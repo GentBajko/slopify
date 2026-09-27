@@ -29,7 +29,7 @@ export interface PlayDraft {
 }
 export interface DraftAttachment {
   readonly id: string;
-  readonly kind: "audio" | "images" | "thumbnail";
+  readonly kind: typeof import("./schema.js").draftAttachmentKinds[number];
   readonly name: string;
   readonly state: "pending" | "copying" | "ready" | "reattach";
   readonly stagedFileId: string | null;

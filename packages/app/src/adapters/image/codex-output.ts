@@ -24,6 +24,56 @@ function unavailable(detail: string): Error {
   });
 }
 
+// A thread that drew more than this is not an image job any more.
+const maxImagesPerThread = 50;
+const imageName = /^[a-zA-Z0-9_-]+\.png$/;
+
+function imagesRoot(env: Readonly<NodeJS.ProcessEnv>): string {
+  return join(resolve(env.CODEX_HOME || join(env.HOME || homedir(), ".codex")), "generated_images");
+}
+
+function latestImage(directory: string): string {
+  const dir = opendirSync(directory);
+  let latest: { readonly name: string; readonly at: number } | undefined;
+  let count = 0;
+  try {
+    for (let entry = dir.readSync(); entry !== null; entry = dir.readSync()) {
+      if (++count > maxImagesPerThread) throw unavailable("far too many files were saved");
+      if (!entry.isFile() || !imageName.test(entry.name))
+        throw unavailable("the saved file is not a plain image file");
+      const at = lstatSync(join(directory, entry.name)).mtimeMs;
+      if (latest === undefined || at > latest.at || (at === latest.at && entry.name > latest.name))
+        latest = { name: entry.name, at };
+    }
+  } finally {
+    dir.closeSync();
+  }
+  if (latest === undefined) throw unavailable("no image was saved");
+  return latest.name;
+}
+
+// How many images this job's thread has drawn so far, for its progress line. Never throws:
+// a folder not made yet, or one being written, counts what it can.
+export function codexImageCount(env: Readonly<NodeJS.ProcessEnv>, threadId: string): number {
+  if (!z.uuid().safeParse(threadId).success) return 0;
+  try {
+    const directory = join(imagesRoot(env), threadId);
+    const entry = lstatSync(directory);
+    if (!entry.isDirectory() || entry.isSymbolicLink()) return 0;
+    const dir = opendirSync(directory);
+    let count = 0;
+    try {
+      for (let one = dir.readSync(); one !== null; one = dir.readSync())
+        if (imageName.test(one.name)) count++;
+    } finally {
+      dir.closeSync();
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
 export function codexGeneratedImage(
   env: Readonly<NodeJS.ProcessEnv>,
   threadId: string | undefined,
@@ -31,10 +81,7 @@ export function codexGeneratedImage(
 ): GeneratedImage {
   if (!z.uuid().safeParse(threadId).success || threadId === undefined)
     throw unavailable("the image job could not be identified");
-  const root = join(
-    resolve(env.CODEX_HOME || join(env.HOME || homedir(), ".codex")),
-    "generated_images",
-  );
+  const root = imagesRoot(env);
   const directory = join(root, threadId);
   try {
     for (const path of [root, directory]) {
@@ -46,19 +93,10 @@ export function codexGeneratedImage(
     if (canonical !== join(realpathSync(root), threadId))
       throw unavailable("Codex's image folder moved while it was being read");
     // Codex 0.155.1 omits image items from exec JSONL. Its artifact contract is
-    // generated_images/<thread.started ID>/<sanitized tool call ID>.png.
-    const dir = opendirSync(directory);
-    let name: string;
-    try {
-      const entry = dir.readSync();
-      if (entry === null) throw unavailable("no image was saved");
-      if (dir.readSync() !== null) throw unavailable("more than one file was saved");
-      if (!entry.isFile() || !/^[a-zA-Z0-9_-]+\.png$/.test(entry.name))
-        throw unavailable("the saved file is not a plain image file");
-      name = entry.name;
-    } finally {
-      dir.closeSync();
-    }
+    // generated_images/<thread.started ID>/<sanitized tool call ID>.png. An agent that reviews
+    // its work may draw several in its one thread; the last one it drew is its answer, so the
+    // newest file wins (the name breaks a tie, the call IDs being in no useful order).
+    const name = latestImage(directory);
     const path = join(directory, name);
     const before = lstatSync(path);
     if (!before.isFile() || before.isSymbolicLink() || realpathSync(path) !== join(canonical, name))

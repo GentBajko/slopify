@@ -36,7 +36,8 @@ export async function uploadDraftAttachment(
     return refuse("conflict");
   const storage = { ...deps, emit: () => undefined };
   const result = await stageUpload(storage, {
-    stageKind: attachment.kind,
+    // The establishing image is the Images stage's upload.
+    stageKind: attachment.kind === "reference" ? "images" : attachment.kind,
     originalFilename: attachment.original_filename,
     content: input.content,
     onAllocated(file) {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
-import type { Project, RunConfig, Stage } from "../admission/model.js";
+import { type Project, type RunConfig, referenceKey, type Stage } from "../admission/model.js";
 import type { RevisionContent } from "../revisions/model.js";
 import type { Output } from "../storage/model.js";
 import { buildRecipes } from "./recipe-build.js";
@@ -44,6 +44,8 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
       return `image:${output.id}`;
     case "thumbnail":
       return "thumbnail:image";
+    case "reference":
+      return referenceKey;
     case "notes":
       return "research:notes";
     case "article_md":

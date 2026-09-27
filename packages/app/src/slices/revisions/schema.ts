@@ -33,6 +33,7 @@ export const revisionContentSchema = z
         article: id.optional(),
         audio: id.optional(),
         thumbnail: id.optional(),
+        reference: id.optional(),
       })
       .strict(),
     imageOrder: z.array(id).max(60),
@@ -109,7 +110,10 @@ export const revisionEditSchema = z
             stagedFileId: id,
             destination: z.discriminatedUnion("kind", [
               z
-                .object({ kind: z.literal("provided"), stage: z.enum(["audio", "thumbnail"]) })
+                .object({
+                  kind: z.literal("provided"),
+                  stage: z.enum(["audio", "thumbnail", "reference"]),
+                })
                 .strict(),
               z.object({ kind: z.literal("image"), imageKey: id }).strict(),
               z.object({ kind: z.literal("narration"), key: workKey }).strict(),

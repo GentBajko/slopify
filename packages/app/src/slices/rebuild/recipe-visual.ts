@@ -8,6 +8,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
+import { type ImageReference, imageChoice } from "./recipe-reference.js";
 import { matchingText, renderedPrompt } from "./recipe-text.js";
 
 export function visualRecipes(
@@ -17,6 +18,8 @@ export function visualRecipes(
   captionFingerprint: string | null,
   // What the Video stage's edit settings add (`recipe-edit.ts`), from the images planned here.
   edit?: (images: readonly ResolvedWorkRecipe[]) => EditPlan,
+  // The establishing image the generated images are drawn from, when it is on.
+  reference?: ImageReference,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -41,12 +44,12 @@ export function visualRecipes(
           : {
               kind: "image",
               version: 1,
-              provider: config.images?.provider ?? "",
-              model: config.images?.model ?? "",
+              ...imageChoice(config),
               aspect: config.format,
               prompt: prompt ?? "",
+              ...(reference === undefined ? {} : { reference: reference.input }),
             },
-        [],
+        image.source === "provide" || reference === undefined ? [] : [reference.key],
         { unresolved: image.source === "provide" ? image.assetId === null : !prompt?.trim() },
       ),
     );
@@ -112,6 +115,8 @@ export function visualRecipes(
 export function thumbnailRecipes(
   context: RecipeContext,
   textRecipes: readonly ResolvedWorkRecipe[],
+  // The establishing image, when it is on and the thumbnail is drawn from it too.
+  reference?: ImageReference,
 ): readonly ResolvedWorkRecipe[] {
   const { config, content } = context;
   if (config.sources.thumbnail === "off") return [];
@@ -151,17 +156,24 @@ export function thumbnailRecipes(
               config.images?.provider ?? null,
               config.images?.model ?? null,
               config.format,
+              // Only what is in use, so a thumbnail made before these existed keeps its
+              // fingerprint.
+              ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+              ...(reference === undefined ? [] : [reference.input.fingerprint]),
             ],
           }
         : {
             kind: "image",
             version: 1,
-            provider: config.images?.provider ?? "",
-            model: config.images?.model ?? "",
+            ...imageChoice(config),
             aspect: config.format,
             prompt,
+            ...(reference === undefined ? {} : { reference: reference.input }),
           },
-      promptRecipe === undefined ? [] : [promptRecipe.key],
+      [
+        ...(promptRecipe === undefined ? [] : [promptRecipe.key]),
+        ...(reference === undefined ? [] : [reference.key]),
+      ],
     ),
   ];
 }

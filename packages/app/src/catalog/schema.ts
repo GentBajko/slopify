@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { thinkingModes } from "../kernel/ports/llm.js";
 import { providers } from "../slices/settings/model.js";
 
 const money = z.number().finite().nonnegative();
@@ -31,7 +32,7 @@ export const llmModelSchema = base
         webSearch: z.boolean().default(false),
         thinking: z
           .partialRecord(
-            z.enum(["off", "low", "medium", "high", "xhigh"]),
+            z.enum(thinkingModes),
             z
               .object({
                 budget: z.number().int().min(-1).optional(),
@@ -103,6 +104,16 @@ export type Catalogue = z.infer<typeof catalogueSchema>;
 export function isVideoModel(model: Pick<CatalogueModel, "keywords">): boolean {
   return model.keywords.includes("video");
 }
+
+// An image model that also takes an input image - so it can draw with the project's
+// establishing image as its visual reference - carries the `reference` keyword, the same way
+// and for the same reason the image-to-video models carry `video`.
+export function takesReferenceImage(model: Pick<CatalogueModel, "keywords">): boolean {
+  return model.keywords.includes("reference");
+}
+// What the run says when the chosen image model cannot take the establishing image.
+export const referenceRefusal =
+  "The chosen image model can't use an establishing image as a reference, so the images can't be drawn to match it. Choose an image model that can (Codex CLI, OpenAI, Google, or a fal.ai model listed with reference) under Images → Model on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.";
 
 // The image-to-video models a provider offers, as Animate images lists them.
 export function videoModelsOf(

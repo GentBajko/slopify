@@ -1,6 +1,7 @@
 import { statSync } from "node:fs";
 import { z } from "zod";
-import type { FieldError } from "../admission/rules.js";
+import { type RunConfig, referenceKey } from "../admission/model.js";
+import { type FieldError, usesReference } from "../admission/rules.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { outputPath, stagingPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
@@ -53,7 +54,7 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
     const field = `uploads.${index}`;
     const to = upload.destination;
     if (
-      (to.kind === "provided" && edit.config.sources[to.stage] !== "provide") ||
+      (to.kind === "provided" && !providesOwnFile(edit.config, to.stage)) ||
       (to.kind === "narration" && edit.config.sources.audio !== "generate") ||
       (to.kind === "image" && edit.config.sources.images === "off")
     )
@@ -77,7 +78,14 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
     staged.add(upload.stagedFileId);
     destinations.add(destination);
     const file = stagedFileById(deps.db, upload.stagedFileId);
-    const kind = to.kind === "provided" ? to.stage : to.kind === "image" ? "images" : "audio";
+    const kind =
+      to.kind === "provided"
+        ? to.stage === "reference"
+          ? "images"
+          : to.stage
+        : to.kind === "image"
+          ? "images"
+          : "audio";
     if (
       file === undefined ||
       file.state !== "staged" ||
@@ -109,7 +117,7 @@ export function validateAssetReferences(
 ): readonly FieldError[] {
   const fields: FieldError[] = [];
   const refs: [string, string, ProvidedKind | "images", boolean][] = [];
-  for (const key of ["research", "article", "audio", "thumbnail"] as const) {
+  for (const key of ["research", "article", "audio", "thumbnail", "reference"] as const) {
     const id = content.provided[key];
     if (id !== undefined) refs.push([`content.provided.${key}`, id, key, false]);
   }
@@ -125,7 +133,10 @@ export function validateAssetReferences(
     audio: ["audio_body", "audio_intro", "audio_outro", "audio_export"],
     images: ["image"],
     thumbnail: ["thumbnail"],
+    reference: ["reference"],
   };
+  // The establishing image is the Images stage's.
+  const stageOf = (kind: ProvidedKind | "images") => (kind === "reference" ? "images" : kind);
   for (const [field, id, kind, allowPiece] of refs) {
     if (
       !prepared.some((row) => row.id === id && row.projectId === projectId) &&
@@ -143,7 +154,7 @@ export function validateAssetReferences(
         .prepare(
           "SELECT 1 FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=? AND json_extract(descriptor,'$.role') IN (SELECT value FROM json_each(?))",
         )
-        .get(projectId, id, kind, JSON.stringify(roles[kind])) === undefined &&
+        .get(projectId, id, stageOf(kind), JSON.stringify(roles[kind])) === undefined &&
       (!allowPiece ||
         deps.db
           .prepare(
@@ -209,19 +220,36 @@ export function assetPath(deps: RevisionDeps, projectId: string, id: string): st
     ).path;
 }
 
+// A stage whose own file the project uses: Provide for audio and the thumbnail, Upload for the
+// establishing image.
+export function providesOwnFile(
+  config: RunConfig,
+  kind: "audio" | "thumbnail" | "reference",
+): boolean {
+  return kind === "reference"
+    ? usesReference(config) && config.reference?.source === "provide"
+    : config.sources[kind] === "provide";
+}
+// Where each provided file is published: its work key and output role.
+export const providedOutput = {
+  audio: { workKey: "audio:provided", role: "audio_body" },
+  thumbnail: { workKey: "thumbnail:image", role: "thumbnail" },
+  reference: { workKey: referenceKey, role: "reference" },
+} as const;
+
 export function providedAssetSelected(
   base: RevisionView,
-  kind: "audio" | "thumbnail",
+  kind: "audio" | "thumbnail" | "reference",
   assetId: string,
 ): boolean {
   return (
-    base.revision.config.sources[kind] === "provide" &&
+    providesOwnFile(base.revision.config, kind) &&
     base.outputs.some(
       (row) =>
         row.selected &&
         row.assetId === assetId &&
-        row.workKey === (kind === "audio" ? "audio:provided" : "thumbnail:image") &&
-        row.output.role === (kind === "audio" ? "audio_body" : "thumbnail"),
+        row.workKey === providedOutput[kind].workKey &&
+        row.output.role === providedOutput[kind].role,
     )
   );
 }
@@ -238,11 +266,11 @@ export function validateReplacementAvailability(
       row.kind === "asset" ? [row.assetId] : [],
     ),
   ]);
-  for (const kind of ["audio", "thumbnail"] as const) {
+  for (const kind of ["audio", "thumbnail", "reference"] as const) {
     const assetId = edit.content.provided[kind];
     if (
       assetId !== undefined &&
-      edit.config.sources[kind] === "provide" &&
+      providesOwnFile(edit.config, kind) &&
       !providedAssetSelected(base, kind, assetId) &&
       !edit.uploads?.some(
         (row) => row.destination.kind === "provided" && row.destination.stage === kind,

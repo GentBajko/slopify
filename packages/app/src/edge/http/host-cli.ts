@@ -21,6 +21,7 @@ import {
   hostOpenFolderSchema,
   hostStatusSchema,
 } from "../../kernel/ports/host-cli.js";
+import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import { isProviderError, providerError } from "../../kernel/ports/model.js";
 
 interface HostJob {
@@ -285,9 +286,23 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const job = c.get("job");
     const controller = new AbortController();
     const signal = AbortSignal.any([job.signal, controller.signal]);
-    const timer = setTimeout(() => controller.abort(), 300_000);
+    const timer = setTimeout(() => controller.abort(), agentImageTimeoutMs);
     try {
-      const result = await ports.image.generate({ ...body.data, signal });
+      const { reference, thinking, ...rest } = body.data;
+      const image =
+        reference === undefined
+          ? undefined
+          : {
+              bytes: new Uint8Array(Buffer.from(reference.base64, "base64")),
+              mime: reference.mime,
+            };
+      if (image !== undefined && sniffImage(image.bytes) !== image.mime) return invalid(c);
+      const result = await ports.image.generate({
+        ...rest,
+        ...(thinking === undefined ? {} : { thinking }),
+        ...(image === undefined ? {} : { reference: image }),
+        signal,
+      });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });
       if (result.bytes.byteLength > bridgeLimits.image || sniffImage(result.bytes) !== result.mime)
         throw new Error(

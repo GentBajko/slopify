@@ -219,3 +219,32 @@ describe("openAiImage.generate", () => {
     expect(String(thrown)).toContain("OpenAI sent back an answer Slopify could not read");
   });
 });
+
+describe("an establishing image", () => {
+  it("goes to the edits endpoint as an input image, noted as a reference", async () => {
+    const seen: Seen[] = [];
+    const reference = { bytes: new Uint8Array(pngHead), mime: "image/png" as const };
+    await openAiImage({
+      fetch: replaying(answering("openai-image-success.json"), seen),
+      key: () => key,
+    }).generate({
+      model,
+      prompt,
+      aspect: "16:9",
+      reference,
+      signal: new AbortController().signal,
+    });
+    expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
+    const form = seen[0]?.init?.body;
+    expect(form).toBeInstanceOf(FormData);
+    if (!(form instanceof FormData)) return;
+    expect(form.get("model")).toBe(model);
+    expect(String(form.get("prompt"))).toContain("visual reference only");
+    expect(String(form.get("prompt"))).toContain(prompt);
+    const image = form.get("image[]");
+    expect(image).toBeInstanceOf(Blob);
+    expect(new Uint8Array(await (image as Blob).arrayBuffer())).toEqual(new Uint8Array(pngHead));
+    // The form sets its own multipart boundary.
+    expect(headersOf(seen[0])["Content-Type"]).toBeUndefined();
+  });
+});

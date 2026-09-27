@@ -96,6 +96,15 @@ export type RecipeInput =
       // model on the same provider, fed the image `image` (its recipe's fingerprint) for a
       // clip of `seconds`. Priced, retried and keyed like an image.
       readonly animate?: { readonly image: string; readonly seconds: number } | undefined;
+      // The chosen effort, for a provider that has one (the Codex CLI). Present only when one
+      // is chosen, so every request made without it keeps its fingerprint.
+      readonly thinking?: ThinkingMode | undefined;
+      // The establishing image this one is drawn with as its visual reference: its step's
+      // fingerprint and, once it has landed, the asset it made. Present only while the
+      // project's Establishing image is on, for the same reason.
+      readonly reference?:
+        | { readonly fingerprint: string; readonly assetId: string | null }
+        | undefined;
     }
   | {
       readonly kind: "provided";

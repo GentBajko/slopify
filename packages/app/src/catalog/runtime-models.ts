@@ -15,7 +15,7 @@ export async function checkRuntimeModel(
   try {
     const model = (await modelsFor(provider, family)).find((row) => row.id === id);
     if (model === undefined) return "missing";
-    if (family === "llm" && thinking !== undefined && !model.thinkingModes?.includes(thinking))
+    if (family !== "tts" && thinking !== undefined && !model.thinkingModes?.includes(thinking))
       return "thinking";
     return "available";
   } catch {

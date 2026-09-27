@@ -283,6 +283,61 @@ describe("curated provider requests", () => {
     ).rejects.toMatchObject({ fault: { kind: "unsupported" } });
     expect(requests).toEqual(["codex-imagegen"]);
   });
+
+  it("checks a chosen Codex image model's effort against the Codex model list", async () => {
+    const requests: string[] = [];
+    const port: ImagePort = {
+      id: "codex-image",
+      models: async () => [
+        { id: "codex-imagegen", name: "Codex default" },
+        { id: "gpt-6-sol", name: "GPT-6-Sol", thinkingModes: ["high", "ultra"] },
+      ],
+      generate: async (request) => {
+        requests.push(`${request.model}:${request.thinking ?? ""}`);
+        return { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" };
+      },
+    };
+    const curated = curateRegistry(registry(undefined, undefined, port), catalogue).image(
+      "codex-image",
+    );
+    const ask = (thinking: "ultra" | "low") =>
+      curated.generate({
+        model: "gpt-6-sol",
+        thinking,
+        prompt: "Blue circle",
+        aspect: "16:9",
+        signal: new AbortController().signal,
+      });
+    await ask("ultra");
+    await expect(ask("low")).rejects.toMatchObject({ fault: { kind: "unsupported" } });
+    expect(requests).toEqual(["gpt-6-sol:ultra"]);
+  });
+
+  it("refuses an establishing image for a catalogue model without the reference keyword", async () => {
+    const requests: string[] = [];
+    const port: ImagePort = {
+      id: "replicate",
+      models: async () => [],
+      generate: async (request) => {
+        requests.push(request.model);
+        return { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" };
+      },
+    };
+    const curated = curateRegistry(registry(undefined, undefined, port), catalogue).image(
+      "replicate",
+    );
+    const reference = { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" as const };
+    await expect(
+      curated.generate({
+        model: "black-forest-labs/flux-1.1-pro",
+        prompt: "Blue circle",
+        aspect: "16:9",
+        reference,
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow(/Establishing image to Off in the Images section/);
+    expect(requests).toEqual([]);
+  });
 });
 
 function ttsRequest(text: string): TtsRequest {

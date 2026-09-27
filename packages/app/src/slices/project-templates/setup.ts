@@ -17,6 +17,10 @@ export function templateSetup(
     { kind: "thumbnail" as const, name: input.form.thumbnailPrompt },
     { kind: "shorts" as const, name: input.form.shorts?.prompt ?? "" },
     { kind: "image" as const, name: input.form.shorts?.imagePrompt ?? "" },
+    {
+      kind: "image" as const,
+      name: input.form.reference?.source === "prompt" ? input.form.reference.prompt : "",
+    },
   ];
   for (const choice of choices) {
     if (choice.name === "") continue;
@@ -61,6 +65,9 @@ export function freshTemplateDraft(
         audio: provided.audio === null ? null : fresh(provided.audio),
         thumbnail: provided.thumbnail === null ? null : fresh(provided.thumbnail),
         images: provided.images.map(fresh),
+        ...(provided.reference === undefined
+          ? {}
+          : { reference: provided.reference === null ? null : fresh(provided.reference) }),
       },
     },
   };

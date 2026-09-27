@@ -163,6 +163,16 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...youtubeDescriptionFields(draft));
   fields.push(...shortsFields(draft));
   fields.push(...videoEditFields(draft));
+  fields.push(...referenceFields(draft));
+  if (usesReference(draft) && draft.reference?.source === "provide")
+    checkFile(
+      input.staged,
+      draft.provided.reference,
+      "images",
+      "provided.reference",
+      "Upload the establishing image, or set Establishing image to Off in the Images section.",
+      fields,
+    );
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
 
@@ -388,6 +398,36 @@ export function youtubeDescriptionFields(
           field: "youtubeDescription",
           message:
             "The YouTube description is timed from the narration. Turn narration on, or turn the YouTube description off.",
+        },
+      ]
+    : [];
+}
+
+// The establishing image belongs to the Images stage: it is made, and the images drawn with
+// it, only while images are Generate.
+export function usesReference(draft: Pick<RunDraft, "sources" | "reference">): boolean {
+  return draft.reference !== undefined && draft.sources.images === "generate";
+}
+// Whether the thumbnail is drawn with it too: on unless turned off, and only for a thumbnail
+// the image provider makes.
+export function referenceForThumbnail(draft: Pick<RunDraft, "sources" | "reference">): boolean {
+  return (
+    usesReference(draft) &&
+    draft.reference?.thumbnail !== false &&
+    (draft.sources.thumbnail === "from_prompt" || draft.sources.thumbnail === "prompt_by_llm")
+  );
+}
+export function referenceFields(
+  draft: Pick<RunDraft, "sources" | "reference">,
+): readonly FieldError[] {
+  return usesReference(draft) &&
+    draft.reference?.source === "prompt" &&
+    (draft.reference.prompt === undefined || draft.reference.prompt.trim() === "")
+    ? [
+        {
+          field: "reference.prompt",
+          message:
+            "Pick an image prompt for the establishing image, upload one instead, or set Establishing image to Off in the Images section.",
         },
       ]
     : [];

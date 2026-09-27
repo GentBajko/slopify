@@ -27,7 +27,9 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         .object({
           budget: z.number().finite().optional(),
           level: z.enum(["minimal", "low", "medium", "high"]).optional(),
-          effort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).optional(),
+          effort: z
+            .enum(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"])
+            .optional(),
         })
         .strict()
         .nullable(),
@@ -71,6 +73,11 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
       prompt: z.string(),
       aspect: z.enum(["16:9", "9:16"]),
       animate: z.object({ image: z.string(), seconds: z.number() }).strict().optional(),
+      thinking: z.enum(thinkingModes).optional(),
+      reference: z
+        .object({ fingerprint: z.string(), assetId: z.string().nullable() })
+        .strict()
+        .optional(),
     })
     .strict(),
   z

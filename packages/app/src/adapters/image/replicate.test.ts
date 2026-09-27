@@ -265,3 +265,19 @@ describe("replicateImage.generate", () => {
     expect(String(thrown)).toContain("Replicate finished without sending an image");
   });
 });
+
+it("refuses an establishing image before sending anything", async () => {
+  const seen: Seen[] = [];
+  const thrown: unknown = await port(replaying([], delivered, seen))
+    .generate({
+      model,
+      prompt,
+      aspect: "16:9",
+      reference: { bytes: jpegBytes, mime: "image/jpeg" },
+      signal: new AbortController().signal,
+    })
+    .catch((error: unknown) => error);
+  expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
+  expect(String(thrown)).toContain("set Establishing image to Off in the Images section");
+  expect(seen).toEqual([]);
+});

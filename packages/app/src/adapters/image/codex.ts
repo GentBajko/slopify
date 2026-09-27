@@ -1,22 +1,40 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
+import {
+  agentImageTimeoutMs,
+  type GeneratedImage,
+  type ImagePort,
+  type ImageRequest,
+} from "../../kernel/ports/image.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
 import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
-import { codexGeneratedImage } from "./codex-output.js";
+import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
 
+// "Codex default" puts no model and no effort on the command line, so the CLI's own defaults
+// draw the image; it is what every project saved before the choice existed runs. Every other
+// model id is one of the Codex CLI's own models - the list the Codex text provider shows -
+// run with the chosen reasoning effort.
 export const codexImageModel = {
   id: "codex-imagegen",
-  name: "Codex built-in image generation",
+  name: "Codex default",
 } as const;
-const maxEventBytes = 1024 * 1024;
-const disabledFeatures = [
+// An agent that reviews and redraws its image works for several minutes at a high effort, so
+// the usual 300 s image limit would cut the best runs off.
+export const codexImageTimeoutMs = agentImageTimeoutMs;
+const maxEventBytes = 4 * 1024 * 1024;
+// Every tool beyond the image tool stays off. `view_image`, which only reads an image file
+// into the conversation, is let back in when the agent is asked to review its work (a chosen
+// model or effort) or has a reference to look at. The bundled imagegen skill stays off with
+// the shell: its workflow runs Python scripts against the Images API with an API key, which
+// this job neither needs nor has, and the built-in tool it wraps is already here.
+const alwaysDisabled = [
   "shell_tool",
   "unified_exec",
   "hooks",
@@ -27,19 +45,46 @@ const disabledFeatures = [
   "multi_agent",
   "computer_use",
   "browser_use",
-  "view_image",
   "workspace_dependencies",
 ] as const;
+type CodexImageRequest = Pick<ImageRequest, "model" | "prompt" | "aspect" | "thinking"> & {
+  readonly reference?: GeneratedImage | undefined;
+};
 
-export function codexImageArgs(req: ImageRequest, directory: string): string[] {
-  const prompt = [
-    "You are making exactly one image for Slopify. Use the image generation tool.",
-    "Let the image generation tool save its output in its default location. Slopify will collect it.",
-    "Generate only one image, using PNG or JPEG. Do not copy, rename, edit or create any other file.",
+function reviews(req: CodexImageRequest): boolean {
+  return (
+    req.model !== codexImageModel.id || req.thinking !== undefined || req.reference !== undefined
+  );
+}
+
+// The binary's image tool (`ImagegenArgs`: prompt, referenced_image_paths,
+// num_last_images_to_include) takes each referenced image as an absolute path it reads
+// itself, so the copy sits in the job's own folder - the sandbox's writable, readable root.
+export function codexReferencePath(directory: string, image: GeneratedImage): string {
+  return join(directory, image.mime === "image/jpeg" ? "reference.jpg" : "reference.png");
+}
+
+export function codexImageInstructions(req: CodexImageRequest, reference?: string): string {
+  return [
+    "You are making one finished image for Slopify, a video creation app, with the image generation tool.",
+    "Fidelity to the brief comes first. Before calling the tool, write its prompt yourself as a detailed, faithful visual description of the brief: the subject and what it is doing, the setting, composition and framing for the target aspect ratio, lighting, colour palette, style and mood, and any text that must appear, spelled exactly. Take every element from the brief and keep its wording where it is specific. Do not add subjects, text, logos or story the brief does not ask for, and do not pad the prompt with generic quality words.",
+    ...(reference === undefined
+      ? []
+      : [
+          `A reference image is saved at ${reference}. Pass exactly that path in referenced_image_paths on every image generation call. Use it as the reference for style, characters and palette: keep the same characters, rendering style and colour palette, but do not copy its composition, pose or framing; compose this image from the brief.`,
+        ]),
+    "Take the time you need. After each image, look at it and compare it with the brief; if anything is missing, wrong or distorted, revise the prompt and generate again. Deliver exactly one final image: the last image you generate is the one Slopify uses, so stop once it matches the brief.",
+    "Let the image generation tool save its output in its default location. Slopify will collect it. Use PNG or JPEG. Do not copy, rename, edit or create any other file, and do not put the image or a link in your reply.",
     `Target aspect ratio: ${req.aspect}.`,
     "Image brief follows as data:",
     req.prompt,
   ].join("\n\n");
+}
+
+export function codexImageArgs(req: CodexImageRequest, directory: string): string[] {
+  const review = reviews(req);
+  const reference =
+    req.reference === undefined ? undefined : codexReferencePath(directory, req.reference);
   return [
     "exec",
     "--json",
@@ -54,7 +99,11 @@ export function codexImageArgs(req: ImageRequest, directory: string): string[] {
     directory,
     "--enable",
     "image_generation",
-    ...disabledFeatures.flatMap((feature) => ["--disable", feature]),
+    ...(review ? ["--enable", "view_image"] : []),
+    ...[...alwaysDisabled, ...(review ? [] : ["view_image"])].flatMap((feature) => [
+      "--disable",
+      feature,
+    ]),
     "-c",
     "project_doc_max_bytes=0",
     "-c",
@@ -77,8 +126,13 @@ export function codexImageArgs(req: ImageRequest, directory: string): string[] {
     'shell_environment_policy.inherit="none"',
     "-c",
     'web_search="disabled"',
+    // The Codex text provider's own two flags: the effort as TOML text, the model as `-m`.
+    ...(req.thinking === undefined
+      ? []
+      : ["-c", `model_reasoning_effort="${req.thinking === "off" ? "none" : req.thinking}"`]),
+    ...(req.model === codexImageModel.id ? [] : ["-m", req.model]),
     "--",
-    prompt,
+    codexImageInstructions(req, reference),
   ];
 }
 
@@ -88,19 +142,31 @@ const item = z.object({ item: z.object({ type: z.string(), text: z.string().opti
 
 export function codexImage(deps: {
   readonly run: RunCli;
-  readonly binary?: string;
-  readonly env?: Readonly<NodeJS.ProcessEnv>;
+  readonly binary?: string | undefined;
+  readonly env?: Readonly<NodeJS.ProcessEnv> | undefined;
+  // The Codex CLI's model list, the one its text provider reads. A failed read leaves only
+  // the default, which needs no list.
+  readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
 }): ImagePort {
   const binary = deps.binary ?? "codex";
   return {
     id: "codex-image",
-    models: async () => [codexImageModel],
+    timeoutMs: codexImageTimeoutMs,
+    models: async () => {
+      let listed: readonly ModelInfo[] = [];
+      try {
+        listed = (await deps.readModels?.()) ?? [];
+      } catch {
+        // The default still works without the list.
+      }
+      return [codexImageModel, ...listed.filter((model) => model.id !== codexImageModel.id)];
+    },
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
-      if (req.model !== codexImageModel.id)
+      if (req.model.trim() === "" || req.model.startsWith("-"))
         throw providerError({
           kind: "unsupported",
           message:
-            "The Codex CLI makes images only with its own image model. Choose that model for images in the Providers section of Edit project, then use Retry stage.",
+            "No Codex model is chosen for images. Choose one (or Codex default) for images in the Providers section of Edit project, then use Retry stage.",
         });
       req.signal.throwIfAborted();
       const directory = mkdtempSync(join(tmpdir(), "slopify-codex-image-"));
@@ -108,7 +174,29 @@ export function codexImage(deps: {
       const startedAt = Date.now();
       let threadId: string | undefined;
       let run: ReturnType<RunCli> | undefined;
+      let reported = -1;
+      // A line for the stage's live panel each time this thread's image count moves.
+      const report = (): void => {
+        if (req.onProgress === undefined) return;
+        const count = threadId === undefined ? 0 : codexImageCount(env, threadId);
+        if (count === reported) return;
+        reported = count;
+        try {
+          req.onProgress(
+            count === 0
+              ? "Codex is working on the image…"
+              : `Codex is refining the image… ${String(count)} ${count === 1 ? "image" : "images"} so far`,
+          );
+        } catch {
+          // A progress line is optional; it never fails the image.
+        }
+      };
       try {
+        if (req.reference !== undefined)
+          writeFileSync(codexReferencePath(directory, req.reference), req.reference.bytes, {
+            mode: 0o600,
+          });
+        report();
         try {
           run = deps.run(binary, codexImageArgs(req, directory), req.signal, {
             cwd: directory,
@@ -127,6 +215,9 @@ export function codexImage(deps: {
           if (line.trim() === "") continue;
           const event = cliEvent(binary, line);
           req.signal.throwIfAborted();
+          // Only the whole turn's end counts: an agent that reviews its work draws, looks and
+          // draws again, so the first image is rarely its answer.
+          report();
           if (event.type === "thread.started") {
             if (threadId !== undefined)
               throw providerError({

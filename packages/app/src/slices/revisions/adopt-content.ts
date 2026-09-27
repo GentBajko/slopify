@@ -6,7 +6,7 @@ import { legacyImageOutput } from "../rebuild/recipe-legacy.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { pieceFile } from "../storage/reconcile.js";
-import type { ProjectAsset, RevisionContent, RevisionDeps } from "./model.js";
+import type { ProjectAsset, ProvidedKind, RevisionContent, RevisionDeps } from "./model.js";
 
 const imagePayload = z.object({
   prompt: z.string().optional(),
@@ -27,7 +27,7 @@ export function baselineContent(
     articlePath !== undefined && statSync(articlePath, { throwIfNoEntry: false })?.isFile() === true
       ? readFileSync(articlePath, "utf8")
       : undefined;
-  const provided: Partial<Record<"research" | "article" | "audio" | "thumbnail", string>> = {};
+  const provided: Partial<Record<ProvidedKind, string>> = {};
   const roles = {
     research: "notes",
     article: "article_md",
@@ -41,6 +41,12 @@ export function baselineContent(
     const output = outputs.find((row) => row.role === role);
     const asset = output === undefined ? undefined : assets.get(output.path);
     if (asset !== undefined) provided[stage] = asset.id;
+  }
+  // An uploaded establishing image, attached when the run started.
+  if (project.config.reference?.source === "provide") {
+    const output = outputs.find((row) => row.role === "reference");
+    const asset = output === undefined ? undefined : assets.get(output.path);
+    if (asset !== undefined) provided.reference = asset.id;
   }
   const imageDefinitions: Record<string, RevisionContent["imageDefinitions"][string]> = {};
   const order: { key: string; index: number }[] = [];

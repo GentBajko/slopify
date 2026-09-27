@@ -2,12 +2,13 @@ import type { RunDraft } from "../slices/admission/model.js";
 import {
   type FieldError,
   usesNarrationPreparation,
+  usesReference,
   usesShorts,
   usesYoutubeDescription,
 } from "../slices/admission/rules.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
 import { usesAnimation } from "../slices/video/edit-settings.js";
-import { videoModelsOf } from "./schema.js";
+import { referenceRefusal, takesReferenceImage, videoModelsOf } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
 export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldError[] {
   if (!catalogue) return [];
@@ -52,6 +53,11 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
         field,
         message: "This model does not support that thinking setting. Choose another.",
       });
+    else if ("image" in model && choice.thinking)
+      fields.push({
+        field: "images.thinking",
+        message: "This image model has no effort setting. Set Effort back to Model default.",
+      });
     else if ("llm" in model && draft.sources.research === "generate" && !model.llm.webSearch)
       fields.push({
         field,
@@ -75,6 +81,18 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
         message:
           "This image model cannot make the vertical (9:16) images Shorts need. Choose another image model, or turn Shorts off.",
       });
+  }
+  // The establishing image needs a model that takes an input image; the catalogue says which.
+  // The Codex CLI always can, so only the keyed providers are looked up.
+  if (
+    usesReference(draft) &&
+    draft.images !== undefined &&
+    !isLocalCliProvider(draft.images.provider)
+  ) {
+    const images = draft.images;
+    const model = catalogue.models(images.provider, "image").find((m) => m.id === images.model);
+    if (model !== undefined && !takesReferenceImage(model))
+      fields.push({ field: "reference.source", message: referenceRefusal });
   }
   // Animate images runs on the image provider's image-to-video models.
   if (usesAnimation(draft) && draft.images !== undefined) {

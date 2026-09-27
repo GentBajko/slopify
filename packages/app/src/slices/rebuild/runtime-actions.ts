@@ -85,7 +85,7 @@ export async function revisionAction(
 function keyStage(key: string): StageKind {
   const prefix = key.split(":")[0];
   if (prefix === "entry" || prefix === "article") return "article";
-  if (prefix === "image") return "images";
+  if (prefix === "image" || prefix === "reference") return "images";
   if (prefix === "audio") return "audio";
   if (prefix === "thumbnail") return "thumbnail";
   if (prefix === "research") return "research";

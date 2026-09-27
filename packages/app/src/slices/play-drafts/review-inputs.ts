@@ -137,6 +137,7 @@ export function resolveReviewInputs(
     runs.flatMap((run) => [
       run.draft.provided.audio,
       run.draft.provided.thumbnail,
+      run.draft.provided.reference,
       ...(run.draft.provided.images ?? []),
     ]),
   );

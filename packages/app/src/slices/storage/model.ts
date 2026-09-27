@@ -38,6 +38,9 @@ export const outputRoles = [
   "short_video",
   // An image of the slideshow brought to life by an image-to-video model (Animate images).
   "animated_image",
+  // The Images stage's establishing image: made or uploaded first, drawn from by the other
+  // images, never shown in the video.
+  "reference",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 

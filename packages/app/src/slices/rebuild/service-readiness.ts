@@ -1,5 +1,5 @@
 import { checkRuntimeModel } from "../../catalog/runtime-models.js";
-import type { Catalogue } from "../../catalog/schema.js";
+import { type Catalogue, referenceRefusal, takesReferenceImage } from "../../catalog/schema.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
@@ -65,7 +65,7 @@ export async function checkReadiness(
       choice.provider,
       choice.family,
       choice.model,
-      choice.family === "llm" ? (choice.thinking ?? undefined) : undefined,
+      choice.family === "tts" ? undefined : (choice.thinking ?? undefined),
     );
     if (result === "missing")
       fields.push({
@@ -160,6 +160,24 @@ export function localReadiness(
         fields.push({
           field: `work.${recipe.key}.aspect`,
           message: "The model does not support this output shape.",
+        });
+      // Only the keyed providers' models are listed; the Codex CLI always takes a reference.
+      if (
+        model !== undefined &&
+        input.reference !== undefined &&
+        !takesReferenceImage(model) &&
+        !fields.some((row) => row.field === "reference.source")
+      )
+        fields.push({ field: "reference.source", message: referenceRefusal });
+      if (
+        model !== undefined &&
+        input.thinking !== undefined &&
+        !fields.some((row) => row.field === "images.thinking")
+      )
+        fields.push({
+          field: "images.thinking",
+          message:
+            "This image model has no effort setting. Set the images' Effort back to Model default under Providers.",
         });
     }
   }

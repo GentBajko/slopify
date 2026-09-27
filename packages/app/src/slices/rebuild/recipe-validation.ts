@@ -4,6 +4,7 @@ import {
   narrationPreparationFields,
   shortsFields,
   usesNarrationPreparation,
+  usesReference,
   usesShorts,
   usesYoutubeDescription,
   videoEditFields,
@@ -116,6 +117,23 @@ export function validateRecipeInputs(
       field: "rendered.thumbnailPrompt",
       raw: content.promptTemplates.thumbnailPrompt ?? null,
       literal: config.rendered.thumbnailPrompt,
+    });
+  // The establishing image: its prompt is checked like the thumbnail's, an upload must be there.
+  if (usesReference(config) && config.reference?.source === "prompt")
+    prompts.push({
+      field: "rendered.referencePrompt",
+      raw: content.promptTemplates.referencePrompt ?? null,
+      literal: config.rendered.referencePrompt,
+    });
+  if (
+    usesReference(config) &&
+    config.reference?.source === "provide" &&
+    content.provided.reference === undefined
+  )
+    fields.push({
+      field: "content.provided.reference",
+      message:
+        "Upload the establishing image, choose From a prompt instead, or set Establishing image to Off.",
     });
   if (config.sources.images !== "off")
     for (const key of content.imageOrder) {

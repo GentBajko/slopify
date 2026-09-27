@@ -260,3 +260,40 @@ describe("falImage.generate", () => {
     expect(String(thrown)).toContain("fal.ai sent back an answer Slopify could not read");
   });
 });
+
+describe("an establishing image", () => {
+  const reference = { bytes: pngBytes, mime: "image/png" as const };
+  const withReference = (fetcher: FalImageDeps["fetch"], which: string) =>
+    falImage({ fetch: fetcher, key: () => key }).generate({
+      model: which,
+      prompt,
+      aspect: "16:9",
+      reference,
+      signal: new AbortController().signal,
+    });
+
+  it("goes to the model's edit endpoint as image_urls", async () => {
+    const seen: Seen[] = [];
+    await withReference(
+      replaying(answering("fal-success.json"), delivered, seen),
+      "fal-ai/nano-banana-2",
+    );
+    expect(seen[0]?.url).toBe(`${falBase}/fal-ai/nano-banana-2/edit`);
+    const body = bodyOf(seen[0]) as { image_urls: string[]; prompt: string };
+    expect(body.image_urls).toEqual([
+      `data:image/png;base64,${Buffer.from(pngBytes).toString("base64")}`,
+    ]);
+    expect(body.prompt).toContain("visual reference only");
+  });
+
+  it("is refused, before any request, by a model without an edit endpoint", async () => {
+    const seen: Seen[] = [];
+    const thrown: unknown = await withReference(
+      replaying(answering("fal-success.json"), delivered, seen),
+      "fal-ai/flux/schnell",
+    ).catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
+    expect(String(thrown)).toContain("set Establishing image to Off in the Images section");
+    expect(seen).toEqual([]);
+  });
+});

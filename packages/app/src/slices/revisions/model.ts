@@ -14,7 +14,8 @@ import type { Output } from "../storage/model.js";
 export type { Fingerprint, WorkKey } from "../../kernel/runner/work.js";
 
 export type OutputState = "ready" | "outdated" | "review";
-export type ProvidedKind = "research" | "article" | "audio" | "thumbnail";
+// `reference` is the uploaded establishing image (`RunDraft.reference`).
+export type ProvidedKind = "research" | "article" | "audio" | "thumbnail" | "reference";
 export interface ManualCue {
   readonly id: string;
   readonly text: string;
@@ -62,7 +63,7 @@ export interface RevisionContent {
 export interface RevisionUpload {
   readonly stagedFileId: string;
   readonly destination:
-    | { readonly kind: "provided"; readonly stage: "audio" | "thumbnail" }
+    | { readonly kind: "provided"; readonly stage: "audio" | "thumbnail" | "reference" }
     | { readonly kind: "image"; readonly imageKey: string }
     | { readonly kind: "narration"; readonly key: string }
     | { readonly kind: "shortsMusic" };

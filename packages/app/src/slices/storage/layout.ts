@@ -92,6 +92,8 @@ export function outputFileName(
       return `audio-outro${extension}`;
     case "thumbnail":
       return `thumbnail${extension}`;
+    case "reference":
+      return `reference${extension}`;
     case "image":
       return `images/${String(index).padStart(3, "0")}${extension}`;
   }

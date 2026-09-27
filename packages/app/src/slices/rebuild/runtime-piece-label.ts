@@ -13,6 +13,7 @@ export function pieceLabel(
 ): string | undefined {
   const { key } = piece;
   if (key === "thumbnail:image" || key.startsWith("thumbnail:")) return "Thumbnail";
+  if (key === "reference:image") return "Establishing image";
   if (key === "article:body") return "Article";
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";

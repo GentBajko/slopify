@@ -31,6 +31,12 @@ export function isLocalCliProvider(id: string): id is HostCliId {
   return id === "claude-code" || id === "codex" || id === "gemini" || id === "codex-image";
 }
 
+// How many calls to a command-line tool run at once. Each Codex image is its own job - its
+// own folder and thread - so four are drawn side by side; the text CLIs keep three.
+export function localCliConcurrency(id: HostCliId): number {
+  return id === "codex-image" ? 4 : 3;
+}
+
 interface ProviderBase {
   readonly id: ProviderId;
   readonly family: ProviderFamily;

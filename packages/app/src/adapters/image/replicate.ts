@@ -75,6 +75,14 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
     id: "replicate",
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(replicateModels),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
+      // The Replicate models listed take no input image to draw from (the FLUX image inputs
+      // copy the picture's composition), so an establishing image is refused, not dropped.
+      if (req.reference !== undefined)
+        throw providerError({
+          kind: "unsupported",
+          message:
+            "Replicate's image models can't use an establishing image as a reference. Choose Codex CLI, OpenAI, Google or fal.ai under Images → Provider on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.",
+        });
       const response = await deps.fetch(`${replicateBase}/models/${req.model}/predictions`, {
         method: "POST",
         signal: req.signal,

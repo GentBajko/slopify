@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { thinkingModes as knownEfforts } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { readCatalogueFile } from "./catalogue-files.js";
 import { codexModelName, nodeCodexServerModels } from "./codex-server-models.js";
@@ -52,7 +53,7 @@ export async function nodeCodexModels(
         const thinkingModes = item.supported_reasoning_levels
           ?.map((level) => level.effort)
           .filter((level): level is NonNullable<ModelInfo["thinkingModes"]>[number] =>
-            ["off", "low", "medium", "high", "xhigh"].includes(level),
+            (knownEfforts as readonly string[]).includes(level),
           );
         unique.set(item.slug, {
           id: item.slug,

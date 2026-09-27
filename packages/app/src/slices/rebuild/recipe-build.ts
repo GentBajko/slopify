@@ -1,8 +1,10 @@
+import { referenceForThumbnail } from "../admission/rules.js";
 import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
 import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
 import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
+import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { shortsRecipes } from "./recipe-shorts.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
@@ -13,14 +15,22 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   const audio = audioRecipes(context, text);
   const exports = exportRecipes(context, audio);
   const captions = exports.find((value) => value.key === "subtitles:files");
-  const thumbnail = thumbnailRecipes(context, text.recipes);
+  // The establishing image, when it is on: every other image is drawn from it.
+  const reference = referenceRecipe(context);
+  const drawnFrom = imageReference(context, reference);
+  const thumbnail = thumbnailRecipes(
+    context,
+    text.recipes,
+    referenceForThumbnail(context.config) ? drawnFrom : undefined,
+  );
   const youtube = youtubeRecipes(context, exports);
   return [
     ...text.recipes,
     ...audio.recipes,
     ...exports,
     ...youtube,
-    ...shortsRecipes(context, exports),
+    ...(reference === undefined ? [] : [reference]),
+    ...shortsRecipes(context, exports, drawnFrom),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),
     ...visualAssets(
@@ -31,6 +41,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         audio.mediaFingerprint,
         captions?.fingerprint ?? null,
         (images) => editPlan(context, exports, youtube, images),
+        drawnFrom,
       ),
     ),
   ];

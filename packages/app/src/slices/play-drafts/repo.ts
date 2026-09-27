@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { fingerprint } from "../../kernel/runner/work.js";
 import type { PlayDraftDocument } from "./model.js";
+import { draftAttachmentKinds } from "./schema.js";
 
 const rowSchema = z.object({
   id: z.string(),
@@ -25,7 +26,7 @@ const attachmentSchema = z.object({
   id: z.string(),
   draft_id: z.string(),
   staged_file_id: z.string().nullable(),
-  kind: z.enum(["audio", "images", "thumbnail"]),
+  kind: z.enum(draftAttachmentKinds),
   original_filename: z.string(),
   status: z.enum(["pending", "ready", "reattach"]),
   error: z.string().nullable(),
@@ -34,7 +35,7 @@ export type AttachmentRow = z.infer<typeof attachmentSchema>;
 export interface AttachmentRef {
   readonly attachmentId: string;
   readonly name: string;
-  readonly kind: "audio" | "images" | "thumbnail";
+  readonly kind: (typeof draftAttachmentKinds)[number];
 }
 export function draftRow(db: DatabaseSync, id: string): DraftRow | undefined {
   const row = db.prepare("SELECT * FROM play_drafts WHERE id=?").get(id);
@@ -64,6 +65,9 @@ export function attachmentRefs(document: PlayDraftDocument): readonly Attachment
     ...(p.audio === null ? [] : [{ ...p.audio, kind: "audio" as const }]),
     ...p.images.map((file) => ({ ...file, kind: "images" as const })),
     ...(p.thumbnail === null ? [] : [{ ...p.thumbnail, kind: "thumbnail" as const }]),
+    ...(p.reference === undefined || p.reference === null
+      ? []
+      : [{ ...p.reference, kind: "reference" as const }]),
   ];
 }
 export function requestHash(value: unknown): string {

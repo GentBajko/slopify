@@ -1,8 +1,9 @@
-import type { LlmEvent } from "../kernel/ports/llm.js";
+import { type LlmEvent, thinkingModes } from "../kernel/ports/llm.js";
 import { providerError } from "../kernel/ports/model.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TtsAudio } from "../kernel/ports/tts.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
+import { referenceRefusal, takesReferenceImage } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
 
 export function curateRegistry(registry: Registry, catalogue: CatalogueStore): Registry {
@@ -85,7 +86,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               ? {
                   thinkingModes: Object.keys(m.llm.thinking).filter(
                     (mode): mode is import("../kernel/ports/llm.js").ThinkingMode =>
-                      ["off", "low", "medium", "high", "xhigh"].includes(mode),
+                      (thinkingModes as readonly string[]).includes(mode),
                   ),
                 }
               : {}),
@@ -121,11 +122,23 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           ...port,
           models: () => port.models(),
           generate: async (request) => {
-            if (!(await port.models()).some((model) => model.id === request.model))
+            const selected = (await port.models()).find((model) => model.id === request.model);
+            if (selected === undefined)
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "Image generation is not available in the Codex CLI on your computer. Update Codex CLI, or choose another image provider in the Edit tab under Edit project, then use Resume.",
+                  request.model === "codex-imagegen"
+                    ? "Image generation is not available in the Codex CLI on your computer. Update Codex CLI, or choose another image provider in the Edit tab under Edit project, then use Resume."
+                    : "The chosen Codex model for images is not in the Codex CLI's model list on your computer. Update Codex CLI, or pick another model for images: in the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+              });
+            if (
+              request.thinking !== undefined &&
+              !selected.thinkingModes?.includes(request.thinking)
+            )
+              throw providerError({
+                kind: "unsupported",
+                message:
+                  "The chosen Codex model does not support this effort for images. In the Edit tab, choose Edit project and change the images' Effort under Providers, then use Resume.",
               });
             return port.generate(request);
           },
@@ -141,6 +154,17 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               kind: "unsupported",
               message:
                 "The chosen image model cannot make images in this video's shape. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+            });
+          if (request.thinking !== undefined)
+            throw providerError({
+              kind: "unsupported",
+              message:
+                "The chosen image model has no effort setting. In the Edit tab, choose Edit project and set the images' Effort back to Model default under Providers, then use Resume.",
+            });
+          if (request.reference !== undefined && !takesReferenceImage(model))
+            throw providerError({
+              kind: "unsupported",
+              message: referenceRefusal,
             });
           return port.generate(request);
         },

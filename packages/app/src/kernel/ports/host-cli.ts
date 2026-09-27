@@ -17,6 +17,8 @@ export const bridgeLimits = {
   frame: 4 * 1024 * 1024,
   stream: 64 * 1024 * 1024,
   image: 32 * 1024 * 1024,
+  // An establishing image sent along with an image request; base64 keeps it inside `request`.
+  reference: 10 * 1024 * 1024,
   text: 2 * 1024 * 1024,
   generation: 5,
   metadata: 8,
@@ -65,9 +67,22 @@ export const hostLlmSchema = z
   .strict();
 export const hostImageSchema = z
   .object({
-    model: z.literal("codex-imagegen"),
+    // "codex-imagegen" is the Codex default; any other is one of the Codex CLI's models.
+    model: short.refine((v) => !v.startsWith("-") && !/\s/.test(v)),
     prompt: z.string().min(1).max(bridgeLimits.text),
     aspect: z.enum(["16:9", "9:16"]),
+    thinking: z.enum(thinkingModes).optional(),
+    // The establishing image, as base64 (at most `bridgeLimits.reference` bytes decoded).
+    reference: z
+      .object({
+        mime: z.enum(["image/png", "image/jpeg"]),
+        base64: z
+          .string()
+          .max(Math.ceil(bridgeLimits.reference / 3) * 4)
+          .regex(/^[A-Za-z0-9+/]*={0,2}$/),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export const hostOpenFolderSchema = z
@@ -102,7 +117,7 @@ export const hostModelsSchema = z
             id: short,
             name: short,
             group: short.optional(),
-            thinkingModes: z.array(z.enum(thinkingModes)).max(5).optional(),
+            thinkingModes: z.array(z.enum(thinkingModes)).max(thinkingModes.length).optional(),
           })
           .strict(),
       )

@@ -225,7 +225,7 @@ it.each(["llm", "image"] as const)(
         }),
       ).then((res) => res.text());
       await started;
-      await vi.advanceTimersByTimeAsync((kind === "llm" ? 120_000 : 300_000) - 1);
+      await vi.advanceTimersByTimeAsync((kind === "llm" ? 120_000 : 30 * 60_000) - 1);
       expect(stopped).toBe(false);
       await vi.advanceTimersByTimeAsync(2);
       expect(stopped).toBe(true);

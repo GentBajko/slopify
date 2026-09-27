@@ -17,6 +17,7 @@ import {
   resourceIdentity,
   selectedReference,
 } from "./recipe-model.js";
+import { type ImageReference, imageChoice } from "./recipe-reference.js";
 import { llmInput, renderedPrompt } from "./recipe-text.js";
 
 // The Shorts step unfolds as its answers land, the way research's chapters unfold from the
@@ -36,6 +37,8 @@ export const shortsFutureKey = "shorts:future";
 export function shortsRecipes(
   context: RecipeContext,
   exports: readonly ResolvedWorkRecipe[],
+  // The establishing image the shorts' images are drawn from, when it is on.
+  reference?: ImageReference,
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -93,6 +96,10 @@ export function shortsRecipes(
             shorts.maxSeconds,
             config.llm?.provider ?? "",
             config.llm?.model ?? "",
+            // Only what is in use, so shorts planned before these existed keep their
+            // fingerprint; the estimate reads the fields above by position.
+            ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+            ...(reference === undefined ? [] : [reference.input.fingerprint]),
           ],
         },
         [pick.key],
@@ -137,12 +144,12 @@ export function shortsRecipes(
         {
           kind: "image",
           version: 1,
-          provider: images.provider,
-          model: images.model,
+          ...imageChoice(config),
           prompt,
           aspect: "9:16",
+          ...(reference === undefined ? {} : { reference: reference.input }),
         },
-        [prompts.key],
+        [prompts.key, ...(reference === undefined ? [] : [reference.key])],
         { token },
       ),
     );

@@ -61,6 +61,11 @@ export interface ImageCall {
   readonly model: string;
   readonly prompt: string;
   readonly aspect: Format;
+  readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
+  // The establishing image the picture is drawn with as its visual reference.
+  readonly reference?: GeneratedImage | undefined;
+  // What the live panel calls this image while a long job reports its progress.
+  readonly previewLabel?: string | undefined;
 }
 
 export interface AnimateCall {
@@ -257,19 +262,39 @@ export function stageProviders(
 
     image: (call: ImageCall): Promise<AttemptResult<GeneratedImage>> => {
       const port = deps.registry.image(call.provider);
+      const callId = randomUUID();
+      // A long job (the Codex CLI reviewing and redrawing its image) says how far it has got
+      // on the stage's live panel; the other providers report nothing and show no panel.
+      const onProgress = (text: string): void =>
+        context.emit({
+          type: "llm.preview",
+          ...(pieceId === undefined ? {} : { workPieceId: pieceId }),
+          projectId: context.stage.projectId,
+          stage: context.stage.kind,
+          callId,
+          label: call.previewLabel ?? "Image",
+          text,
+          reset: true,
+        });
       return schedule(call.provider, () =>
         attempt(
           ctx,
           (signal: AbortSignal): Promise<GeneratedImage> =>
             port.generate({
               model: call.model,
-
               prompt: call.prompt,
               aspect: call.aspect,
+              ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+              ...(call.reference === undefined ? {} : { reference: call.reference }),
+              onProgress,
               signal,
             }),
-          // One request, one answer: the 300 s runs over the whole call.
-          { kind: "image" },
+          // One request, one answer: the limit runs over the whole call - 300 s, or the
+          // provider's own when it needs longer.
+          {
+            kind: "image",
+            ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }),
+          },
         ),
       );
     },

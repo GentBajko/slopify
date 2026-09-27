@@ -141,6 +141,7 @@ image:
     source: https://developers.openai.com/api/docs/guides/image-generation
     keywords:
       - image
+      - reference
     pricing:
       note: Automatic quality and generated image tokens determine the charge; a fixed
         image price is unavailable.
@@ -154,6 +155,7 @@ image:
     source: https://developers.openai.com/api/docs/guides/image-generation
     keywords:
       - image
+      - reference
     pricing:
       note: Automatic quality and generated image tokens determine the charge; a fixed
         image price is unavailable.
@@ -164,6 +166,7 @@ image:
     source: https://developers.openai.com/api/docs/guides/image-generation
     keywords:
       - image
+      - reference
     pricing:
       note: Automatic quality and generated image tokens determine the charge; a fixed
         image price is unavailable.
@@ -174,6 +177,7 @@ image:
     source: https://ai.google.dev/gemini-api/docs/pricing
     keywords:
       - image
+      - reference
     pricing:
       perImage: 0.101
       note: 2K image output price; prompt, thinking and other input tokens are
@@ -187,6 +191,7 @@ image:
     source: https://ai.google.dev/gemini-api/docs/models
     keywords:
       - image
+      - reference
     pricing:
       note: Price depends on your account or generated output; estimate unavailable.
     image:
@@ -198,6 +203,7 @@ image:
     source: https://fal.ai/models/fal-ai/flux-2
     keywords:
       - image
+      - reference
     pricing:
       note: Price depends on your account or generated output; estimate unavailable.
     image: *a4
@@ -207,6 +213,7 @@ image:
     source: https://fal.ai/models/fal-ai/nano-banana-2
     keywords:
       - image
+      - reference
     pricing:
       note: Price depends on your account or generated output; estimate unavailable.
     image: *a4

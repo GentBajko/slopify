@@ -39,12 +39,23 @@ export interface LlmCapabilities {
   readonly webSearch: boolean;
 }
 
-export const thinkingModes = ["off", "low", "medium", "high", "xhigh"] as const;
+// "max" and "ultra" are the Codex CLI's two highest reasoning efforts (its model list reports
+// them per model); the catalogue's models never offer them.
+export const thinkingModes = ["off", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
 export type ThinkingMode = (typeof thinkingModes)[number];
 export interface ThinkingConfig {
   readonly budget?: number | undefined;
   readonly level?: "minimal" | "low" | "medium" | "high" | undefined;
-  readonly effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined;
+  readonly effort?:
+    | "none"
+    | "minimal"
+    | "low"
+    | "medium"
+    | "high"
+    | "xhigh"
+    | "max"
+    | "ultra"
+    | undefined;
 }
 export interface LlmCompletion {
   readonly documents?: readonly LlmDocument[] | undefined;

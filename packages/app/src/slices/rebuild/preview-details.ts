@@ -1,5 +1,5 @@
 import { stageKinds } from "../../kernel/pipeline.js";
-import { sourceOf } from "../admission/model.js";
+import { type RunConfig, sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -64,9 +64,20 @@ export function previewDetails(
       return [
         {
           key: row.key,
-          label: index < 0 ? "Thumbnail image" : `Image ${index + 1}`,
+          label:
+            row.key === "reference:image"
+              ? "Establishing image"
+              : index < 0
+                ? "Thumbnail image"
+                : `Image ${index + 1}`,
           text: input.prompt,
-          settings: [input.provider, input.model, input.aspect].join(" · "),
+          settings: [
+            input.provider,
+            input.model,
+            ...(input.thinking === undefined ? [] : [`effort ${input.thinking}`]),
+            input.aspect,
+            ...(input.reference === undefined ? [] : ["drawn from the establishing image"]),
+          ].join(" · "),
         },
       ];
     }
@@ -181,6 +192,16 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   );
   add("Shorts prompt", before.shorts?.prompt, after.shorts?.prompt);
   add("Shorts image prompt", before.shorts?.imagePrompt, after.shorts?.imagePrompt);
+  add("Establishing image", referenceLabel(before), referenceLabel(after));
+  add(
+    "Thumbnail drawn from the establishing image",
+    before.reference === undefined
+      ? undefined
+      : before.reference.thumbnail === false
+        ? "Off"
+        : "On",
+    after.reference === undefined ? undefined : after.reference.thumbnail === false ? "Off" : "On",
+  );
   add(
     "Title on the shorts",
     before.shorts === undefined ? undefined : before.shorts.titleOnScreen === true ? "On" : "Off",
@@ -257,4 +278,10 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   }
   add("Manual captions", old.subtitleCues?.cues, next.subtitleCues?.cues);
   return changes;
+}
+
+function referenceLabel(config: Pick<RunConfig, "reference">): string {
+  const reference = config.reference;
+  if (reference === undefined) return "Off";
+  return reference.source === "provide" ? "Uploaded image" : `Prompt: ${reference.prompt ?? ""}`;
 }

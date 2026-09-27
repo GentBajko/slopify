@@ -4,6 +4,7 @@ import {
   linkSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   utimesSync,
@@ -108,9 +109,7 @@ function fakeRun(write: (directory: string) => void, events = '{"type":"turn.com
 it("advertises one built-in capability and passes prompt/aspect as data to an isolated child", async () => {
   const fake = generatedRun();
   const port = codexImage({ run: fake.run, binary: "/configured/codex", env: fake.env });
-  expect(await port.models()).toEqual([
-    { id: "codex-imagegen", name: "Codex built-in image generation" },
-  ]);
+  expect(await port.models()).toEqual([{ id: "codex-imagegen", name: "Codex default" }]);
   expect(await port.generate(request())).toEqual({ bytes: png, mime: "image/png" });
   const call = fake.calls[0];
   expect(call?.binary).toBe("/configured/codex");
@@ -149,7 +148,6 @@ it.each([
   "oversized",
   "empty",
   "stale",
-  "ambiguous",
   "directory",
 ] as const)("rejects %s output without leaking a project asset", async (kind) => {
   const fake = generatedRun((path, dir) => {
@@ -174,7 +172,6 @@ it.each([
     );
     if (kind === "hardlink") linkSync(path, join(dir, "..", "linked.png"));
     if (kind === "stale") utimesSync(path, new Date(0), new Date(0));
-    if (kind === "ambiguous") writeFileSync(join(dir, "second.png"), png);
   });
   const error: unknown = await codexImage({ run: fake.run, env: fake.env })
     .generate(request())
@@ -184,16 +181,113 @@ it.each([
   expect(fake.calls[0] && existsSync(fake.calls[0].directory)).toBe(false);
 });
 
-it("rejects an unrelated model before starting Codex", async () => {
-  const fake = fakeRun(() => {});
-  const error: unknown = await codexImage({ run: fake.run })
-    .generate({
-      ...request(),
-      model: "api-model",
-    })
-    .catch((e: unknown) => e);
-  expect(isProviderError(error) && error.fault.kind).toBe("unsupported");
-  expect(fake.calls).toEqual([]);
+it("rejects a blank or flag-like model before starting Codex", async () => {
+  for (const model of ["", "-c"]) {
+    const fake = fakeRun(() => {});
+    const error: unknown = await codexImage({ run: fake.run })
+      .generate({ ...request(), model })
+      .catch((e: unknown) => e);
+    expect(isProviderError(error) && error.fault.kind).toBe("unsupported");
+    expect(fake.calls).toEqual([]);
+  }
+});
+
+it("passes -m and the reasoning effort only when they are chosen", () => {
+  const plain = codexImageArgs(request(), "/job");
+  expect(plain).not.toContain("-m");
+  expect(plain.some((arg) => arg.startsWith("model_reasoning_effort"))).toBe(false);
+  // Codex default keeps view_image off, as before the choice existed.
+  expect(plain[plain.indexOf("view_image") - 1]).toBe("--disable");
+
+  const chosen = codexImageArgs({ ...request(), model: "gpt-6-sol", thinking: "ultra" }, "/job");
+  expect(chosen.slice(chosen.indexOf("-m"), chosen.indexOf("-m") + 2)).toEqual(["-m", "gpt-6-sol"]);
+  expect(chosen).toContain('model_reasoning_effort="ultra"');
+  // The agent may look at its own images to review them.
+  expect(chosen[chosen.indexOf("view_image") - 1]).toBe("--enable");
+  expect(chosen).not.toContain("--disable view_image");
+  expect(chosen.filter((arg) => arg === "view_image")).toHaveLength(1);
+  expect(chosen).toContain("shell_tool");
+
+  const off = codexImageArgs({ ...request(), thinking: "off" }, "/job");
+  expect(off).toContain('model_reasoning_effort="none"');
+  expect(off).not.toContain("-m");
+});
+
+it("asks for a faithful detailed prompt, a review loop and one final image", () => {
+  const text = codexImageArgs(request(), "/job").at(-1) ?? "";
+  expect(text).toContain("detailed, faithful visual description");
+  expect(text).toContain("do not pad the prompt");
+  expect(text).toContain("the last image you generate is the one Slopify uses");
+  expect(text).toContain("Deliver exactly one final image");
+  expect(text).not.toContain("referenced_image_paths");
+});
+
+it("copies the establishing image into the job folder and names its absolute path", async () => {
+  let seen: Buffer | undefined;
+  const fake = generatedRun((path, _dir) => writeFileSync(path, png));
+  const run: RunCli = (binary, args, signal, options) => {
+    seen = readFileSync(join(options?.cwd ?? "", "reference.jpg"));
+    return fake.run(binary, args, signal, options);
+  };
+  const reference = { bytes: jpeg, mime: "image/jpeg" as const };
+  await codexImage({ run, env: fake.env }).generate({ ...request(), reference });
+  const call = fake.calls[0];
+  const path = join(call?.directory ?? "", "reference.jpg");
+  expect(seen).toEqual(jpeg);
+  expect(call?.args.at(-1)).toContain(`A reference image is saved at ${path}.`);
+  expect(call?.args.at(-1)).toContain("referenced_image_paths");
+  expect(call?.args.at(-1)).toContain("do not copy its composition");
+  expect(existsSync(call?.directory ?? "")).toBe(false);
+});
+
+it("waits for the whole turn and takes the latest of several images in its thread", async () => {
+  const later = Buffer.concat([png, Buffer.from("later")]);
+  const fake = generatedRun((path, dir) => {
+    writeFileSync(path, png);
+    const first = new Date(Date.now() + 1000);
+    utimesSync(path, first, first);
+    const last = join(dir, "exec-z-last.png");
+    writeFileSync(last, later);
+    const second = new Date(Date.now() + 5000);
+    utimesSync(last, second, second);
+    // An earlier-named file drawn in between.
+    const middle = join(dir, "exec-a-middle.png");
+    writeFileSync(middle, png);
+    const between = new Date(Date.now() + 3000);
+    utimesSync(middle, between, between);
+  });
+  const image = await codexImage({ run: fake.run, env: fake.env }).generate(request());
+  expect(Buffer.from(image.bytes)).toEqual(later);
+});
+
+it("reports how many images the thread has drawn while the job runs", async () => {
+  const lines: string[] = [];
+  const fake = generatedRun();
+  await codexImage({ run: fake.run, env: fake.env }).generate({
+    ...request(),
+    onProgress: (text) => lines.push(text),
+  });
+  expect(lines[0]).toBe("Codex is working on the image…");
+  expect(lines.at(-1)).toBe("Codex is refining the image… 1 image so far");
+});
+
+it("lists Codex default first, then the Codex CLI's own models with their efforts", async () => {
+  const port = codexImage({
+    run: fakeRun(() => {}).run,
+    readModels: async () => [
+      { id: "gpt-6-sol", name: "GPT-6-Sol", thinkingModes: ["low", "ultra"] },
+    ],
+  });
+  expect(await port.models()).toEqual([
+    { id: "codex-imagegen", name: "Codex default" },
+    { id: "gpt-6-sol", name: "GPT-6-Sol", thinkingModes: ["low", "ultra"] },
+  ]);
+  const failing = codexImage({
+    run: fakeRun(() => {}).run,
+    readModels: () => Promise.reject(new Error("no list")),
+  });
+  expect(await failing.models()).toEqual([{ id: "codex-imagegen", name: "Codex default" }]);
+  expect(port.timeoutMs).toBeGreaterThanOrEqual(20 * 60_000);
 });
 
 it.each(["../other", "", "not-a-thread"])("rejects unsafe session identifier %s", async (id) => {

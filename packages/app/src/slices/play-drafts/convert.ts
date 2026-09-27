@@ -156,6 +156,19 @@ export function toAdmissionDraft(input: {
           : form.audio
         : undefined,
     images: form.images,
+    // The establishing image belongs to generated images; Off, or images not generated,
+    // leaves it out, which is what every draft saved before it was.
+    ...(sources.images === "generate" &&
+    form.reference !== undefined &&
+    form.reference.source !== "off"
+      ? {
+          reference: {
+            source: form.reference.source,
+            ...(form.reference.source === "prompt" ? { prompt: form.reference.prompt } : {}),
+            thumbnail: form.reference.thumbnail,
+          },
+        }
+      : {}),
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()
       ? { narrationPrompt: form.narrationPrompt }
@@ -193,6 +206,10 @@ export function toAdmissionDraft(input: {
       thumbnail:
         sources.thumbnail === "provide"
           ? file(form.provided.thumbnail, "thumbnail", "provided.thumbnail")
+          : undefined,
+      reference:
+        sources.images === "generate" && form.reference?.source === "provide"
+          ? file(form.provided.reference ?? null, "reference", "provided.reference")
           : undefined,
       images:
         sources.images === "provide"

@@ -3,6 +3,7 @@ import { open } from "node:fs/promises";
 import { type IncomingMessage, request } from "node:http";
 import { join } from "node:path";
 import { bridgeLimits } from "../../kernel/ports/host-cli.js";
+import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import { type ProviderError, providerError } from "../../kernel/ports/model.js";
 
 export function hostUnavailable(submitted = false): ProviderError {
@@ -93,7 +94,11 @@ export async function hostRequest(options: HostRequestOptions): Promise<Incoming
     const connectTimer = setTimeout(fail, 5000);
     const deadline = setTimeout(
       fail,
-      options.kind === "image" ? 300_000 : options.kind === "metadata" ? 35_000 : 120_000,
+      options.kind === "image"
+        ? agentImageTimeoutMs
+        : options.kind === "metadata"
+          ? 35_000
+          : 120_000,
     );
     const cleanup = () => {
       clearTimeout(connectTimer);

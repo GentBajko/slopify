@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { cliCommand } from "../../kernel/cli-command.js";
+import { thinkingModes as knownEfforts } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 
 const text = z
@@ -105,7 +106,7 @@ export async function nodeCodexServerModels(
             const thinkingModes = row.supportedReasoningEfforts
               ?.map((item) => item.reasoningEffort)
               .filter((effort): effort is NonNullable<ModelInfo["thinkingModes"]>[number] =>
-                ["off", "low", "medium", "high", "xhigh"].includes(effort),
+                (knownEfforts as readonly string[]).includes(effort),
               );
             models.set(row.model, {
               id: row.model,

@@ -9,6 +9,7 @@ import {
   type FieldError,
   normaliseDraft,
   usesNarrationPreparation,
+  usesReference,
   usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
@@ -95,6 +96,20 @@ export function pickTemplates(
       snapshot,
     );
   }
+
+  // The establishing image's prompt: an image prompt like the others, its keywords filled the
+  // same way.
+  if (usesReference(draft) && draft.reference?.source === "prompt")
+    body(
+      db,
+      "image",
+      draft.reference.prompt,
+      "reference.prompt",
+      missing,
+      image,
+      "referencePrompt",
+      snapshot,
+    );
 
   if (sources.images === "generate") {
     for (const [index, picked] of draft.imagePrompts.entries()) {

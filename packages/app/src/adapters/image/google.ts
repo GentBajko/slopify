@@ -7,6 +7,7 @@ import { httpFailure, missingKey, noImage, quoted, refusedImage, unreadable } fr
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
+import { withReferenceNote } from "./reference.js";
 
 // The HTTP gateway adapter for Google's own image generation, billed to a Gemini API key
 // rather than to a host reselling the same models. Like the OpenAI one it hands back the
@@ -82,7 +83,19 @@ export function googleImage(deps: GoogleImageDeps): ImagePort {
         headers: { "x-goog-api-key": keyOf(deps), "Content-Type": "application/json" },
         body: JSON.stringify({
           model: req.model,
-          input: req.prompt,
+          // With an establishing image the input is two parts, the image first; the Gemini
+          // image models draw with an input image as their reference.
+          input:
+            req.reference === undefined
+              ? req.prompt
+              : [
+                  {
+                    type: "image",
+                    mime_type: req.reference.mime,
+                    data: Buffer.from(req.reference.bytes).toString("base64"),
+                  },
+                  { type: "text", text: withReferenceNote(req.prompt, req.reference) },
+                ],
           // The stage sends Number as that many independent calls, one piece each, so one
           // image per request is what it asks for. Nothing about style is set: the stage
           // asks for the provider's own.

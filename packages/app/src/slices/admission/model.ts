@@ -76,6 +76,25 @@ export interface ProvidedFiles {
   readonly audio?: string | undefined;
   readonly images?: readonly string[] | undefined;
   readonly thumbnail?: string | undefined;
+  // The establishing image, when `reference.source` is "provide".
+  readonly reference?: string | undefined;
+}
+
+// The Images stage's establishing image: made first (from a library image prompt) or uploaded,
+// then every other image of the run - the video's, the shorts' and, unless `thumbnail` is
+// false, the thumbnail - is drawn with it as a visual reference for characters, style and
+// palette. It is never shown in the video. Absent is Off, which is what every project saved
+// before it existed was.
+export const referenceSources = ["prompt", "provide"] as const;
+// The work key of the establishing image's step, in the Images stage.
+export const referenceKey = "reference:image";
+export type ReferenceSource = (typeof referenceSources)[number];
+export interface ReferenceSettings {
+  readonly source: ReferenceSource;
+  // The image prompt's name in the library, when `source` is "prompt".
+  readonly prompt?: string | undefined;
+  // Whether the thumbnail is drawn with it too. Absent reads as on.
+  readonly thumbnail?: boolean | undefined;
 }
 
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
@@ -90,6 +109,8 @@ export interface RunDraft {
   readonly llm?: ProviderChoice | undefined;
   readonly audio?: VoiceChoice | undefined;
   readonly images?: ProviderChoice | undefined;
+  // The establishing image (`ReferenceSettings`); used only while images are Generate.
+  readonly reference?: ReferenceSettings | undefined;
   readonly articlePrompt?: string | undefined;
   readonly narrationPrompt?: string | undefined;
   readonly imagePrompts: readonly ImagePromptChoice[];

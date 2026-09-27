@@ -212,7 +212,10 @@ function checkTemplate(
   if (!template) return { ok: false, reason: "missing-template" };
   const sources = template.document.form.sources;
   const mediaSources = ["audio", "images", "thumbnail"] as const;
-  if (mediaSources.some((kind) => sources[kind] === "provide"))
+  if (
+    mediaSources.some((kind) => sources[kind] === "provide") ||
+    (sources.images === "generate" && template.document.form.reference?.source === "provide")
+  )
     return { ok: false, reason: "unsupported-media" };
   return { ok: true, value: true };
 }

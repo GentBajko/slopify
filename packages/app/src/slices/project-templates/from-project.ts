@@ -117,6 +117,12 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     !prompts.some((prompt) => prompt.kind === "image" && prompt.name === config.shorts?.imagePrompt)
   )
     addPrompt("image", config.shorts?.imagePrompt, "shortsImage");
+  // The establishing image's prompt, the same way.
+  if (
+    config.reference?.source === "prompt" &&
+    !prompts.some((prompt) => prompt.kind === "image" && prompt.name === config.reference?.prompt)
+  )
+    addPrompt("image", config.reference.prompt, "referencePrompt");
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
     const body = revision.content.promptTemplates[category] ?? config.rendered[category];
@@ -140,6 +146,9 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
         : "",
     audio: config.sources.audio === "provide" ? attachment("Audio from project") : null,
     thumbnail: config.sources.thumbnail === "provide" ? attachment("Thumbnail from project") : null,
+    ...(config.reference?.source === "provide"
+      ? { reference: attachment("Establishing image from project") }
+      : {}),
     images:
       config.sources.images === "provide"
         ? (definitions.length ? definitions : (config.provided.images ?? [])).map((_, index) =>
@@ -167,6 +176,15 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       llm: config.llm ?? { provider: "", model: "" },
       audio: config.audio ?? { provider: "", model: "", voice: "" },
       images: config.images ?? { provider: "", model: "" },
+      ...(config.reference === undefined
+        ? {}
+        : {
+            reference: {
+              source: config.reference.source,
+              prompt: config.reference.prompt ?? "",
+              thumbnail: config.reference.thumbnail !== false,
+            },
+          }),
       articlePrompt: config.articlePrompt ?? "",
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),

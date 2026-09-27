@@ -106,7 +106,14 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ],
     ["openai-image", openAiImage({ fetch: deps.fetch, key: keyOf("openai-image") })],
     ["google-image", googleImage({ fetch: deps.fetch, key: keyOf("google-image") })],
-    ["codex-image", codexImage({ run: cliFor("codex") })],
+    [
+      "codex-image",
+      codexImage({
+        run: cliFor("codex"),
+        // The same list, and so the same models and efforts, as the Codex text provider.
+        readModels: () => nodeCodexModels(process.env, cliBinary(deps.db, "codex")),
+      }),
+    ],
   ]);
 
   if (deps.hostCli) {

@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { codexImage } from "../adapters/image/codex.js";
+import { codexImage, codexImageTimeoutMs } from "../adapters/image/codex.js";
 import { claudeCodeLlm } from "../adapters/llm/claude-code.js";
 import { nodeClaudeCodeModels } from "../adapters/llm/claude-code-models.js";
 import { codexLlm } from "../adapters/llm/codex.js";
@@ -84,7 +84,8 @@ export function createHostRuntime(
     }),
     image: {
       id: "codex-image",
-      models: () => codexImage({ run: deps.run }).models(),
+      timeoutMs: codexImageTimeoutMs,
+      models: () => codexImage({ run: deps.run, readModels: () => models("codex") }).models(),
       generate: async (request) => {
         const binary = await command("codex-image");
         return codexImage({ run: deps.run, binary, env: deps.env }).generate(request);

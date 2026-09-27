@@ -30,7 +30,13 @@ describe("Codex installed model catalogue", () => {
         display_name: "Future model",
         visibility: "list",
         priority: 5,
-        supported_reasoning_levels: [{ effort: "low" }, { effort: "high" }, { effort: "max" }],
+        supported_reasoning_levels: [
+          { effort: "low" },
+          { effort: "high" },
+          { effort: "max" },
+          { effort: "ultra" },
+          { effort: "turbo" },
+        ],
         model_messages: "never returned",
       },
       { slug: "internal-review", visibility: "hide", priority: 0 },
@@ -43,7 +49,12 @@ describe("Codex installed model catalogue", () => {
     await writeFile(join(home, "config.toml"), "not parsed");
     expect(await nodeCodexModels({ CODEX_HOME: home })).toEqual([
       { id: "cli-only", name: "cli-only" },
-      { id: "future-model", name: "Future model", thinkingModes: ["low", "high"] },
+      // The CLI's own efforts, max and ultra included; one Slopify does not know is dropped.
+      {
+        id: "future-model",
+        name: "Future model",
+        thinkingModes: ["low", "high", "max", "ultra"],
+      },
     ]);
   });
   it("reads updated metadata on the next refresh without a process restart", async () => {

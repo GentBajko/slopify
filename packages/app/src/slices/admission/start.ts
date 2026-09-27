@@ -18,7 +18,7 @@ import {
   sourceOf,
 } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
-import { usesPronunciationGlossary } from "./rules.js";
+import { usesPronunciationGlossary, usesReference } from "./rules.js";
 import { render } from "./substitute.js";
 
 export interface StartedRun {
@@ -139,6 +139,9 @@ function attachProvided(
   }
   if (sources.thumbnail === "provide") {
     attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail", collected, retainStaged);
+  }
+  if (usesReference(draft) && draft.reference?.source === "provide") {
+    attach(deps, projectId, "images", provided.reference, "reference", collected, retainStaged);
   }
   if (sources.images === "provide") {
     // Slideshow order is the order the user left the list in.

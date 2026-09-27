@@ -15,6 +15,7 @@ import {
   hostOpenFolderSchema,
   hostStatusSchema,
 } from "../../kernel/ports/host-cli.js";
+import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import type { LlmDone, LlmEvent } from "../../kernel/ports/llm.js";
 import { isProviderError, providerError } from "../../kernel/ports/model.js";
 import { sniffImage } from "../image/bytes.js";
@@ -167,12 +168,22 @@ export function createHostCliClient(options: {
     }),
     image: {
       id: "codex-image",
+      timeoutMs: agentImageTimeoutMs,
       models: () => models("codex-image"),
       generate: async (req) => {
         const parsed = hostImageSchema.safeParse({
           model: req.model,
           prompt: req.prompt,
           aspect: req.aspect,
+          ...(req.thinking === undefined ? {} : { thinking: req.thinking }),
+          ...(req.reference === undefined
+            ? {}
+            : {
+                reference: {
+                  mime: req.reference.mime,
+                  base64: Buffer.from(req.reference.bytes).toString("base64"),
+                },
+              }),
         });
         if (!parsed.success)
           throw providerError({

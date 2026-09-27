@@ -12,6 +12,8 @@ import {
   measureAudio,
   type PreparedEditAsset,
   providedAssetSelected,
+  providedOutput,
+  providesOwnFile,
 } from "./mutation-assets.js";
 
 export interface PreparedEdit {
@@ -33,8 +35,8 @@ export async function prepareEditAssets(
       const role =
         to.kind === "image"
           ? "image"
-          : to.kind === "provided" && to.stage === "thumbnail"
-            ? "thumbnail"
+          : to.kind === "provided" && to.stage !== "audio"
+            ? providedOutput[to.stage].role
             : "audio_body";
       const result = prepareStagedFile(deps, {
         projectId,
@@ -52,9 +54,7 @@ export async function prepareEditAssets(
             ? to.key
             : to.kind === "shortsMusic"
               ? "shorts:music"
-              : to.stage === "audio"
-                ? "audio:provided"
-                : "thumbnail:image";
+              : providedOutput[to.stage].workKey;
       const item: PreparedEditAsset = {
         ...result,
         upload,
@@ -120,10 +120,10 @@ export async function prepareEditAssets(
         slot: workKey,
       });
     }
-    for (const kind of ["audio", "thumbnail"] as const) {
+    for (const kind of ["audio", "thumbnail", "reference"] as const) {
       const assetId = content.provided[kind];
       if (
-        edit.config.sources[kind] !== "provide" ||
+        !providesOwnFile(edit.config, kind) ||
         assetId === undefined ||
         providedAssetSelected(base, kind, assetId) ||
         prepared.some((row) => row.asset.id === assetId)
@@ -133,11 +133,11 @@ export async function prepareEditAssets(
         .prepare(
           "SELECT descriptor FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=? LIMIT 1",
         )
-        .get(projectId, assetId, kind);
+        .get(projectId, assetId, kind === "reference" ? "images" : kind);
       if (existing === undefined) throw new Error("Validated replacement asset has no descriptor.");
       const descriptor = outputSchema.parse(JSON.parse(z.string().parse(existing.descriptor)));
       const asset = retainedAsset(deps, projectId, assetId);
-      const role = kind === "audio" ? "audio_body" : "thumbnail";
+      const role = providedOutput[kind].role;
       const item: PreparedEditAsset = {
         asset,
         output: {

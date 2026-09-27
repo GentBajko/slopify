@@ -2,6 +2,7 @@ import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { referenceKey } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { observeNarration } from "../narration/live.js";
@@ -15,6 +16,7 @@ import { outputPath } from "../storage/layout.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { executeArticleRequests } from "./runtime-article.js";
+import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
@@ -135,12 +137,24 @@ export async function executeProviderRecipe(
     return "done";
   }
   if (input.kind === "image") {
-    const image = await wrapped.image({
-      provider: input.provider,
-      model: input.model,
-      prompt: input.prompt,
-      aspect: input.aspect,
-    });
+    const view = executionView(deps, context.work.projectId, context.work.revisionId);
+    const index = piece.key.startsWith("image:")
+      ? (view?.revision.content.imageOrder.indexOf(piece.key.slice(6)) ?? 0) + 1
+      : undefined;
+    const image = await wrapped.image(
+      imageCall(
+        deps,
+        context.work.projectId,
+        input,
+        piece.key === "thumbnail:image"
+          ? "Thumbnail"
+          : piece.key === referenceKey
+            ? "Establishing image"
+            : index === undefined
+              ? "Image"
+              : `Image ${String(index)}`,
+      ),
+    );
     if (!image.ok) return "held";
     const asset = writeAsset(
       deps,
@@ -148,15 +162,15 @@ export async function executeProviderRecipe(
       image.value.mime === "image/jpeg" ? "image.jpg" : "image.png",
       image.value.bytes,
     );
-    const view = executionView(deps, context.work.projectId, context.work.revisionId);
-    const index = piece.key.startsWith("image:")
-      ? (view?.revision.content.imageOrder.indexOf(piece.key.slice(6)) ?? 0) + 1
-      : undefined;
     const output = preparedResult(
       deps,
       context,
       piece,
-      piece.key === "thumbnail:image" ? "thumbnail" : "image",
+      piece.key === "thumbnail:image"
+        ? "thumbnail"
+        : piece.key === referenceKey
+          ? "reference"
+          : "image",
       asset,
       null,
       {

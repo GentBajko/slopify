@@ -7,6 +7,7 @@ import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../e
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
+import { withReferenceNote } from "./reference.js";
 
 // The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
 // nothing else, because the whole call is one request. Unlike fal and Replicate this one
@@ -71,21 +72,34 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
     id: "openai-image",
     models: () => discoverOpenAiImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
-      const response = await deps.fetch(`${openAiImagesBase}/images/generations`, {
-        method: "POST",
-        signal: req.signal,
-        headers: { Authorization: `Bearer ${keyOf(deps)}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: req.model,
-          prompt: req.prompt,
-          // The stage sends Number as that many independent calls, one piece each, so one
-          // image per request is what it asks for.
-          n: 1,
-          size: sizeFor(req.model, req.aspect),
-          // No `quality` and no `background`: the stage asks for the provider's default
-          // quality and style, which is what leaving them off means.
-        }),
-      });
+      const response =
+        req.reference === undefined
+          ? await deps.fetch(`${openAiImagesBase}/images/generations`, {
+              method: "POST",
+              signal: req.signal,
+              headers: {
+                Authorization: `Bearer ${keyOf(deps)}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: req.model,
+                prompt: req.prompt,
+                // The stage sends Number as that many independent calls, one piece each, so
+                // one image per request is what it asks for.
+                n: 1,
+                size: sizeFor(req.model, req.aspect),
+                // No `quality` and no `background`: the stage asks for the provider's default
+                // quality and style, which is what leaving them off means.
+              }),
+            })
+          : // With an establishing image the GPT image models take it as an input image on the
+            // edits endpoint, a multipart form; the note says it is a reference, not the canvas.
+            await deps.fetch(`${openAiImagesBase}/images/edits`, {
+              method: "POST",
+              signal: req.signal,
+              headers: { Authorization: `Bearer ${keyOf(deps)}` },
+              body: editForm(req, req.reference),
+            });
       if (!response.ok) {
         throw await failure(response);
       }
@@ -96,6 +110,20 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
       return decode(first);
     },
   };
+}
+
+function editForm(req: ImageRequest, reference: GeneratedImage): FormData {
+  const form = new FormData();
+  form.set("model", req.model);
+  form.set("prompt", withReferenceNote(req.prompt, reference));
+  form.set("n", "1");
+  form.set("size", sizeFor(req.model, req.aspect));
+  form.append(
+    "image[]",
+    new Blob([Uint8Array.from(reference.bytes)], { type: reference.mime }),
+    reference.mime === "image/jpeg" ? "reference.jpg" : "reference.png",
+  );
+  return form;
 }
 
 // A GPT image model always answers with base64, so the bytes arrive with the call and

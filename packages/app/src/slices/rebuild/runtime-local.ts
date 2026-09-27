@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { referenceKey } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { joinNarration } from "../narration/concat.js";
@@ -62,9 +63,11 @@ export async function executeLocalRecipe(
         ? "audio_body"
         : piece.key === "thumbnail:image"
           ? "thumbnail"
-          : piece.key.startsWith("image:")
-            ? "image"
-            : undefined;
+          : piece.key === referenceKey
+            ? "reference"
+            : piece.key.startsWith("image:")
+              ? "image"
+              : undefined;
     await publishResult(
       deps,
       context,

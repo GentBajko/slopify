@@ -79,6 +79,48 @@ describe("narration preparation admission", () => {
   });
 });
 
+describe("establishing image admission", () => {
+  const draft = (over: Partial<RunDraft> = {}): RunDraft =>
+    provided({
+      sources: { ...provided().sources, images: "generate" },
+      images: { provider: "codex-image", model: "codex-imagegen" },
+      imagePrompts: [{ name: "Scene", number: 1 }],
+      provided: { article: "The article.", audio: "a1" },
+      ...over,
+    });
+  const fieldsOf = (value: RunDraft, staged = files) => {
+    const result = admit({ draft: value, staged, requiredSlots: [] });
+    return result.ok ? [] : result.fields;
+  };
+
+  it("asks for its prompt or its upload, naming the control", () => {
+    expect(fieldsOf(draft({ reference: { source: "prompt", prompt: " " } }))).toContainEqual({
+      field: "reference.prompt",
+      message:
+        "Pick an image prompt for the establishing image, upload one instead, or set Establishing image to Off in the Images section.",
+    });
+    expect(fieldsOf(draft({ reference: { source: "provide" } }))).toContainEqual({
+      field: "provided.reference",
+      message:
+        "Upload the establishing image, or set Establishing image to Off in the Images section.",
+    });
+    expect(
+      fieldsOf(
+        draft({
+          reference: { source: "provide" },
+          provided: { article: "A.", audio: "a1", reference: "r1" },
+        }),
+        [...files, staged("r1", "images")],
+      ),
+    ).toEqual([]);
+    expect(fieldsOf(draft({ reference: { source: "prompt", prompt: "Cast" } }))).toEqual([]);
+  });
+
+  it("asks for nothing while images are not generated", () => {
+    expect(fieldsOf(provided({ reference: { source: "prompt", prompt: "" } }))).toEqual([]);
+  });
+});
+
 describe("YouTube description admission", () => {
   const draft = (): RunDraft =>
     provided({

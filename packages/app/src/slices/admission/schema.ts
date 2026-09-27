@@ -12,7 +12,7 @@ import {
   lookLevels,
   transitionKinds,
 } from "../video/edit-settings.js";
-import { entryModes, formats, motionStyles, stageSources } from "./model.js";
+import { entryModes, formats, motionStyles, referenceSources, stageSources } from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
@@ -82,6 +82,13 @@ export const runDraftSchema = z.object({
     .readonly()
     .optional(),
   images: providerChoice.optional(),
+  reference: z
+    .object({
+      source: z.enum(referenceSources),
+      prompt: z.string().optional(),
+      thumbnail: z.boolean().optional(),
+    })
+    .optional(),
   articlePrompt: z.string().optional(),
   narrationPrompt: z.string().optional(),
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
@@ -95,6 +102,7 @@ export const runDraftSchema = z.object({
     audio: z.string().optional(),
     images: z.array(z.string()).optional(),
     thumbnail: z.string().optional(),
+    reference: z.string().optional(),
   }),
   // Optional until Play carries the control; unknown keys are stripped by this schema, so
   // a mode not listed here would never reach the audio stage.

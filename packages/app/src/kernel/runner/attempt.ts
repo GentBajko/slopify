@@ -62,6 +62,8 @@ export type ProviderCall<T> = (signal: AbortSignal, progress: () => void) => Pro
 export interface AttemptOptions {
   readonly kind: ProviderCallKind;
   readonly streaming?: boolean | undefined;
+  // A provider's own longer limit (`ImagePort.timeoutMs`), in place of the kind's.
+  readonly timeoutMs?: number | undefined;
 }
 
 export async function attempt<T>(
@@ -70,7 +72,7 @@ export async function attempt<T>(
   opts: AttemptOptions,
 ): Promise<AttemptResult<T>> {
   ctx.signal.throwIfAborted();
-  const limit = timeoutMs[opts.kind];
+  const limit = opts.timeoutMs ?? timeoutMs[opts.kind];
   for (let n = 1; ; n += 1) {
     ctx.signal.throwIfAborted();
     const retrieving = ctx.continuation?.read() !== undefined;

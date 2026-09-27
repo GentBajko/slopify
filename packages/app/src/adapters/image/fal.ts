@@ -20,6 +20,7 @@ import {
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
+import { withReferenceNote } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for fal.ai: `fetch` and the downloader beside this file, no SDK.
@@ -72,6 +73,17 @@ function aspectOf(model: string, aspect: ImageRequest["aspect"]): Record<string,
   const field = Object.hasOwn(modelAspects, model) ? modelAspects[model] : undefined;
   const shape: AspectField = field ?? "image_size";
   return { [shape]: sizes[shape][aspect] };
+}
+
+// The text-to-image models whose fal endpoint has an `/edit` twin taking the same fields plus
+// `image_urls`, which is how an establishing image is sent.
+const editModels: readonly string[] = [
+  "fal-ai/flux-2",
+  "fal-ai/nano-banana",
+  "fal-ai/nano-banana-2",
+];
+function editEndpoint(model: string): string | undefined {
+  return editModels.includes(model) ? `${model}/edit` : undefined;
 }
 
 export interface FalImageDeps {
@@ -129,12 +141,22 @@ export function falImage(deps: FalImageDeps): ImagePort {
     id: "fal",
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(falModels),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
-      const response = await deps.fetch(`${falBase}/${req.model}`, {
+      // An establishing image goes to the model's edit endpoint, which takes input images as
+      // `image_urls`; only the models that have one are marked as taking a reference.
+      const edit = req.reference === undefined ? undefined : editEndpoint(req.model);
+      if (req.reference !== undefined && edit === undefined)
+        throw providerError({
+          kind: "unsupported",
+          message:
+            "This fal.ai model can't use an establishing image as a reference. Choose FLUX.2 or Nano Banana 2 under Images → Model on Play or in Edit project → Providers, or set Establishing image to Off in the Images section.",
+        });
+      const response = await deps.fetch(`${falBase}/${edit ?? req.model}`, {
         method: "POST",
         signal: req.signal,
         headers: { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: req.prompt,
+          prompt: withReferenceNote(req.prompt, req.reference),
+          ...(req.reference === undefined ? {} : { image_urls: [dataUri(req.reference)] }),
           ...aspectOf(req.model, req.aspect),
           // The stage sends Number as that many independent calls, one piece each.
           num_images: 1,

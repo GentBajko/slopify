@@ -5,6 +5,7 @@ import { type RunDraft, sourceOf } from "../admission/model.js";
 import {
   imageSecondsProblem,
   usesNarrationPreparation,
+  usesReference,
   usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
@@ -202,6 +203,14 @@ export function estimateRun(
       detail: `${images} images. ${imageNote}`,
     });
   if (images === 0) local("Images", "Provided or off.");
+  // The establishing image is one more image when it is made from a prompt.
+  if (usesReference(draft) && draft.reference?.source === "prompt")
+    requests.push({
+      kind: "image",
+      stage: "Establishing image",
+      provider: image.provider,
+      model: image.model,
+    });
   if (["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail))
     requests.push({
       kind: "image",

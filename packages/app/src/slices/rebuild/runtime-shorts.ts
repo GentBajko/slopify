@@ -35,6 +35,7 @@ import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
 import { shortsPickKey } from "./recipe-shorts.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
+import { imageCall } from "./runtime-image.js";
 import { savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
@@ -227,12 +228,16 @@ async function image(
 ): Promise<StageRunResult> {
   const input = piece.input;
   if (input.kind !== "image") throw setupError();
-  const made = await providers.forPiece(piece.id).image({
-    provider: input.provider,
-    model: input.model,
-    prompt: input.prompt,
-    aspect: input.aspect,
-  });
+  const made = await providers
+    .forPiece(piece.id)
+    .image(
+      imageCall(
+        deps,
+        context.work.projectId,
+        input,
+        `Short ${String(clip.number)} image ${String(index)}`,
+      ),
+    );
   if (!made.ok) return "held";
   const asset = writeAsset(
     deps,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { formats, stageKinds } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
-import { motionStyles, stageSources } from "../admission/model.js";
+import { motionStyles, referenceSources, stageSources } from "../admission/model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
@@ -21,6 +21,8 @@ const values = z.record(text, text).readonly();
 const provider = z
   .object({ provider: text, model: text, thinking: z.enum(thinkingModes).optional() })
   .strict();
+// What a draft's uploads are for: a stage's files, or the Images stage's establishing image.
+export const draftAttachmentKinds = ["audio", "images", "thumbnail", "reference"] as const;
 const file = z.object({ attachmentId: id, name: text }).strict().readonly();
 export const playDraftFormSchema = z
   .object({
@@ -51,6 +53,17 @@ export const playDraftFormSchema = z
       })
       .readonly(),
     images: provider.readonly(),
+    // Absent on drafts and templates saved before the establishing image: Off. The prompt is
+    // an image prompt's name, "" when none is picked.
+    reference: z
+      .object({
+        source: z.enum(["off", ...referenceSources]),
+        prompt: text,
+        thumbnail: z.boolean(),
+      })
+      .strict()
+      .readonly()
+      .optional(),
     articlePrompt: text,
     narrationPrompt: text.optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
@@ -111,6 +124,8 @@ export const playDraftFormSchema = z
         audio: file.nullable(),
         thumbnail: file.nullable(),
         images: z.array(file).readonly(),
+        // The uploaded establishing image; absent on drafts saved before it.
+        reference: file.nullable().optional(),
       })
       .strict()
       .readonly(),
@@ -159,7 +174,7 @@ export const discardDraftInputSchema = z
 export const draftAttachmentSchema = z
   .object({
     id,
-    kind: z.enum(["audio", "images", "thumbnail"]),
+    kind: z.enum(draftAttachmentKinds),
     name: text,
     state: z.enum(["pending", "copying", "ready", "reattach"]),
     stagedFileId: text.nullable(),
