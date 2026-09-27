@@ -7,6 +7,9 @@ export const recoveryActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("resume") }).strict(),
   z.object({ kind: z.literal("retry"), stage: z.enum(stageKinds) }).strict(),
   z.object({ kind: z.literal("rerun"), stage: z.enum(stageKinds) }).strict(),
+  // Make one reviewed item again (`slices/reviews`): an image, the thumbnail, the article, the
+  // narration or one short, and everything that depends on it, its review included.
+  z.object({ kind: z.literal("redo"), item: z.string().min(1).max(200) }).strict(),
 ]);
 export const recoveryRequestSchema = revisionControlSchema
   .extend({

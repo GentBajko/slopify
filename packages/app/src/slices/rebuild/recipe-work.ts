@@ -409,6 +409,23 @@ export function priceRecipe(
         "The numbered transcript is built when the step runs; its length is estimated. One more call is made when the first answer breaks the rules. Retries are excluded.",
     };
   }
+  // A review: the stage's prompt and the item (the article's text, or a short brief beside an
+  // image, which the provider prices as it does).
+  if (input.kind === "local" && input.operation === "review-v1") {
+    const [stage, , , provider, model, , prompt] = Array.isArray(input.values) ? input.values : [];
+    return {
+      kind: "llm",
+      stage: work.key,
+      provider: typeof provider === "string" ? provider : "",
+      model: typeof model === "string" ? model : "",
+      inputCharacters:
+        (typeof prompt === "string" && prompt !== "" ? prompt.length : 600) +
+        (stage === "article" || stage === "narration" ? 20000 : 1500),
+      outputCharacters: 400,
+      detail:
+        "The item is read when the step runs; its length is estimated. A failed item made again is reviewed again, which is not in this estimate.",
+    };
+  }
   if (input.kind === "local" && input.operation === "youtube-description-v1") {
     const [, provider, model, , prompt] = Array.isArray(input.values) ? input.values : [];
     return {

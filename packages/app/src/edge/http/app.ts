@@ -39,6 +39,7 @@ import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
+import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
 import { runCostRoutes } from "./run-cost.js";
@@ -135,6 +136,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))
+      .route("/projects", reviewRoutes(deps))
       .route("/projects", revisionRoutes(deps))
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))

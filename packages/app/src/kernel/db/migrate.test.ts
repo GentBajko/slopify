@@ -75,6 +75,7 @@ describe("migrate", () => {
       "rebuild_previews",
       "review_checkpoint_approvals",
       "review_checkpoints",
+      "review_verdicts",
       "revision_mutations",
       "revision_outputs",
       "revision_pieces",
@@ -110,6 +111,8 @@ describe("migrate", () => {
       "prompts_name",
       "provider_usage_project",
       "review_checkpoint_work",
+      "review_verdicts_item",
+      "review_verdicts_redo",
       "revision_outputs_publication",
       "revision_outputs_revision",
       "revision_outputs_selected",
@@ -154,6 +157,7 @@ describe("migrate", () => {
       { version: 19, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 25, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 26, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 27, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 31, applied_at: "2026-09-02T10:00:00.000Z" },
@@ -167,7 +171,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 25 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 26 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -409,6 +413,54 @@ describe("migrate", () => {
         db
           .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
           .run("s2", "shorts", "SAVED", "Other", "[]", "today"),
+      ).toThrow();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("keeps every saved prompt when adding the review kind to a version 24 library", () => {
+    const db = openDb(":memory:");
+    try {
+      const directory = new URL("./migrations/", import.meta.url);
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 24)
+        .sort()) {
+        db.exec(readFileSync(new URL(file, directory), "utf8"));
+        db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+          Number(file.slice(0, 4)),
+          clock.now().toISOString(),
+        );
+      }
+      for (const kind of ["article", "image", "thumbnail", "narration", "description", "shorts"])
+        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+          kind,
+          kind,
+          "Saved",
+          "Body {{Topic}}.",
+          '["Topic"]',
+          "original-date",
+        );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("r0", "review", "R", "B", "[]", "x"),
+      ).toThrow();
+      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      migrate(db, clock);
+      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        "r1",
+        "review",
+        "Saved",
+        "Strict",
+        "[]",
+        "today",
+      );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("r2", "review", "SAVED", "Other", "[]", "today"),
       ).toThrow();
     } finally {
       db.close();

@@ -1,5 +1,6 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { emptyReviews } from "./reviews";
 import type { PlaySection } from "./sections";
 import { freshShorts } from "./shorts";
 
@@ -58,5 +59,20 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
         "outputs",
         "shorts.prompt",
       );
+    // A Review prompt goes to every review that is on; with none on, it turns the article's on.
+    case "review": {
+      const reviews = form.reviews ?? emptyReviews;
+      const on = Object.entries(reviews.stages).filter(([, stage]) => stage.mode !== "off");
+      const stages =
+        on.length === 0
+          ? { ...reviews.stages, article: { mode: "flag" as const, prompt: item.name } }
+          : {
+              ...reviews.stages,
+              ...Object.fromEntries(
+                on.map(([name, stage]) => [name, { ...stage, prompt: item.name }]),
+              ),
+            };
+      return next({ reviews: { ...reviews, stages } }, "review", "reviews");
+    }
   }
 }

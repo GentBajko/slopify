@@ -11,6 +11,7 @@ import { LiveAudio } from "./live-audio.js";
 import { NarrationDownloads } from "./narration-downloads.js";
 import { NarrationText } from "./narration-text.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration } from "./summary.js";
 
@@ -25,6 +26,7 @@ const players: readonly { readonly role: OutputRole; readonly name: string }[] =
 export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const { api } = useApp();
   const voices = useQuery(voicesQuery(api));
+  const reviews = useReviews(project.id);
   const mine = outputsOf(outputs, stage);
   const landed = players.flatMap((player) => {
     const output = roleOf(mine, player.role);
@@ -48,6 +50,11 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
         ))
       )}
 
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: "narration" })}
+        projectId={project.id}
+        busy={busy}
+      />
       <NarrationText outputs={mine} />
       <NarrationDownloads outputs={mine} />
       <ActionRow>

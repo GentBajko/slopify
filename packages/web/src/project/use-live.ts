@@ -8,6 +8,7 @@ import { keys } from "@/queries";
 import { checkpointKey } from "./checkpoint-api.js";
 import { coalesce, patchProject } from "./live.js";
 import { appendWriting, type WritingPreview, writingKey } from "./live-writing.js";
+import { reviewsKey } from "./review-api.js";
 
 // How long a burst of events is folded into one refetch. Short enough that an image
 // appears while the eye is still on the grid, long enough that a stage landing sixty of
@@ -29,6 +30,7 @@ export function useLiveProject(projectId: string, revisionId: string | null = nu
       void queryClient.invalidateQueries({ queryKey: keys.project(projectId) });
       void queryClient.invalidateQueries({ queryKey: keys.projects });
       void queryClient.invalidateQueries({ queryKey: checkpointKey(projectId) });
+      void queryClient.invalidateQueries({ queryKey: reviewsKey(projectId) });
     }, burstMs);
 
     const unsubscribe = subscribeProject(openEvents, eventsUrl(api, `projects/${projectId}`), {

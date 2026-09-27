@@ -36,6 +36,33 @@ export function sectionRoots(
     .map((row) => row.key);
 }
 
+// What making one reviewed item again regenerates and where its rebuild starts. The article
+// and the narration are redone like Re-run section on their stage; an image or the thumbnail
+// by its own token, like Regenerate; a short by "Make this short again"'s token.
+export function redoTarget(
+  view: RevisionView,
+  plan: RevisionWorkPlan,
+  item: string,
+): { readonly roots: readonly string[]; readonly edit: RevisionEdit } | undefined {
+  const section = (stage: StageKind) => {
+    const edit = regenerationEdit(view, plan, stage);
+    return edit === undefined ? undefined : { roots: sectionRoots(view, plan, stage), edit };
+  };
+  if (item === "narration") return section("audio");
+  if (item === "article:body") return section("article");
+  const own = (roots: readonly string[]) => ({
+    roots,
+    edit: { config: view.revision.config, content: view.revision.content, regenerate: [item] },
+  });
+  if (/^shorts:\d+$/.test(item))
+    return plan.recipes.some((row) => row.key === `${item}:prompts`)
+      ? own([`${item}:prompts`])
+      : undefined;
+  return plan.recipes.some((row) => row.key === item && row.kind === "provider")
+    ? own([item])
+    : undefined;
+}
+
 export function dependentClosure(
   recipes: readonly ResolvedWorkRecipe[],
   roots: readonly string[],

@@ -14,6 +14,8 @@ import { splitEndMatter } from "../article/split.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
+import { defaultReviewPrompts, reviewPromptKey, reviewRetriesOf } from "../reviews/model.js";
+import { activeReviewStages } from "../reviews/rules.js";
 import { isLocalCliProvider } from "../settings/model.js";
 import {
   defaultShortsImagePrompt,
@@ -106,7 +108,11 @@ export function estimateRun(
   const promptChars = Object.entries(rendered).reduce(
     (sum, [key, value]) =>
       sum +
-      (key === "narration" || key === "description" || key === "shorts" || key === "shortsImage"
+      (key === "narration" ||
+      key === "description" ||
+      key === "shorts" ||
+      key === "shortsImage" ||
+      key.startsWith("review.")
         ? 0
         : value.length),
     0,
@@ -308,6 +314,32 @@ export function estimateRun(
             : `Up to ${String(clips)} clips of ${String(animatedClipSeconds)} seconds, one per chapter opening. ${note}`,
       });
   }
+  // Automatic reviews: one call per reviewed item, on the reviewer's model. A failed item
+  // made again is reviewed again, at most the retries allowed, which is not priced here.
+  const reviews = draft.reviews;
+  if (reviews !== undefined)
+    for (const stage of activeReviewStages(draft)) {
+      const picked = rendered[reviewPromptKey(stage)]?.trim() ?? "";
+      const prompt = picked === "" ? defaultReviewPrompts[stage].length : picked.length;
+      const items =
+        stage === "images" ? images : stage === "shorts" ? (draft.shorts?.count ?? 0) : 1;
+      const material =
+        stage === "article"
+          ? articleChars + promptChars
+          : stage === "narration"
+            ? Math.round(articleChars * 2.1)
+            : 1500;
+      for (let index = 0; index < items; index++)
+        requests.push({
+          kind: "llm",
+          stage: "Reviews",
+          provider: reviews.provider,
+          model: reviews.model,
+          inputCharacters: prompt + material + 800,
+          outputCharacters: 400,
+          detail: `One review per item. A failed item made again is reviewed again, up to ${String(reviewRetriesOf(reviews))} times; those remakes are not in this estimate. ${textNote}`,
+        });
+    }
   if (sourceOf(draft.sources, "document") === "generate")
     local("Document", "Laid out locally from the article; no API fee.");
   return {

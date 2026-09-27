@@ -13,6 +13,8 @@ import {
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
+import { reviewSettingsFromForm } from "../reviews/model.js";
+import { stageMakesItems } from "../reviews/rules.js";
 import {
   defaultShorts,
   type ShortsSettings,
@@ -148,7 +150,19 @@ export function toAdmissionDraft(input: {
         : defaultShorts.maxSeconds,
     };
   };
+  // Only the reviews of stages that make something; none left is no reviews at all, which is
+  // what every draft saved before them was.
+  const reviewed =
+    form.reviews === undefined
+      ? undefined
+      : reviewSettingsFromForm(form.reviews, (stage) =>
+          stageMakesItems({ sources, shorts: shortsOn ? { enabled: true } : undefined }, stage),
+        );
+  if (reviewed?.retriesProblem !== undefined)
+    fields.push({ field: "reviews.retries", message: reviewed.retriesProblem });
+  const reviews = reviewed?.settings;
   const draft: RunDraft = {
+    ...(reviews === undefined ? {} : { reviews }),
     ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
     format: form.format,

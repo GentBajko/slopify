@@ -412,7 +412,12 @@ describe("claudeCodeLlm surface", () => {
     const models = [{ id: "installed", name: "Installed", thinkingModes: ["low"] as const }];
     const port = claudeCodeLlm({ run: replaying("").run, readModels: async () => models });
     expect(port.id).toBe("claude-code");
-    expect(port.capabilities).toEqual({ streams: true, reportsUsage: true, webSearch: true });
+    expect(port.capabilities).toEqual({
+      streams: true,
+      reportsUsage: true,
+      webSearch: true,
+      images: true,
+    });
     expect(await port.models()).toBe(models);
   });
 });

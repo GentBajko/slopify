@@ -21,6 +21,7 @@ import {
   documentTool,
   documentWorkspace,
 } from "./document-workspace.js";
+import { type ImageWorkspace, imageWorkspace } from "./image-workspace.js";
 import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
 import {
   cliEvent,
@@ -85,10 +86,16 @@ const disabledFeatures = [
 // plus a zero project-doc budget excludes AGENTS.md and project `.codex` context. Read-only is
 // defense in depth if a future release exposes a new filesystem tool. The TOML strings keep their
 // quotes because each `-c` value is parsed as TOML rather than as a shell expression.
+//
+// Pictures (a review's) are attached to the prompt with `--image` (`codex exec --help` 0.155.1:
+// "-i, --image <FILE>... Optional image(s) to attach to the initial prompt"), which needs no
+// tool: `view_image` stays disabled. Each is given as its own flag so a path is never read as
+// the prompt.
 export function codexArgs(
   req: LlmCompletion,
   directory: string,
   documents?: DocumentWorkspace,
+  images?: ImageWorkspace,
 ): string[] {
   return [
     "exec",
@@ -144,6 +151,7 @@ export function codexArgs(
           }).flatMap(([key, value]) => ["-c", `mcp_servers.${documentServerName}.${key}=${value}`]),
         ]
       : []),
+    ...(images?.files.flatMap((one) => ["--image", one.path]) ?? []),
     // A literal '-' requests stdin; report bodies never become OS arguments.
     "--",
     "-",
@@ -178,6 +186,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     req.signal.throwIfAborted();
     const workspace = codexWorkspace(deps.env ?? process.env);
     let documents: DocumentWorkspace | undefined;
+    let images: ImageWorkspace | undefined;
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     // Asked beside the run rather than before it: the read takes about a second and the
@@ -185,10 +194,19 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     const before = deps.readLimits?.().catch(() => null);
     try {
       documents = documentWorkspace(req.documents);
-      run = deps.run(binary, codexArgs(req, workspace.directory, documents), req.signal, {
+      images = imageWorkspace(req.images);
+      run = deps.run(binary, codexArgs(req, workspace.directory, documents, images), req.signal, {
         ...workspace.options,
         stdin: cliInput(
-          [documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n"),
+          [
+            documents?.instructions,
+            images === undefined
+              ? undefined
+              : `The attached images, in order:\n${images.files.map((one, index) => `${String(index + 1)}. ${one.name}`).join("\n")}`,
+            promptOf(req.messages),
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         ),
       });
       for await (const line of lines(run.stdout, req.signal)) {
@@ -264,6 +282,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
         if (run !== undefined) ended = await stopCliRun(run);
       } finally {
         documents?.remove();
+        images?.remove();
         workspace.remove();
       }
     }
@@ -285,7 +304,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
   return {
     id: "codex",
     // Prose arrives as whole messages; other JSONL events carry activity separately.
-    capabilities: { streams: true, reportsUsage: true, webSearch: true },
+    capabilities: { streams: true, reportsUsage: true, webSearch: true, images: true },
     models: deps.readModels ?? (() => nodeCodexModels(process.env, binary)),
     complete,
   };

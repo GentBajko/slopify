@@ -19,6 +19,16 @@ export function pieceLabel(
   if (key === "article:body") return "Article";
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";
+  if (key.startsWith("review:")) {
+    const item = key.slice("review:".length);
+    const itemLabel =
+      item === "narration"
+        ? "Narration"
+        : /^shorts:\d+$/.test(item)
+          ? `Short ${item.slice("shorts:".length)}`
+          : pieceLabel(deps, context, { key: item });
+    return `Review of ${itemLabel ?? "an item"}`;
+  }
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
   if (key === "animate:future") return "Animated images";
   const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);

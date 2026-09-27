@@ -28,6 +28,7 @@ import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
+import { RevisionReviews } from "./revision-reviews.js";
 import { RevisionShorts } from "./revision-shorts.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 import { RevisionYoutube } from "./revision-youtube.js";
@@ -87,6 +88,11 @@ export function RevisionForm(
     { id: "article", label: "Article", ...(edit.content.articleEdited ? { badge: "edited" } : {}) },
     { id: "providers", label: "Providers" },
     { id: "prompts", label: "Prompts" },
+    {
+      id: "reviews",
+      label: "Reviews",
+      ...(config.reviews === undefined ? {} : { badge: "on" }),
+    },
     ...(config.sources.audio !== "off" || config.shorts?.enabled === true
       ? [
           {
@@ -528,6 +534,15 @@ export function RevisionForm(
             edit={edit}
             prompts={prompts.data?.prompts ?? []}
             entries={entries.data?.entries ?? []}
+            onChange={onChange}
+          />
+        </section>
+        <section aria-label="Reviews" hidden={current !== "reviews"} className={panel("reviews")}>
+          <RevisionReviews
+            edit={edit}
+            providers={providers.data?.providers ?? []}
+            prompts={prompts.data?.prompts ?? []}
+            problem={problem}
             onChange={onChange}
           />
         </section>

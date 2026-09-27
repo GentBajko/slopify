@@ -183,6 +183,9 @@ export interface RunDraft {
   // (`video/edit-settings.ts`). Absent reads as today's slideshow, which is what every project
   // saved before it rendered.
   readonly videoEdit?: import("../video/edit-settings.js").VideoEditSettings | undefined;
+  // Automatic reviews per stage (`slices/reviews`). Absent reads as every review Off, which is
+  // what every project saved before them was.
+  readonly reviews?: import("../reviews/model.js").ReviewSettings | undefined;
   // The channel the run was started in (`slices/channels`). Absent on everything saved before
   // channels, which reads as the default channel.
   readonly channelId?: string | undefined;

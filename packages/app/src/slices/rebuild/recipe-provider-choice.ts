@@ -20,6 +20,16 @@ export function recipeProviderChoice(
   // The YouTube description's request is built when it runs, from the project's LLM row.
   if (input.kind === "local" && input.operation === "youtube-description-v1")
     return config.llm === undefined ? undefined : { ...config.llm, family: "llm" };
+  // A review's request is built when it runs, from the reviewer the project chose.
+  if (input.kind === "local" && input.operation === "review-v1")
+    return config.reviews === undefined
+      ? undefined
+      : {
+          provider: config.reviews.provider,
+          model: config.reviews.model,
+          ...(config.reviews.thinking === undefined ? {} : { thinking: config.reviews.thinking }),
+          family: "llm",
+        };
   // So is the shorts' pick; what stands in for the rest of the step until it lands is
   // mostly images, which are its cost.
   if (input.kind === "local" && input.operation === "shorts-pick-v1")

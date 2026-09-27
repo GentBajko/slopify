@@ -24,6 +24,7 @@ import {
   useOutputText,
 } from "./parts.js";
 import { ReadingView } from "./reading-view.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { shownStage } from "./sections.js";
 
 // A stage that has not started, or is not part of the run, has nothing to re-run yet.
@@ -37,6 +38,7 @@ function withoutHeading(section: string): string {
 }
 
 export function ArticleBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
+  const reviews = useReviews(project.id);
   const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
   const research = companion?.kind === "research" ? companion : undefined;
@@ -127,6 +129,11 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
 
   return (
     <StageBody>
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: "article:body" })}
+        projectId={project.id}
+        busy={busy}
+      />
       <div className="flex flex-wrap items-baseline gap-[14px] text-small text-ink2">
         <span className="text-row font-semibold text-ink">
           <InlineProse markdown={title} />

@@ -6,6 +6,7 @@ import { cliCheck, cliName, cliReported } from "../explain.js";
 import { documentWorkspace } from "./document-workspace.js";
 import { nodeGeminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
+import { noImages } from "./image-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import {
   cliEvent,
@@ -62,6 +63,8 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   const binary = deps.binary ?? geminiBinary;
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
+    // Its CLI has no image flag, and `@file` inclusion would need a file tool this adapter keeps off.
+    if (req.images?.length) throw noImages("the Gemini CLI");
     const documents = documentWorkspace(req.documents);
     let workspace: ReturnType<typeof geminiWorkspace> | undefined;
     let run: ReturnType<RunCli> | undefined;

@@ -13,6 +13,7 @@ import {
   unreadable,
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
+import { noImages } from "./image-workspace.js";
 import { sseData } from "./sse-lines.js";
 
 // The HTTP gateway adapter: the platform's own `fetch` plus the line reader beside this
@@ -67,6 +68,9 @@ const streamChunk = z.object({
 
 export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
+    // ceiling: text only. The catalogue does not yet say which models take images, and an older
+    // Slopify parses the fetched catalogue strictly, so a new key there would break it.
+    if (req.images?.length) throw noImages("OpenRouter models");
     const response = await deps.fetch(`${openRouterBase}/chat/completions`, {
       method: "POST",
       signal: req.signal,

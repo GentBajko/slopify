@@ -4,6 +4,7 @@ import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { chunkModes } from "../narration/chunk.js";
+import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import {
   animateModes,
@@ -159,6 +160,19 @@ export const runDraftSchema = z.object({
     })
     .optional(),
   endScreen: z.object({ text: z.string().max(200) }).optional(),
+  // The retry range is `slices/reviews/model.ts`'s, checked by admission, not the schema's.
+  reviews: z
+    .object({
+      provider: z.string(),
+      model: z.string(),
+      thinking: z.enum(thinkingModes).optional(),
+      retries: z.number().optional(),
+      stages: z.partialRecord(
+        z.enum(reviewStages),
+        z.object({ mode: z.enum(reviewModes), prompt: z.string().optional() }),
+      ),
+    })
+    .optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

@@ -6,6 +6,8 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload } from "./parts.js";
+import type { Review } from "./review-api.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 
 // The thumbnail at the top of the Images section: the picture itself, large, with Regenerate
@@ -29,6 +31,7 @@ export function ThumbnailPanel({
   const image = roleOf(own, "thumbnail");
   const media = useOutputMedia(image);
   const tall = project.format === "9:16";
+  const reviews = useReviews(project.id);
   const count = thumbnailCountOf(project.config);
   const regenerateAll = (
     <ConfirmedButton
@@ -57,6 +60,11 @@ export function ThumbnailPanel({
               output={own.find(
                 (output) => output.role === "thumbnail" && (output.meta.index ?? 1) === variant,
               )}
+              review={reviewFor(reviews, {
+                outputId: own.find(
+                  (output) => output.role === "thumbnail" && (output.meta.index ?? 1) === variant,
+                )?.id,
+              })}
               stage={stage}
               project={project}
               actions={actions}
@@ -91,6 +99,11 @@ export function ThumbnailPanel({
           />
         )}
       </div>
+      <ReviewVerdict
+        review={reviewFor(reviews, { outputId: image?.id })}
+        projectId={project.id}
+        busy={busy}
+      />
       <ActionRow>
         {regenerateAll}
         {image === undefined ? null : <OutputDownload output={image} label="Download thumbnail" />}
@@ -103,6 +116,7 @@ export function ThumbnailPanel({
 function ThumbnailVariant({
   variant,
   output,
+  review,
   stage,
   project,
   actions,
@@ -110,6 +124,8 @@ function ThumbnailVariant({
 }: {
   readonly variant: number;
   readonly output: Output | undefined;
+  // The automatic review's verdict on this thumbnail, when it had one.
+  readonly review: Review | undefined;
   readonly stage: Stage;
   readonly project: ProjectSummary;
   readonly actions: BodyProps["actions"];
@@ -156,6 +172,7 @@ function ThumbnailVariant({
           <OutputDownload output={output} label={`Download ${String(variant)}`} />
         )}
       </div>
+      <ReviewVerdict review={review} projectId={project.id} busy={busy} />
     </li>
   );
 }

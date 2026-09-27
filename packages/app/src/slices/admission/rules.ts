@@ -1,5 +1,6 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
 import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
@@ -164,6 +165,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...shortsFields(draft));
   fields.push(...videoEditFields(draft));
   fields.push(...referenceFields(draft));
+  fields.push(...reviewFields(draft));
   if (usesReference(draft) && draft.reference?.source === "provide")
     checkFile(
       input.staged,
