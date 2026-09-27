@@ -74,6 +74,8 @@ export function FreeSpaceOffer({
         <Button
           variant="secondary"
           size="small"
+          // A long label in a narrow rail wraps inside the button rather than running past it.
+          className="h-auto min-h-8 max-w-full whitespace-normal py-1 text-left"
           disabled={trim.isPending}
           disabledReason="Removing the working files…"
           onClick={() => setAsking(true)}

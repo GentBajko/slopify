@@ -2,7 +2,7 @@ import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeftIcon, EllipsisIcon } from "lucide-react";
+import { ChevronLeftIcon, EllipsisIcon, SlidersHorizontalIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { Button, IconButton } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
@@ -80,7 +80,8 @@ export function ProjectHeader({
               )}
             </span>
           ) : null}
-          <Button variant="quiet" aria-pressed={editing} onClick={onEdit}>
+          <Button variant="secondary" aria-pressed={editing} onClick={onEdit}>
+            <SlidersHorizontalIcon aria-hidden="true" strokeWidth={1.75} />
             Edit settings
           </Button>
           <Menu modal={false}>

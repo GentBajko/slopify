@@ -68,7 +68,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
           {`${project.format} · finished ${startedAt(project.updatedAt)}${project.status === "partial" ? " · a step failed" : ""}`}
         </div>
         <ButtonRow>
-          <PrepareUpload projectId={project.id} ready />
+          <PrepareUpload projectId={project.id} ready size="small" />
           <Button
             variant="quiet"
             size="small"

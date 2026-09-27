@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
+import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
@@ -76,6 +78,8 @@ export function RevisionHistory({
       output.available &&
       (output.output.role === "image" || output.output.role === "thumbnail"),
   );
+  // The version's folder: the one its images are in, else its first saved file's.
+  const folderOf = zipImage ?? selectedView?.outputs.find((output) => output.available);
   return (
     <section aria-label="Project history" className="space-y-3">
       <SectionHead title="Project history" />
@@ -93,48 +97,62 @@ export function RevisionHistory({
       {view.error === null ? null : <p role="alert">{view.error.message}</p>}
       {selectedView === undefined ? null : (
         <div className="space-y-3">
-          <h3 className="text-title-3">{selectedView.revision.config.title}</h3>
-          {zipImage === undefined ? null : (
-            <span className="inline-flex gap-3">
-              <a href={revisionImagesUrl(api, projectId, selectedView.revision.id)} download>
+          <h3 className="m-0 text-title-3">{selectedView.revision.config.title}</h3>
+          {/* The version's actions in one row: Restore is the main one, then its images as
+              one download and its ONE Open folder, never a folder button per file. */}
+          <ButtonRow>
+            <Button
+              variant="primary"
+              disabled={pending}
+              onClick={() => onRestore(selectedView.revision.id)}
+            >
+              Restore this revision
+            </Button>
+            {zipImage === undefined ? null : (
+              <FileLink href={revisionImagesUrl(api, projectId, selectedView.revision.id)} download>
+                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
                 Download all images
-              </a>
+              </FileLink>
+            )}
+            {folderOf === undefined ? null : (
               <OpenFolder
                 projectId={projectId}
                 asset=""
-                folder={{ revisionId: selectedView.revision.id, recordId: zipImage.recordId }}
+                folder={{ revisionId: selectedView.revision.id, recordId: folderOf.recordId }}
               />
-            </span>
-          )}
+            )}
+          </ButtonRow>
           <ul className="m-0 list-none space-y-3 p-0">
             {selectedView.outputs.map((output) => (
               <li
                 key={output.recordId}
                 className="space-y-2 border-t border-line pt-3 first:border-t-0 first:pt-0"
               >
-                {outputLabel(output.output)} · {output.state}
-                {output.selected ? "" : " · Earlier result"}:{" "}
-                {output.available ? (
-                  <a
-                    href={revisionFileUrl(
-                      api,
-                      projectId,
-                      selectedView.revision.id,
-                      output.recordId,
-                    )}
-                  >
-                    Download
-                  </a>
-                ) : (
-                  "File missing"
-                )}
-                {output.available ? (
-                  <OpenFolder
-                    projectId={projectId}
-                    asset=""
-                    folder={{ revisionId: selectedView.revision.id, recordId: output.recordId }}
-                  />
-                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <span className="min-w-0">
+                    <span className="font-semibold text-ink">{outputLabel(output.output)}</span>
+                    <span className="text-small text-ink-2">
+                      {` · ${output.state}${output.selected ? "" : " · Earlier result"}`}
+                      {output.available ? "" : " · File missing"}
+                    </span>
+                  </span>
+                  {output.available ? (
+                    <FileLink
+                      href={revisionFileUrl(
+                        api,
+                        projectId,
+                        selectedView.revision.id,
+                        output.recordId,
+                      )}
+                      download
+                      size="small"
+                      aria-label={`Download ${outputLabel(output.output)}`}
+                    >
+                      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                      Download
+                    </FileLink>
+                  ) : null}
+                </div>
                 {output.available ? (
                   <details>
                     <summary>Preview retained output</summary>
@@ -207,21 +225,19 @@ export function RevisionHistory({
                           piece.recordId,
                         )}
                       />
-                      <a
+                      <FileLink
                         href={revisionFileUrl(
                           api,
                           projectId,
                           selectedView.revision.id,
                           piece.recordId,
                         )}
+                        download
+                        size="small"
                       >
+                        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
                         Download narration part
-                      </a>
-                      <OpenFolder
-                        projectId={projectId}
-                        asset=""
-                        folder={{ revisionId: selectedView.revision.id, recordId: piece.recordId }}
-                      />
+                      </FileLink>
                     </details>
                   ) : (
                     <span> · File missing</span>
@@ -245,13 +261,6 @@ export function RevisionHistory({
                 </li>
               ))}
           </ul>
-          <Button
-            type="button"
-            disabled={pending}
-            onClick={() => onRestore(selectedView.revision.id)}
-          >
-            Restore this revision
-          </Button>
         </div>
       )}
     </section>

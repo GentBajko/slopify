@@ -8,6 +8,7 @@ import type {
   UsageTotals,
 } from "@app/slices/run-cost/panel.js";
 import { useQuery } from "@tanstack/react-query";
+import { ReceiptIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
@@ -67,6 +68,7 @@ export function RunCostSummary({
     >
       <span>{parts.join(" · ")}</span>
       <Button variant="quiet" size="small" onClick={onOpen}>
+        <ReceiptIcon aria-hidden="true" strokeWidth={1.75} />
         See cost by stage
       </Button>
     </section>

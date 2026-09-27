@@ -3,7 +3,7 @@ import type { DocumentTheme } from "@app/slices/document/theme.js";
 import { documentThemeSchema } from "@app/slices/document/theme-schema.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { FieldError } from "@/api";
 import { previewDocumentTheme, removeDocumentTheme, saveDocumentTheme } from "@/api";
@@ -407,7 +407,14 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
     <div className={editorAside}>
       <SectionHead title="Preview" info="library.theme.preview" size="small" className="pb-0">
         {pdf === undefined ? null : (
-          <FileLink href={pdf.url} target="_blank" rel="noreferrer" variant="quiet" size="small">
+          <FileLink
+            href={pdf.url}
+            target="_blank"
+            rel="noreferrer"
+            variant="secondary"
+            size="small"
+          >
+            <ExternalLinkIcon aria-hidden="true" strokeWidth={1.75} />
             Open full size
           </FileLink>
         )}

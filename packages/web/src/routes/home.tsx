@@ -123,13 +123,13 @@ export function HomeRoute(): ReactElement {
         meta={current.channelId === null ? "Every channel" : undefined}
         actions={
           <>
-            <TextLink to="/calendar">
-              <CalendarIcon aria-hidden="true" strokeWidth={1.75} />
-              Open calendar
-            </TextLink>
             <ButtonLink to="/play" variant="secondary">
               <PlusIcon aria-hidden="true" strokeWidth={1.75} />
               New video
+            </ButtonLink>
+            <ButtonLink to="/calendar" variant="quiet">
+              <CalendarIcon aria-hidden="true" strokeWidth={1.75} />
+              Open calendar
             </ButtonLink>
           </>
         }

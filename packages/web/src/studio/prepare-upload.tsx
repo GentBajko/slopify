@@ -42,16 +42,22 @@ export const studioQueueKey = ["studio", "queue"] as const;
 export function PrepareUpload({
   projectId,
   ready,
+  variant = "secondary",
+  size = "default",
 }: {
   readonly projectId: string;
   // A finished video is there to upload.
   readonly ready: boolean;
+  // Primary where it is the item's one thing to do next; a real button either way.
+  readonly variant?: "primary" | "secondary";
+  readonly size?: "default" | "small";
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button
-        variant="quiet"
+        variant={variant}
+        size={size}
         disabled={!ready}
         disabledReason="Available once the video has been made"
         onClick={() => setOpen(true)}
@@ -167,7 +173,7 @@ export function PrepareUploadDrawer({
               href={studioUploadUrl}
               target="_blank"
               rel="noopener noreferrer"
-              variant="quiet"
+              variant="secondary"
             >
               Open YouTube Studio
             </FileLink>
@@ -310,14 +316,14 @@ function readDone(key: string): readonly string[] {
   }
 }
 
-// A download that looks like the row's other small quiet actions.
+// The video file's download: a small secondary button beside its one Open folder.
 function Download({ href, filename }: { readonly href: string; readonly filename: string }) {
   return (
     <FileLink
       href={href}
       download={filename}
       aria-label={`Download ${filename}`}
-      variant="quiet"
+      variant="secondary"
       size="small"
     >
       <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
@@ -380,11 +386,11 @@ function Steps({
               value: item.video.filename,
               actions: (
                 <>
-                  <OpenFolder projectId={projectId} asset={item.video.asset} />
                   <Download
                     href={`${api.origin}${item.video.url}`}
                     filename={item.video.filename}
                   />
+                  <OpenFolder projectId={projectId} asset={item.video.asset} size="small" />
                 </>
               ),
             };
@@ -400,6 +406,7 @@ function Steps({
                 <OpenFolder
                   projectId={projectId}
                   asset={item.thumbnails[0]?.asset ?? "thumbnail"}
+                  size="small"
                 />
               ),
             };

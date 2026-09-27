@@ -2,6 +2,7 @@ import { defaultLoudness } from "@app/slices/loudness/model.js";
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DownloadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   type BackupImportSummary,
@@ -259,10 +260,11 @@ export function SettingsRoute({
             ) : null}
             <span className="inline-flex items-center gap-1">
               <FileLink
-                variant="quiet"
+                variant="secondary"
                 href={`${api.origin}/api/diagnostics`}
                 download="slopify-diagnostics.json"
               >
+                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
                 Download diagnostics
               </FileLink>
               <InfoTip id="settings.diagnostics" />
