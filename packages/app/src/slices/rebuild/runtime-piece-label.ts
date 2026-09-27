@@ -12,6 +12,8 @@ export function pieceLabel(
   piece: Pick<WorkPiece, "key">,
 ): string | undefined {
   const { key } = piece;
+  const variant = /^thumbnail:image:([23])$/.exec(key);
+  if (variant !== null) return `Thumbnail ${variant[1] ?? ""}`;
   if (key === "thumbnail:image" || key.startsWith("thumbnail:")) return "Thumbnail";
   if (key === "reference:image") return "Establishing image";
   if (key === "article:body") return "Article";
