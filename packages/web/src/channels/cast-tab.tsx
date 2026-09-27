@@ -64,7 +64,7 @@ export function CastTab({
           <EmptyState
             title="No cast yet"
             actions={
-              <Button variant="primary" onClick={() => select("new")}>
+              <Button variant="secondary" onClick={() => select("new")}>
                 Add to cast
               </Button>
             }
