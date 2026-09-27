@@ -30,6 +30,22 @@ export function ReviewSection({
   useEffect(() => {
     void session.reviewDraft();
   }, [session.reviewDraft]);
+  // An edit made on this screen (a keyword variation, the expected words) leaves the review
+  // stale; it is checked again once typing pauses rather than waiting for Refresh review.
+  const stale =
+    !review.valid &&
+    !review.pending &&
+    !review.starting &&
+    !review.uncertain &&
+    review.error === null &&
+    errors.length === 0 &&
+    !pendingUploads;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each edit restarts the pause.
+  useEffect(() => {
+    if (!stale) return;
+    const timer = setTimeout(() => void session.reviewDraft(), 800);
+    return () => clearTimeout(timer);
+  }, [stale, document, session.reviewDraft]);
   const runs = review.valid ? (review.receipt?.runs ?? []) : [];
   return (
     <div className="flex min-w-0 flex-col gap-6">

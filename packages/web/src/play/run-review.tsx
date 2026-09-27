@@ -133,7 +133,10 @@ export function BatchEditor({
             ...items,
             {
               key: crypto.randomUUID(),
-              title: `${title || "Video"} ${items.length + 2}`,
+              // A title that names keywords already differs per video once they are filled.
+              title: /\{\{[^}]+\}\}/.test(title)
+                ? title
+                : `${title || "Video"} ${items.length + 2}`,
               values: { ...values },
             },
           ])

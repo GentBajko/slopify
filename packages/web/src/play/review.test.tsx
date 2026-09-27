@@ -82,6 +82,23 @@ describe("bound review identity", () => {
       true,
     );
   });
+  it("checks the setup again by itself after an edit, without Refresh review", async () => {
+    const harness = reviewHarness();
+    await harness.prepare();
+    await waitFor(() => expect(harness.session().review.valid).toBe(true));
+    const reviews = () => harness.requests.filter((request) => request.url.endsWith("/review"));
+    const before = reviews().length;
+    act(() => {
+      const document = harness.session().document;
+      harness.session().edit({ ...document, expectedWords: "2500" });
+    });
+    expect(harness.session().review.valid).toBe(false);
+    await waitFor(() => expect(harness.session().review.valid).toBe(true), { timeout: 3000 });
+    expect(reviews().length).toBe(before + 1);
+    expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
   it("preserves all 49 stable variants and raw expected words through restart", async () => {
     const harness = reviewHarness();
     const variants = Array.from({ length: 49 }, (_, index) => ({
