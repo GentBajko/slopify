@@ -35,6 +35,18 @@ export const projectHelp = {
     title: "Animate images",
     body: "Turns some images into 5-second moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
   },
+  "project.loudness": {
+    title: "Level the volume",
+    body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",
+  },
+  "project.loudness.video": {
+    title: "Video volume",
+    body: "How loud the finished video and shorts are, in dB from the recommended level. LUFS is how loud a file sounds on average (the scale YouTube and Spotify use); YouTube and Spotify play everything at about -14 LUFS, so 0 dB here is -14 LUFS. -6 dB is about half as loud (50%), +4 dB about 158%. Peaks always stay under -1.5 dBTP.",
+  },
+  "project.loudness.audio-files": {
+    title: "Audio files volume",
+    body: "How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from -18 LUFS, the level audiobook shops such as ACX ask for (-18 to -23 LUFS). LUFS is how loud a file sounds on average. Type dB or a percentage of the recommended level; peaks always stay under -3 dBTP, which those shops require.",
+  },
   "project.ambient.source": {
     title: "Ambient sound",
     body: "Rain, a fireplace or wind made on this computer, or your own audio file, played quietly under the whole narration of the long video. It dips while the narrator speaks. Costs no API calls. Shorts never get it. Changing it remakes only the video. Default: None, or the channel's bed.",

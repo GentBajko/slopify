@@ -1,3 +1,4 @@
+import { defaultLoudness } from "@app/slices/loudness/model.js";
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +36,7 @@ import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
 import { TrashSettings } from "@/trash/trash-settings";
+import { LoudnessControls } from "@/video/loudness-controls";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
 import { BackupSettings, useBackUpNow } from "./settings-backups";
@@ -730,7 +732,7 @@ function Playback() {
             onClick={() => {
               setSaved(false);
               save.mutate(
-                { silenceGapSeconds: Number(gap.trim()), appearance: current.appearance },
+                { ...current, silenceGapSeconds: Number(gap.trim()) },
                 {
                   onSuccess: () => {
                     setTyped(undefined);
@@ -757,7 +759,19 @@ function Playback() {
           options={appearances}
           className="self-start"
           onChange={(next) => {
-            save.mutate({ silenceGapSeconds: current.silenceGapSeconds, appearance: next });
+            save.mutate({ ...current, appearance: next });
+          }}
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <LoudnessControls
+          // A settings answer from before the setting reads as its default.
+          value={current.loudness ?? defaultLoudness}
+          switchLabel="Level the volume for new runs"
+          switchTip="settings.loudness"
+          onChange={(loudness) => {
+            save.mutate({ ...current, loudness });
           }}
         />
       </div>

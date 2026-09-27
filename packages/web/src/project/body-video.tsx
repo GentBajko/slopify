@@ -1,4 +1,5 @@
 import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
+import { masterText } from "@app/slices/loudness/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import { useApp } from "@/app-context";
 import { useCommand } from "@/components/kit/command-palette";
@@ -133,6 +134,8 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           {[
             duration(video?.durationMs ?? undefined),
             audioExport ? "WAV · stereo · 48 kHz" : project.format,
+            // Level the volume: what the finished file measured.
+            video?.meta.master === undefined ? undefined : masterText(video.meta.master),
           ]
             .filter((part) => part !== undefined)
             .join(" · ")}

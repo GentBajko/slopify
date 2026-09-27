@@ -10,6 +10,7 @@ import {
   perHourFromMinutes,
   wordCount,
 } from "@app/slices/images/scale.js";
+import { defaultLoudness } from "@app/slices/loudness/model.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import {
   type AmbientBedField,
@@ -24,8 +25,9 @@ import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
+import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls";
 
-// Edit project's ambient sound and More images for long videos: the channel essentials Play
+// Edit project's ambient sound, Level the volume and More images for long videos: the channel essentials Play
 // sets, changeable after the run. A setting left alone leaves the config exactly as it was, so
 // nothing turns outdated; a change is saved like any other edit and the rebuild names what it
 // makes again (the video for the bed, new images for a higher rate).
@@ -62,6 +64,42 @@ export function EditAmbientBed({
         const bed = ambientBedOfForm(next);
         const { ambientBed: _old, ...config } = edit.config;
         onChange({ ...edit, config: bed === undefined ? config : { ...config, ambientBed: bed } });
+      }}
+    />
+  );
+}
+
+// Level the volume. Off on every project made before it; turning it on joins the narration
+// again from the pieces it already has, levelled, and exports again: no speech is made again.
+export function EditLoudness({
+  edit,
+  problem,
+  onChange,
+}: {
+  readonly edit: RevisionEdit;
+  readonly problem: (field: string) => string | undefined;
+  readonly onChange: (next: RevisionEdit) => void;
+}): ReactElement {
+  const saved = edit.config.loudness;
+  const [value, setValue] = useState<LoudnessValue>(() =>
+    saved === undefined ? { ...defaultLoudness, enabled: false } : { ...saved, enabled: true },
+  );
+  return (
+    <LoudnessControls
+      value={value}
+      problem={(field) => problem(`loudness.${field}`)}
+      onChange={(next) => {
+        setValue(next);
+        const { loudness: _old, ...config } = edit.config;
+        onChange({
+          ...edit,
+          config: next.enabled
+            ? {
+                ...config,
+                loudness: { videoLufs: next.videoLufs, audioFilesLufs: next.audioFilesLufs },
+              }
+            : config,
+        });
       }}
     />
   );

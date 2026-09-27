@@ -31,7 +31,7 @@ import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { EditChannel } from "./edit-channel.js";
 import { editPreviewImageOf } from "./edit-preview-image.js";
-import { EditAmbientBed } from "./edit-sound-and-scale.js";
+import { EditAmbientBed, EditLoudness } from "./edit-sound-and-scale.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -428,6 +428,14 @@ export function RevisionForm(
               )}
             </>
           ) : null}
+          {config.sources.audio === "off" ? null : (
+            <>
+              <Rule />
+              <Group title="Volume" columns={false}>
+                <EditLoudness edit={edit} problem={problem} onChange={onChange} />
+              </Group>
+            </>
+          )}
           <Rule />
           <Group title="Intro and outro">
             {(["intro", "outro"] as const).map((category) => (

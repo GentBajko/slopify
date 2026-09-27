@@ -73,7 +73,7 @@ export async function revisionAudio(
     );
     if (row === undefined && levelled)
       throw new Error(
-        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Resume, or Try again on it), then retry this stage; or turn off Level the volume in Edit project → Narration.`,
+        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Resume, or Try again on it), then retry this stage; or turn off Level the volume in Edit project → Volume.`,
       );
     if (row === undefined) return undefined;
     const path = outputPath(deps.paths, context.work.projectId, row.output.path);

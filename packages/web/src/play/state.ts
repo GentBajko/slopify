@@ -20,6 +20,11 @@ import {
 } from "@app/slices/admission/rules.js";
 import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
+import {
+  defaultLoudness,
+  type LoudnessDefault,
+  loudnessOfForm,
+} from "@app/slices/loudness/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
 import { type ShortsSettings, shortsExtrasOf } from "@app/slices/shorts/model.js";
@@ -106,6 +111,8 @@ export interface LegacyPlayFormState {
   readonly voices?: PlayDraftForm["voices"];
   // The ambient bed as the draft holds it, numbers as typed; absent takes the channel's.
   readonly ambientBed?: PlayDraftForm["ambientBed"];
+  // Level the volume as the draft holds it; absent follows Settings → General.
+  readonly loudness?: PlayDraftForm["loudness"];
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -235,6 +242,8 @@ export interface DraftInput {
   readonly slots: readonly string[];
   // The gap beside a segment that exists, as Settings has it.
   readonly silenceGapSeconds: number;
+  // Level the volume as Settings → General has it, for a draft that did not change it.
+  readonly loudness?: LoudnessDefault | undefined;
 }
 
 export function draftOf(input: DraftInput): RunDraft {
@@ -328,6 +337,13 @@ export function draftOf(input: DraftInput): RunDraft {
         ? ambientBedOfForm(form.ambientBed)
         : undefined,
       (ambientBed) => ({ ambientBed }),
+    ),
+    // As `slices/play-drafts/convert.ts` sends it: only while on, with a narration to level.
+    ...pick(
+      form.sources.audio === "off"
+        ? undefined
+        : loudnessOfForm(form.loudness, input.loudness ?? defaultLoudness),
+      (loudness) => ({ loudness }),
     ),
   };
 }

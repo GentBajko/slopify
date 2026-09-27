@@ -17,6 +17,7 @@ import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
+import { PlayLoudness } from "./loudness";
 import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
@@ -283,6 +284,11 @@ export function VideoRail({
             onRemoveFile={onRemoveFile}
             onReattachFile={onReattachFile}
           />
+        </div>
+      ) : null}
+      {form.sources.audio !== "off" ? (
+        <div className={railBeneath}>
+          <PlayLoudness form={form} problem={problem} update={update} />
         </div>
       ) : null}
       {extras ? (

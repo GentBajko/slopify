@@ -1,3 +1,4 @@
+import { reportText } from "@app/slices/loudness/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
@@ -16,10 +17,14 @@ import { duration } from "./summary.js";
 
 // Each completed segment keeps its player and download. Historical voice metadata
 // describes these files; the separate project controls choose providers for future work.
-const players: readonly { readonly role: OutputRole; readonly name: string }[] = [
-  { role: "audio_intro", name: "Intro" },
-  { role: "audio_body", name: "Body" },
-  { role: "audio_outro", name: "Outro" },
+const players: readonly {
+  readonly role: OutputRole;
+  readonly segment: "intro" | "body" | "outro";
+  readonly name: string;
+}[] = [
+  { role: "audio_intro", segment: "intro", name: "Intro" },
+  { role: "audio_body", segment: "body", name: "Body" },
+  { role: "audio_outro", segment: "outro", name: "Outro" },
 ];
 
 export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
@@ -27,9 +32,16 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
   const voices = useQuery(voicesQuery(api));
   const reviews = useReviews(project.id);
   const mine = outputsOf(outputs, stage);
+  // With Level the volume on, each segment plays its levelled join: what the video plays.
+  const levelled = mine.filter((output) => output.role === "audio_levelled");
   const landed = players.flatMap((player) => {
-    const output = roleOf(mine, player.role);
+    const output =
+      levelled.find((one) => one.meta.segment === player.segment) ?? roleOf(mine, player.role);
     return output === undefined ? [] : [{ ...player, output }];
+  });
+  const reports = players.flatMap((player) => {
+    const report = levelled.find((one) => one.meta.segment === player.segment)?.meta.loudness;
+    return report === undefined ? [] : [{ name: player.name, report }];
   });
   const historical = landed.find((player) => player.output.meta.voice !== undefined)?.output.meta;
   const picked = landed.length > 0 ? historical?.voice : project.config.audio?.voice;
@@ -47,6 +59,16 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
         landed.map((player) => (
           <Player key={player.role} name={player.name} output={player.output} />
         ))
+      )}
+
+      {reports.length === 0 ? null : (
+        <p className="m-0 text-small text-ink-2">
+          {reports
+            .map(({ name, report }) =>
+              reports.length === 1 ? reportText(report) : `${name}: ${reportText(report)}`,
+            )
+            .join(" ")}
+        </p>
       )}
 
       <ReviewVerdict

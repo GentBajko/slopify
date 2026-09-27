@@ -120,7 +120,7 @@ export function loudnessProblem(lufs: number, target: LoudnessTarget): string | 
     db >= loudnessDbMin - 1e-9 &&
     db <= loudnessDbMax + 1e-9
     ? undefined
-    : `Choose a volume between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB.`;
+    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (Play's Export row, Edit project → Volume, or Settings → General).`;
 }
 
 export function loudnessFields(
@@ -210,6 +210,11 @@ export function reportText(report: LoudnessReport): string {
       ? ""
       : ` (${String(report.skipped)} too short or quiet to measure, left as they were)`;
   return `Levelled ${pieces} to ${formatNumber(report.target)} LUFS${skipped}: the spread was ${formatNumber(report.spreadBefore)} LU, now ${formatNumber(report.spreadAfter)} LU.`;
+}
+
+// "Mastered to -14 LUFS: measured -14.1 LUFS, peaks -1.6 dBTP".
+export function masterText(report: MasterReport): string {
+  return `Mastered to ${formatNumber(report.target)} LUFS: measured ${formatNumber(report.integrated)} LUFS, peaks ${formatNumber(report.truePeak)} dBTP`;
 }
 
 function round(value: number, places: number): number {

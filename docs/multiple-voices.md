@@ -99,3 +99,13 @@ under it.
 With **Also make MP3 and M4B files** on, the Video stage also writes `narration.mp3` (ID3
 chapters) and `audiobook.m4b` (AAC with chapter markers) of the whole narration timeline, one
 chapter per script section. Both are under the Video section's downloads; nothing is published.
+
+## Volume
+
+Different voices, and different requests of the same voice, come back from the providers at
+different loudness. With **Level the volume** on (the default for new runs; see
+[loudness.md](loudness.md)) every speaker's turn is measured and brought to one common
+loudness before the turns are joined, so a quiet host and a loud guest sit at the same level,
+and the MP3 and M4B are mastered to the audio files volume (−18 LUFS by default). The turn gap
+and each speaker's pace are applied exactly as before, and the word timing still reads the plain
+join, so the captions and chapter marks do not move.

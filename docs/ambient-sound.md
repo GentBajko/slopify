@@ -47,3 +47,7 @@ its project, and a channel has no file store of its own for audio.
   every other uploaded file. For that reason a template with *My own file* cannot run on a
   schedule; pick a built-in bed for scheduled runs.
 - The bed cannot be changed in Edit project yet: start the video again from Play to change it.
+
+With **Level the volume** on ([loudness.md](loudness.md)) the bed is mixed under the levelled
+voice and ducked by it as above, and the master then brings the whole mix to the video volume,
+so the bed's level stays relative to the voice.
