@@ -23,18 +23,42 @@
 
 const quick = { timeout: 4_000 };
 
+// It opens on the finished project (which is also the poster), then shows how it was made.
 export const steps = [
   {
-    id: "projects",
-    caption: "Projects: every run with its state. The demo project is finished.",
+    id: "project",
+    caption: "The finished project: the video with captions, ready to download.",
     hold: 2_500,
     async run({ page, go, start }) {
-      await go("/");
+      await go("/projects/demo-lighthouse");
       await page
-        .getByRole("link", { name: /Keeper of the Drowned Light/i })
+        .getByRole("heading", { name: /Keeper of the Drowned Light/i })
         .first()
         .waitFor(quick);
       start();
+    },
+  },
+  {
+    id: "description",
+    caption:
+      "The YouTube description with chapter timestamps, and the tags, each with a Copy button.",
+    hold: 2_500,
+    async run({ page, start, glide }) {
+      const chapters = page.getByText(/00:10 The First Keeper/).first();
+      await chapters.waitFor(quick);
+      start();
+      await glide(chapters, "center");
+    },
+  },
+  {
+    id: "shorts",
+    caption: "Shorts: vertical clips picked from the video, each with its own title and hashtags.",
+    hold: 3_000,
+    async run({ page, start, glide }) {
+      const short = page.getByText(/The log that stopped for forty days/).first();
+      await short.waitFor(quick);
+      start();
+      await glide(short, "center");
     },
   },
   {
@@ -67,42 +91,6 @@ export const steps = [
       );
       await page.waitForTimeout(600);
       await maybe(() => glide(page.getByRole("heading", { name: /^export$/i }).first(), "center"));
-    },
-  },
-  {
-    id: "project",
-    caption: "The finished project: the video with captions, ready to download.",
-    hold: 2_500,
-    async run({ page, go, start }) {
-      await go("/projects/demo-lighthouse");
-      await page
-        .getByRole("heading", { name: /Keeper of the Drowned Light/i })
-        .first()
-        .waitFor(quick);
-      start();
-    },
-  },
-  {
-    id: "description",
-    caption:
-      "The YouTube description with chapter timestamps, and the tags, each with a Copy button.",
-    hold: 2_500,
-    async run({ page, start, glide }) {
-      const chapters = page.getByText(/00:10 The First Keeper/).first();
-      await chapters.waitFor(quick);
-      start();
-      await glide(chapters);
-    },
-  },
-  {
-    id: "shorts",
-    caption: "Shorts: vertical clips picked from the video, each with its own title and hashtags.",
-    hold: 3_000,
-    async run({ page, start, glide }) {
-      const short = page.getByText(/The log that stopped for forty days/).first();
-      await short.waitFor(quick);
-      start();
-      await glide(short, "center");
     },
   },
   {

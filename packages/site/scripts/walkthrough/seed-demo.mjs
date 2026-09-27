@@ -368,6 +368,8 @@ export async function seedDemo(dataDir, browser) {
     motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     youtubeDescription: true,
+    // Named, so the page shows the built-in Plain look rather than the legacy default.
+    document: { theme: "plain" },
     shorts: { enabled: true, count: 1, minSeconds: 15, maxSeconds: 60, titleOnScreen: true },
     rendered: {},
   };
