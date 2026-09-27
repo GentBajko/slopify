@@ -281,7 +281,7 @@ export const settingsHelp = {
   },
   "welcome.pack": {
     title: "Style",
-    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Picking a pack adds its prompts and suggested voice to your library for the short; Add to library also adds its template for Play.",
+    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Making the short with a pack adds its prompts and suggested voice to your library; Add to library also adds its template for Play.",
   },
   "welcome.packs": {
     title: "Starter packs",
