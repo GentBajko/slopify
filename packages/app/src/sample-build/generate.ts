@@ -44,6 +44,8 @@ import {
   sampleTitle,
   sceneOf,
 } from "./content.js";
+import { type DemoSetup, demoSetup, shrinkAudio } from "./demo-build.js";
+import { type Demo, demoOf } from "./demos.js";
 import { scriptedAnswer } from "./script.js";
 
 // Builds the bundled sample project with Slopify's own pipeline: the article is supplied and
@@ -69,6 +71,8 @@ import { scriptedAnswer } from "./script.js";
 // exported as a backup the app imports on first launch.
 //
 //   node packages/app/scripts/build-sample.mjs [--short] [--assets <folder>] <out.tar>
+//
+// `--demo <audiobook|podcast>` builds one of the multi-voice demos instead (`demo-build.ts`).
 
 const wordsPerMinute = 165;
 const leadSeconds = 0.4;
@@ -76,16 +80,20 @@ const leadSeconds = 0.4;
 async function main(): Promise<void> {
   const out = process.argv.at(-1);
   if (out === undefined || !out.endsWith(".tar"))
-    throw new Error("Usage: build-sample.mjs [--short] [--assets <folder>] <out.tar>");
+    throw new Error(
+      "Usage: build-sample.mjs [--short | --demo <id>] [--assets <folder>] <out.tar>",
+    );
   const short = process.argv.includes("--short");
   const flag = process.argv.indexOf("--assets");
   const assets = flag === -1 ? undefined : process.argv[flag + 1];
   if (flag !== -1 && (assets === undefined || assets.endsWith(".tar")))
-    throw new Error("--assets needs the folder that holds narration.mp3 and the pictures.");
+    throw new Error("--assets needs the folder that holds the narration and the pictures.");
+  const demoFlag = process.argv.indexOf("--demo");
+  const demo = demoFlag === -1 ? undefined : demoOf(process.argv[demoFlag + 1] ?? "");
   const root = mkdtempSync(join(tmpdir(), "slopify-sample-"));
   process.env.SAMPLE_SCRATCH = root;
   try {
-    await build(join(root, "data"), out, short, assets);
+    await build(join(root, "data"), out, short, assets, demo);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -96,6 +104,7 @@ async function build(
   out: string,
   short: boolean,
   assets: string | undefined,
+  demo: Demo | undefined,
 ): Promise<void> {
   const paths = layout(dataDir);
   ensureDirs(paths, { mode: 0o700 });
@@ -110,6 +119,92 @@ async function build(
   };
   const ffmpeg = process.env.FFMPEG ?? "ffmpeg";
   const catalogue = staticCatalogue();
+  const setup =
+    demo === undefined
+      ? librarySetup({ db, ids, clock, paths, ffmpeg, dataDir, short, assets })
+      : demoSetup({
+          db,
+          ids,
+          at: clock.now().toISOString(),
+          ffmpeg,
+          scratch: dataDir,
+          demo,
+          assets,
+        });
+  const draft = setup.draft;
+  const picked = pickTemplates(db, draft);
+  const admitted = admit({ draft: picked.draft, staged: stagedFiles(db), requiredSlots: [] });
+  if (!admitted.ok || picked.missing.length > 0)
+    throw new Error(`The sample draft was refused: ${JSON.stringify(admitted)}`);
+  const storage = { db, paths, ids, clock, log, catalogue, emit: () => undefined };
+  const { project } = startRun(
+    storage,
+    admitted.draft,
+    renderPicked(picked, admitted.draft.values),
+    false,
+    Object.fromEntries(picked.bodies.map(({ key, body }) => [key, body])),
+  );
+  const hub = createHub({ ids, log });
+  const runner = wireRunner({
+    db,
+    paths,
+    clock,
+    ids,
+    log,
+    hub,
+    telemetry: { db, ids, clock, log, appVersion: "sample" },
+    flusher: { soon: () => undefined, stop: () => undefined },
+    registry: setup.registry,
+    catalogue,
+    ffmpeg,
+    audioPreviews: createAudioPreviewStore(),
+    // A real narration is timed by the real aligner, wireRunner's default.
+    ...(setup.alignSubtitles === undefined ? {} : { alignSubtitles: setup.alignSubtitles }),
+  });
+  runner.tick(project.id);
+  for (;;) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const stages = stagesOf(db, project.id);
+    const failed = stages.find((stage) => stage.state === "failed");
+    if (failed !== undefined)
+      throw new Error(`The sample's ${failed.kind} stage failed: ${failed.failureReason ?? ""}`);
+    if (stages.every((stage) => ["done", "skipped", "provided"].includes(stage.state))) break;
+  }
+  await runner.settled();
+  // A demo carries three voices' audio files as well, so it is squeezed harder to stay under
+  // 10 MB.
+  shrinkVideos(db, paths.projects, project.id, ffmpeg, demo === undefined ? 30 : 38);
+  if (demo !== undefined) shrinkAudio(db, paths.projects, project.id, ffmpeg);
+  // The sample carries its project only: no prompts, voices, settings or usage of the machine
+  // that built it.
+  for (const table of [
+    "settings",
+    "prompts",
+    "entries",
+    "voices",
+    "staged_files",
+    "telemetry_events",
+  ])
+    db.prepare(`DELETE FROM ${table}`).run();
+  const plan = planBackup({ db, paths, clock, ids, appVersion: "sample" });
+  await pipeline(Readable.from(streamBackup(plan)), createWriteStream(out));
+  db.close();
+  console.log(`${out}: ${String(statSync(out).size)} bytes, project ${project.id}`);
+}
+
+// The Library of Alexandria's run: the narration uploaded (or an ambient track), the article
+// supplied, the pictures painted ahead of time (or drawn procedurally).
+function librarySetup(input: {
+  readonly db: ReturnType<typeof openDb>;
+  readonly ids: typeof ulidIds;
+  readonly clock: typeof systemClock;
+  readonly paths: ReturnType<typeof layout>;
+  readonly ffmpeg: string;
+  readonly dataDir: string;
+  readonly short: boolean;
+  readonly assets: string | undefined;
+}): DemoSetup {
+  const { db, ids, clock, paths, ffmpeg, dataDir, short, assets } = input;
   const style: SampleStyle = assets === undefined ? "procedural" : "painted";
 
   const seconds = sampleWords().length / (wordsPerMinute / 60) + leadSeconds + 1;
@@ -206,66 +301,16 @@ async function build(
           },
         }),
   };
-  const picked = pickTemplates(db, draft);
-  const admitted = admit({ draft: picked.draft, staged: stagedFiles(db), requiredSlots: [] });
-  if (!admitted.ok || picked.missing.length > 0)
-    throw new Error(`The sample draft was refused: ${JSON.stringify(admitted)}`);
-  const storage = { db, paths, ids, clock, log, catalogue, emit: () => undefined };
-  const { project } = startRun(
-    storage,
-    admitted.draft,
-    renderPicked(picked, admitted.draft.values),
-    false,
-    Object.fromEntries(picked.bodies.map(({ key, body }) => [key, body])),
-  );
-  const hub = createHub({ ids, log });
-  const runner = wireRunner({
-    db,
-    paths,
-    clock,
-    ids,
-    log,
-    hub,
-    telemetry: { db, ids, clock, log, appVersion: "sample" },
-    flusher: { soon: () => undefined, stop: () => undefined },
+  return {
+    draft,
     registry: sampleRegistry(style, assets),
-    catalogue,
-    ffmpeg,
-    audioPreviews: createAudioPreviewStore(),
-    // A real narration is timed by the real aligner, wireRunner's default.
     ...(assets === undefined
       ? {
           alignSubtitles: async (request: { readonly text: string }) =>
             paced(request.text, leadSeconds, seconds - 1),
         }
       : {}),
-  });
-  runner.tick(project.id);
-  for (;;) {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const stages = stagesOf(db, project.id);
-    const failed = stages.find((stage) => stage.state === "failed");
-    if (failed !== undefined)
-      throw new Error(`The sample's ${failed.kind} stage failed: ${failed.failureReason ?? ""}`);
-    if (stages.every((stage) => ["done", "skipped", "provided"].includes(stage.state))) break;
-  }
-  await runner.settled();
-  shrinkVideos(db, paths.projects, project.id, ffmpeg);
-  // The sample carries its project only: no prompts, voices, settings or usage of the machine
-  // that built it.
-  for (const table of [
-    "settings",
-    "prompts",
-    "entries",
-    "voices",
-    "staged_files",
-    "telemetry_events",
-  ])
-    db.prepare(`DELETE FROM ${table}`).run();
-  const plan = planBackup({ db, paths, clock, ids, appVersion: "sample" });
-  await pipeline(Readable.from(streamBackup(plan)), createWriteStream(out));
-  db.close();
-  console.log(`${out}: ${String(statSync(out).size)} bytes, project ${project.id}`);
+  };
 }
 
 function sampleWords(): readonly string[] {
@@ -440,6 +485,7 @@ function shrinkVideos(
   projects: string,
   projectId: string,
   ffmpeg: string,
+  crf = 30,
 ): void {
   const rows = db
     .prepare(
@@ -464,9 +510,9 @@ function shrinkVideos(
         "-c:v",
         "libx264",
         "-preset",
-        "slow",
+        crf > 30 ? "veryslow" : "slow",
         "-crf",
-        "30",
+        String(crf),
         "-pix_fmt",
         "yuv420p",
         "-c:a",

@@ -62,6 +62,26 @@ request unless **One request for consecutive turns** is off. Narration aliases a
 line of that request, each turn on its own, and the request's size limit counts the aliased
 text. Changing one speaker's voice remakes only that speaker's turns.
 
+## Delivery cues
+
+With a **Narration Preparation** prompt (Audio → Advanced), every turn of a speaker on Inworld's
+Realtime TTS-2 is prepared on its own before it is spoken: the text model gets the turn's
+sentences and who says them (`"Rat (character)"`), and answers cues in the same format as a
+single voice's preparation. They become Inworld's bracketed tags in that turn's request: a
+natural-language direction at the start of a sentence (`[say shyly and a little uncertainly]`),
+held until the next one or `[reset]`, and the non-verbal sounds `[laugh]`, `[breathe]`,
+`[sigh]`, `[cough]`, `[clear throat]` and `[yawn]` where they happen. Each turn is its own
+request, so a direction never leaks into the next speaker. Turns of speakers on other voices
+(or TTS-2 Flash, which ignores directions) are spoken as written. Nothing is spoken until every
+prepared turn has its cues, as with one voice; the audio voice under Audio must still be TTS-2,
+and at least one speaker must be.
+
+The tags are only in what the voice is sent: each turn keeps its clean words as its transcript,
+so the captions, the word timing, the MP3/M4B chapters and the script download never show a
+tag, and the aligner times the words against the audio the same way as for one prepared voice.
+A run without a Narration Preparation prompt, and every project made before this, keeps its
+recipes exactly.
+
 ## Captions and files
 
 Word timing learns who said each word: captions never mix two speakers, carry the speaker's

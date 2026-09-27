@@ -13,7 +13,7 @@ import { ulidIds } from "../../kernel/ids.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { RunConfig } from "../../slices/admission/model.js";
 import { projectById } from "../../slices/admission/repo.js";
-import { seedSample } from "../../slices/onboarding/sample.js";
+import { seedSamples } from "../../slices/onboarding/sample.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { upsertKey } from "../../slices/settings/repo.js";
 import { createHub } from "../events/hub.js";
@@ -117,7 +117,7 @@ describe("the first-run screen", () => {
 
   it("still shows beside the sample, and never again once a real project exists", async () => {
     const h = harness();
-    await seedSample({
+    await seedSamples({
       db: h.db,
       paths: h.paths,
       clock,
@@ -222,7 +222,7 @@ describe("Make a 60-second short", () => {
 describe("the sample over HTTP", () => {
   it("is read-only, and its copy is an ordinary project", async () => {
     const h = harness();
-    await seedSample({
+    await seedSamples({
       db: h.db,
       paths: h.paths,
       clock,
@@ -270,8 +270,46 @@ describe("the sample over HTTP", () => {
     expect((await h.app.request(`/api/projects/${projectId}`, { method: "DELETE" })).status).toBe(
       204,
     );
-    expect(await json(await h.app.request("/api/onboarding/sample"))).toEqual({ projectId: null });
+    expect(await json(await h.app.request("/api/onboarding/sample"))).toMatchObject({
+      projectId: null,
+      samples: { library: null },
+    });
     const restored = await h.app.request("/api/onboarding/sample/restore", { method: "POST" });
-    expect(await json(restored)).toEqual({ projectId });
+    expect(await json(restored)).toMatchObject({ projectId, samples: { library: projectId } });
+  });
+
+  it("lists the demos beside the first sample, read-only, and copies the one asked for", async () => {
+    const h = harness();
+    await seedSamples({
+      db: h.db,
+      paths: h.paths,
+      clock,
+      ids: ulidIds,
+      log: { write: () => undefined },
+      appVersion: "3.0.0",
+    });
+    const view = await json(await h.app.request("/api/onboarding"));
+    const samples = view.samples as Record<string, string>;
+    expect(Object.keys(samples)).toEqual(["library", "audiobook", "podcast"]);
+    // The demos are samples, not the user's projects: the first-run screen still shows.
+    expect(view.show).toBe(true);
+    for (const id of [samples.audiobook, samples.podcast]) {
+      const refused = await h.app.request(`/api/projects/${String(id)}/rebuild`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      expect(await json(refused)).toMatchObject({ reason: "sample-read-only" });
+    }
+    const copied = await h.app.request("/api/onboarding/sample/copy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ projectId: samples.podcast }),
+    });
+    expect(copied.status).toBe(201);
+    const copy = ((await copied.json()) as { projectId: string }).projectId;
+    expect(
+      h.db.prepare("SELECT title FROM projects WHERE id=?").get(copy) as { title: string },
+    ).toEqual({ title: "The Antikythera Mechanism (my copy)" });
   });
 });

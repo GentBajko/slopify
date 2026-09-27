@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readSetting, writeSetting } from "../settings/repo.js";
+import type { SampleId } from "./model.js";
 
 // What the first five minutes remember, in the settings table: whether the first-run screen
 // was dismissed, which project is the bundled sample, and which library rows each installed
@@ -52,12 +53,24 @@ export function dismissFirstRun(db: DatabaseSync, at: string): void {
   if (!firstRunDismissed(db)) writeSetting(db, dismissedKey, at);
 }
 
-export function readSampleRecord(db: DatabaseSync): SampleRecord | undefined {
-  return readJson(db, sampleKey, sampleRecord);
+// Each bundled sample is remembered on its own ("The Library of Alexandria" under the key it
+// always had), so a demo added in a later version is seeded once on an install that already
+// has the first.
+const sampleKeyOf = (id: SampleId): string => (id === "library" ? sampleKey : `${sampleKey}.${id}`);
+
+export function readSampleRecord(
+  db: DatabaseSync,
+  id: SampleId = "library",
+): SampleRecord | undefined {
+  return readJson(db, sampleKeyOf(id), sampleRecord);
 }
 
-export function writeSampleRecord(db: DatabaseSync, record: SampleRecord): void {
-  writeSetting(db, sampleKey, JSON.stringify(record));
+export function writeSampleRecord(
+  db: DatabaseSync,
+  record: SampleRecord,
+  id: SampleId = "library",
+): void {
+  writeSetting(db, sampleKeyOf(id), JSON.stringify(record));
 }
 
 export function readPackRecords(db: DatabaseSync): Readonly<Record<string, PackRecord>> {

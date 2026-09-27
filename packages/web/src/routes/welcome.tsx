@@ -1,3 +1,4 @@
+import type { SampleId } from "@app/slices/onboarding/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
@@ -19,8 +20,37 @@ import {
 } from "@/onboarding/api";
 import { keys } from "@/queries";
 
-// The first-run screen: what this machine can already do, the one-minute short, the sample and
-// the starter packs. Shown on a fresh install until it is skipped or a real project exists.
+// The bundled samples, each with what it shows and the button that opens it.
+const samples: readonly {
+  readonly id: SampleId;
+  readonly name: string;
+  readonly summary: string;
+  readonly action: string;
+}[] = [
+  {
+    id: "library",
+    name: "The Library of Alexandria",
+    summary: "A narrated video with its two shorts, article, PDF, description and images.",
+    action: "Explore the sample",
+  },
+  {
+    id: "audiobook",
+    name: "The Wind in the Willows",
+    summary:
+      "An audiobook: a narrator and two character voices, captions tagged with who speaks, MP3 and M4B with chapters.",
+    action: "See an audiobook",
+  },
+  {
+    id: "podcast",
+    name: "The Antikythera Mechanism",
+    summary:
+      "A two-host podcast with the speaker panel, name tags and portraits, and its MP3 and M4B.",
+    action: "Hear a podcast",
+  },
+];
+
+// The first-run screen: what this machine can already do, the one-minute short, the samples
+// and the starter packs. Shown on a fresh install until it is skipped or a real project exists.
 export function WelcomeRoute(): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -153,27 +183,35 @@ export function WelcomeRoute(): ReactElement {
         </Button>
       </form>
 
-      <SectionHead title="Explore the sample" />
+      <SectionHead
+        title="Explore the samples"
+        info="Finished projects that come with Slopify. They are read-only, so nothing you try on them costs anything; Make my own copy on a sample's page gives you one to edit."
+      />
       <RailGroup className="mb-6">
-        <Rail>
-          <span className="min-w-0 flex-1 text-small text-ink2">
-            A finished project with its video, two shorts, article, PDF, description and images. It
-            is read-only, so nothing you try on it costs anything.
-          </span>
-          {data?.sampleProjectId ? (
-            <Button asChild>
-              <Link to="/projects/$projectId" params={{ projectId: data.sampleProjectId }}>
-                Explore the sample
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="ghost">
-              <Link to="/settings" search={{ section: "storage" }}>
-                Restore sample in Settings
-              </Link>
-            </Button>
-          )}
-        </Rail>
+        {samples.map((one) => {
+          const projectId = data?.samples[one.id] ?? null;
+          return (
+            <Rail key={one.id}>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-semibold">{one.name}</span>
+                <span className="text-small text-ink2">{one.summary}</span>
+              </span>
+              {projectId === null ? (
+                <Button asChild variant="ghost">
+                  <Link to="/settings" search={{ section: "storage" }}>
+                    Restore samples in Settings
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link to="/projects/$projectId" params={{ projectId }}>
+                    {one.action}
+                  </Link>
+                </Button>
+              )}
+            </Rail>
+          );
+        })}
       </RailGroup>
 
       <AutostartOffer />

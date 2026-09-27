@@ -80,8 +80,10 @@ export interface AppDeps {
   readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
-  // The bundled sample's archive; the one shipped in assets unless a test hands in another.
-  readonly sampleArchive?: string | undefined;
+  // The bundled samples' archives; the ones shipped in assets unless a test hands in others.
+  readonly sampleArchives?:
+    | Partial<Record<import("../../slices/onboarding/model.js").SampleId, string>>
+    | undefined;
   // Reads a narration file's loudness for the live view's waveform (ffmpeg in production).
   readonly decodePeaks?: DecodePeaks | undefined;
   readonly openFolder?: (path: string) => Promise<void>;

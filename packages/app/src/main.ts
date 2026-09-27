@@ -80,7 +80,7 @@ import { decodePeaks } from "./slices/narration/peaks.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
-import { seedSample } from "./slices/onboarding/sample.js";
+import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
 import { recoverProject } from "./slices/rebuild/recovery.js";
@@ -526,10 +526,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       bootedAt: clock.now(),
       beginMutation: updater.beginMutation,
     });
-    // Before the server answers, so the first page already lists the sample. A failure costs
-    // only the sample: the log says why and Settings → Restore sample tries again.
+    // Before the server answers, so the first page already lists the samples. A failure costs
+    // only the samples: the log says why and Settings → Restore samples tries again.
     if (options.seedSample === true && !pendingActivation)
-      await seedSample({ db, paths, clock, ids, log, appVersion: version }).catch(
+      await seedSamples({ db, paths, clock, ids, log, appVersion: version }).catch(
         (error: unknown) => {
           log.write("warn", "sample.seed", { detail: causedBy(error) });
         },

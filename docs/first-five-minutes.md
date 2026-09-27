@@ -6,9 +6,9 @@ What a new install shows before anything is spent.
 
 Projects opens it on a fresh install (`GET /api/onboarding` answers `show: true`). It lists the
 agent CLIs Slopify found (from the same provider statuses Settings shows), "Make a 60-second
-short", "Explore the sample" and the starter packs. Skip (`POST /api/onboarding/dismiss`) hides
-it for good; so does the first real project (anything but the sample), even if that project is
-deleted later.
+short", the samples ("Explore the sample", "See an audiobook", "Hear a podcast") and the starter
+packs. Skip (`POST /api/onboarding/dismiss`) hides it for good; so does the first real project
+(anything but the samples), even if that project is deleted later.
 
 It also offers "Start Slopify when I log in" once, until it is answered there, in Settings →
 General or in the terminal; see [start-at-login.md](start-at-login.md).
@@ -47,18 +47,28 @@ idempotent: items the pack installed before are kept as they are (edited or not)
 comes back, and a prompt or template of yours with the same name is never touched; the pack's
 copy gets " (2)". What each pack installed is remembered in the `onboarding.packs` setting.
 
-## The bundled sample
+## The bundled samples
 
-`packages/app/src/assets/sample/sample-project.tar` (about 22 MB) is a backup archive holding
-one finished project, "The Library of Alexandria": a 2½-minute 1280×720 narrated video with burned-in
-captions, chapter cards and the warm Look, two shorts, the article, the PDF, a YouTube
-description with chapters, four images and a thumbnail. Boot imports it once
-(`BootOptions.seedSample`, on in the CLI); deleting it keeps it deleted until Settings → Backup
-& storage → Restore sample. It is read-only at the HTTP edge (every non-GET under
-`/api/projects/:id/` is refused except revision prepare, rebuild preview, open folder and
-delete), so nothing on it can reach a paid provider. "Make my own copy" clones every row and
-file under new ids and re-stamps the fingerprints the new asset ids change, so the copy has
-nothing to rebuild.
+Three backup archives in `packages/app/src/assets/sample/`, each holding one finished project
+(all marked **Sample** in Projects):
+
+- `sample-project.tar` (about 22 MB), "The Library of Alexandria": a 2½-minute 1280×720
+  narrated video with burned-in captions, chapter cards and the warm Look, two shorts, the
+  article, the PDF, a YouTube description with chapters, four images and a thumbnail.
+- `sample-audiobook.tar` (about 9.97 MB), "The Wind in the Willows: The River Bank": an
+  audiobook (see [The demos](#the-demos)).
+- `sample-podcast.tar` (about 8.8 MB), "The Antikythera Mechanism": a two-host podcast.
+
+Boot imports each once (`BootOptions.seedSample`, on in the CLI; `seedSamples` in
+`slices/onboarding/sample.ts`), and each is remembered on its own (`onboarding.sample`,
+`onboarding.sample.audiobook`, `onboarding.sample.podcast`), so an install that had only the
+first gets the demos once on its next start. Deleting one keeps it deleted until Settings →
+Backup & storage → Restore samples, which puts all three back as they shipped. They are
+read-only at the HTTP edge (every non-GET under `/api/projects/:id/` is refused except
+revision prepare, rebuild preview, open folder and delete), so nothing on them can reach a paid
+provider. "Make my own copy" (`POST /api/onboarding/sample/copy {projectId}`) clones every row
+and file of that sample under new ids and re-stamps the fingerprints the new asset ids change,
+so the copy has nothing to rebuild.
 
 The archive is built by Slopify's own pipeline. The bundled one uses a folder of pre-made
 narration and pictures:
@@ -84,3 +94,51 @@ code.
 Without `--assets` the build needs no provider at all (CI): the pictures are procedural
 ImageMagick art (`src/sample-build/art.ts`, model `procedural`), the narration is a quiet
 ambient track, and the captions carry the words at a steady reading pace.
+
+## The demos
+
+Two multi-voice projects ([multiple-voices.md](multiple-voices.md)), built through the same
+pipeline as the Library sample: per-turn narration joined with the turn gap, delivery cues from
+Narration Preparation, the real English aligner's word timing, speaker-tagged captions, the
+render, a short, a YouTube description with chapters, and the MP3 and M4B with a chapter per
+script section.
+
+**Audiobook**, "The Wind in the Willows: The River Bank" (1:47): an abridged
+excerpt of chapter I of Kenneth Grahame's *The Wind in the Willows* (1908, public domain,
+Project Gutenberg eBook #289; the description cites it). The text is provided as written, with
+its quotation marks, and the Audiobook format's **attribute** path hands its dialogue to the
+speakers. Narrator "Winston" (mature, warm British storyteller), the Mole "Freddie" (young,
+casual British) and the Rat "Ronald" (deep, confident British). Four painterly landscapes, one
+short ("What?" to the end), captions with speaker names.
+
+**Podcast**, "The Antikythera Mechanism" (1:44): a script written for the demo
+(the 1901 find, the 82 fragments and 30-odd gears, the dials, the pin-and-slot moon, the 2005
+scans). Hosts Nell "Naomi" (warm, grounded) and Theo "Jake" (amiable, curious), each with a
+Codex-painted portrait (fictional people, painted in oil) in the speaker panel, per-speaker
+caption colours and name tags. Four paintings, one short.
+
+The voices are Inworld stock voices on Realtime TTS-2; each demo's turns carry delivery cues
+(for example `[call out cheerfully across the water]`, `[say slowly, in amazed disbelief]`,
+`[laugh]`, `[breathe]`) from the demo's Narration Preparation prompt, answered by the scripted
+writer from `src/sample-build/demos.ts`. Speaking them took 35 requests and 3,810 characters,
+tags included (about $0.095 at the catalogue's $25 per million; four audiobook turns were cut
+afterwards, so the bundled audiobook uses 20 of its 24). The twelve pictures (eight scenes, two
+tall ones for the shorts and two portraits) were painted by the Codex CLI.
+
+    cd packages/app
+    node --import ./scripts/ts-resolve.mjs src/sample-build/paint.ts --demo audiobook <folder>
+    node --import ./scripts/ts-resolve.mjs src/sample-build/voices.ts --demo audiobook <folder>
+    node scripts/build-sample.mjs --demo audiobook --assets <folder>   # writes sample-audiobook.tar
+
+`voices.ts` works out every request with the pipeline's own code (the script's turns, each
+turn's cues as Inworld tags) and speaks the ones not yet in the folder inside the maintainer's
+running Slopify container, where the Inworld key is saved: `container-voices.mjs` is copied to
+the container's `/tmp`, opens the database read-only, hands the key to the installed app's
+Inworld adapter and writes only MP3s, which are copied out before the folder in `/tmp` is
+removed. A file is named by its voice and words, so editing the script speaks only the changed
+turns. The build answers each TTS request with the file made for exactly that text and voice,
+and fails if one is missing. The archive re-encodes the video at CRF 38 and the narration files
+as 48 kbps mono MP3 and 32 kbps AAC to stay under 10 MB.
+
+Without `--assets` a demo builds with no provider (CI): quiet tones for the turns (provider
+`sample-voice`), procedural pictures and paced words, and no delivery cues.

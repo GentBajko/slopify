@@ -5,7 +5,7 @@ import { useApp } from "@/app-context";
 import { BatchQueueCount } from "@/components/batch-queue";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
-import { copySample, readSample, sampleKey } from "@/onboarding/api";
+import { copySample, isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { checkpointRevisionKey, checkpointStatus } from "@/project/checkpoint-api";
 import { CheckpointPanel } from "@/project/checkpoint-panel";
@@ -67,11 +67,11 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
 
   useLiveProject(projectId, project.data?.revisionId ?? null);
   const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
-  const isSample = sample.data?.projectId === projectId;
+  const isSample = isBundledSample(sample.data, projectId);
   const client = useQueryClient();
   const navigate = useNavigate();
   const copy = useMutation({
-    mutationFn: () => copySample(api),
+    mutationFn: () => copySample(api, projectId),
     onSuccess: async ({ projectId: copied }) => {
       await client.invalidateQueries({ queryKey: keys.projects });
       await navigate({ to: "/projects/$projectId", params: { projectId: copied } });
