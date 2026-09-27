@@ -13,6 +13,7 @@ import {
 import { type ReactElement, useEffect, useState, useSyncExternalStore } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { GlobalCommands } from "@/components/global-commands";
@@ -284,6 +285,7 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
+      reviewFlagged: runs.observeReview,
       scheduleTopics: (event) => {
         runs.observeTopics(event);
         void queryClient.invalidateQueries({ queryKey: ["schedules"] });
@@ -427,6 +429,7 @@ function ShellContent() {
 
       <AppearanceSkin />
       <FirstRunNotice />
+      <AutostartReminder />
       <WhatsNewTour />
       <PatchNotesPopup />
       <VersionPrompt

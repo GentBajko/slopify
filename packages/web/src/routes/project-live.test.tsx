@@ -219,7 +219,7 @@ describe("the page under a live run", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByRole("list", { name: "Run steps" })).getByText("image 20 of 20"),
+        within(screen.getByRole("list", { name: "Run steps" })).getByText(/^image 20 of 20( · |$)/),
       ).not.toBeNull();
     });
     expect(reads()).toBe(before);

@@ -69,7 +69,8 @@ describe("the providers health check", () => {
         state: "problem",
         detail: expect.stringContaining('run "codex login"'),
       });
-      expect(of("gemini")?.checks[1]).toMatchObject({ state: "skipped" });
+      // The Gemini CLI's sign-in is read from its files now, like the others' status commands.
+      expect(of("gemini")?.checks[1]).toMatchObject({ label: "Signed in", state: "ok" });
       expect(of("openrouter")).toMatchObject({
         state: "problem",
         checks: [
@@ -106,6 +107,100 @@ describe("the providers health check", () => {
         state: "problem",
       });
       expect(fetched).toBe(0);
+    } finally {
+      h.close();
+    }
+  });
+});
+
+describe("model reachable", () => {
+  function withModel(h: ReturnType<typeof draftFixture>, model: string) {
+    saveProviderKey(h.deps, "openrouter", "good");
+    must(
+      createDraft(h.deps, {
+        id: randomUUID(),
+        document: {
+          ...h.document,
+          form: { ...h.document.form, title: "Moon", llm: { provider: "openrouter", model } },
+        },
+      }),
+    );
+  }
+  function reachDeps(
+    h: ReturnType<typeof draftFixture>,
+    list: (url: string) => Response,
+  ): HealthDeps & { asked: string[] } {
+    const asked: string[] = [];
+    return {
+      ...deps(h, installed),
+      fetch: (async (url: string) => {
+        asked.push(url);
+        return url.endsWith("/key") ? new Response("{}", { status: 200 }) : list(url);
+      }) as typeof globalThis.fetch,
+      probes: {
+        openrouter: {
+          url: "https://openrouter.test/key",
+          headers: () => ({}),
+          model: {
+            url: () => "https://openrouter.test/models",
+            lists: (body, model) =>
+              (JSON.parse(body) as { data: { id: string }[] }).data.some((one) => one.id === model),
+          },
+        },
+      },
+      asked,
+    };
+  }
+  const models = () =>
+    new Response(JSON.stringify({ data: [{ id: "anthropic/claude-sonnet-4.6" }] }), {
+      status: 200,
+    });
+
+  it("asks the provider for the chosen model with the saved key", async () => {
+    const h = draftFixture();
+    try {
+      withModel(h, "anthropic/claude-sonnet-4.6");
+      const d = reachDeps(h, models);
+      const report = await checkProviderHealth(d, "openrouter");
+      expect(report.providers.map((row) => row.id)).toEqual(["openrouter"]);
+      expect(report.providers[0]?.checks.at(-1)).toMatchObject({
+        label: "Model reachable",
+        state: "ok",
+      });
+      expect(d.asked).toEqual(["https://openrouter.test/key", "https://openrouter.test/models"]);
+    } finally {
+      h.close();
+    }
+  });
+
+  it("names a chosen model the key can't use, and where it is chosen", async () => {
+    const h = draftFixture();
+    try {
+      withModel(h, "anthropic/claude-gone");
+      const report = await checkProviderHealth(reachDeps(h, models), "openrouter");
+      expect(report.providers[0]).toMatchObject({ state: "problem" });
+      expect(report.providers[0]?.checks.at(-1)).toMatchObject({
+        label: "Model reachable",
+        state: "problem",
+        detail: expect.stringContaining("anthropic/claude-gone (Text model in draft “Moon”)"),
+      });
+    } finally {
+      h.close();
+    }
+  });
+
+  it("warns rather than passes when the provider doesn't answer", async () => {
+    const h = draftFixture();
+    try {
+      withModel(h, "anthropic/claude-sonnet-4.6");
+      const report = await checkProviderHealth(
+        reachDeps(h, () => new Response("busy", { status: 503 })),
+        "openrouter",
+      );
+      expect(report.providers[0]?.checks.at(-1)).toMatchObject({
+        label: "Model reachable",
+        state: "warning",
+      });
     } finally {
       h.close();
     }

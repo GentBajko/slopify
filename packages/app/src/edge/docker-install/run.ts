@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -134,6 +134,12 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
       interactive: process.stdin.isTTY === true,
       ask: askTerminal,
       exec: nodeAutostartExec,
+      host: {
+        platform: process.platform,
+        home,
+        env,
+        read: (path) => readFile(path, "utf8").catch(() => undefined),
+      },
       now: () => new Date(),
       report: (line) => console.log(line),
     }).catch((error: unknown) => {

@@ -45,6 +45,11 @@ export function useRunNotifications(): RunWatcher {
             void navigateRef.current({ to: "/calendar" });
           });
         },
+        showReview: (notice) => {
+          showBrowserNotification(notice, (projectId) => {
+            void navigateRef.current({ to: "/projects/$projectId", params: { projectId } });
+          });
+        },
         show: (notice) => {
           showBrowserNotification(notice, (projectId) => {
             void navigateRef.current({ to: "/projects/$projectId", params: { projectId } });

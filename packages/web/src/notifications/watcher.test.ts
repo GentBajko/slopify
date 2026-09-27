@@ -5,6 +5,7 @@ import {
   createRunWatcher,
   type RunWatcherDeps,
   type ShownNotice,
+  type ShownReviewNotice,
   type ShownTopicsNotice,
 } from "./watcher.js";
 
@@ -167,6 +168,54 @@ describe("suggested topics", () => {
     await taken.watcher.settled();
     expect(taken.shown).toEqual([]);
     expect(claimed).toEqual(["topics:s1:7"]);
+  });
+});
+
+describe("review notices", () => {
+  function reviewHarness(enabled: boolean) {
+    const shown: ShownReviewNotice[] = [];
+    const claimed: string[] = [];
+    const watcher = createRunWatcher({
+      enabled: () => enabled,
+      seed: () => Promise.resolve([]),
+      subject: () => Promise.resolve({ title: "Hypatia", makesVideo: true }),
+      claim: (key) => {
+        claimed.push(key);
+        return Promise.resolve(!claimed.slice(0, -1).includes(key));
+      },
+      show: () => undefined,
+      showReview: (notice) => {
+        shown.push(notice);
+      },
+      report: () => undefined,
+    });
+    return { watcher, shown, claimed };
+  }
+  const event = { projectId: "p1", verdictId: "v1", stage: "thumbnail", reason: "Blurry." };
+
+  it("says a review needs a decision, once per verdict", async () => {
+    const { watcher, shown, claimed } = reviewHarness(true);
+    watcher.observeReview(event);
+    watcher.observeReview(event);
+    await watcher.settled();
+    expect(claimed).toEqual(["review:v1", "review:v1"]);
+    expect(shown).toEqual([
+      {
+        projectId: "p1",
+        text: {
+          headline: "Review needs a decision: Hypatia — Blurry.",
+          detail:
+            "The automatic review flagged the thumbnail and kept it. Open the project and press Overrule to keep it or Redo to make it again.",
+        },
+      },
+    ]);
+  });
+
+  it("stays quiet while browser notifications are off", async () => {
+    const { watcher, shown } = reviewHarness(false);
+    watcher.observeReview(event);
+    await watcher.settled();
+    expect(shown).toEqual([]);
   });
 });
 

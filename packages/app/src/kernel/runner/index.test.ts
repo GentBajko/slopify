@@ -181,6 +181,23 @@ describe("tick", () => {
     expect(order.indexOf("document:running")).toBeGreaterThan(order.indexOf("article:done"));
   });
 
+  it("lays out the document without its cover when the thumbnail fails", async () => {
+    const broken: StageRun = async (): Promise<StageRunResult> => {
+      throw new Error("The image provider refused the cover.");
+    };
+    const { runner, stages } = harness(
+      { thumbnail: broken, document: ok, audio: ok, images: ok, video: ok },
+      { research: "skipped", article: "provided", document: "pending" },
+    );
+
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(stages.stateOf("thumbnail")).toBe("failed");
+    expect(stages.stateOf("document")).toBe("done");
+    expect(stages.stateOf("video")).toBe("done");
+  });
+
   it("starts a stage once even when several ticks race its own completion", async () => {
     const started: StageKind[] = [];
     const counted: StageRun = async ({ stage }): Promise<StageRunResult> => {

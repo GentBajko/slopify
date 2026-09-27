@@ -81,8 +81,9 @@ export function providerRoutes(deps: AppDeps) {
         dismissFirstRun(deps.db);
         return c.body(null, 204);
       })
-      // "Check all": every CLI signed in, every key valid, every chosen model still offered.
-      // `?provider=codex` checks that one only (a sign-in fix-it's Check again).
+      // "Check all": every CLI signed in, every key valid, every chosen model still offered and
+      // answering for the key. `?provider=codex` checks that one only (its row's Check again,
+      // or a sign-in fix-it's).
       .post("/health", zValidator("query", healthQuery, onInvalid), async (c) => {
         if (deps.fetch === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });

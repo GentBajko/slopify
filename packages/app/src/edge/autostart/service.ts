@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
-import { desktopHowTo, dockerHowTo, type LoginStart } from "./docker.js";
+import { desktopHowTo, howToFor, type LoginStart } from "./docker.js";
 import { type AutostartView, autostartAnsweredKey } from "./model.js";
 import type { NativeAutostart } from "./native.js";
 
@@ -45,18 +45,20 @@ export function createAutostartService(
         summary:
           record === null
             ? "Slopify runs in Docker and starts whenever Docker starts. From inside the container it can't see whether Docker starts when you log in."
-            : record.docker === "yes"
-              ? record.manager === "rootless"
-                ? "Slopify runs in Docker and starts when you log in: rootless Docker starts with your login and restarts Slopify."
-                : "Slopify runs in Docker and starts with this computer: Docker starts at boot and restarts Slopify."
-              : record.docker === "no"
-                ? "Slopify runs in Docker, and Docker doesn't start by itself on this computer, so Slopify doesn't either."
-                : "Slopify runs in Docker and starts whenever Docker starts. The installer couldn't tell whether Docker starts by itself here.",
+            : record.desktop === true
+              ? desktopSummary(record.docker)
+              : record.docker === "yes"
+                ? record.manager === "rootless"
+                  ? "Slopify runs in Docker and starts when you log in: rootless Docker starts with your login and restarts Slopify."
+                  : "Slopify runs in Docker and starts with this computer: Docker starts at boot and restarts Slopify."
+                : record.docker === "no"
+                  ? "Slopify runs in Docker, and Docker doesn't start by itself on this computer, so Slopify doesn't either."
+                  : "Slopify runs in Docker and starts whenever Docker starts. The installer couldn't tell whether Docker starts by itself here.",
         where: null,
         howTo:
           record === null
             ? desktopHowTo
-            : `${dockerHowTo(record.manager)} To check again after changing it, run npx @gentbajko/slopify --docker.`,
+            : `${howToFor(record)} To check again after changing it, run npx @gentbajko/slopify --docker.`,
         checkedAt: record?.checkedAt ?? null,
         offer: false,
       };
@@ -98,6 +100,14 @@ export function createAutostartService(
     unanswered: async () => (await view()).offer,
     refresh: () => (source.kind === "native" ? source.native.refresh() : Promise.resolve()),
   };
+}
+
+function desktopSummary(docker: LoginStart["docker"]): string {
+  return docker === "yes"
+    ? "Slopify runs in Docker Desktop and starts when you sign in: Docker Desktop starts at sign-in and restarts Slopify."
+    : docker === "no"
+      ? "Slopify runs in Docker Desktop, and Docker Desktop doesn't start when you sign in, so Slopify doesn't either."
+      : "Slopify runs in Docker Desktop and starts whenever it does. The installer couldn't read whether Docker Desktop starts when you sign in.";
 }
 
 // The native steps already speak in sentences; a file error from the disk doesn't.

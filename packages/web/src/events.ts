@@ -2,6 +2,7 @@ import type {
   GlobalEvent,
   ProjectEvent,
   ProjectStateEvent,
+  ReviewFlaggedEvent,
   ScheduleTopicsEvent,
 } from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent } from "@app/kernel/events.js";
@@ -46,6 +47,8 @@ export interface GlobalSink {
   readonly projectState?: (event: ProjectStateEvent) => void;
   // A schedule held new generated topics for approval.
   readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
+  // An automatic review kept an item flagged and waits for Overrule or Redo.
+  readonly reviewFlagged?: (event: ReviewFlaggedEvent) => void;
 }
 
 const projectEventNames = [
@@ -57,6 +60,7 @@ const projectEventNames = [
   "narration.piece",
   "project.state",
   "project.updated",
+  "review.flagged",
 ] as const;
 
 const globalEventNames = [
@@ -66,6 +70,7 @@ const globalEventNames = [
   "project.updated",
   "project.state",
   "schedule.topics",
+  "review.flagged",
 ] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
@@ -83,7 +88,11 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
       sink.appendArticle(event.text);
       return;
     }
-    if (event.type === "image.landed" || event.type === "project.updated") {
+    if (
+      event.type === "image.landed" ||
+      event.type === "project.updated" ||
+      event.type === "review.flagged"
+    ) {
       // The frame names an output id and an index, not the row or the file behind them,
       // so this is the one event the page cannot paint without asking.
       sink.refetch();
@@ -111,6 +120,11 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
     }
     if (event.type === "schedule.topics") {
       sink.scheduleTopics?.(event);
+      return;
+    }
+    if (event.type === "review.flagged") {
+      sink.reviewFlagged?.(event);
+      sink.refetch(event.projectId);
       return;
     }
     sink.stagingChanged();

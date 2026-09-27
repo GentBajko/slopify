@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { StageProgressEvent } from "../../kernel/events.js";
 import type { StageState } from "../../kernel/pipeline.js";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
-import type { StageStanding } from "../../kernel/runner/graph.js";
+import { optionalDeps, type StageStanding } from "../../kernel/runner/graph.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { sourceOf } from "../admission/model.js";
@@ -120,9 +120,36 @@ export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
     if (recipe === undefined || recipe.unresolved || recipe.deferred) return false;
     return recipe.dependsOn.every((key) => {
       const dependency = plan.work.find((value) => value.key === key);
-      return dependency?.disposition === "reuse" && !dependency.inflight;
+      if (dependency?.disposition === "reuse" && !dependency.inflight) return true;
+      // A dependency the step can do without (the document's cover) releases it once it has
+      // failed for good; the step then runs without it. The fingerprint is unchanged: it
+      // already names the missing cover, so a thumbnail made later marks the document
+      // outdated rather than current.
+      return (
+        dependency !== undefined &&
+        (optionalDeps[recipe.stage]?.includes(dependency.stage) ?? false) &&
+        gaveUp(deps, work.projectId, key)
+      );
     });
   });
+}
+
+// Whether the current run's step for `key` failed or was canceled and isn't waiting to try
+// again by itself.
+function gaveUp(deps: RevisionDeps, projectId: string, key: string): boolean {
+  const row = deps.db
+    .prepare(
+      `SELECT w.state,w.retry_at FROM revision_work_reservations r
+       JOIN revision_work w ON w.id=r.work_id
+       JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
+       WHERE r.project_id=? AND r.work_key=?`,
+    )
+    .get(projectId, key);
+  return (
+    row !== undefined &&
+    row.retry_at === null &&
+    (row.state === "failed" || row.state === "canceled")
+  );
 }
 
 export function executionStandings(

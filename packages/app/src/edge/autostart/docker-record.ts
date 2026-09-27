@@ -1,7 +1,8 @@
 import { join } from "node:path";
 import { installSchema, readState, writeState } from "../docker-install/state.js";
 import {
-  checkDockerStart,
+  type DockerHost,
+  inspectDockerStart,
   type LoginStart,
   loginStartFile,
   loginStartReport,
@@ -24,6 +25,7 @@ export async function recordLoginStart(o: {
   readonly interactive: boolean;
   readonly ask: (question: string) => Promise<boolean | undefined>;
   readonly exec: AutostartExec;
+  readonly host: DockerHost;
   readonly now: () => Date;
   readonly report: (line: string) => void;
 }): Promise<LoginStart> {
@@ -37,9 +39,9 @@ export async function recordLoginStart(o: {
   const record: LoginStart = {
     version: 1,
     checkedAt: o.now().toISOString(),
-    docker: await checkDockerStart(o.exec, manager),
     manager,
     wanted,
+    ...(await inspectDockerStart({ exec: o.exec, manager, host: o.host })),
   };
   await writeState(path, record);
   o.report(

@@ -297,6 +297,12 @@ export interface Stage {
   readonly failureKind?: string;
   // Waiting to run again by itself after a failure time can fix (a rate limit, a timeout).
   readonly retryAt?: string;
+  // A running step's time left (`slices/eta`), as the server saw it when it answered: seconds
+  // and what they rest on. The page recomputes it every second from `typicalSeconds`, how
+  // long such a step usually takes in all, when finished runs give one.
+  readonly etaSeconds?: number;
+  readonly etaBasis?: import("../eta/model.js").EtaBasis;
+  readonly typicalSeconds?: number;
 }
 
 export interface ProjectSummary extends Project {

@@ -3,7 +3,7 @@ import type { EmitProject, ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 import type { CheckpointAuthority } from "./checkpoint-authority.js";
-import { derive, deps as graph, satisfied } from "./graph.js";
+import { derive, deps as graph, releases } from "./graph.js";
 import { type ProgressGate, progressGate } from "./progress.js";
 import { type Fault, faultOf } from "./retry-policy.js";
 import type { StageRunResult, WorkRef } from "./work.js";
@@ -282,10 +282,14 @@ export function createRunner(deps: RunnerDeps): Runner {
 
   function startEligible(projectId: string): void {
     const stages = deps.stages.stagesOf(projectId);
-    const satisfiedKind = (kind: StageKind): boolean => {
-      const matches = stages.filter((stage) => stage.kind === kind);
-      return matches.length > 0 && matches.every((stage) => satisfied(stage.state));
-    };
+    const releasesKind =
+      (dependent: StageKind) =>
+      (kind: StageKind): boolean => {
+        const matches = stages.filter((stage) => stage.kind === kind);
+        return (
+          matches.length > 0 && matches.every((stage) => releases(dependent, kind, stage.state))
+        );
+      };
     for (const stage of stages) {
       if (stage.state !== "pending" || inflight.has(stage.work.workId)) {
         continue;
@@ -293,7 +297,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       const dependencies = deps.stages.dependenciesOf?.(projectId, stage.kind) ?? graph[stage.kind];
       if (
         deps.stages.ready === undefined
-          ? !dependencies.every(satisfiedKind)
+          ? !dependencies.every(releasesKind(stage.kind))
           : !deps.stages.ready(stage.work)
       ) {
         continue;

@@ -124,7 +124,7 @@ export const settingsSections = [
   {
     id: "notifications",
     label: "Notifications",
-    meta: "When a run finishes, fails, or waits for you.",
+    meta: "When a run finishes, fails, waits for you, or a review needs a decision.",
   },
   {
     id: "channel-links",

@@ -185,6 +185,40 @@ describe("the next action", () => {
   });
 });
 
+describe("time left on a running step", () => {
+  it("goes by past runs for a CLI image job that has counted nothing yet, and says unknown otherwise", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "running",
+            stages: [
+              stage("article", "done"),
+              stage("audio", "running", {
+                startedAt: new Date().toISOString(),
+                progressCurrent: null,
+                progressTotal: null,
+              }),
+              stage("thumbnail", "running", {
+                source: "from_prompt",
+                startedAt: new Date(Date.now() - 60_000).toISOString(),
+                progressCurrent: 0,
+                progressTotal: 1,
+                typicalSeconds: 300,
+              }),
+            ],
+            outputs: [output("article_md", "article")],
+          }),
+        ),
+      }),
+    );
+    const steps = await screen.findByRole("list", { name: "Run steps" });
+    expect(await within(steps).findByText(/about 4 min left$/)).not.toBeNull();
+    expect(within(steps).getByText(/time left unknown$/)).not.toBeNull();
+  });
+});
+
 describe("a failed stage", () => {
   const verbatim = "fal.ai: 429 Too Many Requests after 4 attempts (2s, 8s, 30s, Retry-After 45s)";
   const failed = body({

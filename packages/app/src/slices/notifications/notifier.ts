@@ -1,9 +1,9 @@
-import type { ProjectEvent, ScheduleTopicsEvent } from "../../kernel/events.js";
+import type { ProjectEvent, ReviewFlaggedEvent, ScheduleTopicsEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { NoticeSubject, NoticeText } from "./rules.js";
-import { noticeOf, noticeText, topicsNoticeText, webhookBody } from "./rules.js";
+import { noticeOf, noticeText, reviewNoticeText, topicsNoticeText, webhookBody } from "./rules.js";
 import type { SendNotification } from "./send.js";
 import { sendFailureText } from "./send.js";
 
@@ -11,6 +11,8 @@ export interface RunNotifierDeps {
   // Read at the moment of the transition, so a URL saved mid-run is the one used.
   readonly url: () => string | null;
   readonly subject: (projectId: string) => Omit<NoticeSubject, "reason"> | undefined;
+  // The project's address for the notification's last line; absent leaves the line out.
+  readonly link?: (projectId: string) => string | undefined;
   readonly send: SendNotification;
   readonly log: Log;
 }
@@ -41,7 +43,27 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
     const text = noticeText(kind, { ...subject, reason: reasons.get(projectId) });
-    post(url, text, kind, { projectId });
+    post(url, { ...text, link: deps.link?.(projectId) }, kind, { projectId });
+  };
+
+  // Once per verdict: a review asked again for the same item replaces its verdict in place.
+  // ceiling: one id per flagged verdict since boot.
+  const flagged = new Set<string>();
+  const notifyReview = (event: ReviewFlaggedEvent): void => {
+    if (flagged.has(event.verdictId)) return;
+    flagged.add(event.verdictId);
+    const url = deps.url();
+    if (url === null) return;
+    const subject = deps.subject(event.projectId);
+    if (subject === undefined) return;
+    const text = reviewNoticeText({
+      title: subject.title,
+      stage: event.stage,
+      reason: event.reason,
+    });
+    post(url, { ...text, link: deps.link?.(event.projectId) }, "review", {
+      projectId: event.projectId,
+    });
   };
 
   const post = (
@@ -80,6 +102,10 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
           if (event.state === "failed" && event.failureReason !== undefined)
             reasons.set(event.projectId, event.failureReason);
           else if (event.state === "running") reasons.delete(event.projectId);
+          return;
+        }
+        if (event.type === "review.flagged") {
+          notifyReview(event);
           return;
         }
         if (event.type !== "project.state") return;

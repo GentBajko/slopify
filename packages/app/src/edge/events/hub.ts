@@ -4,6 +4,7 @@ import type {
   ProjectEvent,
   ProjectStateEvent,
   ProjectUpdatedEvent,
+  ReviewFlaggedEvent,
   RunningCountEvent,
   ScheduleTopicsEvent,
   StageProgressEvent,
@@ -20,6 +21,7 @@ export type {
   ImageLandedEvent,
   ProjectEvent,
   ProjectStateEvent,
+  ReviewFlaggedEvent,
   RunningCountEvent,
   ScheduleTopicsEvent,
   StageProgressEvent,
@@ -33,7 +35,8 @@ export type GlobalEvent =
   | ScheduleTopicsEvent
   | StagingEvent
   | ProjectStateEvent
-  | ProjectUpdatedEvent;
+  | ProjectUpdatedEvent
+  | ReviewFlaggedEvent;
 
 export interface SseMessage {
   readonly event: string;
@@ -149,7 +152,11 @@ export function createHub(deps: HubDeps): Hub {
       for (const subscriber of projects.get(projectId) ?? []) {
         send(subscriber, event);
       }
-      if (event.type === "project.state" || event.type === "project.updated") {
+      if (
+        event.type === "project.state" ||
+        event.type === "project.updated" ||
+        event.type === "review.flagged"
+      ) {
         for (const subscriber of globals) send(subscriber, event);
       }
     },

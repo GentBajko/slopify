@@ -24,6 +24,7 @@ import { useToast } from "@/components/kit/toast";
 import { markUploaded } from "@/home/api";
 import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
+import { isQueued } from "@/home/running-more";
 import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { limitWaitLine } from "@/project/limit-wait";
@@ -35,11 +36,19 @@ import { TutorialInvite } from "@/tutorial/launcher";
 // Beside the list on a desktop: the counts per state, and where the video queue is (the
 // calendar, which shows it once for every screen).
 
-type Filter = "all" | "running" | "waiting" | "ready" | "failed";
+const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
+export type ProjectFilter = (typeof filterValues)[number];
+type Filter = ProjectFilter;
+
+// The `?show=` search value Home's links use ("See all 5 running"); anything else is All.
+export function projectFilterOf(value: unknown): ProjectFilter | undefined {
+  return filterValues.find((one) => one === value);
+}
 
 const filters: readonly { readonly value: Filter; readonly label: string }[] = [
   { value: "all", label: "All" },
   { value: "running", label: "Running" },
+  { value: "queued", label: "Queued" },
   { value: "waiting", label: "Needs you" },
   { value: "ready", label: "Ready to upload" },
   { value: "failed", label: "Failed" },
@@ -51,6 +60,8 @@ function matches(project: ProjectListing, filter: Filter): boolean {
       return true;
     case "running":
       return project.status === "running" || project.status === "paused";
+    case "queued":
+      return isQueued(project);
     case "waiting":
       return isWaiting(project);
     case "ready":
@@ -91,14 +102,18 @@ export function madeOf(project: ProjectListing): string {
     .join(" · ");
 }
 
-export function ProjectsRoute(): ReactElement {
+export function ProjectsRoute({
+  initialFilter = "all",
+}: {
+  readonly initialFilter?: ProjectFilter;
+} = {}): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
   const current = useCurrentChannel();
   const projects = useQuery(projectsQuery(api));
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   // The bundled sample projects carry a Sample badge.
   const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
   const samples = new Set(

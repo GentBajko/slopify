@@ -51,10 +51,17 @@ answers with raw audio, which Slopify turns into MP3 with its own ffmpeg.
 ## Health check
 
 **Check all** under Settings → Providers checks, for every provider: that the command-line tool
-is installed, new enough and signed in (Gemini CLI offers no sign-in check, so it says how to
-confirm); that each saved key passes Test; and that the models your templates, schedules,
-drafts and unfinished projects use are still offered. Each problem says how to fix it.
-Providers you have not set up and do not use are listed on one line.
+is installed (`--version`), new enough and signed in (`claude auth status`, `codex login
+status`; Gemini CLI has no such command, so its sign-in is read from its own files:
+`~/.gemini/settings.json` for the chosen method, `~/.gemini/oauth_creds.json` for a Google
+sign-in, `GEMINI_API_KEY` in the environment or `~/.gemini/.env` for a key); that each saved key
+passes Test; and that the models your templates, schedules, drafts and unfinished projects use
+are still offered. For a keyed provider, **Model reachable** then asks the provider with the saved
+key about each chosen model (its model page, or its model list for OpenRouter and ElevenLabs):
+a model the key can't use is a problem, a provider that doesn't answer is a warning, and
+Cartesia and Inworld, which have no such read, say they can't be checked. Nothing is generated or
+billed. Each problem says how to fix it, and **Check again** on a provider's row checks that one
+alone after a fix. Providers you have not set up and do not use are listed on one line.
 
 ## Models stay up to date
 

@@ -220,10 +220,39 @@ describe("home", () => {
     const steps = await within(running).findByRole("list", { name: "Steps of Sargon" });
     expect(await within(steps).findByText("Article")).not.toBeNull();
     expect(within(steps).getByText("7 min")).not.toBeNull();
-    expect(within(steps).getByText("2 of 8")).not.toBeNull();
+    // No start time to measure the rate against: the time left is unknown, and says so.
+    expect(within(steps).getByText("2 of 8 · time left unknown")).not.toBeNull();
     const images = within(running).getByRole("list", { name: "Images of Sargon" });
     expect(within(images).getAllByRole("img")).toHaveLength(2);
     expect(within(images).getByText("Drawing · 2 so far")).not.toBeNull();
+  });
+
+  it("says a running step's time left from its rate so far", async () => {
+    const going = body({
+      status: "running",
+      stages: [
+        stage("images", "running", {
+          startedAt: new Date(Date.now() - 240_000).toISOString(),
+          progressCurrent: 2,
+          progressTotal: 8,
+        }),
+      ],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-hyp", "Hypatia", "running", { progress: 0.2 })],
+        }),
+        "GET /api/projects/p-hyp": jsonAnswer({
+          ...going,
+          project: { ...going.project, id: "p-hyp" },
+        }),
+      }),
+    );
+    const steps = await screen.findByRole("list", { name: "Steps of Hypatia" });
+    expect(await within(steps).findByText("2 of 8 · about 12 min left")).not.toBeNull();
   });
 
   it("lists what is coming up, what is ready to upload and this week's numbers", async () => {
@@ -335,6 +364,50 @@ describe("home", () => {
     const running = screen.getByRole("region", { name: "Running now" });
     expect(within(running).queryByText("Xerxes")).toBeNull();
     expect(within(running).getByText("Nothing is running")).not.toBeNull();
+  });
+
+  it("links to every running run past the first three and names the queued ones", async () => {
+    const running = body({ status: "running", stages: [], outputs: [] });
+    const ids = ["r1", "r2", "r3", "r4"];
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            ...ids.map((id) => listing(id, `Run ${id}`, "running", { progress: 0.2 })),
+            listing("q1", "Hypatia", "pending"),
+            listing("q2", "Cleopatra", "pending"),
+            listing("q3", "Nefertiti", "pending"),
+          ],
+        }),
+        ...Object.fromEntries(
+          ids.map((id) => [
+            `GET /api/projects/${id}`,
+            jsonAnswer({ ...running, project: { ...running.project, id } }),
+          ]),
+        ),
+      }),
+    );
+    const region = await screen.findByRole("region", { name: "Running now" });
+    const all = await within(region).findByRole("link", { name: "See all 4 running" });
+    expect(all.getAttribute("href")).toBe("/projects?show=running");
+    expect(within(region).getByText("Hypatia, Cleopatra and 1 more")).not.toBeNull();
+    expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
+      "/projects?show=queued",
+    );
+  });
+
+  it("shows queued runs instead of the empty state when nothing runs yet", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({ projects: [listing("q1", "Hypatia", "pending")] }),
+      }),
+    );
+    const region = await screen.findByRole("region", { name: "Running now" });
+    expect(await within(region).findByText("Hypatia")).not.toBeNull();
+    expect(within(region).queryByText("Start the next video")).toBeNull();
+    expect(within(region).queryByRole("link", { name: /See all/ })).toBeNull();
   });
 
   it("marks a finished video uploaded", async () => {

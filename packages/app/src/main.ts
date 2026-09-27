@@ -79,6 +79,7 @@ import {
 import { resolveFont } from "./slices/fonts/index.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
+import { projectLink } from "./slices/notifications/rules.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
@@ -294,6 +295,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           ? undefined
           : { title: project.title, makesVideo: project.config.sources.video !== "off" };
       },
+      // Read when a notification goes out, by which time the server is listening.
+      link: (projectId) => projectLink(config.host, listeningPort, projectId),
       send: sendNotification,
       log,
     });

@@ -20,8 +20,9 @@ function checkedAt(iso: string): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 
-// The switch and what it says, shared by Settings → General and the first-run offer.
-function useAutostart() {
+// The switch and what it says, shared by Settings → General, the first-run offer and the
+// one-time reminder (`autostart-reminder.tsx`).
+export function useAutostart() {
   const { api } = useApp();
   const client = useQueryClient();
   const view = useQuery({ queryKey: autostartKey, queryFn: () => readAutostart(api) });
@@ -82,7 +83,7 @@ export function AutostartSettings(): ReactElement {
   );
 }
 
-function DockerStatus({ view }: { readonly view: AutostartView }): ReactElement {
+export function DockerStatus({ view }: { readonly view: AutostartView }): ReactElement {
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-body">
@@ -113,6 +114,17 @@ export function AutostartOffer(): ReactElement | null {
       <p role="status" className="m-0 text-small text-ink-2">
         Slopify now starts when you log in. Change it any time in Settings → General.
       </p>
+    );
+  // Docker has nothing to switch here, but the person should know whether Slopify will be
+  // there after a restart, and where Docker's own setting is.
+  if (view.data?.kind === "docker")
+    return (
+      <>
+        <SectionHead title={title} info="settings.autostart" />
+        <div className="mb-6">
+          <DockerStatus view={view.data} />
+        </div>
+      </>
     );
   if (view.data?.offer !== true) return null;
   const error = turn.error ?? decline.error;
