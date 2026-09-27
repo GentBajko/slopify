@@ -48,6 +48,7 @@ import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
 import { studioRoutes } from "./studio.js";
+import { stylePreviewRoutes } from "./style-preview.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
@@ -85,6 +86,8 @@ export interface AppDeps {
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
+  // Edit project's and Play's rendered style preview; absent answers that it is unavailable.
+  readonly stylePreviews?: import("../../slices/style-preview/service.js").StylePreviews;
   // Settings → Notifications' test button. Handed in so a test never reaches the network.
   readonly sendNotification?: import("../../slices/notifications/send.js").SendNotification;
   readonly db: DatabaseSync;
@@ -157,6 +160,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
+      .route("/style-preview", stylePreviewRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );

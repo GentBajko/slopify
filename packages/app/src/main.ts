@@ -97,6 +97,8 @@ import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import { ffmpegStylePreview } from "./slices/style-preview/render.js";
+import { createStylePreviews, stylePreviewDir } from "./slices/style-preview/service.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
 import type { Flusher } from "./slices/telemetry/flush.js";
 import { createFlusher } from "./slices/telemetry/flush.js";
@@ -515,6 +517,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       mutations,
       sendNotification,
       audioPreviews,
+      stylePreviews: createStylePreviews({
+        dir: stylePreviewDir(paths.dataDir),
+        render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
+        log,
+      }),
       ...modelSources(registry),
       catalogue,
       clock,
