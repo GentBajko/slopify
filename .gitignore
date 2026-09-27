@@ -11,3 +11,8 @@ packages/app/dist/web/
 
 # A local data directory for `npm run start:fresh`
 .slopify-local/
+
+# Local planning notes, not published
+docs/roadmap-3.0.md
+docs/roadmap-3.1.md
+docs/blog-drafts/
