@@ -14,7 +14,7 @@ import { Welcome } from "@/components/welcome";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission, keywordOrigins } from "@/play/admission";
-import { ChannelPicker } from "@/play/channel-picker";
+import { ChannelPicker, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
@@ -27,6 +27,7 @@ import {
   NarrationSection,
   VideoSection,
 } from "@/play/outputs-section";
+import { previewImageOf } from "@/play/preview-image";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
 import { lookSummary } from "@/play/review-summary";
@@ -80,6 +81,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
 
   const [form, setForm] = usePlayDraft();
+  const cast = useDraftCast();
   const session = usePlaySession();
   const { document } = session;
   const choices = templateLibrary(
@@ -488,8 +490,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     },
   });
   const previewOn = form.sources.video === "generate" && form.sources.images !== "off";
+  const drawn = previewImageOf(form, cast);
   const preview = previewOn ? (
     <StylePreview
+      drawnOn={drawn?.drawnOn}
       settings={{
         format: form.format,
         subtitles: {
@@ -500,6 +504,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         },
         videoEdit: form.videoEdit,
         previewText: document.previewText,
+        image: drawn?.image,
       }}
     />
   ) : null;

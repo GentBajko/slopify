@@ -107,6 +107,7 @@ import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import { previewPictures } from "./slices/style-preview/images.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
 import { createStylePreviews, stylePreviewDir } from "./slices/style-preview/service.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -576,6 +577,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       stylePreviews: createStylePreviews({
         dir: stylePreviewDir(paths.dataDir),
         render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
+        pictures: previewPictures({ db, paths }),
         log,
       }),
       ...modelSources(registry),

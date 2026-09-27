@@ -13,6 +13,17 @@ export const stylePreviewSeconds = 6;
 export const stylePreviewTextMax = 200;
 export const defaultPreviewText = "Every story begins with a word.";
 
+// A picture the preview is drawn on instead of the sample stills: the establishing image a
+// draft uploaded (its staged file), one a project already has (its output), or a channel cast
+// member's picture (by content hash). One the server can no longer find falls back to the
+// stills rather than failing the preview.
+export const stylePreviewImageSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("upload"), stagedFileId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) }),
+  z.object({ kind: z.literal("output"), outputId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) }),
+  z.object({ kind: z.literal("picture"), sha256: z.string().regex(/^[a-f0-9]{64}$/) }),
+]);
+export type StylePreviewImage = z.infer<typeof stylePreviewImageSchema>;
+
 export const stylePreviewRequestSchema = z.object({
   format: z.enum(formats),
   subtitles: z.object({
@@ -26,6 +37,7 @@ export const stylePreviewRequestSchema = z.object({
   }),
   videoEdit: videoEditSchema.optional(),
   previewText: z.string().max(stylePreviewTextMax).optional(),
+  image: stylePreviewImageSchema.optional(),
   // Render again even when this exact preview is already saved.
   force: z.boolean().optional(),
 });

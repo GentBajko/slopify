@@ -22,9 +22,16 @@ export interface StylePreviewSettings {
   readonly look: Look;
   readonly transition: { readonly kind: TransitionStyle; readonly seconds: number } | null;
   readonly chapterCard: { readonly fontId: string } | null;
+  // The content hash of the picture drawn instead of the sample stills; absent draws the
+  // stills, so previews saved before pictures keep their hash.
+  readonly image?: string | undefined;
 }
 
-export function normalizeStylePreview(request: StylePreviewRequest): StylePreviewSettings {
+export function normalizeStylePreview(
+  request: StylePreviewRequest,
+  // The sha256 of the picture the server found for request.image, if it found one.
+  image?: string,
+): StylePreviewSettings {
   const edit = videoEditOf(request);
   const { subtitles } = request;
   const text = (request.previewText ?? "").replace(/\s+/g, " ").trim();
@@ -64,6 +71,7 @@ export function normalizeStylePreview(request: StylePreviewRequest): StylePrevie
               ) / 10,
           },
     chapterCard: edit.chapterCards ? { fontId: subtitles.fontId } : null,
+    ...(image === undefined ? {} : { image }),
   };
 }
 
