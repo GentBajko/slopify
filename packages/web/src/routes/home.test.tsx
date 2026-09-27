@@ -220,10 +220,36 @@ describe("home", () => {
     const steps = await within(running).findByRole("list", { name: "Steps of Demogorgon" });
     expect(await within(steps).findByText("Article")).not.toBeNull();
     expect(within(steps).getByText("7 min")).not.toBeNull();
-    expect(within(steps).getByText("2 of 8")).not.toBeNull();
+    // No start time to measure the rate against: the time left is unknown, and says so.
+    expect(within(steps).getByText("2 of 8 · time left unknown")).not.toBeNull();
     const images = within(running).getByRole("list", { name: "Images of Demogorgon" });
     expect(within(images).getAllByRole("img")).toHaveLength(2);
     expect(within(images).getByText("Drawing · 2 so far")).not.toBeNull();
+  });
+
+  it("says a running step's time left from its rate so far", async () => {
+    const going = body({
+      status: "running",
+      stages: [
+        stage("images", "running", {
+          startedAt: new Date(Date.now() - 240_000).toISOString(),
+          progressCurrent: 2,
+          progressTotal: 8,
+        }),
+      ],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-run": jsonAnswer({
+          ...going,
+          project: { ...going.project, id: "p-run" },
+        }),
+      }),
+    );
+    const steps = await screen.findByRole("list", { name: "Steps of Demogorgon" });
+    expect(await within(steps).findByText("2 of 8 · about 12 min left")).not.toBeNull();
   });
 
   it("lists what is coming up, what is ready to upload and this week's numbers", async () => {

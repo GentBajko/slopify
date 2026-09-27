@@ -14,6 +14,7 @@ import {
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { projectChannels } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
+import { stagesWithEta } from "../../slices/eta/view.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -101,7 +102,12 @@ export function projectRoutes(deps: AppDeps) {
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
           resumable: resumable(deps.db, project.id),
           project: summarise(project),
-          stages: stagesOf(deps.db, project.id),
+          stages: stagesWithEta(
+            deps.db,
+            stagesOf(deps.db, project.id),
+            project.config,
+            deps.clock.now(),
+          ),
           outputs: outputsOf(deps.db, project.id),
         });
       })

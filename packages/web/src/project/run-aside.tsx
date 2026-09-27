@@ -1,4 +1,5 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
@@ -63,6 +64,14 @@ export function elapsed(stage: Stage, now: number): string | undefined {
   return `${String(Math.floor(minutes / 60))} h ${String(minutes % 60)} min`;
 }
 
+// A running step's line ends with its time left, recomputed every second (`slices/eta`):
+// "12 of 40 chunks · about 4 min left", or "time left unknown" when nothing gives one.
+function withEta(detail: string | undefined, stage: Stage, now: number): string | undefined {
+  const eta = stageEta(stage, now);
+  if (eta === undefined) return detail;
+  return detail === undefined || detail === "" ? etaLabel(eta) : `${detail} · ${etaLabel(eta)}`;
+}
+
 export function runSteps({
   stages,
   outputs,
@@ -92,7 +101,9 @@ export function runSteps({
         tone: toneOf(stage, isHeld),
         state: stateWord(stage, isHeld),
         ...(time === undefined ? {} : { time }),
-        detail: isHeld ? "Held for your review" : summaryOf(stage, outputs, project, resumable),
+        detail: isHeld
+          ? "Held for your review"
+          : withEta(summaryOf(stage, outputs, project, resumable), stage, now),
       };
     });
 }

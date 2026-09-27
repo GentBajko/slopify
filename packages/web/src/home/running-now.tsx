@@ -1,4 +1,5 @@
 import type { ProjectListing, Stage } from "@app/slices/admission/model.js";
+import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -53,6 +54,18 @@ export function elapsed(
   return `${String(hours)} h ${String(minutes % 60)} min`;
 }
 
+// "2 of 8 · about 4 min left": what a running step has counted and its time left, recomputed
+// every second (`slices/eta`); "time left unknown" when there is nothing to go by.
+function runningDetail(stage: Stage, now: number): string | undefined {
+  const eta = stageEta(stage, now);
+  if (eta === undefined) return undefined;
+  const counted =
+    stage.progressTotal !== null && stage.progressTotal > 0
+      ? `${String(stage.progressCurrent ?? 0)} of ${String(stage.progressTotal)} · `
+      : "";
+  return `${counted}${etaLabel(eta)}`;
+}
+
 export function RunningProject({
   project,
   now,
@@ -79,10 +92,7 @@ export function RunningProject({
     tone: stepTone[stage.state],
     state: stepWord[stage.state],
     time: elapsed(stage.startedAt, stage.finishedAt, now),
-    detail:
-      stage.state === "running" && stage.progressTotal !== null && stage.progressTotal > 0
-        ? `${String(stage.progressCurrent ?? 0)} of ${String(stage.progressTotal)}`
-        : undefined,
+    detail: runningDetail(stage, now),
   }));
   return (
     <li className="sl-home-run">
