@@ -344,6 +344,19 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           .prepare("SELECT id FROM projects")
           .all()
           .some((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true),
+      busyWith: () => {
+        const running = updateDb
+          .prepare(
+            "SELECT p.title FROM stages s JOIN projects p ON p.id=s.project_id WHERE s.state='running' LIMIT 1",
+          )
+          .get();
+        if (typeof running?.title === "string") return running.title;
+        const inflight = updateDb
+          .prepare("SELECT id,title FROM projects")
+          .all()
+          .find((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true);
+        return typeof inflight?.title === "string" ? inflight.title : undefined;
+      },
       report: (message) => log.write("warn", "update", { detail: message }),
       install: async (next, restarting) => {
         if (npm === undefined) throw new Error("npm is unavailable.");

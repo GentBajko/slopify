@@ -107,15 +107,22 @@ describe("update HTTP API", () => {
     expect((await h.app.request("/api/health")).status).toBe(200);
     expect((await h.app.request("/api/update", { method: "POST" })).status).toBe(409);
   });
-  it("rejects active work and does not install", async () => {
+  it("waits for active work instead of installing, and drops the wait when asked", async () => {
     const h = await harness();
     h.busy();
-    expect((await h.app.request("/api/update")).status).toBe(200);
     expect(await (await h.app.request("/api/update")).json()).toMatchObject({
-      canUpdate: false,
+      canUpdate: true,
       busy: true,
     });
+    const accepted = await h.app.request("/api/update", { method: "POST" });
+    expect(accepted.status).toBe(202);
+    expect(await accepted.json()).toMatchObject({ status: "waiting" });
     expect((await h.app.request("/api/update", { method: "POST" })).status).toBe(409);
+    expect(h.versions).toEqual([]);
+    const dropped = await h.app.request("/api/update", { method: "DELETE" });
+    expect(dropped.status).toBe(200);
+    expect(await dropped.json()).toMatchObject({ status: "idle" });
+    expect((await h.app.request("/api/update", { method: "DELETE" })).status).toBe(409);
     expect(h.versions).toEqual([]);
   });
   it("rejects cross-origin form submissions before checking or installing", async () => {
