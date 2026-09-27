@@ -612,6 +612,7 @@ it("omits tutorial runtime state from exports and ignores it in older v1 imports
   try {
     writeSetting(source.deps.db, "appearance", JSON.stringify("dark"));
     writeSetting(source.deps.db, "tutorial.session", JSON.stringify({ projectId: "old-project" }));
+    writeSetting(source.deps.db, "whats-new.seen-major", "3");
     const exported = unzipSync(
       exportPortable({ ...source.deps, now: () => source.deps.clock.now().toISOString() }),
     );

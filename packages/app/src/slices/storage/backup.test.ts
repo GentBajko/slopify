@@ -301,19 +301,27 @@ describe("import validation", () => {
     project(source, "p1", "Old");
     const list = await members(await exported(source));
     // As Slopify 2.1 would have written it: schema 13, before the Document stage existed.
+    // Tables that came later (the default channel and a project's channel row) are not in it.
     const old = editJson(
-      editJson(list, "manifest.json", (manifest) => ({ ...manifest, databaseVersion: 13 })),
+      editJson(
+        editJson(list, "manifest.json", (manifest) => ({ ...manifest, databaseVersion: 13 })),
+        "data/library.json",
+        (part) => {
+          const { channels: _channels, ...tables } = part.tables;
+          return { ...part, tables };
+        },
+      ),
       "data/projects/p1.json",
-      (part) => ({
+      ({ tables: { project_channels: _channel, ...kept }, ...part }) => ({
         ...part,
         tables: {
-          ...part.tables,
-          stages: part.tables.stages
+          ...kept,
+          stages: kept.stages
             .filter((row: { kind: string }) => row.kind !== "document")
             .map(beforeRetries),
-          ...(part.tables.revision_work === undefined
+          ...(kept.revision_work === undefined
             ? {}
-            : { revision_work: part.tables.revision_work.map(beforeRetries) }),
+            : { revision_work: kept.revision_work.map(beforeRetries) }),
         },
       }),
     );

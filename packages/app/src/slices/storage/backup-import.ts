@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statfsSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statfsSync,
+} from "node:fs";
 import { open } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync, type SQLInputValue, type StatementSync } from "node:sqlite";
@@ -7,7 +15,8 @@ import { ZodError, type z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { migrate, newestMigration } from "../../kernel/db/migrate.js";
 import { transact } from "../../kernel/db/tx.js";
-import { projectById } from "../admission/repo.js";
+import { projectByIdIncludingTrash } from "../admission/repo.js";
+import { castOfChannel, channelById } from "../channels/repo.js";
 import { documentThemeNameMax, documentThemeNameProblems } from "../document/model.js";
 import { documentThemeSchema } from "../document/theme-schema.js";
 import { nameMax } from "../library/model.js";
@@ -26,6 +35,7 @@ import {
   checksumsMember,
   checksumsSchema,
   fontMember,
+  imageMember,
   type LibraryPart,
   libraryMember,
   libraryPartSchema,
@@ -112,6 +122,11 @@ export interface BackupImportSummary {
   };
   readonly prompts: ItemCounts;
   readonly entries: ItemCounts;
+  // Absent in summaries recorded before channels travelled.
+  readonly channels?: ItemCounts | undefined;
+  readonly cast?: ItemCounts | undefined;
+  readonly episodeMemories?: ItemCounts | undefined;
+  readonly channelVideos?: ItemCounts | undefined;
   readonly documentThemes: ItemCounts;
   readonly narrationAliases: ItemCounts;
   readonly templates: ItemCounts;
@@ -129,6 +144,8 @@ interface Expected {
   // Where the file waits until the commit; undefined when the import skips it.
   readonly destination: string | undefined;
   readonly font?: { readonly id: string; readonly extension: ".ttf" | ".otf" };
+  // A picture for image_blobs: its bytes must hash to the name it travels under.
+  readonly image?: string;
 }
 
 interface Prepared {
@@ -136,6 +153,7 @@ interface Prepared {
   readonly projects: ReadonlySet<string>;
   readonly skippedProjects: ReadonlyMap<string, string>;
   readonly drafts: ReadonlySet<string>;
+  readonly images: readonly { readonly sha256: string; readonly mime: string }[];
 }
 
 export async function importBackup(
@@ -309,7 +327,10 @@ async function receive(body: TarBody, file: Expected): Promise<string> {
   } finally {
     await handle.close();
   }
-  return hash.digest("hex");
+  const digest = hash.digest("hex");
+  if (file.image !== undefined && digest !== file.image)
+    throw damaged(`the picture ${file.image} in it is damaged.`);
+  return digest;
 }
 
 // Loads every row into a scratch database at the schema the backup was written with, carries
@@ -379,6 +400,16 @@ function prepare(
         font: { id, extension },
       });
     }
+    for (const image of library.images ?? []) {
+      const keep =
+        deps.db.prepare("SELECT 1 FROM image_blobs WHERE sha256=?").get(image.sha256) === undefined;
+      expect(imageMember(image.sha256), {
+        bytes: image.bytes,
+        destination: keep ? join(work, "images", image.sha256) : undefined,
+        image: image.sha256,
+      });
+      if (keep) needed += image.bytes;
+    }
     for (const staged of library.staged) {
       const keep = keptStaged.has(staged.id);
       expect(stagedMember(staged.id), {
@@ -388,7 +419,7 @@ function prepare(
       if (keep) needed += staged.bytes;
     }
     checkFreeSpace(deps.paths.dataDir, needed);
-    return { scratch, projects, skippedProjects, drafts };
+    return { scratch, projects, skippedProjects, drafts, images: library.images ?? [] };
   } catch (error) {
     scratch.close();
     throw error;
@@ -423,11 +454,23 @@ function loadScratch(
       if (known.size === 0 || Object.keys(row).some((column) => !known.has(column)))
         throw damaged(`it has ${table} records that don't fit the Slopify version it names.`);
       try {
-        insertRow(scratch, table, row);
+        // The default channel is already there: every install makes it (0032) with the same id.
+        insertRow(scratch, table, row, table === "channels" ? "INSERT OR REPLACE" : "INSERT");
       } catch {
         throw damaged(`it has a ${table} record Slopify can't read.`);
       }
     };
+    // The pictures' bytes arrive after this, as files; a stand-in row lets their links check.
+    for (const image of library.images ?? [])
+      try {
+        scratch
+          .prepare(
+            "INSERT OR IGNORE INTO image_blobs(sha256,mime,bytes,created_at) VALUES (?,?,X'00','')",
+          )
+          .run(image.sha256, image.mime);
+      } catch {
+        throw damaged("it has pictures that don't fit the Slopify version it names.");
+      }
     for (const table of libraryTables)
       for (const row of library.tables[table] ?? []) insert(table, row);
     for (const table of usageTables)
@@ -475,11 +518,19 @@ function checkScratch(
   const unreadable = (what: string): BackupImportRefused =>
     damaged(`it has ${what} Slopify can't read.`);
   try {
+    // Names are unique among the items outside the trash (0039); one in the trash is checked
+    // on its own.
+    const prompt = "SELECT id,kind,name,body,slots,updated_at FROM prompts";
+    const entry = "SELECT id,category,mode,name,body,slots,updated_at FROM entries";
     checkLibraryRows({
-      prompts: rowsOf(scratch, "SELECT * FROM prompts"),
-      entries: rowsOf(scratch, "SELECT * FROM entries"),
+      prompts: rowsOf(scratch, `${prompt} WHERE deleted_at IS NULL`),
+      entries: rowsOf(scratch, `${entry} WHERE deleted_at IS NULL`),
       voices: rowsOf(scratch, "SELECT * FROM voices"),
     });
+    for (const row of rowsOf(scratch, `${prompt} WHERE deleted_at IS NOT NULL`))
+      checkLibraryRows({ prompts: [row], entries: [], voices: [] });
+    for (const row of rowsOf(scratch, `${entry} WHERE deleted_at IS NOT NULL`))
+      checkLibraryRows({ prompts: [], entries: [row], voices: [] });
   } catch {
     throw unreadable("a prompt, intro, outro or voice");
   }
@@ -505,6 +556,14 @@ function checkScratch(
     }
   } catch {
     throw unreadable("a document theme");
+  }
+  try {
+    for (const row of rowsOf(scratch, "SELECT id FROM channels")) {
+      if (channelById(scratch, String(row.id)) === undefined) throw new Error("channel");
+      castOfChannel(scratch, String(row.id));
+    }
+  } catch {
+    throw unreadable("a channel or cast member");
   }
   try {
     for (const schedule of scheduleRows(scratch)) runsForSchedule(scratch, schedule.id);
@@ -534,7 +593,7 @@ function checkScratch(
   }
   for (const project of parts) {
     try {
-      if (projectById(scratch, project.id) === undefined) throw new Error("project");
+      if (projectByIdIncludingTrash(scratch, project.id) === undefined) throw new Error("project");
       for (const row of rowsOf(
         scratch,
         "SELECT id FROM project_revisions WHERE project_id=?",
@@ -654,14 +713,16 @@ function commit(
 
       const prompts = mergeNamed(db, scratch, {
         table: "prompts",
-        sameName: "SELECT body FROM prompts WHERE kind=? AND lower(name)=lower(?)",
+        sameName:
+          "SELECT body FROM prompts WHERE kind=? AND lower(name)=lower(?) AND deleted_at IS NULL",
         key: (row) => [row.kind ?? null],
         same: (row, existing) => existing.body === row.body,
         max: nameMax,
       });
       const entries = mergeNamed(db, scratch, {
         table: "entries",
-        sameName: "SELECT mode,body FROM entries WHERE category=? AND lower(name)=lower(?)",
+        sameName:
+          "SELECT mode,body FROM entries WHERE category=? AND lower(name)=lower(?) AND deleted_at IS NULL",
         key: (row) => [row.category ?? null],
         same: (row, existing) => existing.mode === row.mode && existing.body === row.body,
         max: nameMax,
@@ -673,6 +734,10 @@ function commit(
         same: (row, existing) => existing.values_json === row.values_json,
         max: documentThemeNameMax,
       });
+
+      mergeVersions(db, scratch, "prompt", prompts.inserted);
+      mergeVersions(db, scratch, "entry", entries.inserted);
+      const channelCounts = mergeChannels(db, scratch, work, prepared.images, now);
 
       let voicesAdded = 0;
       let voicesSkipped = 0;
@@ -735,11 +800,15 @@ function commit(
           id,
         )) {
           let next = revision;
-          if (revision.version === template.head_version) {
+          // Names clash only among templates outside the trash, like prompts'.
+          if (
+            revision.version === template.head_version &&
+            typeof template.deleted_at !== "string"
+          ) {
             const name = String(revision.name);
             const taken = (candidate: string): boolean =>
               has(
-                "SELECT 1 FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version WHERE t.id<>? AND lower(r.name)=lower(?)",
+                "SELECT 1 FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version WHERE t.id<>? AND t.deleted_at IS NULL AND lower(r.name)=lower(?)",
                 id,
                 candidate,
               );
@@ -885,8 +954,9 @@ function commit(
           appVersion: manifest.appVersion,
         },
         projects: { imported, skipped },
-        prompts,
-        entries,
+        prompts: counts(prompts),
+        entries: counts(entries),
+        ...channelCounts,
         documentThemes,
         narrationAliases,
         templates,
@@ -919,6 +989,10 @@ function commit(
 // Library items whose name is unique per kind: same id is the same item and is skipped; the
 // same name with the same content is skipped; the same name with other content comes in as
 // "<name> (imported)".
+//
+// A prompt or intro/outro in the backup's trash comes in as it is, still in the trash: names
+// only have to be unique among the items that are not (0039), and the name lookups here only
+// see those.
 function mergeNamed(
   db: DatabaseSync,
   scratch: DatabaseSync,
@@ -929,10 +1003,11 @@ function mergeNamed(
     readonly same: (row: BackupRow, existing: Record<string, unknown>) => boolean;
     readonly max: number;
   },
-): ItemCounts {
+): ItemCounts & { readonly inserted: ReadonlySet<string> } {
   let added = 0;
   let renamed = 0;
   let skipped = 0;
+  const inserted = new Set<string>();
   for (const row of rowsOf(scratch, `SELECT * FROM ${rule.table} ORDER BY rowid`)) {
     if (db.prepare(`SELECT 1 FROM ${rule.table} WHERE id=?`).get(String(row.id)) !== undefined) {
       skipped += 1;
@@ -941,9 +1016,11 @@ function mergeNamed(
     const name = String(row.name);
     const lookup = (candidate: string) =>
       db.prepare(rule.sameName).get(...rule.key(row), candidate);
-    const existing = lookup(name);
+    const trashed = typeof row.deleted_at === "string";
+    const existing = trashed ? undefined : lookup(name);
     if (existing === undefined) {
       insertRow(db, rule.table, row);
+      inserted.add(String(row.id));
       added += 1;
     } else if (rule.same(row, existing)) {
       skipped += 1;
@@ -952,10 +1029,129 @@ function mergeNamed(
         ...row,
         name: importedName(name, rule.max, (candidate) => lookup(candidate) !== undefined),
       });
+      inserted.add(String(row.id));
       renamed += 1;
     }
   }
-  return { added, renamed, skipped };
+  return { added, renamed, skipped, inserted };
+}
+
+// A prompt's or intro/outro's History comes with it when the item itself came in; an item
+// that was already here keeps the history it has.
+function mergeVersions(
+  db: DatabaseSync,
+  scratch: DatabaseSync,
+  itemKind: "prompt" | "entry",
+  inserted: ReadonlySet<string>,
+): void {
+  for (const row of rowsOf(
+    scratch,
+    "SELECT * FROM library_versions WHERE item_kind=? ORDER BY item_id,version",
+    itemKind,
+  ))
+    if (inserted.has(String(row.item_id)))
+      insertRow(db, "library_versions", row, "INSERT OR IGNORE");
+}
+
+// The default channel has the same id on every install (0032), so the backup's default is
+// always "already here". While this install's own default is still as it was made (never
+// renamed or edited), it takes the backup's name, brand kit, brief and settings; otherwise it
+// is kept. Any other channel whose id is here is skipped. Cast members, their pictures,
+// episode memories and existing videos then come in by id into whichever channel is here.
+function mergeChannels(
+  db: DatabaseSync,
+  scratch: DatabaseSync,
+  work: string,
+  images: readonly { readonly sha256: string; readonly mime: string }[],
+  now: string,
+): {
+  readonly channels: ItemCounts;
+  readonly cast: ItemCounts;
+  readonly episodeMemories: ItemCounts;
+  readonly channelVideos: ItemCounts;
+} {
+  const has = (sql: string, ...params: SQLInputValue[]): boolean =>
+    db.prepare(sql).get(...params) !== undefined;
+  const channels = { added: 0, renamed: 0, skipped: 0 };
+  for (const row of rowsOf(scratch, "SELECT * FROM channels ORDER BY rowid")) {
+    const id = String(row.id);
+    const local = db
+      .prepare("SELECT is_default,version,brand_json,series_brief FROM channels WHERE id=?")
+      .get(id);
+    if (local === undefined) {
+      insertRow(db, "channels", { ...row, is_default: 0 });
+      channels.added += 1;
+    } else if (
+      local.is_default === 1 &&
+      row.is_default === 1 &&
+      local.version === 1 &&
+      local.brand_json === "{}" &&
+      local.series_brief === "" &&
+      !(row.version === 1 && row.brand_json === "{}" && row.series_brief === "")
+    ) {
+      const columns = Object.keys(row).filter(
+        (column) => column !== "id" && column !== "is_default",
+      );
+      db.prepare(
+        `UPDATE channels SET ${columns.map((column) => `${column}=?`).join(",")} WHERE id=?`,
+      ).run(...columns.map((column) => row[column] ?? null), id);
+      channels.added += 1;
+    } else channels.skipped += 1;
+  }
+  for (const image of images) {
+    const path = join(work, "images", image.sha256);
+    if (!existsSync(path)) continue;
+    db.prepare(
+      "INSERT INTO image_blobs(sha256,mime,bytes,created_at) VALUES (?,?,?,?) ON CONFLICT(sha256) DO NOTHING",
+    ).run(image.sha256, image.mime, readFileSync(path), now);
+  }
+  const cast = { added: 0, renamed: 0, skipped: 0 };
+  for (const row of rowsOf(scratch, "SELECT * FROM cast_members ORDER BY rowid")) {
+    if (has("SELECT 1 FROM cast_members WHERE id=?", String(row.id))) cast.skipped += 1;
+    else {
+      insertRow(db, "cast_members", row);
+      cast.added += 1;
+    }
+  }
+  for (const row of rowsOf(scratch, "SELECT * FROM cast_images ORDER BY rowid"))
+    if (
+      !has("SELECT 1 FROM cast_images WHERE id=?", String(row.id)) &&
+      has("SELECT 1 FROM cast_members WHERE id=?", String(row.member_id)) &&
+      (row.sha256 === null || has("SELECT 1 FROM image_blobs WHERE sha256=?", String(row.sha256)))
+    )
+      // A picture the other install was still drawing never finishes here.
+      insertRow(
+        db,
+        "cast_images",
+        row.state === "generating"
+          ? { ...row, state: "failed", error: "Stopped by the backup. Make it again." }
+          : row,
+      );
+  const episodeMemories = { added: 0, renamed: 0, skipped: 0 };
+  for (const row of rowsOf(scratch, "SELECT * FROM episode_memories ORDER BY rowid")) {
+    if (
+      has("SELECT 1 FROM episode_memories WHERE id=?", String(row.id)) ||
+      has("SELECT 1 FROM episode_memories WHERE project_id=?", String(row.project_id))
+    )
+      episodeMemories.skipped += 1;
+    else {
+      insertRow(db, "episode_memories", row);
+      episodeMemories.added += 1;
+    }
+  }
+  const channelVideos = { added: 0, renamed: 0, skipped: 0 };
+  for (const row of rowsOf(scratch, "SELECT * FROM channel_videos ORDER BY rowid")) {
+    const changes = has("SELECT 1 FROM channel_videos WHERE id=?", String(row.id))
+      ? 0
+      : insertRow(db, "channel_videos", row, "INSERT OR IGNORE");
+    if (changes > 0) channelVideos.added += 1;
+    else channelVideos.skipped += 1;
+  }
+  return { channels, cast, episodeMemories, channelVideos };
+}
+
+function counts(value: ItemCounts): ItemCounts {
+  return { added: value.added, renamed: value.renamed, skipped: value.skipped };
 }
 
 export function importedName(name: string, max: number, taken: (name: string) => boolean): string {
@@ -972,7 +1168,7 @@ function insertRow(
   db: DatabaseSync,
   table: string,
   row: BackupRow,
-  verb: "INSERT" | "INSERT OR IGNORE" = "INSERT",
+  verb: "INSERT" | "INSERT OR IGNORE" | "INSERT OR REPLACE" = "INSERT",
 ): number {
   const columns = Object.keys(row);
   const sql = `${verb} INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`;

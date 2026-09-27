@@ -21,6 +21,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
+import { liveProject } from "../admission/repo.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
 import { fontMaxBytes } from "../fonts/model.js";
@@ -31,11 +32,14 @@ import { listEntries, listPrompts } from "../library/repo.js";
 import { notificationUrlKey } from "../notifications/settings.js";
 import { projectTemplateSchema } from "../project-templates/schema.js";
 import { cliPathMaxLength } from "../settings/cli-paths.js";
+import { providerDefaultsKey, providerDefaultsSchema } from "../settings/first-run.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
+import { whatsNewSeenKey } from "../settings/whats-new.js";
 import { studioPlaylistMax } from "../studio/model.js";
 import { studioPairingKey, studioPlaylistKey } from "../studio/settings.js";
+import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
@@ -200,7 +204,7 @@ export function exportPortable(deps: PortableDeps): Uint8Array<ArrayBuffer> {
   }));
   const templates = deps.db
     .prepare(
-      "SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version ORDER BY t.id",
+      "SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version WHERE t.deleted_at IS NULL ORDER BY t.id",
     )
     .all()
     .map((row) =>
@@ -419,18 +423,32 @@ const storedCliPath = z.string().max(cliPathMaxLength).nullable();
 const storedSilenceGap = z.number().int().min(0).max(silenceGapSecondsMax);
 const storedAppearance = z.enum(appearances);
 const storedPlaylist = z.string().max(studioPlaylistMax);
+// Settings → Channel links, and the providers a fresh Play form starts with.
+const storedChannelLinks = z
+  .array(z.object({ name: z.string().max(200), url: z.string().max(2000) }).strict())
+  .max(200);
 
 function portableSettings(settings: Readonly<Record<string, string>>): Record<string, string> {
   const portable: Record<string, string> = {};
   for (const [key, value] of Object.entries(settings)) {
     // The Notification URL stays on this machine: an ntfy topic in it is as good as a password.
     // So does the Studio extension's pairing: its token reads every project's upload pack.
-    if (key === "tutorial.session" || key === notificationUrlKey || key === studioPairingKey)
+    // Which "What's new" tour this install has closed is about this install, not the data.
+    if (
+      key === "tutorial.session" ||
+      // Whether this install showed its first-run welcome belongs to this install.
+      key === "first-run.done" ||
+      key === notificationUrlKey ||
+      key === studioPairingKey ||
+      key === whatsNewSeenKey
+    )
       continue;
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
+    else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
+    else if (key === providerDefaultsKey) providerDefaultsSchema.parse(parsed);
     else if (key.startsWith("cli.path.")) {
       const provider = providerById(z.enum(providerIds).parse(key.slice("cli.path.".length)));
       if (provider.auth !== "cli") throw new Error("A CLI path names a provider without a CLI.");
@@ -1081,7 +1099,9 @@ export function storageUsage(
 ): StorageUsage {
   const totals = storageBytes(deps.paths);
   const byProject = deps.db
-    .prepare("SELECT id,title FROM projects ORDER BY created_at DESC, id DESC")
+    .prepare(
+      `SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`,
+    )
     .all()
     .flatMap((row) => {
       if (typeof row.id !== "string" || typeof row.title !== "string") return [];
