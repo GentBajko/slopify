@@ -20,6 +20,7 @@ import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
+import { clearSoftening, softenedPrompt, softeningRequested, softenMessages } from "./soften.js";
 import type { WorkPiece } from "./work-records.js";
 
 export interface ProviderExecutionDeps extends RevisionDeps {
@@ -143,21 +144,21 @@ export async function executeProviderRecipe(
       : undefined;
     // Which thumbnail this is (1-3), or undefined for any other image.
     const variant = thumbnailVariant(piece.key);
+    const label =
+      variant !== undefined
+        ? variant === 1
+          ? "Thumbnail"
+          : `Thumbnail ${String(variant)}`
+        : piece.key === referenceKey
+          ? "Establishing image"
+          : index === undefined
+            ? "Image"
+            : `Image ${String(index)}`;
+    const softened = await softenIfAsked(deps, context, wrapped, piece, input.prompt, label);
+    if (softened === "held") return "held";
+    const prompt = softened ?? input.prompt;
     const image = await wrapped.image(
-      imageCall(
-        deps,
-        context.work.projectId,
-        input,
-        variant !== undefined
-          ? variant === 1
-            ? "Thumbnail"
-            : `Thumbnail ${String(variant)}`
-          : piece.key === referenceKey
-            ? "Establishing image"
-            : index === undefined
-              ? "Image"
-              : `Image ${String(index)}`,
-      ),
+      imageCall(deps, context.work.projectId, { ...input, prompt }, label),
     );
     if (!image.ok) return "held";
     const asset = writeAsset(
@@ -174,7 +175,7 @@ export async function executeProviderRecipe(
       asset,
       null,
       {
-        prompt: input.prompt,
+        prompt,
         provider: input.provider,
         model: input.model,
         ...(index === undefined ? {} : { index }),
@@ -183,7 +184,8 @@ export async function executeProviderRecipe(
         ...(variant === undefined || variant === 1 ? {} : { index: variant }),
       },
     );
-    await publishResult(deps, context, piece, [output], { prompt: input.prompt }, asset);
+    await publishResult(deps, context, piece, [output], { prompt }, asset);
+    if (softened !== undefined) clearSoftening(deps.db, context.work.projectId, [piece.key]);
     deps.count?.("stage.completed", {
       stage: context.work.kind,
       provider: input.provider,
@@ -195,6 +197,34 @@ export async function executeProviderRecipe(
   throw new Error(
     "Slopify hit an internal error (this step has no provider request to run). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
   );
+}
+
+// Soften and retry (`soften.ts`): the project's AI model rewords a refused image prompt
+// before the image is drawn again. Undefined when nobody asked, or the project has no model.
+async function softenIfAsked(
+  deps: ProviderExecutionDeps,
+  context: StageContext,
+  providers: StageProviders,
+  piece: WorkPiece,
+  prompt: string,
+  label: string,
+): Promise<string | "held" | undefined> {
+  if (!softeningRequested(deps.db, context.work.projectId, piece.key)) return undefined;
+  const llm = executionView(deps, context.work.projectId, context.work.revisionId)?.revision.config
+    .llm;
+  if (llm === undefined) return undefined;
+  const answer = await providers.llm({
+    provider: llm.provider,
+    model: llm.model,
+    ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
+    messages: softenMessages(prompt),
+    previewLabel: `${label}: softened prompt`,
+    check: (value) =>
+      softenedPrompt(value.text) === ""
+        ? "The AI model sent back an empty prompt while softening it. Use Soften and retry again, or reword the prompt yourself in Edit project → Images."
+        : undefined,
+  });
+  return answer.ok ? softenedPrompt(answer.value.text) : "held";
 }
 
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {

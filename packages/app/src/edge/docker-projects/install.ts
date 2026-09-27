@@ -8,6 +8,7 @@ import type { Engine } from "./engine.js";
 import { type PruneResult, pruneRecoveryVolumes } from "./prune.js";
 import { assertSourceIdentity, recoverInstallation } from "./recover.js";
 import {
+  type Container,
   type DockerConfig,
   type Journal,
   journalSchema,
@@ -29,10 +30,19 @@ import {
   treeDigest,
 } from "./tree.js";
 
+// How the launcher waits for running work before replacing the container.
+export interface WorkWait {
+  readonly report: (message: string) => void;
+  readonly sleep: (ms: number) => Promise<void>;
+}
+
+const workCheckMs = 15_000;
+
 export async function installProjects(
   c: DockerConfig,
   e: Engine,
   recovery: () => Engine,
+  wait?: WorkWait,
 ): Promise<{
   url: string;
   projects: string;
@@ -147,6 +157,8 @@ export async function installProjects(
       pruned: { removed: [], problems: [] },
     };
   }
+  // Stopping the container would cut a run off mid-step: the update waits for it instead.
+  if (old?.running === true && wait !== undefined) await waitForIdle(old, e, expectedVersion, wait);
   const id = randomUUID();
   const directory = join(c.directory, id);
   await privateDirectory(directory, c.uid);
@@ -303,5 +315,22 @@ export async function installProjects(
       `Install failed. Previous installation restored${old?.running ? " and restarted" : " (not started)"}, so nothing was lost. Backup volume: ${j.backup}; project copy: ${projects}. Reason: ${cause instanceof Error ? cause.message : "Installation failed."}`,
       { cause },
     );
+  }
+}
+
+async function waitForIdle(
+  old: Container,
+  e: Engine,
+  version: string,
+  wait: WorkWait,
+): Promise<void> {
+  let said: string | undefined;
+  for (;;) {
+    const activity = await e.activity?.(old);
+    if (activity === undefined || !activity.busy) return;
+    const message = `Update to ${version} will install when ${activity.waitingFor === undefined ? "the running work" : `'${activity.waitingFor}'`} finishes. Leave this running; press Ctrl+C to keep the current version for now.`;
+    if (message !== said) wait.report(message);
+    said = message;
+    await wait.sleep(workCheckMs);
   }
 }

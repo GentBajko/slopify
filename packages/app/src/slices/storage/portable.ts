@@ -39,6 +39,7 @@ import { studioPairingKey, studioPlaylistKey } from "../studio/settings.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
+import { projectStorage } from "./trim.js";
 
 const record = z.record(z.string(), z.string());
 export const portableMaxArchiveBytes = 100 * 1024 * 1024;
@@ -140,6 +141,12 @@ export interface StorageUsage {
     readonly id: string;
     readonly title: string;
     readonly bytes: number;
+    // The split Keep outputs only works from (`trim.ts`).
+    readonly outputsBytes: number;
+    readonly workingBytes: number;
+    readonly removableFiles: number;
+    readonly removableBytes: number;
+    readonly finished: boolean;
   }[];
 }
 
@@ -1067,7 +1074,11 @@ export function storageBytes(paths: Paths): {
   return { data: directoryBytes(paths.dataDir), projects, staging };
 }
 
-export function storageUsage(deps: Pick<PortableDeps, "db" | "paths">): StorageUsage {
+export function storageUsage(
+  deps: Pick<PortableDeps, "db" | "paths"> & {
+    readonly hasInflight?: ((projectId: string) => boolean) | undefined;
+  },
+): StorageUsage {
   const totals = storageBytes(deps.paths);
   const byProject = deps.db
     .prepare("SELECT id,title FROM projects ORDER BY created_at DESC, id DESC")
@@ -1079,6 +1090,7 @@ export function storageUsage(deps: Pick<PortableDeps, "db" | "paths">): StorageU
           id: row.id,
           title: row.title,
           bytes: directoryBytes(projectDir(deps.paths, row.id)),
+          ...projectStorage(deps, row.id),
         },
       ];
     });

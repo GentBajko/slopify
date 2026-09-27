@@ -194,6 +194,7 @@ describe("boot", { timeout: 30_000 }, () => {
       { version: 25 },
       { version: 26 },
       { version: 27 },
+      { version: 30 },
       { version: 31 },
       { version: 32 },
     ]);

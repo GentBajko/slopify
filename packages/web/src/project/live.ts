@@ -35,8 +35,13 @@ function patchStage(stage: Stage, event: StageStateEvent | StageProgressEvent): 
   if (event.type === "stage.progress") {
     return { ...stage, progressCurrent: event.current, progressTotal: event.total };
   }
+  // A wait to run again belongs to the pending row that carries it and to no other state.
+  const { retryAt: _waited, failureKind: _kind, ...rest } = stage;
+  const kind = event.failureKind ?? stage.failureKind;
   return {
-    ...stage,
+    ...rest,
+    ...(event.retryAt === undefined ? {} : { retryAt: event.retryAt }),
+    ...(kind === undefined ? {} : { failureKind: kind }),
     state: event.state,
     // The provider's own words reach the row through here and are never rewritten. An event
     // without one leaves the reason the row already held, because the refetch this same event

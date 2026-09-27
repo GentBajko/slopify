@@ -4,6 +4,7 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { nodeHostSetupRunner } from "../host-cli/install.js";
 import { assertManagedDockerHost } from "./docker.js";
@@ -85,7 +86,10 @@ async function main(): Promise<void> {
     const e = dockerEngine(nodeHostSetupRunner, controller.signal, process.env);
     const recovery = () =>
       dockerEngine(nodeHostSetupRunner, AbortSignal.timeout(5 * 60_000), process.env);
-    const result = await installProjects(c, e, recovery);
+    const result = await installProjects(c, e, recovery, {
+      report: (message) => console.log(message),
+      sleep: (ms) => delay(ms, undefined, { signal: controller.signal }),
+    });
     console.log(`Slopify is running at ${result.url}`);
     console.log(`Project files on this machine: ${result.projects}`);
     if (result.recovery)

@@ -419,3 +419,35 @@ it("labels a recovery volume with its update, installation and container at crea
     `data-recovery-${id}`,
   ]);
 });
+
+it("asks the running Slopify whether work is in flight, and reads silence as idle", async () => {
+  const container = {
+    id: "old",
+    name: "slopify",
+    image: "i",
+    user: "1000",
+    running: true,
+    restart: { Name: "always", MaximumRetryCount: 0 },
+    signature: null,
+    installation: null,
+    mounts: [],
+    port: "127.0.0.1:6969",
+  };
+  const answers = [
+    { code: 0, stdout: '{"busy":true,"waitingFor":"Tiamat"}\n' },
+    { code: 0, stdout: '{"busy":false,"waitingFor":null}' },
+    { code: 1, stdout: "" },
+    { code: 0, stdout: "not json at all" },
+  ];
+  const exec = vi.fn(async () => answers.shift() ?? { code: 1, stdout: "" });
+  const e = dockerEngine({ exec }, new AbortController().signal, {});
+  expect(await e.activity?.(container)).toEqual({ busy: true, waitingFor: "Tiamat" });
+  expect(await e.activity?.(container)).toEqual({ busy: false });
+  expect(await e.activity?.(container)).toBeUndefined();
+  expect(await e.activity?.(container)).toBeUndefined();
+  expect(exec.mock.calls[0]).toEqual([
+    "docker",
+    expect.arrayContaining(["exec", "old", "node", "-e"]),
+    expect.any(AbortSignal),
+  ]);
+});

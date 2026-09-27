@@ -28,6 +28,7 @@ import {
   cliInput,
   cliShaped,
   deliveredInput,
+  endedKind,
   endedWithout,
   promptOf,
   stopCliRun,
@@ -296,7 +297,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     const planLimit = codexPlanLimit(run.stderr(), (deps.now ?? (() => new Date()))());
     if (planLimit !== undefined) throw codexLimitError(run.stderr().trim(), planLimit);
     throw providerError({
-      kind: "other",
+      kind: endedKind(ended),
       message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     });
   }

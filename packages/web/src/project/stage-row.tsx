@@ -11,6 +11,7 @@ import { StateWord } from "@/components/state-word";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { confirmationFor } from "./confirmations.js";
 import { canRerunSection } from "./controls.js";
+import { FixIt, fixOf } from "./fix-it.js";
 import { LiveWriting } from "./live-writing.js";
 import { RefusalLine } from "./parts.js";
 import { unreadyFor } from "./readiness.js";
@@ -203,6 +204,7 @@ function RecoveryLine({
         : (unready?.label ?? retry);
   const rerunnable = revisioned && view !== undefined && canRerunSection(view, stage.kind);
   const rerunCopy = confirmationFor({ kind: "rerun", stage: stage.kind });
+  const fix = fixOf(stage, project);
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-red/30 bg-red-tint px-5 py-3">
       <p className="min-w-0 text-small text-red">
@@ -235,6 +237,9 @@ function RecoveryLine({
           </Link>
         </p>
       ) : null}
+      {fix === undefined ? null : (
+        <FixIt fix={fix} stage={stage} providers={providers} actions={actions} />
+      )}
       <span className="ml-auto flex items-center gap-1">
         <InfoTip label={`recovering ${name}`}>
           <p>

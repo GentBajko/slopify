@@ -137,7 +137,8 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
     .flatMap((row) => {
       const project = projectRow.parse(row);
       const state = derive(standings.get(project.id) ?? [], projectPaused(deps.db, project.id));
-      const terminal = state === "done" || state === "failed" || state === "canceled";
+      const terminal =
+        state === "done" || state === "partial" || state === "failed" || state === "canceled";
       if (terminal) {
         const ended = project.finished_at ?? project.created_at;
         if (ended < from.toISOString() || ended >= to.toISOString()) return [];

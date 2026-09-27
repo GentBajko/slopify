@@ -680,3 +680,41 @@ it("removes a rolled-back update's volume, and reports one Docker won't remove",
     await h.close();
   }
 });
+
+it("waits for a running project before stopping the old container, and says for which", async () => {
+  const h = await seeded();
+  try {
+    const answers = [
+      { busy: true, waitingFor: "Tiamat" },
+      { busy: true, waitingFor: "Tiamat" },
+      { busy: true },
+      { busy: false },
+    ];
+    const engine = {
+      ...h.engine,
+      activity: async () => {
+        h.calls.push("activity");
+        return answers.shift();
+      },
+    };
+    const said: string[] = [];
+    const slept: number[] = [];
+    await installProjects(h.config, engine, () => engine, {
+      report: (message) => said.push(message),
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+    });
+    expect(said).toEqual([
+      expect.stringMatching(
+        /^Update to .+ will install when 'Tiamat' finishes\. Leave this running/,
+      ),
+      expect.stringMatching(/will install when the running work finishes/),
+    ]);
+    expect(slept).toEqual([15_000, 15_000, 15_000]);
+    const calls = h.calls.filter((call) => call === "activity" || call === "stop");
+    expect(calls).toEqual(["activity", "activity", "activity", "activity", "stop"]);
+  } finally {
+    await h.close();
+  }
+});

@@ -17,7 +17,14 @@ import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
 import { codexLimitError, readingOf } from "../llm/codex.js";
 import { codexPlanLimit } from "../llm/codex-limits.js";
-import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
+import {
+  cliEvent,
+  cliShaped,
+  endedKind,
+  endedWithout,
+  type RunCli,
+  stopCliRun,
+} from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
 import { type ReferencePicture, referencePictures } from "./reference.js";
@@ -355,7 +362,7 @@ export function codexImage(deps: {
           throw (
             cliLoginError("codex", run.stderr()) ??
             providerError({
-              kind: unavailable ? "unsupported" : "other",
+              kind: unavailable ? "unsupported" : endedKind(ended),
               message: endedWithout(binary, ended, run.stderr()),
             })
           );

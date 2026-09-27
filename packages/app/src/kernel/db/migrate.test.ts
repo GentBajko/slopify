@@ -68,6 +68,7 @@ describe("migrate", () => {
       "project_template_revisions",
       "project_templates",
       "projects",
+      "prompt_softening",
       "prompts",
       "provider_keys",
       "provider_usage",
@@ -121,6 +122,7 @@ describe("migrate", () => {
       "revision_pieces_revision",
       "revision_pieces_selected",
       "revision_work_dispatch",
+      "revision_work_retry",
       "revision_work_revision_identity",
       "revision_work_stage",
       "schedule_runs_schedule",
@@ -160,6 +162,7 @@ describe("migrate", () => {
       { version: 25, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 26, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 27, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 30, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 31, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 32, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
@@ -285,7 +288,8 @@ describe("migrate", () => {
           db
             .prepare(`SELECT * FROM ${table}`)
             .all()
-            .filter((row) => row.kind !== "document"),
+            .filter((row) => row.kind !== "document")
+            .map(withoutRetryColumns),
         ),
       ).toEqual(before);
       expect(
@@ -544,7 +548,8 @@ describe("migrate", () => {
         db
           .prepare(`SELECT * FROM ${table}`)
           .all()
-          .filter((row) => row.kind !== "document"),
+          .filter((row) => row.kind !== "document")
+          .map(withoutRetryColumns),
       ),
     ).toEqual(before);
     for (const table of [
@@ -578,3 +583,12 @@ describe("migrate", () => {
     expect(db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });
   });
 });
+
+// Version 30 adds the automatic retry's columns to every stage and step row, empty.
+function withoutRetryColumns(row: Record<string, unknown>): Record<string, unknown> {
+  const { failure_kind: kind, retry_at: at, auto_retries: count, ...rest } = row;
+  if ((kind !== undefined && kind !== null) || (at !== undefined && at !== null))
+    throw new Error("an existing row gained a retry");
+  if (count !== undefined && count !== 0) throw new Error("an existing row gained a retry");
+  return rest;
+}

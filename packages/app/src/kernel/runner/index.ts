@@ -5,6 +5,7 @@ import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 import type { CheckpointAuthority } from "./checkpoint-authority.js";
 import { derive, deps as graph, satisfied } from "./graph.js";
 import { type ProgressGate, progressGate } from "./progress.js";
+import { type Fault, faultOf } from "./retry-policy.js";
 import type { StageRunResult, WorkRef } from "./work.js";
 
 export interface RunnerStage {
@@ -22,7 +23,20 @@ export interface StageStore {
   readonly ready?: (work: WorkRef) => boolean;
   // One statement, `pending` → `running`, false if the row moved on. A stage starts once.
   readonly claim: (work: WorkRef) => boolean;
-  readonly finish: (work: WorkRef, state: StageState, failureReason: string | null) => void;
+  readonly finish: (
+    work: WorkRef,
+    state: StageState,
+    failureReason: string | null,
+    failureKind?: string | null,
+  ) => void;
+  // A failure time can fix is put back to wait instead of failing the step: the store keeps
+  // the wait and its count (`retry-policy.ts`) and answers when the step may run again, or
+  // undefined when it should fail now.
+  readonly waitToRetry?: (
+    work: WorkRef,
+    fault: Fault | undefined,
+    reason: string,
+  ) => string | undefined;
   readonly paused?: (projectId: string) => boolean;
   readonly dependenciesOf?: (projectId: string, kind: StageKind) => readonly StageKind[];
 }
@@ -80,7 +94,12 @@ export function createRunner(deps: RunnerDeps): Runner {
   let count = 0;
   let shuttingDown = false;
 
-  const emitStage = (stage: RunnerStage, state: StageState, reason: string | null): void => {
+  const emitStage = (
+    stage: RunnerStage,
+    state: StageState,
+    reason: string | null,
+    detail: { readonly retryAt?: string; readonly failureKind?: string | undefined } = {},
+  ): void => {
     deps.emit(stage.projectId, {
       type: "stage.state",
       revisionId: stage.work.revisionId,
@@ -89,6 +108,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       stage: stage.kind,
       state,
       ...(reason === null ? {} : { failureReason: reason }),
+      ...(detail.retryAt === undefined ? {} : { retryAt: detail.retryAt }),
+      ...(detail.failureKind === undefined ? {} : { failureKind: detail.failureKind }),
     });
   };
 
@@ -117,9 +138,14 @@ export function createRunner(deps: RunnerDeps): Runner {
     deps.emit(projectId, { type: "project.state", projectId, state });
   };
 
-  const conclude = (stage: RunnerStage, state: StageState, reason: string | null): void => {
+  const conclude = (
+    stage: RunnerStage,
+    state: StageState,
+    reason: string | null,
+    kind?: string,
+  ): void => {
     try {
-      deps.stages.finish(stage.work, state, reason);
+      deps.stages.finish(stage.work, state, reason, kind ?? null);
     } catch (error) {
       // The row stays `running` when the write fails. The event still goes out, and the
       // next boot marks the row interrupted.
@@ -129,7 +155,30 @@ export function createRunner(deps: RunnerDeps): Runner {
         detail: reasonOf(error),
       });
     }
-    emitStage(stage, state, reason);
+    emitStage(stage, state, reason, { failureKind: kind });
+  };
+
+  // False when the failure is to be shown now.
+  const deferred = (stage: RunnerStage, fault: Fault | undefined, reason: string): boolean => {
+    let at: string | undefined;
+    try {
+      at = deps.stages.waitToRetry?.(stage.work, fault, reason);
+    } catch (error) {
+      deps.log.write("error", "stage.retry", {
+        projectId: stage.projectId,
+        stage: stage.kind,
+        detail: reasonOf(error),
+      });
+      return false;
+    }
+    if (at === undefined) return false;
+    deps.log.write("warn", "stage.retry", {
+      projectId: stage.projectId,
+      stage: stage.kind,
+      detail: `waiting until ${at} to run again after ${fault?.kind ?? "a failure"}: ${reason}`,
+    });
+    emitStage(stage, "pending", reason, { retryAt: at, failureKind: fault?.kind });
+    return true;
   };
 
   async function execute(stage: RunnerStage, controller: AbortController): Promise<void> {
@@ -172,12 +221,14 @@ export function createRunner(deps: RunnerDeps): Runner {
         conclude(stage, paused ? "pending" : "canceled", paused ? null : "canceled by user");
         return;
       }
+      const fault = faultOf(error);
+      if (deferred(stage, fault, reasonOf(error))) return;
       deps.log.write("error", "stage.failed", {
         projectId: stage.projectId,
         stage: stage.kind,
         detail: causedBy(error),
       });
-      conclude(stage, "failed", reasonOf(error));
+      conclude(stage, "failed", reasonOf(error), fault?.kind);
     }
   }
 

@@ -137,7 +137,23 @@ export function recoverCheckpointWork(db: DatabaseSync): void {
         AND (p.submitted_at IS NOT NULL OR p.continuation IS NOT NULL OR p.state IN ('running','done')))`)
       .all()
       .map((row) => z.string().parse(row.id));
+    // A step waiting out a rate limit or a timeout keeps its wait across a restart: it was not
+    // running when the process stopped, and the failure that parked it lost no submission.
+    const waiting = db
+      .prepare(
+        "SELECT id FROM revision_work WHERE state='pending' AND dispatch_state='allowed' AND retry_at IS NOT NULL",
+      )
+      .all()
+      .map((row) => z.string().parse(row.id));
     recoverWork(db);
+    for (const id of waiting) {
+      db.prepare(
+        "UPDATE revision_work SET dispatch_state='allowed' WHERE id=? AND state='pending'",
+      ).run(id);
+      db.prepare(
+        "UPDATE revision_work_pieces SET state='pending',dispatch_state='allowed' WHERE work_id=? AND state!='done'",
+      ).run(id);
+    }
     for (const id of retained) {
       db.prepare(
         "UPDATE revision_work SET dispatch_state='allowed' WHERE id=? AND state='pending'",

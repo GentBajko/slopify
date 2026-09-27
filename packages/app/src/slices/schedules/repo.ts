@@ -414,7 +414,7 @@ export function settleTerminalScheduleRuns(db: DatabaseSync, settledAt: string):
 function projectIsActive(db: DatabaseSync, projectId: string): boolean {
   if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId) === undefined) return false;
   const state = derive(stagesOf(db, projectId), projectPaused(db, projectId));
-  return state !== "done" && state !== "failed" && state !== "canceled";
+  return state !== "done" && state !== "partial" && state !== "failed" && state !== "canceled";
 }
 
 export function recoverRunningRuns(

@@ -46,8 +46,18 @@ export interface Engine {
   restart(c: Container): Promise<void>;
   start(c: DockerConfig, j: Journal, transactionDirectory: string): Promise<string>;
   health(id: string, token: string, expectedVersion: string): Promise<void>;
+  // Whether the running Slopify has work in flight, and whose. Undefined when it cannot say
+  // (stopped, starting, or too old to answer), which the update takes as idle.
+  activity?(c: Container): Promise<Activity | undefined>;
   command(args: readonly string[]): Promise<string>;
 }
+export interface Activity {
+  readonly busy: boolean;
+  readonly waitingFor?: string | undefined;
+}
+
+const activityAnswer = z.object({ busy: z.boolean(), waitingFor: z.string().nullable() });
+
 export interface RecoveryVolume {
   readonly name: string;
   readonly transaction: string | null;
@@ -540,6 +550,31 @@ export function dockerEngine(
         "SLOPIFY_UPDATE_PENDING=1",
         j.image,
       ]);
+    },
+    activity: async (c) => {
+      const probe = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
+      try {
+        const result = await run(
+          [
+            "exec",
+            c.id,
+            "node",
+            "-e",
+            "fetch('http://127.0.0.1:6969/api/update').then(r=>r.json()).then(b=>console.log(JSON.stringify({busy:b.busy===true,waitingFor:typeof b.waitingFor==='string'?b.waitingFor:null}))).catch(()=>process.exit(1))",
+          ],
+          probe,
+        );
+        if (result.code !== 0) return undefined;
+        const parsed = activityAnswer.safeParse(JSON.parse(result.stdout.trim()));
+        if (!parsed.success) return undefined;
+        return {
+          busy: parsed.data.busy,
+          ...(parsed.data.waitingFor === null ? {} : { waitingFor: parsed.data.waitingFor }),
+        };
+      } catch (error) {
+        if (signal.aborted) throw error;
+        return undefined;
+      }
     },
     health: async (id, token, expectedVersion) => {
       const deadline = Date.now() + 120_000;

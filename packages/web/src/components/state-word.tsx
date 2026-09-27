@@ -8,10 +8,16 @@ const tones: Readonly<Record<StageState | ProjectState, string>> = {
   running: "text-run-text",
   done: "text-done",
   failed: "text-red",
+  partial: "text-amber",
   canceled: "text-amber",
   paused: "text-amber",
   provided: "text-ink2",
   skipped: "text-ink3",
+};
+
+// A state whose name is not the word a person would use.
+const words: Readonly<Partial<Record<StageState | ProjectState, string>>> = {
+  partial: "done with problems",
 };
 
 export function StateWord({
@@ -28,11 +34,11 @@ export function StateWord({
   return (
     <span className={cn("inline-flex items-center", className)}>
       <span data-state={state} className={cn("engraved font-bold", tones[state])}>
-        {state}
+        {words[state] ?? state}
       </span>
       {announce === undefined ? null : (
         <span className="sr-only" role="status" aria-live="polite">
-          {`${announce}: ${state}`}
+          {`${announce}: ${words[state] ?? state}`}
         </span>
       )}
     </span>

@@ -74,13 +74,22 @@ describe("app updater", () => {
     }
     expect(newerVersion("0.10.0", "0.9.9")).toBe(true);
   });
-  it("rechecks active work after the registry await before acquiring the install barrier", async () => {
+  it("waits for work that started during the registry check, then installs by itself", async () => {
     let busy = false;
     let installs = 0;
+    let tick = () => {};
+    let stopped = false;
     const updater = createUpdater({
       currentVersion: "0.6.1",
       now: () => 0,
       busy: () => busy,
+      busyWith: () => (busy ? "Tiamat" : undefined),
+      every: (callback) => {
+        tick = callback;
+        return () => {
+          stopped = true;
+        };
+      },
       latest: async () => {
         busy = true;
         return "0.6.2";
@@ -91,8 +100,46 @@ describe("app updater", () => {
       unsupported: () => undefined,
       report: () => {},
     });
+    expect(await updater.start()).toMatchObject({
+      ok: true,
+      info: { status: "waiting", pendingVersion: "0.6.2", waitingFor: "Tiamat" },
+    });
+    // A second click neither installs nor queues a second wait.
     expect(await updater.start()).toMatchObject({ ok: false, code: 409 });
+    // A check while waiting never overwrites the wait with a registry round-trip.
+    expect((await updater.check(true)).status).toBe("waiting");
+    tick();
     expect(installs).toBe(0);
+    busy = false;
+    tick();
+    expect(stopped).toBe(true);
+    await vi.waitFor(() => expect(installs).toBe(1));
+    expect(updater.locked()).toBe(true);
+  });
+  it("drops a waiting update when asked, and installs nothing", async () => {
+    let tick = () => {};
+    const installs: string[] = [];
+    const updater = createUpdater({
+      currentVersion: "0.6.1",
+      now: () => 0,
+      busy: () => true,
+      every: (callback) => {
+        tick = callback;
+        return () => {};
+      },
+      latest: async () => "0.6.2",
+      install: async (version) => {
+        installs.push(version);
+      },
+      unsupported: () => undefined,
+      report: () => {},
+    });
+    expect((await updater.start()).info.status).toBe("waiting");
+    expect(updater.cancelWaiting()).toBe(true);
+    expect(updater.cancelWaiting()).toBe(false);
+    tick();
+    expect(installs).toEqual([]);
+    expect((await updater.check()).status).toBe("idle");
   });
   it("locks mutations through installation and restart and admits only one click", async () => {
     const h = harness();
@@ -115,15 +162,31 @@ describe("app updater", () => {
     expect(h.updater.locked()).toBe(false);
     expect(info.error).not.toContain("private");
   });
-  it("blocks updates until an admitted HTTP mutation settles and blocks mutations during install", async () => {
-    const h = harness();
-    const release = h.updater.beginMutation();
+  it("waits for an admitted HTTP mutation to settle and blocks mutations during install", async () => {
+    let tick = () => {};
+    let installs = 0;
+    const updater = createUpdater({
+      currentVersion: "0.6.1",
+      now: () => 0,
+      busy: () => false,
+      every: (callback) => {
+        tick = callback;
+        return () => {};
+      },
+      latest: async () => "0.6.2",
+      install: async () => {
+        installs++;
+      },
+      unsupported: () => undefined,
+      report: () => {},
+    });
+    const release = updater.beginMutation();
     expect(release).toBeTypeOf("function");
-    expect(await h.updater.start()).toMatchObject({ ok: false, code: 409 });
+    expect((await updater.start()).info.status).toBe("waiting");
     release?.();
-    expect((await h.updater.start()).ok).toBe(true);
-    expect(h.updater.beginMutation()).toBeUndefined();
-    h.finish();
+    tick();
+    await vi.waitFor(() => expect(installs).toBe(1));
+    expect(updater.beginMutation()).toBeUndefined();
   });
   it("reports rollback on the restarted old server until an explicit install retry", async () => {
     const updater = createUpdater({

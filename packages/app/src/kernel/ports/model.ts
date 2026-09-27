@@ -33,15 +33,17 @@ export function readinessIsUsable(readiness: Readiness): boolean {
 }
 
 export const providerErrorKinds = [
+  // A key the provider rejected. Like an absent one it fails at once: no wait fixes it.
   "auth",
-  // Distinct from `auth`, a key the provider rejected: a bad key runs the whole retry
-  // policy, an absent one fails immediately.
   "missing_key",
   "unavailable",
   "rate_limit",
   "refusal",
   "unsupported",
   "timeout",
+  // The connection, the provider's server or the CLI process went away before an answer:
+  // nothing says the request itself was wrong, so it is worth sending again later.
+  "dropped",
   "other",
 ] as const;
 export type ProviderErrorKind = (typeof providerErrorKinds)[number];

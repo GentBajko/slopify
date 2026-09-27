@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { StageProgressEvent } from "../../kernel/events.js";
 import type { StageState } from "../../kernel/pipeline.js";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
+import type { StageStanding } from "../../kernel/runner/graph.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { sourceOf } from "../admission/model.js";
@@ -95,10 +96,12 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
 export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
   const row = deps.db
     .prepare(
-      "SELECT recipe_context FROM revision_work WHERE id=? AND project_id=? AND revision_id=?",
+      "SELECT recipe_context,retry_at FROM revision_work WHERE id=? AND project_id=? AND revision_id=?",
     )
     .get(work.workId, work.projectId, work.revisionId);
   if (row?.recipe_context === null || row === undefined) return false;
+  // Waiting out a failure time can fix: `dueRetries` clears the wait when it runs out.
+  if (row.retry_at !== null) return false;
   const view = executionView(deps, work.projectId, work.revisionId);
   if (view === undefined) return false;
   const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
@@ -126,7 +129,7 @@ export function executionStandings(
   deps: RevisionDeps,
   projectId: string,
   derived?: readonly RunnerStage[],
-): readonly Pick<RunnerStage, "kind" | "state">[] {
+): readonly StageStanding[] {
   const revisionId = currentRevisionId(deps.db, projectId);
   const view = revisionId === undefined ? undefined : getRevisionView(deps, projectId, revisionId);
   if (view === undefined) return [];
@@ -162,6 +165,9 @@ export function executionStandings(
       });
     let state: StageState =
       source === "off" ? "skipped" : source === "provide" ? "provided" : "pending";
+    const retryAt = group.some((entry) => entry.state === "failed")
+      ? null
+      : latestRetry(deps, group);
     if (group.some((entry) => entry.state === "running")) state = "running";
     else if (group.some((entry) => entry.state === "failed")) state = "failed";
     else if (group.some((entry) => entry.state === "canceled")) state = "canceled";
@@ -171,8 +177,21 @@ export function executionStandings(
           ? "provided"
           : "done"
         : "pending";
-    return { kind, state };
+    return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
   });
+}
+
+// The latest wait among a stage's steps that went back to wait after a failure time can fix.
+function latestRetry(deps: RevisionDeps, group: readonly RunnerStage[]): string | null {
+  let latest: string | null = null;
+  for (const entry of group) {
+    if (entry.state !== "pending") continue;
+    const at = deps.db
+      .prepare("SELECT retry_at FROM revision_work WHERE id=?")
+      .get(entry.work.workId)?.retry_at;
+    if (typeof at === "string" && (latest === null || at > latest)) latest = at;
+  }
+  return latest;
 }
 
 export function projectStandings(deps: RevisionDeps, projectId: string): void {
@@ -189,20 +208,27 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
         .get(entry.work.workId);
       return total + fraction(progress?.progress_current, progress?.progress_total);
     }, 0);
-    const failed = all.find((work) => work.state === "failed");
+    // A failed step, or else one waiting to run again, says why on the stage row.
+    const failed =
+      all.find((work) => work.state === "failed") ??
+      (stage.retryAt === undefined || stage.retryAt === null
+        ? undefined
+        : all.find((work) => work.state === "pending"));
     const failure =
       failed === undefined
-        ? null
-        : (deps.db
-            .prepare("SELECT failure_reason FROM revision_work WHERE id=?")
-            .get(failed.work.workId)?.failure_reason ?? null);
+        ? undefined
+        : deps.db
+            .prepare("SELECT failure_reason,failure_kind FROM revision_work WHERE id=?")
+            .get(failed.work.workId);
     deps.db
       .prepare(
-        "UPDATE stages SET state=?,failure_reason=?,progress_current=?,progress_total=?,finished_at=CASE WHEN ?='done' THEN ? ELSE NULL END WHERE project_id=? AND kind=?",
+        "UPDATE stages SET state=?,failure_reason=?,failure_kind=?,retry_at=?,progress_current=?,progress_total=?,finished_at=CASE WHEN ?='done' THEN ? ELSE NULL END WHERE project_id=? AND kind=?",
       )
       .run(
         stage.state,
-        failure,
+        textOf(failure?.failure_reason),
+        textOf(failure?.failure_kind),
+        stage.retryAt ?? null,
         invocations.length === 0 ? null : current,
         invocations.length === 0 ? null : invocations.length,
         stage.state,
@@ -274,6 +300,10 @@ const spokenKey = /^audio:(?:intro|body|outro)(?::(?!concat$|future$).+)?$/;
 
 function spoken(deps: RevisionDeps, workId: string): boolean {
   return workPieces(deps.db, workId).some((piece) => spokenKey.test(piece.key));
+}
+
+function textOf(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
 }
 
 function fraction(current: unknown, total: unknown): number {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectStates } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { cadenceSchema, validTimeZone } from "./calendar.js";
 
@@ -195,7 +196,7 @@ export const calendarProjectSchema = z
   .object({
     id: z.string(),
     title: z.string(),
-    state: z.enum(["pending", "running", "paused", "done", "failed", "canceled"]),
+    state: z.enum(projectStates),
     createdAt: z.string(),
     finishedAt: z.string().nullable(),
     scheduleId: z.string().nullable(),
