@@ -1,12 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Trash2Icon } from "lucide-react";
-import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
@@ -17,22 +16,24 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { ListSkeleton } from "@/library/list-states";
+import { LibraryRowActions } from "@/library/row-actions";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
   instantiateProjectTemplate,
+  readProjectTemplate,
   saveProjectTemplate,
   type TemplateSummary,
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
-import { TemplateKeywords } from "@/templates/keywords";
+import { TemplateEditor, TemplateHistoryDrawer } from "@/templates/row-parts";
 import { LibraryToolbar } from "./library.js";
 
-// Library → Templates: saved Play setups, each applied as a fresh draft to review. The rows
-// carry their actions (Apply to Play, Delete) in view; Save a setup opens a drawer beside the
-// list.
+// Library → Templates: saved Play setups, each used in Play as a fresh draft to review. The
+// rows carry the Library's row actions in view (Edit, Duplicate, Use in Play, History,
+// Delete); Save a setup opens a drawer beside the list.
 export function TemplatesRoute({
   onApplied,
   beforeApply,
@@ -73,8 +74,10 @@ export function TemplatesRoute({
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
-  // The template whose keywords are shown under its row.
-  const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
+  // The template whose editor (name and keywords) is open under its row.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [historyOf, setHistoryOf] = useState<TemplateSummary | null>(null);
+  const duplicates = useRef(new Map<string, string>());
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   const applications = useRef(new Map<string, string>());
@@ -161,8 +164,28 @@ export function TemplatesRoute({
     if (opened !== false) applications.current.delete(key);
     else
       throw new Error(
-        "The template's draft was created but didn't open. Press Apply to Play again to open it.",
+        "The template's draft was created but didn't open. Press Use in Play again to open it.",
       );
+  }
+  // The copy is "<name> copy" in the same channel; pressed twice for one version it is made once.
+  async function duplicate(template: TemplateSummary): Promise<void> {
+    const key = `${template.id}:${template.version}`;
+    let id = duplicates.current.get(key);
+    if (!id) {
+      id = crypto.randomUUID();
+      duplicates.current.set(key, id);
+    }
+    const read = await readProjectTemplate(api, template.id);
+    if (!read.ok) throw new Error(read.message);
+    const reply = await saveProjectTemplate(api, {
+      id,
+      name: `${template.name} copy`,
+      document: read.value.document,
+    });
+    if (!reply.ok) throw new Error(reply.message);
+    duplicates.current.delete(key);
+    notify(`Duplicated as ${reply.value.name}.`, "success");
+    await client.invalidateQueries({ queryKey: templatesKey });
   }
   async function remove(): Promise<void> {
     if (!deleting) return;
@@ -244,8 +267,9 @@ export function TemplatesRoute({
           <InfoTip id="templates.show-channel" />
         </span>
         <p className="m-0 flex items-center gap-1 text-small text-ink-2">
-          Reuse a Play setup and its checkpoint choices. Apply creates a fresh draft to review.
-          <InfoTip id="templates.apply" label="Apply to Play" />
+          Reuse a Play setup and its checkpoint choices. Use in Play creates a fresh draft to
+          review.
+          <InfoTip id="templates.apply" label="Use in Play" />
         </p>
       </LibraryToolbar>
       <div className="mb-2 flex min-h-8 flex-wrap items-center gap-3">
@@ -276,64 +300,65 @@ export function TemplatesRoute({
       {shown?.length ? (
         <List label="Project templates">
           {shown.map((template) => (
-            <Fragment key={template.id}>
-              <ListRow
-                className="max-md:grid-cols-1"
-                title={template.name}
-                meta={
-                  <>
-                    {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                    Version {template.version} · updated{" "}
-                    <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                  </>
-                }
-                actions={
-                  // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
-                  <div
-                    role="group"
-                    aria-label={`Actions for ${template.name}`}
-                    className="flex flex-wrap items-center gap-[2px]"
-                  >
+            <ListRow
+              key={template.id}
+              className="max-md:grid-cols-1"
+              title={template.name}
+              meta={
+                <>
+                  {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                  Version {template.version} · updated{" "}
+                  <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                </>
+              }
+              actions={
+                <LibraryRowActions
+                  name={template.name}
+                  edit={
                     <Button
                       variant="quiet"
                       size="small"
-                      aria-label={`Apply ${template.name}`}
-                      disabled={pending || blocked}
-                      onClick={() => void execute(() => apply(template))}
-                    >
-                      Apply to Play
-                    </Button>
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-expanded={keywordsOf === template.id}
-                      aria-label={`Keywords of ${template.name}`}
+                      aria-label={`Edit ${template.name}`}
+                      aria-expanded={editing === template.id}
                       onClick={() =>
-                        setKeywordsOf((current) => (current === template.id ? null : template.id))
+                        setEditing((current) => (current === template.id ? null : template.id))
                       }
                     >
-                      Keywords
+                      Edit
                     </Button>
-                    <IconButton
+                  }
+                  duplicate={
+                    <Button
+                      variant="quiet"
                       size="small"
-                      label={`Delete ${template.name}`}
+                      aria-label={`Duplicate ${template.name}`}
                       disabled={pending}
-                      onClick={() => {
-                        setDeleting(template);
-                        setError(null);
-                      }}
+                      disabledReason="Working on the last press"
+                      onClick={() => void execute(() => duplicate(template))}
                     >
-                      <Trash2Icon aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                }
-              />
-              {keywordsOf === template.id ? (
-                <li className="px-3 pb-3">
-                  <TemplateKeywords template={template} />
-                </li>
+                      Duplicate
+                    </Button>
+                  }
+                  play={{
+                    run: () => void execute(() => apply(template)),
+                    blocked: blocked
+                      ? "A run is still starting in Play. Wait for it, then use the template."
+                      : pending
+                        ? "Working on the last press"
+                        : undefined,
+                  }}
+                  onHistory={() => setHistoryOf(template)}
+                  onDelete={() => {
+                    setDeleting(template);
+                    setError(null);
+                  }}
+                />
+              }
+            >
+              {editing === template.id ? (
+                <TemplateEditor template={template} onDone={() => setEditing(null)} />
               ) : null}
-            </Fragment>
+            </ListRow>
           ))}
         </List>
       ) : null}
@@ -442,6 +467,13 @@ export function TemplatesRoute({
           </Field>
         </form>
       </Drawer>
+      {historyOf === null ? null : (
+        <TemplateHistoryDrawer
+          key={`${historyOf.id}:${String(historyOf.version)}`}
+          template={historyOf}
+          onClose={() => setHistoryOf(null)}
+        />
+      )}
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete ${deleting?.name ?? "template"}?`}

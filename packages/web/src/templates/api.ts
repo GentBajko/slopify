@@ -71,8 +71,14 @@ export function templatesQuery(api: Api): UseQueryOptions<readonly TemplateSumma
 export async function readProjectTemplate(
   api: Api,
   id: string,
+  // An earlier saved version (History); the current one when left out.
+  version?: number,
 ): Promise<TemplateReply<ProjectTemplate>> {
-  return responseOf(await api.fetch(`${root(api)}/${encodeURIComponent(id)}`), templateReplySchema);
+  const query = version === undefined ? "" : `?version=${String(version)}`;
+  return responseOf(
+    await api.fetch(`${root(api)}/${encodeURIComponent(id)}${query}`),
+    templateReplySchema,
+  );
 }
 export async function saveProjectTemplate(
   api: Api,

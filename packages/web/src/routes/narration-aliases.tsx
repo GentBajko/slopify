@@ -1,12 +1,13 @@
 import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { saveNarrationAliases } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import { Button, IconButton } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { List, ListRow } from "@/components/kit/list-row";
 import { RailGroup } from "@/components/rail";
 import { Input } from "@/components/ui/input";
 import { keys, narrationAliasesQuery } from "@/queries";
@@ -115,10 +116,10 @@ export function NarrationAliasesRoute(): ReactElement {
           </p>
         </RailGroup>
       ) : (
-        <RailGroup>
+        <>
           {/* One info button per column, once above the rows rather than on every row. */}
           <div {...helpScope}>
-            <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-2 text-small text-ink2">
+            <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 px-3 pb-2 text-small text-ink2">
               <span className="flex items-center gap-1">
                 Written
                 <InfoTip id="library.aliases.written" />
@@ -136,77 +137,90 @@ export function NarrationAliasesRoute(): ReactElement {
                 <InfoTip id="library.aliases.match-case" />
               </span>
             </p>
-            <ul aria-label="Narration aliases">
+            <List label="Narration aliases">
               {shown.map((row, index) => {
                 const id = `${idPrefix}-${row.key}`;
                 const error = errors[index];
+                const written = row.written.trim();
+                const spoken = row.spoken.trim();
                 return (
-                  <li
+                  <ListRow
                     key={row.key}
-                    className="grid grid-cols-1 gap-x-[14px] gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-end"
+                    title={`Alias ${String(index + 1)}`}
+                    meta={
+                      written === "" || spoken === ""
+                        ? "Not filled in yet"
+                        : `Says ${written} as ${spoken}${row.wholeWord ? " · whole word" : ""}${
+                            row.caseSensitive ? " · match case" : ""
+                          }`
+                    }
+                    actions={
+                      <IconButton
+                        size="small"
+                        label={`Remove alias ${String(index + 1)}`}
+                        onClick={() => remove(row.key)}
+                      >
+                        <Trash2Icon aria-hidden="true" />
+                      </IconButton>
+                    }
                   >
-                    <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-written`}>
-                      Written
-                      <Input
-                        id={`${id}-written`}
-                        value={row.written}
-                        placeholder="Dr."
-                        maxLength={200}
-                        aria-invalid={error !== undefined}
-                        aria-describedby={error === undefined ? undefined : `${id}-error`}
-                        onChange={(event) => update(row.key, { written: event.target.value })}
-                      />
-                    </label>
-                    <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-spoken`}>
-                      Say it as
-                      <Input
-                        id={`${id}-spoken`}
-                        value={row.spoken}
-                        placeholder="Doctor"
-                        maxLength={500}
-                        aria-invalid={error !== undefined}
-                        onChange={(event) => update(row.key, { spoken: event.target.value })}
-                      />
-                    </label>
-                    <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-accent"
-                        checked={row.wholeWord}
-                        onChange={(event) => update(row.key, { wholeWord: event.target.checked })}
-                      />
-                      Whole word
-                    </label>
-                    <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-accent"
-                        checked={row.caseSensitive}
-                        onChange={(event) =>
-                          update(row.key, { caseSensitive: event.target.checked })
-                        }
-                      />
-                      Match case
-                    </label>
-                    <Button
-                      type="button"
-                      variant="quiet"
-                      aria-label={`Remove alias ${index + 1}`}
-                      onClick={() => remove(row.key)}
-                    >
-                      Remove
-                    </Button>
-                    {error === undefined ? null : (
-                      <p id={`${id}-error`} className="m-0 text-small text-red md:col-span-5">
-                        {error}
-                      </p>
-                    )}
-                  </li>
+                    {/* Every alias is edited in place: the list is saved as a whole. */}
+                    <div className="grid grid-cols-1 gap-x-[14px] gap-y-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
+                      <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-written`}>
+                        Written
+                        <Input
+                          id={`${id}-written`}
+                          value={row.written}
+                          placeholder="Dr."
+                          maxLength={200}
+                          aria-invalid={error !== undefined}
+                          aria-describedby={error === undefined ? undefined : `${id}-error`}
+                          onChange={(event) => update(row.key, { written: event.target.value })}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-spoken`}>
+                        Say it as
+                        <Input
+                          id={`${id}-spoken`}
+                          value={row.spoken}
+                          placeholder="Doctor"
+                          maxLength={500}
+                          aria-invalid={error !== undefined}
+                          onChange={(event) => update(row.key, { spoken: event.target.value })}
+                        />
+                      </label>
+                      <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-accent"
+                          checked={row.wholeWord}
+                          onChange={(event) => update(row.key, { wholeWord: event.target.checked })}
+                        />
+                        Whole word
+                      </label>
+                      <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-accent"
+                          checked={row.caseSensitive}
+                          onChange={(event) =>
+                            update(row.key, { caseSensitive: event.target.checked })
+                          }
+                        />
+                        Match case
+                      </label>
+                      {error === undefined ? null : (
+                        <p id={`${id}-error`} className="m-0 text-small text-red md:col-span-4">
+                          {error}
+                        </p>
+                      )}
+                    </div>
+                  </ListRow>
                 );
               })}
-            </ul>
+            </List>
           </div>
-        </RailGroup>
+        </>
       )}
 
       <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
