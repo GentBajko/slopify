@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { channelsQuery } from "@/channels/api";
+import { channelOfTemplate } from "@/channels/members-tabs";
 import { ConfirmDialog } from "@/components/confirm";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
@@ -10,6 +12,7 @@ import { useToast } from "@/components/kit/toast";
 import { RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Picker } from "@/components/ui/picker";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
@@ -35,6 +38,14 @@ export function TemplatesRoute({
   const { api } = useApp();
   const client = useQueryClient();
   const templates = useQuery(templatesQuery(api));
+  const channels = useQuery(channelsQuery(api));
+  // "" shows every channel's templates.
+  const [channelFilter, setChannelFilter] = useState("");
+  const shown = templates.data?.filter(
+    (template) => channelFilter === "" || channelOfTemplate(template) === channelFilter,
+  );
+  const channelName = (template: TemplateSummary): string | undefined =>
+    channels.data?.find((channel) => channel.id === channelOfTemplate(template))?.name;
   const drafts = useQuery({
     queryKey: ["play-drafts"],
     queryFn: async () => {
@@ -45,6 +56,8 @@ export function TemplatesRoute({
   });
   const [draftId, setDraftId] = useState("");
   const [name, setName] = useState("");
+  // "" keeps the draft's own channel.
+  const [saveChannel, setSaveChannel] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
@@ -77,12 +90,17 @@ export function TemplatesRoute({
   async function save(): Promise<void> {
     const draft = await readPlayDraft(api, draftId);
     if (!draft.ok) throw new Error(draft.message);
-    const key = JSON.stringify([draftId, draft.value.draft.version, name.trim()]);
+    const key = JSON.stringify([draftId, draft.value.draft.version, name.trim(), saveChannel]);
     if (saveIdentity.current?.key !== key) saveIdentity.current = { key, id: crypto.randomUUID() };
+    const document = draft.value.draft.document;
+    // A draft that never picked a channel runs in its template's, which the server reads too.
+    const source = templates.data?.find((template) => template.id === document.templateSource?.id);
+    const channelId =
+      saveChannel || document.channelId || (source ? channelOfTemplate(source) : undefined);
     const reply = await saveProjectTemplate(api, {
       id: saveIdentity.current.id,
       name: name.trim(),
-      document: draft.value.draft.document,
+      document: channelId === undefined ? document : { ...document, channelId },
     });
     if (!reply.ok) {
       saveIdentity.current = null;
@@ -170,6 +188,19 @@ export function TemplatesRoute({
           </Button>
         }
       >
+        <Picker
+          aria-label="Show templates of"
+          value={channelFilter}
+          className="w-auto min-w-[160px]"
+          onChange={(event) => setChannelFilter(event.target.value)}
+        >
+          <option value="">All channels</option>
+          {(channels.data ?? []).map((channel) => (
+            <option key={channel.id} value={channel.id}>
+              {channel.name}
+            </option>
+          ))}
+        </Picker>
         <p className="text-small text-ink2">
           Reuse a Play setup and its checkpoint choices. Apply creates a fresh draft to review.
         </p>
@@ -197,12 +228,17 @@ export function TemplatesRoute({
           </p>
         </RailGroup>
       ) : null}
-      {templates.data?.length ? (
+      {templates.data?.length && shown?.length === 0 ? (
+        <RailGroup>
+          <p className="px-4 py-6 text-ink2">No templates in this channel.</p>
+        </RailGroup>
+      ) : null}
+      {shown?.length ? (
         <ul
           className="overflow-hidden rounded-panel border border-line bg-panel"
           aria-label="Project templates"
         >
-          {templates.data.map((template) => (
+          {shown.map((template) => (
             <li
               key={template.id}
               className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0"
@@ -210,6 +246,7 @@ export function TemplatesRoute({
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
                 <h2 className="break-words font-semibold">{template.name}</h2>
                 <p className="text-small text-ink3">
+                  {channelName(template) === undefined ? "" : `${channelName(template)} · `}
                   Version {template.version} · Updated{" "}
                   <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
                 </p>
@@ -322,6 +359,22 @@ export function TemplatesRoute({
               disabled={pending}
               onChange={(event) => setName(event.target.value)}
             />
+          </label>
+          <label className="block space-y-1" htmlFor="template-channel">
+            <span className="engraved text-ink3">Channel</span>
+            <Picker
+              id="template-channel"
+              value={saveChannel}
+              disabled={pending}
+              onChange={(event) => setSaveChannel(event.target.value)}
+            >
+              <option value="">The draft's channel</option>
+              {(channels.data ?? []).map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name}
+                </option>
+              ))}
+            </Picker>
           </label>
         </form>
       </Drawer>

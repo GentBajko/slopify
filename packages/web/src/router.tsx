@@ -10,6 +10,8 @@ import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
+import { ChannelRoute, type ChannelTab, channelTabOf } from "@/routes/channel";
+import { ChannelsRoute } from "@/routes/channels";
 import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
 import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
@@ -60,7 +62,7 @@ const playRoute = createRoute({
   component: PlayRoute,
 });
 
-// Prompts, Intros & Outros, Templates and Schedules are one destination with four tabs. The
+// Channels, Prompts, Intros & Outros, Templates, Documents and Schedules are one destination. The
 // layout is pathless, so the four keep their own URLs and every existing link still lands.
 const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -75,6 +77,45 @@ const libraryIndexRoute = createRoute({
     throw redirect({ to: "/prompts", search: { kind: "article" } });
   },
 });
+
+const channelsRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "channels",
+  component: ChannelsRoute,
+});
+
+interface ChannelSearch {
+  readonly tab?: ChannelTab;
+}
+
+const channelRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "channels/$channelId",
+  validateSearch: (search: Record<string, unknown>): ChannelSearch =>
+    search.tab === undefined ? {} : { tab: channelTabOf(search.tab) },
+  component: ChannelPage,
+});
+
+function ChannelPage() {
+  const { channelId } = channelRoute.useParams();
+  const { tab } = channelRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <ChannelRoute
+      key={channelId}
+      channelId={channelId}
+      tab={tab ?? "brand"}
+      onTab={(next) => {
+        void navigate({
+          to: "/channels/$channelId",
+          params: { channelId },
+          search: { tab: next },
+          replace: true,
+        });
+      }}
+    />
+  );
+}
 
 const templatesRoute = createRoute({
   getParentRoute: () => libraryRoute,
@@ -341,6 +382,7 @@ const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
   libraryRoute: libraryRoute.addChildren({
+    channelsRoute,
     promptsRoute,
     entriesRoute,
     templatesRoute,
@@ -348,6 +390,7 @@ const routeTree = rootRoute.addChildren({
     schedulesRoute,
   }),
   libraryIndexRoute,
+  channelRoute,
   projectRoute,
   newPromptRoute,
   promptRoute,

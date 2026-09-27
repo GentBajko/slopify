@@ -8,6 +8,7 @@ import { PageBar } from "@/components/kit/page-bar";
 import { Button } from "@/components/ui/button";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
+import { ChannelPicker } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
@@ -290,6 +291,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               {...controls}
               fields={fields}
               entries={choices.entries}
+              channel={<ChannelPicker />}
               onLibrary={(to) => {
                 void library(to);
               }}

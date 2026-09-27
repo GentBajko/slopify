@@ -3,10 +3,11 @@ import type { ReactElement } from "react";
 import { PageBar } from "@/components/kit/page-bar";
 import { TabLinks } from "@/components/kit/tabs";
 
-// Everything reusable lives in one place: the prompts and spoken entries a run is written from,
+// Everything reusable lives in one place: the channels that hold a brand kit and cast, the prompts and spoken entries a run is written from,
 // the saved setups it can start from, and the schedules that start it unattended. Each tab
 // keeps its own URL, so a link to any of them still lands.
 export const libraryTabs = [
+  { to: "/channels", label: "Channels" },
   { to: "/prompts", label: "Prompts" },
   { to: "/entries", label: "Intros & Outros" },
   { to: "/templates", label: "Templates" },

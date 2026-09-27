@@ -28,7 +28,7 @@ const sections = [
   {
     to: "/prompts",
     label: "Library",
-    match: ["/library", "/prompts", "/entries", "/templates", "/schedules"],
+    match: ["/library", "/channels", "/prompts", "/entries", "/templates", "/schedules"],
   },
   { to: "/settings", label: "Settings", match: ["/settings", "/usage"] },
 ] as const;
