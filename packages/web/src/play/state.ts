@@ -26,6 +26,7 @@ import { type ShortsSettings, shortsExtrasOf } from "@app/slices/shorts/model.js
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { VideoEditSettings } from "@app/slices/video/edit-settings.js";
+import type { UploadKind } from "@/api";
 import { subtitlesFor } from "@/subtitles/config";
 import { freshDraftDocument } from "./draft-state";
 
@@ -40,12 +41,21 @@ export interface Upload {
   readonly error: string | undefined;
 }
 
+// Where a picked file goes on the draft: a stage's own file, or the shorts' background music,
+// which is uploaded as an audio attachment.
+export type UploadSlot = UploadKind | "shortsMusic";
+export function attachmentKindOf(slot: UploadSlot): UploadKind {
+  return slot === "shortsMusic" ? "audio" : slot;
+}
+
 export interface ProvidedState {
   readonly research: string;
   readonly article: string;
   readonly audio: Upload | undefined;
   readonly images: readonly Upload[];
   readonly thumbnail: Upload | undefined;
+  // The Shorts step's background music, an audio attachment. Absent until one is picked.
+  readonly shortsMusic?: Upload | undefined;
 }
 
 export interface LegacyPlayFormState {
@@ -178,8 +188,8 @@ export function modeOf(
 // Every staged row the form knows about, which is what the admission rule checks the
 // provided ids against.
 export function stagedOf(provided: ProvidedState): readonly StagedFile[] {
-  return [provided.audio, provided.thumbnail, ...provided.images].flatMap((upload) =>
-    upload?.file === undefined ? [] : [upload.file],
+  return [provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].flatMap(
+    (upload) => (upload?.file === undefined ? [] : [upload.file]),
   );
 }
 
@@ -233,6 +243,10 @@ export function draftOf(input: DraftInput): RunDraft {
       images: form.provided.images.flatMap((image) =>
         image.file === undefined ? [] : [image.file.id],
       ),
+      // As `slices/play-drafts/convert.ts` sends it: only while the run makes shorts.
+      ...(shortsOn(form)
+        ? pick(form.provided.shortsMusic?.file, (file) => ({ shortsMusic: file.id }))
+        : {}),
     },
     chunking: form.chunking,
     subtitles: subtitlesFor(form.subtitles, form.sources),

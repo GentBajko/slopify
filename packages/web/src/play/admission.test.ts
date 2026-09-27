@@ -379,6 +379,38 @@ describe("a provided stage", () => {
     ).toBe("Paste the research notes to play");
   });
 
+  it("posts the shorts' background music only while Shorts is on, and waits for its upload", () => {
+    const shorts = {
+      enabled: true,
+      count: "2",
+      minSeconds: "45",
+      maxSeconds: "90",
+      prompt: "",
+      imagePrompt: "",
+    };
+    const withMusic = (music: Upload, enabled = true): PlayFormState => ({
+      ...provided,
+      shorts: { ...shorts, enabled },
+      provided: { ...provided.provided, shortsMusic: music },
+    });
+    expect(ask(withMusic(upload("m1", "audio"))).draft.provided.shortsMusic).toBe("m1");
+    expect(ask(withMusic(upload("m1", "audio"), false)).draft.provided.shortsMusic).toBeUndefined();
+    const failed: Upload = { key: "m2", name: "bed.mp3", file: undefined, error: "disk full" };
+    const blocked = ask(withMusic(failed));
+    expect(blocked.blocker).toEqual({
+      field: "provided",
+      hint: "Remove the upload that failed to play",
+    });
+    // Focus goes to the music control, inside More shorts options on the Export rail.
+    expect(playFieldTarget("provided", withMusic(failed), [])).toEqual({
+      section: "outputs",
+      field: "shorts.music",
+    });
+    expect(ask(withMusic(failed, false)).blocker?.hint).not.toBe(
+      "Remove the upload that failed to play",
+    );
+  });
+
   it("asks for the thumbnail image when the thumbnail is provided", () => {
     expect(
       ask({ ...provided, sources: { ...provided.sources, thumbnail: "provide" } }).blocker?.hint,

@@ -11,6 +11,7 @@ import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { freshShorts, Shorts } from "@/play/shorts";
+import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
 
@@ -158,6 +159,9 @@ export function VideoRail({
   silenceGapSeconds,
   problem,
   update,
+  onPickFiles,
+  onRemoveFile,
+  onReattachFile,
   rawTiming,
 }: RailProps & { readonly rawTiming?: RawTiming }) {
   const explanation =
@@ -265,6 +269,29 @@ export function VideoRail({
           prompts={prompts}
           narrated={form.sources.audio !== "off"}
           problem={problem}
+          musicName={form.provided.shortsMusic?.name}
+          music={
+            <div className="basis-full">
+              <FilePick
+                field="shorts.music"
+                label="Background music (optional): an audio file, looped if shorter than a short"
+                accept="audio/*"
+                disabled={!shortsOn(form)}
+                uploads={form.provided.shortsMusic === undefined ? [] : [form.provided.shortsMusic]}
+                problem={problem("shorts.music")}
+                onPick={(files) => onPickFiles("shortsMusic", files)}
+                onReattach={
+                  onReattachFile
+                    ? (key, file) => onReattachFile("shortsMusic", key, file)
+                    : undefined
+                }
+                onRemove={(key) => onRemoveFile("shortsMusic", key)}
+              />
+              <p className="mt-1 text-label text-ink3">
+                Plays at the volume above under every short and dips while the narrator speaks.
+              </p>
+            </div>
+          }
           onChange={(shorts) => update({ shorts })}
         />
       </div>

@@ -146,6 +146,10 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
             attachment(`Image ${index + 1}`),
           )
         : [],
+    // Named like the project's other files, to be attached again on Play.
+    ...(config.shorts?.enabled === true && revision.content.shortsMusic !== undefined
+      ? { shortsMusic: attachment("Music from project") }
+      : {}),
   };
   return {
     schemaVersion: 1,

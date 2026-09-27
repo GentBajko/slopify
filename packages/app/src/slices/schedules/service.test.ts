@@ -77,6 +77,50 @@ it("creates, pauses, resumes and updates a schedule with a timezone preview", ()
   }
 });
 
+it("refuses a template whose shorts use supplied background music, and accepts it with Shorts off", () => {
+  const h = startFixture();
+  try {
+    const deps = {
+      ...h.deps,
+      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+    };
+    const shorts = {
+      enabled: true,
+      count: "2",
+      minSeconds: "45",
+      maxSeconds: "90",
+      prompt: "",
+      imagePrompt: "",
+    };
+    const withMusic = (enabled: boolean) => ({
+      ...h.document,
+      form: {
+        ...h.document.form,
+        shorts: { ...shorts, enabled },
+        provided: {
+          ...h.document.form.provided,
+          shortsMusic: { attachmentId: randomUUID(), name: "bed.mp3" },
+        },
+      },
+    });
+    const on = randomUUID();
+    expect(createTemplate(h.deps, { id: on, name: "Music", document: withMusic(true) }).ok).toBe(
+      true,
+    );
+    expect(createSchedule(deps, scheduleInput(on))).toEqual({
+      ok: false,
+      reason: "unsupported-media",
+    });
+    const off = randomUUID();
+    expect(createTemplate(h.deps, { id: off, name: "Silent", document: withMusic(false) }).ok).toBe(
+      true,
+    );
+    expect(createSchedule(deps, scheduleInput(off)).ok).toBe(true);
+  } finally {
+    h.close();
+  }
+});
+
 it("replays a committed update when its response was lost", () => {
   const h = startFixture();
   try {

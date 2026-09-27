@@ -64,6 +64,8 @@ export function attachmentRefs(document: PlayDraftDocument): readonly Attachment
     ...(p.audio === null ? [] : [{ ...p.audio, kind: "audio" as const }]),
     ...p.images.map((file) => ({ ...file, kind: "images" as const })),
     ...(p.thumbnail === null ? [] : [{ ...p.thumbnail, kind: "thumbnail" as const }]),
+    // The shorts' music is staged like narration audio, so it is an audio attachment.
+    ...(p.shortsMusic == null ? [] : [{ ...p.shortsMusic, kind: "audio" as const }]),
   ];
 }
 export function requestHash(value: unknown): string {

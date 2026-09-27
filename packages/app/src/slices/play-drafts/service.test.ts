@@ -193,6 +193,61 @@ it("forks ready shared bytes under independent IDs and retains stale local refs 
   }
 });
 
+it("keeps the shorts' background music as an audio attachment that a fork carries under a new ID", () => {
+  const h = draftFixture();
+  const id = randomUUID();
+  const attachmentId = randomUUID();
+  const document = {
+    ...h.document,
+    form: {
+      ...h.document.form,
+      provided: { ...h.document.form.provided, shortsMusic: { attachmentId, name: "bed.mp3" } },
+    },
+  };
+  try {
+    const created = must(createDraft(h.deps, { id, document }));
+    expect(created.attachments).toMatchObject([
+      { id: attachmentId, kind: "audio", name: "bed.mp3", state: "pending" },
+    ]);
+    const stagedId = h.deps.ids.next();
+    insertStagedFile(h.deps.db, {
+      id: stagedId,
+      stageKind: "audio",
+      path: stagedId,
+      originalFilename: "bed.mp3",
+      bytes: 3,
+      state: "staged",
+      createdAt: h.deps.clock.now().toISOString(),
+    });
+    writeFileSync(stagingPath(h.deps.paths, stagedId), "abc");
+    h.deps.db
+      .prepare("UPDATE play_draft_attachments SET staged_file_id=?,status='ready' WHERE id=?")
+      .run(stagedId, attachmentId);
+    const copied = must(forkDraft(h.deps, { sourceId: id, id: randomUUID(), document }));
+    const music = copied.draft.document.form.provided.shortsMusic;
+    expect(music?.name).toBe("bed.mp3");
+    expect(music?.attachmentId).not.toBe(attachmentId);
+    expect(copied.attachments).toMatchObject([
+      { id: music?.attachmentId, kind: "audio", state: "ready", stagedFileId: stagedId },
+    ]);
+    // Removing the music drops its attachment; a draft saved before the music had none.
+    const removed = must(
+      saveDraft(h.deps, {
+        id,
+        baseVersion: 1,
+        mutationId: randomUUID(),
+        document: {
+          ...document,
+          form: { ...document.form, provided: { ...document.form.provided, shortsMusic: null } },
+        },
+      }),
+    );
+    expect(removed.attachments).toEqual([]);
+  } finally {
+    h.close();
+  }
+});
+
 it("refuses writes during Start and rolls back document and refs on storage errors", () => {
   const h = draftFixture();
   const id = randomUUID();

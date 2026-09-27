@@ -1,5 +1,5 @@
 import type { PlaySection } from "./sections";
-import type { PlayFormState } from "./state";
+import { type PlayFormState, shortsOn } from "./state";
 export function focusPlayField(root: HTMLElement, field: string): boolean {
   const target = [...root.querySelectorAll<HTMLElement>("[data-play-field]")].find(
     (element) => element.dataset.playField === field,
@@ -31,7 +31,14 @@ export function playFieldTarget(
           (upload) => upload && (upload.error !== undefined || upload.file === undefined),
         ),
     );
-    target = `provided.${slot ?? "audio"}`;
+    const music = form.provided.shortsMusic;
+    target =
+      slot === undefined &&
+      shortsOn(form) &&
+      music !== undefined &&
+      (music.error !== undefined || music.file === undefined)
+        ? "shorts.music"
+        : `provided.${slot ?? "audio"}`;
   }
   const image = /^imagePrompts\.(\d+)\.(.+)$/.exec(field);
   if (image) {

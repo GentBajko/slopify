@@ -32,6 +32,8 @@ export function adoptBaseline(
   deps: RevisionDeps,
   projectId: string,
   templates?: Readonly<Record<string, string>>,
+  // The Shorts step's background music a new run was started with, already a project asset.
+  supplied: { readonly shortsMusic?: string } = {},
 ): BaselineResult {
   return transact(deps.db, (): BaselineResult => {
     const project = projectById(deps.db, projectId);
@@ -46,7 +48,10 @@ export function adoptBaseline(
     const stages = stagesOf(deps.db, projectId);
     const pieces = stages.flatMap((stage) => allPiecesOf(deps.db, stage.id));
     const assets = adoptAssets(deps, projectId, outputs, pieces);
-    const content = baselineContent(deps, project, outputs, pieces, assets, templates);
+    const content = {
+      ...baselineContent(deps, project, outputs, pieces, assets, templates),
+      ...(supplied.shortsMusic === undefined ? {} : { shortsMusic: supplied.shortsMusic }),
+    };
     const fingerprints = baselineFingerprints(project, outputs, pieces, content, stages);
     const revision: ProjectRevision = {
       id: deps.ids.next(),

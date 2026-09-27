@@ -22,6 +22,17 @@ import {
 import { defaultSubtitles } from "../subtitles/model.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
 
+// Said where the control is, since the music sits in a closed disclosure on the Export rail.
+const musicMessages = {
+  uploading:
+    "The shorts' background music is still uploading, so the run can't start yet. Wait for it to finish, or remove it under Outputs → Export → More shorts options → Background music.",
+  missing:
+    "The shorts' background music file is no longer available (it was not uploaded again after the draft was copied, or the upload failed). Choose the file again under Outputs → Export → More shorts options → Background music, or remove it.",
+} as const;
+function pickMusic(id: string | undefined): { readonly shortsMusic?: string } {
+  return id === undefined ? {} : { shortsMusic: id };
+}
+
 export function toAdmissionDraft(input: {
   readonly document: PlayDraftDocument;
   readonly attachments: readonly DraftAttachment[];
@@ -81,6 +92,10 @@ export function toAdmissionDraft(input: {
     ref: { readonly attachmentId: string; readonly name: string } | null,
     kind: DraftAttachment["kind"],
     field: string,
+    messages: { readonly uploading: string; readonly missing: string } = {
+      uploading: "This file is still uploading. Wait for it to finish.",
+      missing: "That upload is no longer available. Choose the file again.",
+    },
   ): string | undefined => {
     const attachment = input.attachments.find(
       (item) => item.id === ref?.attachmentId && item.kind === kind && item.name === ref.name,
@@ -91,8 +106,8 @@ export function toAdmissionDraft(input: {
       field,
       message:
         attachment?.state === "copying" || attachment?.state === "pending"
-          ? "This file is still uploading. Wait for it to finish."
-          : "That upload is no longer available. Choose the file again.",
+          ? messages.uploading
+          : messages.missing,
     });
     return undefined;
   };
@@ -201,6 +216,11 @@ export function toAdmissionDraft(input: {
               return id === undefined ? [] : [id];
             })
           : [],
+      // Optional, so only a file that was attached is checked; with Shorts off it is kept on
+      // the draft for when Shorts is turned back on, and never reaches the run.
+      ...(shortsOn && form.provided.shortsMusic
+        ? pickMusic(file(form.provided.shortsMusic, "audio", "shorts.music", musicMessages))
+        : {}),
     },
     chunking: {
       mode: chunkMode,

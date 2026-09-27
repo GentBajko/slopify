@@ -39,7 +39,7 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
     "missing-template":
       "The template you picked was deleted or changed. Choose a template again, then save.",
     "unsupported-media":
-      "This template uses audio, images or a thumbnail you supplied, so it cannot run on a schedule. Pick a template that generates these instead.",
+      "This template uses audio, images, a thumbnail or shorts background music you supplied, so it cannot run on a schedule: a scheduled run has no one to attach the file again. Pick a template that generates these instead, or remove the music under Outputs → Export → More shorts options on Play and save the template again.",
     "not-due": "This one-off time has already passed. Choose a time in the future.",
     "spend-limit":
       "The estimated cost is above this schedule's spend limit, or some prices are unknown. Raise the spend limit or choose models with known prices.",

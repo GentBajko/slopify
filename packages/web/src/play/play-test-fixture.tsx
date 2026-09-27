@@ -145,7 +145,7 @@ export function playRoutes(
       const owned = {
         ...view,
         attachments: view.attachments.filter((attachment) =>
-          [provided.audio, provided.thumbnail, ...provided.images].some(
+          [provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].some(
             (ref) => ref?.attachmentId === attachment.id,
           ),
         ),
@@ -169,7 +169,7 @@ export function playRoutes(
       const owned = {
         ...view,
         attachments: view.attachments.filter((attachment) =>
-          [provided.audio, provided.thumbnail, ...provided.images].some(
+          [provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].some(
             (ref) => ref?.attachmentId === attachment.id,
           ),
         ),
@@ -249,7 +249,7 @@ export function playRoutes(
           const view = current(id);
           const provided = view.draft.document.form.provided;
           if (
-            ![provided.audio, provided.thumbnail, ...provided.images].some(
+            ![provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].some(
               (ref) => ref?.attachmentId === attachment.id,
             )
           )

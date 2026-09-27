@@ -179,3 +179,29 @@ it("rejects unknown credential fields and stale updates; remaps attachments for 
     h.close();
   }
 });
+
+it("keeps the shorts' background music by name, to be attached again like the other files", () => {
+  const h = draftFixture();
+  try {
+    const id = randomUUID();
+    const attachmentId = randomUUID();
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        provided: { ...h.document.form.provided, shortsMusic: { attachmentId, name: "bed.mp3" } },
+      },
+    };
+    expect(createTemplate(h.deps, { id, name: "Music", document }).ok).toBe(true);
+    const result = instantiateTemplate(h.deps, { templateId: id, id: randomUUID(), version: 1 });
+    if (!result.ok) throw new Error("Instantiation failed");
+    const music = result.value.draft.document.form.provided.shortsMusic;
+    expect(music?.name).toBe("bed.mp3");
+    expect(music?.attachmentId).not.toBe(attachmentId);
+    expect(result.value.attachments).toMatchObject([
+      { id: music?.attachmentId, kind: "audio", state: "reattach", stagedFileId: null },
+    ]);
+  } finally {
+    h.close();
+  }
+});

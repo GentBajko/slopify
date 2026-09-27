@@ -60,6 +60,7 @@ export function FilePick({
   field,
   accept,
   multiple = false,
+  disabled = false,
   uploads,
   problem,
   numbered = false,
@@ -71,6 +72,8 @@ export function FilePick({
   readonly field?: string | undefined;
   readonly accept: string;
   readonly multiple?: boolean | undefined;
+  // Kept on screen but not pickable while the step it belongs to is off.
+  readonly disabled?: boolean | undefined;
   readonly uploads: readonly Upload[];
   readonly problem: string | undefined;
   // Slideshow order is selection order, so the images say where they sit.
@@ -93,6 +96,7 @@ export function FilePick({
         type="file"
         accept={accept}
         multiple={multiple}
+        disabled={disabled}
         aria-invalid={problem !== undefined}
         aria-describedby={problem === undefined ? undefined : noteId}
         className={fileInput}

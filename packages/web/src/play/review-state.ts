@@ -11,6 +11,7 @@ import { sentence } from "@/http";
 import { type DraftRefusal, readPlayDraft, reviewPlayDraft, startPlayDraft } from "./draft-api";
 import { refreshDraftChoices, rememberDraft } from "./draft-restore";
 import type { DraftSessionState } from "./draft-save";
+import { shortsOn } from "./state";
 
 export interface ReviewedGeneration {
   readonly draftId: string;
@@ -261,6 +262,9 @@ export function pendingReviewUpload(
       : []),
     ...(sources.images === "provide"
       ? provided.images.map((ref, index) => ({ ref, field: `provided.images.${index}` }))
+      : []),
+    ...(shortsOn(document.form) && provided.shortsMusic
+      ? [{ ref: provided.shortsMusic, field: "shorts.music" }]
       : []),
   ];
   return active.find(

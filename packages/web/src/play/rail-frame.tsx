@@ -3,10 +3,9 @@ import type { StageSource } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { ReactNode } from "react";
-import type { UploadKind } from "@/api";
 import { StageGlyph } from "@/components/glyph";
 import { cn } from "@/lib/utils";
-import type { PlayFormState } from "@/play/state";
+import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
 
@@ -23,9 +22,9 @@ export interface RailProps {
   // own refusal named it.
   readonly problem: (field: string) => string | undefined;
   readonly update: (patch: Partial<PlayFormState>) => void;
-  readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
-  readonly onReattachFile?: (kind: UploadKind, key: string, file: File) => void;
-  readonly onRemoveFile: (kind: UploadKind, key: string) => void;
+  readonly onPickFiles: (kind: UploadSlot, files: readonly File[]) => void;
+  readonly onReattachFile?: (kind: UploadSlot, key: string, file: File) => void;
+  readonly onRemoveFile: (kind: UploadSlot, key: string) => void;
   readonly subtitleSession?: {
     readonly previewText: string;
     readonly fontUploading: boolean;

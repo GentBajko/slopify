@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { UploadKind } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
@@ -20,7 +19,7 @@ import { ReadinessRail } from "@/play/readiness-rail";
 import { ReviewSection } from "@/play/review-section";
 import { SectionNavigation } from "@/play/section-navigation";
 import { type PlaySection, playSections } from "@/play/sections";
-import type { PlayFormState, Upload } from "@/play/state";
+import type { PlayFormState, Upload, UploadSlot } from "@/play/state";
 import { StyleSection } from "@/play/style-section";
 import { templateLibrary } from "@/play/template-library";
 import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
@@ -198,12 +197,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     }
   };
 
-  const onPickFiles = (kind: UploadKind, files: readonly File[]): void => {
+  const onPickFiles = (kind: UploadSlot, files: readonly File[]): void => {
     session.invalidateReview(true);
     void session.attach(kind, files);
   };
 
-  const onRemoveFile = (kind: UploadKind, key: string): void => {
+  const onRemoveFile = (kind: UploadSlot, key: string): void => {
     setForm((current) => ({
       ...current,
       provided:
@@ -212,9 +211,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               ...current.provided,
               images: current.provided.images.filter((image) => image.key !== key),
             }
-          : kind === "audio"
-            ? { ...current.provided, audio: undefined }
-            : { ...current.provided, thumbnail: undefined },
+          : { ...current.provided, [kind]: undefined },
     }));
   };
 
@@ -234,7 +231,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     update,
     onPickFiles,
     onRemoveFile,
-    onReattachFile: (kind: UploadKind, key: string, file: File) => {
+    onReattachFile: (kind: UploadSlot, key: string, file: File) => {
       void session.attach(kind, [file], key);
     },
   };

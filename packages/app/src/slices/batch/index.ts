@@ -62,6 +62,8 @@ export function enqueueBatch(
         used.add(draft.provided.thumbnail);
       if (draft.sources.images === "provide")
         for (const id of draft.provided.images ?? []) used.add(id);
+      if (draft.shorts?.enabled === true && draft.provided.shortsMusic)
+        used.add(draft.provided.shortsMusic);
     }
     for (const id of retainStaged ? [] : used) {
       sources.add(id);

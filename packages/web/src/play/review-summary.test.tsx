@@ -341,6 +341,21 @@ it.each([
     },
     "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Title on screen · 1.10× speed · Music at 20% once added in Edit project · Links https://youtu.be/x · Vertical images and renders after subtitle timing",
   ],
+  [
+    "attached background music",
+    {
+      ...generated,
+      form: {
+        ...generated.form,
+        shorts,
+        provided: {
+          ...generated.form.provided,
+          shortsMusic: { attachmentId: "00000000-0000-4000-8000-0000000000aa", name: "bed.mp3" },
+        },
+      },
+    },
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Music: bed.mp3 at 15% · Vertical images and renders after subtitle timing",
+  ],
 ])("names the Shorts for %s", async (_name, document, expected) => {
   const harness = reviewHarness();
   await harness.prepare(document);
