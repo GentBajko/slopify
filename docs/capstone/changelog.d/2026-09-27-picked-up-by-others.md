@@ -1,0 +1,6 @@
+# Being picked up by others: walkthrough, donation link, channel page, site restyle
+
+- The site's walkthrough video is recorded by a script (`npm run record:walkthrough -w @slopify/site`, [docs/walkthrough.md](../../walkthrough.md)): a demo project seeded from locally made placeholder media, the built app run natively on a random port against a temp data directory, Playwright at 1920x1080 over one list of steps, and an ffmpeg cut to `play-run.mp4` (faststart), its poster and step captions. No provider is called. The published recording is replaced (18.7 s: finished project, description, a short, Play); Run cost, Prepare upload and the calendar join it once their screens exist.
+- A donation link on the site, in Settings → About (new section) and in the README, driven by one value that is still the placeholder `https://example.com/donate`: while it is, nothing renders a link. The maintainer must supply the real page.
+- New page `channel.html`: how a lore channel runs on Slopify, linked from the home page. Anything from 3.0 on it is held back until release.
+- slopify.stream restyled to the 3.0 design system (tokens, type scale, buttons, lamps, media frame). The 3.0 features are written into the Features list inside an inert template, shown only once `nextReleasePublished` in `main.js` is true.

@@ -30,6 +30,7 @@ import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
+import { AboutSettings } from "./settings-about";
 import { BackupSettings } from "./settings-backups";
 import { formatBytes, ProjectStorageList } from "./settings-storage";
 import { UsageBoard } from "./usage";
@@ -93,6 +94,7 @@ export const settingsSections = [
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
+  { id: "about", label: "About" },
 ] as const;
 
 export type SettingsSection = (typeof settingsSections)[number]["id"];
@@ -178,6 +180,7 @@ export function SettingsRoute({
             />
           ) : null}
           {section === "usage" ? <UsageBoard /> : null}
+          {section === "about" ? <AboutSettings /> : null}
         </section>
       </div>
     </div>

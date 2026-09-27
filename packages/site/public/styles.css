@@ -54,54 +54,72 @@
   src: url("/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
 }
 
+/* The Slopify design system's tokens (3.0), the same names and values the app uses, so the
+   site and the app read as one product: graphite grounds, one lime accent spent once per
+   area, Barlow for reading and Barlow Condensed for titles, numbers and kickers. Dark is the
+   default; light follows the visitor's system. */
 :root {
   color-scheme: dark light;
 
-  --bg: #141416;
-  --panel: #1b1b1f;
-  --panel2: #202026;
+  --ground: #121214;
+  --surface: #19191c;
+  --raised: #212125;
+  --sunken: #0d0d0f;
   --line: #2a2a30;
-  --line2: #35353d;
-  --ink: #e6e3dc;
-  --ink2: #9a978f;
-  --ink3: #8a887f;
-  --accent: #9bcb4f;
-  --accent-ink: #17200b;
-  --accent-edge: #6d9333;
-  --focus: #9bcb4f;
-  --lamp-run: #9bcb4f;
-  --lamp-off: #2c2c33;
-  --lamp-ring: #3a3a42;
-  --halo: rgb(155 203 79 / 18%);
-  --done: #6f9a3a;
-  --screen: #0b0b0d;
+  --line-strong: #6c6c76;
+  --ink: #ece9e2;
+  --ink-2: #a9a69e;
+  --ink-3: #8e8c84;
+  --accent: #a6d45c;
+  --accent-strong: #86b33c;
+  --on-accent: #15200a;
+  --accent-tint: rgb(166 212 92 / 12%);
+  --accent-ink: #b6e070;
+  --focus: var(--accent);
+  --screen: #08080a;
+  --shadow-key: 0 4px 0 #86b33c;
 
-  --radius-control: 4px;
-  --radius-sheet: 6px;
+  --radius-control: 6px;
+  --radius-media: 10px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  /* Half a grid step, for the few optical nudges the 8px grid is too coarse for. */
   --step: 4px;
 
-  --face: Barlow, ui-sans-serif, system-ui, sans-serif;
-  --face-engraved: "Barlow Condensed", Barlow, ui-sans-serif, system-ui, sans-serif;
+  --measure: 68ch;
+  --content-max: 1680px;
+
+  --font-sans: Barlow, system-ui, sans-serif;
+  --font-condensed: "Barlow Condensed", Barlow, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f4f2ec;
-    --panel: #fbfaf7;
-    --panel2: #eceae3;
-    --line: #dad8d0;
-    --line2: #c9c7be;
-    --ink: #1c1c1e;
-    --ink2: #5c5b56;
-    --ink3: #6b6a64;
-    --accent-edge: #6e9a33;
-    --focus: #5f8a2b;
-    --lamp-run: #5f8a2b;
-    --lamp-off: #dedcd4;
-    --lamp-ring: #c9c7be;
-    --halo: rgb(95 138 43 / 18%);
-    --done: #55673f;
-    --screen: #1c1c1e;
+    --ground: #f2f0ea;
+    --surface: #fbfaf6;
+    --raised: #ffffff;
+    --sunken: #e8e6df;
+    --line: #dcd9d0;
+    --line-strong: #827f76;
+    --ink: #1b1b1d;
+    --ink-2: #51504b;
+    --ink-3: #62615b;
+    --accent: #4d7a1c;
+    --accent-strong: #3c6214;
+    --on-accent: #ffffff;
+    --accent-tint: rgb(77 122 28 / 10%);
+    --accent-ink: #3c6214;
+    --screen: #141416;
+    --shadow-key: 0 4px 0 #3c6214;
   }
 }
 
@@ -113,21 +131,23 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--ground);
   color: var(--ink);
-  font-family: var(--face);
-  font-size: 14px;
-  line-height: 1.45;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
 }
 
 :where(a) {
   color: var(--ink);
-  text-decoration-color: var(--line2);
+  text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease-out;
 }
 
 :where(a):hover {
-  text-decoration-color: var(--focus);
+  text-decoration-color: var(--accent);
 }
 
 :where(a, button, [tabindex]):focus-visible {
@@ -135,9 +155,11 @@ body {
   outline-offset: 2px;
 }
 
+/* Keywords, commands and paths are code, in the mono face (the system's when JetBrains
+   Mono is not installed: the site ships only Barlow). */
 code {
-  font-family: inherit;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
   color: var(--ink);
 }
 
@@ -158,8 +180,8 @@ code {
   top: calc(var(--step) * -16);
   z-index: 1;
   padding: calc(var(--step) * 2) calc(var(--step) * 4);
-  background: var(--panel);
-  border: 1px solid var(--line2);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   transition: top 150ms ease-out;
 }
@@ -174,13 +196,15 @@ code {
   }
 }
 
+/* The system's `label` style: uppercase kickers in Barlow Condensed. Never for sentences. */
 .engraved {
-  font-family: var(--face-engraved);
+  font-family: var(--font-condensed);
   font-weight: 600;
   font-size: 12px;
-  letter-spacing: 0.09em;
+  line-height: 16px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink3);
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -190,9 +214,9 @@ code {
 }
 
 .page {
-  max-width: 1440px;
+  max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 calc(var(--step) * 12);
+  padding: 0 var(--space-7);
 }
 
 /* Lamps ------------------------------------------------------------------- */
@@ -201,22 +225,21 @@ code {
    the colour is a second reading of something already written down. */
 .lamp {
   flex: none;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--lamp-off);
-  box-shadow: inset 0 0 0 1px var(--lamp-ring);
+  background: var(--line-strong);
 }
 
 .lamp[data-lamp="run"] {
-  background: var(--lamp-run);
-  box-shadow: 0 0 0 3px var(--halo);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-tint);
   animation: lamp-pulse 1.2s ease-in-out infinite;
 }
 
 .lamp[data-lamp="done"] {
-  background: var(--done);
-  box-shadow: none;
+  background: var(--accent);
+  opacity: 0.7;
 }
 
 @keyframes lamp-pulse {
@@ -257,7 +280,7 @@ code {
    donation, so it stays the colour of the text it sits in. */
 .glyph-patreon,
 .glyph-coffee {
-  background-color: var(--lamp-run);
+  background-color: var(--accent);
 }
 
 .glyph-github {
@@ -281,8 +304,9 @@ code {
 .masthead {
   display: flex;
   align-items: center;
-  gap: calc(var(--step) * 6);
+  gap: var(--space-5);
   height: 64px;
+  border-bottom: 1px solid var(--line);
 }
 
 .wordmark {
@@ -330,20 +354,35 @@ code {
 .masthead-links {
   display: flex;
   align-items: center;
-  gap: calc(var(--step) * 6);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
+/* Quiet links: no border until hover, the system's `quiet` kind at link size. */
 .masthead-links a {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--step) * 1.5);
-  color: var(--ink2);
-  font-size: 13px;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 500;
   text-decoration: none;
+  border-radius: var(--radius-control);
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
 }
 
 .masthead-links a:hover {
   color: var(--ink);
+  background: var(--raised);
+}
+
+.masthead-links a[aria-current="page"] {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* Hero -------------------------------------------------------------------- */
@@ -351,38 +390,41 @@ code {
 .hero {
   display: grid;
   grid-template-columns: 3fr 2fr;
-  gap: calc(var(--step) * 14);
+  gap: var(--space-8);
   align-items: start;
-  padding: calc(var(--step) * 16) 0 calc(var(--step) * 18);
+  padding: var(--space-8) 0;
 }
 
 .hero-pitch {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--step) * 6);
-  max-width: 560px;
+  gap: var(--space-5);
+  max-width: 600px;
 }
 
+/* The system's `display` style: one per page. */
 h1 {
   margin: 0;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-family: var(--font-condensed);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 46px;
+  letter-spacing: 0.005em;
 }
 
 .lede {
-  max-width: 34ch;
+  max-width: 36ch;
   margin: 0;
-  color: var(--ink2);
+  color: var(--ink-2);
   font-size: 18px;
+  line-height: 30px;
   text-wrap: pretty;
 }
 
 .hero-aside {
   margin: 0;
-  color: var(--ink2);
-  font-size: 16px;
+  color: var(--ink-3);
+  font-size: 15px;
 }
 
 .install-options {
@@ -395,32 +437,34 @@ h1 {
 .install-tabs {
   display: inline-flex;
   justify-self: start;
-  padding: calc(var(--step) * 0.75);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line);
 }
 
+/* The system's tabs: ink-2 until chosen, the chosen one underlined in accent. */
 .install-tabs [role="tab"] {
   min-height: 36px;
-  padding: 0 calc(var(--step) * 4);
-  color: var(--ink2);
+  padding: 0 var(--space-3);
+  color: var(--ink-2);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   background: none;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
   cursor: pointer;
+  transition:
+    color 120ms ease-out,
+    background-color 120ms ease-out;
 }
 
 .install-tabs [role="tab"]:hover {
   color: var(--ink);
+  background: var(--raised);
 }
 
 .install-tabs [role="tab"][aria-selected="true"] {
   color: var(--ink);
-  background: var(--line);
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 
@@ -454,7 +498,7 @@ h1 {
 .install-hint {
   margin: 0;
   font-size: 14px;
-  color: var(--ink2);
+  color: var(--ink-2);
 }
 
 .install-hint {
@@ -473,17 +517,15 @@ h1 {
   gap: calc(var(--step) * 3);
   max-width: 440px;
   margin-top: calc(var(--step) * 2);
-  padding: calc(var(--step) * 2.5) calc(var(--step) * 2.5) calc(var(--step) * 2.5)
-    calc(var(--step) * 4.5);
-  background: var(--panel);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--sunken);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-control);
 }
 
 .command code {
   flex: 1;
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  font-size: 16px;
 }
 
 /* The same sheet at prose scale, sitting inside a sentence rather than under the headline:
@@ -514,40 +556,51 @@ h1 {
   font-size: 14px;
 }
 
+/* The system's `primary` button: accent fill, one per area. */
 .key {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--step) * 1.5);
+  gap: var(--space-2);
   min-width: 96px;
-  min-height: 32px;
-  padding: calc(var(--step) * 2) calc(var(--step) * 3.5);
-  font-family: inherit;
-  font-size: 13px;
+  height: 36px;
+  padding: 0 14px;
+  font-family: var(--font-sans);
+  font-size: 15px;
   font-weight: 600;
-  color: var(--accent-ink);
+  line-height: 22px;
+  color: var(--on-accent);
   background: var(--accent);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--radius-control);
   cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.key:hover {
+  background: var(--accent-strong);
 }
 
 /* The hero key is a 44 px target under the headline; this one sits in a line of prose and
    would break the leading at that height. It also gives up the accent fill: the green marks
    the one thing the page is asking you to press, and two of them on a page is none. */
+/* The system's small `secondary` button. */
 .key-small {
   min-width: 0;
-  min-height: 0;
-  padding: calc(var(--step) * 0.5) calc(var(--step) * 1.5);
-  font-size: 12px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
   color: var(--ink);
   background: transparent;
-  border: 1px solid var(--line2);
-  box-shadow: none;
+  border-color: var(--line-strong);
 }
 
 .key-small:hover {
-  background: var(--panel2);
+  background: var(--raised);
+  border-color: var(--ink-3);
 }
 
 /* One row per platform, so a reader takes their own line instead of parsing all three. The
@@ -571,7 +624,7 @@ h1 {
 .pick dt {
   flex: 0 0 auto;
   min-width: 56px;
-  color: var(--ink2);
+  color: var(--ink-2);
 }
 
 .pick dd {
@@ -579,14 +632,16 @@ h1 {
   align-items: center;
   gap: calc(var(--step) * 2);
   margin: 0;
-  padding: calc(var(--step) * 0.5) calc(var(--step) * 1.5);
-  background: var(--panel);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  background: var(--sunken);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
 }
 
 .pick dd code {
-  font-size: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .key-glyph {
@@ -607,9 +662,9 @@ h1 {
 
 .tally {
   margin-top: calc(var(--step) * 3);
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-media);
   overflow: hidden;
 }
 
@@ -629,13 +684,14 @@ h1 {
   border-top: 1px solid var(--line);
 }
 
+/* The system's `counter` style: big numbers in Barlow Condensed with tabular figures. */
 .tally-item dd {
   margin: 0;
+  font-family: var(--font-condensed);
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 34px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  line-height: 1;
 }
 
 /* Anything slower than about a second shows the final shape rather than a spinner. The
@@ -649,7 +705,7 @@ h1 {
 .tally[data-loading] dd {
   overflow: hidden;
   color: transparent;
-  background: var(--panel2);
+  background: var(--raised);
   border-radius: var(--radius-control);
 }
 
@@ -668,27 +724,27 @@ h1 {
   align-items: center;
   gap: calc(var(--step) * 2);
   margin: 0;
-  padding: calc(var(--step) * 3) calc(var(--step) * 4.5);
-  background: var(--panel2);
+  padding: var(--space-3) calc(var(--step) * 4.5);
   border-top: 1px solid var(--line);
-  color: var(--ink2);
-  font-size: 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 19px;
 }
 
 /* Showcase ---------------------------------------------------------------- */
 
 .showcase {
-  padding-bottom: calc(var(--step) * 18);
+  padding-bottom: var(--space-8);
 }
 
 .showcase-figure {
   margin: 0;
 }
 
+/* A media frame: media sits on `screen`, never on a surface, with the media radius. */
 .showcase-frame {
   background: var(--screen);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-media);
   overflow: hidden;
 }
 
@@ -701,16 +757,18 @@ h1 {
 }
 
 .showcase-caption {
-  margin: calc(var(--step) * 2.5) 0 0;
-  color: var(--ink2);
-  font-size: 13px;
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .showcase-description {
-  max-width: 75ch;
-  margin: calc(var(--step) * 1.5) 0 0;
-  color: var(--ink3);
+  max-width: var(--measure);
+  margin: var(--space-1) 0 0;
+  color: var(--ink-2);
   font-size: 13px;
+  line-height: 19px;
   text-wrap: pretty;
 }
 
@@ -718,82 +776,103 @@ h1 {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: calc(var(--step) * 3);
-  margin: calc(var(--step) * 7) 0 0;
+  gap: var(--space-2);
+  margin: var(--space-6) 0 0;
 }
 
 .support-label {
-  margin-right: calc(var(--step));
-  color: var(--ink2);
-  font-size: 13px;
+  margin-right: var(--space-2);
+  color: var(--ink-2);
 }
 
+/* Links styled as the system's `secondary` button: they go to another site, so they stay
+   links, and they are the one pair of outside links the page asks you to follow. */
 .support-key {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--step) * 2);
-  min-height: 32px;
-  padding: calc(var(--step) * 1.75) calc(var(--step) * 3.5);
-  font-size: 13px;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
-  background: var(--panel2);
-  border: 1px solid var(--line2);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   text-decoration: none;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
 }
 
 .support-key:hover {
-  border-color: var(--focus);
+  background: var(--raised);
+  border-color: var(--ink-3);
 }
 
 /* How to use and the options ---------------------------------------------- */
 
-.guide {
-  padding-bottom: calc(var(--step) * 18);
+/* Section heads: the system's `title-2`, sections separated by space and a hairline. */
+main > section + section {
+  padding-top: var(--space-7);
+  border-top: 1px solid var(--line);
 }
 
-.guide h2 {
-  margin: 0 0 calc(var(--step) * 2.5);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+main h2 {
+  margin: 0 0 var(--space-4);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+main h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.guide {
+  padding-bottom: var(--space-8);
 }
 
 .guide h3 {
-  margin: calc(var(--step) * 8) 0 calc(var(--step) * 2);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  margin: var(--space-6) 0 var(--space-2);
 }
 
 .guide-note {
-  max-width: 75ch;
-  margin: 0 0 calc(var(--step) * 2.5);
-  color: var(--ink2);
+  max-width: var(--measure);
+  margin: 0 0 var(--space-3);
+  color: var(--ink-2);
   font-size: 13px;
+  line-height: 19px;
 }
 
 .features {
-  padding-bottom: calc(var(--step) * 14);
-}
-
-.features h2 {
-  margin: 0 0 calc(var(--step) * 4);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  padding-bottom: var(--space-8);
 }
 
 .feature-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: calc(var(--step) * 6);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
 }
 
 .feature-group h3 {
-  margin: 0 0 calc(var(--step) * 2.5);
-  color: var(--accent);
+  margin: 0 0 var(--space-3);
+  color: var(--ink-2);
+}
+
+/* The release that is still being built. Its list ships inside an inert <template> and
+   is only put on the page once main.js's `nextReleasePublished` is true. */
+.feature-next {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.feature-next .feature-note {
+  max-width: var(--measure);
+  margin: 0 0 var(--space-4);
+  color: var(--ink-2);
 }
 
 .feature-group ul {
@@ -801,7 +880,7 @@ h1 {
   gap: calc(var(--step) * 2);
   margin: 0;
   padding: 0;
-  color: var(--ink2);
+  color: var(--ink-2);
   list-style: none;
 }
 
@@ -812,14 +891,14 @@ h1 {
 
 .more > summary {
   margin-top: calc(var(--step) * 1.5);
-  color: var(--ink2);
+  color: var(--ink-2);
   font-size: 13px;
   cursor: pointer;
 }
 
 .more > p {
   margin: calc(var(--step) * 2) 0 0;
-  color: var(--ink2);
+  color: var(--ink-2);
 }
 
 .options-details {
@@ -842,9 +921,9 @@ h1 {
 
 .sheet,
 .rundown {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-media);
   overflow: hidden;
 }
 
@@ -899,7 +978,7 @@ h1 {
 }
 
 .options-none {
-  color: var(--ink3);
+  color: var(--ink-3);
 }
 
 /* Four columns need about 700 px before the sentence column starts wrapping every other
@@ -945,7 +1024,7 @@ h1 {
 
   .options td[data-label]::before {
     content: attr(data-label) " ";
-    color: var(--ink3);
+    color: var(--ink-3);
   }
 
   .options tbody td:last-child {
@@ -959,8 +1038,8 @@ h1 {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: calc(var(--step) * 6);
-  padding: calc(var(--step) * 6) 0 calc(var(--step) * 10);
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-6) 0 var(--space-8);
   border-top: 1px solid var(--line);
 }
 
@@ -971,43 +1050,113 @@ h1 {
 
 .free-line {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: 26px;
 }
 
 .free-note {
-  margin: calc(var(--step) * 1.5) 0 0;
-  color: var(--ink3);
-  font-size: 12px;
+  margin: var(--space-1) 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 19px;
 }
 
 .free-support {
   margin: 0;
-  color: var(--ink2);
+  color: var(--ink-2);
   font-size: 13px;
 }
 
 .donate {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--step) * 1.5);
+  gap: var(--space-2);
   color: var(--ink);
-  font-size: 13px;
   text-decoration: underline;
+}
+
+/* The donation link's empty slot, until main.js has a real address to put there. */
+[data-donate][hidden] {
+  display: none;
+}
+
+/* How I run a channel with it ---------------------------------------------- */
+
+/* The system's reading view: 18/30 at a 68ch measure, headings in the condensed face. */
+.reading {
+  max-width: var(--measure);
+  padding: var(--space-8) 0;
+  font-size: 18px;
+  line-height: 30px;
+}
+
+.reading h1 {
+  margin-bottom: var(--space-3);
+}
+
+.reading .lede {
+  max-width: none;
+  margin-bottom: var(--space-6);
+}
+
+.reading h2 {
+  margin: var(--space-7) 0 var(--space-3);
+  font-family: var(--font-condensed);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 30px;
+}
+
+.reading p,
+.reading ul,
+.reading ol {
+  margin: 0 0 18px;
+}
+
+.reading ul,
+.reading ol {
+  padding-left: 1.25em;
+}
+
+.reading li + li {
+  margin-top: var(--space-2);
+}
+
+.reading-toc {
+  margin: 0 0 var(--space-6);
+  padding: var(--space-4) 0;
+  border-block: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.reading-toc ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reading-note {
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 22px;
 }
 
 /* Narrow ------------------------------------------------------------------ */
 
 @media (max-width: 900px) {
   .page {
-    padding: 0 calc(var(--step) * 5);
+    padding: 0 var(--space-4);
   }
 
   .hero {
     grid-template-columns: 1fr;
-    gap: calc(var(--step) * 8);
-    padding: calc(var(--step) * 8) 0 calc(var(--step) * 12);
+    gap: var(--space-6);
+    padding: var(--space-6) 0 var(--space-7);
   }
 
   .tally {
@@ -1015,7 +1164,12 @@ h1 {
   }
 
   h1 {
-    font-size: 24px;
+    font-size: 34px;
+    line-height: 38px;
+  }
+
+  .reading {
+    padding: var(--space-6) 0;
   }
 
   .mark-hero {
@@ -1026,8 +1180,17 @@ h1 {
   .masthead {
     height: auto;
     flex-wrap: wrap;
-    gap: calc(var(--step) * 3) calc(var(--step) * 5);
-    padding: calc(var(--step) * 4) 0;
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-3) 0;
+  }
+
+  .pick {
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .pick dd {
+    max-width: 100%;
   }
 
   .rundown-row {

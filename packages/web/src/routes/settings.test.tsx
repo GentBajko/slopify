@@ -124,6 +124,7 @@ describe("the settings screen", () => {
       "Backup & storage",
       "Backups",
       "Usage",
+      "About",
     ]);
     expect(
       within(nav).getByRole("button", { name: "Providers" }).getAttribute("aria-current"),
