@@ -4,13 +4,16 @@ import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
 import { thumbnailCountOf } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
+import { channelById, projectChannelId } from "../channels/repo.js";
 import { fullVideoLine } from "../shorts/model.js";
 import { assetOf } from "../storage/asset-name.js";
 import { contentTypeOf, downloadName, slugOf } from "../storage/downloads.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
+import { usesAnimation } from "../video/edit-settings.js";
 import { effectiveDescription } from "../youtube/edits-repo.js";
+import { aiDisclosureOf } from "./disclosure.js";
 import {
   type PackFile,
   type PackItem,
@@ -67,6 +70,15 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       : readFileSync(outputPath(deps.paths, projectId, output.path), "utf8").trim();
   const playlist = readStudioPlaylist(deps.db);
   const missing: string[] = [];
+  // The channel's setting, then the project's own sources, for every item.
+  const disclosure = (kind: "video" | "short") =>
+    aiDisclosureOf({
+      setting: channelById(deps.db, projectChannelId(deps.db, projectId))?.aiDisclosure ?? "auto",
+      kind,
+      audio: config.sources.audio,
+      images: config.sources.images,
+      animated: usesAnimation(config),
+    });
 
   const video = outputs.find((output) => output.role === "video");
   if (video === undefined)
@@ -82,6 +94,11 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       : effectiveDescription(deps.db, projectId, {
           description: written,
           tags: writtenTags ?? "",
+          // The last chapter is checked against the video's own length when it is known.
+          durationSeconds:
+            video?.durationMs === null || video?.durationMs === undefined
+              ? undefined
+              : video.durationMs / 1000,
         });
   const tagsFile = edited?.tags ?? writtenTags;
   const description = edited?.description;
@@ -121,7 +138,9 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       tags: tagsOf(tagsFile),
       thumbnails: thumbnails.map(file),
       audience: studioAudience,
+      alteredContent: disclosure("video"),
       playlist,
+      ...(edited?.chapterNotice === undefined ? {} : { chapterNotice: edited.chapterNotice }),
     },
   ];
 
@@ -158,6 +177,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       // Studio shows a frame of a short; a custom thumbnail isn't offered in its upload dialog.
       thumbnails: [],
       audience: studioAudience,
+      alteredContent: disclosure("short"),
       playlist,
     });
   }

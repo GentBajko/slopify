@@ -111,6 +111,25 @@ export const notForKids: FieldSelectors = {
   ],
 };
 
+// "Altered or synthetic content" (YouTube's help now calls it "AI use"): a Yes/No radio pair,
+// assumed to sit among the fields Show more reveals. The least certain selectors here.
+export const alteredYes: FieldSelectors = {
+  label: 'the "Yes" answer to Altered content',
+  selectors: [
+    'tp-yt-paper-radio-button[name="VIDEO_HAS_ALTERED_CONTENT_YES"]',
+    '[name="VIDEO_HAS_ALTERED_CONTENT_YES"]',
+    "#altered-content [role=radio]:nth-of-type(1)",
+  ],
+};
+export const alteredNo: FieldSelectors = {
+  label: 'the "No" answer to Altered content',
+  selectors: [
+    'tp-yt-paper-radio-button[name="VIDEO_HAS_ALTERED_CONTENT_NO"]',
+    '[name="VIDEO_HAS_ALTERED_CONTENT_NO"]',
+    "#altered-content [role=radio]:nth-of-type(2)",
+  ],
+};
+
 // "Show more", which reveals Tags among the other advanced fields.
 export const showMore: FieldSelectors = {
   label: "the Show more button",

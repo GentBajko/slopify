@@ -183,6 +183,58 @@ describe("the upload pack", () => {
     expect(short?.description).toBe(
       "Watch the moment it leaps.\nWatch the full video: [PASTE THE FULL VIDEO LINK HERE]\n\n#fox #shorts",
     );
+    // An AI voice and AI images: Yes for the video and the short.
+    expect(video?.alteredContent.altered).toBe(true);
+    expect(video?.alteredContent.why).toContain("an AI voice narrates it");
+    expect(short?.alteredContent.altered).toBe(true);
+    expect(video?.chapterNotice).toBeUndefined();
+  });
+
+  it("answers the AI disclosure from the project's sources and the channel's setting", async () => {
+    const own: RunConfig = {
+      ...config,
+      sources: { ...config.sources, audio: "provide", images: "provide" },
+    };
+    const { app, call, output } = harness(own);
+    finished(output);
+    const read = async () => ((await (await call("/packs/p1")).json()) as UploadPack).items;
+    const [video, short] = await read();
+    expect(video?.alteredContent).toEqual({
+      altered: false,
+      why: "No because the narration and the images are your own, with no AI voice or AI images in the video.",
+    });
+    // A short's images are always drawn anew by the image model.
+    expect(short?.alteredContent.altered).toBe(true);
+    expect(short?.alteredContent.why).toContain("AI image model");
+
+    const set = (value: string) =>
+      app.request(
+        "http://127.0.0.1:4545/api/channels/00000000-0000-4000-8000-000000000001/ai-disclosure",
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ aiDisclosure: value }),
+        },
+      );
+    expect((await set("no")).status).toBe(200);
+    expect((await read()).map((item) => item.alteredContent.altered)).toEqual([false, false]);
+    expect((await read())[1]?.alteredContent.why).toContain("Always No");
+    expect((await set("yes")).status).toBe(200);
+    expect((await read()).map((item) => item.alteredContent.altered)).toEqual([true, true]);
+  });
+
+  it("fits the description's chapters to YouTube's rules and says so", async () => {
+    const { call, output } = harness();
+    output(
+      "youtube_description",
+      "description.txt",
+      "A fox.\n\n0:02 Intro\n0:40 The Cliff\n0:45 Blink\n1:30 Flight\n\n#fox\n",
+    );
+    const [video] = ((await (await call("/packs/p1")).json()) as UploadPack).items;
+    expect(video?.description).toBe("A fox.\n\n0:00 Intro\n0:45 Blink\n1:30 Flight\n\n#fox");
+    expect(video?.chapterNotice).toBe(
+      'Chapters adjusted for YouTube: moved the first, "Intro", from 0:02 to 0:00; merged "The Cliff" (5 s) into "Intro".',
+    );
   });
 
   it("names what is missing and how to fix it, and leaves out thumbnails no longer made", async () => {

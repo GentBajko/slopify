@@ -12,6 +12,7 @@ import { castMemberById, castOfChannel, channelById, channelSummaries } from "./
 import {
   castMemberCreateSchema,
   castMemberUpdateSchema,
+  channelAiDisclosureSchema,
   channelCreateSchema,
   channelUpdateSchema,
   templateChannelSchema,
@@ -42,8 +43,12 @@ export function createChannel(deps: ChannelDeps, input: unknown): ChannelResult<
         ? { ok: true, value: existing }
         : { ok: false, reason: "conflict" };
     const at = deps.clock.now().toISOString();
+    // A new channel starts with episode memory on (`slices/episodes`); the column's default
+    // is off only for the channels that existed before it.
     deps.db
-      .prepare("INSERT INTO channels(id,name,created_at,updated_at) VALUES (?,?,?,?)")
+      .prepare(
+        "INSERT INTO channels(id,name,episode_memory,created_at,updated_at) VALUES (?,?,1,?,?)",
+      )
       .run(id, name, at, at);
     const created = channelById(deps.db, id);
     if (created === undefined) throw new Error("The new channel could not be read back");
@@ -86,6 +91,25 @@ export function updateChannel(
   });
 }
 
+// Automatic, Always Yes or Always No for YouTube's AI disclosure. It leaves the channel's
+// version alone, so a Brand form open in another tab still saves.
+export function setChannelAiDisclosure(
+  deps: ChannelDeps,
+  id: string,
+  input: unknown,
+): ChannelResult<Channel> {
+  const parsed = channelAiDisclosureSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, reason: "invalid-input", message: parsed.error.issues[0]?.message };
+  const changed = deps.db
+    .prepare("UPDATE channels SET ai_disclosure=?,updated_at=? WHERE id=?")
+    .run(parsed.data.aiDisclosure, deps.clock.now().toISOString(), id);
+  if (Number(changed.changes) === 0) return { ok: false, reason: "not-found" };
+  const saved = channelById(deps.db, id);
+  if (saved === undefined) throw new Error("The saved channel could not be read back");
+  return { ok: true, value: saved };
+}
+
 // Its cast goes with it; its projects move to the default channel. A channel with templates
 // is refused, since its schedules would silently change channel.
 export function deleteChannel(
@@ -96,7 +120,15 @@ export function deleteChannel(
     const channel = channelById(deps.db, id);
     if (channel === undefined) return { ok: false, reason: "not-found" };
     if (channel.isDefault) return { ok: false, reason: "default-channel" };
-    if (deps.db.prepare("SELECT 1 FROM project_templates WHERE channel_id=? LIMIT 1").get(id))
+    // A template in the trash does not hold its channel: restored, it falls back to the
+    // default channel (`resolveChannelId`).
+    if (
+      deps.db
+        .prepare(
+          "SELECT 1 FROM project_templates WHERE channel_id=? AND deleted_at IS NULL LIMIT 1",
+        )
+        .get(id)
+    )
       return { ok: false, reason: "has-templates" };
     deps.db
       .prepare("UPDATE project_channels SET channel_id=? WHERE channel_id=?")

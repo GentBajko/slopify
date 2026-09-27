@@ -4,6 +4,8 @@
 // extension (`packages/extension`), and the person presses Publish.
 // Browser-safe: the project page and the extension read these names too.
 
+import type { AiDisclosure } from "./disclosure.js";
+
 // YouTube's own limits on the upload dialog's fields.
 export const studioTitleMax = 100;
 export const studioPlaylistMax = 150;
@@ -38,7 +40,12 @@ export interface PackItem {
   // Up to three; Studio's Test & Compare takes all three, its thumbnail field the first.
   readonly thumbnails: readonly PackFile[];
   readonly audience: typeof studioAudience;
+  // Studio's "Altered or synthetic content" answer and why (`disclosure.ts`).
+  readonly alteredContent: AiDisclosure;
   readonly playlist: string | null;
+  // What was changed in the description's chapters to meet YouTube's rules
+  // (`slices/youtube/chapters.ts`); absent when nothing was.
+  readonly chapterNotice?: string | undefined;
 }
 
 export interface UploadPack {
@@ -63,6 +70,7 @@ export const studioSteps = [
   "thumbnails",
   "playlist",
   "audience",
+  "altered",
   "tags",
 ] as const;
 export type StudioStep = (typeof studioSteps)[number];

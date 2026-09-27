@@ -19,7 +19,11 @@ export interface PackItem {
   readonly tags: readonly string[];
   readonly thumbnails: readonly PackFile[];
   readonly audience: "not_made_for_kids";
+  // Studio's "Altered or synthetic content" answer and why. Absent from a Slopify older than
+  // the answer, and then the question is left to the person.
+  readonly alteredContent?: { readonly altered: boolean; readonly why: string } | undefined;
   readonly playlist: string | null;
+  readonly chapterNotice?: string | undefined;
 }
 
 export interface ActivePack {

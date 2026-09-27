@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { aiDisclosureSettings } from "../studio/disclosure.js";
+import { ambientBedProblems } from "../video/ambient-bed.js";
+import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
 import { paceSteps } from "../voices/model.js";
 import { castKinds } from "./model.js";
 
@@ -26,6 +29,17 @@ export const brandKitSchema = z
     outro: optionalText(200),
     endScreenText: optionalText(200),
     documentTheme: optionalText(200),
+    // The built-in beds only; the ranges are `video/ambient-bed.ts`'s, said in its words.
+    ambientBed: channelAmbientBedSchema
+      .superRefine((bed, context) => {
+        for (const problem of ambientBedProblems(bed))
+          context.addIssue({
+            code: "custom",
+            path: [problem.field],
+            message: `${problem.message} Change it under Brand kit → Ambient sound on the channel page.`,
+          });
+      })
+      .optional(),
   })
   .strict()
   .transform((kit) =>
@@ -107,6 +121,12 @@ export const castGenerateSchema = z
   })
   .strict();
 export const templateChannelSchema = z.object({ channelId: id }).strict();
+// The channel's YouTube AI disclosure, saved on its own so it never races the Brand form.
+export const channelAiDisclosureSchema = z
+  .object({
+    aiDisclosure: z.enum(aiDisclosureSettings, "Choose Automatic, Always Yes or Always No."),
+  })
+  .strict();
 
 // A cast member as a run's config holds it (`CastSnapshot`).
 export const castSnapshotSchema = z

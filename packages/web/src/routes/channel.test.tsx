@@ -16,6 +16,7 @@ const channel: Channel = {
   isDefault: true,
   brand: { endScreenText: "Subscribe" },
   seriesBrief: "",
+  aiDisclosure: "auto",
   version: 3,
   createdAt: "a",
   updatedAt: "a",
@@ -95,6 +96,29 @@ describe("Channels", () => {
       brand: { captionColor: "#ffd700" },
       baseVersion: 3,
     });
+  });
+
+  it("saves the YouTube AI disclosure as soon as it is picked", async () => {
+    const user = userEvent.setup();
+    const seen: unknown[] = [];
+    renderRouted(
+      <Page />,
+      testDeps({
+        ...common,
+        [`PUT /api/channels/${id}/ai-disclosure`]: recording(
+          jsonAnswer({ ...channel, aiDisclosure: "no" }),
+          seen,
+        ),
+      }),
+    );
+    const picker = await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
+    expect((picker as HTMLSelectElement).value).toBe("auto");
+    expect(
+      screen.getByText(/Automatic says Yes when an AI voice or AI images are used/),
+    ).not.toBeNull();
+    await user.selectOptions(picker, "no");
+    await waitFor(() => expect(seen).toEqual([{ aiDisclosure: "no" }]));
+    await waitFor(() => expect((picker as HTMLSelectElement).value).toBe("no"));
   });
 
   it("shows the cast with its pictures and adds a member with aliases", async () => {

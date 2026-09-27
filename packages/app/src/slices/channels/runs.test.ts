@@ -41,6 +41,7 @@ const channel: Channel = {
     documentTheme: "plain",
   },
   seriesBrief: "",
+  aiDisclosure: "auto",
   version: 1,
   createdAt: "a",
   updatedAt: "a",

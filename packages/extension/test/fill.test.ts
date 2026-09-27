@@ -14,6 +14,7 @@ const item: PackItem = {
   tags: ["fox", "cliff diving"],
   thumbnails: [],
   audience: "not_made_for_kids",
+  alteredContent: { altered: true, why: "Yes because an AI voice narrates it." },
   playlist: "Fox tales",
 };
 const png = (name: string) => new File(["png"], name, { type: "image/png" });
@@ -45,8 +46,9 @@ function loadStudio(edit: (doc: Document) => void = () => {}): void {
       box.getAttribute("aria-checked") === "true" ? "false" : "true",
     ),
   );
+  // A radio unticks the others of its own question only.
   on("tp-yt-paper-radio-button", (radio) => {
-    for (const other of document.querySelectorAll("tp-yt-paper-radio-button"))
+    for (const other of radio.parentElement?.querySelectorAll("tp-yt-paper-radio-button") ?? [])
       other.setAttribute("aria-checked", "false");
     radio.setAttribute("aria-checked", "true");
   });
@@ -57,6 +59,8 @@ function loadStudio(edit: (doc: Document) => void = () => {}): void {
 }
 
 const text = (selector: string) => (document.querySelector(selector)?.textContent ?? "").trim();
+const checkedOf = (name: string) =>
+  document.querySelector(`[name="${name}"]`)?.getAttribute("aria-checked");
 
 describe("filling Studio's upload dialog", () => {
   beforeEach(() => loadStudio());
@@ -74,6 +78,7 @@ describe("filling Studio's upload dialog", () => {
       ["thumbnails", true],
       ["playlist", true],
       ["audience", true],
+      ["altered", true],
       ["tags", true],
     ]);
     expect(text("#title-textarea #textbox")).toBe("The Fox of Cliffside");
@@ -91,7 +96,49 @@ describe("filling Studio's upload dialog", () => {
     expect(document.querySelector<HTMLInputElement>("#tags-container input")?.value).toBe(
       "fox, cliff diving,",
     );
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_YES")).toBe("true");
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe("false");
+    // Answering it left the audience answer alone, and Show more open for Tags.
+    expect(checkedOf("VIDEO_MADE_FOR_KIDS_NOT_MFK")).toBe("true");
+    expect(document.querySelector("#advanced")?.hasAttribute("hidden")).toBe(false);
     expect(pressed).toEqual([]);
+  });
+
+  it('answers "No" to Altered content when the pack says so, and never presses Publish', async () => {
+    const results = await fillStudio(
+      document,
+      { ...item, alteredContent: { altered: false, why: "No because it is all yours." } },
+      [],
+      noWait,
+    );
+    expect(results.find((result) => result.field === "altered")).toEqual({
+      field: "altered",
+      ok: true,
+      message: 'Altered content set to "No". No because it is all yours.',
+    });
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe("true");
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_YES")).toBe("false");
+    expect(results.find((result) => result.field === "tags")?.ok).toBe(true);
+    expect(pressed).toEqual([]);
+  });
+
+  it("says what to choose by hand when the Altered content question isn't there", async () => {
+    loadStudio((doc) => doc.querySelector("#altered-content")?.remove());
+    const results = await fillStudio(document, item, [], noWait);
+    const altered = results.find((result) => result.field === "altered");
+    expect(altered?.ok).toBe(false);
+    expect(altered?.message).toContain('choose "Yes" under Altered content');
+    // Show more was pressed once and stays open, so Tags still fill.
+    expect(results.find((result) => result.field === "tags")?.ok).toBe(true);
+    expect(pressed).toEqual([]);
+  });
+
+  it("leaves Altered content alone for a pack from an older Slopify", async () => {
+    const { alteredContent: _dropped, ...older } = item;
+    const results = await fillStudio(document, older, [], noWait);
+    expect(results.some((result) => result.field === "altered")).toBe(false);
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_YES")).toBe("false");
+    expect(checkedOf("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe("false");
   });
 
   it("puts three thumbnails into Test & compare when Studio offers it", async () => {

@@ -4,6 +4,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readSetting, writeSetting } from "../settings/repo.js";
+import { chapterNotice, fitChapters } from "./chapters.js";
 import type { DescriptionEdits } from "./edits.js";
 import {
   composeDescription,
@@ -81,20 +82,30 @@ export function writeChannelLinks(db: DatabaseSync, links: readonly ChannelLink[
 }
 
 // The description and tags as the project page shows and copies them: the user's edits over
-// the generated text, placeholders filled from the project's and Settings' links (one with no
-// link stays as typed). For anything that hands the description on, such as Prepare upload.
+// the generated text, the chapters fitted to YouTube's rules (`chapters.ts`; the last one's
+// length only checked when the video's length is given), placeholders filled from the
+// project's and Settings' links (one with no link stays as typed). For anything that hands the
+// description on, such as Prepare upload. `chapterNotice` says what the fitting changed.
 export function effectiveDescription(
   db: DatabaseSync,
   projectId: string,
-  generated: { readonly description: string; readonly tags: string },
-): { readonly description: string; readonly tags: string } {
+  generated: {
+    readonly description: string;
+    readonly tags: string;
+    readonly durationSeconds?: number | undefined;
+  },
+): { readonly description: string; readonly tags: string; readonly chapterNotice?: string } {
   const edits = readDescriptionEdits(db, projectId);
   const shown = shownFields(
     resolveFields(splitDescription(generated.description, generated.tags), edits.fields),
   );
+  const fitted = fitChapters(shown.chapters, generated.durationSeconds);
+  const notice = chapterNotice(fitted.adjustments);
   const links = mergeLinks(readChannelLinks(db), edits.links);
   return {
-    description: fillPlaceholders(composeDescription(shown), links).text,
+    description: fillPlaceholders(composeDescription({ ...shown, chapters: fitted.text }), links)
+      .text,
     tags: fillPlaceholders(shown.tags, links).text,
+    ...(notice === undefined ? {} : { chapterNotice: notice }),
   };
 }

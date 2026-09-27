@@ -103,7 +103,10 @@ async function fill(): Promise<void> {
     toast(now ? result.message : byHand(result), "error", result.copy);
   }
   const failed = results.filter((result) => !result.ok).length;
-  const notes = results.filter((result) => result.ok && result.field === "thumbnails");
+  // Thumbnails and the AI disclosure say what they did, so the person can check them.
+  const notes = results.filter(
+    (result) => result.ok && (result.field === "thumbnails" || result.field === "altered"),
+  );
   for (const note of notes) toast(note.message, "info");
   toast(
     failed === 0

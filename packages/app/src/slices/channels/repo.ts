@@ -1,5 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { aiDisclosureSettings } from "../studio/disclosure.js";
+import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
 import {
   type BrandKit,
   type CastImage,
@@ -21,6 +23,7 @@ const brandSchema = z
     outro: z.string().optional(),
     endScreenText: z.string().optional(),
     documentTheme: z.string().optional(),
+    ambientBed: channelAmbientBedSchema.optional(),
   })
   .readonly();
 const channelRow = z.object({
@@ -29,6 +32,7 @@ const channelRow = z.object({
   is_default: z.number(),
   brand_json: z.string(),
   series_brief: z.string(),
+  ai_disclosure: z.enum(aiDisclosureSettings),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -71,6 +75,7 @@ function channelOf(row: unknown): Channel {
     isDefault: value.is_default === 1,
     brand: brandSchema.parse(JSON.parse(value.brand_json)) as BrandKit,
     seriesBrief: value.series_brief,
+    aiDisclosure: value.ai_disclosure,
     version: value.version,
     createdAt: value.created_at,
     updatedAt: value.updated_at,
@@ -94,7 +99,7 @@ export function resolveChannelId(db: DatabaseSync, id: string | null | undefined
 export function channelSummaries(db: DatabaseSync): readonly ChannelSummary[] {
   const templates = counts(
     db,
-    "SELECT coalesce(channel_id,'') AS id, count(*) AS n FROM project_templates GROUP BY channel_id",
+    "SELECT coalesce(channel_id,'') AS id, count(*) AS n FROM project_templates WHERE deleted_at IS NULL GROUP BY channel_id",
   );
   const cast = counts(
     db,

@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { projectExists } from "../../slices/admission/repo.js";
 import { descriptionFields, withEdit, withoutEdit } from "../../slices/youtube/edits.js";
 import { readDescriptionEdits, writeDescriptionEdits } from "../../slices/youtube/edits-repo.js";
 import { descriptionMaxCharacters } from "../../slices/youtube/model.js";
@@ -25,8 +26,7 @@ const gone = "This project no longer exists. Go back to Projects to pick another
 // The project page's hand edits to the YouTube description (`slices/youtube/edits.ts`). The
 // server keeps them; the page applies the merge rules to the text it shows.
 export function youtubeEditRoutes(deps: AppDeps) {
-  const exists = (id: string) =>
-    deps.db.prepare("SELECT 1 FROM projects WHERE id=?").get(id) !== undefined;
+  const exists = (id: string) => projectExists(deps.db, id);
   const missing = (c: Context) => problem(c, { status: 404, title: titleOf(404), detail: gone });
   const now = () => deps.clock.now().toISOString();
 

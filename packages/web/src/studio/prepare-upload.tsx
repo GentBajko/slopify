@@ -51,6 +51,7 @@ const stepLabels: Readonly<Record<StudioStep, string>> = {
   thumbnails: "Thumbnail",
   playlist: "Playlist",
   audience: "Audience",
+  altered: "Altered or synthetic content",
   tags: "Tags (under Show more)",
 };
 
@@ -263,6 +264,18 @@ function Steps({
             )
           ) : step === "audience" ? (
             "No, it's not made for kids"
+          ) : step === "altered" ? (
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">{item.alteredContent.altered ? "Yes" : "No"}</span>
+              <span className="text-ink2">{item.alteredContent.why}</span>
+            </span>
+          ) : step === "description" && item.chapterNotice !== undefined ? (
+            <span className="flex flex-col gap-1">
+              <span className="line-clamp-4 whitespace-pre-wrap break-words">
+                {item.description}
+              </span>
+              <span className="text-amber">{item.chapterNotice}</span>
+            </span>
           ) : step === "playlist" ? (
             (item.playlist ?? (
               <span className="text-ink3">None set (Settings → YouTube Studio).</span>
