@@ -33,6 +33,11 @@ export async function revisionAction(
             row.selected &&
             row.output.id === action.outputId &&
             (row.output.role === "image" ||
+              // One of the generated thumbnails is made again on its own, the others kept.
+              (action.kind === "regenerate-image" &&
+                row.output.role === "thumbnail" &&
+                (config.sources.thumbnail === "from_prompt" ||
+                  config.sources.thumbnail === "prompt_by_llm")) ||
               // A generated establishing image is made again like any image; it is never deleted
               // on its own (Edit project sets it Off), and an uploaded one has nothing to redo.
               (action.kind === "regenerate-image" &&

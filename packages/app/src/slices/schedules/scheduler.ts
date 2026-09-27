@@ -14,20 +14,64 @@ import {
   recordRunStartIdentity,
   recoverRunningRuns,
   scheduleById,
+  scheduleRows,
   updateRun,
 } from "./repo.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
+import { generateTopics, generationDue, releaseTopicLeases } from "./topics.js";
 
 const missedGraceMs = 60_000;
 
 export interface ScheduleRunner {
   readonly tick: (now?: Date) => Promise<void>;
   readonly recover: (now?: Date) => number;
+  // Starts one generation now, ignoring the wait after a failure.
+  readonly requestTopics: (scheduleId: string) => void;
+  // Resolves once every topic generation started so far has finished. Tests and shutdown.
+  readonly generated: () => Promise<void>;
+  // Shutdown: abandons the LLM calls of topic generations still going.
+  readonly stop: () => Promise<void>;
 }
 
 export function createScheduleRunner(deps: ScheduleDeps): ScheduleRunner {
   let ticking = false;
+  // ceiling: one entry per schedule generating now.
+  const generations = new Set<Promise<unknown>>();
+  const stopping = new AbortController();
+  const generated = async (): Promise<void> => {
+    while (generations.size > 0) await Promise.allSettled([...generations]);
+  };
+  // Topic generation can take minutes, so a tick starts it and moves on: another schedule's
+  // run is never late because of it. The lease inside `generateTopics` is what keeps it to
+  // one at a time per schedule.
+  const start = (scheduleId: string, force: boolean): void => {
+    if (stopping.signal.aborted) return;
+    const running = generateTopics(deps, scheduleId, { signal: stopping.signal, force })
+      .then((result) => {
+        if (!result.ok && result.reason === "failed")
+          deps.log.write("warn", "schedule.topics", { detail: result.message });
+      })
+      .catch(() => {
+        deps.log.write("error", "schedule.topics", {
+          detail: "Topic generation could not record its result.",
+        });
+      })
+      .finally(() => {
+        generations.delete(running);
+      });
+    generations.add(running);
+  };
+  const startGenerations = (now: Date): void => {
+    for (const schedule of scheduleRows(deps.db))
+      if (generationDue(schedule, now)) start(schedule.id, false);
+  };
   return {
+    generated,
+    requestTopics: (scheduleId) => start(scheduleId, true),
+    stop: async () => {
+      stopping.abort();
+      await generated();
+    },
     tick: async (now = deps.clock.now()): Promise<void> => {
       if (ticking) return;
       ticking = true;
@@ -37,6 +81,7 @@ export function createScheduleRunner(deps: ScheduleDeps): ScheduleRunner {
           now.toISOString(),
           "The previous schedule tick could not record this run's result.",
         );
+        startGenerations(now);
         const due = dueSchedules(deps.db, now.toISOString());
         const claimed = due.flatMap((schedule) => claim(deps, schedule, now));
         const settled = await Promise.allSettled(claimed.map((entry) => execute(deps, entry)));
@@ -48,7 +93,10 @@ export function createScheduleRunner(deps: ScheduleDeps): ScheduleRunner {
         ticking = false;
       }
     },
-    recover: (now = deps.clock.now()): number => recoverRunningRuns(deps.db, now.toISOString()),
+    recover: (now = deps.clock.now()): number => {
+      releaseTopicLeases(deps);
+      return recoverRunningRuns(deps.db, now.toISOString());
+    },
   };
 }
 
@@ -79,7 +127,12 @@ function claim(
     )
       return [];
     const overlapping = activeRun(deps.db, schedule.id, now.toISOString());
-    const skip = occurrence || overlapping;
+    // A schedule that finds its own topics never runs the template without one.
+    const noTopic =
+      current.topicGeneration.mode !== "off" && current.items.length === 0
+        ? noTopicReason(current)
+        : null;
+    const skip = occurrence || overlapping || noTopic !== null;
     const run: ScheduleRun = {
       id: deps.uuid(),
       scheduleId: schedule.id,
@@ -93,7 +146,9 @@ function claim(
       error: skip
         ? overlapping
           ? "Skipped because the previous run of this schedule was still going."
-          : "Skipped because Slopify was not running at the scheduled time."
+          : occurrence
+            ? "Skipped because Slopify was not running at the scheduled time."
+            : noTopic
         : null,
     };
     if (!insertRun(deps.db, run)) return [];
@@ -104,6 +159,14 @@ function claim(
       .run(status, next?.toISOString() ?? null, now.toISOString(), schedule.id, schedule.version);
     return skip ? [] : [{ run, schedule }];
   });
+}
+
+function noTopicReason(schedule: ScheduleSummary): string {
+  const { held, error } = schedule.topics;
+  if (held > 0)
+    return `Skipped because no topic was approved: ${String(held)} ${held === 1 ? "topic is" : "topics are"} waiting for you. Approve them under Schedules → ${schedule.name} → Topics waiting.`;
+  if (error !== null) return `Skipped because the topic queue was empty. ${error}`;
+  return "Skipped because the topic queue was empty and new topics were still being generated. The next run uses the first one.";
 }
 
 async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise<void> {

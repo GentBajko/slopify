@@ -66,6 +66,8 @@ export const playDraftFormSchema = z
       .optional(),
     articlePrompt: text,
     narrationPrompt: text.optional(),
+    // Absent on drafts and templates saved before three thumbnails: one.
+    thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),

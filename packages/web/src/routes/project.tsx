@@ -22,6 +22,7 @@ import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
 import { projectQuery, promptsQuery, providersQuery } from "@/queries";
+import { PrepareUpload } from "@/studio/prepare-upload";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
@@ -109,6 +110,10 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               resumable={project.data.resumable}
               primaryOutput={primaryOutput}
             >
+              <PrepareUpload
+                projectId={projectId}
+                ready={outputs.some((output) => output.role === "video")}
+              />
               <SaveProjectTemplate
                 projectId={projectId}
                 revisionId={project.data.revisionId}

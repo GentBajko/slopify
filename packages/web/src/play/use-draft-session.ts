@@ -153,6 +153,7 @@ export function useDraftSession(): PlaySession {
       queryClient,
       current: () => state.current,
       flush,
+      resave: () => edit(state.current.document),
       render: () => {
         if (alive) render();
       },

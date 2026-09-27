@@ -34,6 +34,8 @@ import { cliPathMaxLength } from "../settings/cli-paths.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
+import { studioPlaylistMax } from "../studio/model.js";
+import { studioPairingKey, studioPlaylistKey } from "../studio/settings.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
@@ -409,15 +411,19 @@ const slotsColumn = z.array(z.string());
 const storedCliPath = z.string().max(cliPathMaxLength).nullable();
 const storedSilenceGap = z.number().int().min(0).max(silenceGapSecondsMax);
 const storedAppearance = z.enum(appearances);
+const storedPlaylist = z.string().max(studioPlaylistMax);
 
 function portableSettings(settings: Readonly<Record<string, string>>): Record<string, string> {
   const portable: Record<string, string> = {};
   for (const [key, value] of Object.entries(settings)) {
     // The Notification URL stays on this machine: an ntfy topic in it is as good as a password.
-    if (key === "tutorial.session" || key === notificationUrlKey) continue;
+    // So does the Studio extension's pairing: its token reads every project's upload pack.
+    if (key === "tutorial.session" || key === notificationUrlKey || key === studioPairingKey)
+      continue;
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
+    else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
     else if (key.startsWith("cli.path.")) {
       const provider = providerById(z.enum(providerIds).parse(key.slice("cli.path.".length)));
       if (provider.auth !== "cli") throw new Error("A CLI path names a provider without a CLI.");
