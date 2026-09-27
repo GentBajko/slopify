@@ -52,7 +52,11 @@ it("serves immutable old output and audio-part records after a newer Save", asyn
       },
     });
     expect(saved.ok).toBe(true);
-    const response = await h.app.request(h.file(old.recordId), { headers: { range: "bytes=0-2" } });
+    const slice = await h.app.request(h.file(old.recordId), { headers: { range: "bytes=0-2" } });
+    expect(slice.status).toBe(206);
+    expect(slice.headers.get("content-range")).toBe("bytes 0-2/9");
+    expect(await slice.text()).toBe("old");
+    const response = await h.app.request(h.file(old.recordId));
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("audio/wav");
     expect(response.headers.get("content-length")).toBe("9");

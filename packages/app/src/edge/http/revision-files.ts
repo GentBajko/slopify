@@ -1,10 +1,9 @@
-import { createReadStream } from "node:fs";
-import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { findRevisionDownload, revisionImagesZip } from "../../slices/revisions/downloads.js";
 import type { AppDeps } from "./app.js";
+import { fileResponse } from "./byte-range.js";
 import { replyForFolder } from "./folder-location.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -44,9 +43,8 @@ export function revisionFileRoutes(deps: AppDeps) {
         // `?inline=1` lets the project page open a PDF in a browser tab instead of saving
         // it. Only PDFs: anything else the browser might render stays a download.
         const inline = c.req.query("inline") === "1" && value.contentType === "application/pdf";
-        return c.body(Readable.toWeb(createReadStream(value.path)), 200, {
+        return fileResponse(c, value.path, value.bytes, {
           "content-type": value.contentType,
-          "content-length": String(value.bytes),
           "content-disposition": `${inline ? "inline" : "attachment"}; filename="${value.filename}"`,
           "x-content-type-options": "nosniff",
         });

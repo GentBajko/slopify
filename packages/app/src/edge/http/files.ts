@@ -1,11 +1,10 @@
-import { createReadStream } from "node:fs";
-import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { DownloadDeps } from "../../slices/storage/downloads.js";
 import { findDownload, imagesZip } from "../../slices/storage/downloads.js";
 import type { AppDeps } from "./app.js";
+import { fileResponse } from "./byte-range.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const projectParam = z.object({
@@ -55,11 +54,9 @@ export function fileRoutes(deps: AppDeps) {
             "content-length": String(download.text.byteLength),
             "content-disposition": disposition(download.filename),
           });
-        // ceiling: whole-file responses only. Seeking inside the finished video would
-        // need a Range handler answering 206 with the requested slice.
-        return c.body(Readable.toWeb(createReadStream(download.path)), 200, {
+        // Byte ranges, so the players can jump to any time in the video or narration.
+        return fileResponse(c, download.path, download.bytes, {
           "content-type": download.contentType,
-          "content-length": String(download.bytes),
           "content-disposition": disposition(download.filename),
         });
       })

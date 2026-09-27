@@ -1,6 +1,4 @@
-import { createReadStream } from "node:fs";
 import { extname } from "node:path";
-import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -10,6 +8,7 @@ import { readDraft } from "../../slices/play-drafts/service.js";
 import { uploadDraftAttachment } from "../../slices/play-drafts/uploads.js";
 import { stagingPath } from "../../slices/storage/layout.js";
 import { stagedFileById } from "../../slices/storage/repo.js";
+import { fileResponse } from "./byte-range.js";
 import { draftProblem } from "./draft-problem.js";
 import { readMultipart } from "./multipart.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -72,9 +71,8 @@ export function draftFileRoutes(service: () => DraftStartDeps) {
           detail:
             "This attached file has not finished uploading, so it cannot be previewed yet. Wait a moment or attach it again.",
         });
-      return c.body(Readable.toWeb(createReadStream(stagingPath(deps.paths, staged.path))), 200, {
+      return fileResponse(c, stagingPath(deps.paths, staged.path), staged.bytes, {
         "content-type": contentType,
-        "content-length": String(staged.bytes),
         "x-content-type-options": "nosniff",
         "cache-control": "no-store",
       });

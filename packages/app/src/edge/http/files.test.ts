@@ -278,3 +278,28 @@ describe("opening output folders", () => {
     });
   });
 });
+
+describe("seeking in a project's media", () => {
+  it("answers a byte range with 206 and just that slice, so the players can jump", async () => {
+    const { app, place } = harness();
+    place({ id: "o1", role: "video", path: "video.mp4", stageKind: "video" }, "0123456789");
+
+    const whole = await app.request("/files/p1/video");
+    expect(whole.status).toBe(200);
+    expect(whole.headers.get("accept-ranges")).toBe("bytes");
+    expect(await whole.text()).toBe("0123456789");
+
+    const part = await app.request("/files/p1/video", { headers: { range: "bytes=2-5" } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get("content-range")).toBe("bytes 2-5/10");
+    expect(part.headers.get("content-length")).toBe("4");
+    expect(await part.text()).toBe("2345");
+
+    const tail = await app.request("/files/p1/video", { headers: { range: "bytes=7-" } });
+    expect(await tail.text()).toBe("789");
+
+    const past = await app.request("/files/p1/video", { headers: { range: "bytes=20-" } });
+    expect(past.status).toBe(416);
+    expect(past.headers.get("content-range")).toBe("bytes */10");
+  });
+});
