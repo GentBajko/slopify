@@ -26,6 +26,7 @@ import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { AboutSettings } from "./settings-about";
 import { BackupSettings } from "./settings-backups";
 import { UsageBoard } from "./usage";
 
@@ -86,6 +87,7 @@ export const settingsSections = [
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
+  { id: "about", label: "About" },
 ] as const;
 
 export type SettingsSection = (typeof settingsSections)[number]["id"];
@@ -167,6 +169,7 @@ export function SettingsRoute({
             />
           ) : null}
           {section === "usage" ? <UsageBoard /> : null}
+          {section === "about" ? <AboutSettings /> : null}
         </section>
       </div>
     </div>

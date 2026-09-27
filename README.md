@@ -115,6 +115,20 @@ descriptions, shorts, audio seconds and token totals) to show the totals on
 [slopify.stream](https://slopify.stream). Never your keys, prompts, keywords, titles,
 text, files or anything about your machine beyond a random id.
 
+## Support
+
+Slopify is free and open source. If it saves you time, you can support it on
+[Patreon](https://www.patreon.com/cw/GentBajko) or with a
+[coffee](https://buymeacoffee.com/gentbajko). [How I run a channel with it](https://slopify.stream/channel.html)
+shows a lore channel run on Slopify from topic to upload.
+
+<!-- Donation page: not known yet, so nothing links to it. When it is, put the address in
+     `donationUrl` in packages/site/public/main.js and packages/web/src/lib/support-links.ts
+     (both hold the placeholder https://example.com/donate and show no link while they do),
+     update their "ships with the placeholder" tests, and uncomment this line with it:
+- [Donate](https://example.com/donate)
+-->
+
 ## Licence
 
 MIT, see [LICENSE](./LICENSE). The licence covers the code, not the Slopify name or logo:
