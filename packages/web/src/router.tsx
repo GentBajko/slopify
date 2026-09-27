@@ -11,6 +11,7 @@ import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
 import { pickInPlay } from "@/play/pick-in-play";
+import { CalendarRoute } from "@/routes/calendar";
 import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
 import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
@@ -88,6 +89,13 @@ const schedulesRoute = createRoute({
   path: "schedules",
   component: SchedulesRoute,
 });
+
+const calendarRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "calendar",
+  component: CalendarRoute,
+});
+
 function TemplatesPage(): import("react").ReactElement {
   const session = usePlaySession();
   const navigate = useNavigate();
@@ -376,6 +384,7 @@ const routeTree = rootRoute.addChildren({
     templatesRoute,
     documentThemesRoute,
     schedulesRoute,
+    calendarRoute,
   }),
   libraryIndexRoute,
   projectRoute,

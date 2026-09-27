@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
-import { type RunDraft, sourceOf } from "../admission/model.js";
+import { type RunDraft, sourceOf, thumbnailCountOf } from "../admission/model.js";
 import {
   imageSecondsProblem,
   usesNarrationPreparation,
@@ -212,12 +212,13 @@ export function estimateRun(
       model: image.model,
     });
   if (["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail))
-    requests.push({
-      kind: "image",
-      stage: "Thumbnail",
-      provider: image.provider,
-      model: image.model,
-    });
+    for (let variant = 1; variant <= thumbnailCountOf(draft); variant++)
+      requests.push({
+        kind: "image",
+        stage: "Thumbnail",
+        provider: image.provider,
+        model: image.model,
+      });
   else local("Thumbnail", "Provided or off.");
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);

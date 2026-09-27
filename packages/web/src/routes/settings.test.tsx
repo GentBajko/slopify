@@ -120,6 +120,7 @@ describe("the settings screen", () => {
       "Playback & appearance",
       "Notifications",
       "Channel links",
+      "YouTube Studio",
       "Backup & storage",
       "Backups",
       "Usage",

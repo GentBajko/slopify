@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
+import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
@@ -85,6 +86,7 @@ export const settingsSections = [
   { id: "playback", label: "Playback & appearance" },
   { id: "notifications", label: "Notifications" },
   { id: "channel-links", label: "Channel links" },
+  { id: "studio", label: "YouTube Studio" },
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
@@ -161,6 +163,7 @@ export function SettingsRoute({
           {section === "playback" ? <Playback /> : null}
           {section === "notifications" ? <NotificationSettings /> : null}
           {section === "channel-links" ? <ChannelLinksSettings /> : null}
+          {section === "studio" ? <StudioSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (
