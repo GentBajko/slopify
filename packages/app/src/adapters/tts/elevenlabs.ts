@@ -5,6 +5,7 @@ import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
+import { elevenLabsLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for ElevenLabs: the platform's own `fetch` and nothing else. The
 // response body already is the `ReadableStream<Uint8Array>` the port asks for, so an SDK
@@ -57,6 +58,18 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
   return {
     id: "elevenlabs",
     capabilities: { streams: true, dialogue: true },
+    voiceLanguages: async (voiceId, signal) => {
+      const key = deps.key();
+      if (key === undefined || key === "") return undefined;
+      return elevenLabsLanguages(
+        await lookUp(
+          deps.fetch,
+          `${elevenLabsBase}/voices/${encodeURIComponent(voiceId)}`,
+          { "xi-api-key": key },
+          signal,
+        ),
+      );
+    },
     models: async (): Promise<readonly ModelInfo[]> => {
       const response = await deps.fetch(`${elevenLabsBase}/models`, {
         headers: { "xi-api-key": keyOf(deps) },

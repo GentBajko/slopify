@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import type { RunDraft } from "../admission/model.js";
 import { listDocumentThemes } from "../document/library.js";
 import { documentThemes } from "../document/model.js";
@@ -32,7 +33,13 @@ export function brandedForm(
   brand: BrandKit,
   entries: readonly Entry[],
 ): PlayDraftForm {
-  if (form.useBrandKit === false) return form;
+  // The channel's language is not styling, so it applies with the brand kit off too; a
+  // language picked on Play (English included) is the draft's own.
+  const language =
+    form.language === undefined && brand.language !== undefined
+      ? { language: languageSchema.parse(brand.language) }
+      : {};
+  if (form.useBrandKit === false) return { ...form, ...language };
   const entry = (category: "intro" | "outro", name: string | undefined): string | undefined =>
     name === undefined
       ? undefined
@@ -44,6 +51,7 @@ export function brandedForm(
   const document = form.document === undefined ? brandDocument(db, brand) : undefined;
   return {
     ...form,
+    ...language,
     ...(form.subtitles.fontId === "default" && brand.captionFontId !== undefined
       ? { subtitles: { ...form.subtitles, fontId: brand.captionFontId } }
       : {}),

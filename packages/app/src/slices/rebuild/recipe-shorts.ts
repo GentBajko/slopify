@@ -65,6 +65,8 @@ export function shortsRecipes(
         shorts.minSeconds,
         shorts.maxSeconds,
         config.title,
+        // The project language, only when it is not English, so English keeps its fingerprint.
+        ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
       ],
     },
     [timing.key],

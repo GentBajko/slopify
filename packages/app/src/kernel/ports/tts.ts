@@ -44,4 +44,11 @@ export interface TtsPort {
   readonly capabilities: TtsCapabilities;
   readonly models: () => Promise<readonly ModelInfo[]>;
   readonly synthesize: (req: TtsRequest) => Promise<TtsAudio>;
+  // The languages the provider says a voice speaks, as primary subtags ("es"), or undefined
+  // when it says nothing (or has no voice API: OpenAI's voices speak every language its
+  // model does). Never throws for a missing key or a failed request; it answers undefined.
+  readonly voiceLanguages?: (
+    voiceId: string,
+    signal: AbortSignal,
+  ) => Promise<readonly string[] | undefined>;
 }

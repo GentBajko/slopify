@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { subtitleModelDir } from "../../kernel/paths.js";
+import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import { narrationAliasesOf } from "../admission/rules.js";
+import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { validateCues } from "../revisions/rules.js";
@@ -101,6 +103,7 @@ async function timing(
   const words: SpeakerWord[] = [];
   const omissions: SubtitleOmission[] = [];
   const turns = revisionTurns(snapshot);
+  const language = projectLanguage(snapshot.view.revision.config);
   let offset = 0;
   const total = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   for (const segment of audio) {
@@ -112,7 +115,8 @@ async function timing(
           audioPath: path,
           text: revisionTranscript(deps, snapshot, kind),
           aliases: narrationAliasesOf(snapshot.view.revision.config),
-          cacheDir: subtitleModelDir(deps.paths.dataDir),
+          cacheDir: subtitleModelDir(deps.paths.dataDir, language),
+          ...(language === "en" ? {} : { language }),
           ffmpeg: deps.ffmpeg,
           signal: context.signal,
           onOmission: (value) => omissions.push({ ...value, start: value.start + offset }),
@@ -146,7 +150,7 @@ async function timing(
   }
   if (captionCues(words).length === 0)
     throw new Error(
-      "None of the narration could be matched to the article text, so captions can't be timed. Captions only work for English narration; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
+      "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
     );
   context.signal.throwIfAborted();
   const output = preparedText(
@@ -251,10 +255,18 @@ async function files(
         .optional(),
     })
     .parse(JSON.parse(previousFiles?.piece.payload ?? "{}")).font;
+  // Another language's captions may need a font with its letters (`fonts/coverage.ts`); an
+  // English project keeps the saved font as it always did.
+  const language = projectLanguage(view.revision.config);
   const font =
-    savedFont?.id === config.fontId && previous !== undefined
-      ? { ...savedFont, path: outputPath(deps.paths, context.work.projectId, previous.output.path) }
-      : await resolveFont(deps.paths, config.fontId);
+    language !== "en"
+      ? await captionFont(captionFontDeps(deps.paths), config.fontId, language)
+      : savedFont?.id === config.fontId && previous !== undefined
+        ? {
+            ...savedFont,
+            path: outputPath(deps.paths, context.work.projectId, previous.output.path),
+          }
+        : await resolveFont(deps.paths, config.fontId);
   if (!context.maySubmit(piece.id)) return "held";
   const prepared: PreparedOutput[] = [];
   try {

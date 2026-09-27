@@ -5,7 +5,14 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { VoicesDeps } from "./voices.js";
-import { addVoice, removeVoice, voiceIdMax, voiceNameMax, voices } from "./voices.js";
+import {
+  addVoice,
+  removeVoice,
+  setVoiceLanguages,
+  voiceIdMax,
+  voiceNameMax,
+  voices,
+} from "./voices.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
@@ -140,5 +147,35 @@ describe("removeVoice", () => {
     removeVoice(settings, "v1");
 
     expect(addVoice(settings, { provider: "elevenlabs", name: "N2", voiceId: "a" }).ok).toBe(true);
+  });
+});
+
+describe("voice languages", () => {
+  it("stores languages as lower-case codes and leaves unknown voices without any", () => {
+    const settings = deps();
+    addVoice(settings, {
+      provider: "cartesia",
+      name: "A",
+      voiceId: "a",
+      languages: ["ES", " de "],
+    });
+    addVoice(settings, { provider: "cartesia", name: "B", voiceId: "b" });
+    expect(voices(settings)).toEqual([
+      { id: "v1", provider: "cartesia", name: "A", voiceId: "a", languages: ["es", "de"] },
+      { id: "v2", provider: "cartesia", name: "B", voiceId: "b" },
+    ]);
+  });
+
+  it("refuses something that is not a language code, and edits a saved voice's list", () => {
+    const settings = deps();
+    expect(
+      addVoice(settings, { provider: "cartesia", name: "A", voiceId: "a", languages: ["Spanish"] }),
+    ).toEqual({ ok: false, reason: "unknown-language" });
+    addVoice(settings, { provider: "cartesia", name: "A", voiceId: "a" });
+    expect(setVoiceLanguages(settings, "v1", ["pt"])).toEqual({ ok: true });
+    expect(voices(settings)[0]?.languages).toEqual(["pt"]);
+    expect(setVoiceLanguages(settings, "v1", [])).toEqual({ ok: true });
+    expect(voices(settings)[0]?.languages).toBeUndefined();
+    expect(setVoiceLanguages(settings, "nope", ["pt"])).toEqual({ ok: false, reason: "missing" });
   });
 });

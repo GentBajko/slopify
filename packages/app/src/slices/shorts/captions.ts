@@ -39,6 +39,8 @@ export interface ShortCaptionStyle {
   readonly width: number;
   readonly height: number;
   readonly fontName: string;
+  // False draws each group whole with no word lit, for word times that are only estimates.
+  readonly wordByWord?: boolean | undefined;
   // The short's title, drawn as a headline near the top from the first frame to the last.
   readonly title?: { readonly text: string; readonly seconds: number } | undefined;
 }
@@ -189,6 +191,20 @@ export function shortCaptionsAss(words: readonly TimedWord[], style: ShortCaptio
     const shown =
       next === undefined ? last.end + holdSeconds : Math.min(last.end + holdSeconds, next.start);
     const lines = lineBreaks(group.map((word) => word.text));
+    if (style.wordByWord === false) {
+      const text = group
+        .map(
+          (one, place) =>
+            `${assText(one.text)}${lines.has(place) ? "\\N" : place < group.length - 1 ? " " : ""}`,
+        )
+        .join("");
+      const from = group[0]?.start ?? last.start;
+      if (shown > from)
+        events.push(
+          `Dialogue: 0,${assStamp(from)},${assStamp(shown)},Short,,0,0,0,,${position}${text}\n`,
+        );
+      continue;
+    }
     for (const [index, word] of group.entries()) {
       const from = word.start;
       const to = group[index + 1]?.start ?? Math.max(shown, word.end);

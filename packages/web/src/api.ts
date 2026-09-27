@@ -468,7 +468,7 @@ export async function listVoices(api: Api): Promise<VoiceListBody> {
 
 // Which input a refused voice belongs under. The names are the fields the add form
 // draws, which are the names `edge/http/settings.ts` answers with.
-export type VoiceField = "name" | "provider" | "voiceId";
+export type VoiceField = "name" | "provider" | "voiceId" | "languages";
 
 export interface VoiceRefusal {
   readonly field: VoiceField;
@@ -483,7 +483,12 @@ export type AddVoiceResult =
 // form can mark a field with. Everything else still throws.
 export async function addVoice(api: Api, draft: VoiceDraft): Promise<AddVoiceResult> {
   const response = await api.client.settings.voices.$post({
-    json: { provider: draft.provider, name: draft.name, voiceId: draft.voiceId },
+    json: {
+      provider: draft.provider,
+      name: draft.name,
+      voiceId: draft.voiceId,
+      ...(draft.languages === undefined ? {} : { languages: [...draft.languages] }),
+    },
   });
   if (response.ok) {
     return { ok: true, voice: (await response.json()) as Voice };
@@ -493,6 +498,23 @@ export async function addVoice(api: Api, draft: VoiceDraft): Promise<AddVoiceRes
   if (refusal !== undefined) {
     return { ok: false, refusal };
   }
+  throw errorOf(response, problem);
+}
+
+// Settings → Voices' own list for a saved voice; an empty list is unknown (every language).
+export async function setVoiceLanguages(
+  api: Api,
+  id: string,
+  languages: readonly string[],
+): Promise<VoiceRefusal | undefined> {
+  const response = await api.client.settings.voices[":id"].languages.$put({
+    param: { id },
+    json: { languages: [...languages] },
+  });
+  if (response.ok) return undefined;
+  const problem = await problemOf(response);
+  const refusal = refusalOf(response.status, problem);
+  if (refusal !== undefined) return refusal;
   throw errorOf(response, problem);
 }
 
@@ -520,7 +542,7 @@ function refusalOf(status: number, problem: Problem | undefined): VoiceRefusal |
 }
 
 function isVoiceField(field: string): field is VoiceField {
-  return field === "name" || field === "provider" || field === "voiceId";
+  return field === "name" || field === "provider" || field === "voiceId" || field === "languages";
 }
 
 export async function listPrompts(api: Api): Promise<PromptListBody> {

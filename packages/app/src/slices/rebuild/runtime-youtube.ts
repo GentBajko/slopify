@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { withLanguage } from "../../kernel/ports/languages.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -77,12 +78,15 @@ export async function executeYoutubeRecipe(
   const saved = Array.isArray(input.values) ? input.values[4] : undefined;
   const instruction =
     typeof saved === "string" && saved.trim() !== "" ? saved : defaultDescriptionPrompt;
-  const messages = descriptionMessages({
-    instruction,
-    title: config.title,
-    durationSeconds,
-    transcript: transcriptText(passages),
-  });
+  const messages = withLanguage(
+    descriptionMessages({
+      instruction,
+      title: config.title,
+      durationSeconds,
+      transcript: transcriptText(passages),
+    }),
+    config.language,
+  );
   const row = deps.db
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);

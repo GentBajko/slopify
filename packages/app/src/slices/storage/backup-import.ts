@@ -525,7 +525,11 @@ function checkScratch(
     checkLibraryRows({
       prompts: rowsOf(scratch, `${prompt} WHERE deleted_at IS NULL`),
       entries: rowsOf(scratch, `${entry} WHERE deleted_at IS NULL`),
-      voices: rowsOf(scratch, "SELECT * FROM voices"),
+      // A voice's languages are checked as the settings export reads them (`languages`).
+      voices: rowsOf(scratch, "SELECT id,provider,name,voice_id,languages_json FROM voices").map(
+        ({ languages_json: languages, ...voice }) =>
+          typeof languages === "string" ? { ...voice, languages: JSON.parse(languages) } : voice,
+      ),
     });
     for (const row of rowsOf(scratch, `${prompt} WHERE deleted_at IS NOT NULL`))
       checkLibraryRows({ prompts: [row], entries: [], voices: [] });

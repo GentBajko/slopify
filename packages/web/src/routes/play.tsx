@@ -11,6 +11,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { Welcome } from "@/components/welcome";
+import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission, keywordOrigins } from "@/play/admission";
 import { ChannelPicker } from "@/play/channel-picker";
@@ -400,7 +401,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     video: <VideoSection {...controls} problemOf={problem} />,
     outputs: <ExtrasSection {...controls} />,
     reviews: undefined,
-    channel: <ChannelPicker />,
+    channel: (
+      <>
+        <ChannelPicker />
+        <PlayLanguage />
+      </>
+    ),
   };
   const rows: readonly SetupListRow[] = setupRows.map((row) => ({
     id: row.id,

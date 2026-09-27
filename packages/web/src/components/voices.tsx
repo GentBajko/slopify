@@ -8,6 +8,7 @@ import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input, Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
+import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
 // The voice list and the row that adds to it. Nothing here is checked against the provider: a
@@ -44,18 +45,21 @@ export function Voices() {
   return (
     <div data-tour="voices" className="flex min-w-0 flex-col gap-10">
       <div className="min-w-0 overflow-x-auto">
-        <table className="sl-table min-w-[480px] table-fixed">
+        <table className="sl-table min-w-[640px] table-fixed">
           <caption className="sr-only">Voices</caption>
           <thead>
             <tr>
-              <th scope="col" className="w-[30%] pr-4">
+              <th scope="col" className="w-[22%] pr-4">
                 Name
               </th>
-              <th scope="col" className="w-[26%] pr-4">
+              <th scope="col" className="w-[18%] pr-4">
                 Provider
               </th>
               <th scope="col" className="pr-4">
                 Voice ID
+              </th>
+              <th scope="col" className="w-[26%] pr-4">
+                Languages
               </th>
               <th scope="col" className="w-[96px]">
                 <span className="sr-only">Remove</span>
@@ -65,14 +69,14 @@ export function Voices() {
           <tbody>
             {listed === undefined ? (
               <tr>
-                <td colSpan={4}>
+                <td colSpan={5}>
                   <span className="block h-4 w-64 rounded-control bg-raised" />
                 </td>
               </tr>
             ) : listed.length === 0 ? (
               // An empty list teaches rather than showing a bare box.
               <tr>
-                <td colSpan={4} className="text-ink-2">
+                <td colSpan={5} className="text-ink-2">
                   Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
                 </td>
               </tr>
@@ -82,6 +86,9 @@ export function Voices() {
                   <td className="truncate pr-4 font-semibold">{voice.name}</td>
                   <td className="truncate pr-4 text-ink-2">{nameOf(tts, voice.provider)}</td>
                   <td className="truncate pr-4 text-ink-2">{voice.voiceId}</td>
+                  <td className="pr-4">
+                    <VoiceLanguagesCell voice={voice} />
+                  </td>
                   <td className="text-right">
                     <Button
                       variant="quiet"
@@ -136,14 +143,19 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
+  const [languages, setLanguages] = useState("");
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
   const provider = picked ?? tts[0]?.id;
 
   const add = useMutation({
-    mutationFn: (draft: { provider: ProviderId; name: string; voiceId: string }) =>
-      addVoice(api, draft),
+    mutationFn: (draft: {
+      provider: ProviderId;
+      name: string;
+      voiceId: string;
+      languages?: readonly string[];
+    }) => addVoice(api, draft),
     onSuccess: async (result) => {
       if (!result.ok) {
         setRefusal(result.refusal);
@@ -151,6 +163,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
       }
       setName("");
       setVoiceId("");
+      setLanguages("");
       setRefusal(undefined);
       await queryClient.invalidateQueries({ queryKey: keys.voices });
     },
@@ -170,7 +183,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <Field label="Voice name" error={problem("name")}>
           <Input
             value={name}
@@ -223,13 +236,36 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
           />
         </Field>
 
+        <Field
+          label="Languages"
+          help="Codes such as es, de. Blank asks the provider when it can say."
+          error={problem("languages")}
+        >
+          <Input
+            value={languages}
+            placeholder="es, de"
+            onChange={(event) => {
+              const next = event.target.value;
+              edit("languages", () => {
+                setLanguages(next);
+              });
+            }}
+          />
+        </Field>
+
         <Button
           variant="primary"
           className="md:mt-[22px]"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {
-              add.mutate({ provider, name, voiceId });
+              const codes = languagesOfText(languages);
+              add.mutate({
+                provider,
+                name,
+                voiceId,
+                ...(codes.length === 0 ? {} : { languages: codes }),
+              });
             }
           }}
         >

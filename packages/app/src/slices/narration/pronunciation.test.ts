@@ -234,3 +234,32 @@ describe("article pronunciation glossary", () => {
     ]);
   });
 });
+
+describe("glossaries in other languages", () => {
+  const german = "Pronunciation glossary\n\nMünchen: /ˈmʏnçn̩/\n\nBach: /bax/";
+  it("keeps English to standard-English IPA, skipping the non-English row", () => {
+    for (const language of [undefined, "en"]) {
+      const parsed = parsePronunciationGlossary(german, language);
+      expect(parsed.ok && parsed.entries).toEqual([{ term: "Bach", ipa: ["bax"] }]);
+      expect(parsed.ok && parsed.skipped).toEqual([
+        { row: 2, reason: expect.stringContaining("non-English sounds") },
+      ]);
+    }
+  });
+  it("accepts the language's own sounds when the project is not in English", () => {
+    expect(parsePronunciationGlossary(german, "de")).toEqual({
+      ok: true,
+      entries: [
+        { term: "München", ipa: ["ˈmʏnçn̩"] },
+        { term: "Bach", ipa: ["bax"] },
+      ],
+    });
+    expect(parsePronunciationGlossary("Ñandú: /ɲanˈdu/", "es")).toMatchObject({ ok: true });
+  });
+  it("still skips ARPAbet and tags, naming IPA", () => {
+    const result = parsePronunciationGlossary("Bach: /B AA1 K/", "de");
+    expect(result.ok && result.skipped).toEqual([
+      { row: 1, reason: "use IPA, not ARPAbet or delivery tags" },
+    ]);
+  });
+});

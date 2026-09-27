@@ -239,7 +239,7 @@ function speakerGlossary(
     (speaker.voice.model === "inworld-tts-2" || speaker.voice.model === "inworld-tts-2-flash");
   if (!reads) return { ok: true, entries: [] };
   const own = speaker.pronunciations?.trim()
-    ? parsePronunciationGlossary(speaker.pronunciations)
+    ? parsePronunciationGlossary(speaker.pronunciations, context.config.language)
     : { ok: true as const, entries: [] as readonly GlossaryEntry[] };
   if (!own.ok)
     return {

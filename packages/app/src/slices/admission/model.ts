@@ -230,6 +230,9 @@ export interface RunDraft {
   // voice (`video/ambient-bed.ts`), from the template or the channel's brand kit. Absent is
   // none, which is what every project saved before it was.
   readonly ambientBed?: import("../video/ambient-bed.js").AmbientBedSettings | undefined;
+  // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
+  // what every project saved before it was; English is never stored.
+  readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;
 }
 
 export interface TitleStyle {

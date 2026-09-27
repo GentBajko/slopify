@@ -1,10 +1,9 @@
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
+import { type AlignmentSpec, englishMismatch, englishSpec } from "./spec.js";
 import type { SpeechWord } from "./text.js";
-import { vocabulary } from "./vocabulary.js";
 
 export const frameSeconds = 0.02;
-export const mismatch =
-  "The audio does not closely match the English transcript. Check the article and audio, including any intro or outro, before generating subtitles.";
+export const mismatch = englishMismatch;
 export interface WindowAlignment {
   readonly words: readonly TimedWord[];
   readonly confidence: number;
@@ -21,15 +20,17 @@ export function alignWindow(
   frames: number,
   words: readonly SpeechWord[],
   complete: boolean,
+  spec: AlignmentSpec = englishSpec,
 ): WindowAlignment {
-  if (frames < 1 || frames > 1100 || logits.length !== frames * 32)
+  const labels = spec.labels;
+  if (frames < 1 || frames > 1100 || logits.length !== frames * labels)
     throw new Error("The subtitle alignment window exceeds its safe size.");
-  const tokens = tokenize(words);
+  const tokens = tokenize(words, spec);
   if (tokens.ids.length === 0 || tokens.ids.length > 1500)
     throw new Error("The subtitle transcript window exceeds its safe size.");
   const states = [0];
   for (const id of tokens.ids) states.push(id, 0);
-  const probabilities = logSoftmax(logits, frames);
+  const probabilities = logSoftmax(logits, frames, labels);
   const width = states.length;
   const back = new Uint8Array(frames * width);
   let previous = new Float32Array(width).fill(-Infinity);
@@ -52,32 +53,34 @@ export function alignWindow(
         score = previous[state - 2] ?? -Infinity;
         step = 2;
       }
-      current[state] = score + (probabilities[frame * 32 + (states[state] ?? 0)] ?? -Infinity);
+      current[state] = score + (probabilities[frame * labels + (states[state] ?? 0)] ?? -Infinity);
       back[frame * width + state] = step;
     }
     previous = current;
   }
   const state = endState(previous, tokens, complete);
-  if (!Number.isFinite(previous[state])) throw new Error(mismatch);
-  const traced = trace(back, states, tokens, words, probabilities, frames, state);
-  if (traced.length === 0) throw new Error(mismatch);
+  if (!Number.isFinite(previous[state])) throw new Error(spec.mismatch);
+  const traced = trace(back, states, tokens, words, probabilities, frames, state, labels);
+  if (traced.length === 0) throw new Error(spec.mismatch);
   const confidence = traced.reduce((sum, word) => sum + (word.confidence ?? 0), 0) / traced.length;
-  const poor = traced.filter((word) => (word.confidence ?? 0) < 0.2).length / traced.length;
-  if (confidence < 0.48 || poor > 0.3) throw new Error(mismatch);
+  const { gates } = spec;
+  const poor =
+    traced.filter((word) => (word.confidence ?? 0) < gates.poorScore).length / traced.length;
+  if (confidence < gates.meanPosterior || poor > gates.poorShare) throw new Error(spec.mismatch);
   return { words: traced, confidence };
 }
 
-function tokenize(words: readonly SpeechWord[]): Tokens {
+function tokenize(words: readonly SpeechWord[], spec: AlignmentSpec): Tokens {
   const ids: number[] = [],
     owners: number[] = [],
     ends: number[] = [];
   for (const [index, word] of words.entries()) {
     if (index > 0) {
-      ids.push(4);
+      ids.push(spec.delimiter);
       owners.push(-1);
     }
     for (const letter of word.spoken.replaceAll(" ", "|")) {
-      const id = vocabulary[letter];
+      const id = spec.ids[letter];
       if (id !== undefined) {
         ids.push(id);
         owners.push(index);
@@ -110,6 +113,7 @@ function trace(
   probabilities: Float32Array,
   frames: number,
   finalState: number,
+  labels: number,
 ): readonly TimedWord[] {
   const found = words.map((word) => ({
     text: word.text,
@@ -126,7 +130,7 @@ function trace(
       if (word !== undefined) {
         word.start = Math.min(word.start, frame * frameSeconds);
         word.end = Math.max(word.end, (frame + 1) * frameSeconds);
-        word.score += Math.exp(probabilities[frame * 32 + (states[state] ?? 0)] ?? -Infinity);
+        word.score += Math.exp(probabilities[frame * labels + (states[state] ?? 0)] ?? -Infinity);
         word.count += 1;
       }
     }
@@ -140,18 +144,18 @@ function trace(
   });
 }
 
-function logSoftmax(logits: Float32Array, frames: number): Float32Array {
+function logSoftmax(logits: Float32Array, frames: number, labels: number): Float32Array {
   const result = new Float32Array(logits.length);
   for (let frame = 0; frame < frames; frame += 1) {
-    const offset = frame * 32;
+    const offset = frame * labels;
     let max = -Infinity;
-    for (let label = 0; label < 32; label += 1)
+    for (let label = 0; label < labels; label += 1)
       max = Math.max(max, logits[offset + label] ?? -Infinity);
     let sum = 0;
-    for (let label = 0; label < 32; label += 1)
+    for (let label = 0; label < labels; label += 1)
       sum += Math.exp((logits[offset + label] ?? -Infinity) - max);
     const divisor = max + Math.log(sum);
-    for (let label = 0; label < 32; label += 1)
+    for (let label = 0; label < labels; label += 1)
       result[offset + label] = (logits[offset + label] ?? -Infinity) - divisor;
   }
   return result;

@@ -13,10 +13,14 @@ export interface SpeechWord {
 // Narration aliases ("Dr." said as "Doctor") make the aliased form the default for the
 // written words they cover, with the written form kept as an alternative for audio that
 // was not aliased (an uploaded chunk, say).
+// `formsOf` is the language's normaliser (`multilingual.ts` passes its own); the default is
+// English, and `empty` is the sentence for a text with nothing to say.
 export function speechWords(
   text: string,
   observed = "",
   aliases: readonly NarrationAlias[] = [],
+  formsOf: (raw: string) => readonly string[] = wordForms,
+  empty = "Local subtitles currently require an English transcript with spoken words.",
 ): readonly SpeechWord[] {
   const matches = aliases.length === 0 ? [] : aliasMatches(text, aliases);
   const words: { text: string; spoken: string; forms: string[]; aliased: boolean }[] = [];
@@ -24,7 +28,7 @@ export function speechWords(
     const textWord = token[0];
     const start = token.index;
     const end = start + textWord.length;
-    const plain = wordForms(textWord);
+    const plain = formsOf(textWord);
     const touching = matches.filter((match) => match.start < end && start < match.end);
     let forms = [...plain];
     if (touching.length > 0) {
@@ -40,7 +44,7 @@ export function speechWords(
       const aliased = said
         .trim()
         .split(/\s+/)
-        .map((piece) => (piece === "" ? "" : (wordForms(piece)[0] ?? "")))
+        .map((piece) => (piece === "" ? "" : (formsOf(piece)[0] ?? "")))
         .filter((form) => form !== "")
         .join(" ");
       forms = [aliased, ...plain.filter((form) => form !== aliased)];
@@ -62,16 +66,19 @@ export function speechWords(
     }
     words.push({ text: textWord, spoken, forms, aliased: touching.length > 0 });
   }
-  if (words.length === 0)
-    throw new Error("Local subtitles currently require an English transcript with spoken words.");
+  if (words.length === 0) throw new Error(empty);
   return words.map(({ text: shown, spoken, forms }) =>
     forms.length > 1 ? { text: shown, spoken, forms } : { text: shown, spoken },
   );
 }
 
 // The form of a word the recording seems to say, else its default.
-export function respoken(word: SpeechWord, observed: string): SpeechWord {
-  if (word.forms === undefined) return speechWords(word.text, observed)[0] ?? word;
+export function respoken(
+  word: SpeechWord,
+  observed: string,
+  formsOf: (raw: string) => readonly string[] = wordForms,
+): SpeechWord {
+  if (word.forms === undefined) return speechWords(word.text, observed, [], formsOf)[0] ?? word;
   return { ...word, spoken: pick(word.forms, observed) };
 }
 function pick(forms: readonly string[], observed: string): string {

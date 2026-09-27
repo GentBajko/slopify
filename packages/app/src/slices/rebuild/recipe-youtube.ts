@@ -37,6 +37,8 @@ export function youtubeRecipes(
           // ships as a new operation version rather than a silent change here.
           config.descriptionPrompt?.trim() ? renderedPrompt(context, "description") : "",
           config.title,
+          // The project language, only when it is not English, so English keeps its fingerprint.
+          ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
         ],
       },
       [timing.key],

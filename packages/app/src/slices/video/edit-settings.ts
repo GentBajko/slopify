@@ -1,3 +1,5 @@
+import { wordTimingUnavailable } from "../../kernel/ports/languages.js";
+
 // How the Video stage edits the slideshow beyond seconds per image, zoom and motion: where the
 // cuts fall, how one shot hands over to the next, the Look (vignette, grain, colour, an
 // atmosphere overlay and chapter cards), and which images come to life as short clips.
@@ -133,15 +135,18 @@ export function videoEditOf(config: {
 interface EditSources {
   readonly sources: { readonly audio: string; readonly video: string };
   readonly videoEdit?: VideoEditSettings | undefined;
+  readonly language?: string | undefined;
 }
 
-// Following the narration needs narration to follow and a video to cut; otherwise the video
-// falls back to Every N seconds, which is also what its fingerprint says.
+// Following the narration needs narration to follow, a video to cut and word timing in the
+// project language (`wordTimingUnavailable`); otherwise the video falls back to Every N
+// seconds, which is also what its fingerprint says.
 export function usesNarrationCuts(config: EditSources): boolean {
   return (
     videoEditOf(config).cuts === "narration" &&
     config.sources.audio !== "off" &&
-    config.sources.video === "generate"
+    config.sources.video === "generate" &&
+    wordTimingUnavailable(config.language) === undefined
   );
 }
 

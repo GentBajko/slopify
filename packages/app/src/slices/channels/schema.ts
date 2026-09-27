@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import { aiDisclosureSettings } from "../studio/disclosure.js";
 import { ambientBedProblems } from "../video/ambient-bed.js";
 import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
@@ -40,6 +41,7 @@ export const brandKitSchema = z
           });
       })
       .optional(),
+    language: languageSchema.optional(),
   })
   .strict()
   .transform((kit) =>

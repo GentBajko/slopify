@@ -1,8 +1,9 @@
 import { open, readFile, stat } from "node:fs/promises";
 import { SubtitleMismatch, type TimedWord } from "../../kernel/ports/subtitles.js";
-import { mismatch } from "./ctc.js";
+import { alignmentSpecFor } from "./multilingual.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
-import { respoken, type SpeechWord, speechWords } from "./text.js";
+import type { AlignmentSpec } from "./spec.js";
+import type { SpeechWord } from "./text.js";
 import { subtitleThreads } from "./threads.js";
 import { alignSpeechWindow, greedy } from "./window.js";
 
@@ -37,13 +38,15 @@ function send(message: unknown): void {
 }
 
 async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
+  const spec = alignmentSpecFor(input.language);
+  const { mismatch } = spec;
   const { ort, session } = await openSession(input.modelPath);
   const file = await open(input.pcmPath, "r");
   try {
     const totalSamples = (await stat(input.pcmPath)).size / 4;
     if (!Number.isInteger(totalSamples) || totalSamples < sampleRate / 10)
       throw new Error("The narration is too short to align subtitles.");
-    const source = speechWords(input.text, "", input.aliases ?? []);
+    const source = spec.words(input.text, "", input.aliases ?? []);
     const output: TimedWord[] = [];
     let cursor = 0;
     let omitted = 0;
@@ -62,22 +65,23 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
       const result = await session.run({
         input_values: new ort.Tensor("float32", normalized, [1, count]),
       });
-      const logits = result.logits;
+      const raw = result.logits;
       if (
-        logits === undefined ||
-        !(logits.data instanceof Float32Array) ||
-        logits.dims.length !== 3 ||
-        logits.dims[2] !== 32
+        raw === undefined ||
+        !(raw.data instanceof Float32Array) ||
+        raw.dims.length !== 3 ||
+        raw.dims[2] !== spec.modelLabels
       )
         throw new Error("The local subtitle model returned an unsupported result.");
-      const frames = logits.dims[1] ?? 0;
-      const observed = greedy(logits.data, frames);
-      if (observed.replace(/[^A-Z]/g, "").length === 0) {
+      const frames = raw.dims[1] ?? 0;
+      const logits = { data: spec.compact?.(raw.data, frames) ?? raw.data };
+      const observed = greedy(logits.data, frames, spec);
+      if (spec.lettersOnly(observed).length === 0) {
         sampleAt += count;
         for (const tensor of Object.values(result)) tensor.dispose();
         continue;
       }
-      const candidate = candidates(source, cursor, observed);
+      const candidate = candidates(source, cursor, observed, spec);
       const finalWindow = sampleAt + count >= totalSamples;
       const complete = finalWindow && cursor + candidate.length === source.length;
       const cutoff = finalWindow ? count / sampleRate : count / sampleRate - overlapSeconds;
@@ -97,6 +101,7 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
           complete,
           cutoff,
           cursor === 0 ? 0 : omissionBudget - omitted,
+          spec,
         );
       } catch (error) {
         if (error instanceof Error && error.message === mismatch) throw stuck();
@@ -149,17 +154,17 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
           input_values: new ort.Tensor("float32", audio, [1, count]),
         });
         const logits = result.logits;
-        if (
-          logits !== undefined &&
-          logits.data instanceof Float32Array &&
-          greedy(logits.data, logits.dims[1] ?? 0).replace(/[^A-Z]/g, "").length > 8
-        )
-          throw new SubtitleMismatch(
-            mismatch,
-            sampleAt / sampleRate,
-            "",
-            snippet(greedy(logits.data, logits.dims[1] ?? 0).split(/\s+/)),
-          );
+        if (logits !== undefined && logits.data instanceof Float32Array) {
+          const frames = logits.dims[1] ?? 0;
+          const heard = greedy(spec.compact?.(logits.data, frames) ?? logits.data, frames, spec);
+          if (spec.lettersOnly(heard).length > 8)
+            throw new SubtitleMismatch(
+              mismatch,
+              sampleAt / sampleRate,
+              "",
+              snippet(heard.split(/\s+/)),
+            );
+        }
         for (const tensor of Object.values(result)) tensor.dispose();
       }
       sampleAt += count;
@@ -215,13 +220,14 @@ function candidates(
   source: readonly SpeechWord[],
   cursor: number,
   observed: string,
+  spec: AlignmentSpec,
 ): readonly SpeechWord[] {
   const selected: SpeechWord[] = [];
   let length = 0;
   for (let index = cursor; index < source.length; index += 1) {
     const word = source[index];
     if (word === undefined) break;
-    const normalized = respoken(word, observed);
+    const normalized = spec.respoken(word, observed);
     if (length + normalized.spoken.length + 1 > 900) break;
     selected.push(normalized);
     length += normalized.spoken.length + 1;

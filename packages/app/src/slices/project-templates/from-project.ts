@@ -211,6 +211,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       ...(config.thumbnailCount === 3 ? { thumbnailCount: 3 as const } : {}),
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),
+      ...(config.language === undefined ? {} : { language: config.language }),
       ...(config.descriptionPrompt === undefined
         ? {}
         : { descriptionPrompt: config.descriptionPrompt }),

@@ -23,7 +23,10 @@ export interface PreparedGroup {
 }
 
 export function preparationTemplate(context: RecipeContext): FingerprintValue {
-  const input = llmInput(context, preparationMessages(renderedPrompt(context, "narration"), ""));
+  const input = llmInput(
+    context,
+    preparationMessages(renderedPrompt(context, "narration"), "", [], context.config.language),
+  );
   return [
     "inworld-tts-2",
     1,
@@ -74,7 +77,12 @@ export function preparationForGroup(
     {
       ...llmInput(
         context,
-        preparationMessages(renderedPrompt(context, "narration"), source, aliases),
+        preparationMessages(
+          renderedPrompt(context, "narration"),
+          source,
+          aliases,
+          context.config.language,
+        ),
       ),
       preparation: { format: "inworld-tts-2", version: 1, source, logicalKey, segment },
     },

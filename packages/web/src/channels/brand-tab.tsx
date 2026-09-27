@@ -6,6 +6,7 @@ import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { LanguageSelect } from "@/language/language-select";
 import { documentThemesQuery, entriesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
@@ -23,6 +24,7 @@ const fields: readonly (keyof Draft)[] = [
   "outro",
   "endScreenText",
   "documentTheme",
+  "language",
 ];
 
 function draftOf(brand: BrandKit): Draft {
@@ -112,6 +114,15 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           meta="Fills what a template leaves at its default. Blank fields add nothing."
           className="mt-2 border-t border-line pt-6"
         />
+        <section aria-label="Language" className="max-w-md">
+          {/* The channel's language applies with the brand kit off too: it is not styling. */}
+          <LanguageSelect
+            label="Language of new projects"
+            value={kit.language === "" ? undefined : kit.language}
+            inherited={{ label: "Not set", language: undefined }}
+            onChange={(language) => set("language")(language ?? "")}
+          />
+        </section>
         <section aria-label="Captions" className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
           <Choice
             label="Caption font"

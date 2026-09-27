@@ -7,11 +7,14 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStreamReadResult } from "node:stream/web";
 import { setTimeout as delay } from "node:timers/promises";
 
-interface ModelFile {
+export interface ModelFile {
   readonly filename: string;
   readonly url: string;
   readonly bytes: number;
   readonly sha256: string;
+  // How long one download attempt may take; absent is five minutes, enough for the 95 MB
+  // English model. The 248 MB multilingual model gets longer.
+  readonly timeoutMs?: number | undefined;
 }
 interface ModelInput {
   readonly cacheDir: string;
@@ -73,7 +76,10 @@ async function downloadModel(input: ModelInput, deps: ModelDeps, target: string)
     let response: Response;
     try {
       response = await deps.fetch(deps.model.url, {
-        signal: AbortSignal.any([input.signal, AbortSignal.timeout(300_000)]),
+        signal: AbortSignal.any([
+          input.signal,
+          AbortSignal.timeout(deps.model.timeoutMs ?? 300_000),
+        ]),
       });
     } catch (error) {
       throw interrupted(error);

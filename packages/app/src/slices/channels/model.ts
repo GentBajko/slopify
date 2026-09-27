@@ -29,6 +29,9 @@ export interface BrandKit {
   // A built-in ambient bed under the long video (`video/ambient-bed.ts`), for a setup that
   // leaves its own unset.
   readonly ambientBed?: import("../video/ambient-bed.js").ChannelAmbientBed | undefined;
+  // The language new projects in this channel are made in (`kernel/ports/languages.ts`),
+  // unless Play picks one. Absent is English.
+  readonly language?: string | undefined;
 }
 
 export interface Channel {

@@ -17,6 +17,7 @@ import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
+import { RevisionLanguage } from "@/language/revision-language";
 import { cn } from "@/lib/utils";
 import { FormatPicker } from "@/play/format-picker";
 import { sourceOptions } from "@/play/state";
@@ -78,6 +79,7 @@ export function RevisionForm(
     narrated: config.sources.audio !== "off",
     imageProvider: config.images?.provider ?? "",
     problem,
+    language: config.language,
     onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
   });
   const sections: readonly {
@@ -508,6 +510,7 @@ export function RevisionForm(
           hidden={current !== "providers"}
           className={panel("providers")}
         >
+          <RevisionLanguage edit={edit} error={problem("language")} onChange={onChange} />
           <RevisionProviders
             projectId={view.revision.projectId}
             edit={edit}
