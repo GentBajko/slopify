@@ -117,6 +117,16 @@ everywhere, before any new screen is added.
   line, hover actions, a lightbox for full size, a real player for video with the poster.
 - Galleries (images, shorts, thumbnails) use one grid component.
 
+**Controls that say what they do**
+- Resume, Rebuild, Review, Retry stage and friends overlap and sit side by side. Replace them with
+  one clear action per situation, named for its result ("Continue the run", "Remake 3 outdated
+  images"), shown only when it applies, next to the thing it affects.
+
+**See it before you make it**
+- Picking a style (captions, font, the Look, transitions, chapter cards, Shorts layout) shows a
+  real rendered preview: a few seconds of video with sample images and narration, not a
+  description.
+
 **Fewer clicks**
 - Every common task is counted in clicks, and the count goes down: queue a video, regenerate
   an image, copy the description, edit a prompt, change a schedule's topics.
