@@ -178,6 +178,10 @@ function seed(db: DatabaseSync): void {
     at,
   );
   run("INSERT INTO project_trash(project_id,deleted_at) VALUES ('p1',?)", at);
+  run(
+    "INSERT INTO standalone_usage(id,owner_kind,owner_id,channel_id,purpose,kind,provider,model,wall_ms,cost,created_at) VALUES ('su1','channel','c1','c1','episode-summary','llm','openai','gpt',900,0.01,?)",
+    at,
+  );
   writeSetting(db, "channel_links", JSON.stringify([{ name: "Patreon", url: "https://x.test" }]));
   writeSetting(db, "provider.defaults", JSON.stringify({ llm: { provider: "codex", model: "" } }));
 }
@@ -225,6 +229,7 @@ describe("backups carry everything added since 2.5.0", () => {
     same("SELECT * FROM provider_usage ORDER BY id");
     same("SELECT * FROM plan_limit_readings ORDER BY id");
     same("SELECT * FROM project_trash ORDER BY project_id");
+    same("SELECT * FROM standalone_usage ORDER BY id");
     same(
       "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults') ORDER BY key",
     );
@@ -236,6 +241,7 @@ describe("backups carry everything added since 2.5.0", () => {
     expect(again.episodeMemories).toEqual({ added: 0, renamed: 0, skipped: 1 });
     expect(again.channelVideos).toEqual({ added: 0, renamed: 0, skipped: 1 });
     expect(rows(target.db, "SELECT count(*) AS n FROM library_versions")).toEqual([{ n: 2 }]);
+    expect(rows(target.db, "SELECT count(*) AS n FROM standalone_usage")).toEqual([{ n: 1 }]);
   });
 
   it("keeps a default channel this install already edited, and merges cast into it by id", async () => {

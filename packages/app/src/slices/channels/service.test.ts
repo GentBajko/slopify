@@ -230,6 +230,8 @@ describe("the cast", () => {
         provider: "openai-image",
         model: "gpt-image-2",
         aspect: "9:16",
+        // Its cost is metered on this channel.
+        channelId: defaultChannelId,
       },
     ]);
     answer({ bytes: png, mime: "image/png" });

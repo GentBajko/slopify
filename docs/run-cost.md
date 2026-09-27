@@ -52,3 +52,18 @@ not held up, and a waiting call holds no slot in the provider queue.
 The wait survives a restart: a stage that was waiting when Slopify stopped is resumed at the
 next start and waits on the stored reset again. A project paused or cancelled meanwhile is left
 alone.
+
+## Calls outside a project
+
+A few calls belong to no project: a schedule's topic generation, the episode summary written
+for a channel when one of its projects finishes, and a cast member's generated picture. They go
+through the same attempt wrapper as a stage's calls (the same retries, back-off and idle
+timeout; the caller's own deadline or shutdown stops them) and are priced the same way when they
+land, but they are kept in their own table, `standalone_usage`, against the schedule or channel
+they were made for. A schedule counts under its template's channel; a channel that has since
+been deleted counts as the default channel, as its projects do.
+
+Home's **This week** includes them in its calls, spend, unpriced count and API equivalent, and
+the channel filter narrows them like projects. Plan windows a CLI reported around these calls
+count toward the plan standings too. They never appear on a project's **Run cost** tab. Backups
+carry them.

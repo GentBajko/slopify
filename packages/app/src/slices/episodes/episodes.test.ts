@@ -9,12 +9,16 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
-import type { MeteredCall } from "../../kernel/runner/meter.js";
+import type { LlmPort } from "../../kernel/ports/llm.js";
+import { standaloneOver } from "../../kernel/runner/standalone.fake.js";
+import { standaloneLlm } from "../../kernel/runner/standalone.js";
 import type { RunDraft } from "../admission/model.js";
 import { startRun } from "../admission/start.js";
 import type { CastSnapshot } from "../channels/model.js";
 import { defaultChannelId } from "../channels/model.js";
+import { setProjectChannel } from "../channels/repo.js";
 import { createCastMember, createChannel } from "../channels/service.js";
+import { createStandaloneMeter } from "../run-cost/meter.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { earlierEpisodesMax, relatedEpisodes, withEarlierEpisodes } from "./related.js";
 import { type EpisodeMemory, memoriesOfChannel } from "./repo.js";
@@ -29,7 +33,7 @@ import {
 
 const clock = fixedClock("2026-09-27T10:00:00.000Z");
 
-function harness() {
+function harness(port?: LlmPort) {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-episodes-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -49,7 +53,6 @@ function harness() {
   };
   const storage: StorageDeps = { db, paths, ids, clock, log, emit: (): void => {} };
   const calls: EpisodeLlmCall[] = [];
-  const metered: MeteredCall[] = [];
   let answer: () => Promise<string> = async () => "Tiamat woke under the mountain.";
   const summary: EpisodeSummaryDeps = {
     db,
@@ -59,19 +62,41 @@ function harness() {
     uuid: randomUUID,
     llm: async (call) => {
       calls.push(call);
+      if (port !== undefined)
+        return standaloneLlm(
+          standaloneOver(
+            { llm: port },
+            {
+              clock,
+              log,
+              meter: createStandaloneMeter({
+                db,
+                ids,
+                clock,
+                catalogue: () => ({
+                  schemaVersion: 1,
+                  updatedAt: "2026-09-26",
+                  providers: {},
+                  llm: [],
+                  tts: [],
+                  image: [],
+                }),
+              }),
+            },
+          ),
+          call,
+        );
       return {
         text: await answer(),
         usage: { inputTokens: 900, outputTokens: 60 },
       };
     },
-    meter: { record: (call) => metered.push(call) },
   };
   return {
     db,
     storage,
     summary,
     calls,
-    metered,
     logged,
     answers: (next: () => Promise<string>) => {
       answer = next;
@@ -126,7 +151,7 @@ const castOf = (name: string, ...aliases: string[]): CastSnapshot => ({
 });
 
 describe("the episode summary", () => {
-  it("is written once per article with the project's model, recorded on its run cost", async () => {
+  it("is written once per article with the project's model, asked for its channel", async () => {
     const h = harness();
     // A fresh install's default channel has episode memory on (migration 0039).
     const created = createCastMember({ db: h.db, clock, uuid: randomUUID }, defaultChannelId, {
@@ -140,17 +165,10 @@ describe("the episode summary", () => {
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0]).toMatchObject({ provider: "text", model: "text-model" });
     expect(h.calls[0]?.messages.at(-1)?.content).toContain("Tiamat sleeps beneath the mountain.");
-    expect(h.metered).toMatchObject([
-      {
-        projectId: run.project.id,
-        stage: "article",
-        kind: "llm",
-        provider: "text",
-        model: "text-model",
-        tokensIn: 900,
-        tokensOut: 60,
-      },
-    ]);
+    expect(h.calls[0]).toMatchObject({
+      owner: { kind: "channel", id: defaultChannelId },
+      purpose: "episode-summary",
+    });
     const [saved] = memoriesOfChannel(h.db, defaultChannelId);
     expect(saved).toMatchObject({
       projectId: run.project.id,
@@ -188,6 +206,54 @@ describe("the episode summary", () => {
     expect(await summarizeEpisode(h.summary, run.project.id)).toBe("failed");
     expect(h.logged.join("\n")).toContain("signed out");
     expect(memoriesOfChannel(h.db, defaultChannelId)).toEqual([]);
+  });
+
+  it("is metered on its channel's run cost, not the finished project's", async () => {
+    let asked = 0;
+    const h = harness({
+      id: "text",
+      capabilities: { streams: true, reportsUsage: true, webSearch: false },
+      models: () => Promise.resolve([]),
+      complete: async function* () {
+        asked += 1;
+        if (asked === 1) throw new TypeError("fetch failed");
+        yield { type: "delta", text: "Tiamat woke under the mountain." };
+        yield {
+          type: "done",
+          usage: { inputTokens: 900, outputTokens: 60 },
+          finishReason: "stop",
+        };
+      },
+    });
+    const lore = randomUUID();
+    const channel = createChannel(
+      { db: h.db, clock, uuid: randomUUID },
+      { id: lore, name: "Lore" },
+    );
+    expect(channel.ok).toBe(true);
+    const run = startRun(h.storage, draft(), {});
+    setProjectChannel(h.db, run.project.id, lore);
+    expect(await summarizeEpisode(h.summary, run.project.id)).toBe("saved");
+    expect(asked).toBe(2);
+    expect(
+      h.db
+        .prepare(
+          "SELECT owner_kind, owner_id, channel_id, purpose, provider, model, tokens_in, tokens_out FROM standalone_usage",
+        )
+        .all(),
+    ).toEqual([
+      {
+        owner_kind: "channel",
+        owner_id: lore,
+        channel_id: lore,
+        purpose: "episode-summary",
+        provider: "text",
+        model: "text-model",
+        tokens_in: 900,
+        tokens_out: 60,
+      },
+    ]);
+    expect(h.db.prepare("SELECT count(*) AS n FROM provider_usage").get()).toEqual({ n: 0 });
   });
 
   it("is written in the background when a project reaches done, and only then", async () => {

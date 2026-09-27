@@ -1,12 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import type { ScheduleTopicsEvent } from "../../kernel/events.js";
-import type { Message } from "../../kernel/ports/llm.js";
+import type { LlmPort, Message } from "../../kernel/ports/llm.js";
+import { providerError } from "../../kernel/ports/model.js";
+import { standaloneOver } from "../../kernel/runner/standalone.fake.js";
+import { standaloneLlm } from "../../kernel/runner/standalone.js";
 import { defaultChannelId } from "../channels/model.js";
 import { importChannelVideos } from "../channels/videos.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
+import { createStandaloneMeter } from "../run-cost/meter.js";
 import type { ScheduleDeps, TopicLlm } from "./model.js";
 import { scheduleById } from "./repo.js";
 import { createScheduleRunner } from "./scheduler.js";
@@ -35,6 +40,8 @@ function setup(options: {
   readonly generation: TopicGeneration;
   readonly items?: readonly string[];
   readonly answers: (call: Call) => Promise<string>;
+  // In place of the fake: the real standalone call, for the tests that meter it.
+  readonly topicLlm?: TopicLlm;
 }) {
   const h = startFixture();
   const templateId = randomUUID();
@@ -57,13 +64,13 @@ function setup(options: {
   const waiting: ScheduleTopicsEvent[] = [];
   const topicLlm: TopicLlm = async (call) => {
     calls.push({ provider: call.provider, model: call.model, messages: call.messages });
-    return options.answers(call);
+    return { text: await options.answers(call), usage: null };
   };
   const deps: ScheduleDeps = {
     ...h.deps,
     clock: { now: () => now, sleep: async () => undefined },
     template: (id, version) => templateById(h.deps.db, id, version),
-    topicLlm,
+    topicLlm: options.topicLlm ?? topicLlm,
     topicsWaiting: (event) => {
       waiting.push(event);
     },
@@ -334,6 +341,73 @@ it("records a failure with a plain reason and retries on a later tick, not in a 
     expect(s.calls).toHaveLength(2);
     expect(s.read().items.map((item) => item.title)).toEqual(["Beholders"]);
     expect(s.read().topics).toMatchObject({ error: null, failedAt: null });
+  } finally {
+    s.h.close();
+  }
+});
+
+it("asks through the attempt wrapper, retrying a dropped call, and meters it on the schedule", async () => {
+  let asked = 0;
+  const port: LlmPort = {
+    id: "template-llm",
+    capabilities: { streams: true, reportsUsage: true, webSearch: false },
+    models: () => Promise.resolve([]),
+    complete: async function* () {
+      asked += 1;
+      if (asked === 1) throw providerError({ kind: "dropped", message: "Connection reset." });
+      yield { type: "delta", text: JSON.stringify(["Beholders"]) };
+      yield {
+        type: "done",
+        usage: { inputTokens: 400, outputTokens: 20 },
+        finishReason: "stop",
+      };
+    },
+  };
+
+  const s = setup({
+    generation: queue(1),
+    answers: async () => "[]",
+    topicLlm: (call) =>
+      standaloneLlm(
+        standaloneOver(
+          { llm: port },
+          {
+            clock: fixedClock("2026-09-12T00:00:00.000Z"),
+            meter: createStandaloneMeter({
+              db: s.h.deps.db,
+              ids: { next: randomUUID },
+              clock: fixedClock("2026-09-12T00:00:00.000Z"),
+              catalogue: () => s.h.deps.catalogue.read(),
+            }),
+          },
+        ),
+        call,
+      ),
+  });
+  const db = s.h.deps.db;
+  try {
+    expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 1, mode: "queue" });
+    expect(asked).toBe(2);
+    expect(
+      db
+        .prepare(
+          "SELECT owner_kind, owner_id, channel_id, purpose, kind, provider, model, tokens_in, tokens_out FROM standalone_usage",
+        )
+        .all(),
+    ).toEqual([
+      {
+        owner_kind: "schedule",
+        owner_id: s.id,
+        channel_id: defaultChannelId,
+        purpose: "topics",
+        kind: "llm",
+        provider: "template-llm",
+        model: "template-model",
+        tokens_in: 400,
+        tokens_out: 20,
+      },
+    ]);
+    expect(db.prepare("SELECT count(*) AS n FROM provider_usage").get()).toEqual({ n: 0 });
   } finally {
     s.h.close();
   }

@@ -94,6 +94,9 @@ export const libraryTables = [
   "cast_images",
   "episode_memories",
   "channel_videos",
+  // Since 3.0.0: what topic generation, episode summaries and cast pictures cost, which
+  // belongs to a schedule or channel rather than a project.
+  "standalone_usage",
 ] as const;
 export type LibraryTable = (typeof libraryTables)[number];
 
