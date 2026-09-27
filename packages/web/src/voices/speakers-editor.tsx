@@ -1,5 +1,6 @@
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { auditionLine } from "@app/slices/voices/audition.js";
+import { speakerFromCast } from "@app/slices/voices/cast.js";
 import {
   defaultVoicesSettings,
   paceSteps,
@@ -18,6 +19,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { quoteAuditions, speakAudition, type Voice } from "@/api";
 import { useApp } from "@/app-context";
+import type { CastMember } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
@@ -43,7 +45,10 @@ export function SpeakersEditor({
   voices,
   script,
   problem,
+  cast = [],
 }: {
+  // The channel's cast; members with a voice can be added as speakers.
+  readonly cast?: readonly CastMember[] | undefined;
   readonly value: VoicesSettings | undefined;
   readonly onChange: (next: VoicesSettings | undefined) => void;
   readonly providers: readonly ProviderStatus[];
@@ -77,6 +82,12 @@ export function SpeakersEditor({
   const set = (patch: Partial<VoicesSettings>): void => {
     if (value !== undefined) onChange({ ...value, ...patch });
   };
+  // Members with a voice who are not speakers yet.
+  const voiced = cast.filter(
+    (member) =>
+      member.voice !== undefined &&
+      !(value?.speakers ?? []).some((speaker) => speaker.castId === member.id),
+  );
   const setSpeaker = (index: number, next: Speaker): void => {
     if (value === undefined) return;
     set({ speakers: value.speakers.map((one, at) => (at === index ? next : one)) });
@@ -155,6 +166,25 @@ export function SpeakersEditor({
               Add speaker
             </Button>
             <OptionPicker
+              label="Add from the cast"
+              value=""
+              placeholder={
+                voiced.length === 0
+                  ? "No cast member has a voice yet"
+                  : `Pick one of ${String(voiced.length)}`
+              }
+              options={voiced.map((member) => ({ value: member.id, label: member.name }))}
+              disabled={voiced.length === 0 || value.speakers.length >= speakersMax}
+              problem={undefined}
+              onPick={(id) => {
+                const member = voiced.find((one) => one.id === id);
+                if (member !== undefined)
+                  set({
+                    speakers: [...value.speakers, speakerFromCast(member, castRole(value))],
+                  });
+              }}
+            />
+            <OptionPicker
               field="voices.turnGapSeconds"
               label="Gap between turns"
               value={String(value.turnGapSeconds)}
@@ -191,6 +221,14 @@ export function SpeakersEditor({
       )}
     </div>
   );
+}
+
+// The role a cast member usually takes in the format.
+function castRole(value: VoicesSettings): SpeakerRole {
+  if (value.format === "podcast") return "host";
+  if (value.format === "interview")
+    return value.speakers.some((speaker) => speaker.role === "host") ? "guest" : "host";
+  return value.speakers.some((speaker) => speaker.role === "narrator") ? "character" : "narrator";
 }
 
 function newSpeaker(speakers: readonly Speaker[]): Speaker {

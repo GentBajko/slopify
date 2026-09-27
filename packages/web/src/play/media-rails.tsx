@@ -1,5 +1,6 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
 import type { ComponentProps, ReactNode } from "react";
+import type { CastMember } from "@/channels/api";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -29,7 +30,10 @@ export function AudioRail({
   onReattachFile,
   rawCounts,
   advanced,
+  cast,
 }: RailProps & {
+  // The draft channel's cast, which speakers can be picked from.
+  readonly cast?: readonly CastMember[] | undefined;
   readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"];
   // Intro, outro and the links that go with them, drawn inside the Advanced disclosure.
   readonly advanced?: ReactNode;
@@ -99,6 +103,7 @@ export function AudioRail({
                   voices={voices}
                   script={form.sources.article === "provide" ? form.provided.article : undefined}
                   problem={problem}
+                  cast={cast}
                   onChange={(next) => update({ voices: next })}
                 />
                 {form.voices === undefined ? null : (

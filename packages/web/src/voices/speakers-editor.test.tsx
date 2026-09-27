@@ -1,3 +1,4 @@
+import type { CastMember } from "@app/slices/channels/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { VoicesSettings } from "@app/slices/voices/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
@@ -152,4 +153,60 @@ it("shows the script turn by turn under each speaker, with its sections", async 
     "listitem",
   );
   expect(turns.map((turn) => turn.textContent)).toEqual(["OneAlexHello.", "SamHi."]);
+});
+
+it("adds a cast member with a voice as a speaker, keeping the link to the cast", async () => {
+  const user = userEvent.setup();
+  const member = (id: string, name: string, kind: CastMember["kind"]): CastMember => ({
+    id,
+    channelId: "c",
+    kind,
+    name,
+    aliases: [],
+    description: "",
+    version: 1,
+    images: [],
+    createdAt: "",
+    updatedAt: "",
+  });
+  const cast: readonly CastMember[] = [
+    {
+      ...member("0b7c1f2e-0000-4000-8000-000000000001", "Ada", "character"),
+      voice: { provider: "openai-tts", model: "tts-1", voice: "echo", pace: 1.1 },
+    },
+    member("0b7c1f2e-0000-4000-8000-000000000002", "Harbor", "place"),
+  ];
+  function WithCast(): ReactElement {
+    const [value, setValue] = useState<VoicesSettings | undefined>(undefined);
+    return (
+      <>
+        <SpeakersEditor
+          value={value}
+          onChange={setValue}
+          providers={providers}
+          voices={voices}
+          cast={cast}
+        />
+        <output aria-label="Saved voices">{JSON.stringify(value ?? null)}</output>
+      </>
+    );
+  }
+  renderRouted(<WithCast />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "podcast");
+  const picker = screen.getByLabelText("Add from the cast");
+  expect(
+    within(picker)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["Pick one of 1", "Ada"]);
+  await user.selectOptions(picker, "0b7c1f2e-0000-4000-8000-000000000001");
+  expect(saved()?.speakers.at(-1)).toEqual({
+    id: "cast-0b7c1f2e",
+    name: "Ada",
+    role: "host",
+    voice: { provider: "openai-tts", model: "tts-1", voice: "echo" },
+    pace: 1.1,
+    castId: "0b7c1f2e-0000-4000-8000-000000000001",
+  });
+  expect(screen.getByLabelText<HTMLSelectElement>("Add from the cast").disabled).toBe(true);
 });

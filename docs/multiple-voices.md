@@ -39,6 +39,12 @@ the glossary's `Term: /IPA/` format (Inworld TTS-2 voices). The voice under Audi
 the intro and outro. **Audition** reads the speaker's first line of the script (or a sample
 line) in their voice; the button shows the price first and nothing is spoken until you click.
 
+**Speakers are cast.** A channel's cast member can have a voice (Channels → the channel → Cast
+→ edit a member → Voice). **Add from the cast** on the Speakers panel adds any member with a
+voice; every run started later takes that member's voice, pace and pronunciations as they are
+then, so a host or a character sounds the same in every episode. Projects already made keep the
+voice they were made with.
+
 Every turn is its own request in its speaker's voice, joined with the **gap between turns**.
 Consecutive turns of speakers on ElevenLabs v3 go to ElevenLabs' Text to Dialogue in one
 request unless **One request for consecutive turns** is off. Changing one speaker's voice

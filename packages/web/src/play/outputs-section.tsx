@@ -1,6 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
+import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
@@ -16,11 +17,13 @@ export function OutputsSection(
 ): ReactElement {
   const session = usePlaySession();
   const document = session.document;
+  const cast = useDraftCast();
   const { form, entries, problem, update } = props;
   return (
     <>
       <AudioRail
         {...props}
+        cast={cast}
         rawCounts={{
           ...document.form.chunking,
           onChange: (mode, amount) =>
