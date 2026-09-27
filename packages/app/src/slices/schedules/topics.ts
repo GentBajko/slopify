@@ -149,7 +149,9 @@ async function ask(
   ]);
   let answer: string;
   try {
-    answer = await deps.topicLlm({
+    const answered = await deps.topicLlm({
+      owner: { kind: "schedule", id: schedule.id },
+      purpose: "topics",
       provider: llm.provider,
       model: llm.model,
       ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
@@ -161,6 +163,7 @@ async function ask(
       ),
       signal,
     });
+    answer = answered.text;
   } catch (error) {
     if (options.signal?.aborted === true)
       return { ok: false, reason: "failed", message: "Slopify was closing." };

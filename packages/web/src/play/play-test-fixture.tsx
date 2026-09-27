@@ -1,8 +1,12 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
-import type { DraftAttachment, DraftView } from "@app/slices/play-drafts/model.js";
+import type {
+  DraftAttachment,
+  DraftView,
+  PlayDraftDocument,
+} from "@app/slices/play-drafts/model.js";
 import { createDraftInputSchema, saveDraftInputSchema } from "@app/slices/play-drafts/schema.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import { type RenderResult, screen } from "@testing-library/react";
+import { act, type RenderResult, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
@@ -300,16 +304,53 @@ export function draftView(id: string, title = "Saved draft", version = 1): Draft
   };
 }
 
+// A draft with every stage generated and every choice answered, as filling the whole form by
+// hand leaves it. Tests about what comes after a complete setup start from it instead of
+// clicking through fifteen controls first.
+export const generatedRun: PlayDraftDocument = {
+  ...freshDraftDocument,
+  form: {
+    ...freshDraftDocument.form,
+    title: "Rope Tricks",
+    llm: { provider: "claude-code", model: "sonnet" },
+    audio: {
+      ...freshDraftDocument.form.audio,
+      provider: "elevenlabs",
+      model: "eleven_multilingual_v2",
+      voice: "eleven-narrator",
+    },
+    images: { provider: "fal", model: "fal-ai/flux-2" },
+    articlePrompt: "Dossier",
+    imagePrompts: [{ name: "Oils", number: "1" }],
+    values: { topic: "rope", minWords: "3000", style: "oil on canvas" },
+  },
+};
+
+// Mounts Play on a fresh draft, or on `start` when given, once the lists it picks from arrived.
 export async function mountPlay(
   overrides: Readonly<Record<string, Answer>> = {},
-): Promise<{ readonly created: ReturnType<typeof vi.fn>; readonly requests: readonly Request[] }> {
+  start?: PlayDraftDocument,
+): Promise<{
+  readonly created: ReturnType<typeof vi.fn>;
+  readonly requests: readonly Request[];
+  readonly session: () => PlaySession;
+}> {
   const created = vi.fn();
   const requests: Request[] = [];
   const deps = testDeps(playRoutes(overrides));
   const original = deps.api.fetch;
+  let captured: PlaySession | undefined;
+  function Capture(): ReactElement {
+    captured = usePlaySession();
+    return <PlayForm onCreated={created} />;
+  }
+  const session = (): PlaySession => {
+    if (captured === undefined) throw new Error("Play is not mounted");
+    return captured;
+  };
   renderRouted(
     <PlayDraftProvider>
-      <PlayForm onCreated={created} />
+      <Capture />
     </PlayDraftProvider>,
     {
       ...deps,
@@ -324,7 +365,11 @@ export async function mountPlay(
     },
   );
   await screen.findByRole("option", { name: "Dossier" });
-  return { created, requests };
+  if (start !== undefined)
+    await act(async () => {
+      session().edit(start);
+    });
+  return { created, requests, session };
 }
 
 export function deferred(): {
@@ -373,6 +418,13 @@ export function mountSession(
     </PlayDraftProvider>,
     testDeps(playRoutes(over)),
   );
+}
+
+// Enters a whole value at once, as a paste does: one input event where typing would render
+// Play once per key.
+export async function fill(element: HTMLElement, text: string): Promise<void> {
+  await userEvent.click(element);
+  await userEvent.paste(text);
 }
 
 // Play folds its settings into summary rows; a test opens the row that holds a control with

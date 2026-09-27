@@ -1,19 +1,15 @@
 import type { ScheduleTopicsEvent } from "../../kernel/events.js";
-import type { Message, ThinkingMode } from "../../kernel/ports/llm.js";
+import type { StandaloneLlm } from "../../kernel/runner/standalone.js";
 import type { DraftStartDeps } from "../play-drafts/model.js";
 import type { ProjectTemplate } from "../project-templates/model.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
 
 export type { ScheduleCreate, ScheduleRun, ScheduleSummary, ScheduleUpdate } from "./schema.js";
 
-// One LLM answer, as text. `main.ts` builds it from the provider registry; tests pass a fake.
-export type TopicLlm = (call: {
-  readonly provider: string;
-  readonly model: string;
-  readonly thinking?: ThinkingMode | undefined;
-  readonly messages: readonly Message[];
-  readonly signal: AbortSignal;
-}) => Promise<string>;
+// One LLM answer, asked through `kernel/runner/standalone.ts` so it gets the stage calls'
+// retries and lands on Home's run cost against the schedule. `main.ts` builds it from the
+// provider registry; tests pass a fake.
+export type TopicLlm = StandaloneLlm;
 
 export interface ScheduleDeps extends DraftStartDeps {
   readonly template: (id: string, version: number) => ProjectTemplate | undefined;

@@ -7,6 +7,7 @@ import { timingOperation } from "../subtitles/model.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
+import { portraitValues } from "../voices/portraits.js";
 import type { AudioRecipes } from "./recipe-audio.js";
 import {
   type RecipeContext,
@@ -122,7 +123,14 @@ export function exportRecipes(
             kind: "local",
             version: 1,
             operation: "manual-cues-v1",
-            values: [cues.audioFingerprint, cues.cues.map((cue) => ({ ...cue }))],
+            // A cue's speaker only when it has one, so captions edited before speakers were
+            // kept (and every one-voice run's) keep their fingerprint.
+            values: [
+              cues.audioFingerprint,
+              cues.cues.map(({ speaker, ...cue }) =>
+                speaker === undefined ? { ...cue } : { ...cue, speaker },
+              ),
+            ],
           },
           audio.keys,
         );
@@ -172,13 +180,16 @@ export function manualCuesNeedReview(
 }
 
 // How the captions show the speakers: names, colours by place, name tags and, for a podcast or
-// interview, the speaker panel, which runs to the end of the narration.
+// interview, the speaker panel, which runs to the end of the narration. The panel's portraits
+// only when a speaker has one; the render reads the caption file's fingerprint, so it follows.
 function captionSpeakerValues(voices: VoicesSettings, media: string | null): FingerprintValue {
+  const portraits = portraitValues(voices);
   return [
     "voice-captions-v1",
     voices.format,
     voices.nameTags,
     voices.speakers.map((speaker) => [speaker.id, speaker.name.trim()]),
     media,
+    ...(portraits === undefined ? [] : [["portraits", [...portraits]]]),
   ];
 }

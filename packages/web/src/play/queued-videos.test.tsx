@@ -52,8 +52,12 @@ it("never offers to queue more videos than the reviewed draft will start", async
     /saved draft has 1 video, but this page shows 3/,
   );
 
-  // The page is saved again with its three videos; the next review covers all of them.
-  await waitFor(() => expect(harness.session().status).toBe("saved"));
+  // The page is saved again with its three videos (at once here, not after the autosave
+  // pause); the next review covers all of them.
+  await act(async () => {
+    await harness.session().flush();
+  });
+  expect(harness.session().status).toBe("saved");
   const firstReview = harness.requests.findIndex((request) => request.url.endsWith("/review"));
   const saves = harness.requests.slice(firstReview).filter((request) => request.method === "PUT");
   expect(saves).toHaveLength(1);

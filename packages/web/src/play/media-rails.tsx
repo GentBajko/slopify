@@ -34,6 +34,7 @@ export function AudioRail({
   advanced,
   cast,
   language,
+  titled,
 }: RailProps & {
   // The project language the voice list is filtered by; absent lists every voice.
   readonly language?: string | undefined;
@@ -63,7 +64,7 @@ export function AudioRail({
     .join(" · ");
 
   return (
-    <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"}>
+    <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"} titled={titled}>
       <SourceSwitch kind="audio" form={form} update={update} />
       <div className={railControls}>
         {form.sources.audio === "generate" ? (
@@ -124,6 +125,7 @@ export function AudioRail({
                   script={form.sources.article === "provide" ? form.provided.article : undefined}
                   problem={problem}
                   cast={cast}
+                  language={language}
                   onChange={(next) => update({ voices: next })}
                 />
                 {form.voices === undefined ? null : (
@@ -220,13 +222,14 @@ export function ImagesRail({
   onReattachFile,
   rawNumbers,
   more,
+  titled,
 }: RailProps & {
   readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"];
   // Controls shown under the prompts while images are generated: more images for long videos.
   readonly more?: ReactNode;
 }) {
   return (
-    <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
+    <StageRail kind="images" name="Images" dim={form.sources.images === "off"} titled={titled}>
       <SourceSwitch kind="images" form={form} update={update} />
       <div className={railControls}>
         {form.sources.images === "generate" ? (

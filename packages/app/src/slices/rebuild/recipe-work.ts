@@ -2,9 +2,14 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
-import { skippedGlossaryNotice } from "../narration/pronunciation.js";
+import {
+  skippedGlossaryNotice,
+  skippedSpeakerPronunciations,
+  skippedSpeakerPronunciationsNotice,
+} from "../narration/pronunciation.js";
 import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
 import { defaultShortsPrompt, shortsImageUpperBound } from "../shorts/model.js";
+import { usesVoices } from "../voices/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
 import type { RebuildPreview, RebuildWork } from "./model.js";
 import { matchingNarrationPiece } from "./narration-reuse.js";
@@ -17,6 +22,7 @@ import {
   selectedReference,
 } from "./recipe-model.js";
 import { narrationGlossary } from "./recipe-text.js";
+import { readsIpa } from "./recipe-voices.js";
 
 export interface RevisionWorkPlan {
   readonly recipes: readonly ResolvedWorkRecipe[];
@@ -26,6 +32,8 @@ export interface RevisionWorkPlan {
   readonly wholeRequestNotice: string | null;
   // Pronunciation Glossary rows the narration skips, for the rebuild review to show.
   readonly glossaryNotice?: string | null;
+  // Speaker pronunciation rows the narration skips, for the same review.
+  readonly speakerPronunciationNotice?: string | null;
   readonly costs: CostEstimate;
 }
 export function planRevisionWork(
@@ -135,6 +143,16 @@ export function planRevisionWork(
     glossaryNotice:
       glossary?.ok === true && glossary.skipped !== undefined
         ? skippedGlossaryNotice(glossary.skipped)
+        : null,
+    // Only speakers whose voice reads IPA use their pronunciations at all.
+    speakerPronunciationNotice:
+      usesVoices(revision.config) && revision.config.voices !== undefined
+        ? skippedSpeakerPronunciationsNotice(
+            skippedSpeakerPronunciations(
+              revision.config.voices.speakers.filter(readsIpa),
+              revision.config.language,
+            ),
+          )
         : null,
     costs: estimateRequests(priced, catalogue),
   };

@@ -205,3 +205,55 @@ it("resolves generated glossary before literal/generated entry audio", async () 
     h.close();
   }
 }, 30_000);
+
+it("names the speaker pronunciation rows a multi-voice run skips in the rebuild review", async () => {
+  const inworld = { provider: "inworld", model: "inworld-tts-2" };
+  const h = await narrationFixture("Alex: Arda waits.\n\nSam: So does Tiamat.", {
+    config: {
+      audio: { ...inworld, voice: "voice" },
+      voices: {
+        format: "podcast",
+        source: "script",
+        speakers: [
+          {
+            id: "alex",
+            name: "Alex",
+            role: "host",
+            voice: { ...inworld, voice: "a" },
+            pronunciations: "Arda: /ˈɑɹdə/\nTiamat: TEE-ah-mat",
+          },
+          // An OpenAI voice never reads IPA, so its rows are not the run's concern.
+          {
+            id: "sam",
+            name: "Sam",
+            role: "host",
+            voice: { provider: "openai-tts", model: "tts", voice: "s" },
+            pronunciations: "Tiamat: TEE-ah-mat",
+          },
+        ],
+        turnGapSeconds: 0.35,
+        nameTags: false,
+        nativeDialogue: false,
+        audioFiles: false,
+      },
+    },
+    catalogue: preparationCatalogue,
+  });
+  try {
+    const plan = executionPlan(h.deps, h.view(), preparationCatalogue);
+    expect(plan.speakerPronunciationNotice).toContain("Alex: entry 2: use slash-delimited");
+    expect(plan.speakerPronunciationNotice).not.toContain("Sam");
+    expect(plan.speakerPronunciationNotice).not.toContain("TEE-ah-mat");
+    const preview = planPreview(
+      h.deps,
+      h.view(),
+      preparationCatalogue,
+      { kind: "allAffected" },
+      "preview",
+    );
+    if (!preview.ok) throw new Error(preview.reason);
+    expect(preview.value.preview.warnings).toContain(plan.speakerPronunciationNotice);
+  } finally {
+    h.close();
+  }
+});

@@ -34,10 +34,13 @@ export interface TurnGroup {
   readonly native: boolean;
 }
 
+// `spokenLength` is how long a turn's text is once it goes to the voice (narration aliases can
+// make it longer than the script), so a request never passes the provider's limit.
 export function groupTurns(
   turns: readonly ScriptTurn[],
   speakers: readonly Speaker[],
   nativeDialogue: boolean,
+  spokenLength: (text: string) => number = (text) => text.length,
 ): readonly TurnGroup[] {
   const byId = new Map(speakers.map((speaker) => [speaker.id, speaker]));
   const groups: { turns: ScriptTurn[]; native: boolean }[] = [];
@@ -56,7 +59,7 @@ export function groupTurns(
       nativeDialogue && speaker !== undefined
         ? dialogueCapability(speaker.voice.provider, speaker.voice.model)
         : undefined;
-    if (own === undefined || speaker === undefined || turn.text.length > own.maxCharacters) {
+    if (own === undefined || speaker === undefined || spokenLength(turn.text) > own.maxCharacters) {
       close();
       groups.push({ turns: [turn], native: false });
       continue;
@@ -67,7 +70,7 @@ export function groupTurns(
     const voices = new Set(
       [...current, turn].map((one) => byId.get(one.speaker)?.voice.voice ?? ""),
     );
-    const characters = [...current, turn].reduce((sum, one) => sum + one.text.length, 0);
+    const characters = [...current, turn].reduce((sum, one) => sum + spokenLength(one.text), 0);
     if (
       current.length > 0 &&
       (mine !== signature ||

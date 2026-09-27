@@ -1,7 +1,6 @@
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
-import { type ReactElement, useId } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import type { ReactElement } from "react";
+import { Field, Input } from "@/components/kit/field";
 import { SubtitleControls } from "@/subtitles/controls";
 import { usePlaySession } from "./draft-context";
 import { FormatPicker } from "./format-picker";
@@ -14,20 +13,21 @@ export function StyleSection({
   const session = usePlaySession();
   const { document } = session;
   const { form } = document;
-  const sampleId = useId();
   const change = (subtitles: SubtitleConfig): void =>
     session.edit({
       ...document,
       form: { ...form, subtitles: { ...subtitles, fontSize: form.subtitles.fontSize } },
     });
   return (
-    <div data-tour="play-subtitles" className="flex min-w-0 flex-col gap-6 py-6">
-      <p className="text-body text-ink2">See frame and caption changes in the preview as you go.</p>
+    <div data-tour="play-subtitles" className="flex min-w-0 flex-col gap-4 py-4">
+      <p className="m-0 text-small text-ink-2">
+        See frame and caption changes in the preview as you go.
+      </p>
       <FormatPicker
         value={form.format}
         onPick={(format) => session.edit({ ...document, form: { ...form, format } })}
       />
-      <div className="border-t border-line pt-6">
+      <div className="border-t border-line pt-4">
         <SubtitleControls
           showPreview={false}
           illustratedPositions
@@ -55,19 +55,16 @@ export function StyleSection({
           problem={problem}
         />
       </div>
-      <div className="border-t border-line pt-6">
-        <Label htmlFor={sampleId} className="mb-2">
-          Preview text
-        </Label>
+      <Field
+        label="Preview text"
+        help="Just a sample. Your actual captions come from the narration."
+        className="border-t border-line pt-4"
+      >
         <Input
-          id={sampleId}
           value={document.previewText}
           onChange={(event) => session.edit({ ...document, previewText: event.target.value })}
         />
-        <p className="mt-2 text-small text-ink3">
-          Just a sample. Your actual captions come from the narration.
-        </p>
-      </div>
+      </Field>
     </div>
   );
 }

@@ -31,6 +31,11 @@ timing matches each written word to its aliased speech. Where an alias and the P
 Glossary name the same word, the alias wins. A project's narration is rebuilt only where an
 alias it uses appears in the text.
 
+An alias whose written form has several words (`et al.`, `New York City`) is read with single
+spaces around it: "Grey et al. wrote" goes to the voice as "Grey and others wrote", never with a
+doubled space where the later words were. Multi-speaker runs apply aliases to each turn,
+including turns sent together to ElevenLabs' Text to Dialogue.
+
 ## Prompt history
 
 Every save of a prompt or intro/outro keeps a version (author "you", with its time); a save
@@ -106,6 +111,15 @@ renders it from scratch. Captions show in the preview only when they are burned 
 caption file is drawn by the player in its own style. The pictures are three stills and the
 sound is silence, all made by ffmpeg on your computer, so a preview never calls a provider and
 costs nothing.
+
+On Play the preview is drawn on a real picture when there is one, so the Look and captions are
+judged on something like the video's own images: the establishing image the draft uploaded
+(Images → Establishing image → Upload, or the one a template brings along), else a picture of
+the channel's cast member the title or a keyword names, else the first cast member with a
+picture. The rail says which ("Drawn on Tiamat's picture"). The server reads it from the
+upload, the project output or the cast picture itself (`slices/style-preview/images.ts`); the
+request can also name a project's own output, for Edit project. A picture the server can no
+longer find, or a file that is not a PNG, JPEG or WebP, falls back to the stills.
 
 Previews are saved in `<data-dir>/cache/style-preview/`, named by a hash of the settings, so a
 style you have seen before plays at once; the 200 most recent are kept, and deleting the folder

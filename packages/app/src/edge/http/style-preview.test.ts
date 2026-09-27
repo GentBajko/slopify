@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
@@ -11,12 +11,17 @@ import { byteRange, stylePreviewRoutes } from "./style-preview.js";
 // The routes with a renderer that writes a few bytes instead of running ffmpeg.
 let dir = "";
 let calls: StylePreviewSettings[] = [];
+let stills: { readonly path: string | undefined; readonly bytes: string | undefined }[] = [];
 let fail: StylePreviewError | undefined;
 let gate: Promise<void> = Promise.resolve();
 const log = { write: (): void => {} };
 
-const fake: StylePreviewRenderer = async (settings, output) => {
+const fake: StylePreviewRenderer = async (settings, output, _signal, picture) => {
   calls.push(settings);
+  stills.push({
+    path: picture,
+    bytes: picture === undefined ? undefined : readFileSync(picture).toString("hex"),
+  });
   await gate;
   if (fail !== undefined) throw fail;
   writeFileSync(output, `mp4 #${String(calls.length)} ${settings.format}`);
@@ -42,6 +47,7 @@ const post = (target: Hono, json: unknown) =>
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "slopify-style-preview-"));
   calls = [];
+  stills = [];
   fail = undefined;
   gate = Promise.resolve();
 });
@@ -135,4 +141,41 @@ it("answers that the preview is unavailable without a renderer", async () => {
   const bare = new Hono().route("/api/style-preview", stylePreviewRoutes({}));
   const response = await post(bare, body);
   expect(response.status).toBe(503);
+});
+
+it("draws the preview on a picture the server finds, and on the stills when it finds none", async () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 7]);
+  const target = new Hono().route(
+    "/api/style-preview",
+    stylePreviewRoutes({
+      stylePreviews: createStylePreviews({
+        dir,
+        render: fake,
+        log,
+        pictures: (image) =>
+          image.kind === "picture" && image.sha256 === "b".repeat(64)
+            ? { bytes: png, extension: ".png", sha256: "c".repeat(64) }
+            : undefined,
+      }),
+    }),
+  );
+  const plain = (await (await post(target, body)).json()) as { hash: string };
+  const drawn = (await (
+    await post(target, { ...body, image: { kind: "picture", sha256: "b".repeat(64) } })
+  ).json()) as { hash: string };
+  expect(drawn.hash).not.toBe(plain.hash);
+  expect(calls.at(-1)?.image).toBe("c".repeat(64));
+  expect(stills.at(-1)?.path).toMatch(/\.still\.png$/);
+  expect(stills.at(-1)?.bytes).toBe("89504e470d0a1a0a07");
+  // The copy lives only as long as the render.
+  expect(existsSync(stills.at(-1)?.path ?? "")).toBe(false);
+  // A picture that is gone renders the stills, the same preview as asking for none.
+  const gone = (await (
+    await post(target, { ...body, image: { kind: "upload", stagedFileId: "gone" } })
+  ).json()) as { hash: string; cached: boolean };
+  expect(gone).toMatchObject({ hash: plain.hash, cached: true });
+  expect(stills[0]?.path).toBeUndefined();
+  expect((await post(target, { ...body, image: { kind: "picture", sha256: "../x" } })).status).toBe(
+    400,
+  );
 });

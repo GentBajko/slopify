@@ -18,6 +18,13 @@ const cue = z
     text: z.string().trim().min(1).max(10000),
     start: z.number().finite().nonnegative(),
     end: z.number().finite().positive(),
+    // The speaker's id on a multi-voice run (`voices/model.ts`); absent everywhere else.
+    speaker: z
+      .string()
+      .min(1)
+      .max(60)
+      .regex(/^[a-z0-9-]+$/)
+      .optional(),
   })
   .strict()
   .refine((value) => value.end > value.start, {

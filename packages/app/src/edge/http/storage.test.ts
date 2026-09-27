@@ -16,6 +16,7 @@ it("reports aggregate and per-project storage without exposing backup contents",
       data: expect.any(Number),
       projects: 0,
       staging: 0,
+      trash: { projects: 0, bytes: 0 },
       byProject: [],
     });
   } finally {

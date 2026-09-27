@@ -28,7 +28,13 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/providers": jsonAnswer({ providers: [] }),
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
     "GET /api/settings": jsonAnswer(settings),
-    "GET /api/storage": jsonAnswer({ data: 1024, projects: 512, staging: 128, byProject: [] }),
+    "GET /api/storage": jsonAnswer({
+      data: 1024,
+      projects: 512,
+      staging: 128,
+      trash: { projects: 0, bytes: 0 },
+      byProject: [],
+    }),
     ...extra,
   });
 }
@@ -241,11 +247,18 @@ describe("the settings screen", () => {
           data: 1024 * 1024,
           projects: 512 * 1024,
           staging: 128,
+          trash: { projects: 2, bytes: 256 * 1024 },
           byProject: [{ id: "p1", title: "A finished run", bytes: 42 }],
         }),
       }),
     );
     expect(await screen.findByText(/1 MB stored/)).not.toBeNull();
+    // Trashed projects' folders are shown apart from the live project files.
+    expect(
+      screen.getByText(
+        /256 KB project files · 128 B staged files · 256 KB in the trash \(2 deleted projects\), freed when removed for good/,
+      ),
+    ).not.toBeNull();
     expect(screen.getByText("A finished run")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Clean orphan files" })).not.toBeNull();
   });

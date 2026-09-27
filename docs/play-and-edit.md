@@ -18,9 +18,18 @@ Play is one path from topic to queue:
    Reviews, Channel. Each is one line of what the run will do. Change opens the stage's own
    editor under the row (Reviews opens the side panel with checkpoints, automatic reviews, the
    whole setup and the resolved prompts). Rows that need attention when a draft opens start open.
+   An editor never repeats its row's name: the stage the row is (Article, Narration's audio,
+   Images, the video export) starts at its **Source** switch, and only the parts inside it
+   (Research, Text generation, Thumbnail, Document) have headings. Fields use the 3.0 kit's
+   label and error style.
 5. **The right rail**: the rendered style preview, the videos count, the estimate (refreshed once
    typing pauses) and the Play key. When the key can't start, the reason is right under it, and
-   pressing it opens and focuses the field.
+   pressing it opens and focuses the field. The estimate shows the total; **Cost by stage**
+   folds the per-stage prices, their assumptions and the catalogue date under it.
+
+The language Play uses everywhere is the draft's own, else the channel's (`useDraftLanguage`):
+the voice lists, the Speakers panel and the Cuts control (a language without word timing cuts
+every N seconds) all follow a language inherited from the channel.
 
 Every Play action is in the command palette (Ctrl+K): Start or Queue, Add a topic, Save as
 template, Review the whole setup, Pick a template, and Change for each row.

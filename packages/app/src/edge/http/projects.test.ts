@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +11,9 @@ import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { ProjectSummary, RunDraft, Stage } from "../../slices/admission/model.js";
+import { defaultChannelId } from "../../slices/channels/model.js";
+import { createCastMember } from "../../slices/channels/service.js";
+import { defaultVoicesSettings } from "../../slices/voices/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -694,6 +698,77 @@ describe("planning and batch admission", () => {
     expect((await submit("Gondor")).status).toBe(200);
     expect(h.ticked).toHaveLength(1);
     expect(h.db.prepare("SELECT * FROM projects").all()).toHaveLength(2);
+    h.db.close();
+  });
+});
+
+describe("cast voices on API starts", () => {
+  // The Play review refreshes cast speakers from the cast (`play-drafts/review-inputs.ts`), and
+  // schedules go through that review; a draft sent whole to the API must get the same.
+  it("gives cast speakers the cast's current voice on a single start and on a batch", async () => {
+    const h = harness();
+    const castId = "0b8f6f0e-6a4b-4f55-9f0e-3d7c2b0a1c11";
+    const voice = { provider: "openai-tts", model: "tts-1", voice: "alloy" };
+    expect(
+      createCastMember({ db: h.db, clock, uuid: randomUUID }, defaultChannelId, {
+        id: castId,
+        kind: "character",
+        name: "Ada",
+        voice: { ...voice, voice: "nova", pace: 1.1 },
+      }).ok,
+    ).toBe(true);
+    const voiced = draft({
+      sources: {
+        research: "off",
+        article: "provide",
+        audio: "generate",
+        images: "off",
+        thumbnail: "off",
+        video: "off",
+      },
+      audio: voice,
+      voices: {
+        ...defaultVoicesSettings("podcast"),
+        // Saved in a template before the cast member's voice changed.
+        speakers: [
+          { id: "cast-0b8f6f0e", name: "Ada", role: "host", voice, castId },
+          { id: "sam", name: "Sam", role: "host", voice: { ...voice, voice: "echo" } },
+        ],
+      },
+    });
+    const speakersOf = (id: string) =>
+      (
+        JSON.parse(
+          String(h.db.prepare("SELECT config FROM projects WHERE id=?").get(id)?.config),
+        ) as RunDraft
+      ).voices?.speakers.map((one) => [one.id, one.voice.voice, one.pace]);
+
+    const single = await post(h.app, voiced);
+    expect(single.status).toBe(201);
+    const created = (await single.json()) as { project: { id: string } };
+    expect(speakersOf(created.project.id)).toEqual([
+      ["cast-0b8f6f0e", "nova", 1.1],
+      ["sam", "echo", undefined],
+    ]);
+
+    const batch = await h.app.request("/api/projects/batch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        requestId: "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+        draft: voiced,
+        items: [
+          { title: "One", values: {} },
+          { title: "Two", values: {} },
+        ],
+      }),
+    });
+    expect(batch.status).toBe(201);
+    const { queue } = (await batch.json()) as { queue: { projectId: string }[] };
+    expect(queue.map((entry) => speakersOf(entry.projectId)?.[0])).toEqual([
+      ["cast-0b8f6f0e", "nova", 1.1],
+      ["cast-0b8f6f0e", "nova", 1.1],
+    ]);
     h.db.close();
   });
 });

@@ -1,3 +1,4 @@
+import { skippedSpeakerPronunciations } from "@app/slices/narration/pronunciation.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { auditionLine } from "@app/slices/voices/audition.js";
 import { speakerFromCast } from "@app/slices/voices/cast.js";
@@ -21,9 +22,11 @@ import { quoteAuditions, speakAudition, type Voice } from "@/api";
 import { useApp } from "@/app-context";
 import type { CastMember } from "@/channels/api";
 import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
 import { Field, Input, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Switch } from "@/components/kit/switch";
+import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 
 // Multiple voices, the same control on Play and in Edit project: the format, where the script
@@ -46,9 +49,15 @@ export function SpeakersEditor({
   script,
   problem,
   cast = [],
+  language,
 }: {
   // The channel's cast; members with a voice can be added as speakers.
   readonly cast?: readonly CastMember[] | undefined;
+  // The project language. It filters each speaker's voice list and decides which IPA a
+  // speaker's pronunciations may use. Absent (a caller that doesn't know it) lists every voice
+  // and checks only what no language accepts, so a French project's rows are never reported
+  // for sounds English lacks.
+  readonly language?: string | undefined;
   readonly value: VoicesSettings | undefined;
   readonly onChange: (next: VoicesSettings | undefined) => void;
   readonly providers: readonly ProviderStatus[];
@@ -147,6 +156,7 @@ export function SpeakersEditor({
                 line={auditionLine(speaker, parsed)}
                 providers={providers}
                 voices={voices}
+                language={language}
                 problem={problem}
                 onChange={(next) => setSpeaker(index, next)}
                 onRemove={
@@ -248,6 +258,7 @@ function SpeakerRow({
   line,
   providers,
   voices,
+  language,
   problem,
   onChange,
   onRemove,
@@ -257,13 +268,23 @@ function SpeakerRow({
   readonly line: string;
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
+  readonly language: string | undefined;
   readonly problem?: ((field: string) => string | undefined) | undefined;
   readonly onChange: (next: Speaker) => void;
   readonly onRemove: (() => void) | undefined;
 }): ReactElement {
   const field = `voices.speakers.${String(index)}`;
-  const mine = voices.filter((voice) => voice.provider === speaker.voice.provider);
   const voice = speaker.voice;
+  const ofProvider = voices.filter((one) => one.provider === voice.provider);
+  const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
+  const mine = language === undefined ? ofProvider : byLanguage.listed;
+  const name = speaker.name.trim() || "this speaker";
+  // The rows the narration would skip, found as they are typed. "und" (undetermined) reads
+  // like any non-English language: full IPA, still never ARPAbet or tags.
+  const skipped = useMemo(
+    () => skippedSpeakerPronunciations([speaker], language ?? "und")[0]?.skipped ?? [],
+    [speaker, language],
+  );
   return (
     <li className="grid grid-cols-1 gap-3 py-3 min-[700px]:grid-cols-2" data-play-field={field}>
       <div className="flex min-w-0 items-end gap-2">
@@ -316,6 +337,15 @@ function SpeakerRow({
         problem={problem?.(`${field}.voice.voice`)}
         onPick={(picked) => onChange({ ...speaker, voice: { ...voice, voice: picked } })}
       />
+      {language === undefined ? null : (
+        <VoiceLanguageNote
+          language={language}
+          voice={ofProvider.find((one) => one.voiceId === voice.voice)}
+          hidden={byLanguage.hidden}
+          showAll={byLanguage.showAll}
+          onShowAll={byLanguage.setShowAll}
+        />
+      )}
       <OptionPicker
         field={`${field}.pace`}
         label="Pace"
@@ -355,6 +385,25 @@ function SpeakerRow({
           }}
         />
       </details>
+      {skipped.length === 0 ? null : (
+        <Callout
+          tone="waiting"
+          className="col-span-full"
+          title={`${String(skipped.length)} ${skipped.length === 1 ? "pronunciation" : "pronunciations"} for ${name} ${skipped.length === 1 ? "is" : "are"} skipped`}
+        >
+          <ul>
+            {skipped.map((row) => (
+              <li key={row.row}>
+                Entry {row.row}: {row.reason}.
+              </li>
+            ))}
+          </ul>
+          <p>
+            Those words are read as ordinary text; the other entries are used. Fix them in
+            Pronunciations for {name} above: one <code>Term: /IPA/</code> per line.
+          </p>
+        </Callout>
+      )}
       <div className="col-span-full flex flex-wrap items-center gap-3">
         <Audition speaker={speaker} line={line} />
         <span className="flex-1" />

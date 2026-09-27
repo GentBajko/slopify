@@ -267,7 +267,17 @@ describe.skipIf(process.platform === "win32")(
           aspect: "16:9",
           signal: AbortSignal.timeout(5000),
         }),
-      ).toEqual({ bytes: f.png, mime: "image/png" });
+      ).toEqual({
+        bytes: f.png,
+        mime: "image/png",
+        // The usage and the Codex plan windows the host read around the call cross the bridge
+        // in a header.
+        usage: { inputTokens: 1, outputTokens: 2 },
+        limits: {
+          before: [{ kind: "weekly", usedPercent: 12, resetsAt: "2100-01-01T00:00:00.000Z" }],
+          after: [{ kind: "weekly", usedPercent: 12, resetsAt: "2100-01-01T00:00:00.000Z" }],
+        },
+      });
       const calls = await f.calls();
       expect(calls).toHaveLength(4);
       for (const call of calls) {

@@ -19,6 +19,16 @@ The workspace holds four packages. `packages/app` is the CLI and the HTTP server
 `packages/web` the SPA it serves, `packages/site` the marketing page, and
 `packages/collector` the telemetry Worker.
 
+### Play tests
+
+Play is one large form, so every edit re-renders a lot of it, and the full suite runs its
+test files side by side. Its tests stay fast and steady with the helpers in
+`packages/web/src/play/play-test-fixture.tsx`: `mountPlay(routes, generatedRun)` starts from a
+complete setup instead of clicking through it, `openRow` opens only the row that holds a
+control, and `fill` enters a whole value at once. A test that needs a save waits for none: it
+calls `session().flush()` (the autosave pause itself is timed in `draft-session.test.tsx`), and
+a debounce that must pass is moved past with fake timers and `fireEvent`, never waited out.
+
 To run the collector against a real local D1 database:
 
 ```sh

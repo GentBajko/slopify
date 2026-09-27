@@ -533,8 +533,11 @@ function StorageTools() {
                 </span>
                 <span className="tabular-nums">
                   {" "}
-                  · {formatBytes(usage.data.projects)} project files ·{" "}
-                  {formatBytes(usage.data.staging)} staged files
+                  · {formatBytes(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
+                  files · {formatBytes(usage.data.staging)} staged files
+                  {usage.data.trash.projects > 0
+                    ? ` · ${formatBytes(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
+                    : null}
                 </span>
               </>
             ) : usage.error ? (
@@ -550,6 +553,12 @@ function StorageTools() {
       </div>
     </>
   );
+}
+
+// Deleted projects keep their folders for 30 days (Settings → Trash), so their space only
+// comes back once Delete now or the daily purge removes them for good.
+function trashedProjects(count: number): string {
+  return count === 1 ? "1 deleted project" : `${String(count)} deleted projects`;
 }
 
 function counted(label: string, counts: ItemCounts | undefined): string | null {

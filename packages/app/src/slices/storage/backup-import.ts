@@ -914,6 +914,10 @@ function commit(
         "SELECT 1 FROM backup_imports WHERE backup_id=?",
         manifest.backupId,
       );
+      // Run cost made for a schedule or channel: a call already here, from an earlier import
+      // of the same backup, is kept once.
+      for (const row of rowsOf(scratch, "SELECT * FROM standalone_usage ORDER BY rowid"))
+        insertRow(db, "standalone_usage", row, "INSERT OR IGNORE");
       let events = 0;
       if (!alreadyImported)
         for (const event of rowsOf(scratch, "SELECT * FROM telemetry_events ORDER BY rowid")) {

@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { admissionOf, freshDraftDocument } from "./draft-state";
+import { openRow } from "./play-test-fixture";
 import { reviewHarness, reviewStorage } from "./review-test-harness";
 
 beforeEach(() =>
@@ -29,10 +30,9 @@ it.each([
       kind === "images"
         ? h.session().document.form.imagePrompts[0]?.number
         : h.session().document.form.chunking[kind];
+    // Only the row that holds the count is opened; the rest of Play stays folded.
     const open = async () => {
-      await act(async () => {
-        await h.session().navigate("outputs");
-      });
+      await openRow(kind === "images" ? "Images" : "Narration");
       if (kind !== "images") await userEvent.click(screen.getByText(/Audio Advanced/));
     };
     await open();
@@ -67,11 +67,7 @@ it.each([
   async (field, label, values) => {
     const h = reviewHarness();
     await h.prepare(freshDraftDocument);
-    const open = async () => {
-      await act(async () => {
-        await h.session().navigate("outputs");
-      });
-    };
+    const open = () => openRow("Video and style");
     await open();
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(
       { imageSeconds: "15", edgeSilenceSeconds: "2", zoomPercent: "22.5" }[field],
@@ -107,9 +103,7 @@ it("offers seconds per image only for a video and the edge silence only with nar
       sources: { ...freshDraftDocument.form.sources, images: "off", video: "off" },
     },
   });
-  await act(async () => {
-    await h.session().navigate("outputs");
-  });
+  await openRow("Video and style");
   expect(screen.queryByLabelText("Seconds per image")).toBeNull();
   expect(screen.queryByLabelText("Zoom (%)")).toBeNull();
   expect(screen.queryByLabelText("Motion")).toBeNull();
@@ -122,11 +116,7 @@ it("offers seconds per image only for a video and the edge silence only with nar
 it("offers the motion beside the zoom and keeps the pick through save/reload", async () => {
   const h = reviewHarness();
   await h.prepare(freshDraftDocument);
-  const open = async () => {
-    await act(async () => {
-      await h.session().navigate("outputs");
-    });
-  };
+  const open = () => openRow("Video and style");
   await open();
   const motion = screen.getByLabelText<HTMLSelectElement>("Motion");
   expect(motion.value).toBe("zoom");
