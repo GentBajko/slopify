@@ -20,6 +20,7 @@ import type {
   PromptDraft,
   PromptKind,
 } from "@app/slices/library/model.js";
+import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type {
   Appearance,
   AppSettings,
@@ -252,6 +253,11 @@ export async function listProjects(api: Api): Promise<ProjectListBody> {
 
 export async function readProject(api: Api, id: string): Promise<ProjectBody> {
   return read<ProjectBody>(await api.client.projects[":id"].$get({ param: { id } }));
+}
+
+// The Run cost tab and the "Waiting for … limits" line (`edge/http/run-cost.ts`).
+export async function readRunCost(api: Api, id: string): Promise<RunCost> {
+  return read<RunCost>(await api.client.projects[":id"]["run-cost"].$get({ param: { id } }));
 }
 
 // A refused run is an expected outcome, not a fault: the server names every failing field
