@@ -19,7 +19,7 @@ import {
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import { Button, buttonClass } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { InfoTip } from "@/components/kit/info-tip";
