@@ -107,6 +107,12 @@ const request = (text: string, signal = AbortSignal.timeout(10_000)) => ({
   messages: [{ role: "user" as const, content: text }],
   signal,
 });
+// expect.poll gives up after one second by default. A fixture is a Node process: on a busy
+// CI machine starting one can take longer than that, and stopping one takes the runner's
+// one-second SIGTERM grace, then SIGKILL, then the kernel reaping it. Each wait below is
+// for that event, bounded well inside the group's budget rather than at the default.
+const started = { timeout: 8_000 };
+const stopped = { timeout: 8_000 };
 function alive(pid: number) {
   try {
     process.kill(pid, 0);
@@ -159,7 +165,7 @@ describe.skipIf(process.platform === "win32")(
           (error: unknown) => error,
         ),
       );
-      await expect.poll(async () => (await f.calls()).length).toBe(5);
+      await expect.poll(async () => (await f.calls()).length, started).toBe(5);
       await expect(collect(f.client.llm("codex").complete(request("sixth")))).rejects.toMatchObject(
         {
           fault: { kind: "unavailable" },
@@ -169,10 +175,7 @@ describe.skipIf(process.platform === "win32")(
       await server.stop();
       expect((await Promise.all(results)).every((result) => result instanceof Error)).toBe(true);
       for (const call of await f.calls()) {
-        // Beyond the runner's one-second SIGTERM grace, after which it sends SIGKILL.
-        await expect
-          .poll(() => alive(call.pid) || existsSync(call.cwd), { timeout: 5_000 })
-          .toBe(false);
+        await expect.poll(() => alive(call.pid) || existsSync(call.cwd), stopped).toBe(false);
       }
     });
     it("stops the host process when a stream consumer leaves early", async () => {
@@ -181,9 +184,8 @@ describe.skipIf(process.platform === "win32")(
       for await (const _ of f.client.llm("codex").complete(request("HOLD_CANCEL"))) break;
       const call = (await f.calls())[0];
       if (!call) throw new Error("Missing fixture process");
-      // Beyond the runner's one-second SIGTERM grace, after which it sends SIGKILL.
-      await expect.poll(() => alive(call.pid), { timeout: 5_000 }).toBe(false);
-      await expect.poll(() => existsSync(call.cwd), { timeout: 5_000 }).toBe(false);
+      await expect.poll(() => alive(call.pid), stopped).toBe(false);
+      await expect.poll(() => existsSync(call.cwd), stopped).toBe(false);
     });
     it.each(["canceled", "unavailable"] as const)(
       "records %s once when a submitted host call is aborted",
@@ -229,7 +231,7 @@ describe.skipIf(process.platform === "win32")(
           (signal) => collect(f.client.llm("codex").complete(request("HOLD_CANCEL", signal))),
           { kind: "llm", streaming: true },
         ).catch((error: unknown) => error);
-        await expect.poll(async () => (await f.calls()).length).toBe(1);
+        await expect.poll(async () => (await f.calls()).length, started).toBe(1);
         if (outcome === "canceled") parent.abort();
         else {
           now += 120_001;
@@ -240,7 +242,7 @@ describe.skipIf(process.platform === "win32")(
         expect(rows[1]).toMatchObject({ outcome });
         const call = (await f.calls())[0];
         if (!call) throw new Error("Missing fixture process");
-        await expect.poll(() => alive(call.pid)).toBe(false);
+        await expect.poll(() => alive(call.pid), stopped).toBe(false);
         expect(await f.calls()).toHaveLength(1);
       },
     );
@@ -289,18 +291,18 @@ describe.skipIf(process.platform === "win32")(
         f.client.llm("codex").complete(request("HOLD_CANCEL", cancel.signal)),
       ).catch((error: unknown) => error);
       const finishes = collect(f.client.llm("codex").complete(request("HOLD_FINISH")));
-      await expect.poll(async () => (await f.calls()).length).toBe(2);
+      await expect.poll(async () => (await f.calls()).length, started).toBe(2);
       const calls = await f.calls();
-      const stopped = calls.find((c) => c.held === "HOLD_CANCEL");
+      const held = calls.find((c) => c.held === "HOLD_CANCEL");
       const other = calls.find((c) => c.held === "HOLD_FINISH");
-      if (!stopped || !other || !stopped.child) throw new Error("Missing fixture process");
+      if (!held || !other || !held.child) throw new Error("Missing fixture process");
       cancel.abort();
       expect(await canceled).toBeInstanceOf(Error);
-      await expect.poll(() => alive(stopped.pid) || alive(stopped.child ?? 0)).toBe(false);
+      await expect.poll(() => alive(held.pid) || alive(held.child ?? 0), stopped).toBe(false);
       expect(alive(other.pid)).toBe(true);
       await writeFile(join(f.home, "finish"), "done");
       expect(await finishes).toContainEqual({ type: "delta", text: "Host fixture answer." });
-      await expect.poll(() => existsSync(stopped.cwd)).toBe(false);
+      await expect.poll(() => existsSync(held.cwd), stopped).toBe(false);
       expect(existsSync(other.cwd)).toBe(false);
     });
 
@@ -358,7 +360,7 @@ describe.skipIf(process.platform === "win32")(
       expect(await f.calls()).toHaveLength(1);
       const call = (await f.calls())[0];
       if (!call) throw new Error("Missing fixture process");
-      await expect.poll(() => alive(call.pid)).toBe(false);
+      await expect.poll(() => alive(call.pid), stopped).toBe(false);
     });
   },
 );
