@@ -45,6 +45,11 @@ voice; every run started later takes that member's voice, pace and pronunciation
 then, so a host or a character sounds the same in every episode. Projects already made keep the
 voice they were made with.
 
+Each speaker's voice list on Play, and a cast member's in the channel, shows the voices that
+speak the project's language (on Play the draft's or the channel's; for the cast, the channel's),
+with **Show all voices** for the rest and the same warning as the Audio voice when a picked voice
+is listed for other languages.
+
 Every turn is its own request in its speaker's voice, joined with the **gap between turns**.
 Consecutive turns of speakers on ElevenLabs v3 go to ElevenLabs' Text to Dialogue in one
 request unless **One request for consecutive turns** is off. Changing one speaker's voice
