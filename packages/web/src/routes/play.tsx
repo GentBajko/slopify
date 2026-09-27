@@ -34,9 +34,9 @@ import type { PlaySection } from "@/play/sections";
 import { SetupList, type SetupListRow } from "@/play/setup-list";
 import {
   rowOf,
-  rowsOfSection,
   rowProblem,
   rowSummary,
+  rowsOfSection,
   type SetupRowId,
   setupRows,
 } from "@/play/setup-rows";
@@ -195,7 +195,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     const found = target(field);
     setTouched((current) => new Set([...current, field, found.field]));
     // Another video's keywords open in their own side panel, over the form rather than Review.
-    void session.navigate(found.field.startsWith("items.") ? "content" : found.section, found.field);
+    void session.navigate(
+      found.field.startsWith("items.") ? "content" : found.section,
+      found.field,
+    );
   };
 
   // Rows that need attention when a draft is opened start open; the rest stay folded until
@@ -533,7 +536,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         }
         asideLabel="Review and start"
       >
-        <div className="grid min-w-0 grid-cols-1 items-start gap-4 min-[700px]:grid-cols-2">
+        <div
+          data-tour="play-options"
+          className="grid min-w-0 grid-cols-1 items-start gap-4 min-[700px]:grid-cols-2"
+        >
           <TemplateField topics={topics} onError={setTemplateError} />
           <TopicFields topics={topics} problem={problem} />
         </div>

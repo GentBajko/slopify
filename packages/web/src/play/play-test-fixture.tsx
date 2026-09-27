@@ -132,6 +132,14 @@ export function playRoutes(
       ],
     }),
     "POST /api/projects": jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201),
+    "GET /api/project-templates": jsonAnswer({ templates: [] }),
+    "POST /api/project-templates": async (request) => {
+      const body = (await request.json()) as { id: string; name: string; document: unknown };
+      return jsonAnswer(
+        { ...body, version: 1, updatedAt: "2026-09-27T00:00:00.000Z" },
+        201,
+      )(request);
+    },
     // The rendered style preview in the right rail; the tests never render video.
     "POST /api/style-preview": jsonAnswer({
       hash: "f".repeat(64),

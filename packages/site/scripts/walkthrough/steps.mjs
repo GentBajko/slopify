@@ -67,13 +67,15 @@ export const steps = [
     hold: 2_000,
     async run({ page, go, start, maybe, glide, choose, press }) {
       await go("/play");
-      const title = page.getByLabel(/project title/i).first();
+      const title = page.getByLabel(/^title$/i).first();
       await title.waitFor(quick);
       start();
       await maybe(() => title.pressSequentially("The Sunken Archive", { delay: 60 }));
       await maybe(() => choose(page.getByLabel(/article prompt/i).first(), "Sleep lore article"));
       await page.waitForTimeout(600);
-      // The prompt's {{Topic}} keyword appears as a field once the prompt is picked.
+      // The prompt's {{Topic}} keyword appears as a field once the prompt is picked, in the
+      // Title and keywords row.
+      await maybe(() => press(/^change title and keywords$/i));
       await maybe(() =>
         page
           .getByLabel(/^topic$/i)
@@ -81,7 +83,7 @@ export const steps = [
           .pressSequentially("The Sunken Archive", { delay: 50 }),
       );
       await page.waitForTimeout(800);
-      await maybe(() => press(/^outputs$/i));
+      await maybe(() => press(/^change images$/i));
       await page.waitForTimeout(800);
       await maybe(() =>
         page
@@ -90,6 +92,7 @@ export const steps = [
           .check(quick),
       );
       await page.waitForTimeout(600);
+      await maybe(() => press(/^change video and style$/i));
       await maybe(() => glide(page.getByRole("heading", { name: /^export$/i }).first(), "center"));
     },
   },

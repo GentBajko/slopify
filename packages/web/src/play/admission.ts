@@ -329,16 +329,16 @@ export interface KeywordOriginsInput {
   > & {
     readonly sources: RunDraft["sources"];
     readonly imagePrompts: readonly { readonly name: string }[];
-    readonly shorts?: { readonly enabled: boolean; readonly prompt: string; readonly imagePrompt: string } | undefined;
+    readonly shorts?:
+      | { readonly enabled: boolean; readonly prompt: string; readonly imagePrompt: string }
+      | undefined;
     readonly reference?: { readonly source: string; readonly prompt: string } | undefined;
   };
   readonly prompts: readonly Prompt[];
   readonly entries: readonly Entry[];
 }
 
-export function keywordOrigins(
-  input: KeywordOriginsInput,
-): ReadonlyMap<string, readonly string[]> {
+export function keywordOrigins(input: KeywordOriginsInput): ReadonlyMap<string, readonly string[]> {
   const origins = new Map<string, string[]>();
   const add = (body: string | undefined, label: string): void => {
     if (!body) return;

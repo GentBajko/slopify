@@ -326,7 +326,7 @@ export function TemplatesRoute({
         </p>
         <p className="mb-4 text-small text-ink2">
           A template keeps the settings, not one video&apos;s topic: keywords the project title
-          names, like {'{{Topic}}'}, are saved empty, and other keywords keep their values.
+          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
         </p>
         <form
           id="save-template-form"
