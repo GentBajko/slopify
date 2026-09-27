@@ -152,6 +152,9 @@ export interface StorageUsage {
   readonly data: number;
   readonly projects: number;
   readonly staging: number;
+  // Projects in Settings → Trash: their folders still count in `projects` until the trash
+  // removes them for good (Delete now, or the daily purge after 30 days).
+  readonly trash: { readonly projects: number; readonly bytes: number };
   readonly byProject: readonly {
     readonly id: string;
     readonly title: string;
@@ -171,6 +174,11 @@ interface StagedExport {
   readonly path: string;
 }
 
+// The settings-only .zip. Nothing in the app writes it any more: Export everything (the tar in
+// `backup-export.ts`) replaced it in 2.5.0, and this stays so tests can make the .zip files
+// older versions wrote. Channels and their cast are deliberately not in it: they arrived after
+// the last version that could write a .zip, so no such file can hold one, and the full backup
+// already carries them (with cast pictures) through `backup-format.ts`.
 export function exportPortable(deps: PortableDeps): Uint8Array<ArrayBuffer> {
   const entries: Record<string, [Uint8Array, { readonly level: 0 }]> = {};
   const stagedPlan = planStagedExport(deps);
@@ -1132,7 +1140,15 @@ export function storageUsage(
         },
       ];
     });
-  return { ...totals, byProject };
+  const trashed = deps.db
+    .prepare("SELECT project_id FROM project_trash ORDER BY project_id")
+    .all()
+    .flatMap((row) => (typeof row.project_id === "string" ? [row.project_id] : []));
+  const trash = {
+    projects: trashed.length,
+    bytes: trashed.reduce((sum, id) => sum + directoryBytes(projectDir(deps.paths, id)), 0),
+  };
+  return { ...totals, trash, byProject };
 }
 
 function directoryBytes(root: string): number {
