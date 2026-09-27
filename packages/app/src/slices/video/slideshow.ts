@@ -3,7 +3,14 @@ import { extname, join } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import { cardsAss } from "./cards.js";
 import type { EditList } from "./edit-list.js";
-import { concatList, joinArgs, runFfmpeg, segmentArgs, slideshowClips } from "./ffmpeg.js";
+import {
+  concatList,
+  joinArgs,
+  type PortraitOverlay,
+  runFfmpeg,
+  segmentArgs,
+  slideshowClips,
+} from "./ffmpeg.js";
 import { cardsIn } from "./look.js";
 
 // The two steps `ffmpeg.ts` explains, run one ffmpeg at a time: the distinct clips into a
@@ -16,6 +23,8 @@ export interface SlideshowRun {
   readonly burnSubtitles: boolean;
   // Holds subtitles.ass and fonts/ when captions are burned in; the join runs there.
   readonly cwd?: string | undefined;
+  // The speaker panel's portraits, beside subtitles.ass; only with burned-in captions.
+  readonly portraits?: readonly PortraitOverlay[] | undefined;
   // Where the clips' working directory is made. It is removed however the render ends.
   readonly scratch: string;
   readonly signal: AbortSignal;
@@ -88,7 +97,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<void> {
     await runFfmpeg({
       bin: run.bin,
       cwd: run.cwd,
-      args: joinArgs(edit, run.output, list, run.burnSubtitles),
+      args: joinArgs(edit, run.output, list, run.burnSubtitles, run.portraits),
       signal: run.signal,
       log: run.log,
       onProgress: (elapsedMs) =>

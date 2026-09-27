@@ -150,6 +150,45 @@ describe("multi-voice narration recipes", () => {
     expect(files?.dependsOn).toContain("subtitles:timing");
   });
 
+  it("adds the speaker panel's portraits to the caption file only when a speaker has one", () => {
+    const values = (c: RunConfig) => {
+      const files = plan(c).find((one) => one.key === "subtitles:files");
+      return files?.input.kind === "local" ? (files.input.values as unknown[]) : [];
+    };
+    const speakerValues = (c: RunConfig) => values(c).at(-1) as unknown[];
+    // Without a portrait the caption values are the ones every podcast had.
+    expect(speakerValues(voiced)).toEqual([
+      "voice-captions-v1",
+      "podcast",
+      true,
+      [
+        ["alex", "Alex"],
+        ["sam", "Sam"],
+      ],
+      expect.anything(),
+    ]);
+    const portrait = "a".repeat(64);
+    const pictured = (format: VoicesSettings["format"]): RunConfig => ({
+      ...voiced,
+      voices: {
+        ...voices,
+        format,
+        speakers: [{ ...(voices.speakers[0] as Speaker), portrait }, voices.speakers[1] as Speaker],
+      },
+    });
+    expect(speakerValues(pictured("podcast")).at(-1)).toEqual(["portraits", [portrait, null]]);
+    // The voices themselves do not change, so no narration is redone for a picture.
+    const before = fingerprints(voiced);
+    const after = fingerprints(pictured("podcast"));
+    for (const key of Object.keys(before).filter((one) => one.startsWith("audio:")))
+      expect(after[key]).toBe(before[key]);
+    expect(after["subtitles:files"]).not.toBe(before["subtitles:files"]);
+    // An audiobook has no speaker panel, so a portrait changes nothing there.
+    expect(fingerprints(pictured("audiobook"))).toEqual(
+      fingerprints({ ...voiced, voices: { ...voices, format: "audiobook" } }),
+    );
+  });
+
   it("leaves a Narration-format run's recipes exactly as they were", () => {
     const without = plan(narrated);
     expect(plan({ ...narrated, voices: undefined })).toEqual(without);

@@ -19,6 +19,7 @@ import { spoken } from "../video/plan.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
 import { type CaptionSpeakers, speakerColour } from "../voices/palette.js";
 import { speakerPanelEvents, usesSpeakerPanel } from "../voices/panel.js";
+import { panelPortraits } from "../voices/portraits.js";
 import { attributeWords, type SpeakerWord } from "../voices/timing.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import {
@@ -275,6 +276,7 @@ async function files(
         ? { width: 1920, height: 1080 }
         : { width: 1080, height: 1920 };
     const voices = captionVoices(view.revision.config);
+    const portraits = panelPortraits(deps.db, voices);
     const overlay =
       voices !== undefined && usesSpeakerPanel(voices.format)
         ? speakerPanelEvents(
@@ -283,6 +285,7 @@ async function files(
               id: speaker.id,
               name: speaker.name.trim(),
               colour: speakerColour(index),
+              ...(portraits[index] === undefined ? {} : { portrait: true }),
             })),
             frame,
             (await revisionAudio(deps, context, view)).reduce(
