@@ -1,6 +1,7 @@
 import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
 import { masterText } from "@app/slices/loudness/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
+import type { Output } from "@app/slices/storage/model.js";
 import { useApp } from "@/app-context";
 import { useCommand } from "@/components/kit/command-palette";
 import { Player } from "@/components/kit/player";
@@ -36,6 +37,9 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
     (left, right) => (left.meta.short ?? 0) - (right.meta.short ?? 0),
   );
   const media = useOutputMedia(video);
+  // The thumbnail stands in for the video until it plays: the first variant when there are
+  // several.
+  const poster = useOutputMedia(posterOf(outputs));
   const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
@@ -105,6 +109,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           key={video.id}
           src={media.url}
           label="Generated video"
+          {...(poster === undefined ? {} : { poster: poster.url })}
           portrait={project.format === "9:16"}
           className={project.format === "9:16" ? "max-w-[360px]" : "max-w-[1100px]"}
           {...(playedSubtitles === "files" && vtt && captions
@@ -190,4 +195,11 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       ) : null}
     </StageBody>
   );
+}
+
+// The project's first thumbnail, which the player shows until the video plays.
+export function posterOf(outputs: readonly Output[]): Output | undefined {
+  return outputs
+    .filter((output) => output.role === "thumbnail")
+    .toSorted((left, right) => (left.meta.index ?? 1) - (right.meta.index ?? 1))[0];
 }

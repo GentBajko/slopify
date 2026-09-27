@@ -11,12 +11,12 @@ import { type ReactNode, useState } from "react";
 import { chooseUploadPack, readUploadPack, saveRealFootage } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
-import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
@@ -212,15 +212,12 @@ function readDone(key: string): readonly string[] {
 // A download that looks like the row's other small quiet actions.
 function Download({ href, filename }: { readonly href: string; readonly filename: string }) {
   return (
-    <a
-      href={href}
-      download={filename}
-      aria-label={`Download ${filename}`}
-      className={buttonClass({ variant: "quiet", size: "small" })}
-    >
-      <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
-      Download
-    </a>
+    <Button asChild variant="quiet" size="small">
+      <a href={href} download={filename} aria-label={`Download ${filename}`}>
+        <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+        Download
+      </a>
+    </Button>
   );
 }
 
@@ -241,6 +238,7 @@ function Steps({
 }) {
   const { api } = useApp();
   const [done, setDone] = useState<readonly string[]>(() => readDone(doneKey));
+  const [openThumbnail, setOpenThumbnail] = useState<number | null>(null);
   const tick = (step: StudioStep, on: boolean) => {
     const next = on ? [...done, step] : done.filter((one) => one !== step);
     setDone(next);
@@ -382,7 +380,7 @@ function Steps({
             title={`${String(item.thumbnails.length)} ${item.thumbnails.length === 1 ? "thumbnail" : "thumbnails"}`}
             className="mb-3"
           />
-          <MediaGrid label="Thumbnails to upload" className="grid-cols-2">
+          <MediaGrid label="Thumbnails to upload" density="compact">
             {item.thumbnails.map((file, index) => (
               <MediaFrame
                 key={file.asset}
@@ -390,11 +388,29 @@ function Steps({
                 alt={`Thumbnail ${String.fromCharCode(65 + index)}`}
                 title={String.fromCharCode(65 + index)}
                 meta={file.filename}
+                onOpen={() => setOpenThumbnail(index)}
+                openLabel={`Open thumbnail ${String.fromCharCode(65 + index)} full size`}
                 actionsShown
                 actions={<Download href={`${api.origin}${file.url}`} filename={file.filename} />}
               />
             ))}
           </MediaGrid>
+          <Lightbox
+            items={item.thumbnails.map((file, index) => ({
+              src: `${api.origin}${file.url}`,
+              alt: `Thumbnail ${String.fromCharCode(65 + index)}`,
+              caption: file.filename,
+            }))}
+            index={openThumbnail}
+            onIndex={setOpenThumbnail}
+            onClose={() => setOpenThumbnail(null)}
+            actions={(_, index) => {
+              const file = item.thumbnails[index];
+              return file === undefined ? null : (
+                <Download href={`${api.origin}${file.url}`} filename={file.filename} />
+              );
+            }}
+          />
         </section>
       )}
     </div>

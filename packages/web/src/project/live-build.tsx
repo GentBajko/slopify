@@ -3,11 +3,12 @@ import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { type Aspect, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { StageLamp } from "@/components/lamp";
 import { Rail, RailGroup } from "@/components/rail";
 import { peaksKey, readPeaks } from "@/onboarding/api";
-import { aspectOf } from "./body-images.js";
+import { frameAspect } from "./body-images.js";
 import { LiveWriting } from "./live-writing.js";
 import { useOutputMedia } from "./revision-media.js";
 
@@ -60,14 +61,11 @@ export function LiveBuild({
         {images.length === 0 ? (
           <p className="text-small text-ink-2">The images appear here as each one is drawn.</p>
         ) : (
-          <ul
-            aria-label="Images so far"
-            className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3"
-          >
+          <MediaGrid list density="compact" label="Images so far">
             {images.map((image) => (
-              <LiveImage key={image.id} output={image} aspect={aspectOf(project.format)} />
+              <LiveImage key={image.id} output={image} aspect={frameAspect(project.format)} />
             ))}
-          </ul>
+          </MediaGrid>
         )}
       </div>
     </div>
@@ -79,17 +77,18 @@ function LiveImage({
   aspect,
 }: {
   readonly output: Output;
-  readonly aspect: string;
+  readonly aspect: Aspect;
 }): ReactElement | null {
   const media = useOutputMedia(output);
   if (media === undefined) return null;
+  const number = output.meta.index === undefined ? "" : ` ${String(output.meta.index)}`;
   return (
-    <li className="overflow-hidden rounded-control border border-line bg-raised">
-      <img
+    <li className="min-w-0">
+      <MediaFrame
         src={media.url}
-        alt=""
-        className="block w-full object-cover"
-        style={{ aspectRatio: aspect }}
+        alt={output.meta.prompt ?? `Image${number}`}
+        aspect={aspect}
+        {...(output.meta.index === undefined ? {} : { meta: `#${String(output.meta.index)}` })}
       />
     </li>
   );

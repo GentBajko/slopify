@@ -2,10 +2,10 @@ import type { ProjectListing, Stage } from "@app/slices/admission/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useState } from "react";
 import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
-import { MediaFrame } from "@/components/kit/media";
+import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import { stageName } from "@/project/summary";
@@ -62,6 +62,7 @@ export function RunningProject({
 }): ReactElement {
   const { api } = useApp();
   useLiveProject(project.id);
+  const [open, setOpen] = useState<number | null>(null);
   const body = useQuery(projectQuery(api, project.id));
   const stages = (body.data?.stages ?? []).filter(
     (stage) => stage.source !== "off" && stage.state !== "skipped",
@@ -102,12 +103,13 @@ export function RunningProject({
           )}
         </div>
         {shown.length === 0 && drawing === undefined ? null : (
-          <ul aria-label={`Images of ${project.title}`} className="sl-home-run__images">
-            {shown.map((output) => (
+          <MediaGrid list density="compact" label={`Images of ${project.title}`}>
+            {shown.map((output, index) => (
               <li key={output.id}>
                 <MediaFrame
                   src={fileUrl(api, project.id, assetOf(output))}
                   alt={`Image ${String(output.meta.index ?? "")}`}
+                  onOpen={() => setOpen(index)}
                 />
               </li>
             ))}
@@ -119,8 +121,18 @@ export function RunningProject({
                 />
               </li>
             )}
-          </ul>
+          </MediaGrid>
         )}
+        <Lightbox
+          items={shown.map((output) => ({
+            src: fileUrl(api, project.id, assetOf(output)),
+            alt: `Image ${String(output.meta.index ?? "")}`,
+            ...(output.meta.prompt === undefined ? {} : { caption: output.meta.prompt }),
+          }))}
+          index={open}
+          onIndex={setOpen}
+          onClose={() => setOpen(null)}
+        />
         {drawing === undefined ? null : (
           <p className="m-0 text-small text-ink-2">
             {`Images ${String(drawing.progressCurrent ?? images.length)} of ${String(drawing.progressTotal ?? "?")}`}

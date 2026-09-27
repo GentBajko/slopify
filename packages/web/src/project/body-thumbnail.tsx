@@ -1,16 +1,15 @@
 import { type ProjectSummary, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { DownloadIcon, RefreshCwIcon } from "lucide-react";
+import { RefreshCwIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Lightbox, type LightboxItem, MediaFrame } from "@/components/kit/media";
+import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf } from "./body.js";
-import { frameAspect } from "./body-images.js";
+import { DownloadButton, frameAspect, OutputLightboxActions } from "./body-images.js";
 import { confirmationFor } from "./confirmations.js";
 import { useOutputChange } from "./output-change.js";
 import type { Review } from "./review-api.js";
@@ -46,13 +45,27 @@ export function ThumbnailPanel({
   const made = variants.flatMap((one) => (one.output === undefined ? [] : [one.output]));
   const files = useOutputMediaList(made);
   const [open, setOpen] = useState<number | null>(null);
-  const items: LightboxItem[] = made.flatMap((output) => {
-    const file = files.get(output.id);
-    return file === undefined
-      ? []
-      : [{ src: file.url, alt: `Thumbnail ${String(output.meta.index ?? 1)}` }];
-  });
+  // The thumbnails the lightbox pages through, and the output behind each, for its actions.
+  const openable = made.filter((output) => files.has(output.id));
+  const items: LightboxItem[] = openable.map((output) => ({
+    src: files.get(output.id)?.url ?? "",
+    alt: `Thumbnail ${String(output.meta.index ?? 1)}`,
+  }));
   const tall = project.format === "9:16";
+  const tile = ({ variant, output }: (typeof variants)[number]): ReactElement => (
+    <ThumbnailVariant
+      key={variant}
+      variant={variant}
+      count={count}
+      output={output}
+      review={reviewFor(reviews, { outputId: output?.id })}
+      stage={stage}
+      project={project}
+      actions={actions}
+      busy={busy}
+      onOpen={() => setOpen(output === undefined ? null : opened(openable, output))}
+    />
+  );
   return (
     <section
       aria-label={count === 1 ? "Thumbnail" : "Thumbnails"}
@@ -68,35 +81,37 @@ export function ThumbnailPanel({
       >
         <SectionMore stages={[stage]} project={project} actions={actions} />
       </SectionHead>
-      <ul
-        className={cn(
-          "m-0 grid list-none gap-5 p-0",
-          count === 1
-            ? tall
-              ? "max-w-[280px]"
-              : "max-w-[480px]"
-            : tall
-              ? "max-w-[720px] grid-cols-3"
-              : "sm:grid-cols-3",
-        )}
-      >
-        {variants.map(({ variant, output }) => (
-          <li key={variant} className="min-w-0">
-            <ThumbnailVariant
-              variant={variant}
-              count={count}
+      {/* One thumbnail is a single picture, not a gallery; Test & compare's three are. */}
+      {variants.length === 1 ? (
+        <div className={tall ? "max-w-[280px]" : "max-w-[480px]"}>{variants.map(tile)}</div>
+      ) : (
+        <MediaGrid list label="Thumbnail variants">
+          {variants.map((one) => (
+            <li key={one.variant} className="min-w-0">
+              {tile(one)}
+            </li>
+          ))}
+        </MediaGrid>
+      )}
+      <Lightbox
+        items={items}
+        index={open}
+        onIndex={setOpen}
+        onClose={() => setOpen(null)}
+        actions={(_, index) => {
+          const output = openable[index];
+          return output === undefined ? null : (
+            <OutputLightboxActions
+              key={output.id}
               output={output}
-              review={reviewFor(reviews, { outputId: output?.id })}
-              stage={stage}
-              project={project}
+              name={count === 1 ? "the thumbnail" : `thumbnail ${String(output.meta.index ?? 1)}`}
               actions={actions}
               busy={busy}
-              onOpen={() => setOpen(output === undefined ? null : made.indexOf(output))}
+              onLeave={() => setOpen(null)}
             />
-          </li>
-        ))}
-      </ul>
-      <Lightbox items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+          );
+        }}
+      />
     </section>
   );
 }
@@ -177,15 +192,7 @@ function ThumbnailVariant({
                     Regenerate
                   </Button>
                   {media === undefined ? null : (
-                    <a
-                      href={media.url}
-                      download
-                      className="sl-btn sl-btn--secondary sl-btn--small"
-                      aria-label={`Download ${name}`}
-                      title={`Download ${name}`}
-                    >
-                      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                    </a>
+                    <DownloadButton href={media.url} label={`Download ${name}`} />
                   )}
                 </>
               ),
@@ -204,6 +211,12 @@ function ThumbnailVariant({
       />
     </>
   );
+}
+
+// Where a thumbnail sits in the lightbox, or closed when its file is not there yet.
+function opened(openable: readonly Output[], output: Output): number | null {
+  const at = openable.indexOf(output);
+  return at === -1 ? null : at;
 }
 
 function missing(stage: Stage): string {

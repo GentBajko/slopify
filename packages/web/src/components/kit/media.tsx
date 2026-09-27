@@ -93,20 +93,37 @@ export function MediaFrame({
   );
 }
 
-// The one gallery grid: auto-fill 220px columns, or 150px portrait tiles for shorts.
+// The one gallery grid: auto-fill 220px columns, or 150px portrait tiles for shorts. Compact
+// is the same grid at 140px with a tighter gap, for a gallery inside a drawer, a side panel or
+// a Home card. `list` makes it a list whose children are `<li>` tiles.
 export function MediaGrid({
   shorts = false,
+  density = "default",
+  list = false,
   className,
   children,
   label,
 }: {
   readonly shorts?: boolean;
+  readonly density?: "default" | "compact";
+  readonly list?: boolean;
   readonly className?: string;
   readonly children: ReactNode;
   readonly label?: string;
 }): ReactElement {
-  return (
-    <section aria-label={label} className={cn("sl-grid", shorts && "sl-grid--shorts", className)}>
+  const classes = cn(
+    "sl-grid",
+    shorts && "sl-grid--shorts",
+    density === "compact" && "sl-grid--compact",
+    list && "m-0 list-none p-0",
+    className,
+  );
+  return list ? (
+    <ul aria-label={label} className={classes} data-slot="media-grid">
+      {children}
+    </ul>
+  ) : (
+    <section aria-label={label} className={classes} data-slot="media-grid">
       {children}
     </section>
   );
