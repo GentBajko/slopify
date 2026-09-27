@@ -36,7 +36,9 @@ Plan windows, only as the CLIs report them:
 - **Gemini** reports none.
 
 The tab says "This run used ~X% of your weekly Codex limit"; when a CLI reported nothing (for
-example through the Docker host bridge) it says the share is not known.
+example through a Docker host helper older than the app) it says the share is not known. A
+current host helper passes the windows, cached tokens and answering model through, so Docker
+runs read the same as local ones (see "The host CLI bridge" in `docker.md`).
 
 ## Living within plan limits
 

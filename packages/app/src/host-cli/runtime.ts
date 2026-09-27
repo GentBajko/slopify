@@ -5,6 +5,7 @@ import { codexImage, codexImageTimeoutMs } from "../adapters/image/codex.js";
 import { claudeCodeLlm } from "../adapters/llm/claude-code.js";
 import { nodeClaudeCodeModels } from "../adapters/llm/claude-code-models.js";
 import { codexLlm } from "../adapters/llm/codex.js";
+import { nodeCodexLimits } from "../adapters/llm/codex-limits.js";
 import { nodeCodexModels } from "../adapters/llm/codex-models.js";
 import { geminiLlm } from "../adapters/llm/gemini.js";
 import { nodeGeminiModels } from "../adapters/llm/gemini-models.js";
@@ -19,8 +20,11 @@ export function createHostRuntime(
     readonly run: RunCli;
     readonly env: Readonly<NodeJS.ProcessEnv>;
     readonly folders?: HostFolderDeps;
+    // Codex's plan windows, asked of its app-server around each call as the app does locally.
+    readonly readCodexLimits?: typeof nodeCodexLimits;
   },
 ): HostCliRuntime {
+  const readCodexLimits = deps.readCodexLimits ?? nodeCodexLimits;
   const status = createHostStatus(deps);
   async function command(id: HostCliId): Promise<string> {
     const ready = await status(id);
@@ -67,6 +71,7 @@ export function createHostRuntime(
             binary,
             env: deps.env,
             readModels: () => models(id),
+            ...(id === "codex" ? { readLimits: () => readCodexLimits(binary, deps.env) } : {}),
           }).complete({
             ...request,
             ...(id === "codex" && request.thinking !== undefined
@@ -88,7 +93,12 @@ export function createHostRuntime(
       models: () => codexImage({ run: deps.run, readModels: () => models("codex") }).models(),
       generate: async (request) => {
         const binary = await command("codex-image");
-        return codexImage({ run: deps.run, binary, env: deps.env }).generate(request);
+        return codexImage({
+          run: deps.run,
+          binary,
+          env: deps.env,
+          readLimits: () => readCodexLimits(binary, deps.env),
+        }).generate(request);
       },
     },
   };

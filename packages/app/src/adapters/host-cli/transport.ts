@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { type IncomingMessage, request } from "node:http";
 import { join } from "node:path";
-import { bridgeLimits } from "../../kernel/ports/host-cli.js";
+import { bridgeLimits, hostFramesHeader, hostFramesVersion } from "../../kernel/ports/host-cli.js";
 import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import { type ProviderError, providerError } from "../../kernel/ports/model.js";
 
@@ -62,6 +62,8 @@ export async function hostRequest(options: HostRequestOptions): Promise<Incoming
         headers: {
           authorization: `Bearer ${token}`,
           "content-type": "application/json",
+          // The stream frames this app reads; an older helper ignores the header.
+          ...(options.kind === "llm" ? { [hostFramesHeader]: String(hostFramesVersion) } : {}),
           ...(options.body ? { "content-length": options.body.byteLength } : {}),
         },
       },
