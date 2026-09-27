@@ -2,6 +2,7 @@ import type { UploadPack } from "@app/slices/studio/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StudioSettingsBody } from "@/api";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { PrepareUpload } from "./prepare-upload.js";
 
@@ -49,12 +50,12 @@ const pack: UploadPack = {
   ],
 };
 
-const pairedSettings = {
+const pairedSettings: StudioSettingsBody = {
   playlist: null,
   channelPlaylists: {},
   pairing: { token: "t".repeat(32), origin: "chrome-extension://abc", pairedAt: "2026-09-27" },
 };
-const unpairedSettings = {
+const unpairedSettings: StudioSettingsBody = {
   ...pairedSettings,
   pairing: { ...pairedSettings.pairing, origin: null, pairedAt: null },
 };
