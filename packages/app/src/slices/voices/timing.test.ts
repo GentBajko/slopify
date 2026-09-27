@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "../subtitles/captions.js";
 import type { CaptionSpeakers } from "./palette.js";
-import { speakerPanelEvents, speakerRuns } from "./panel.js";
+import { panelTiles, speakerPanelEvents, speakerRuns } from "./panel.js";
 import { attributeWords, turnStarts } from "./timing.js";
 
 const turns = [
@@ -133,5 +133,33 @@ describe("speaker panel", () => {
         (line) => line.startsWith("Dialogue: 2,0:00:01.10,0:00:02.00") && line.endsWith("}Sam"),
       ),
     ).toBe(true);
+  });
+
+  it("leaves a portrait speaker's tile empty for the render and still lights it", () => {
+    const cues = [{ start: 0, end: 1, text: "a", speaker: "alex" }];
+    const speakers = [
+      { id: "alex", name: "Alex Moore", colour: "#f2c14e", portrait: true },
+      { id: "sam", name: "Sam", colour: "#6ec3f4" },
+    ];
+    const frame = { width: 1920, height: 1080 };
+    const events = speakerPanelEvents(cues, speakers, frame, 10);
+    const [alex, sam] = panelTiles(2, frame);
+    // No box or initials for Alex; Sam keeps both.
+    expect(events.filter((line) => line.includes("}AM"))).toHaveLength(0);
+    expect(events.filter((line) => line.includes("}SA"))).toHaveLength(1);
+    expect(events.filter((line) => line.startsWith("Dialogue: 1,"))).toEqual([
+      expect.stringContaining(`\\pos(${String(sam?.x)},${String(sam?.y)})`),
+    ]);
+    // The lit outline is drawn on Alex's tile, over the portrait.
+    expect(
+      events.some(
+        (line) =>
+          line.startsWith("Dialogue: 2,0:00:00.00,0:00:01.00") &&
+          line.includes(`\\pos(${String(alex?.x)},${String(alex?.y)})`),
+      ),
+    ).toBe(true);
+    // The tiles are one centred row of equal squares.
+    expect(alex?.size).toBe(119);
+    expect((alex?.x ?? 0) + (sam?.x ?? 0) + (sam?.size ?? 0)).toBe(1920);
   });
 });

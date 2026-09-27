@@ -1,9 +1,82 @@
+import { readFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
+import { z } from "zod";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionPlanResult } from "../rebuild/recipe-save.js";
+import { outputPath } from "../storage/layout.js";
+import { usesVoices } from "../voices/model.js";
+import { cueSpeaker } from "../voices/timing.js";
 import type { ManifestOutput, RevisionDeps, RevisionEdit, RevisionView } from "./model.js";
 import { assetPath, measureAudio, type PreparedEditAsset } from "./mutation-assets.js";
 import { validateCues } from "./rules.js";
+
+// Edited captions of a multi-voice run keep their speakers. A cue that comes back without one
+// (the caption editor edits text and times only) takes the speaker it had before, found by the
+// cue's id, and a new cue the speaker of the narration under it, from the word timing. A cue
+// sent with a speaker keeps it. Runs with one voice are left as they are.
+export function withCueSpeakers(
+  deps: Pick<RevisionDeps, "paths">,
+  base: RevisionView,
+  edit: RevisionEdit,
+): RevisionEdit {
+  const edited = edit.content.subtitleCues;
+  if (
+    edited === undefined ||
+    !usesVoices(edit.config) ||
+    !cuesChanged(base, edit) ||
+    edited.cues.every((cue) => cue.speaker !== undefined)
+  )
+    return edit;
+  const before = new Map(
+    (base.revision.content.subtitleCues?.cues ?? []).flatMap((cue) =>
+      cue.speaker === undefined ? [] : [[cue.id, cue.speaker] as const],
+    ),
+  );
+  let words: readonly { start: number; end: number; speaker?: string | undefined }[] | undefined;
+  const timing = (): typeof words => {
+    if (words !== undefined) return words;
+    const row = base.outputs.find(
+      (one) =>
+        one.selected &&
+        one.available &&
+        one.state === "ready" &&
+        one.workKey === "subtitles:timing" &&
+        one.output.role === "subtitle_words",
+    );
+    try {
+      words =
+        row === undefined
+          ? []
+          : timedWords.parse(
+              JSON.parse(
+                readFileSync(
+                  outputPath(deps.paths, base.revision.projectId, row.output.path),
+                  "utf8",
+                ),
+              ),
+            ).words;
+    } catch {
+      // Unreadable timing leaves the new cues without a speaker; they still save.
+      words = [];
+    }
+    return words;
+  };
+  const cues = edited.cues.map((cue) => {
+    if (cue.speaker !== undefined) return cue;
+    const speaker = before.get(cue.id) ?? cueSpeaker(cue, timing() ?? []);
+    return speaker === undefined ? cue : { ...cue, speaker };
+  });
+  return { ...edit, content: { ...edit.content, subtitleCues: { ...edited, cues } } };
+}
+const timedWords = z.object({
+  words: z.array(
+    z.object({
+      start: z.number(),
+      end: z.number(),
+      speaker: z.string().optional(),
+    }),
+  ),
+});
 
 export function cuesChanged(base: RevisionView, edit: RevisionEdit): boolean {
   return (

@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
+import { uploadCastImage } from "../channels/cast-images.js";
 import { defaultChannelId } from "../channels/model.js";
 import { castOfChannel } from "../channels/repo.js";
 import { createCastMember, updateCastMember } from "../channels/service.js";
 import { castSpeakers, withCastVoices } from "./cast.js";
-import { defaultVoicesSettings } from "./model.js";
+import { defaultVoicesSettings, type Speaker } from "./model.js";
+import { panelPortraits } from "./portraits.js";
 
 const clock = fixedClock("2026-09-27T10:00:00.000Z");
 function deps() {
@@ -92,5 +94,39 @@ describe("cast voices", () => {
       ["Ada", "host", "new-voice", 0.9],
       ["Sam", "host", "alloy", undefined],
     ]);
+  });
+
+  it("gives a cast speaker the member's first picture as their panel portrait", () => {
+    const d = deps();
+    const host = randomUUID();
+    createCastMember(d, defaultChannelId, { id: host, kind: "character", name: "Ada", voice });
+    const [ada] = castSpeakers(castOfChannel(d.db, defaultChannelId)).speakers();
+    if (ada === undefined) throw new Error("Ada has a voice");
+    // No picture: the speaker is exactly what it was before portraits.
+    expect(ada).not.toHaveProperty("portrait");
+    const settings = {
+      ...defaultVoicesSettings("podcast"),
+      speakers: [{ ...ada, role: "host" as const }],
+    };
+    expect(withCastVoices(settings, castOfChannel(d.db, defaultChannelId))).toBe(settings);
+
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const uploaded = uploadCastImage(d, host, png);
+    const later = uploadCastImage(d, host, new Uint8Array([0xff, 0xd8, 0xff, 9]));
+    if (!uploaded.ok || !later.ok) throw new Error("Expected the pictures to upload.");
+    const refreshed = withCastVoices(settings, castOfChannel(d.db, defaultChannelId));
+    expect(refreshed.speakers[0]?.portrait).toBe(uploaded.value.sha256);
+
+    // The panel reads the picture's bytes; an audiobook has no panel to put it in.
+    expect(panelPortraits(d.db, refreshed)).toEqual([
+      { sha256: uploaded.value.sha256, bytes: png, extension: ".png" },
+    ]);
+    expect(panelPortraits(d.db, { ...refreshed, format: "audiobook" })).toEqual([]);
+    // A picture that is not in this database (a backup from another install) keeps the initials.
+    const missing = {
+      ...refreshed,
+      speakers: [{ ...(refreshed.speakers[0] as Speaker), portrait: "b".repeat(64) }],
+    };
+    expect(panelPortraits(d.db, missing)).toEqual([undefined]);
   });
 });

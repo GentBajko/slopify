@@ -298,11 +298,22 @@ export function concatList(order: readonly string[]): string {
   return `ffconcat version 1.0\n${order.map((name) => `file ${name}`).join("\n")}\n`;
 }
 
+// A picture laid into the video before the captions are burned in: a podcast speaker's
+// portrait, scaled and centre-cropped to fill its square tile of the speaker panel.
+export interface PortraitOverlay {
+  // Resolved beside the caption file, like it.
+  readonly path: string;
+  readonly x: number;
+  readonly y: number;
+  readonly size: number;
+}
+
 export function joinArgs(
   edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
   output: string,
   list: string,
   burnSubtitles = false,
+  portraits: readonly PortraitOverlay[] = [],
 ): string[] {
   const inputs: string[] = ["-f", "concat", "-i", list];
   const audioAt: number[] = [];
@@ -322,7 +333,8 @@ export function joinArgs(
     inputs.push("-i", segment.path);
   }
   const chains: string[] = [];
-  if (burnSubtitles) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+  const overlaid = burnSubtitles && portraits.length > 0;
+  if (burnSubtitles && !overlaid) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
   audioAt.forEach((input, at) => {
     // The segments come from different files and the silence from lavfi, so they are
     // brought to one format before concat, which refuses to join mismatched streams.
@@ -352,6 +364,25 @@ export function joinArgs(
         "[a]",
       ),
     );
+  }
+  // The portraits go in after every other input and under the captions, so the panel's lit
+  // outline is drawn over them; a video without any is joined exactly as before. A still
+  // image is one frame, which overlay holds to the end (`eof_action=repeat`).
+  if (overlaid) {
+    let first = inputs.filter((value) => value === "-i").length;
+    let source = "[0:v]";
+    const video: string[] = [];
+    portraits.forEach((portrait, at) => {
+      inputs.push("-i", portrait.path);
+      const size = String(portrait.size);
+      video.push(
+        `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase,crop=${size}:${size},setsar=1[pic${String(at)}]`,
+        `${source}[pic${String(at)}]overlay=x=${String(portrait.x)}:y=${String(portrait.y)}:eof_action=repeat[panel${String(at)}]`,
+      );
+      source = `[panel${String(at)}]`;
+      first += 1;
+    });
+    chains.unshift(...video, `${source}ass=filename=subtitles.ass:fontsdir=fonts[v]`);
   }
 
   return [

@@ -26,6 +26,7 @@ import {
   inspectCueAudio,
   measuredOutputs,
   validateProposedCues,
+  withCueSpeakers,
 } from "./mutation-cues.js";
 import { prepareEditAssets } from "./mutation-prepare.js";
 import { checkMutation, insertReceipt, requestHash, requiredView } from "./mutation-request.js";
@@ -87,7 +88,8 @@ export async function saveRevision(
       currentRevisionId: base.revision.id,
       fields: unavailable,
     };
-  const { edit: supplied, assets: prepared } = await prepareEditAssets(deps, base, edit);
+  const { edit: uploaded, assets: prepared } = await prepareEditAssets(deps, base, edit);
+  const supplied = withCueSpeakers(deps, base, uploaded);
   try {
     const durations = await inspectCueAudio(deps, base, supplied, prepared);
     const result = transact(deps.db, (): RevisionMutationResult => {

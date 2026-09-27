@@ -47,8 +47,9 @@ rebuild review lists them again for speakers on Inworld TTS-2 voices.
 **Speakers are cast.** A channel's cast member can have a voice (Channels → the channel → Cast
 → edit a member → Voice). **Add from the cast** on the Speakers panel adds any member with a
 voice; every run started later takes that member's voice, pace and pronunciations as they are
-then, so a host or a character sounds the same in every episode. Projects already made keep the
-voice they were made with.
+then, so a host or a character sounds the same in every episode. That holds however the run
+starts: Play (one video or a batch of variations), a schedule, or a draft sent to the API.
+Projects already made keep the voice they were made with.
 
 Every turn is its own request in its speaker's voice, joined with the **gap between turns**.
 Consecutive turns of speakers on ElevenLabs v3 go to ElevenLabs' Text to Dialogue in one
@@ -61,7 +62,14 @@ text. Changing one speaker's voice remakes only that speaker's turns.
 Word timing learns who said each word: captions never mix two speakers, carry the speaker's
 colour and, with **Speaker names on captions**, their name (`<v Name>` in the VTT file). The
 podcast and interview speaker panel is drawn with burned-in captions, so it needs Captions set
-to Burn in. Shorts start and end on a speaker's turn.
+to Burn in. A speaker picked from the cast whose member has a picture shows that picture in
+their tile (the member's first picture, scaled and cropped square, taken when the run starts);
+everyone else shows their initials. Adding a picture later changes no project already made.
+Shorts start and end on a speaker's turn.
+
+Captions edited by hand (Edit project → Captions) keep their speakers: a cue keeps the speaker
+it had however its text or times change, and a cue you add takes the speaker of the narration
+under it.
 
 With **Also make MP3 and M4B files** on, the Video stage also writes `narration.mp3` (ID3
 chapters) and `audiobook.m4b` (AAC with chapter markers) of the whole narration timeline, one

@@ -50,6 +50,12 @@ export const speakerSchema = z.object({
   pronunciations: z.string().max(20_000).optional(),
   // The cast entry this speaker was picked from, when the cast library holds it.
   castId: z.string().max(200).optional(),
+  // SHA-256 of the cast member's first picture when the run started: the portrait in a podcast
+  // or interview's speaker panel. Absent is the initials tile.
+  portrait: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .optional(),
 });
 export type Speaker = z.infer<typeof speakerSchema>;
 

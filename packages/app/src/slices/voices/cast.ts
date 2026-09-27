@@ -31,11 +31,19 @@ export function speakerFromCast(member: CastMember, role: SpeakerRole): Speaker 
     ...(voice?.pace === undefined || voice.pace === 1 ? {} : { pace: voice.pace }),
     ...(voice?.pronunciations?.trim() ? { pronunciations: voice.pronunciations } : {}),
     castId: member.id,
+    ...portraitOf(member),
   };
 }
 
-// A run's speakers with each cast speaker's voice, pace and pronunciations taken from the cast
-// as it is now. A member since deleted, or without a voice, leaves the speaker as saved.
+// The member's first finished picture, the one the speaker panel shows. Nothing when they have
+// none, so a speaker without a picture is the speaker it always was.
+function portraitOf(member: CastMember): { readonly portrait?: string } {
+  const sha256 = member.images.find((one) => one.state === "ready" && one.sha256 !== null)?.sha256;
+  return sha256 === undefined || sha256 === null ? {} : { portrait: sha256 };
+}
+
+// A run's speakers with each cast speaker's voice, pace, pronunciations and portrait taken from
+// the cast as it is now. A member since deleted, or without a voice, leaves the speaker as saved.
 export function withCastVoices(
   settings: VoicesSettings,
   members: readonly CastMember[],
@@ -46,12 +54,13 @@ export function withCastVoices(
       speaker.castId === undefined ? undefined : members.find((one) => one.id === speaker.castId);
     if (member?.voice === undefined) return speaker;
     const fresh = speakerFromCast(member, speaker.role);
-    const { pace: _pace, pronunciations: _pronunciations, ...rest } = speaker;
+    const { pace: _pace, pronunciations: _pronunciations, portrait: _portrait, ...rest } = speaker;
     const next: Speaker = {
       ...rest,
       voice: fresh.voice,
       ...(fresh.pace === undefined ? {} : { pace: fresh.pace }),
       ...(fresh.pronunciations === undefined ? {} : { pronunciations: fresh.pronunciations }),
+      ...(fresh.portrait === undefined ? {} : { portrait: fresh.portrait }),
     };
     if (JSON.stringify(next) !== JSON.stringify(speaker)) changed = true;
     return next;
