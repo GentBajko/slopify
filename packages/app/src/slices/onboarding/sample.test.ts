@@ -85,6 +85,11 @@ describe("the bundled sample", () => {
     const roles = new Set(
       view?.outputs.filter((row) => row.selected).map((row) => row.output.role),
     );
+    // The bundled build is the real one: pictures painted ahead of time, not procedural art.
+    expect(view?.revision.config.images).toEqual({
+      provider: "sample-artist",
+      model: "codex-painted",
+    });
     for (const role of [
       "video",
       "short_video",

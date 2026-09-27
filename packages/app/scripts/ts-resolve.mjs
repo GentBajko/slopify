@@ -8,7 +8,11 @@ import { transformSync } from "esbuild";
 // them, and each .ts file is compiled by esbuild as it loads.
 registerHooks({
   resolve(specifier, context, next) {
-    if (specifier.endsWith(".js") && (specifier.startsWith(".") || specifier.startsWith("/"))) {
+    // A forked child's entry point arrives as a file: URL.
+    if (
+      specifier.endsWith(".js") &&
+      (specifier.startsWith(".") || specifier.startsWith("/") || specifier.startsWith("file:"))
+    ) {
       const candidate = new URL(`${specifier.slice(0, -3)}.ts`, context.parentURL);
       if (
         !existsSync(fileURLToPath(new URL(specifier, context.parentURL))) &&

@@ -46,8 +46,8 @@ copy gets " (2)". What each pack installed is remembered in the `onboarding.pack
 
 ## The bundled sample
 
-`packages/app/src/assets/sample/sample-project.tar` (about 12 MB) is a backup archive holding
-one finished project, "The Library of Alexandria": a 2-minute 1280×720 video with burned-in
+`packages/app/src/assets/sample/sample-project.tar` (about 22 MB) is a backup archive holding
+one finished project, "The Library of Alexandria": a 2½-minute 1280×720 narrated video with burned-in
 captions, chapter cards and the warm Look, two shorts, the article, the PDF, a YouTube
 description with chapters, four images and a thumbnail. Boot imports it once
 (`BootOptions.seedSample`, on in the CLI); deleting it keeps it deleted until Settings → Backup
@@ -57,13 +57,27 @@ delete), so nothing on it can reach a paid provider. "Make my own copy" clones e
 file under new ids and re-stamps the fingerprints the new asset ids change, so the copy has
 nothing to rebuild.
 
-The archive is built by Slopify's own pipeline with local stand-ins:
+The archive is built by Slopify's own pipeline. The bundled one uses a folder of pre-made
+narration and pictures:
 
-    node packages/app/scripts/build-sample.mjs            # needs ffmpeg and ImageMagick
+    node packages/app/scripts/build-sample.mjs --assets <folder>   # needs ffmpeg and ImageMagick
 
-The article is the maintainer's own text; the images are procedural ImageMagick art
-(`src/sample-build/art.ts`); the description, the shorts' picks and their image prompts are
-scripted answers worked out from the real transcript (`src/sample-build/script.ts`), under the
-provider names `sample-writer` and `sample-artist`. No local text-to-speech was available when it
-was built, so the narration is a quiet ambient track and the captions carry the words at a
-steady reading pace. Everything after that (captions, render, shorts, PDF) is the real code.
+The folder holds `narration.mp3`, the four scenes as `harbor.jpg`, `scrolls.jpg`,
+`embers.jpg` and `disc.jpg`, the same four tall as `<scene>-vertical.jpg` for the shorts, and
+`thumbnail.jpg` (the list is also at the top of `src/sample-build/generate.ts`). The narration
+is the article's plain text, headings included, spoken once by Inworld's stock voice "Tristan"
+on Realtime TTS-2 (2,335 characters, about $0.06 at the catalogue's $25 per million). The nine
+pictures were painted by the Codex CLI with the app's own Codex image adapter:
+
+    node --import ./scripts/ts-resolve.mjs src/sample-build/paint.ts <folder>   # from packages/app
+
+The words are timed against the narration by the real English aligner, which downloads its
+model on first use. The article is the maintainer's own text; the description, the shorts'
+picks and their image prompts are scripted answers worked out from the real transcript
+(`src/sample-build/script.ts`), under the provider names `sample-writer` and `sample-artist`
+(model `codex-painted`). Everything after that (captions, render, shorts, PDF) is the real
+code.
+
+Without `--assets` the build needs no provider at all (CI): the pictures are procedural
+ImageMagick art (`src/sample-build/art.ts`, model `procedural`), the narration is a quiet
+ambient track, and the captions carry the words at a steady reading pace.
