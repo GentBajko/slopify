@@ -246,7 +246,11 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             signal.throwIfAborted();
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
-            const parsed = hostFrameSchema.parse(event);
+            // Typed-ahead text stays on this computer: the bridge protocol carries the
+            // committed answer, and the app's live panel updates per message instead.
+            const parsed = hostFrameSchema.parse(
+              event.type === "partial" ? { type: "activity" } : event,
+            );
             if (done || parsed.type === "error")
               throw new Error(
                 "Slopify hit an internal error (the AI tool on your computer sent a reply Slopify could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",

@@ -100,8 +100,15 @@ export interface ReferenceSettings {
   readonly thumbnail?: boolean | undefined;
 }
 
+// What a run makes: the long video (absent, which is what every project saved before the
+// mode existed was) or one vertical short of about a minute, made by the same stages with
+// the Shorts renderer's word-by-word captions (`admission/short-mode.ts`).
+export const runModes = ["video", "short"] as const;
+export type RunMode = (typeof runModes)[number];
+
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
+  readonly mode?: RunMode | undefined;
   // The other projects' pronunciations as copied when this one started or was last refreshed
   // in Edit project; used only while `audio.shareGlossary` is on.
   readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;

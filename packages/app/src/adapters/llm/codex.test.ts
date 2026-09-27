@@ -395,3 +395,27 @@ it("reads the injected catalogue again and exposes discovery failures", async ()
   failed = true;
   await expect(port.models()).rejects.toThrow("metadata unavailable");
 });
+
+describe("codexLlm live text", () => {
+  it("shows an agent message while it grows and answers with the completed item", async () => {
+    const progress = (type: string, text: string) =>
+      JSON.stringify({ type, item: { id: "item_1", type: "agent_message", text } });
+    const events = await drain(
+      [
+        '{"type":"thread.started","thread_id":"t"}',
+        '{"type":"turn.started"}',
+        progress("item.started", ""),
+        progress("item.updated", "Server-Sent "),
+        progress("item.updated", "Server-Sent Events"),
+        progress("item.completed", "Server-Sent Events."),
+        '{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":2}}',
+      ].join("\n"),
+    );
+    expect(events).toEqual([
+      { type: "partial", text: "Server-Sent " },
+      { type: "partial", text: "Events" },
+      { type: "delta", text: "Server-Sent Events." },
+      { type: "done", usage: { inputTokens: 1, outputTokens: 2 }, finishReason: null },
+    ]);
+  });
+});

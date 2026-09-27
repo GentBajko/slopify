@@ -12,7 +12,14 @@ import {
   lookLevels,
   transitionKinds,
 } from "../video/edit-settings.js";
-import { entryModes, formats, motionStyles, referenceSources, stageSources } from "./model.js";
+import {
+  entryModes,
+  formats,
+  motionStyles,
+  referenceSources,
+  runModes,
+  stageSources,
+} from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
@@ -43,6 +50,8 @@ export const videoEditSchema = z.object({
 // The shape Play posts and the shape `projects.config` holds, in one place: the second
 // is the first plus the rendered prompt texts.
 export const runDraftSchema = z.object({
+  // Absent is the long video.
+  mode: z.enum(runModes).optional(),
   checkpoints: z
     .array(checkpointStageSchema)
     .max(3)

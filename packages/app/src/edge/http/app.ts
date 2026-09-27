@@ -30,6 +30,7 @@ import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import type { MutationLifecycle } from "./mutations.js";
+import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
@@ -59,6 +60,8 @@ export interface AppDeps {
   readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
+  // Reads a narration file's loudness for the live view's waveform (ffmpeg in production).
+  readonly decodePeaks?: DecodePeaks | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
   readonly installationPending?: () => boolean;
   readonly folderLocation?: {
@@ -124,6 +127,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
+      .route("/projects", narrationPeakRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.

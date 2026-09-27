@@ -9,6 +9,7 @@ import {
   silenceGapSecondsMax,
   zoomPercentProblem,
 } from "../admission/rules.js";
+import { shortModeFields } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import type {
   ManifestOutput,
@@ -85,6 +86,7 @@ export function planRevision(
   const content = normalizeImages(normalizeArticleIntent(base, edit));
   const fields = [
     ...validateRevisionEdit(edit.config, content),
+    ...shortModeFields(edit.config),
     ...validateCues(content),
     ...validateRecipeInputs(edit.config, content),
     ...shortRangeFields(base, edit.config, content),

@@ -362,3 +362,32 @@ describe("claudeCodeLlm surface", () => {
     expect(await port.models()).toBe(models);
   });
 });
+
+describe("claudeCodeLlm live text", () => {
+  it("shows prose as it is typed and answers only with the committed message", async () => {
+    const lines = fixture("claude-code-success.jsonl").trimEnd().split("\n");
+    const typed = ["Server-Sent ", "Events"].map((text) =>
+      JSON.stringify({
+        type: "stream_event",
+        event: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } },
+      }),
+    );
+    const thinking = JSON.stringify({
+      type: "stream_event",
+      event: {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "thinking_delta", thinking: "hm" },
+      },
+    });
+    const at = lines.findIndex((line) => line.includes('"type":"text"'));
+    const events = await drain(
+      [...lines.slice(0, at), thinking, ...typed, ...lines.slice(at)].join("\n"),
+    );
+    expect(events.slice(0, 2)).toEqual([
+      { type: "partial", text: "Server-Sent " },
+      { type: "partial", text: "Events" },
+    ]);
+    expect(events.filter((event) => event.type === "delta")).toHaveLength(1);
+  });
+});

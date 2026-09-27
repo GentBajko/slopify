@@ -49,6 +49,15 @@ export interface ImageLandedEvent extends EventOrigin {
   readonly index: number;
 }
 
+// One narration request finished and its audio is saved: the live view's waveform grows by
+// that piece (`GET /api/projects/:id/narration/peaks`).
+export interface NarrationPieceEvent extends EventOrigin {
+  readonly type: "narration.piece";
+  readonly projectId: string;
+  readonly key: string;
+  readonly durationMs: number | null;
+}
+
 export interface ProjectStateEvent extends EventOrigin {
   readonly type: "project.state";
   readonly projectId: string;
@@ -71,6 +80,7 @@ export type ProjectEvent =
   | ArticleDeltaEvent
   | LlmPreviewEvent
   | ImageLandedEvent
+  | NarrationPieceEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent;
 

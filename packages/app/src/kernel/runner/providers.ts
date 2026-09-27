@@ -149,6 +149,9 @@ export function stageProviders(
           async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
             preview("", true);
             let text = "";
+            // Typed-ahead text the panel shows past the committed answer; the next delta
+            // replaces it, so the panel never shows a sentence twice.
+            let typed = false;
             let usage: Usage | null = null;
             let finishReason: string | null = null;
             for await (const event of port.complete({
@@ -165,12 +168,17 @@ export function stageProviders(
               progress();
               if (event.type === "delta") {
                 text += event.text;
+                if (typed) preview(text, true);
+                else preview(event.text);
+                typed = false;
+              } else if (event.type === "partial") {
+                typed = true;
                 preview(event.text);
               } else if (event.type === "done") {
                 usage = event.usage;
                 finishReason = event.finishReason;
               }
-              if (event.type !== "activity") onEvent?.(event);
+              if (event.type === "delta" || event.type === "done") onEvent?.(event);
             }
             const answer: LlmAnswer = { text, usage, finishReason };
             const unusable = call.check?.(answer);

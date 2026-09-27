@@ -31,7 +31,15 @@ export interface LlmDone {
 export interface LlmActivity {
   readonly type: "activity";
 }
-export type LlmEvent = LlmDelta | LlmDone | LlmActivity;
+
+// Answer text as the provider types it, before it commits the message the text belongs to.
+// Shown on the live panel only: the answer is made of `delta`s alone, which repeat this text
+// once the message is complete.
+export interface LlmPartial {
+  readonly type: "partial";
+  readonly text: string;
+}
+export type LlmEvent = LlmDelta | LlmDone | LlmActivity | LlmPartial;
 
 export interface LlmCapabilities {
   readonly streams: boolean;

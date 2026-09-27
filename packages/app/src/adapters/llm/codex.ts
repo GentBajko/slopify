@@ -140,6 +140,10 @@ export function codexArgs(
   ];
 }
 
+const itemProgress = z.object({
+  item: z.object({ id: z.string().optional(), type: z.string(), text: z.string().optional() }),
+});
+
 const itemCompleted = z.object({
   item: z.object({ type: z.string(), text: z.string().optional() }),
 });
@@ -162,6 +166,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     req.signal.throwIfAborted();
     const workspace = codexWorkspace(deps.env ?? process.env);
     let documents: DocumentWorkspace | undefined;
+    const typed = new Map<string, string>();
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     try {
@@ -179,6 +184,21 @@ export function codexLlm(deps: CodexDeps): LlmPort {
         const event = cliEvent(binary, line);
         yield { type: "activity" };
         req.signal.throwIfAborted();
+        // An agent message may be reported while it is written; its text so far is shown on
+        // the live panel, and only the completed item becomes the answer.
+        if (event.type === "item.started" || event.type === "item.updated") {
+          const item = itemProgress.safeParse(event.value);
+          if (item.success && item.data.item.type === "agent_message") {
+            const id = item.data.item.id ?? "";
+            const seen = typed.get(id) ?? "";
+            const text = item.data.item.text ?? "";
+            if (text.length > seen.length && text.startsWith(seen)) {
+              typed.set(id, text);
+              yield { type: "partial", text: text.slice(seen.length) };
+            }
+          }
+          continue;
+        }
         if (event.type === "item.completed") {
           const { item } = cliShaped(binary, itemCompleted, event.value);
           // A turn also completes `reasoning`, `web_search`, `command_execution` and

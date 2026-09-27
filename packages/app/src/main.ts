@@ -64,6 +64,7 @@ import {
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
 import { resolveFont } from "./slices/fonts/index.js";
+import { decodePeaks } from "./slices/narration/peaks.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
@@ -94,7 +95,6 @@ import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
-
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -433,6 +433,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       schedules: scheduleDeps,
       backups,
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
+      decodePeaks: (path, signal) => decodePeaks(ffmpeg, path, signal),
       openFolder,
       folderLocation: {
         ...folderConfiguration,
