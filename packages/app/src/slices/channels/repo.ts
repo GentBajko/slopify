@@ -25,6 +25,7 @@ const brandSchema = z
     documentTheme: z.string().optional(),
     ambientBed: channelAmbientBedSchema.optional(),
     language: z.string().optional(),
+    links: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
   })
   .readonly();
 const channelRow = z.object({

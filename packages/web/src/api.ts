@@ -652,7 +652,7 @@ export type {
   UsedBy,
 };
 
-// Settings → Channel links: the named links `{{Name}}` fills from in YouTube descriptions.
+// The older Settings list of named links: the default channel's until its Brand tab saves its own.
 export async function readChannelLinks(api: Api): Promise<readonly ChannelLink[]> {
   return (
     await read<{ links: readonly ChannelLink[] }>(await api.client.settings["channel-links"].$get())
@@ -668,6 +668,16 @@ export async function saveChannelLinks(
       await api.client.settings["channel-links"].$put({ json: { links: [...links] } }),
     )
   ).links;
+}
+
+// The links of a project's channel (its Brand tab), which its placeholders fill from.
+export async function readProjectChannelLinks(
+  api: Api,
+  projectId: string,
+): Promise<{ readonly channelId: string; readonly links: readonly ChannelLink[] }> {
+  return read<{ channelId: string; links: readonly ChannelLink[] }>(
+    await api.client.projects[":id"]["channel-links"].$get({ param: { id: projectId } }),
+  );
 }
 
 // The project page's hand edits to the YouTube description (`slices/youtube/edits.ts`).

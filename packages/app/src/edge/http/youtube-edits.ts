@@ -4,8 +4,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { projectExists } from "../../slices/admission/repo.js";
+import { projectChannelId } from "../../slices/channels/repo.js";
 import { descriptionFields, withEdit, withoutEdit } from "../../slices/youtube/edits.js";
-import { readDescriptionEdits, writeDescriptionEdits } from "../../slices/youtube/edits-repo.js";
+import {
+  readChannelLinksFor,
+  readDescriptionEdits,
+  writeDescriptionEdits,
+} from "../../slices/youtube/edits-repo.js";
 import { descriptionMaxCharacters } from "../../slices/youtube/model.js";
 import { channelLinksProblem } from "../../slices/youtube/placeholders.js";
 import type { AppDeps } from "./app.js";
@@ -35,6 +40,13 @@ export function youtubeEditRoutes(deps: AppDeps) {
       .get("/:id/youtube-edits", zValidator("param", idParam, onInvalid), (c) => {
         const { id } = c.req.valid("param");
         return exists(id) ? c.json(readDescriptionEdits(deps.db, id)) : missing(c);
+      })
+      // The links of the project's channel, which its placeholders fill from after its own.
+      .get("/:id/channel-links", zValidator("param", idParam, onInvalid), (c) => {
+        const { id } = c.req.valid("param");
+        if (!exists(id)) return missing(c);
+        const channelId = projectChannelId(deps.db, id);
+        return c.json({ channelId, links: readChannelLinksFor(deps.db, channelId) });
       })
       // Saves the user's text for one field with the generated text it was edited from; text
       // equal to that generated text clears the edit. "Keep mine" is this call with the new
@@ -72,7 +84,7 @@ export function youtubeEditRoutes(deps: AppDeps) {
           return c.json(saved);
         },
       )
-      // The project's own links, such as its "Previous video"; they win over Settings' list.
+      // The project's own links, such as its "Previous video"; they win over its channel's list.
       .put(
         "/:id/youtube-edits/links",
         zValidator("param", idParam, onInvalid),

@@ -11,6 +11,7 @@ import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { insertProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { writeSetting } from "../settings/repo.js";
+import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
 import { libraryTables, projectTables, usageTables } from "./backup-format.js";
 import { importBackup } from "./backup-import.js";
@@ -113,7 +114,10 @@ function seed(db: DatabaseSync): void {
     db.prepare(sql).run(...params);
   run(
     "INSERT INTO channels(id,name,is_default,brand_json,series_brief,version,episode_memory,ai_disclosure,created_at,updated_at) VALUES ('c2','Night stories',0,?,?,3,1,'yes',?,?)",
-    JSON.stringify({ captionColor: "#FFD700" }),
+    JSON.stringify({
+      captionColor: "#FFD700",
+      links: [{ name: "Discord", url: "https://discord.test/night" }],
+    }),
     "Calm stories for sleep.",
     at,
     at,
@@ -222,6 +226,14 @@ describe("backups carry everything added since 2.5.0", () => {
 
     const same = (sql: string) => expect(rows(target.db, sql)).toEqual(rows(source.db, sql));
     same("SELECT * FROM channels ORDER BY id");
+    // Each channel's own links travel in its brand kit; the default channel reads the older
+    // Settings list until its Brand tab is saved.
+    expect(readChannelLinksFor(target.db, "c2")).toEqual([
+      { name: "Discord", url: "https://discord.test/night" },
+    ]);
+    expect(readChannelLinksFor(target.db, defaultChannelId)).toEqual([
+      { name: "Patreon", url: "https://x.test" },
+    ]);
     same("SELECT * FROM cast_members ORDER BY id");
     same("SELECT * FROM cast_images ORDER BY id");
     same("SELECT sha256,mime,hex(bytes) AS bytes FROM image_blobs ORDER BY sha256");

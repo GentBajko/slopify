@@ -32,6 +32,10 @@ export interface BrandKit {
   // The language new projects in this channel are made in (`kernel/ports/languages.ts`),
   // unless Play picks one. Absent is English.
   readonly language?: string | undefined;
+  // The named links a YouTube description's `{{Name}}` placeholders fill from for this
+  // channel's projects (`slices/youtube/placeholders.ts`). Absent on the default channel, the
+  // older Settings list stands in (`readChannelLinksFor`). Not styling: no run reads it.
+  readonly links?: readonly import("../youtube/placeholders.js").ChannelLink[] | undefined;
 }
 
 export interface Channel {
