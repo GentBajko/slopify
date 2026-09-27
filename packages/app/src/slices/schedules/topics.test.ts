@@ -7,6 +7,8 @@ import { providerError } from "../../kernel/ports/model.js";
 import { standaloneOver } from "../../kernel/runner/standalone.fake.js";
 import { standaloneLlm } from "../../kernel/runner/standalone.js";
 import { defaultChannelId } from "../channels/model.js";
+import { setProjectChannel } from "../channels/repo.js";
+import { createChannel } from "../channels/service.js";
 import { importChannelVideos } from "../channels/videos.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
@@ -24,6 +26,7 @@ import {
   generationDue,
   generationRetryMs,
   heldTopics,
+  knownTitles,
   moveTopic,
   parseTopics,
   rejectHeldTopic,
@@ -89,12 +92,14 @@ function setup(options: {
     topicGeneration: options.generation,
   });
   if (!schedule.ok) throw new Error(`schedule refused: ${schedule.reason}`);
-  const project = (title: string): void => {
+  const project = (title: string): string => {
+    const projectId = randomUUID();
     h.deps.db
       .prepare(
         "INSERT INTO projects (id,title,format,config,created_at,updated_at) VALUES (?,?,?,?,?,?)",
       )
-      .run(randomUUID(), title, "16:9", "{}", now.toISOString(), now.toISOString());
+      .run(projectId, title, "16:9", "{}", now.toISOString(), now.toISOString());
+    return projectId;
   };
   return {
     h,
@@ -152,6 +157,27 @@ it("merges only new topics, dropping near-duplicates of what was queued or made,
     expect(prompt).toContain("{{Topic}}");
     expect(prompt).toContain("Suggest 7 new topics");
     expect(s.read().topics).toMatchObject({ error: null, generatingSince: null });
+  } finally {
+    s.h.close();
+  }
+});
+
+it("compares only with the projects of the schedule's own channel", async () => {
+  const s = setup({
+    generation: queue(2),
+    answers: async () => JSON.stringify(["Vecna", "Lolth", "Orcus"]),
+  });
+  try {
+    const other = randomUUID();
+    createChannel(s.h.deps, { id: other, name: "Sleep" });
+    s.project("D&D Lore: Lolth");
+    const elsewhere = s.project("Sleep Stories: Vecna");
+    setProjectChannel(s.h.deps.db, elsewhere, other);
+    expect(knownTitles(s.deps, s.id).projects).toEqual(["D&D Lore: Lolth"]);
+    expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 2, mode: "queue" });
+    expect(s.read().items.map((item) => item.title)).toEqual(["Vecna", "Orcus"]);
+    const prompt = s.calls[0]?.messages.map((message) => message.content).join("\n") ?? "";
+    expect(prompt).not.toContain("Sleep Stories: Vecna");
   } finally {
     s.h.close();
   }

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { liveProject } from "../admission/repo.js";
-import { scheduleChannel } from "../channels/repo.js";
+import { defaultChannelId } from "../channels/model.js";
+import { projectChannels, scheduleChannel } from "../channels/repo.js";
 import { channelVideoTitles } from "../channels/videos.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
@@ -244,8 +245,10 @@ function nextRank(deps: ScheduleDeps, scheduleId: string): number {
   return rank === null ? 0 : rank + 1;
 }
 
-// Everything this schedule has queued, held, turned down or used, every project's title, and
-// the titles of the videos its channel made before Slopify (Channel page → Existing videos).
+// Everything this schedule has queued, held, turned down or used, the titles of the projects in
+// its channel, and the titles of the videos its channel made before Slopify (Channel page →
+// Existing videos). Another channel's videos are its own business: a sleep channel may cover a
+// subject a lore channel already did.
 export function knownTitles(
   deps: Pick<ScheduleDeps, "db">,
   scheduleId: string,
@@ -255,11 +258,16 @@ export function knownTitles(
     .prepare("SELECT title FROM schedule_topics WHERE schedule_id=? ORDER BY created_at DESC")
     .all(scheduleId)
     .map((row) => z.object({ title: z.string() }).parse(row).title);
-  const projects = deps.db
-    .prepare(`SELECT title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
-    .all()
-    .map((row) => z.object({ title: z.string() }).parse(row).title);
   const channel = scheduleChannel(deps.db, scheduleId);
+  const channels = projectChannels(deps.db);
+  const projects = deps.db
+    .prepare(`SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
+    .all()
+    .map((row) => z.object({ id: z.string(), title: z.string() }).parse(row))
+    .filter(
+      (row) => channel === undefined || (channels.get(row.id) ?? defaultChannelId) === channel.id,
+    )
+    .map((row) => row.title);
   const existing = channel === undefined ? [] : channelVideoTitles(deps.db, channel.id);
   return {
     topics: [...new Set([...(schedule?.items.map((item) => item.title) ?? []), ...logged])],
