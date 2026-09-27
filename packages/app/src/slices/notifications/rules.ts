@@ -74,6 +74,24 @@ export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText 
   }
 }
 
+// A schedule that holds its generated topics for approval says so once per generation.
+export interface TopicsNoticeSubject {
+  readonly scheduleName: string;
+  readonly added: number;
+  readonly waiting: number;
+}
+
+export function topicsNoticeText(subject: TopicsNoticeSubject): NoticeText {
+  const name =
+    subject.scheduleName.trim() === "" ? "Untitled schedule" : subject.scheduleName.trim();
+  const count = subject.added;
+  const total = subject.waiting > count ? ` ${String(subject.waiting)} are waiting in all.` : "";
+  return {
+    headline: `${String(count)} new ${count === 1 ? "topic is" : "topics are"} waiting for you`,
+    detail: `Open Schedules → ${name} → Topics waiting to approve, edit or reject ${count === 1 ? "it" : "them"}.${total}`,
+  };
+}
+
 export const testNotice: NoticeText = {
   headline: "Slopify test notification",
   detail: "Notifications work. You'll get one when a run finishes, fails or waits for you.",

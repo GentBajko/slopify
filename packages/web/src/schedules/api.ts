@@ -4,7 +4,14 @@ import type {
   ScheduleSummary,
   ScheduleUpdate,
 } from "@app/slices/schedules/model.js";
-import { scheduleRunSchema, scheduleSummarySchema } from "@app/slices/schedules/schema.js";
+import {
+  type Calendar,
+  calendarSchema,
+  type HeldTopic,
+  heldTopicSchema,
+  scheduleRunSchema,
+  scheduleSummarySchema,
+} from "@app/slices/schedules/schema.js";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import type { Api } from "@/api";
@@ -109,4 +116,133 @@ export async function deleteSchedule(
     await api.fetch(`${root(api)}/${encodeURIComponent(id)}`, json("DELETE", { baseVersion })),
     z.object({ deleted: z.literal(true) }),
   );
+}
+
+// Topic generation and the held topics waiting for approval.
+const heldBody = z.object({ topics: z.array(heldTopicSchema) });
+
+export const heldTopicsKey = (id: string) => ["schedule", id, "held-topics"] as const;
+
+export async function readHeldTopics(
+  api: Api,
+  id: string,
+): Promise<ScheduleReply<readonly HeldTopic[]>> {
+  const reply = await responseOf(
+    await api.fetch(`${root(api)}/${encodeURIComponent(id)}/topics/held`),
+    heldBody,
+  );
+  return reply.ok ? { ok: true, value: reply.value.topics } : reply;
+}
+
+const topicPath = (api: Api, id: string, rest: string): string =>
+  `${root(api)}/${encodeURIComponent(id)}/topics/${rest}`;
+
+export async function generateTopicsNow(
+  api: Api,
+  id: string,
+): Promise<ScheduleReply<{ readonly started: true }>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "generate"), json("POST", {})),
+    z.object({ started: z.literal(true) }),
+  );
+}
+
+export async function approveHeldTopic(
+  api: Api,
+  id: string,
+  topicId: string,
+  title?: string,
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(
+      topicPath(api, id, `held/${encodeURIComponent(topicId)}/approve`),
+      json("POST", title === undefined ? {} : { title }),
+    ),
+    scheduleSummarySchema,
+  );
+}
+
+export async function approveAllHeldTopics(
+  api: Api,
+  id: string,
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "held/approve-all"), json("POST", {})),
+    scheduleSummarySchema,
+  );
+}
+
+export async function rejectHeldTopic(
+  api: Api,
+  id: string,
+  topicId: string,
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(
+      topicPath(api, id, `held/${encodeURIComponent(topicId)}/reject`),
+      json("POST", {}),
+    ),
+    scheduleSummarySchema,
+  );
+}
+
+export async function editHeldTopic(
+  api: Api,
+  id: string,
+  topicId: string,
+  title: string,
+): Promise<ScheduleReply<HeldTopic>> {
+  return responseOf(
+    await api.fetch(
+      topicPath(api, id, `held/${encodeURIComponent(topicId)}`),
+      json("PUT", { title }),
+    ),
+    heldTopicSchema,
+  );
+}
+
+// Reordering a queue, which is also what reorders the calendar.
+export async function moveTopic(
+  api: Api,
+  id: string,
+  input: { readonly baseVersion: number; readonly from: number; readonly to: number },
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "move"), json("POST", input)),
+    scheduleSummarySchema,
+  );
+}
+
+export async function transferTopic(
+  api: Api,
+  id: string,
+  input: {
+    readonly baseVersion: number;
+    readonly index: number;
+    readonly targetId: string;
+    readonly position?: number;
+  },
+): Promise<ScheduleReply<{ readonly source: ScheduleSummary; readonly target: ScheduleSummary }>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "transfer"), json("POST", input)),
+    z.object({ source: scheduleSummarySchema, target: scheduleSummarySchema }),
+  );
+}
+
+export const calendarKey = ["calendar"] as const;
+
+export function calendarQuery(api: Api, from: string, to: string): UseQueryOptions<Calendar> {
+  return {
+    queryKey: [...calendarKey, from, to],
+    queryFn: async () => {
+      const query = new URLSearchParams({ from, to });
+      const reply = await responseOf(
+        await api.fetch(`${api.origin}/api/calendar?${query.toString()}`),
+        calendarSchema,
+      );
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+    refetchInterval: 30_000,
+  };
 }

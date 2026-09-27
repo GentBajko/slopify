@@ -5,13 +5,20 @@ import type {
   ScheduleSummary,
   ScheduleUpdate,
 } from "@app/slices/schedules/model.js";
-import { queueMax } from "@app/slices/schedules/schema.js";
+import {
+  briefMax,
+  queueMax,
+  type TopicGeneration,
+  topicGenerationOff,
+} from "@app/slices/schedules/schema.js";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModelPicker, ProviderPicker } from "@/play/pickers";
+import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
 import { createSchedule, updateSchedule } from "./api";
 import { localScheduleTime, scheduleInstant } from "./time";
@@ -74,6 +81,10 @@ export function ScheduleForm({
   );
   const [topicKeyword, setTopicKeyword] = useState<string | null>(editing?.topicKeyword ?? null);
   const [fixed, setFixed] = useState<Readonly<Record<string, string>>>(editing?.values ?? {});
+  const [brief, setBrief] = useState(editing?.brief ?? "");
+  const [generation, setGeneration] = useState<TopicGeneration>(
+    editing?.topicGeneration ?? topicGenerationOff,
+  );
   const [saving, setSaving] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const active = useRef(false);
@@ -129,6 +140,19 @@ export function ScheduleForm({
       onError("Each topic can be at most 200 characters.");
       return;
     }
+    if (brief.trim().length > briefMax) {
+      onError(`Keep the series brief to ${String(briefMax)} characters or fewer.`);
+      return;
+    }
+    if (
+      generation.llm !== null &&
+      (generation.llm.provider === "" || generation.llm.model === "")
+    ) {
+      onError(
+        "Pick both a provider and a model for topic generation, or choose Use the template's LLM.",
+      );
+      return;
+    }
     if (kind === "weekly" && days.length === 0) {
       onError("Choose at least one weekday for a weekly schedule.");
       return;
@@ -175,6 +199,8 @@ export function ScheduleForm({
               .filter((name) => name !== chosenKeyword)
               .map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
           ),
+          brief: brief.trim() === "" ? null : brief.trim(),
+          topicGeneration: generation,
         };
         attempt.current = editing
           ? { ...input, baseVersion: editing.version, mutationId: crypto.randomUUID() }
@@ -373,6 +399,13 @@ export function ScheduleForm({
             title={form?.title}
             loading={templateId !== "" && template.isPending}
           />
+          <GenerationFields
+            brief={brief}
+            onBrief={setBrief}
+            generation={generation}
+            onGeneration={setGeneration}
+            templateLlm={form?.llm}
+          />
         </fieldset>
         <div className="sticky bottom-[-16px] -mx-4 mt-4 flex gap-2 border-t border-line bg-panel px-4 py-3">
           <Button
@@ -446,8 +479,8 @@ function TopicFields({
         <InfoTip label="Topics">
           <p>
             One topic per line. Each run starts one project with the first topic and removes it from
-            the list; the schedule completes when the list is empty. With no topics, every run uses
-            the template as saved.
+            the list; the schedule completes when the list is empty, unless topic generation below
+            is on. With no topics and generation off, every run uses the template as saved.
           </p>
         </InfoTip>
       </legend>
@@ -517,6 +550,138 @@ function TopicFields({
           )}
         </p>
       ) : null}
+    </fieldset>
+  );
+}
+
+// The series brief and whether the schedule asks an LLM for its next topics.
+function GenerationFields({
+  brief,
+  onBrief,
+  generation,
+  onGeneration,
+  templateLlm,
+}: {
+  readonly brief: string;
+  readonly onBrief: (text: string) => void;
+  readonly generation: TopicGeneration;
+  readonly onGeneration: (next: TopicGeneration) => void;
+  readonly templateLlm: { readonly provider: string; readonly model: string } | undefined;
+}): ReactElement {
+  const { api } = useApp();
+  const providers = useQuery({ ...providersQuery(api), enabled: generation.mode !== "off" });
+  const fieldClass =
+    "min-h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-[5px] text-small";
+  const own = generation.llm;
+  return (
+    <fieldset className="space-y-3 sm:col-span-2">
+      <legend className="flex items-center gap-1">
+        Topic generation
+        <InfoTip label="Topic generation">
+          <p>
+            When the queue holds fewer topics than you ask for, Slopify asks an LLM for more. It
+            sends the series brief and every title this schedule and your projects already have, and
+            drops any suggestion close to one of them. Queue directly adds them to the end of the
+            list; Hold for approval waits for you under Topics waiting.
+          </p>
+        </InfoTip>
+      </legend>
+      <label className="block space-y-1" htmlFor="schedule-brief">
+        <span className="text-small text-ink2">Series brief (optional)</span>
+        <textarea
+          id="schedule-brief"
+          rows={3}
+          maxLength={briefMax}
+          className={fieldClass}
+          value={brief}
+          onChange={(event) => onBrief(event.target.value)}
+          placeholder="D&D lore, documentary style. Famous villains and places first."
+        />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1" htmlFor="schedule-generation">
+          <span className="text-small text-ink2">New topics</span>
+          <select
+            id="schedule-generation"
+            value={generation.mode}
+            onChange={(event) => {
+              const mode = event.target.value;
+              onGeneration({
+                ...generation,
+                mode: mode === "queue" || mode === "hold" ? mode : "off",
+              });
+            }}
+            className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
+          >
+            <option value="off">Off: I add topics myself</option>
+            <option value="queue">Generate and queue directly</option>
+            <option value="hold">Generate and hold for approval</option>
+          </select>
+        </label>
+        {generation.mode === "off" ? null : (
+          <label className="block space-y-1" htmlFor="schedule-keep">
+            <span className="text-small text-ink2">Keep at least this many queued</span>
+            <Input
+              id="schedule-keep"
+              type="number"
+              min={1}
+              max={100}
+              value={String(generation.keepAtLeast)}
+              onChange={(event) => {
+                const value = Math.round(Number(event.target.value));
+                onGeneration({
+                  ...generation,
+                  keepAtLeast: Number.isFinite(value) ? Math.min(100, Math.max(1, value)) : 1,
+                });
+              }}
+            />
+          </label>
+        )}
+      </div>
+      {generation.mode === "off" ? null : (
+        <div className="space-y-3">
+          <label className="inline-flex items-center gap-2 text-small">
+            <input
+              type="checkbox"
+              checked={own === null}
+              onChange={(event) =>
+                onGeneration({
+                  ...generation,
+                  llm: event.target.checked
+                    ? null
+                    : {
+                        provider: templateLlm?.provider ?? "",
+                        model: templateLlm?.model ?? "",
+                      },
+                })
+              }
+            />
+            Use the template's LLM
+            {own === null && templateLlm !== undefined && templateLlm.provider !== ""
+              ? ` (${templateLlm.provider} · ${templateLlm.model})`
+              : ""}
+          </label>
+          {own === null ? null : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ProviderPicker
+                label="Provider"
+                family="llm"
+                providers={providers.data?.providers ?? []}
+                value={own.provider}
+                problem={providers.error?.message}
+                onPick={(provider) => onGeneration({ ...generation, llm: { provider, model: "" } })}
+              />
+              <ModelPicker
+                label="Model"
+                provider={own.provider}
+                value={own.model}
+                problem={undefined}
+                onPick={(model) => onGeneration({ ...generation, llm: { ...own, model } })}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </fieldset>
   );
 }

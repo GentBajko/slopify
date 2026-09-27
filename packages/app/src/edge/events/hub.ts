@@ -5,6 +5,7 @@ import type {
   ProjectStateEvent,
   ProjectUpdatedEvent,
   RunningCountEvent,
+  ScheduleTopicsEvent,
   StageProgressEvent,
   StageStateEvent,
 } from "../../kernel/events.js";
@@ -20,6 +21,7 @@ export type {
   ProjectEvent,
   ProjectStateEvent,
   RunningCountEvent,
+  ScheduleTopicsEvent,
   StageProgressEvent,
   StageStateEvent,
 };
@@ -28,6 +30,7 @@ export type {
 // the running tally stays the same. Token and stage-progress events stay local.
 export type GlobalEvent =
   | RunningCountEvent
+  | ScheduleTopicsEvent
   | StagingEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent;

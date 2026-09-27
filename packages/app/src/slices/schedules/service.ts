@@ -20,6 +20,7 @@ import {
   scheduleCreateSchema,
   scheduleDeleteSchema,
   scheduleUpdateSchema,
+  topicStateIdle,
 } from "./schema.js";
 
 export function listSchedules(deps: ScheduleDeps): readonly ScheduleSummary[] {
@@ -108,6 +109,8 @@ export function updateSchedule(
       now.toISOString(),
       previous.status,
       previous.version + 1,
+      // Saving clears a recorded generation failure, so the next tick tries again.
+      { ...previous.topics, failedAt: null, error: null },
     );
     if (!updateScheduleRow(deps.db, value, parsed.data.mutationId, hash, parsed.data.baseVersion))
       return { ok: false, reason: "conflict" };
@@ -230,6 +233,7 @@ function summary(
   now: string,
   status: ScheduleSummary["status"] = "active",
   version = 1,
+  topics: ScheduleSummary["topics"] = topicStateIdle,
 ): ScheduleSummary {
   return {
     id: input.id,
@@ -244,6 +248,9 @@ function summary(
     items: input.items,
     topicKeyword: input.topicKeyword,
     values: input.values,
+    brief: input.brief === null || input.brief === "" ? null : input.brief,
+    topicGeneration: input.topicGeneration,
+    topics,
     status,
     version,
     nextRunAt,
