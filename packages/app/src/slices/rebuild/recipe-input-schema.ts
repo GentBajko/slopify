@@ -46,6 +46,14 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         })
         .strict()
         .optional(),
+      // A multi-voice run's script or speaker split: the answer is checked as a script.
+      script: z
+        .object({
+          speakers: z.array(z.object({ id: z.string(), name: z.string() }).strict()),
+          attribute: z.boolean(),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
   z
