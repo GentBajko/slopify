@@ -56,7 +56,7 @@ person's own browser.
 - An **upload pack** fallback without the extension: files plus every text, each with a Copy
   button, in the order Studio asks for them.
 
-## 4. Smoothness
+## 4. Smoothness of the flow
 
 Everything that made a run harder than it should be. Each is small; together they are the point
 of 3.0.
@@ -88,7 +88,52 @@ of 3.0.
 - Health check on the providers page: each CLI signed in, each key valid, the model reachable.
 - Updating Slopify waits for running work by itself and says when it will update.
 
-## 5. Being picked up by others
+## 5. A real design, not a pile of screens
+
+The app works, but it doesn't look or feel designed. 3.0 gets one visual language, applied
+everywhere, before any new screen is added.
+
+**One theme**
+- A defined identity: palette, type scale, spacing scale, radii, elevation, motion. Written down
+  once (tokens + a short style guide) and used by every screen and by slopify.stream, so the app
+  and the site look like the same product.
+
+**Buttons mean one thing each**
+- A small, fixed set: primary (one per area), secondary, quiet, destructive, icon. Same look =
+  same kind of action, everywhere.
+- Actions are buttons, links go somewhere. No actions disguised as plain text, no links dressed
+  as buttons.
+- Actions sit in the same place on every screen (e.g. top right of a section), in the same
+  order.
+
+**Use the screen**
+- No card inside a card. Sections are separated by space and headings, not nested borders.
+- Layouts use the full width on a desktop: two or three columns where content allows (settings
+  beside preview, list beside detail), so the common tasks need little or no scrolling.
+- Everything sits on one grid; labels, fields and buttons line up.
+
+**Media looks like media**
+- Images and videos get proper frames: consistent aspect boxes, rounded corners, a caption
+  line, hover actions, a lightbox for full size, a real player for video with the poster.
+- Galleries (images, shorts, thumbnails) use one grid component.
+
+**Fewer clicks**
+- Every common task is counted in clicks, and the count goes down: queue a video, regenerate
+  an image, copy the description, edit a prompt, change a schedule's topics.
+- Library actions (edit, duplicate, delete, use in Play) are visible on each row, not hidden
+  in menus.
+- Inline editing where it is safe; menus only for the rare actions.
+- Keyboard shortcuts for the frequent ones.
+
+**Installing and updating**
+- Replace the layered Docker scripts with one clean setup: a single image, one compose file,
+  one install command, one update command, with the host CLI bridge designed in rather than
+  glued on. Same for the native install.
+
+How it is done: an audit screen by screen against these rules (with screenshots before and
+after), then fixes, with the kit components enforcing the rules so new screens can't drift.
+
+## 6. Being picked up by others
 
 For career and donations, not growth at any cost.
 
