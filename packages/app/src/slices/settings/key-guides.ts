@@ -38,6 +38,21 @@ const openAi: KeyGuide = {
   },
 };
 
+const google: KeyGuide = {
+  signUp: { label: "aistudio.google.com", url: "https://aistudio.google.com" },
+  keyPage: { label: "aistudio.google.com/apikey", url: "https://aistudio.google.com/apikey" },
+  billing: { label: "Projects → Set up billing", url: "https://aistudio.google.com/projects" },
+  steps: [
+    "Sign in to Google AI Studio with your Google account.",
+    "Open Projects and choose Set up billing next to your project: Gemini image models are not available on the free tier.",
+    "Open API keys, choose Create API key, and copy it.",
+    "Paste it here, choose Save, then Test.",
+  ],
+  permissions:
+    "Use a key made in AI Studio. An older Google Cloud key must be set to Restrict to Gemini API only, or Google rejects it.",
+  docs: { label: "Gemini API keys", url: "https://ai.google.dev/gemini-api/docs/api-key" },
+};
+
 export const keyGuides: Readonly<Partial<Record<ProviderId, KeyGuide>>> = {
   openrouter: {
     signUp: { label: "openrouter.ai/sign-up", url: "https://openrouter.ai/sign-up" },
@@ -55,19 +70,15 @@ export const keyGuides: Readonly<Partial<Record<ProviderId, KeyGuide>>> = {
   },
   "openai-tts": openAi,
   "openai-image": openAi,
-  "google-image": {
-    signUp: { label: "aistudio.google.com", url: "https://aistudio.google.com" },
-    keyPage: { label: "aistudio.google.com/apikey", url: "https://aistudio.google.com/apikey" },
-    billing: { label: "Projects → Set up billing", url: "https://aistudio.google.com/projects" },
+  "google-image": google,
+  "google-tts": {
+    ...google,
     steps: [
       "Sign in to Google AI Studio with your Google account.",
-      "Open Projects and choose Set up billing next to your project: Gemini image models are not available on the free tier.",
       "Open API keys, choose Create API key, and copy it.",
       "Paste it here, choose Save, then Test.",
     ],
-    permissions:
-      "Use a key made in AI Studio. An older Google Cloud key must be set to Restrict to Gemini API only, or Google rejects it.",
-    docs: { label: "Gemini API keys", url: "https://ai.google.dev/gemini-api/docs/api-key" },
+    permissions: `The same Gemini API key as Google images: with one saved there, Gemini voices use it and nothing is needed here. ${google.permissions}`,
   },
   fal: {
     signUp: { label: "fal.ai/login", url: "https://fal.ai/login" },
