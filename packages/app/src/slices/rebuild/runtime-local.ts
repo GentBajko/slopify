@@ -14,6 +14,7 @@ import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { turnJoinArgs } from "../voices/join.js";
+import { executeFigureCard } from "./runtime-figure-card.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
@@ -85,6 +86,7 @@ export async function executeLocalRecipe(
     throw new Error(
       "Slopify hit an internal error (a local step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
+  if (input.operation === "figure-card-v1") return executeFigureCard(deps, context, piece);
   if (input.operation === "narration-files-v1") {
     await publishNarrationText(deps, context, piece);
     return "done";

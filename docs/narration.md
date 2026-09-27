@@ -46,3 +46,33 @@ narration chunks that contain a block (all of it when Chunking is the whole arti
 absent, plans exactly what the project planned before the setting existed; the fingerprints
 are pinned in `rebuild/recipe-describe.test.ts`. It needs a text model: without one the
 narration flattens the article as before.
+
+## Show tables and figures on screen
+
+Play → Video, and Edit project → Video → Cuts and look; offered while the narration describes
+tables and figures. On by default for new runs and templates, stored only when on, so a
+project saved before it renders the video it always did.
+
+Each described block also becomes a card (`figure:card:<n>`, Images stage), drawn on this
+computer by the bundled ffmpeg with libass (`packages/app/src/slices/video/figure-card.ts`),
+at no cost:
+
+- a figure: the article's own picture when the project has an uploaded image with the file
+  name the article uses, fitted over its caption; otherwise its caption, large;
+- a table: a clean grid, header in the accent colour over a rule, numbers right-aligned; a
+  table too tall to read at 1080p is cut with "…and N more rows";
+- code and diagrams: a monospace face (DejaVu Sans Mono where installed) with simple syntax
+  colouring;
+- an equation: set as readable text (Greek letters, powers and indices, fractions as a/b);
+  there is no offline TeX renderer in the app.
+
+Cards use the channel brand kit's title font and colour (the caption font otherwise) on the
+3.0 graphite ground with lime accents, in the video's format, and also upright (9:16) when a
+16:9 project makes Shorts.
+
+The export finds each description's words in the word timing (`video/figure-spans.ts`) and
+shows the card from 0.3 s before the description starts to 0.3 s after it ends
+(`video/plan.ts`, `figureFrames`); gaps under a second go to the card. The images take turns
+around the cards, keeping their order and motion. A Short whose clip includes a description
+shows the upright card for that stretch. The cards are listed under Images → From the article,
+where Regenerate makes one again.

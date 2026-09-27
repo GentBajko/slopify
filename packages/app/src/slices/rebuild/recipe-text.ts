@@ -99,6 +99,8 @@ export interface TextRecipes {
   readonly narrationText: string | null;
   // The description steps the body narration waits on (`recipe-describe.ts`).
   readonly descriptions: readonly ResolvedWorkRecipe[];
+  // Their cards, with "Show tables and figures on screen" (`figure:card:<n>`).
+  readonly cards: readonly ResolvedWorkRecipe[];
   readonly glossary: GlossaryResult | null;
   readonly article: ResolvedWorkRecipe;
   readonly entries: Readonly<Partial<Record<"intro" | "outro", TextRecipe>>>;
@@ -292,6 +294,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   }
   let narrationText = articleText;
   const descriptions: ResolvedWorkRecipe[] = [];
+  const cards: ResolvedWorkRecipe[] = [];
   if (describing(context) && voices === undefined) {
     if (endMatter === null) {
       descriptions.push(describeFuture(context, article));
@@ -299,6 +302,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     } else {
       const described = describedText(context, endMatter.body, [article.key]);
       descriptions.push(...described.recipes);
+      cards.push(...described.cards);
       narrationText = described.spoken;
     }
   }
@@ -373,6 +377,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     articleText,
     narrationText,
     descriptions,
+    cards,
     glossary,
     article,
     entries,

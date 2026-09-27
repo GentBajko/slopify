@@ -150,6 +150,7 @@ export const runDraftSchema = z.object({
   subtitles: subtitleConfigSchema.optional(),
   document: documentSettingsSchema.optional(),
   youtubeDescription: z.boolean().optional(),
+  showFigures: z.boolean().optional(),
   descriptionPrompt: z.string().optional(),
   // The ranges are `slices/shorts/model.ts`'s, checked by admission, not the schema's.
   shorts: z

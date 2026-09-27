@@ -92,6 +92,8 @@ export function outputFileName(
       return `shorts/short-${String(index).padStart(2, "0")}${extension}`;
     case "animated_image":
       return `animated/image-${String(index).padStart(3, "0")}${extension}`;
+    case "figure_card":
+      return `cards/card-${String(index).padStart(3, "0")}${extension}`;
     case "audio_body":
       return `audio-body${extension}`;
     case "audio_export":

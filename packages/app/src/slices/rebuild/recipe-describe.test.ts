@@ -237,3 +237,47 @@ describe("describing tables and figures", () => {
     );
   });
 });
+
+describe("showing tables and figures on screen", () => {
+  const video: RunConfig = {
+    ...on(narrated),
+    sources: { ...narrated.sources, video: "generate" },
+    showFigures: true,
+  };
+
+  it("plans a card per described block, which the video waits for", () => {
+    const recipes = plan(video);
+    const cards = recipes.filter((one) => one.key.startsWith("figure:card:"));
+    expect(cards.map((one) => [one.key, one.stage])).toEqual([
+      ["figure:card:1", "images"],
+      ["figure:card:2", "images"],
+      ["figure:card:3", "images"],
+      ["figure:card:4", "images"],
+    ]);
+    expect(cards[0]?.input).toMatchObject({
+      kind: "local",
+      operation: "figure-card-v1",
+      values: { kind: "table", formats: ["16:9"] },
+    });
+    const exported = recipes.find((one) => one.key === "export:video");
+    expect(exported?.dependsOn).toEqual(
+      expect.arrayContaining(["subtitles:timing", ...cards.map((one) => one.key)]),
+    );
+  });
+
+  it("draws them upright too for the Shorts of a 16:9 video, which wait for them", () => {
+    const recipes = plan({
+      ...video,
+      shorts: { enabled: true, count: 1, minSeconds: 30, maxSeconds: 60 },
+    });
+    expect(recipes.find((one) => one.key === "figure:card:1")?.input).toMatchObject({
+      values: { formats: ["16:9", "9:16"] },
+    });
+  });
+
+  it("plans no card, and the video it always did, when off", () => {
+    const { showFigures: _off, ...without } = video;
+    const recipes = plan(without);
+    expect(recipes.some((one) => one.key.startsWith("figure:card:"))).toBe(false);
+  });
+});

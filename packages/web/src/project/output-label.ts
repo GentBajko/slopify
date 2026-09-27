@@ -29,6 +29,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   short_image: "Short image",
   short_video: "Short",
   animated_image: "Animated image",
+  figure_card: "On-screen card",
   reference: "Establishing image (reference)",
   script_md: "Script (speaker split)",
   audio_mp3: "Audio (MP3 with chapters)",
@@ -41,6 +42,8 @@ export function outputLabel(output: Output): string {
     return `Short ${String(output.meta.short)}`;
   if (output.role === "short_image" && typeof output.meta.short === "number")
     return `Short ${String(output.meta.short)} image ${String(output.meta.index ?? 1)}`;
+  if (output.role === "figure_card" && typeof output.meta.index === "number")
+    return `On-screen card ${String(output.meta.index)}`;
   if (output.role === "animated_image" && typeof output.meta.index === "number")
     return `Animated image ${String(output.meta.index)}`;
   return output.role === "image" && typeof output.meta.index === "number"

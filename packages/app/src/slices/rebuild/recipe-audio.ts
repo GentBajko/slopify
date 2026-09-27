@@ -30,6 +30,8 @@ export interface AudioRecipes {
   readonly keys: readonly string[];
   // A multi-voice run's script sections, once the script is known: the audio files' chapters.
   readonly sections?: readonly ScriptSection[] | undefined;
+  // "Show tables and figures on screen": the cards of the described blocks, in reading order.
+  readonly cards?: readonly ResolvedWorkRecipe[] | undefined;
 }
 export function bodyNarrationGroups(
   context: RecipeContext,
@@ -64,6 +66,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           text.descriptions.map((row) => row.fingerprint),
         ]);
   let sections: readonly ScriptSection[] | undefined;
+  let cards: readonly ResolvedWorkRecipe[] = [];
   if (config.sources.audio === "provide") {
     body = recipe(
       context,
@@ -81,7 +84,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     recipes.push(body);
   } else if (text.script !== undefined && config.voices !== undefined) {
     const voiced = voiceBodyRecipes(context, config.voices, text.script, text.glossary);
-    recipes.push(...voiced.preparations, ...voiced.parts);
+    recipes.push(...voiced.preparations, ...voiced.cards, ...voiced.parts);
+    cards = voiced.cards;
     if (narrationFiles) recipes.push(narrationFileRecipe(context, "body", voiced.parts));
     recipes.push(voiced.body);
     body = voiced.body;
@@ -92,7 +96,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     const parts: ResolvedWorkRecipe[] = [];
     const transcripts: { original: string; effective: string }[] = [];
     const futurePronunciation: FingerprintValue[] = [];
-    recipes.push(...text.descriptions);
+    recipes.push(...text.descriptions, ...text.cards);
+    cards = text.cards;
     let pending = text.narrationText === null;
     for (const { key: logicalKey, text: logicalText } of groups) {
       transcripts.push({
@@ -291,6 +296,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     timeline,
     keys: ordered.map(({ value }) => value.key),
     ...(sections === undefined ? {} : { sections }),
+    ...(cards.length === 0 ? {} : { cards }),
   };
 }
 function effectiveText(context: RecipeContext, key: string, original: string): string {

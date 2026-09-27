@@ -3,10 +3,15 @@ import { join } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { MotionStyle } from "../admission/model.js";
-import { type AudioSegment, type EditList, editListVersion } from "../video/edit-list.js";
+import {
+  type AudioSegment,
+  type EditList,
+  editListVersion,
+  type Shot,
+} from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { motionFor } from "../video/motion.js";
-import { fps } from "../video/plan.js";
+import { type FigureShot, figureFrames, fps } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
 import { fasterWords, shortCaptionsAss } from "./captions.js";
 
@@ -124,6 +129,8 @@ export function shortEditList(input: {
   readonly imageSeconds: number;
   readonly motionStyle: MotionStyle;
   readonly zoomPercent: number;
+  // Cards on the short's own timeline (seconds from its first frame).
+  readonly figures?: readonly FigureShot[] | undefined;
 }): EditList {
   if (input.images.length === 0)
     throw new Error(
@@ -131,6 +138,43 @@ export function shortEditList(input: {
     );
   const total = Math.max(1, Math.round(input.seconds * fps));
   const each = Math.max(1, Math.round(input.imageSeconds * fps));
+  const figures = figureFrames(input.figures ?? [], total);
+  if (figures.length > 0) {
+    // The short's images take turns around the cards, in order, starting over if the cards
+    // leave room for more shots than there are images.
+    const shots: Shot[] = [];
+    let cursor = 0;
+    let slot = 0;
+    const stretch = (to: number): void => {
+      for (let from = cursor; from < to; from += each) {
+        const frames = Math.min(each, to - from);
+        shots.push({
+          source: { kind: "image", path: input.images[slot % input.images.length] ?? "" },
+          frames,
+          motion: motionFor(input.motionStyle, slot, input.zoomPercent),
+        });
+        slot += 1;
+      }
+      cursor = Math.max(cursor, to);
+    };
+    for (const figure of figures) {
+      stretch(figure.startFrame);
+      shots.push({
+        source: { kind: "image", path: figure.path },
+        frames: figure.frames,
+        motion: { kind: "still" },
+      });
+      cursor = figure.startFrame + figure.frames;
+    }
+    stretch(total);
+    return {
+      version: editListVersion,
+      ...shortFrame,
+      fps,
+      audio: [{ kind: "body", path: input.audioPath, seconds: input.seconds }],
+      shots,
+    };
+  }
   const images = input.images.slice(0, Math.max(1, Math.ceil(total / each)));
   const shots = images.flatMap((path, at) => {
     const frames = at < images.length - 1 ? each : total - each * (images.length - 1);
@@ -171,6 +215,9 @@ export interface ShortRender {
   readonly font: { readonly path: string; readonly extension: string; readonly assName: string };
   // Drawn as a headline for the whole short when given.
   readonly title?: string | undefined;
+  // "Show tables and figures on screen": the upright cards the clip's stretch of narration
+  // describes, on the clip's own timeline before the speed-up.
+  readonly figures?: readonly FigureShot[] | undefined;
   // 1-1.25; everything on the clip's timeline plays this much faster.
   readonly speed?: number | undefined;
   readonly music?: ShortMusic | undefined;
@@ -221,6 +268,15 @@ export async function renderShort(run: ShortRender): Promise<void> {
         imageSeconds: run.imageSeconds / speed,
         motionStyle: run.motionStyle,
         zoomPercent: run.zoomPercent,
+        ...(run.figures === undefined
+          ? {}
+          : {
+              figures: run.figures.map((figure) => ({
+                ...figure,
+                start: figure.start / speed,
+                end: figure.end / speed,
+              })),
+            }),
       }),
       output: run.output,
       burnSubtitles: true,

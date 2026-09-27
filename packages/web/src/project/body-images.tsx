@@ -45,18 +45,33 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
   const own = outputsOf(outputs, stage);
   const groups = groupImages(own, project.config.imagePrompts?.map((prompt) => prompt.name) ?? []);
   const all = groups.flatMap((group) => group.images);
-  const files = useOutputMediaList(all);
+  // "Show tables and figures on screen": the cards drawn from the article, in the video's
+  // frame, in reading order.
+  const cards = own
+    .filter(
+      (output) =>
+        output.role === "figure_card" && (output.meta.format ?? project.format) === project.format,
+    )
+    .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
+  const shown = [...all, ...cards];
+  const files = useOutputMediaList(shown);
   const [open, setOpen] = useState<number | null>(null);
-  const items: LightboxItem[] = all.flatMap((image) => {
+  const items: LightboxItem[] = shown.flatMap((image) => {
     const file = files.get(image.id);
     return file === undefined
       ? []
       : [
           {
             src: file.url,
-            alt: image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`,
+            alt:
+              image.role === "figure_card"
+                ? `On-screen card ${String(image.meta.index ?? "")}`
+                : (image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`),
             ...(isClip(image) ? { kind: "video" as const } : {}),
-            caption: image.meta.prompt ?? image.meta.promptName ?? "Slideshow image",
+            caption:
+              image.role === "figure_card"
+                ? "Shown while the narration describes it"
+                : (image.meta.prompt ?? image.meta.promptName ?? "Slideshow image"),
           },
         ];
   });
@@ -155,6 +170,27 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
               }
             </ImageGroup>
           ))}
+          {cards.length === 0 ? null : (
+            <ImageGroup name="From the article" count={cards.length} showName>
+              {(limit) =>
+                cards
+                  .slice(0, limit)
+                  .map((card) => (
+                    <ImageTile
+                      key={card.id}
+                      image={card}
+                      projectId={project.id}
+                      review={undefined}
+                      format={project.format}
+                      actions={actions}
+                      busy={busy}
+                      card
+                      onOpen={() => setOpen(shown.indexOf(card))}
+                    />
+                  ))
+              }
+            </ImageGroup>
+          )}
           {groups.length === 0 && waiting > 0 ? (
             <MediaGrid label="Images being made">
               {Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
@@ -305,10 +341,13 @@ function ImageTile({
   format,
   actions,
   busy,
+  card = false,
   onOpen,
 }: {
   readonly image: Output;
   readonly projectId: string;
+  // A card drawn from the article: made again from the article, never deleted on its own.
+  readonly card?: boolean;
   // The automatic review's verdict on this image, when it had one.
   readonly review: Review | undefined;
   readonly format: Format;
@@ -318,13 +357,13 @@ function ImageTile({
 }): ReactElement {
   const media = useOutputMedia(image);
   const number = image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
-  const name = `image${number}`;
+  const name = card ? `on-screen card${number}` : `image${number}`;
   const change = useOutputChange(image, actions, busy);
   const outdated = useOutdated(image);
   // Every image is a palette command too: "Regenerate image 4".
   useCommand({
     id: `project.image.${image.id}`,
-    title: `Regenerate image${number}`,
+    title: `Regenerate ${name}`,
     group: "This project",
     keywords: ["image", "redraw", "remake", image.meta.promptName ?? ""],
     run: () => change.act("regenerate-image"),
@@ -337,11 +376,11 @@ function ImageTile({
   return (
     <>
       <MediaFrame
-        alt={image.meta.prompt ?? `Slideshow ${name}`}
+        alt={card ? `On-screen card${number}` : (image.meta.prompt ?? `Slideshow ${name}`)}
         kind={isClip(image) ? "video" : "image"}
         aspect={frameAspect(format)}
         {...(media === undefined ? {} : { src: media.url })}
-        title={image.meta.prompt ?? `Image${number}`}
+        title={card ? `Card${number}` : (image.meta.prompt ?? `Image${number}`)}
         {...(image.meta.index === undefined ? {} : { meta: `#${String(image.meta.index)}` })}
         onOpen={onOpen}
         openLabel={`Open ${name} full size`}
@@ -382,17 +421,19 @@ function ImageTile({
                 <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
               </a>
             )}
-            <Button
-              size="small"
-              variant="destructive"
-              disabled={change.unavailable}
-              disabledReason="Wait until the work on this project is done"
-              onClick={() => change.act("delete-image")}
-              aria-label={`Delete ${name}`}
-              title={`Delete ${name}`}
-            >
-              <Trash2Icon aria-hidden="true" strokeWidth={1.75} />
-            </Button>
+            {card ? null : (
+              <Button
+                size="small"
+                variant="destructive"
+                disabled={change.unavailable}
+                disabledReason="Wait until the work on this project is done"
+                onClick={() => change.act("delete-image")}
+                aria-label={`Delete ${name}`}
+                title={`Delete ${name}`}
+              >
+                <Trash2Icon aria-hidden="true" strokeWidth={1.75} />
+              </Button>
+            )}
           </>
         }
       />

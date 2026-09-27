@@ -588,6 +588,17 @@ export function usesDescribedNarration(
   );
 }
 
+// "Show tables and figures on screen": a video, and the narration describing its blocks.
+export function usesFigureCards(
+  draft: Pick<RunDraft, "sources" | "audio" | "llm" | "showFigures">,
+): boolean {
+  return (
+    usesDescribedNarration(draft) &&
+    draft.sources.video === "generate" &&
+    draft.showFigures === true
+  );
+}
+
 export function usesPronunciationGlossary(draft: Pick<RunDraft, "sources" | "audio">): boolean {
   return (
     draft.sources.audio === "generate" &&

@@ -245,6 +245,13 @@ export function toAdmissionDraft(input: {
       : {}),
     // English is never stored on the run, so an English project is the run it always was.
     ...(form.language === undefined || form.language === "en" ? {} : { language: form.language }),
+    // Drawn for the blocks the narration describes, so only with a video and describing on.
+    ...(sources.video === "generate" &&
+    sources.audio === "generate" &&
+    form.audio.describeFigures === true &&
+    form.showFigures === true
+      ? { showFigures: true }
+      : {}),
     // Timed from the narration, so a switch left on with narration Off asks for nothing.
     ...(sources.audio !== "off" && form.youtubeDescription === true
       ? {

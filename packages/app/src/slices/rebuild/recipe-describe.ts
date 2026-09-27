@@ -1,6 +1,11 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import { usesDescribedNarration } from "../admission/rules.js";
-import { describedBlocks, narrationBlocks, spokenNarration } from "../narration/blocks.js";
+import { usesDescribedNarration, usesFigureCards, usesShorts } from "../admission/rules.js";
+import {
+  type DescribedBlock,
+  describedBlocks,
+  narrationBlocks,
+  spokenNarration,
+} from "../narration/blocks.js";
 import { describeMessages, spokenPassage } from "../narration/describe.js";
 import { type RecipeContext, type ResolvedWorkRecipe, recipe } from "./recipe-model.js";
 import { llmInput, matchingText, renderedPrompt } from "./recipe-text.js";
@@ -60,6 +65,8 @@ export function describeFuture(
 
 export interface DescribedText {
   readonly recipes: readonly ResolvedWorkRecipe[];
+  // With "Show tables and figures on screen", each block's card (`figure:card:<n>`).
+  readonly cards: readonly ResolvedWorkRecipe[];
   // The text as it is spoken, or null while a description has not answered.
   readonly spoken: string | null;
 }
@@ -79,6 +86,7 @@ export function describedText(
   });
   const style = renderedPrompt(context, "narration");
   const passages = new Map<number, string | null>();
+  const cards: ResolvedWorkRecipe[] = [];
   const recipes = describedBlocks(blocks).map((block) => {
     const index = offset + block.index;
     const value = recipe(
@@ -97,10 +105,48 @@ export function describedText(
     );
     const answer = matchingText(context, value, "text");
     passages.set(block.index, answer === null ? null : spokenPassage(answer));
+    if (usesFigureCards(config)) cards.push(cardRecipe(context, block, index, dependsOn));
     return value;
   });
   return {
     recipes,
+    cards,
     spoken: spokenNarration(blocks, (block) => passages.get(block.index) ?? null),
   };
+}
+
+// The card the video shows while block `index` is described: drawn locally from the block in
+// the brand kit's title font and colour (the 3.0 look otherwise), in the video's format, and
+// upright too when a 16:9 project makes Shorts. Regenerated with its own token.
+function cardRecipe(
+  context: RecipeContext,
+  block: DescribedBlock,
+  index: number,
+  dependsOn: readonly string[],
+): ResolvedWorkRecipe {
+  const { config } = context;
+  const formats =
+    config.format === "16:9" && usesShorts(config) ? ["16:9", "9:16"] : [config.format];
+  return recipe(
+    context,
+    `figure:card:${String(index)}`,
+    "images",
+    {
+      kind: "local",
+      version: 1,
+      operation: "figure-card-v1",
+      values: {
+        kind: block.kind,
+        index,
+        source: block.source,
+        section: block.section,
+        image: block.image ?? null,
+        formats,
+        fontId: config.titleStyle?.fontId ?? config.subtitles?.fontId ?? "default",
+        color: config.titleStyle?.color ?? null,
+        language: config.language ?? "en",
+      },
+    },
+    dependsOn,
+  );
 }

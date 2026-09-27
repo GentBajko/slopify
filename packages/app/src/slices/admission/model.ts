@@ -199,6 +199,10 @@ export interface RunDraft {
   readonly subtitles?: SubtitleConfig | undefined;
   // The PDF's look. Absent on configs saved before the Document stage.
   readonly document?: DocumentSettings | undefined;
+  // "Show tables and figures on screen": every block the narration describes is also drawn as
+  // a card the video shows while it is described (`video/figure-card.ts`). Stored only when
+  // on; absent reads as off, which is what every project saved before it was.
+  readonly showFigures?: boolean | undefined;
   // The Video stage's optional YouTube description step (`slices/youtube`). Absent reads as
   // off, which is what every project saved before it was.
   readonly youtubeDescription?: boolean | undefined;

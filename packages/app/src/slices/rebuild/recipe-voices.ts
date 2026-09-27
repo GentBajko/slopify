@@ -45,6 +45,8 @@ export interface VoiceBody {
   // The turns' preparation steps, which the parts that use them wait on, and with "Describe
   // tables and figures" on, the description steps of the blocks inside turns.
   readonly preparations: readonly ResolvedWorkRecipe[];
+  // With "Show tables and figures on screen", the cards of those blocks.
+  readonly cards: readonly ResolvedWorkRecipe[];
   readonly parts: readonly ResolvedWorkRecipe[];
   readonly body: ResolvedWorkRecipe;
   readonly transcript: FingerprintValue;
@@ -97,6 +99,7 @@ export function voiceBodyRecipes(
   // A table, figure, equation or code block inside a turn is described within that turn: the
   // turn says the description where the block was, in the same voice.
   const described: ResolvedWorkRecipe[] = [];
+  const cards: ResolvedWorkRecipe[] = [];
   let turns = parsed?.ok === true ? parsed.script.turns : [];
   if (describe && script.text === null) {
     const from = script.dependsOn[0];
@@ -112,6 +115,7 @@ export function voiceBodyRecipes(
       if (said.recipes.length === 0) return turn;
       offset += said.recipes.length;
       described.push(...said.recipes);
+      cards.push(...said.cards);
       if (said.spoken === null) {
         pending = true;
         return turn;
@@ -191,6 +195,7 @@ export function voiceBodyRecipes(
   );
   return {
     preparations,
+    cards,
     parts,
     body,
     transcript,

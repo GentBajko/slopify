@@ -68,3 +68,36 @@ export function DescribeFiguresToggle({
     </div>
   );
 }
+
+// "Show tables and figures on screen": each described block is also drawn as a card the video
+// shows while its description is spoken. Only offered while the narration describes them.
+export function ShowFiguresToggle({
+  value,
+  onChange,
+  tip = "play.show-figures",
+}: {
+  readonly value: boolean | undefined;
+  readonly onChange: (value: boolean) => void;
+  readonly tip?: HelpId;
+}): ReactElement {
+  const id = useId();
+  return (
+    <span className="flex min-w-0 items-center gap-1" {...helpScope}>
+      <label
+        htmlFor={id}
+        className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
+      >
+        <input
+          id={id}
+          type="checkbox"
+          data-play-field="showFigures"
+          checked={value === true}
+          className="size-4 accent-accent"
+          onChange={(event) => onChange(event.currentTarget.checked)}
+        />
+        Show tables and figures on screen
+      </label>
+      <InfoTip id={tip} />
+    </span>
+  );
+}

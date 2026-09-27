@@ -189,6 +189,11 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     audio?.describeFigures !== true ? "Off" : audio.skipCode === true ? "On, code left out" : "On";
   add("Describe tables and figures", described(before.audio), described(after.audio));
   add(
+    "Show tables and figures on screen",
+    before.showFigures === true ? "On" : "Off",
+    after.showFigures === true ? "On" : "Off",
+  );
+  add(
     "YouTube description",
     before.youtubeDescription === true ? "On" : "Off",
     after.youtubeDescription === true ? "On" : "Off",

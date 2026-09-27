@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import type { Message } from "../../kernel/ports/llm.js";
 import { writeAsset } from "../storage/assets.js";
+import { outputPath } from "../storage/layout.js";
 import { revisionTranscript } from "./runtime-export-inputs.js";
 import { narrationCatalogue, narrationFixture } from "./runtime-narration.fake.js";
 import { joinedNarration, narrationTextParts } from "./runtime-narration-text.js";
@@ -137,6 +138,47 @@ it("unfolds the descriptions of an article the text model writes", async () => {
     const tts = h.calls.filter((call) => call.kind === "tts").map((call) => call.text);
     expect(tts.join("")).toContain("seven metres against Dover's six");
     expect(tts.join("")).not.toContain("|");
+  } finally {
+    h.close();
+  }
+});
+
+it("draws a card for each described block when they are shown on screen", async () => {
+  const h = await narrationFixture(article, {
+    config: {
+      ...describing,
+      sources: {
+        research: "off",
+        article: "provide",
+        audio: "generate",
+        images: "provide",
+        thumbnail: "off",
+        video: "generate",
+      },
+      showFigures: true,
+    },
+    catalogue: bigCatalogue,
+    answer,
+  });
+  try {
+    await h.pump();
+    const cards = h
+      .view()
+      .outputs.filter((row) => row.selected && row.output.role === "figure_card")
+      .toSorted((a, b) => a.workKey.localeCompare(b.workKey));
+    expect(cards.map((row) => [row.workKey, row.output.meta.format])).toEqual([
+      ["figure:card:1", "16:9"],
+      ["figure:card:2", "16:9"],
+    ]);
+    for (const row of cards) {
+      const bytes = readFileSync(outputPath(h.deps.paths, h.projectId, row.output.path));
+      expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1920, 1080]);
+    }
+    // The export waits for the cards and changes with them.
+    const plan = executionPlan(h.deps, h.view(), bigCatalogue);
+    expect(plan.recipes.find((row) => row.key === "export:video")?.dependsOn).toEqual(
+      expect.arrayContaining(["figure:card:1", "figure:card:2", "subtitles:timing"]),
+    );
   } finally {
     h.close();
   }

@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { basename } from "node:path";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { LlmImage, Message } from "../../kernel/ports/llm.js";
@@ -25,6 +24,7 @@ import { parseScript } from "../voices/script.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
+import { articlePicture } from "./runtime-pictures.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
 import { clearSoftening, softenedPrompt, softeningRequested, softenMessages } from "./soften.js";
@@ -432,8 +432,7 @@ function checkPreparation(
   return prepared.ok ? undefined : prepared.reason;
 }
 
-// The picture a described figure names, as a file the model can open: an image uploaded to
-// the project whose file name is the one the article uses, sent only to a text provider that
+// A described figure's own picture (`runtime-pictures.ts`), sent only to a text provider that
 // looks at pictures (`reviews/model.ts`). Otherwise the figure is described from its caption
 // and alt text alone.
 function describedPicture(
@@ -443,25 +442,9 @@ function describedPicture(
 ): LlmImage | undefined {
   const named = input.describe?.image;
   if (named === undefined || !imageReviewers.includes(input.provider)) return undefined;
-  const name = basename(named.split(/[?#]/)[0] ?? "");
-  if (name === "") return undefined;
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  const provided = new Set(
-    Object.values(view?.revision.content.imageDefinitions ?? {}).flatMap((image) =>
-      image.source === "provide" && image.assetId !== null ? [image.assetId] : [],
-    ),
-  );
-  for (const assetId of provided) {
-    const row = deps.db
-      .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
-      .get(assetId, context.work.projectId);
-    const path = typeof row?.path === "string" ? row.path : undefined;
-    if (path !== undefined && basename(path).toLowerCase() === name.toLowerCase()) {
-      const file = outputPath(deps.paths, context.work.projectId, path);
-      if (existsSync(file)) return { path: file, name };
-    }
-  }
-  return undefined;
+  const path = view === undefined ? undefined : articlePicture(deps, view, named);
+  return path === undefined ? undefined : { path, name: basename(path) };
 }
 
 function withPicture(messages: readonly Message[]): readonly Message[] {

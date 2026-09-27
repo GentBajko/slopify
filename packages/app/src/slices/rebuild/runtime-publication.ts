@@ -144,7 +144,12 @@ function pieceKind(piece: WorkPiece): StagePiece["kind"] {
   if (piece.input.kind === "provided" && /^audio:body:.+:\d+$/.test(piece.key)) return "chunk";
   if (piece.input.kind === "provided" && /^audio:(intro|outro):\d+$/.test(piece.key))
     return "segment";
-  if (piece.key.startsWith("image:") || piece.key.startsWith("animate:")) return "image";
+  if (
+    piece.key.startsWith("image:") ||
+    piece.key.startsWith("animate:") ||
+    piece.key.startsWith("figure:card:")
+  )
+    return "image";
   if (piece.key.startsWith("research:chapter:")) return "chapter";
   if (piece.key.startsWith("entry:")) return "segment";
   if (piece.key === "research:planner" || piece.key === "thumbnail:prompt") return "prompt_written";
@@ -159,6 +164,9 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
   if (segment !== null) return Number(segment[2]) * 2 - (segment[1] === "intro" ? 1 : 0);
   if (piece.key === "entry:intro:text") return 1;
   if (piece.key === "entry:outro:text") return 2;
+  // The cards take places of their own, past the animated images'.
+  const card = /^figure:card:(\d+)$/.exec(piece.key);
+  if (card !== null) return 800000 + Number(card[1]);
   // The narration's descriptions take places of their own, past the preparation steps'.
   if (piece.input.kind === "llm" && piece.input.describe !== undefined)
     return 500000 + piece.input.describe.index;

@@ -32,7 +32,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     ...exports,
     ...youtube,
     ...(reference === undefined ? [] : [reference]),
-    ...shortsRecipes(context, exports, drawnFrom),
+    ...shortsRecipes(context, exports, drawnFrom, audio.cards ?? []),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),
     ...visualAssets(
@@ -42,7 +42,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         context.content,
         audio.mediaFingerprint,
         captions?.fingerprint ?? null,
-        (images) => editPlan(context, exports, youtube, images),
+        (images) => editPlan(context, exports, youtube, images, audio.cards ?? []),
         drawnFrom,
         timing === undefined ? null : resourceIdentity(context, timing),
       ),

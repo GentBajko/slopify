@@ -77,6 +77,7 @@ export const playDraftFormSchema = z
     thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
+    showFigures: z.boolean().optional(),
     descriptionPrompt: text.optional(),
     // The project language (`kernel/ports/languages.ts`). Absent on drafts and templates saved
     // before it, and on a draft nobody picked one for: the channel's language, else English.

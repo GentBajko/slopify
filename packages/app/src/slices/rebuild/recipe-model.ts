@@ -48,6 +48,7 @@ export const localOperations = [
   "concat-turns-v1",
   "voice-captions-v1",
   "audio-files-v1",
+  "figure-card-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",

@@ -40,6 +40,8 @@ export function shortsRecipes(
   exports: readonly ResolvedWorkRecipe[],
   // The establishing image the shorts' images are drawn from, when it is on.
   reference?: ImageReference,
+  // "Show tables and figures on screen": the cards a short shows where it describes one.
+  cards: readonly ResolvedWorkRecipe[] = [],
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -181,9 +183,13 @@ export function shortsRecipes(
             // Only when one of the later settings is in use, so a short rendered before
             // they existed keeps its fingerprint.
             ...(extras === undefined ? [] : [extras]),
+            // Only with cards, so a short rendered before them keeps its fingerprint.
+            ...(cards.length === 0
+              ? []
+              : [["figure-cards-v1", cards.map((card) => resourceIdentity(context, card))]]),
           ],
         },
-        [pick.key, ...stills.map((still) => still.key)],
+        [pick.key, ...stills.map((still) => still.key), ...cards.map((card) => card.key)],
         { token },
       ),
     );

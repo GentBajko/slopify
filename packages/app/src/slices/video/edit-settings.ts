@@ -136,6 +136,8 @@ interface EditSources {
   readonly sources: { readonly audio: string; readonly video: string };
   readonly videoEdit?: VideoEditSettings | undefined;
   readonly language?: string | undefined;
+  readonly showFigures?: boolean | undefined;
+  readonly audio?: { readonly describeFigures?: boolean | undefined } | undefined;
 }
 
 // Following the narration needs narration to follow, a video to cut and word timing in the
@@ -174,6 +176,11 @@ export function usesAnimation(config: EditSources): boolean {
 export function editNeedsTiming(config: EditSources): boolean {
   return (
     usesNarrationCuts(config) ||
+    // "Show tables and figures on screen" places each card where its description is spoken.
+    (config.showFigures === true &&
+      config.audio?.describeFigures === true &&
+      config.sources.audio === "generate" &&
+      config.sources.video === "generate") ||
     usesChapterCards(config) ||
     (usesAnimation(config) && videoEditOf(config).animate === "chapters")
   );

@@ -11,6 +11,7 @@ export const metaSchema = z.object({
   prompt: z.string().optional(),
   index: z.number().optional(),
   short: z.number().optional(),
+  format: z.enum(["16:9", "9:16"]).optional(),
   sentences: z.tuple([z.number(), z.number()]).optional(),
   warnings: z.array(z.string()).optional(),
   provider: z.string().optional(),

@@ -215,6 +215,10 @@ export const projectHelp = {
     title: "Update from other projects",
     body: "Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. The project keeps its own copy, so nothing changes until you press this. After you save, only the narration chunks whose words those terms change are spoken again, paid per character.",
   },
+  "project.edit.show-figures": {
+    title: "Show tables and figures on screen",
+    body: "Shows each described table, figure, equation and code block in the video while its description is spoken, as the article's picture or a card drawn on this computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept. The cards appear under Images, From the article, and can be made again there.",
+  },
   "project.edit.describe-figures": {
     title: "Describe tables and figures",
     body: "The text model writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one text-model call per block, and after you save, the narration chunks that contain a block are spoken again, paid per character (the whole narration when Chunking is the whole article). Other chunks keep their audio; captions and timing are redone to match.",

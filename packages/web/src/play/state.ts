@@ -79,6 +79,8 @@ export interface LegacyPlayFormState {
   // The Video stage's YouTube description step and its Description prompt ("" is built-in).
   readonly youtubeDescription?: boolean | undefined;
   readonly descriptionPrompt?: string | undefined;
+  // "Show tables and figures on screen", as the draft holds it.
+  readonly showFigures?: boolean | undefined;
   // The project language as picked on Play; absent is the channel's, else English.
   readonly language?: PlayDraftForm["language"];
   // The Video stage's Shorts step, as the draft holds it: the numbers as typed, and the two
@@ -269,6 +271,14 @@ export function draftOf(input: DraftInput): RunDraft {
     ...(form.language === undefined || form.language === "en" ? {} : { language: form.language }),
     // As `slices/play-drafts/convert.ts` sends it: timed from the narration, so nothing with
     // narration Off.
+    // As `slices/play-drafts/convert.ts` sends it: only with a video and describing on.
+    ...(form.sources.video === "generate" &&
+    form.sources.images !== "off" &&
+    form.sources.audio === "generate" &&
+    form.audio.describeFigures === true &&
+    form.showFigures === true
+      ? { showFigures: true }
+      : {}),
     ...(form.sources.audio !== "off" && form.youtubeDescription === true
       ? {
           youtubeDescription: true,

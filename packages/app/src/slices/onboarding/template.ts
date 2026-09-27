@@ -39,6 +39,7 @@ export function packTemplate(
       articlePrompt: name("article"),
       narrationPrompt: "",
       youtubeDescription: name("description") !== "",
+      showFigures: true,
       descriptionPrompt: name("description"),
       shorts: {
         enabled: name("shorts") !== "",
