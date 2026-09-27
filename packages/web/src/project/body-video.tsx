@@ -1,3 +1,4 @@
+import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
@@ -140,6 +141,13 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
         />
         <OutputFolder output={video} />
       </div>
+      {project.config.sources.audio === "off" ||
+      wordTimingUnavailable(project.config.language) === undefined ? null : (
+        // A language no model can time: say how its captions were made, and what is off.
+        <p role="note" className="border-t border-line pt-3 text-small text-ink2">
+          {wordTimingUnavailable(project.config.language)}
+        </p>
+      )}
       {video?.meta.subtitleOmissions?.length ? (
         <details className="border-t border-line pt-3 text-small">
           <summary className="cursor-pointer font-semibold">

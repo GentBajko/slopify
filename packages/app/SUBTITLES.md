@@ -10,7 +10,7 @@ For a completed project, open its final Video or Audio export section, set subti
 
 If narration omits a short phrase, alignment can skip that transcript span when the surrounding speech is a strong match, including omissions inside an alignment window. The export records the omitted text and audio position for review. Recovery stays bounded and never recreates missing speech.
 
-Audio Off disables subtitles. Video Off produces WAV audio with separate subtitle files. Uploaded audio must match the article; substantial mismatches fail with a message to correct the transcript. Review timing and spelling before publishing. English is supported first; unusual pronunciations and non-English passages can fail alignment.
+Audio Off disables subtitles. Video Off produces WAV audio with separate subtitle files. Uploaded audio must match the article; substantial mismatches fail with a message to correct the transcript. Review timing and spelling before publishing. English, Spanish, German, French, Italian, Portuguese, Dutch, Catalan, Polish and Czech are timed word by word (the other nine with a separate 248 MB multilingual model, downloaded on first use into `<data-dir>/models/multilingual-subtitles/`, about 1.1 GB of memory while aligning); other project languages are timed sentence by sentence. See docs/multilingual-timing.md. Unusual pronunciations and passages in another language than the project's can fail alignment.
 
 Fonts are copied into the completed project's caption assets, so an existing export can reuse its chosen font even after the original system font is removed. Installed fonts and uploaded fonts stay local. SRT/VTT are portable text/timing files and do not embed a font; the chosen font is used in burned video captions.
 

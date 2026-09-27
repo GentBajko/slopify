@@ -1,0 +1,18 @@
+Noto Sans (Latin, Greek, Cyrillic), Noto Sans Arabic, Noto Sans Hebrew, Noto Sans Devanagari
+and Noto Sans Thai, Regular. Caption fallbacks for project languages the chosen caption font
+cannot draw (src/slices/fonts/coverage.ts).
+
+Source: the Noto Project (https://github.com/notofonts), static Regular instances as packaged
+by Arch Linux noto-fonts 1:2026.09.01-1 (/usr/share/fonts/noto/). Noto Sans reports
+"Version 2.015".
+Licence: SIL Open Font License 1.1, OFL.txt beside this file, from
+https://raw.githubusercontent.com/notofonts/latin-greek-cyrillic/main/OFL.txt
+(SHA-256 cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a). Each family is
+"Copyright 2022 The Noto Project Authors" under the same licence.
+
+SHA-256:
+478c558ea716033cd60c03438f628dfa75694dcf6b5f6d505a2f05fd2b4f3823  NotoSans-Regular.ttf
+bdff3e5659d67e67def05b33f749683b9376ae819d65d3dd62ac4640b3aaef48  NotoSansArabic-Regular.ttf
+cdefaf8efd47045f6820928eba84db5bed7557539328952b5f828315485e02ee  NotoSansHebrew-Regular.ttf
+306b53ecfb182a504dd8a7446093c316387d2fd8dc350d0792ed1753fe0996cd  NotoSansDevanagari-Regular.ttf
+61cf814eec46b294d6ea4401ac295d0cecd5207bd2331dcc5a15e7301d30ee44  NotoSansThai-Regular.ttf
