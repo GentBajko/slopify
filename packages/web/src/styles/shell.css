@@ -445,6 +445,34 @@
     background: var(--color-surface);
     overflow-y: auto;
   }
+  /* GitHub and the donation links, in the rail's own link type but a step quieter. */
+  .sl-rail__links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-line);
+  }
+  .sl-rail__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-control);
+    font: 500 14px / 20px var(--font-sans);
+    color: var(--color-ink-2);
+    text-decoration: none;
+  }
+  .sl-rail__link:hover {
+    background: var(--color-raised);
+    color: var(--color-ink);
+  }
+  .sl-rail__link svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
   .sl-app__foot {
     margin-top: auto;
     display: flex;

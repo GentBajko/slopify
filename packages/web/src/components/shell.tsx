@@ -268,9 +268,26 @@ function ChannelCommands() {
   ));
 }
 
+// The sidebar shows from 768px up (shell.css hides it below). The update and tutorial
+// buttons are mounted in one place only, so an update is announced once, not twice.
+const wideQuery = "(min-width: 768px)";
+function subscribeWide(listener: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(wideQuery);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+function isWide(): boolean {
+  return typeof window.matchMedia !== "function" || window.matchMedia(wideQuery).matches;
+}
+function useWide(): boolean {
+  return useSyncExternalStore(subscribeWide, isWide, () => true);
+}
+
 function ShellContent() {
   const { api, openEvents, version } = useApp();
   const loadedVersion = useSyncExternalStore(version.subscribe, version.loadedAt, version.loadedAt);
+  const wide = useWide();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
   const pathname = useLocation({ select: (location) => location.pathname });
@@ -343,6 +360,16 @@ function ShellContent() {
             </Link>
           ))}
         </nav>
+        {running === 0 ? null : (
+          <Link
+            to="/"
+            hash="running"
+            className="sl-status sl-status--running px-3 no-underline hover:text-ink"
+          >
+            <Lamp tone="running" />
+            {`${String(running)} running`}
+          </Link>
+        )}
         <div className="sl-app__foot">
           <div className="flex items-end gap-1" {...helpScope}>
             <ChannelPicker className="min-w-0 flex-1" />
@@ -354,56 +381,79 @@ function ShellContent() {
               New video
             </Link>
           </PlayKey>
-          <p className="m-0 px-2 text-label text-ink-3">Free. Your keys, your machine.</p>
-        </div>
-      </aside>
-
-      <div className="sl-app__main">
-        <header className="sl-topbar">
-          <div className="sl-topbar__lead">
-            <Link to="/" className="sl-wordmark px-0 md:hidden">
-              <Logo className="sl-wordmark__logo" />
-              <span className="max-[380px]:sr-only">Slopify</span>
-            </Link>
-            <IconButton
-              label="Search or run a command"
-              onClick={() => palette.setOpen(true)}
-              className="md:hidden"
-            >
-              <SearchIcon {...iconProps} />
-            </IconButton>
-            {running === 0 ? null : (
-              <Link
-                to="/"
-                hash="running"
-                aria-label={`${String(running)} running`}
-                title={`${String(running)} running`}
-                className="sl-status sl-status--running no-underline hover:text-ink"
-              >
-                <Lamp tone="running" />
-                {String(running)}
-                <span className="sr-only sm:not-sr-only">running</span>
-              </Link>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2 [&_button]:min-h-8 [&_button]:min-w-8">
+          <nav aria-label="Support Slopify" className="sl-rail__links">
             {support.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                title={link.label}
-                className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-2 whitespace-nowrap text-small text-ink-2 no-underline hover:text-ink sm:flex"
+                className="sl-rail__link"
               >
                 <SupportGlyph name={link.glyph} className={link.tone} />
-                <span className="sr-only min-[1280px]:not-sr-only">{link.label}</span>
+                {link.label}
               </a>
             ))}
-            <UpdateWidget reload={() => window.location.reload()} />
-            <TutorialLauncher />
+          </nav>
+          <div className="flex items-center gap-1 px-1">
+            <p className="m-0 min-w-0 flex-1 px-1 text-label text-ink-3">
+              Free. Your keys, your machine.
+            </p>
+            {wide ? (
+              <>
+                <UpdateWidget reload={() => window.location.reload()} />
+                <TutorialLauncher />
+              </>
+            ) : null}
           </div>
-        </header>
+        </div>
+      </aside>
+
+      <div className="sl-app__main">
+        {/* Phones only: from tablet width up, the sidebar carries all of this. */}
+        {wide ? null : (
+          <header className="sl-topbar">
+            <div className="sl-topbar__lead">
+              <Link to="/" className="sl-wordmark px-0">
+                <Logo className="sl-wordmark__logo" />
+                <span className="max-[380px]:sr-only">Slopify</span>
+              </Link>
+              <IconButton label="Search or run a command" onClick={() => palette.setOpen(true)}>
+                <SearchIcon {...iconProps} />
+              </IconButton>
+              {running === 0 ? null : (
+                <Link
+                  to="/"
+                  hash="running"
+                  aria-label={`${String(running)} running`}
+                  title={`${String(running)} running`}
+                  className="sl-status sl-status--running no-underline hover:text-ink"
+                >
+                  <Lamp tone="running" />
+                  {String(running)}
+                  <span className="sr-only sm:not-sr-only">running</span>
+                </Link>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2 [&_button]:min-h-8 [&_button]:min-w-8">
+              {support.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={link.label}
+                  className="flex min-h-8 min-w-8 shrink-0 items-center justify-center text-ink-2 no-underline hover:text-ink"
+                >
+                  <SupportGlyph name={link.glyph} className={link.tone} />
+                  <span className="sr-only">{link.label}</span>
+                </a>
+              ))}
+              <UpdateWidget reload={() => window.location.reload()} />
+              <TutorialLauncher />
+            </div>
+          </header>
+        )}
 
         <main className="sl-app__content sl-page">
           <Outlet />
