@@ -9,7 +9,7 @@ import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
-import { PageHeader, Rule, Workspace } from "@/components/kit/layout";
+import { PageHeader, Workspace } from "@/components/kit/layout";
 import { Welcome } from "@/components/welcome";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission, keywordOrigins } from "@/play/admission";
@@ -554,7 +554,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           open={variantOpen}
           onOpen={setVariantOpen}
         />
-        <Rule className="!my-0" />
         <SetupList rows={rows} open={open} onChange={setRow} />
       </Workspace>
       <Drawer
