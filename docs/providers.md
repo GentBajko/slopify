@@ -5,9 +5,29 @@
 On a first launch (no API key saved yet) Slopify looks for Claude Code, Codex and Gemini CLI on
 the computer. If it finds any, Play and Settings → Providers say "You can make a video now, no
 API keys needed", and a new draft on Play starts with the found tool picked for text (Claude
-Code first, then Codex, then Gemini) and Codex for images. Narration still needs a voice
-provider key, or Audio set to Off or Provide. Choose **Got it** to hide the message. The same
-facts are at `GET /api/providers/first-run` for the guided setup to build on.
+Code first, then Codex, then Gemini) and Codex for images. Narration can use the computer's own
+**System voice** (below) with no key; a voice provider key gives a better one. Choose **Got it**
+to hide the message. The same facts are at `GET /api/providers/first-run` for the guided setup
+to build on.
+
+## System voice (no key)
+
+`system-voice` is a speech provider that uses what the computer already has, found at runtime
+(`kernel/ports/system-speech.ts`, adapter `adapters/tts/system.ts`):
+
+- **macOS**: `say` (voices from `say -v ?`), recorded to AIFF.
+- **Windows**: System.Speech through PowerShell (`SpeechSynthesizer.SetOutputToWaveFile`, voices
+  from `GetInstalledVoices`). The text, voice and file reach the script in environment
+  variables, never inside it.
+- **Linux**: Piper (only with voice models listed in `SLOPIFY_PIPER_VOICES`, `.onnx` paths
+  separated by `:`), SVOX Pico (`pico2wave`), eSpeak NG or eSpeak, best first.
+
+Its "models" are the programs found and its voices are theirs; each request speaks the text from
+a file into a WAV/AIFF and converts it to mp3 with the app's ffmpeg. It costs nothing, has no row
+in models.yaml (so older installs reading the published list are unaffected) and no key field.
+Settings → Providers shows what was found or, when nothing was, why and the fix (install
+espeak-ng); Settings → Voices lists its voices to add. Detection is cached for a minute. The
+Docker image ships espeak-ng; an image without it says so and names `docker compose pull`.
 
 ## Keys, step by step
 
