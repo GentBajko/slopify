@@ -27,6 +27,7 @@ import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
 import { BackupSettings } from "./settings-backups";
+import { formatBytes, ProjectStorageList } from "./settings-storage";
 import { UsageBoard } from "./usage";
 
 const storageQueryKey = ["storage-usage"] as const;
@@ -388,17 +389,7 @@ function StorageTools() {
               </span>
             </Rail>
             {usage.data.byProject.length > 0 ? (
-              <ul aria-label="Storage by project">
-                {usage.data.byProject.slice(0, 5).map((project) => (
-                  <li
-                    key={project.id}
-                    className="flex justify-between gap-4 border-b border-line px-4 py-2 text-small text-ink2 last:border-b-0"
-                  >
-                    <span className="truncate">{project.title}</span>
-                    <span className="shrink-0 tabular-nums">{formatBytes(project.bytes)}</span>
-                  </li>
-                ))}
-              </ul>
+              <ProjectStorageList projects={usage.data.byProject} queryKey={[...storageQueryKey]} />
             ) : null}
           </>
         ) : usage.error ? (
@@ -484,20 +475,6 @@ export function ImportResult({
       </ul>
     </RailGroup>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unit = units[0] ?? "KB";
-  for (const candidate of units) {
-    value /= 1024;
-    unit = candidate;
-    if (value < 1024 || candidate === units.at(-1)) break;
-  }
-  const rounded = value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "");
-  return `${rounded} ${unit}`;
 }
 
 function Playback() {

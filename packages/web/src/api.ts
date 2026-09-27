@@ -103,6 +103,12 @@ export interface StorageUsage {
     readonly id: string;
     readonly title: string;
     readonly bytes: number;
+    // What gets published, and what the project was made from (slices/storage/trim.ts).
+    readonly outputsBytes: number;
+    readonly workingBytes: number;
+    readonly removableFiles: number;
+    readonly removableBytes: number;
+    readonly finished: boolean;
   }[];
 }
 export interface NoticeBody {
@@ -283,6 +289,19 @@ export async function listStaged(api: Api): Promise<StagingListBody> {
 
 export async function readStorageUsage(api: Api): Promise<StorageUsage> {
   return read<StorageUsage>(await api.fetch(`${api.origin}/api/storage`));
+}
+
+// Keep outputs only: a finished project drops the working files it was made from.
+export async function keepOutputsOnly(
+  api: Api,
+  projectId: string,
+): Promise<{ readonly files: number; readonly bytesFreed: number }> {
+  return read<{ readonly files: number; readonly bytesFreed: number }>(
+    await api.fetch(
+      `${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}/keep-outputs`,
+      { method: "POST" },
+    ),
+  );
 }
 
 export async function uploadStaged(api: Api, kind: UploadKind, file: File): Promise<StagedFile> {

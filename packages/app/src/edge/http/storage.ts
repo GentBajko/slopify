@@ -1,4 +1,6 @@
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { z } from "zod";
 import {
   BackupBusyError,
   type BackupDeps,
@@ -12,8 +14,17 @@ import {
   storageUsage,
 } from "../../slices/storage/portable.js";
 import { reconcileStorage } from "../../slices/storage/reconcile.js";
+import { keepOutputsOnly } from "../../slices/storage/trim.js";
 import type { AppDeps } from "./app.js";
-import { problem, titleOf } from "./problem.js";
+import { onInvalid, problem, titleOf } from "./problem.js";
+
+const idParam = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[0-9A-Za-z_-]+$/),
+});
 
 const exportFailed =
   "Slopify could not create the backup. Check there is free disk space and try again; if it keeps failing, use Download diagnostics in Settings and report it.";
@@ -29,7 +40,32 @@ export function storageRoutes(deps: AppDeps) {
   });
   return (
     new Hono()
-      .get("/", (c) => c.json(storageUsage({ db: deps.db, paths: deps.paths })))
+      .get("/", (c) =>
+        c.json(
+          storageUsage({ db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight }),
+        ),
+      )
+      // Keep outputs only: a finished project drops its working files (`slices/storage/trim.ts`).
+      .post("/projects/:id/keep-outputs", zValidator("param", idParam, onInvalid), (c) => {
+        const result = keepOutputsOnly(
+          { db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight },
+          c.req.valid("param").id,
+        );
+        if (result.ok) return c.json(result);
+        return result.reason === "no-project"
+          ? problem(c, {
+              status: 404,
+              title: titleOf(404),
+              detail:
+                "This project no longer exists. Reload Settings → Storage to see the current list.",
+            })
+          : problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then use Keep outputs only again.",
+            });
+      })
       // What Export everything would write, asked before the download starts: a download
       // link cannot show a refusal, the browser would save it as the file.
       .get("/export/summary", (c) => {
