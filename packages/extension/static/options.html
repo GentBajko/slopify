@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slopify Studio · Pairing</title>
+    <style>
+      body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; max-width: 520px; color: #222; }
+      label { display: block; font-weight: 600; margin-top: 16px; }
+      input { width: 100%; box-sizing: border-box; padding: 6px 8px; font: inherit; }
+      button { margin-top: 16px; padding: 6px 14px; font: inherit; cursor: pointer; }
+      #status { margin-top: 12px; min-height: 1.5em; }
+      .error { color: #a40000; }
+      .ok { color: #1d6b2d; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #1e1e1e; color: #eee; }
+        .error { color: #ff8a80; }
+        .ok { color: #8ee29b; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Slopify Studio</h1>
+    <p>
+      Fills YouTube Studio's upload dialog from the Slopify project you choose. It never presses
+      Publish: you check the details and publish yourself.
+    </p>
+    <form id="pair">
+      <label for="base">Slopify address</label>
+      <input id="base" name="base" value="http://127.0.0.1:6969" autocomplete="off" required />
+      <label for="token">Pairing token</label>
+      <input id="token" name="token" autocomplete="off" required />
+      <small>Copy it from Slopify's Settings → YouTube Studio.</small>
+      <div><button type="submit">Pair</button></div>
+    </form>
+    <p id="status" role="status"></p>
+    <script src="options.js"></script>
+  </body>
+</html>
