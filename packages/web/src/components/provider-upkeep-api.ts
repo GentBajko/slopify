@@ -67,9 +67,7 @@ export async function switchRetired(api: Api, usage: RetiredUsage): Promise<void
     }),
   );
 }
-export async function switchAllRetired(
-  api: Api,
-): Promise<{
+export async function switchAllRetired(api: Api): Promise<{
   readonly switched: number;
   readonly failed: readonly { readonly message: string }[];
 }> {
