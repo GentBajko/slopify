@@ -187,7 +187,7 @@ export function DownloadLink({
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label}
       </FileLink>
-      <OpenFolder projectId={projectId} asset={asset} folder={media.folder} />
+      <OpenFolder projectId={projectId} asset={asset} folder={media.folder} size="small" />
     </span>
   );
 }
@@ -207,7 +207,12 @@ export function OutputDownload({
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label ?? "Download"}
       </FileLink>
-      <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />
+      <OpenFolder
+        projectId={output.projectId}
+        asset={assetOf(output)}
+        folder={media.folder}
+        size="small"
+      />
     </span>
   );
 }
@@ -230,10 +235,11 @@ export function DownloadMenu({
     // Not modal: an open menu leaves the rest of the page readable and clickable.
     <Menu modal={false}>
       <MenuTrigger asChild>
-        <Button>
+        {/* The stage's main action, so it wears the accent. */}
+        <Button variant="primary">
           <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
           {label}
-          <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} className="text-ink-2" />
+          <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
         </Button>
       </MenuTrigger>
       <MenuContent>

@@ -141,11 +141,14 @@ describe("the next action", () => {
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
     expect(await downloadItem("Video (.mp4)")).not.toBeNull();
     expect(within(nextAction()).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
-    // One primary action on the page.
+    // Two primary actions: the project's next step, and the open section's own Download.
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
-    expect(shown).toHaveLength(1);
+    expect(shown.map((button) => button.textContent?.trim()).sort()).toEqual([
+      "Download",
+      "Prepare upload",
+    ]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
   });

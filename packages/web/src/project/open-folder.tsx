@@ -13,6 +13,9 @@ interface Props {
   readonly projectId: string;
   readonly asset: string;
   readonly folder?: { readonly revisionId: string; readonly recordId: string } | null;
+  // A real secondary button, never bare text: beside a stage's Download it is full size,
+  // inside a row of small file links it is small to match them.
+  readonly size?: "default" | "small";
 }
 
 // Asks the machine running Slopify to open the folder a saved output is in. When it can't
@@ -81,8 +84,8 @@ function FolderAction(props: Props) {
     >
       <PopoverAnchor asChild>
         <Button
-          variant="quiet"
-          size="small"
+          variant="secondary"
+          size={props.size ?? "default"}
           disabled={pending}
           onClick={() => void open()}
           title="Locate the saved output folder on the machine running Slopify"
