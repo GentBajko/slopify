@@ -70,7 +70,11 @@ export function splitSections(markdown: string): readonly ReadingSection[] {
     levels.filter((level) => level === first).length === 1 &&
     levels.every((level) => level === undefined || level >= first);
   const used = [
-    ...new Set(levels.filter((level) => level !== undefined && !(titled && level === first))),
+    ...new Set(
+      levels.filter(
+        (level): level is number => level !== undefined && !(titled && level === first),
+      ),
+    ),
   ].sort((a, b) => a - b);
   const top = used[0];
   const nested = used[1];
