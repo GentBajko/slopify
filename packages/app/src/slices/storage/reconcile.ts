@@ -1,5 +1,5 @@
 import { readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { backupsFolderName, outputPath, stagingPath } from "./layout.js";
@@ -45,11 +45,17 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   }
 
   let orphanFiles = 0;
+  // A Projects folder outside the data dir (in Documents, from 3.0) is one the user browses,
+  // and the system drops its own files there (.DS_Store, desktop.ini). Only folders are
+  // Slopify's in it, so a loose file stays; hidden entries stay everywhere.
+  const userVisible = !within(paths.dataDir, paths.projects);
   for (const entry of readdirSync(paths.projects, { withFileTypes: true })) {
     const path = join(paths.projects, entry.name);
     // The scheduled backups' default folder: its archives belong to slices/backups, which
     // prunes them by its own rules.
     if (entry.name === backupsFolderName && entry.isDirectory()) continue;
+    if (entry.name.startsWith(".") || osFiles.has(entry.name.toLowerCase())) continue;
+    if (!entry.isDirectory() && userVisible) continue;
     if (!entry.isDirectory()) {
       unlinkSync(path);
       orphanFiles += 1;
@@ -140,6 +146,15 @@ function filesUnder(root: string): string[] {
     }
   }
   return files;
+}
+
+const osFiles = new Set(["desktop.ini", "thumbs.db"]);
+
+function within(root: string, path: string): boolean {
+  const inside = relative(root, path);
+  return (
+    inside === "" || (inside !== ".." && !inside.startsWith(`..${sep}`) && !isAbsolute(inside))
+  );
 }
 
 // outputs.path is stored with forward slashes; the filesystem may hand back backslashes.

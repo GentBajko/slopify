@@ -35,6 +35,7 @@ import type {
 } from "@app/slices/settings/model.js";
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
+import type { FilesView } from "@app/slices/storage/files-location.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import type { StudioPairingView, UploadPack } from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
@@ -307,6 +308,33 @@ export async function listStaged(api: Api): Promise<StagingListBody> {
 
 export async function readStorageUsage(api: Api): Promise<StorageUsage> {
   return read<StorageUsage>(await api.fetch(`${api.origin}/api/storage`));
+}
+
+export type { FilesView };
+
+// Settings → Backup & storage → Your files (`edge/http/storage-files.ts`).
+export async function readFiles(api: Api): Promise<FilesView> {
+  return read<FilesView>(await api.fetch(`${api.origin}/api/storage/files`));
+}
+
+// Starts copying the files to "documents" (<Documents>/Slopify) or a full folder path; answers
+// at once and the screen polls readFiles for the progress.
+export async function moveFiles(api: Api, target: string): Promise<FilesView> {
+  return read<FilesView>(
+    await api.fetch(`${api.origin}/api/storage/files/move`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target }),
+    }),
+  );
+}
+
+export async function openFilesFolder(
+  api: Api,
+): Promise<{ readonly opened: boolean; readonly path: string }> {
+  return read<{ readonly opened: boolean; readonly path: string }>(
+    await api.fetch(`${api.origin}/api/storage/files/open`, { method: "POST" }),
+  );
 }
 
 // Keep outputs only: a finished project drops the working files it was made from.

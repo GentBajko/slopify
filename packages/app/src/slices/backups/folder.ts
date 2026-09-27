@@ -5,9 +5,11 @@ import { defaultBackupsDir } from "../storage/layout.js";
 export interface FolderLocation {
   readonly container: boolean;
   readonly hostProjects: string | null;
+  // A Docker install from 3.0 on shares its Backups folder with the host too.
+  readonly hostBackups?: string | null;
 }
 
-export function effectiveFolder(paths: Pick<Paths, "projects">, folder: string | null): string {
+export function effectiveFolder(paths: Pick<Paths, "backups">, folder: string | null): string {
   return folder === null ? defaultBackupsDir(paths) : resolve(folder);
 }
 
@@ -22,7 +24,7 @@ function within(root: string, path: string): boolean {
 // when it can. Staging and logs are swept by Slopify itself, and the projects folder belongs to
 // storage reconciliation except for its Backups folder.
 export function folderProblem(
-  paths: Pick<Paths, "projects" | "staging" | "logs" | "dataDir">,
+  paths: Pick<Paths, "projects" | "backups" | "staging" | "logs" | "dataDir">,
   folder: string | null,
 ): string | undefined {
   if (folder === null) return undefined;
@@ -37,15 +39,23 @@ export function folderProblem(
   return undefined;
 }
 
-// Where the folder is on the user's computer. In Docker only the projects folder is shared
-// with the host, so a folder elsewhere lives in the container's private volume.
+// Where the folder is on the user's computer. In Docker only the projects folder (and, from
+// 3.0, the Backups folder) is shared with the host, so a folder elsewhere lives in the
+// container's private volume.
 export function hostFolder(
-  paths: Pick<Paths, "projects">,
+  paths: Pick<Paths, "projects" | "backups">,
   location: FolderLocation,
   folder: string,
 ): string | null {
   if (!location.container) return folder;
-  if (location.hostProjects === null || !within(paths.projects, folder)) return null;
-  const inside = relative(paths.projects, folder);
-  return inside === "" ? location.hostProjects : join(location.hostProjects, inside);
+  const shared: [string, string | null | undefined][] = [
+    [paths.projects, location.hostProjects],
+    [paths.backups, location.hostBackups],
+  ];
+  for (const [inContainer, onHost] of shared.toSorted((a, b) => b[0].length - a[0].length)) {
+    if (!onHost || !within(inContainer, folder)) continue;
+    const inside = relative(inContainer, folder);
+    return inside === "" ? onHost : join(onHost, inside);
+  }
+  return null;
 }

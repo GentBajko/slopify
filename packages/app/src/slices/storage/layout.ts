@@ -10,14 +10,14 @@ export function outputPath(paths: Paths, projectId: string, relativePath: string
   return contained(projectDir(paths, projectId), relativePath);
 }
 
-// Scheduled backups (slices/backups) land here unless the user picks another folder. It sits
-// inside the projects root because that is the one folder a Docker install shares with the
-// host, so the archives end up on the user's disk and not only in the container's volume.
+// Scheduled backups (slices/backups) land in paths.backups unless the user picks another
+// folder. Installs from before 3.0 keep it inside the projects root, since that is the one
+// folder an older Docker install shares with the host; newer ones have it beside Projects.
 // Project folders are ULIDs, so the name never collides with one; reconcile leaves it alone.
 export const backupsFolderName = "Backups";
 
-export function defaultBackupsDir(paths: Pick<Paths, "projects">): string {
-  return contained(paths.projects, backupsFolderName);
+export function defaultBackupsDir(paths: Pick<Paths, "backups">): string {
+  return paths.backups;
 }
 
 export function stagingPath(paths: Paths, stagedFileId: string): string {

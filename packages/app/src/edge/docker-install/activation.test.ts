@@ -2,7 +2,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import { dockerActivationCommitted, dockerFolderConfiguration } from "./activation.js";
+import {
+  dockerActivationCommitted,
+  dockerFilesLayout,
+  dockerFolderConfiguration,
+} from "./activation.js";
 import { writeState } from "./state.js";
 
 it("activates only the exact committed transaction token", async () => {
@@ -21,12 +25,28 @@ it("activates only the exact committed transaction token", async () => {
     expect(await dockerFolderConfiguration({}, root)).toEqual({
       container: false,
       hostProjects: null,
+      hostBackups: null,
     });
     expect(await dockerFolderConfiguration({ SLOPIFY_CONTAINER: "1" }, root)).toEqual({
       container: true,
       hostProjects: null,
+      hostBackups: null,
     });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+it("keeps backups in the shared Backups folder only when the installer mounted one", () => {
+  expect(dockerFilesLayout({}, "/data")).toEqual({
+    projects: "/data/projects",
+    backups: "/data/projects/Backups",
+    exports: null,
+  });
+  expect(
+    dockerFilesLayout(
+      { SLOPIFY_DOCKER_BACKUPS_DIR: "/home/you/Documents/Slopify/Backups" },
+      "/data",
+    ),
+  ).toEqual({ projects: "/data/projects", backups: "/data/backups", exports: null });
 });

@@ -13,7 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { crc32 } from "node:zlib";
 import { strFromU8, strToU8, Unzip, UnzipInflate, zipSync } from "fflate";
@@ -1120,15 +1120,26 @@ function planStagedImport(
   });
 }
 
+function inside(root: string, path: string): boolean {
+  const r = relative(root, path);
+  return r === "" || (r !== ".." && !r.startsWith(`..${sep}`) && !isAbsolute(r));
+}
+
 export function storageBytes(paths: Paths): {
   readonly data: number;
   readonly projects: number;
   readonly staging: number;
 } {
-  // Scheduled backups default to a folder inside the projects root; they are not project files.
-  const projects = directoryBytes(paths.projects) - directoryBytes(defaultBackupsDir(paths));
+  // Scheduled backups default to a folder inside the projects root on installs from before
+  // 3.0; they are not project files. Newer installs keep projects outside the data dir.
+  const backups = defaultBackupsDir(paths);
+  const projects =
+    directoryBytes(paths.projects) -
+    (inside(paths.projects, backups) ? directoryBytes(backups) : 0);
   const staging = directoryBytes(paths.staging);
-  return { data: directoryBytes(paths.dataDir), projects, staging };
+  const data =
+    directoryBytes(paths.dataDir) + (inside(paths.dataDir, paths.projects) ? 0 : projects);
+  return { data, projects, staging };
 }
 
 export function storageUsage(

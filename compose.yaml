@@ -24,6 +24,14 @@ services:
       - type: bind
         source: ${SLOPIFY_PROJECTS_DIR:?set SLOPIFY_PROJECTS_DIR to the folder for your project files}
         target: /data/projects
+      # Scheduled backups' default folder, beside Projects (new installs from 3.0). Without
+      # SLOPIFY_BACKUPS_DIR it is an empty folder nobody reads and backups stay in
+      # Projects/Backups.
+      - type: bind
+        source: ${SLOPIFY_BACKUPS_DIR:-./backups-off}
+        target: /data/backups
+        bind:
+          create_host_path: true
       # The host CLI bridge: a folder holding the helper's socket and token, nothing else.
       # With the bridge off it is an empty folder and Settings shows the CLIs as unavailable.
       - type: bind
@@ -41,6 +49,7 @@ services:
           create_host_path: true
     environment:
       SLOPIFY_DOCKER_PROJECTS_DIR: ${SLOPIFY_PROJECTS_DIR}
+      SLOPIFY_DOCKER_BACKUPS_DIR: ${SLOPIFY_BACKUPS_DIR:-}
       SLOPIFY_HOST_CLI_DIR: /opt/slopify-host
       SLOPIFY_DOCKER_INSTALL_STATE: /opt/slopify-install/activation.json
       SLOPIFY_UPDATE_TOKEN: ${SLOPIFY_UPDATE_TOKEN:-}
