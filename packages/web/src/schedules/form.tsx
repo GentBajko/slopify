@@ -1,4 +1,4 @@
-import { render } from "@app/slices/admission/substitute.js";
+import { detectSlots, render } from "@app/slices/admission/substitute.js";
 import { type Cadence, validTimeZone } from "@app/slices/schedules/calendar.js";
 import type {
   ScheduleCreate,
@@ -101,7 +101,12 @@ export function ScheduleForm({
     },
   });
   const form = template.data?.document.form;
-  const keywords = form === undefined ? [] : Object.keys(form.values);
+  // The stored values, plus any keyword the project title names: a template saved without a
+  // value for its title's keyword still offers it here.
+  const keywords =
+    form === undefined
+      ? []
+      : [...new Set([...detectSlots(form.title).names, ...Object.keys(form.values)])];
   // Until the person picks one: the keyword the project title uses, else the first.
   const chosenKeyword =
     topicKeyword !== null && keywords.includes(topicKeyword)

@@ -464,6 +464,43 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
 });
 
+it("offers the title's keyword even when the template stored no value for it", async () => {
+  const user = userEvent.setup();
+  const document = {
+    ...freshDraftDocument,
+    form: {
+      ...freshDraftDocument.form,
+      title: "D&D Lore: {{Topic}}",
+      values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
+    },
+  };
+  renderRouted(
+    <SchedulesRoute />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        template: {
+          id: templateId,
+          name: "Stories",
+          version: 1,
+          updatedAt: summary.updatedAt,
+          document,
+        },
+      }),
+    }),
+  );
+  await openNew(user);
+  await screen.findByRole("option", { name: "Stories · v1" });
+  await user.selectOptions(screen.getByLabelText("Template"), templateId);
+  await user.type(screen.getByLabelText("One per line"), "Owlbears");
+  await screen.findByLabelText("Each topic fills");
+  expect(screen.getByLabelText<HTMLSelectElement>("Each topic fills").value).toBe("Topic");
+  expect(screen.getByText("D&D Lore: Owlbears")).toBeTruthy();
+});
+
 it("explains that nonexistent one-off times are refused", async () => {
   const user = userEvent.setup();
   renderRouted(
