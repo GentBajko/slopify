@@ -56,6 +56,12 @@ export const quickShortInputSchema = z
   .strict();
 export type QuickShortInput = z.infer<typeof quickShortInputSchema>;
 
+// A finished short's "Make the full video on this topic": the draft id is the browser's, so a
+// repeated press opens the same Play draft instead of making another.
+export const fullVideoInputSchema = z
+  .object({ projectId: z.string().min(1).max(64), draftId: z.uuid() })
+  .strict();
+
 export const quickShortResultSchema = z.object({
   projectId: z.string(),
   replayed: z.boolean(),

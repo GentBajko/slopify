@@ -4,8 +4,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { loudnessOfDefault } from "../../slices/loudness/model.js";
 import { firstRunView } from "../../slices/onboarding/first-run.js";
+import { fullVideoDraft } from "../../slices/onboarding/full-video.js";
 import { installPack } from "../../slices/onboarding/install.js";
-import { quickShortInputSchema, sampleCopyInputSchema } from "../../slices/onboarding/model.js";
+import {
+  fullVideoInputSchema,
+  quickShortInputSchema,
+  sampleCopyInputSchema,
+} from "../../slices/onboarding/model.js";
 import { packById, starterSet } from "../../slices/onboarding/packs.js";
 import { planShortProviders, shortDraft } from "../../slices/onboarding/quick-short.js";
 import {
@@ -127,6 +132,31 @@ export function onboardingRoutes(deps: AppDeps) {
         });
       recordShortRequest(deps.db, input.requestId, created.project.id);
       return c.json({ projectId: created.project.id, replayed: false }, 201);
+    })
+    .post("/full-video", zValidator("json", fullVideoInputSchema, onInvalid), (c) => {
+      const made = fullVideoDraft(templates, c.req.valid("json"));
+      if (made.ok) return c.json(made.value, 201);
+      if (made.reason === "not-found")
+        return problem(c, {
+          status: 404,
+          title: titleOf(404),
+          detail:
+            "This short or its starter pack is no longer here, so Play couldn't be set up from it. Open Play and pick a template yourself.",
+        });
+      if (made.reason === "not-short")
+        return problem(c, {
+          status: 409,
+          title: titleOf(409),
+          detail:
+            "This project is already a long video. Open Play to start another one on a new topic.",
+        });
+      return problem(c, {
+        status: 409,
+        title: titleOf(409),
+        detail:
+          "Slopify couldn't open a Play draft for the full video. Press Make the full video on this topic again; if it keeps failing, open Play and pick the pack's template in Library → Templates.",
+        extensions: { reason: made.reason },
+      });
     })
     .get("/sample", (c) => {
       const samples = sampleProjectIds(deps.db);

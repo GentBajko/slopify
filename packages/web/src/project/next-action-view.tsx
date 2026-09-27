@@ -9,7 +9,8 @@ import { Callout, type CalloutTone } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { NextAction as NextActionCard } from "@/components/kit/next-action";
 import { sentence } from "@/http";
-import { copySample } from "@/onboarding/api";
+import { copySample, fullVideoDraft } from "@/onboarding/api";
+import { useOptionalPlaySession } from "@/play/draft-context";
 import { keys } from "@/queries";
 import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
 import { fixOf } from "./fix-it.js";
@@ -107,6 +108,30 @@ export function useNextAction({
         `${sentence(error.message)} The copy was not made. Press Make my own copy to try again.`,
       ),
   });
+  // One draft identity per project page, so a retried press opens the same draft.
+  const fullDraft = useRef<string | null>(null);
+  const session = useOptionalPlaySession();
+  const full = useMutation({
+    mutationFn: async () => {
+      if (session === null) throw new Error("Play isn't available on this page. Reload the page");
+      if (session.review.starting || session.review.uncertain || session.review.created !== null)
+        throw new Error("Play is starting a run from its open draft. Wait for it to start");
+      if (!(await session.flush()))
+        throw new Error("The draft open in Play couldn't be saved. Open Play, save or discard it");
+      fullDraft.current ??= crypto.randomUUID();
+      const { draft } = await fullVideoDraft(api, {
+        projectId: project.id,
+        draftId: fullDraft.current,
+      });
+      await client.invalidateQueries({ queryKey: ["play-drafts"] });
+      if (!(await session.open(draft.id)))
+        throw new Error("The full video's draft was made but didn't open. Open Play and pick it");
+      fullDraft.current = null;
+      await navigate({ to: "/play" });
+    },
+    onError: (error) =>
+      setMessage(`${sentence(error.message)} Then press Make the full video on this topic again.`),
+  });
   const approve = useMutation({
     mutationFn: async (gate: HeldGate) => {
       const full = gates.find((one) => one.checkpointId === gate.checkpointId);
@@ -163,9 +188,13 @@ export function useNextAction({
       case "prepare-upload":
         openUpload();
         return;
+      case "full-video":
+        full.mutate();
+        return;
     }
   };
-  const pending = copy.isPending || approve.isPending || actions.pending || controller.pending;
+  const pending =
+    copy.isPending || full.isPending || approve.isPending || actions.pending || controller.pending;
   return { next, run, pending, message };
 }
 
@@ -186,6 +215,8 @@ function busyLabel(intent: NextIntent): string | undefined {
       return "Trying again…";
     case "soften":
       return "Softening…";
+    case "full-video":
+      return "Opening Play…";
     default:
       return undefined;
   }

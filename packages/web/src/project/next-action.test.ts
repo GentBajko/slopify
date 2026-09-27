@@ -376,4 +376,18 @@ describe("the next action", () => {
       })?.situation,
     ).toBe("outdated");
   });
+
+  it("leads a finished short to the full video on its topic, ahead of Prepare upload", () => {
+    const short = { ...config, mode: "short" } as ProjectSummary["config"];
+    expect(nextActionFor(input({ project: { status: "done", config: short } }))).toMatchObject({
+      situation: "done",
+      title: "The short is ready.",
+      action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
+    });
+    // Not before it is done, and never for a long video.
+    expect(
+      nextActionFor(input({ project: { status: "partial", config: short }, uploadReady: false })),
+    ).toBeUndefined();
+    expect(nextActionFor(input())?.action?.intent.kind).toBe("prepare-upload");
+  });
 });

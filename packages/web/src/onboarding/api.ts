@@ -46,6 +46,15 @@ export async function makeShort(
   return read<{ projectId: string }>(await post(api, "/short", input));
 }
 
+// A finished short's "Make the full video on this topic": a Play draft for the long video.
+// `draftId` is the caller's, so a retried press opens the same draft.
+export async function fullVideoDraft(
+  api: Api,
+  input: { readonly projectId: string; readonly draftId: string },
+): Promise<{ readonly draft: { readonly id: string } }> {
+  return read<{ draft: { id: string } }>(await post(api, "/full-video", input));
+}
+
 export interface SampleState {
   // The Library of Alexandria's project; `samples` has all three.
   readonly projectId: string | null;

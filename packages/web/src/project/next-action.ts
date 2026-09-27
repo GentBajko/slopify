@@ -92,7 +92,8 @@ export type NextIntent =
   | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "edit" }
   | { readonly kind: "open-settings"; readonly section: "providers" | "storage" }
-  | { readonly kind: "prepare-upload" };
+  | { readonly kind: "prepare-upload" }
+  | { readonly kind: "full-video" };
 
 export type Situation =
   | "sample"
@@ -332,6 +333,18 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         intent: { kind: "remake", workKeys: group.workKeys },
       },
       section: group.section,
+    };
+
+  // The first thing a person makes is a short; the long video comes second. A finished short
+  // leads there, with the same topic and starter pack. Prepare upload stays in its section.
+  if (project.status === "done" && config.mode === "short")
+    return {
+      situation: "done",
+      tone: "done",
+      status: "Done",
+      title: "The short is ready.",
+      why: "Play opens set up for a long video on the same topic, with the same starter pack and providers. Nothing starts until you press Play.",
+      action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
   if ((project.status === "done" || project.status === "partial") && input.uploadReady)
