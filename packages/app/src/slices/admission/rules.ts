@@ -426,11 +426,17 @@ export function voicesFields(
 ): readonly FieldError[] {
   if (draft.voices === undefined || !usesVoices(draft)) return [];
   const fields: FieldError[] = [...voicesProblems(draft.voices)];
-  if (!blank(draft.narrationPrompt))
+  // Preparation adds delivery tags to the turns of speakers on Inworld TTS-2, so it needs one.
+  if (
+    !blank(draft.narrationPrompt) &&
+    !draft.voices.speakers.some(
+      (speaker) => speaker.voice.provider === "inworld" && speaker.voice.model === "inworld-tts-2",
+    )
+  )
     fields.push({
       field: "narrationPrompt",
       message:
-        "Narration preparation works with one voice only. Clear it in Audio → Advanced, or set the format back to Narration.",
+        "Narration preparation adds delivery cues only to speakers on Inworld's TTS-2 model, and no speaker uses it. Choose that model for a speaker under Speakers, or clear Narration Preparation in Audio → Advanced.",
     });
   return fields;
 }

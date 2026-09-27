@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
-import type { RevisionContent } from "../revisions/model.js";
+import type { ManifestPiece, RevisionContent } from "../revisions/model.js";
 import type { Speaker, VoicesSettings } from "../voices/model.js";
 import { buildRecipes } from "./recipe-build.js";
 import { catalogue, config, content } from "./recipe-fixture.js";
+import type { ResolvedWorkRecipe } from "./recipe-model.js";
 
 const script = [
   "# Opening",
@@ -211,5 +212,132 @@ describe("multi-voice narration recipes", () => {
     // Voices set while narration is uploaded read as the Narration format.
     const provided = { ...narrated, sources: { ...narrated.sources, audio: "provide" as const } };
     expect(plan({ ...provided, voices })).toEqual(plan(provided));
+  });
+});
+
+describe("delivery cues for speakers", () => {
+  const inworld = { provider: "inworld", model: "inworld-tts-2", voice: "Ashley" };
+  const prepared: RunConfig = {
+    ...voiced,
+    narrationPrompt: "Lively",
+    rendered: { ...voiced.rendered, narration: "A lively two-host show." },
+    audio: { ...inworld },
+    voices: {
+      ...voices,
+      speakers: [speaker("alex", "Alex", inworld), speaker("sam", "Sam", { ...plain, voice: "s" })],
+    },
+  };
+  const inworldCatalogue = {
+    ...catalogue,
+    tts: [
+      ...catalogue.tts,
+      ...catalogue.tts.map((row) => ({ ...row, provider: "inworld", id: "inworld-tts-2" })),
+    ],
+  };
+  const build = (pieces: readonly ManifestPiece[] = []) =>
+    buildRecipes({
+      config: prepared,
+      content: scripted,
+      manifest: { outputs: [], pieces },
+      resolved: { articleMarkdown: script, researchNotes: null },
+      catalogue: inworldCatalogue,
+    });
+  const answered = (recipes: readonly ResolvedWorkRecipe[], cues: unknown[]): ManifestPiece[] =>
+    recipes
+      .filter((one) => one.key.startsWith("narration:prepare:body:"))
+      .map((one, index) => ({
+        key: one.key,
+        stageKind: "audio",
+        assetId: null,
+        fingerprint: one.fingerprint,
+        piece: {
+          id: `p${String(index)}`,
+          stageId: "s",
+          kind: "prompt_written",
+          idx: index + 1,
+          state: "done",
+          payload: JSON.stringify({ text: JSON.stringify({ cues }) }),
+        } as ManifestPiece["piece"],
+      }));
+
+  it("prepares only the Inworld TTS-2 speaker's turns, naming who says them", () => {
+    const recipes = build();
+    const preparations = recipes.filter((one) => one.key.startsWith("narration:prepare:body:"));
+    expect(preparations.map((one) => one.key)).toEqual([
+      "narration:prepare:body:audio:body:turn:1",
+      "narration:prepare:body:audio:body:turn:3",
+    ]);
+    const first = preparations[0];
+    if (first?.input.kind !== "llm") throw new Error("Missing preparation");
+    expect(JSON.stringify(first.input.messages)).toContain("Alex (host)");
+    expect(first.input.preparation?.source).toBe("Welcome to the show.");
+    // Nothing is spoken until every turn's cues are in: the turns wait as one future.
+    expect(recipes.some((one) => one.input.kind === "tts")).toBe(false);
+    const future = recipes.find((one) => one.key === "audio:body:future");
+    expect(future?.dependsOn).toEqual(expect.arrayContaining(preparations.map((one) => one.key)));
+    expect(recipes.find((one) => one.key === "audio:body:concat")?.dependsOn).toEqual([
+      "audio:body:future",
+    ]);
+  });
+
+  it("speaks the tags, but keeps each turn's clean words as its transcript", () => {
+    const cues = [{ sentence: 1, kind: "instruction", text: "say warmly" }];
+    const recipes = build(answered(build(), cues));
+    const turns = recipes.flatMap((one) =>
+      one.input.kind === "tts"
+        ? [[one.key, one.input.text, one.input.spokenText ?? null, one.dependsOn]]
+        : [],
+    );
+    expect(turns).toEqual([
+      [
+        "audio:body:turn:1:1",
+        "[say warmly] Welcome to the show.",
+        "Welcome to the show.",
+        ["narration:prepare:body:audio:body:turn:1"],
+      ],
+      ["audio:body:turn:2:1", "Glad to be here.", null, ["article:body"]],
+      [
+        "audio:body:turn:3:1",
+        "[say warmly] Let's talk about tides.",
+        "Let's talk about tides.",
+        ["narration:prepare:body:audio:body:turn:3"],
+      ],
+    ]);
+  });
+
+  it("waits for the script, then prepares, while an audiobook's text is split", () => {
+    const recipes = buildRecipes({
+      config: {
+        ...prepared,
+        voices: { ...(prepared.voices as VoicesSettings), source: "attribute" },
+      },
+      content: scripted,
+      manifest: { outputs: [], pieces: [] },
+      resolved: { articleMarkdown: script, researchNotes: null },
+      catalogue: inworldCatalogue,
+    });
+    expect(recipes.map((one) => one.key)).toEqual(
+      expect.arrayContaining([
+        "script:attribute",
+        "narration:prepare:body:future",
+        "audio:body:future",
+      ]),
+    );
+    expect(recipes.find((one) => one.key === "audio:body:future")?.dependsOn).toContain(
+      "narration:prepare:body:future",
+    );
+  });
+
+  it("changes nothing for a run without a Narration Preparation prompt", () => {
+    const without = { ...prepared, narrationPrompt: undefined };
+    expect(
+      buildRecipes({
+        config: without,
+        content: scripted,
+        manifest: { outputs: [], pieces: [] },
+        resolved: { articleMarkdown: script, researchNotes: null },
+        catalogue: inworldCatalogue,
+      }).some((one) => one.key.startsWith("narration:prepare:")),
+    ).toBe(false);
   });
 });

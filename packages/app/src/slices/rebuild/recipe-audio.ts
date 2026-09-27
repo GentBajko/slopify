@@ -73,7 +73,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     recipes.push(body);
   } else if (text.script !== undefined && config.voices !== undefined) {
     const voiced = voiceBodyRecipes(context, config.voices, text.script, text.glossary);
-    recipes.push(...voiced.parts);
+    recipes.push(...voiced.preparations, ...voiced.parts);
     if (narrationFiles) recipes.push(narrationFileRecipe(context, "body", voiced.parts));
     recipes.push(voiced.body);
     body = voiced.body;
