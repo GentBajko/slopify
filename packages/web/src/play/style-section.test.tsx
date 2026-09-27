@@ -1,15 +1,29 @@
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { defaultChannelId } from "@/channels/api";
 import { jsonAnswer } from "@/test-app";
 import { mountSupplied } from "./draft-upload-test-fixture";
 import { mountPlay, openRow, openSection } from "./play-test-fixture";
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   window.localStorage?.clear();
 });
+
+// The preview renders a moment after the last change. Its timers are faked once Play has
+// loaded, so a test moves past the pause at once instead of waiting it out; while they are,
+// controls are changed with fireEvent, which needs no timer of its own.
+function pausedTimers(): { readonly settle: () => Promise<void> } {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  return {
+    settle: async () => {
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      vi.useRealTimers();
+    },
+  };
+}
 
 // What the rail's style preview asked the server to render.
 function previewBodies(requests: readonly Request[]): Promise<readonly Record<string, unknown>[]> {
@@ -28,22 +42,18 @@ it.each([
   async ({ format, position }) => {
     const { requests } = await mountPlay();
     await openRow("Video and style");
-    await userEvent.selectOptions(
-      screen.getByLabelText("Subtitles", { selector: "select" }),
-      "burn-in",
-    );
-    await userEvent.click(screen.getByRole("radio", { name: position }));
-    await userEvent.click(screen.getByRole("radio", { name: format }));
+    const { settle } = pausedTimers();
+    fireEvent.change(screen.getByLabelText("Subtitles", { selector: "select" }), {
+      target: { value: "burn-in" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: position }));
+    fireEvent.click(screen.getByRole("radio", { name: format }));
     const rail = screen.getByRole("complementary", { name: "Review and start" });
     expect(within(rail).getByRole("heading", { name: "Style preview" })).not.toBeNull();
-    await waitFor(
-      async () => {
-        const last = (await previewBodies(requests)).at(-1);
-        expect(last?.format).toBe(format);
-        expect(last?.subtitles).toMatchObject({ mode: "burn-in", position });
-      },
-      { timeout: 3000 },
-    );
+    await settle();
+    const last = (await previewBodies(requests)).at(-1);
+    expect(last?.format).toBe(format);
+    expect(last?.subtitles).toMatchObject({ mode: "burn-in", position });
     // Nothing paid is asked for: the preview renders locally from silence and sample stills.
     expect(requests.some((r) => /alignment|providers\/.+\/speak|projects$/.test(r.url))).toBe(
       false,

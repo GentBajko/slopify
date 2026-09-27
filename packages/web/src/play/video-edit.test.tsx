@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { defaultChannelId } from "@/channels/api";
@@ -36,7 +36,7 @@ async function drafts(requests: readonly Request[]): Promise<unknown> {
 
 it("starts a new video following the narration, with a plain Look folded away", async () => {
   await mountPlay();
-  await openSection("Outputs");
+  await openRow("Video and style");
   const cuts = screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" });
   expect(cuts.value).toBe("narration");
   expect(cuts.selectedOptions[0]?.textContent).toBe("Follow the narration");
@@ -48,8 +48,8 @@ it("starts a new video following the narration, with a plain Look folded away", 
 });
 
 it("sets transitions, the Look, chapter cards and animated images, and saves them in the draft", async () => {
-  const { requests } = await mountPlay(falModels);
-  await openSection("Outputs");
+  const { requests, session } = await mountPlay(falModels);
+  await openRow("Video and style");
   // The clips are made on the image provider, so its models are the ones offered.
   const provider = document.querySelector<HTMLSelectElement>('[data-play-field="images.provider"]');
   if (provider === null) throw new Error("The image provider picker is missing.");
@@ -78,27 +78,29 @@ it("sets transitions, the Look, chapter cards and animated images, and saves the
       "Crossfade 0.8 s · Warm fantasy · Embers · Vignette · Grain · Chapter cards · Animated images",
     ),
   ).not.toBeNull();
-  await waitFor(async () =>
-    expect(await drafts(requests)).toMatchObject({
-      document: {
-        form: {
-          videoEdit: {
-            cuts: "interval",
-            transition: "crossfade",
-            transitionSeconds: 0.8,
-            vignette: "subtle",
-            grain: "strong",
-            grade: "warm",
-            atmosphere: "embers",
-            chapterCards: true,
-            animate: "every",
-            animateEvery: 4,
-            animateModel: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
-          },
+  // Saved at once rather than after the autosave pause.
+  await act(async () => {
+    await session().flush();
+  });
+  expect(await drafts(requests)).toMatchObject({
+    document: {
+      form: {
+        videoEdit: {
+          cuts: "interval",
+          transition: "crossfade",
+          transitionSeconds: 0.8,
+          vignette: "subtle",
+          grain: "strong",
+          grade: "warm",
+          atmosphere: "embers",
+          chapterCards: true,
+          animate: "every",
+          animateEvery: 4,
+          animateModel: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
         },
       },
-    }),
-  );
+    },
+  });
 });
 
 it("cuts every N seconds when the channel's language has no word timing and the draft picked none", async () => {
@@ -126,7 +128,7 @@ it("cuts every N seconds when the channel's language has no word timing and the 
 
 it("keeps the transition length off while the transition is a cut", async () => {
   await mountPlay();
-  await openSection("Outputs");
+  await openRow("Video and style");
   await userEvent.click(screen.getByText("Look"));
   const length = screen.getByRole<HTMLSelectElement>("combobox", { name: "Transition length" });
   expect(length.disabled).toBe(true);
@@ -135,7 +137,7 @@ it("keeps the transition length off while the transition is a cut", async () => 
 
 it("asks for an image-to-video model in plain words when Animate images has none", async () => {
   await mountPlay(falModels);
-  await openSection("Outputs");
+  await openRow("Video and style");
   await userEvent.click(screen.getByText("Look"));
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Animate images" }), "every");
   await openSection("Review");

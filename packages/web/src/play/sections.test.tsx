@@ -1,11 +1,20 @@
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import type { PlaySession } from "./draft-context";
 import { mountPlay, openRow, openSection } from "./play-test-fixture";
 
 // The Outputs row's one line: what the run makes besides the video.
 function outputsSummary(): string {
   return document.querySelector('[data-setup-row="outputs"] [data-row-summary]')?.textContent ?? "";
+}
+
+// Saves the draft at once, as the autosave would after its pause (draft-session.test.tsx times
+// the pause itself).
+async function saveNow(session: () => PlaySession): Promise<void> {
+  await act(async () => {
+    await session().flush();
+  });
 }
 
 afterEach(cleanup);
@@ -44,7 +53,7 @@ it("does not mark untouched fields when another field changes", async () => {
 
 it("keeps every chunking mode selectable inside Audio Advanced", async () => {
   await mountPlay();
-  await openSection("Outputs");
+  await openRow("Narration");
   await userEvent.click(screen.getByText(/Audio Advanced/));
   for (const name of [/Every .* words/, /Every .* characters/, "Paragraph", "Whole"]) {
     await userEvent.click(screen.getByRole("radio", { name }));
@@ -53,7 +62,7 @@ it("keeps every chunking mode selectable inside Audio Advanced", async () => {
 });
 it("focuses a stable image count after removing an earlier selected prompt", async () => {
   await mountPlay();
-  await openSection("Outputs");
+  await openRow("Images");
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
   await userEvent.clear(screen.getByLabelText("Number for Maps"));
@@ -134,8 +143,8 @@ it("edits a provided article from the summary and preserves focus through autosa
 });
 
 it("switches the Document on, picks its theme and saves both into the draft", async () => {
-  const { requests } = await mountPlay();
-  await openSection("Outputs");
+  const { requests, session } = await mountPlay();
+  await openRow("Outputs");
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
   // Plain is the one built-in; DiceMaster is no longer offered.
   expect(theme.value).toBe("builtin:plain");
@@ -154,7 +163,8 @@ it("switches the Document on, picks its theme and saves both into the draft", as
   );
   expect(theme.disabled).toBe(false);
   expect(outputsSummary()).toMatch(/PDF \(Plain\)/);
-  await waitFor(async () => {
+  await saveNow(session);
+  {
     const saves = requests.filter(
       (request) =>
         ["PUT", "POST"].includes(request.method) &&
@@ -164,12 +174,12 @@ it("switches the Document on, picks its theme and saves both into the draft", as
     expect(saved).toMatchObject({ document: { form: { sources: { document: "generate" } } } });
     // The default needs no saving: a draft without a theme reads, and is made, as Plain.
     expect(saved.document.form.document?.theme ?? "plain").toBe("plain");
-  });
+  }
 });
 
 it("switches the YouTube description on, picks its prompt and saves both into the draft", async () => {
-  const { requests } = await mountPlay();
-  await openSection("Outputs");
+  const { requests, session } = await mountPlay();
+  await openRow("Outputs");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   expect(on.checked).toBe(false);
@@ -181,7 +191,8 @@ it("switches the YouTube description on, picks its prompt and saves both into th
   expect(prompt.disabled).toBe(false);
   await userEvent.selectOptions(prompt, "Hooky");
   expect(outputsSummary()).toMatch(/YouTube description/);
-  await waitFor(async () => {
+  await saveNow(session);
+  {
     const saves = requests.filter(
       (request) =>
         ["PUT", "POST"].includes(request.method) &&
@@ -190,7 +201,7 @@ it("switches the YouTube description on, picks its prompt and saves both into th
     expect(await saves.at(-1)?.clone().json()).toMatchObject({
       document: { form: { youtubeDescription: true, descriptionPrompt: "Hooky" } },
     });
-  });
+  }
 });
 
 it("keeps the YouTube description switch in place but disabled without narration", async () => {
@@ -208,8 +219,8 @@ it("keeps the YouTube description switch in place but disabled without narration
 });
 
 it("switches Shorts on, sets how many and how long, picks both prompts and saves them into the draft", async () => {
-  const { requests } = await mountPlay();
-  await openSection("Outputs");
+  const { requests, session } = await mountPlay();
+  await openRow("Outputs");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /Shorts/ });
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" });
@@ -230,7 +241,8 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
   await userEvent.selectOptions(prompt, "Hooks");
   await userEvent.selectOptions(style, "Maps");
   expect(outputsSummary()).toMatch(/2 shorts/);
-  await waitFor(async () => {
+  await saveNow(session);
+  {
     const saves = requests.filter(
       (request) =>
         ["PUT", "POST"].includes(request.method) &&
@@ -250,12 +262,12 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
         },
       },
     });
-  });
+  }
 });
 
 it("refuses a Shorts length whose shortest is longer than its longest, in plain words", async () => {
   await mountPlay();
-  await openSection("Outputs");
+  await openRow("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
   const shortest = screen.getByRole<HTMLInputElement>("textbox", {
     name: "Shortest short, in seconds",
@@ -277,8 +289,8 @@ it("refuses a Shorts length whose shortest is longer than its longest, in plain 
 });
 
 it("keeps the title, speed, music volume and link in More shorts options and saves them into the draft", async () => {
-  const { requests } = await mountPlay();
-  await openSection("Outputs");
+  const { requests, session } = await mountPlay();
+  await openRow("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
   // Closed until asked for; a new form starts with the title on screen.
   const more = screen.getByText(/More shorts options/);
@@ -306,7 +318,8 @@ it("keeps the title, speed, music volume and link in More shorts options and sav
   );
   // The music file is attached beside them, as a draft upload.
   expect(screen.getByLabelText(/^Background music \(optional\)/)).not.toBeNull();
-  await waitFor(async () => {
+  await saveNow(session);
+  {
     const saves = requests.filter(
       (request) =>
         ["PUT", "POST"].includes(request.method) &&
@@ -325,5 +338,5 @@ it("keeps the title, speed, music volume and link in More shorts options and sav
         },
       },
     });
-  });
+  }
 });

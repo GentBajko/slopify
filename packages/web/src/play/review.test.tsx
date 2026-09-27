@@ -1,7 +1,7 @@
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "./play-test-fixture";
 import { sameReviewedGeneration } from "./review-state";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
@@ -88,12 +88,19 @@ describe("bound review identity", () => {
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     const reviews = () => harness.requests.filter((request) => request.url.endsWith("/review"));
     const before = reviews().length;
-    act(() => {
-      const document = harness.session().document;
-      harness.session().edit({ ...document, expectedWords: "2500" });
-    });
-    expect(harness.session().review.valid).toBe(false);
-    await waitFor(() => expect(harness.session().review.valid).toBe(true), { timeout: 3000 });
+    // The check waits for typing to pause; the pause is moved past at once, not waited out.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      act(() => {
+        const document = harness.session().document;
+        harness.session().edit({ ...document, expectedWords: "2500" });
+      });
+      expect(harness.session().review.valid).toBe(false);
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(harness.session().review.valid).toBe(true));
     expect(reviews().length).toBe(before + 1);
     expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
       false,

@@ -1,14 +1,25 @@
+import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { subtitleConfigSchema } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { entries, mountPlay, openSection } from "@/play/play-test-fixture";
+import {
+  entries,
+  fill,
+  generatedRun,
+  mountPlay,
+  openRow,
+  openSection,
+} from "@/play/play-test-fixture";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 
 const tutorial = vi.hoisted(() => ({
   event: vi.fn(),
   progress: vi.fn<(progress: Readonly<Record<string, boolean>>) => void>(),
 }));
+
+// The rail's style preview has its own tests; here it would only render in the background.
+vi.mock("@/video/style-preview", () => ({ StylePreview: () => null }));
 
 vi.mock("@/tutorial/context", () => ({
   useTutorialEvent: () => tutorial.event,
@@ -57,8 +68,24 @@ function held(): boolean {
   return tutorial.progress.mock.lastCall?.[0]?.playReady !== true;
 }
 
+// Opens only the row that holds the picker, so the rest of Play stays folded and each edit
+// renders less.
+const rowOfPicker: Readonly<Record<string, string>> = {
+  "Article prompt": "Article",
+  LLM: "Article",
+  "Text model": "Article",
+  TTS: "Narration",
+  "TTS model": "Narration",
+  Voice: "Narration",
+  Intro: "Narration",
+  Outro: "Narration",
+  Provider: "Images",
+  Model: "Images",
+  "Thumbnail prompt": "Outputs",
+};
 async function pick(label: string, value: string): Promise<void> {
-  await section(["Article prompt", "LLM", "Text model"].includes(label) ? "Content" : "Outputs");
+  if (screen.queryByRole("dialog", { name: "Review" })) await section("Content");
+  await openRow(rowOfPicker[label] ?? "Outputs");
   return userEvent.selectOptions(screen.getByLabelText(label), value);
 }
 
@@ -75,13 +102,16 @@ function modelPickers(): readonly HTMLElement[] {
   return screen.getAllByLabelText("Model");
 }
 
+// Mounts Play on a fresh draft, or on `start` (a complete generated run is `generatedRun`).
 async function mount(
   over: Readonly<Record<string, Answer>> = {},
+  start?: PlayDraftDocument,
 ): Promise<ReturnType<typeof vi.fn>> {
-  return (await mountPlay(over)).created;
+  return (await mountPlay(over, start)).created;
 }
 
-// Fills the form for a run whose every stage is generated.
+// Fills the form by hand for a run whose every stage is generated, as a person would; the
+// tests about what comes after start from `generatedRun` instead.
 async function fillGeneratedRun(): Promise<void> {
   await pick("Article prompt", "Dossier");
   await pick("TTS", "elevenlabs");
@@ -92,18 +122,14 @@ async function fillGeneratedRun(): Promise<void> {
   if (imageModel !== undefined) {
     await userEvent.selectOptions(imageModel, "fal-ai/flux-2");
   }
-  await section("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
   await pick("LLM", "claude-code");
   await pick("Text model", "sonnet");
-  await section("Content");
-  await userEvent.type(screen.getByLabelText("Title"), "Rope Tricks");
-  await section("Content");
-  await userEvent.type(screen.getByLabelText("topic"), "rope");
-  await section("Content");
-  await userEvent.type(screen.getByLabelText("minWords"), "3000");
-  await section("Content");
-  await userEvent.type(screen.getByLabelText("style"), "oil on canvas");
+  await fill(screen.getByLabelText("Title"), "Rope Tricks");
+  await openRow("Title and keywords");
+  await fill(screen.getByLabelText("topic"), "rope");
+  await fill(screen.getByLabelText("minWords"), "3000");
+  await fill(screen.getByLabelText("style"), "oil on canvas");
 }
 
 // Review opens over the editor, so a message can show both in the drawer's error list and
@@ -160,12 +186,14 @@ describe("tutorial completion from the Play form", () => {
   });
 
   it("does not report a project when server admission refuses the run", async () => {
-    await mount({
-      "POST /api/projects": fieldsAnswer([
-        { field: "articlePrompt", message: "That article prompt was deleted." },
-      ]),
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "POST /api/projects": fieldsAnswer([
+          { field: "articlePrompt", message: "That article prompt was deleted." },
+        ]),
+      },
+      generatedRun,
+    );
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
@@ -194,7 +222,7 @@ describe("the Play key and its hint", () => {
     // Naming the run leaves the article prompt the first missing item, and now that the
     // user is configuring the run it is marked where it stands.
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Title"), "Rope Tricks");
+    await fill(screen.getByLabelText("Title"), "Rope Tricks");
 
     expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
   });
@@ -243,9 +271,8 @@ describe("Ctrl+Enter", () => {
   });
 
   it("presses Play once the run is admissible", async () => {
-    const created = await mount();
+    const created = await mount({}, generatedRun);
 
-    await fillGeneratedRun();
     await waitFor(() => {
       expect(held()).toBe(false);
     });
@@ -366,7 +393,7 @@ describe("optional stages", () => {
     await section("Content");
     await userEvent.click(segment("article", "Provide"));
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Article text"), "The full article.");
+    await fill(screen.getByLabelText("Article text"), "The full article.");
     await section("Outputs");
     await userEvent.click(segment("audio", "Provide"));
     expect(screen.queryByLabelText("Intro")).toBeNull();
@@ -386,7 +413,7 @@ describe("optional stages", () => {
     await section("Outputs");
     await userEvent.click(segment("images", "Off"));
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Title"), "Uploaded audio");
+    await fill(screen.getByLabelText("Title"), "Uploaded audio");
     expect(held()).toBe(false);
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
@@ -415,7 +442,7 @@ describe("optional stages", () => {
     await section("Content");
     await userEvent.click(segment("article", "Provide"));
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Article text"), "My finished article.");
+    await fill(screen.getByLabelText("Article text"), "My finished article.");
     await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
     await section("Outputs");
@@ -427,7 +454,7 @@ describe("optional stages", () => {
     expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
     expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(true);
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Title"), "Article only");
+    await fill(screen.getByLabelText("Title"), "Article only");
     expect(held()).toBe(false);
     expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
       playAudioReady: true,
@@ -442,8 +469,7 @@ describe("optional stages", () => {
   });
 
   it("keeps silent video available without a TTS provider or voice", async () => {
-    await mount();
-    await fillGeneratedRun();
+    await mount({}, generatedRun);
     await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
     expect(screen.getByText("Silent video · each image shown once")).not.toBeNull();
@@ -463,7 +489,7 @@ describe("optional stages", () => {
     await section("Content");
     await userEvent.click(segment("article", "Provide"));
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Article text"), "Ready article.");
+    await fill(screen.getByLabelText("Article text"), "Ready article.");
     await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
     await section("Outputs");
@@ -474,9 +500,9 @@ describe("optional stages", () => {
     await pick("Provider", "fal");
     await pick("Model", "fal-ai/flux-2");
     await section("Content");
-    await userEvent.type(screen.getByLabelText("topic"), "Albania");
+    await fill(screen.getByLabelText("topic"), "Albania");
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Title"), "Thumbnail run");
+    await fill(screen.getByLabelText("Title"), "Thumbnail run");
     expect(held()).toBe(false);
     await section("Outputs");
     await userEvent.click(segment("images", "Provide"));
@@ -489,7 +515,7 @@ describe("optional stages", () => {
 
 describe("the thumbnail's two generate modes", () => {
   it("asks for a prompt in both, and for the LLM row only when the LLM writes it", async () => {
-    await mount();
+    await mount({}, generatedRun);
 
     expect(screen.queryByLabelText("Thumbnail prompt")).toBeNull();
 
@@ -498,7 +524,6 @@ describe("the thumbnail's two generate modes", () => {
     expect(screen.getByLabelText("Thumbnail prompt")).not.toBeNull();
     await pick("Thumbnail prompt", "Title card");
 
-    await fillGeneratedRun();
     await waitFor(() => {
       expect(held()).toBe(false);
     });
@@ -536,6 +561,7 @@ describe("the keyword block", () => {
     expect(screen.queryByLabelText("topic")).toBeNull();
 
     await pick("Article prompt", "Dossier");
+    await openRow("Title and keywords");
     expect(screen.getByLabelText("topic")).not.toBeNull();
     expect(screen.getByLabelText("minWords")).not.toBeNull();
     expect(screen.queryByLabelText("style")).toBeNull();
@@ -553,9 +579,8 @@ describe("the keyword block", () => {
   });
 
   it("names the empty keyword in the hint and marks it in place", async () => {
-    await mount();
+    await mount({}, generatedRun);
 
-    await fillGeneratedRun();
     await section("Content");
     await userEvent.clear(screen.getByLabelText("style"));
     // Leaving the field marks it; the rows stay open, so nothing else takes focus first.
@@ -569,14 +594,19 @@ describe("the keyword block", () => {
 
 describe("a run the server refuses", () => {
   it("marks every field the 400 named and keeps the form", async () => {
-    const created = await mount({
-      "POST /api/projects": fieldsAnswer([
-        { field: "articlePrompt", message: "That article prompt no longer exists; pick another." },
-        { field: "values.topic", message: "This field is required." },
-      ]),
-    });
+    const created = await mount(
+      {
+        "POST /api/projects": fieldsAnswer([
+          {
+            field: "articlePrompt",
+            message: "That article prompt no longer exists; pick another.",
+          },
+          { field: "values.topic", message: "This field is required." },
+        ]),
+      },
+      generatedRun,
+    );
 
-    await fillGeneratedRun();
     await waitFor(() => {
       expect(held()).toBe(false);
     });
@@ -597,13 +627,15 @@ describe("a run the server refuses", () => {
   });
 
   it("clears the server's marks as soon as the form changes", async () => {
-    await mount({
-      "POST /api/projects": fieldsAnswer([
-        { field: "values.topic", message: "This field is required." },
-      ]),
-    });
+    await mount(
+      {
+        "POST /api/projects": fieldsAnswer([
+          { field: "values.topic", message: "This field is required." },
+        ]),
+      },
+      generatedRun,
+    );
 
-    await fillGeneratedRun();
     await waitFor(() => {
       expect(held()).toBe(false);
     });
@@ -663,12 +695,14 @@ describe("subtitles on Play", () => {
       });
       return jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201)(request);
     });
-    await mount({
-      "GET /api/fonts": jsonAnswer({ fonts: [...fonts, custom] }),
-      "POST /api/fonts": () => pending,
-      "POST /api/projects": create,
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "GET /api/fonts": jsonAnswer({ fonts: [...fonts, custom] }),
+        "POST /api/fonts": () => pending,
+        "POST /api/projects": create,
+      },
+      generatedRun,
+    );
     expect(held()).toBe(false);
     await section("Style");
     await userEvent.selectOptions(mode(), "burn-in");
@@ -705,18 +739,23 @@ describe("subtitles on Play", () => {
   ])(
     "can start after an invalid subtitle size is hidden by $off Off (size '$size')",
     async ({ off, size }) => {
-      const created = await mount({
-        "GET /api/fonts": jsonAnswer({ fonts }),
-        "POST /api/projects": async (request) => {
-          const draft = await request.json();
-          expect(subtitleConfigSchema.parse(draft.subtitles)).toMatchObject({
-            mode: "off",
-            fontSize: 48,
-          });
-          return jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201)(request);
+      const created = await mount(
+        {
+          "GET /api/fonts": jsonAnswer({ fonts }),
+          "POST /api/projects": async (request) => {
+            const draft = await request.json();
+            expect(subtitleConfigSchema.parse(draft.subtitles)).toMatchObject({
+              mode: "off",
+              fontSize: 48,
+            });
+            return jsonAnswer(
+              { project: { id: "p1", status: "running" }, stages: [] },
+              201,
+            )(request);
+          },
         },
-      });
-      await fillGeneratedRun();
+        generatedRun,
+      );
       await section("Style");
       await userEvent.selectOptions(mode(), "burn-in");
       await userEvent.clear(screen.getByLabelText("Subtitle font size"));
@@ -735,13 +774,15 @@ describe("subtitles on Play", () => {
   );
 
   it("shows a subtitle font refusal from the server at the subtitle controls", async () => {
-    await mount({
-      "GET /api/fonts": jsonAnswer({ fonts }),
-      "POST /api/projects": fieldsAnswer([
-        { field: "subtitles.fontId", message: "Choose an installed font." },
-      ]),
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "GET /api/fonts": jsonAnswer({ fonts }),
+        "POST /api/projects": fieldsAnswer([
+          { field: "subtitles.fontId", message: "Choose an installed font." },
+        ]),
+      },
+      generatedRun,
+    );
     await section("Style");
     await userEvent.selectOptions(mode(), "files");
     await openCosts();
@@ -752,12 +793,14 @@ describe("subtitles on Play", () => {
 
 describe("explicit review error navigation", () => {
   it("opens Audio Advanced and focuses its native chunking control", async () => {
-    await mount({
-      "POST /api/projects": fieldsAnswer([
-        { field: "chunking.mode", message: "Review audio chunking." },
-      ]),
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "POST /api/projects": fieldsAnswer([
+          { field: "chunking.mode", message: "Review audio chunking." },
+        ]),
+      },
+      generatedRun,
+    );
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await userEvent.click(
@@ -769,12 +812,14 @@ describe("explicit review error navigation", () => {
     expect(screen.getByText(/Audio Advanced/).closest("details")?.open).toBe(true);
   });
   it("keeps unknown failures visible and focuses the Review heading", async () => {
-    await mount({
-      "POST /api/projects": fieldsAnswer([
-        { field: "future.rule", message: "A new rule requires attention." },
-      ]),
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "POST /api/projects": fieldsAnswer([
+          { field: "future.rule", message: "A new rule requires attention." },
+        ]),
+      },
+      generatedRun,
+    );
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await userEvent.click(
@@ -788,12 +833,14 @@ describe("explicit review error navigation", () => {
     ).not.toBeNull();
   });
   it("opens the other video's keywords and focuses its refused field", async () => {
-    await mount({
-      "POST /api/projects/batch": fieldsAnswer([
-        { field: "items.1.values.topic", message: "Complete the second video's topic." },
-      ]),
-    });
-    await fillGeneratedRun();
+    await mount(
+      {
+        "POST /api/projects/batch": fieldsAnswer([
+          { field: "items.1.values.topic", message: "Complete the second video's topic." },
+        ]),
+      },
+      generatedRun,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Add topic" }));
     await userEvent.type(screen.getByLabelText("Title of another video"), "Knot Tricks{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
