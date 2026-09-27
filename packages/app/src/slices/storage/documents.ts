@@ -18,16 +18,30 @@ export interface DocumentsHost {
 
 const execute = promisify(execFile);
 
-export function nodeDocumentsHost(): DocumentsHost {
+// Runs a program and hands back its raw standard output bytes.
+export type ExecBytes = (command: string, args: readonly string[]) => Promise<Uint8Array>;
+
+const execBytes: ExecBytes = async (command, args) =>
+  (await execute(command, [...args], { timeout: 10_000, windowsHide: true, encoding: "buffer" }))
+    .stdout;
+
+// Output is always decoded as UTF-8: the PowerShell command below switches its own output to
+// UTF-8 first, so a Documents folder named with non-ASCII letters (a Cyrillic or accented
+// OneDrive path) survives instead of arriving in the console codepage.
+export function nodeDocumentsHost(exec: ExecBytes = execBytes): DocumentsHost {
   return {
     platform: process.platform,
     env: process.env,
     home: homedir(),
-    run: async (command, args) =>
-      (await execute(command, [...args], { timeout: 10_000, windowsHide: true })).stdout,
+    run: async (command, args) => new TextDecoder("utf-8").decode(await exec(command, args)),
     read: (path) => readFile(path, "utf8").catch(() => undefined),
   };
 }
+
+// Forces PowerShell's stdout to UTF-8 before printing: by default it writes in the console's
+// codepage (437, 850, 1252...), which mangles every non-ASCII letter in the path.
+export const WINDOWS_DOCUMENTS_COMMAND =
+  "[Console]::OutputEncoding = [Text.Encoding]::UTF8; [Environment]::GetFolderPath('MyDocuments')";
 
 // The user's own Documents folder, the way the system itself names it: Windows asks for the
 // known folder (which follows OneDrive and a folder moved in its Properties), Linux asks
@@ -40,7 +54,7 @@ export async function documentsDir(host: DocumentsHost): Promise<string> {
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        "[Environment]::GetFolderPath('MyDocuments')",
+        WINDOWS_DOCUMENTS_COMMAND,
       ])
       .then((out) => out.trim())
       .catch(() => "");

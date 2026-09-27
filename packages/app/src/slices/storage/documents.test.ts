@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { type DocumentsHost, documentsDir, userDirsDocuments } from "./documents.js";
+import {
+  type DocumentsHost,
+  documentsDir,
+  nodeDocumentsHost,
+  userDirsDocuments,
+  WINDOWS_DOCUMENTS_COMMAND,
+} from "./documents.js";
 
 function host(over: Partial<DocumentsHost>): DocumentsHost & { calls: string[] } {
   const calls: string[] = [];
@@ -17,6 +23,16 @@ function host(over: Partial<DocumentsHost>): DocumentsHost & { calls: string[] }
   };
 }
 
+describe("nodeDocumentsHost", () => {
+  it("decodes PowerShell's answer as UTF-8, so a non-ASCII Documents path survives", async () => {
+    const path = "C:\\Users\\Élodie\\OneDrive - Société\\Документы";
+    const exec = async () => new TextEncoder().encode(`${path}\r\n`);
+    const node = nodeDocumentsHost(exec);
+    const windows: DocumentsHost = { ...node, platform: "win32", home: "C:\\Users\\Élodie", env: {} };
+    expect(await documentsDir(windows)).toBe(path);
+  });
+});
+
 describe("documentsDir", () => {
   it("asks Windows for the known folder, which follows OneDrive", async () => {
     const h = host({
@@ -25,7 +41,8 @@ describe("documentsDir", () => {
       env: { USERPROFILE: "C:\\Users\\you" },
       run: async (command, args) => {
         expect(command).toBe("powershell.exe");
-        expect(args.at(-1)).toBe("[Environment]::GetFolderPath('MyDocuments')");
+        expect(args.at(-1)).toBe(WINDOWS_DOCUMENTS_COMMAND);
+        expect(args.at(-1)).toContain("[Console]::OutputEncoding = [Text.Encoding]::UTF8;");
         return "C:\\Users\\you\\OneDrive\\Documents\r\n";
       },
     });
