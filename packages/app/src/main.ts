@@ -335,6 +335,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clock,
         probe: nodeCliProbe,
         hostCli,
+        ffmpeg,
       }),
       catalogue,
     );

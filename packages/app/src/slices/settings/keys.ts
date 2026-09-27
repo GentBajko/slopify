@@ -43,7 +43,7 @@ export type KeyLookup =
 // Trimmed, stored as given, overwriting any previous one. No format
 // check and no test call.
 export function saveProviderKey(deps: KeysDeps, provider: ProviderId, key: string): SaveKeyResult {
-  if (providerById(provider).auth === "cli") {
+  if (providerById(provider).auth !== "key") {
     return { ok: false, reason: "cli-provider" };
   }
   const trimmed = key.trim();
@@ -62,7 +62,7 @@ export function saveProviderKey(deps: KeysDeps, provider: ProviderId, key: strin
 }
 
 export function removeProviderKey(deps: KeysDeps, provider: ProviderId): RemoveKeyResult {
-  if (providerById(provider).auth === "cli") {
+  if (providerById(provider).auth !== "key") {
     return { ok: false, reason: "cli-provider" };
   }
   return deleteKey(deps.db, provider) ? { ok: true } : { ok: false, reason: "absent" };
@@ -72,7 +72,7 @@ export function removeProviderKey(deps: KeysDeps, provider: ProviderId): RemoveK
 // every time and hands back a plain string, so an attempt holds the value it started
 // with and a save or a remove landing mid-run reaches the next attempt only.
 export function keyForAttempt(deps: KeysDeps, provider: ProviderId): KeyLookup {
-  if (providerById(provider).auth === "cli") {
+  if (providerById(provider).auth !== "key") {
     return { ok: false, reason: "cli-provider" };
   }
   const key = keyOf(deps.db, provider);

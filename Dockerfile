@@ -35,7 +35,7 @@ COPY packages/web/package.json packages/web/package.json
 COPY packages/collector/package.json packages/collector/package.json
 COPY packages/site/package.json packages/site/package.json
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core espeak-ng \
     && rm -rf /var/lib/apt/lists/* \
     && npm ci --ignore-scripts --omit=dev --workspace @gentbajko/slopify --include-workspace-root=false \
     && XDG_CACHE_HOME=/tmp/slopify-ffmpeg-cache node node_modules/ffmpeg-static/install.js \

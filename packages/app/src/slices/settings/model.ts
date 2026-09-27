@@ -20,6 +20,7 @@ export const providerIds = [
   "openai-tts",
   "cartesia",
   "inworld",
+  "system-voice",
   "fal",
   "replicate",
   "openai-image",
@@ -56,7 +57,21 @@ export interface CliProvider extends ProviderBase {
   readonly versionArgs: readonly string[];
 }
 
-export type Provider = KeyedProvider | CliProvider;
+// The computer's own speech (`kernel/system-speech.ts`): no key, no login, no charge, and no row
+// in the model list. Ready when a speech program answers.
+export interface LocalProvider extends ProviderBase {
+  readonly auth: "local";
+}
+
+export type Provider = KeyedProvider | CliProvider | LocalProvider;
+
+export const systemVoiceProvider = "system-voice";
+
+// A provider Slopify's model list (models.yaml) does not carry: an agent CLI lists its own
+// models, and the system voice's "models" are the speech programs found on this computer.
+export function isUncataloguedProvider(id: string): boolean {
+  return isLocalCliProvider(id) || id === systemVoiceProvider;
+}
 
 export const providers: readonly Provider[] = [
   { id: "openrouter", family: "llm", displayName: "OpenRouter", auth: "key" },
@@ -88,6 +103,7 @@ export const providers: readonly Provider[] = [
   { id: "openai-tts", family: "tts", displayName: "OpenAI", auth: "key" },
   { id: "cartesia", family: "tts", displayName: "Cartesia", auth: "key" },
   { id: "inworld", family: "tts", displayName: "Inworld", auth: "key" },
+  { id: "system-voice", family: "tts", displayName: "System voice", auth: "local" },
   { id: "fal", family: "image", displayName: "fal.ai", auth: "key" },
   { id: "replicate", family: "image", displayName: "Replicate", auth: "key" },
   { id: "openai-image", family: "image", displayName: "OpenAI", auth: "key" },

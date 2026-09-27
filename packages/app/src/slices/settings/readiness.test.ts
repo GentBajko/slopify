@@ -141,16 +141,58 @@ describe("providerStatuses", () => {
     deps.db.close();
   });
 
-  it("probes each CLI provider's own binary and nothing else", async () => {
+  it("probes each CLI provider's own binary, and the speech programs for the system voice", async () => {
     const probed: string[] = [];
-    const probe: CliProbe = (binary) => {
-      probed.push(binary);
+    const probe: CliProbe = (binary, args) => {
+      probed.push(binary === "sh" ? `sh ${args.at(-1)}` : binary);
       return Promise.resolve({ ran: false, stdout: "" });
     };
 
-    await providerStatuses(harness(probe));
+    await providerStatuses({ ...harness(probe), host: { platform: "linux", env: {} } });
 
-    expect(probed.toSorted()).toEqual(["claude", "codex", "gemini"]);
+    expect(probed.toSorted()).toEqual([
+      "claude",
+      "codex",
+      "espeak",
+      "espeak-ng",
+      "gemini",
+      "sh pico2wave",
+      "sh piper",
+    ]);
+  });
+
+  it("finds the system voice from the speech program on this computer, with no key", async () => {
+    const probe: CliProbe = (binary) =>
+      Promise.resolve(
+        binary === "espeak-ng"
+          ? {
+              ran: true,
+              stdout:
+                "Pty Language       Age/Gender VoiceName          File                 Other Languages\n 5  en-us           --/M      English_(America)  gmw/en-US\n",
+            }
+          : { ran: false, stdout: "" },
+      );
+    const found = await providerStatuses({
+      ...harness(probe),
+      host: { platform: "linux", env: {} },
+    });
+    expect(statusOf(found, "system-voice")).toMatchObject({
+      family: "tts",
+      displayName: "System voice",
+      readiness: { kind: "local", available: true, engine: "eSpeak NG" },
+    });
+  });
+
+  it("says plainly why the system voice can't speak in Docker, and what fixes it", async () => {
+    const found = await providerStatuses({
+      ...harness(notFound),
+      host: { platform: "linux", env: { SLOPIFY_CONTAINER: "1" } },
+    });
+    expect(statusOf(found, "system-voice").readiness).toMatchObject({
+      kind: "local",
+      available: false,
+      issue: expect.stringMatching(/Docker.*docker compose pull.*Settings → Providers/),
+    });
   });
 
   it("reports saved command paths and probes the latest override", async () => {

@@ -69,11 +69,17 @@ function harness(installed: readonly string[] = ["claude", "codex"]): {
     version: "3.0.0",
     webDist: join(paths.dataDir, "missing"),
     flushSoon: () => undefined,
-    // Claude Code and Codex answer; nothing else is installed.
+    // Claude Code and Codex answer; nothing else is installed unless the test says.
     probe: async (binary) =>
-      installed.includes(binary)
-        ? { ran: true, stdout: binary === "codex" ? "codex-cli 0.160.0" : "2.1.300 (Claude Code)" }
-        : { ran: false, stdout: "" },
+      !installed.includes(binary)
+        ? { ran: false, stdout: "" }
+        : binary === "espeak-ng"
+          ? { ran: true, stdout: " 5  en-us  --/M  English_(America)  gmw/en-US\n" }
+          : {
+              ran: true,
+              stdout: binary === "codex" ? "codex-cli 0.160.0" : "2.1.300 (Claude Code)",
+            },
+    speechHost: { platform: "linux", env: {} },
     modelsFor: async (provider, family) =>
       family === "llm"
         ? [
@@ -215,7 +221,80 @@ describe("Make a 60-second short", () => {
       "voice",
     ]);
     expect(body.detail).toContain("Settings → Providers");
+    expect(body.detail).toContain("Install espeak-ng");
     expect(h.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
+  });
+
+  it("narrates with the computer's own voice when no voice key is saved, and saves that voice", async () => {
+    const h = harness(["claude", "codex", "espeak-ng"]);
+    const view = await json(await h.app.request("/api/onboarding"));
+    expect(view.voice).toEqual({
+      keyed: null,
+      system: { available: true, engine: "eSpeak NG", issue: null },
+    });
+    const made = await h.app.request("/api/onboarding/short", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ topic: "tides", packId: "science", requestId: randomUUID() }),
+    });
+    expect(made.status).toBe(201);
+    const { projectId } = (await made.json()) as { projectId: string };
+    expect(projectById(h.db, projectId)?.config).toMatchObject({
+      audio: { provider: "system-voice", model: "espeak-ng", voice: "en-us" },
+    });
+    const voices = (await json(await h.app.request("/api/settings/voices"))).voices as {
+      provider: string;
+      voiceId: string;
+      languages?: string[];
+    }[];
+    expect(voices).toContainEqual(
+      expect.objectContaining({ provider: "system-voice", voiceId: "en-us", languages: ["en"] }),
+    );
+  });
+
+  it("prefers a voice key over the computer's voice", async () => {
+    const h = harness(["claude", "codex", "espeak-ng"]);
+    upsertKey(h.db, "openai-tts", "sk-test", clock.now().toISOString());
+    expect((await json(await h.app.request("/api/onboarding"))).voice).toMatchObject({
+      keyed: "OpenAI",
+    });
+    const made = await h.app.request("/api/onboarding/short", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ topic: "tides", requestId: randomUUID() }),
+    });
+    const { projectId } = (await made.json()) as { projectId: string };
+    expect(projectById(h.db, projectId)?.config).toMatchObject({
+      audio: { provider: "openai-tts" },
+    });
+  });
+});
+
+describe("reading the first-run screen", () => {
+  it("writes nothing; a real project made elsewhere is settled by an explicit dismiss", async () => {
+    const h = harness();
+    await seedSamples({
+      db: h.db,
+      paths: h.paths,
+      clock,
+      ids: ulidIds,
+      log: { write: () => undefined },
+      appVersion: "3.0.0",
+    });
+    const copied = await h.app.request("/api/onboarding/sample/copy", { method: "POST" });
+    expect(copied.status).toBe(201);
+    const settings = () => h.db.prepare("SELECT key, value FROM settings ORDER BY key").all();
+    const before = settings();
+    expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({
+      show: false,
+      settle: true,
+    });
+    expect(settings()).toEqual(before);
+    await h.app.request("/api/onboarding/dismiss", { method: "POST" });
+    expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({
+      show: false,
+      settle: false,
+    });
   });
 });
 

@@ -2,7 +2,7 @@ import { type LlmEvent, thinkingModes } from "../kernel/ports/llm.js";
 import { providerError } from "../kernel/ports/model.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TtsAudio } from "../kernel/ports/tts.js";
-import { isLocalCliProvider } from "../slices/settings/model.js";
+import { isLocalCliProvider, systemVoiceProvider } from "../slices/settings/model.js";
 import { referenceRefusal, takesReferenceImage } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
 
@@ -172,6 +172,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
     },
     tts: (id) => {
       const port = registry.tts(id);
+      // The system voice's models are the speech programs on this computer, not list rows.
+      if (id === systemVoiceProvider) return port;
       return {
         ...port,
         models: async () => catalogue.models(id, "tts"),
