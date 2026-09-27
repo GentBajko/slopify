@@ -76,6 +76,9 @@ export interface ProvidedFiles {
   readonly audio?: string | undefined;
   readonly images?: readonly string[] | undefined;
   readonly thumbnail?: string | undefined;
+  // The Shorts step's background music, staged like narration audio. Copied into the project
+  // as the revision's `shortsMusic` when the run starts; ignored while Shorts is off.
+  readonly shortsMusic?: string | undefined;
 }
 
 // What Play posts. Everything a run is configured with, before any rule has looked at it.

@@ -57,7 +57,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
   const current = useRef(session);
   current.current = session;
   const form = session.document.form;
-  const upload = (ref: typeof form.provided.audio): Upload | undefined => {
+  const upload = (ref: typeof form.provided.audio | undefined): Upload | undefined => {
     if (!ref) return undefined;
     const attachment = session.view?.attachments.find((one) => one.id === ref.attachmentId);
     const file =
@@ -114,6 +114,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
       ...form.provided,
       audio: upload(form.provided.audio),
       thumbnail: upload(form.provided.thumbnail),
+      shortsMusic: upload(form.provided.shortsMusic),
       images: form.provided.images.flatMap((ref) => {
         const one = upload(ref);
         return one ? [one] : [];
@@ -133,6 +134,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     // A draft saved before the Document stage keeps both fields absent until one is changed.
     const { document: documentSource, ...otherSources } = next.sources;
     const { document: documentSettings, ...rest } = next;
+    const { shortsMusic, ...providedRest } = next.provided;
     const keepSource = before.form.sources.document !== undefined || documentSource !== "off";
     const keepSettings =
       before.form.document !== undefined ||
@@ -181,10 +183,15 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
           ? before.form.zoomPercent
           : String(next.zoomPercent),
         provided: {
-          ...next.provided,
+          ...providedRest,
           audio: ref(next.provided.audio),
           thumbnail: ref(next.provided.thumbnail),
           images: next.provided.images.map((one) => ({ attachmentId: one.key, name: one.name })),
+          // A draft saved before Play offered the music keeps the field absent until one is
+          // picked, so opening it changes nothing.
+          ...(shortsMusic !== undefined || before.form.provided.shortsMusic !== undefined
+            ? { shortsMusic: ref(shortsMusic) }
+            : {}),
         },
       },
     });

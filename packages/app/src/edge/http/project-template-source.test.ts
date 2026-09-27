@@ -5,6 +5,7 @@ import { startRun } from "../../slices/admission/start.js";
 import { startFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplateFromProject } from "../../slices/project-templates/from-project.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
+import { stageUpload } from "../../slices/storage/staging.js";
 import { projectTemplateRoutes } from "./project-templates.js";
 
 it("snapshots a pinned project setup without copying generated output or approvals", async () => {
@@ -64,6 +65,64 @@ it("snapshots a pinned project setup without copying generated output or approva
     expect(response.status).toBe(201);
     expect(h.ticks).toEqual([]);
     expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+  } finally {
+    h.close();
+  }
+});
+
+it("names the project's shorts background music, to be attached again, in a template snapshot", async () => {
+  const h = startFixture();
+  try {
+    const staged = async (body: string) => {
+      const result = await stageUpload(h.deps, {
+        stageKind: "audio",
+        originalFilename: `${body}.mp3`,
+        content: (async function* () {
+          yield new TextEncoder().encode(body);
+        })(),
+      });
+      if (!result.ok) throw new Error("Upload failed");
+      return result.file.id;
+    };
+    const project = startRun(
+      h.deps,
+      {
+        title: "Saved project",
+        format: "16:9",
+        sources: {
+          research: "off",
+          article: "provide",
+          audio: "provide",
+          images: "off",
+          thumbnail: "off",
+          video: "off",
+        },
+        imagePrompts: [],
+        values: {},
+        shorts: { enabled: true, count: 2, minSeconds: 45, maxSeconds: 90 },
+        provided: {
+          article: "Arda.",
+          audio: await staged("voice"),
+          shortsMusic: await staged("music"),
+        },
+        silenceGapSeconds: 0,
+        imageSeconds: 15,
+        zoomPercent: 22.5,
+        motionStyle: "zoom",
+        edgeSilenceSeconds: 0,
+      },
+      {},
+    ).project;
+    const revisionId = currentRevisionId(h.deps.db, project.id);
+    if (!revisionId) throw new Error("Missing fixture revision");
+    const made = createTemplateFromProject(h.deps, {
+      id: randomUUID(),
+      name: "Music",
+      projectId: project.id,
+      revisionId,
+    });
+    if (!made.ok) throw new Error("Project template failed");
+    expect(made.value.document.form.provided.shortsMusic?.name).toBe("Music from project");
   } finally {
     h.close();
   }

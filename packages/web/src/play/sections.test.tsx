@@ -297,8 +297,8 @@ it("keeps the title, speed, music volume and link in More shorts options and sav
   expect(more.textContent).toBe(
     "More shorts options · Title on screen · 1.10× · Music at 25% · Full video linked",
   );
-  // The music file itself is a project's, added in Edit project.
-  expect(screen.getByText(/Background music is added per project/)).not.toBeNull();
+  // The music file is attached beside them, as a draft upload.
+  expect(screen.getByLabelText(/^Background music \(optional\)/)).not.toBeNull();
   await waitFor(async () => {
     const saves = requests.filter(
       (request) =>

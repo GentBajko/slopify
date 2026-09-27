@@ -61,6 +61,10 @@ export function freshTemplateDraft(
         audio: provided.audio === null ? null : fresh(provided.audio),
         thumbnail: provided.thumbnail === null ? null : fresh(provided.thumbnail),
         images: provided.images.map(fresh),
+        // Like the images: the name is kept and the file is attached again on Play.
+        ...(provided.shortsMusic === undefined
+          ? {}
+          : { shortsMusic: provided.shortsMusic === null ? null : fresh(provided.shortsMusic) }),
       },
     },
   };

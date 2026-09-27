@@ -7,6 +7,7 @@ import { uploadPlayDraftAttachment } from "./draft-api";
 import type { PlaySession } from "./draft-context";
 import type { DraftSessionState } from "./draft-save";
 import { sameUploadOwner, type UploadOwner } from "./draft-uploads";
+import { attachmentKindOf, type UploadSlot } from "./state";
 
 export function useDraftUploads({
   api,
@@ -44,7 +45,7 @@ export function useDraftUploads({
   );
   const owns = (sent: UploadOwner): boolean => {
     const provided = state.current.document.form.provided;
-    const ref = [provided.audio, provided.thumbnail, ...provided.images].find(
+    const ref = [provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].find(
       (one) => one?.attachmentId === sent.attachmentId,
     );
     return sameUploadOwner(
@@ -75,11 +76,12 @@ export function useDraftUploads({
     };
   }, []);
   const attach = async (
-    kind: DraftAttachment["kind"],
+    slot: UploadSlot,
     files: readonly File[],
     replaceId?: string,
   ): Promise<void> => {
     if (files.length === 0) return;
+    const kind = attachmentKindOf(slot);
     const selectedFiles = kind === "images" && !replaceId ? files : files.slice(-1);
     const refs = selectedFiles.map((file) => ({
       attachmentId: crypto.randomUUID(),
@@ -104,7 +106,7 @@ export function useDraftUploads({
                     )
                   : [...provided.images, ...refs],
               }
-            : { ...provided, [kind]: refs.at(-1) ?? null },
+            : { ...provided, [slot]: refs.at(-1) ?? null },
       },
     });
     const saved = await flush();

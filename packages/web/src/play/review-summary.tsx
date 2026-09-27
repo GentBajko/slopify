@@ -476,7 +476,7 @@ export function ReviewSummary({
                       `${form.shorts.count} shorts of ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s`,
                       `${form.shorts.prompt || defaultShortsPromptName} prompt`,
                       `${form.shorts.imagePrompt || defaultShortsPromptName} image style`,
-                      ...shortsExtrasSummary(form.shorts),
+                      ...shortsExtrasSummary(form.shorts, form.provided.shortsMusic?.name),
                       "Vertical images and renders after subtitle timing",
                     ].join(" · ")
                   : "Off",
@@ -539,16 +539,18 @@ export function ReviewSummary({
 }
 
 // The later Shorts settings the review names, each only when it differs from the default.
-function shortsExtrasSummary(shorts: ShortsForm): readonly string[] {
+function shortsExtrasSummary(shorts: ShortsForm, music: string | undefined): readonly string[] {
   const settings = shortsExtrasOf(shorts);
   const speed = settings.speed;
   const volume = settings.musicVolume;
   return [
     ...(settings.titleOnScreen === true ? ["Title on screen"] : []),
     ...(speed !== undefined && speed !== 1 ? [`${speed.toFixed(2)}× speed`] : []),
-    ...(volume !== undefined && volume !== defaultMusicVolume
-      ? [`Music at ${String(volume)}% once added in Edit project`]
-      : []),
+    ...(music === undefined
+      ? volume !== undefined && volume !== defaultMusicVolume
+        ? [`Music at ${String(volume)}% once added in Edit project`]
+        : []
+      : [`Music: ${music} at ${String(volume ?? defaultMusicVolume)}%`]),
     ...(settings.fullVideoLink === undefined ? [] : [`Links ${settings.fullVideoLink}`]),
   ];
 }

@@ -133,6 +133,32 @@ describe("Shorts admission", () => {
     // With the video off, nothing else checks how long each image is held.
     expect(fields({ ...draft(), imageSeconds: 0 })).toEqual(["imageSeconds"]);
   });
+  it("checks the background music only while Shorts is on, naming the control that fixes it", () => {
+    const withMusic = (id: string, shorts = draft().shorts) => ({
+      ...draft(),
+      shorts,
+      provided: { ...draft().provided, shortsMusic: id },
+    });
+    const uploads = [...files, staged("m1", "audio"), staged("m2", "audio", "copying")];
+    const check = (run: RunDraft) => admit({ draft: run, staged: uploads, requiredSlots: [] });
+    expect(check(withMusic("m1")).ok).toBe(true);
+    const gone = check(withMusic("gone"));
+    expect(!gone.ok && gone.fields).toEqual([
+      {
+        field: "shorts.music",
+        message: expect.stringContaining(
+          "Choose the file again under Outputs → Export → More shorts options → Background music",
+        ),
+      },
+    ]);
+    const copying = check(withMusic("m2"));
+    expect(!copying.ok && copying.fields[0]?.message).toMatch(/still uploading/);
+    // An image is not music, and Shorts off leaves the file alone.
+    expect(fields(withMusic("i1"))).toEqual(["shorts.music"]);
+    expect(
+      check(withMusic("gone", { enabled: false, count: 3, minSeconds: 60, maxSeconds: 120 })).ok,
+    ).toBe(true);
+  });
 });
 
 describe("video edit admission", () => {

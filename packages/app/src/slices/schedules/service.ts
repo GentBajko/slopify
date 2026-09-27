@@ -212,7 +212,13 @@ function checkTemplate(
   if (!template) return { ok: false, reason: "missing-template" };
   const sources = template.document.form.sources;
   const mediaSources = ["audio", "images", "thumbnail"] as const;
-  if (mediaSources.some((kind) => sources[kind] === "provide"))
+  const { form } = template.document;
+  // A supplied file is attached again on Play, which a scheduled run cannot do; the shorts'
+  // background music is one too.
+  if (
+    mediaSources.some((kind) => sources[kind] === "provide") ||
+    (form.shorts?.enabled === true && form.provided.shortsMusic)
+  )
     return { ok: false, reason: "unsupported-media" };
   return { ok: true, value: true };
 }

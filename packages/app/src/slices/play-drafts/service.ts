@@ -247,6 +247,9 @@ export function forkDraft(
           audio: p.audio === null ? null : rewrite(p.audio),
           thumbnail: p.thumbnail === null ? null : rewrite(p.thumbnail),
           images: p.images.map(rewrite),
+          ...(p.shortsMusic === undefined
+            ? {}
+            : { shortsMusic: p.shortsMusic === null ? null : rewrite(p.shortsMusic) }),
         },
       },
     };
