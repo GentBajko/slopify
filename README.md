@@ -72,7 +72,7 @@ It opens at `http://127.0.0.1:6969`. Update by running the same command with `@l
 
 - **Articles** from your AI model, with optional web research
 - **Narration** with ElevenLabs, OpenAI, Cartesia or [Inworld](docs/inworld.md)
-- **Images and thumbnails** from OpenAI, Google, fal.ai, Replicate or Codex
+- **Images and thumbnails** from OpenAI, Google, fal.ai, Replicate or Codex (any Codex model and effort), optionally drawn from one establishing image so characters, style and palette stay consistent
 - **Videos** with moving images (zoom, pan or both), free local captions and silence padding
 - **Video editing** with cuts that follow the narration, transitions, a Look (vignette, grain, colour grade, atmosphere), chapter cards and animated images
 - **PDF documents** of the article, with contents, sources and a cover

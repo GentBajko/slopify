@@ -1,0 +1,7 @@
+# Codex images: pick the model and effort; an establishing image keeps the look
+
+- Codex CLI images can use any of the Codex CLI's own models (the same list as the Codex text provider) and a reasoning effort, up to Max and Ultra where Codex offers them: Images → Model and Effort on Play, Edit project → Providers, and templates. "Codex default" is what every existing project keeps, unchanged, so nothing is marked outdated.
+- The Codex image agent now writes a detailed, faithful prompt from the brief, may look at its image and redraw it until it matches, and the last image it draws is the one used. A Codex image may take up to 30 minutes, shows "Codex is refining the image… N images so far" on the stage's live panel, and four are drawn at once.
+- New optional Images setting, Establishing image: made first from an image prompt (keywords filled like the others) or uploaded, and never shown in the video. Every other image, the shorts' images and (unless you untick it) the thumbnail are drawn with it as a reference for characters, style and palette. Changing it or pressing Regenerate on it marks those images outdated. Templates and schedules carry the setting.
+- The establishing image works with the Codex CLI, OpenAI's GPT image models, Google's Gemini image models and fal.ai's FLUX.2 and Nano Banana 2. Replicate's models can't take one: Play and Edit project say so and name the control to change.
+- Database schema 24 lets a Play draft hold an uploaded establishing image.
