@@ -14,6 +14,7 @@ import {
   usesYoutubeDescription,
 } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
+import { usesScriptPrompt } from "../voices/model.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
 
@@ -51,7 +52,16 @@ export function pickTemplates(
   const image: PickedBody[] = [];
 
   if (sources.article === "generate") {
-    body(db, "article", draft.articlePrompt, "articlePrompt", missing, text, "article", snapshot);
+    body(
+      db,
+      usesScriptPrompt(draft) ? "script" : "article",
+      draft.articlePrompt,
+      "articlePrompt",
+      missing,
+      text,
+      "article",
+      snapshot,
+    );
   }
 
   const intro = pickEntry(db, "intro", draft.intro, missing, snapshot);

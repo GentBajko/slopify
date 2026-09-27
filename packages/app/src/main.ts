@@ -43,6 +43,7 @@ import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
+import { auditionVoice } from "./kernel/runner/audition.js";
 import {
   type CheckpointAuthority,
   createCheckpointAuthority,
@@ -448,6 +449,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       sendNotification,
       audioPreviews,
       ...modelSources(registry),
+      audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
       catalogue,
       clock,
       ids,

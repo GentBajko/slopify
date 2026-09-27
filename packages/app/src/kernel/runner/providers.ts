@@ -44,6 +44,7 @@ export interface TtsCall {
   readonly provider: string;
   readonly voiceId: string;
   readonly text: string;
+  readonly dialogue?: readonly import("../ports/tts.js").DialogueLine[] | undefined;
 }
 
 export type TtsStreamEvent =
@@ -217,11 +218,17 @@ export function stageProviders(
           async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
             notify({ type: "start" });
             try {
+              if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
+                throw providerError({
+                  kind: "unsupported",
+                  message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Audio, or Edit project → Providers), then Retry stage.`,
+                });
               const spoken = await port.synthesize({
                 model: call.model,
 
                 voiceId: call.voiceId,
                 text: call.text,
+                ...(call.dialogue === undefined ? {} : { dialogue: call.dialogue }),
                 signal,
                 onActivity: progress,
                 continuation,

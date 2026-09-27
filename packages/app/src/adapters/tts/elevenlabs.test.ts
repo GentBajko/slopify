@@ -89,6 +89,30 @@ describe("elevenLabsTts.synthesize", () => {
     expect(bodyOf(seen[0])).toMatchObject({ model_id: "eleven_v3" });
   });
 
+  it("sends a multi-speaker request to Text to Dialogue, one input per line", async () => {
+    const seen: Seen[] = [];
+    await port(replaying(new Response(audioBytes(), { status: 200 }), seen)).synthesize({
+      voiceId,
+      text: "Knock knock.\nWho is there?",
+      dialogue: [
+        { voiceId, text: "Knock knock." },
+        { voiceId: "Aw4FAjKCGjjNkVhN1Xmq", text: "Who is there?" },
+      ],
+      signal: new AbortController().signal,
+    });
+
+    expect(seen[0]?.url).toBe(
+      `${elevenLabsBase}/text-to-dialogue/stream?output_format=${elevenLabsFormat}`,
+    );
+    expect(bodyOf(seen[0])).toEqual({
+      inputs: [
+        { text: "Knock knock.", voice_id: voiceId },
+        { text: "Who is there?", voice_id: "Aw4FAjKCGjjNkVhN1Xmq" },
+      ],
+      model_id: "eleven_v3",
+    });
+  });
+
   it("hands back the response body as the audio stream", async () => {
     const bytes = audioBytes();
     const spoken = await speak(replaying(new Response(bytes, { status: 200 })));
@@ -228,6 +252,6 @@ describe("elevenLabsTts capabilities", () => {
   it("declares what the provider can do", () => {
     const speaker = port(replaying(new Response(null, { status: 200 })));
     expect(speaker.id).toBe("elevenlabs");
-    expect(speaker.capabilities).toEqual({ streams: true });
+    expect(speaker.capabilities).toEqual({ streams: true, dialogue: true });
   });
 });

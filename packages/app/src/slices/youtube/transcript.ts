@@ -73,7 +73,13 @@ export interface TranscriptSentence {
   // inclusive, so a clip cut at sentence edges knows exactly which words it holds.
   readonly firstWord: number;
   readonly lastWord: number;
+  // Who says it, on a multi-voice run.
+  readonly speaker?: string | undefined;
 }
+type VoicedWord = TimedWord & {
+  readonly speaker?: string | undefined;
+  readonly turn?: number | undefined;
+};
 
 // ceiling: a sentence with no full stop in 30 s (a list read out, a transcript without
 // punctuation) is closed there, so no single number spans more than a short can hold.
@@ -82,8 +88,10 @@ const sentenceLongestSeconds = 30;
 // The narration as numbered sentences, for the Shorts step: the model picks clips by
 // sentence number and Slopify cuts at the sentences' own word times, so a clip never starts
 // or ends mid-word. A sentence closes at its full stop, question or exclamation mark, at a
-// pause of 1.5 s (the gap between intro, body and outro), or after 30 s.
-export function transcriptSentences(words: readonly TimedWord[]): readonly TranscriptSentence[] {
+// pause of 1.5 s (the gap between intro, body and outro), or after 30 s. On a multi-voice run
+// it also closes where one speaker's turn ends, so a clip always starts and ends on a turn's
+// sentence and never cuts a speaker off mid-line.
+export function transcriptSentences(words: readonly VoicedWord[]): readonly TranscriptSentence[] {
   const sentences: TranscriptSentence[] = [];
   let first = -1;
   const flush = (last: number): void => {
@@ -103,6 +111,7 @@ export function transcriptSentences(words: readonly TimedWord[]): readonly Trans
         text,
         firstWord: first,
         lastWord: last,
+        ...(opening.speaker === undefined ? {} : { speaker: opening.speaker }),
       });
     first = -1;
   };
@@ -113,6 +122,7 @@ export function transcriptSentences(words: readonly TimedWord[]): readonly Trans
       opening !== undefined &&
       previous !== undefined &&
       (word.start - previous.end >= pauseSeconds ||
+        word.turn !== previous.turn ||
         word.end - opening.start > sentenceLongestSeconds)
     )
       flush(index - 1);
@@ -124,12 +134,15 @@ export function transcriptSentences(words: readonly TimedWord[]): readonly Trans
 }
 
 // One sentence per line, led by its number and its span in the video, which is what the
-// model picks from.
-export function sentencesText(sentences: readonly TranscriptSentence[]): string {
+// model picks from; on a multi-voice run, with the speaker's name before the words.
+export function sentencesText(
+  sentences: readonly TranscriptSentence[],
+  names?: Readonly<Record<string, string>>,
+): string {
   return sentences
-    .map(
-      (sentence) =>
-        `[${String(sentence.number)}] (${youtubeTimestamp(sentence.start)}-${youtubeTimestamp(sentence.end)}) ${sentence.text}`,
-    )
+    .map((sentence) => {
+      const name = sentence.speaker === undefined ? undefined : names?.[sentence.speaker];
+      return `[${String(sentence.number)}] (${youtubeTimestamp(sentence.start)}-${youtubeTimestamp(sentence.end)}) ${name === undefined ? "" : `${name}: `}${sentence.text}`;
+    })
     .join("\n");
 }

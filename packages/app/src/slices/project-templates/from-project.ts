@@ -12,6 +12,7 @@ import { requestHash } from "../play-drafts/repo.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
+import { usesScriptPrompt } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { createTemplate, readTemplate } from "./service.js";
 
@@ -85,7 +86,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       updatedAt: revision.createdAt,
     });
   };
-  addPrompt("article", config.articlePrompt, "article");
+  addPrompt(usesScriptPrompt(config) ? "script" : "article", config.articlePrompt, "article");
   addPrompt("narration", config.narrationPrompt, "narration");
   addPrompt("description", config.descriptionPrompt, "description");
   const definitions = revision.content.imageOrder.flatMap((key) => {
@@ -211,6 +212,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       // A project without edit settings makes a template without them, so a video made from
       // it cuts every N seconds like the project did.
       ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
+      ...(config.voices === undefined ? {} : { voices: config.voices }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

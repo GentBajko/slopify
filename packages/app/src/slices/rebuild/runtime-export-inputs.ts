@@ -9,6 +9,8 @@ import type { PreparedOutput } from "../revisions/publication-model.js";
 import { outputPath } from "../storage/layout.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { type AudioSegment, audioTimeline } from "../video/plan.js";
+import { usesVoices } from "../voices/model.js";
+import type { SpokenTurn } from "../voices/timing.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { joinedNarration, narrationTextParts } from "./runtime-narration-text.js";
@@ -95,7 +97,8 @@ export function revisionTranscript(
   const { view, plan } = snapshot;
   if (
     usesNarrationPreparation(view.revision.config) ||
-    usesPronunciationGlossary(view.revision.config)
+    usesPronunciationGlossary(view.revision.config) ||
+    (kind === "body" && usesVoices(view.revision.config))
   )
     return joinedNarration(narrationTextParts(view, plan, kind));
   const concat = plan.recipes.find(
@@ -169,4 +172,25 @@ export function retainedOutput(
     },
     output: { ...row.output, id: deps.ids.next(), createdAt: deps.clock.now().toISOString() },
   };
+}
+
+// The body's speaker turns in narration order, as the plan asked for them: a native
+// multi-speaker request lists its own lines, every other part says whose turn it speaks.
+export function revisionTurns(snapshot: ExportSnapshot): readonly SpokenTurn[] {
+  const { view, plan } = snapshot;
+  if (!usesVoices(view.revision.config)) return [];
+  const concat = plan.recipes.find((one) => one.key === "audio:body:concat");
+  return (concat?.dependsOn ?? []).flatMap((key): readonly SpokenTurn[] => {
+    const input = plan.recipes.find((one) => one.key === key)?.input;
+    if (input?.kind !== "tts") return [];
+    if (input.dialogue !== undefined)
+      return input.dialogue.map((line) => ({
+        speaker: line.speaker,
+        turn: line.turn,
+        text: line.text,
+      }));
+    return input.speaker === undefined || input.turn === undefined
+      ? []
+      : [{ speaker: input.speaker, turn: input.turn, text: input.spokenText ?? input.text }];
+  });
 }

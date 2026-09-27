@@ -44,6 +44,11 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
       return `image:${output.id}`;
     case "thumbnail":
       return "thumbnail:image";
+    case "script_md":
+      return "script:attribute";
+    case "audio_mp3":
+    case "audio_m4b":
+      return "voices:files";
     case "reference":
       return referenceKey;
     case "notes":

@@ -185,6 +185,7 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
     "narration:files:body",
     "narration:files:intro",
     "narration:files:outro",
+    "voices:files",
   ];
   const localIndex = localOrder.indexOf(piece.key);
   if (localIndex >= 0) return localIndex + 1;

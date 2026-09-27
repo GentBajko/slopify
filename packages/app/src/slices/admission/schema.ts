@@ -12,6 +12,7 @@ import {
   lookLevels,
   transitionKinds,
 } from "../video/edit-settings.js";
+import { voicesSettingsSchema } from "../voices/model.js";
 import { entryModes, formats, motionStyles, referenceSources, stageSources } from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
@@ -143,6 +144,8 @@ export const runDraftSchema = z.object({
     .optional(),
   // The ranges are `slices/video/edit-settings.ts`'s, checked by admission, not the schema's.
   videoEdit: videoEditSchema.optional(),
+  // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
+  voices: voicesSettingsSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

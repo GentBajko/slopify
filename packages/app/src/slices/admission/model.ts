@@ -155,6 +155,10 @@ export interface RunDraft {
   // (`video/edit-settings.ts`). Absent reads as today's slideshow, which is what every project
   // saved before it rendered.
   readonly videoEdit?: import("../video/edit-settings.js").VideoEditSettings | undefined;
+  // Multiple voices: an audiobook, podcast, radio drama or interview narrated by several
+  // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
+  // reading the article, which is what every project saved before it was.
+  readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column
