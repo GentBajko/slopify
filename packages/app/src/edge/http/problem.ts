@@ -22,6 +22,7 @@ const titles: Readonly<Record<number, string>> = {
   404: "Not Found",
   409: "Conflict",
   415: "Unsupported Media Type",
+  502: "Bad Gateway",
   500: "Internal Server Error",
 };
 

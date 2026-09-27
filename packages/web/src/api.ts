@@ -360,6 +360,34 @@ export async function saveAppSettings(api: Api, settings: AppSettings): Promise<
   return read<AppSettings>(await api.client.settings.$put({ json: { ...settings } }));
 }
 
+export interface NotificationUrlBody {
+  readonly url: string | null;
+}
+
+export async function readNotificationUrl(api: Api): Promise<NotificationUrlBody> {
+  return read<NotificationUrlBody>(await api.client.settings.notifications.$get());
+}
+
+// A refusal's `detail` already names the field, the reason and the control, so it is the
+// whole sentence; the fields list would only repeat it.
+async function detailed<T>(response: Response): Promise<T> {
+  if (response.ok) return (await response.json()) as T;
+  const problem = await problemOf(response);
+  throw problem?.detail === undefined ? errorOf(response, problem) : new Error(problem.detail);
+}
+
+export async function saveNotificationUrl(api: Api, url: string): Promise<NotificationUrlBody> {
+  return detailed<NotificationUrlBody>(
+    await api.client.settings.notifications.$put({ json: { url } }),
+  );
+}
+
+export async function sendTestNotification(api: Api, url: string): Promise<void> {
+  await detailed<{ sent: boolean }>(
+    await api.client.settings.notifications.test.$post({ json: { url } }),
+  );
+}
+
 export async function listVoices(api: Api): Promise<VoiceListBody> {
   return read<VoiceListBody>(await api.client.settings.voices.$get());
 }

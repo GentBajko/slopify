@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
+import { createRunNotifier } from "../../slices/notifications/notifier.js";
 import type { EventStream, Hub } from "./hub.js";
-import { createHub } from "./hub.js";
+import { createHub, observedHub } from "./hub.js";
 
 interface Written {
   readonly event: string;
@@ -253,4 +254,25 @@ it("filters late origin events and stale cached previews at delivery time", asyn
   expect(sink.written.map((one) => one.event)).toEqual(["project.updated"]);
   controller.abort();
   await waiting;
+});
+
+describe("observedHub", () => {
+  it("hands every project event to the run notifier, with no page open", async () => {
+    const { log } = recorder();
+    const posted: string[] = [];
+    const notifier = createRunNotifier({
+      url: () => "https://ntfy.example/topic",
+      subject: () => ({ title: "Black holes", makesVideo: true }),
+      send: (_url, body) => {
+        posted.push(body);
+        return Promise.resolve({ ok: true });
+      },
+      log,
+    });
+    const hub = observedHub(createHub({ ids: counter(), log }), notifier.observe);
+    hub.emit("p1", { type: "project.state", projectId: "p1", state: "running" });
+    hub.emit("p1", { type: "project.state", projectId: "p1", state: "done" });
+    await notifier.settled();
+    expect(posted).toEqual(["Video ready: Black holes\nOpen the project to watch it.\n"]);
+  });
 });
