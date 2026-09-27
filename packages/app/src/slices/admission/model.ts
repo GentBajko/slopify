@@ -322,4 +322,16 @@ export interface ProjectListing extends ProjectSummary {
   // When the person marked the finished video as uploaded (Home, Ready to upload); null
   // while it is not.
   readonly uploadedAt: string | null;
+  // Stages waiting for a CLI plan's limits to reset (`slices/run-cost/limits.ts`), so the
+  // row can say "Waiting for Codex limits (resets at 14:00)". Left out when nothing waits.
+  readonly limitWaits?: readonly ListingLimitWait[];
+}
+
+export interface ListingLimitWait {
+  // "Codex", "Claude".
+  readonly name: string;
+  readonly stage: StageKind;
+  readonly resetsAt: string | null;
+  // When the wait checks again; what the row says when the CLI named no reset time.
+  readonly retryAt: string;
 }

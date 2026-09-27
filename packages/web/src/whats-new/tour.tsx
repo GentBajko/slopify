@@ -33,7 +33,6 @@ export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = 
       id: "home",
       title: "Home",
       body: "What is running and at which step, what is coming up, what needs you and what is ready to upload, on one screen.",
-      // Home's route; see the TODO in components/shell.tsx.
       to: "/",
       place: "Home",
     },
@@ -55,6 +54,13 @@ export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = 
       id: "channels",
       title: "Channels and cast",
       body: "A channel keeps its brand kit, series brief, templates and schedules, and a cast of characters and places that look the same in every video.",
+      to: "/channels",
+      place: "Channels",
+    },
+    {
+      id: "memory",
+      title: "Episodes that remember",
+      body: "Each finished episode leaves a short summary on its channel's Episodes tab, and a new article reads the related ones. Add your existing video titles on Existing videos, and topic suggestions skip them too.",
       to: "/channels",
       place: "Channels",
     },
@@ -89,11 +95,26 @@ export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = 
       place: "Play",
     },
     {
+      id: "long-videos",
+      title: "Long videos stay watchable",
+      body: "More images for long videos sets images per hour or one every few minutes, with pan and zoom variety. An ambient bed of rain, fire, wind or your own file can play under the narration. Both are on Play; a channel's brand kit can set the ambient sound for all its videos.",
+      to: "/play",
+      place: "Play",
+    },
+    {
       id: "languages",
       title: "Other languages",
       body: "A project can be made in another language: pick it on Play, and the article, narration and description are written in it.",
       to: "/play",
       place: "Play",
+    },
+    {
+      id: "trash",
+      title: "A trash bin",
+      body: "Deleted projects, prompts, templates and schedules stay in Settings, Trash for 30 days, and Restore brings them back.",
+      to: "/settings",
+      search: { section: "trash" },
+      place: "Trash",
     },
   ],
 };

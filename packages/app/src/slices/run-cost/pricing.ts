@@ -1,6 +1,6 @@
 import type { Catalogue } from "../../catalog/schema.js";
 import type { ProviderUse } from "../../kernel/runner/meter.js";
-import { isLocalCliProvider } from "../settings/model.js";
+import { isLocalCliProvider, systemVoiceProvider } from "../settings/model.js";
 
 // One price source for the estimate before Start and the cost after: the model catalogue
 // (assets/models.yaml, or the refreshed copy in the data folder). A model it does not price
@@ -93,6 +93,9 @@ export function priceCall(call: ProviderUse, catalogue: Catalogue): CallPrice {
       price: api === undefined ? null : { catalogue: date, model: api.id, ...api.pricing },
     };
   }
+  // The computer's own voice costs nothing.
+  if (call.provider === systemVoiceProvider)
+    return { onPlan: false, cost: 0, apiModel: null, apiCost: null, price: null };
   const family = call.kind === "video" ? "image" : call.kind;
   const entry = catalogue[family].find(
     (model) => model.provider === call.provider && model.id === call.model,

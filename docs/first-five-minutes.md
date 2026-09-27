@@ -4,28 +4,52 @@ What a new install shows before anything is spent.
 
 ## First-run screen (`/welcome`)
 
-Projects opens it on a fresh install (`GET /api/onboarding` answers `show: true`). It lists the
-agent CLIs Slopify found (from the same provider statuses Settings shows), "Make a 60-second
-short", the samples ("Explore the sample", "See an audiobook", "Hear a podcast") and the starter
-packs. Skip (`POST /api/onboarding/dismiss`) hides it for good; so does the first real project
-(anything but the samples), even if that project is deleted later.
+Home opens it on a fresh install (`GET /api/onboarding` answers `show: true`). It is a guided
+sequence of three steps (kit Tabs, with Back and Next in the action bar) that ends with a real
+short being made:
 
-It also offers "Start Slopify when I log in" once, until it is answered there, in Settings →
-General or in the terminal; see [start-at-login.md](start-at-login.md).
+1. **What you have**: the agent CLIs Slopify found (from the same provider statuses Settings
+   shows) and who will narrate: a voice provider with a saved key, else the computer's built-in
+   voice ("Narration uses your computer's built-in voice; add an ElevenLabs or OpenAI key later
+   for a better one"). When nothing can narrate it says why, with **Add a voice key** (Settings →
+   Providers) and **Check again** right there.
+2. **Pick a style**: General or a starter pack (**Use this style**); **Add to library** installs
+   a pack's prompts and Play template.
+3. **Make your first short**: a topic and **Make a 60-second short**, with the same inline voice
+   choice when needed. Once it starts, **Watch it being made** opens the project's live view;
+   the samples ("Explore the sample", "See an audiobook", "Hear a podcast") and the one-time
+   "Start Slopify when I log in" offer ([start-at-login.md](start-at-login.md)) sit below as
+   extras.
+
+Skip (`POST /api/onboarding/dismiss`) hides it for good; so does the first real project
+(anything but the samples), even if that project is deleted later. Reading the screen's state
+writes nothing: a real project made before the screen was recorded as done comes back as
+`settle: true`, and Home records it with the same `POST /api/onboarding/dismiss`. Making the
+short records it too.
 
 ## Make a 60-second short
 
 `POST /api/onboarding/short {topic, packId?, requestId}` picks the providers itself: the first
 ready text CLI (Claude Code, Codex, Gemini, then OpenRouter), Codex for the images (else a keyed
-image provider) and a keyed voice (a saved voice, else the pack's suggested OpenAI voice). A
-missing piece is refused with the Settings screen that fixes it; CLIs can't speak, so a voice
-key is always needed. It installs the pack's prompts (or the "Starter" set) and starts a
+image provider) and a voice: a saved keyed voice, else the pack's suggested OpenAI voice when an
+OpenAI key is saved, else the **system voice** (the best speech program found and its English
+voice; see [providers.md](providers.md#system-voice-no-key)), which is then saved in Settings →
+Voices so Play and a rebuild offer it. It refuses only when a piece is missing, naming the
+screen or command that fixes it (for the voice: install espeak-ng, or add a key). It installs the pack's prompts (or the "Starter" set) and starts a
 **short-mode** project (`RunDraft.mode: "short"`, `slices/admission/short-mode.ts`): 9:16, a
 ~150-word script, narration, 4 images at 15 s each, no thumbnail/PDF/shorts. The word timing
 always runs and the Video stage renders the whole narration through the Shorts renderer with
 word-by-word captions and the title on top (`slices/rebuild/runtime-export-short.ts`). The
 short's values are added to the render fingerprint only in short mode, so long videos keep
 their fingerprints. The same `requestId` returns the same project.
+
+Once the short is done, its next action is **Make the full video on this topic**:
+`POST /api/onboarding/full-video {projectId, draftId}` (`slices/onboarding/full-video.ts`)
+opens a Play draft for a long video on the same topic. It uses the starter pack the short was
+written from (found by its short-script prompt; its template is installed if it was not yet),
+or the Starter set's settings without saving a template, and fills in the topic, the title and
+the text, image and voice providers the short used. Nothing starts until you press Play. The
+same `draftId` opens the same draft.
 
 ## Live view
 

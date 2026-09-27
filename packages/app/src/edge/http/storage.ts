@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { projectExists } from "../../slices/admission/repo.js";
 import {
   BackupBusyError,
   type BackupDeps,
@@ -14,7 +15,7 @@ import {
   storageUsage,
 } from "../../slices/storage/portable.js";
 import { reconcileStorage } from "../../slices/storage/reconcile.js";
-import { keepOutputsOnly } from "../../slices/storage/trim.js";
+import { keepOutputsOnly, projectStorage } from "../../slices/storage/trim.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -45,6 +46,24 @@ export function storageRoutes(deps: AppDeps) {
           storageUsage({ db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight }),
         ),
       )
+      // One project's split between outputs and working files, and what Keep outputs only
+      // would free now: the project page offers it once the project has finished.
+      .get("/projects/:id", zValidator("param", idParam, onInvalid), (c) => {
+        const id = c.req.valid("param").id;
+        if (!projectExists(deps.db, id))
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail: "This project no longer exists. Go back to Projects to pick another.",
+          });
+        c.header("Cache-Control", "no-store");
+        return c.json(
+          projectStorage(
+            { db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight },
+            id,
+          ),
+        );
+      })
       // Keep outputs only: a finished project drops its working files (`slices/storage/trim.ts`).
       .post("/projects/:id/keep-outputs", zValidator("param", idParam, onInvalid), (c) => {
         const result = keepOutputsOnly(
@@ -63,7 +82,7 @@ export function storageRoutes(deps: AppDeps) {
               status: 409,
               title: titleOf(409),
               detail:
-                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then use Keep outputs only again.",
+                "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Storage.",
             });
       })
       // What Export everything would write, asked before the download starts: a download

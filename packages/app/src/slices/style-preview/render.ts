@@ -1,30 +1,25 @@
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { defaultMotionStyle, defaultZoomPercent } from "../admission/rules.js";
-import { isMissingFont, resolveFont } from "../fonts/index.js";
+import { isMissingFont, resolveBoldFont, resolveFont } from "../fonts/index.js";
+import { renderShort } from "../shorts/render.js";
 import { serializeAss } from "../subtitles/captions.js";
 import { subtitleFrame } from "../subtitles/layout.js";
 import type { EditList } from "../video/edit-list.js";
-import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
+import { bundledSampleAssets, type SampleAssets, sampleNarrationSeconds } from "./narration.js";
 import { stylePreviewSeconds } from "./schema.js";
-import { type StylePreviewSettings, sampleCues } from "./settings.js";
+import { previewCues, previewWords, type StylePreviewSettings } from "./settings.js";
 
 // The preview goes through the same planner and renderer as a real video: `planRender` builds
 // the edit list (motion, transitions, the Look, the chapter card), the captions are the same
-// ASS script `prepareSubtitles` writes, and `renderSlideshow` encodes it clip by clip. Only the
-// inputs are stand-ins: three stills and silence made locally, no provider is ever called.
+// ASS script `prepareSubtitles` writes, and `renderSlideshow` encodes it clip by clip. The
+// Shorts layout goes through `renderShort`, as a short-mode video and every cut short do. Only
+// the inputs are the bundled sample's: three of its images and six seconds of its narration
+// with the word timing (`narration.ts`); no provider is ever called.
 
 // `picture` is a still to draw every shot from instead of the sample stills.
 export type StylePreviewRenderer = (
@@ -52,86 +47,48 @@ const previewFrame = {
   "16:9": { width: 480, height: 270 },
   "9:16": { width: 270, height: 480 },
 } as const;
-const stillSize = 1280;
 const shotSeconds = stylePreviewSeconds / 3;
 const chapterTitle = "Chapter one";
-
-// Three stills, each a different colour story with a horizon and a light, so motion, grade
-// and transitions all read. Square, so either format crops them to cover.
-const stills: readonly string[] = [
-  `gradients=s=${stillSize}x${stillSize}:c0=0x1d2b53:c1=0xe07a5f:x0=0:y0=0:x1=0:y1=${stillSize}:d=1,` +
-    "drawbox=x=820:y=300:w=140:h=140:color=0xfff1c1@0.9:t=fill," +
-    "drawbox=x=0:y=880:w=iw:h=400:color=0x14213d@0.85:t=fill",
-  `gradients=s=${stillSize}x${stillSize}:c0=0x0b3d2e:c1=0x88c9a1:x0=0:y0=${stillSize}:x1=${stillSize}:y1=0:d=1,` +
-    "drawbox=x=200:y=380:w=260:h=260:color=0xf4f1de@0.8:t=fill," +
-    "drawbox=x=0:y=840:w=iw:h=440:color=0x081c15@0.9:t=fill",
-  `gradients=s=${stillSize}x${stillSize}:c0=0x3d1e6d:c1=0xf2a65a:x0=${stillSize}:y0=0:x1=0:y1=${stillSize}:d=1,` +
-    "drawbox=x=540:y=330:w=200:h=200:color=0xffd166@0.9:t=fill," +
-    "drawbox=x=0:y=820:w=iw:h=460:color=0x1b0f2e@0.85:t=fill",
-];
 
 export interface FfmpegPreviewDeps {
   readonly ffmpeg: string;
   readonly paths: Paths;
   readonly log: Log;
-  // Where the stills are kept and renders are worked on.
+  // Where renders are worked on.
   readonly dir: string;
+  // The sample's narration and images; the bundled ones unless a test gives others.
+  readonly assets?: SampleAssets | undefined;
 }
 
 export function ffmpegStylePreview(deps: FfmpegPreviewDeps): StylePreviewRenderer {
-  let samples: Promise<readonly string[]> | undefined;
-  const ensureSamples = (signal: AbortSignal): Promise<readonly string[]> => {
-    samples ??= makeSamples(deps, signal).catch((error: unknown) => {
-      samples = undefined;
-      throw error;
-    });
-    return samples;
-  };
+  const assets = deps.assets ?? bundledSampleAssets();
   return async (settings, output, signal, picture) => {
     try {
       // A real picture is shown for all three shots: the motion, the Look and the captions read
       // on it, and the transition and chapter card still show at the cuts.
       const images =
-        picture === undefined ? await ensureSamples(signal) : [picture, picture, picture];
-      await renderPreview(deps, settings, images, output, signal);
+        picture !== undefined
+          ? [picture, picture, picture]
+          : settings.format === "9:16"
+            ? assets.tall
+            : assets.wide;
+      if (settings.short !== undefined)
+        await renderShortPreview(deps, settings, settings.short, assets, images, output, signal);
+      else await renderPreview(deps, settings, assets, images, output, signal);
     } catch (error) {
       throw explained(deps.log, error);
     }
   };
 }
 
-async function makeSamples(deps: FfmpegPreviewDeps, signal: AbortSignal) {
-  const folder = join(deps.dir, "samples");
-  mkdirSync(folder, { recursive: true, mode: 0o700 });
-  const paths: string[] = [];
-  for (const [at, source] of stills.entries()) {
-    const path = join(folder, `still-${String(at + 1)}.png`);
-    paths.push(path);
-    if (existsSync(path)) continue;
-    const part = join(folder, `still-${String(at + 1)}.part.png`);
-    await runFfmpeg({
-      bin: deps.ffmpeg,
-      args: [
-        ...["-hide_banner", "-nostdin", "-loglevel", "error", "-y"],
-        ...["-f", "lavfi", "-i", source, "-frames:v", "1", part],
-      ],
-      signal,
-      log: deps.log,
-      onProgress: () => {},
-    });
-    renameSync(part, path);
-  }
-  return paths;
-}
-
 async function renderPreview(
   deps: FfmpegPreviewDeps,
   settings: StylePreviewSettings,
+  assets: SampleAssets,
   images: readonly string[],
   output: string,
   signal: AbortSignal,
 ): Promise<void> {
-  // A render on a given picture never made the stills, which is what created the folder.
   mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
   const workspace = mkdtempSync(join(deps.dir, "work-"));
   try {
@@ -165,7 +122,7 @@ async function renderPreview(
     const edit: EditList = {
       ...plan.editList,
       ...previewFrame[settings.format],
-      audio: [{ kind: "gap", path: null, seconds: plan.totalSeconds }],
+      audio: [{ kind: "body", path: assets.narration, seconds: plan.totalSeconds }],
     };
     const captions = settings.captions;
     if (captions !== null) {
@@ -174,7 +131,7 @@ async function renderPreview(
       copyFileSync(font.path, join(workspace, "fonts", `selected${font.extension}`));
       writeFileSync(
         join(workspace, "subtitles.ass"),
-        serializeAss(sampleCues(captions.text, plan.totalSeconds), {
+        serializeAss(previewCues(captions.text), {
           ...subtitleFrame(settings.format),
           fontName: font.assName,
           fontSize: captions.fontSize,
@@ -197,6 +154,40 @@ async function renderPreview(
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }
+}
+
+// The Shorts layout, drawn at the preview's size: the same audio cut, image timing, captions
+// and headline a short gets, from the sample narration.
+async function renderShortPreview(
+  deps: FfmpegPreviewDeps,
+  settings: StylePreviewSettings,
+  short: NonNullable<StylePreviewSettings["short"]>,
+  assets: SampleAssets,
+  images: readonly string[],
+  output: string,
+  signal: AbortSignal,
+): Promise<void> {
+  mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
+  await renderShort({
+    bin: deps.ffmpeg,
+    timeline: [{ kind: "body", path: assets.narration, seconds: sampleNarrationSeconds }],
+    start: 0,
+    end: sampleNarrationSeconds,
+    images,
+    imageSeconds: shotSeconds,
+    motionStyle: defaultMotionStyle,
+    zoomPercent: defaultZoomPercent,
+    words: previewWords(short.text),
+    font: await resolveBoldFont(deps.paths, short.fontId),
+    ...(short.title === null ? {} : { title: short.title }),
+    speed: short.speed,
+    frame: previewFrame[settings.format],
+    output,
+    scratch: deps.dir,
+    signal,
+    log: deps.log,
+    onProgress: () => {},
+  });
 }
 
 function explained(log: Log, error: unknown): StylePreviewError {

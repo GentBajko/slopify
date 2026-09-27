@@ -73,11 +73,12 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     output === undefined
       ? undefined
       : readFileSync(outputPath(deps.paths, projectId, output.path), "utf8").trim();
-  const playlist = readStudioPlaylist(deps.db);
+  const channelId = projectChannelId(deps.db, projectId);
+  // The channel's own playlist, else the default (Settings → YouTube Studio).
+  const playlist = readStudioPlaylist(deps.db, channelId);
   const missing: string[] = [];
   // The channel's setting, then what the project narrates and shows (`disclosure.ts`).
-  const setting =
-    channelById(deps.db, projectChannelId(deps.db, projectId))?.aiDisclosure ?? "auto";
+  const setting = channelById(deps.db, channelId)?.aiDisclosure ?? "auto";
   const realPersonVoices = realPersonVoicesOf(deps, config);
   const uploadedClips =
     config.sources.images === "provide"
@@ -146,7 +147,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     );
   if (playlist === null)
     missing.push(
-      "No playlist is set, so the playlist step is left to you. Set one in Settings → YouTube Studio.",
+      "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio → Playlist.",
     );
 
   const items: PackItem[] = [

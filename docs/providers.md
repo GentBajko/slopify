@@ -5,9 +5,29 @@
 On a first launch (no API key saved yet) Slopify looks for Claude Code, Codex and Gemini CLI on
 the computer. If it finds any, Play and Settings → Providers say "You can make a video now, no
 API keys needed", and a new draft on Play starts with the found tool picked for text (Claude
-Code first, then Codex, then Gemini) and Codex for images. Narration still needs a voice
-provider key, or Audio set to Off or Provide. Choose **Got it** to hide the message. The same
-facts are at `GET /api/providers/first-run` for the guided setup to build on.
+Code first, then Codex, then Gemini) and Codex for images. Narration can use the computer's own
+**System voice** (below) with no key; a voice provider key gives a better one. Choose **Got it**
+to hide the message. The same facts are at `GET /api/providers/first-run` for the guided setup
+to build on.
+
+## System voice (no key)
+
+`system-voice` is a speech provider that uses what the computer already has, found at runtime
+(`kernel/ports/system-speech.ts`, adapter `adapters/tts/system.ts`):
+
+- **macOS**: `say` (voices from `say -v ?`), recorded to AIFF.
+- **Windows**: System.Speech through PowerShell (`SpeechSynthesizer.SetOutputToWaveFile`, voices
+  from `GetInstalledVoices`). The text, voice and file reach the script in environment
+  variables, never inside it.
+- **Linux**: Piper (only with voice models listed in `SLOPIFY_PIPER_VOICES`, `.onnx` paths
+  separated by `:`), SVOX Pico (`pico2wave`), eSpeak NG or eSpeak, best first.
+
+Its "models" are the programs found and its voices are theirs; each request speaks the text from
+a file into a WAV/AIFF and converts it to mp3 with the app's ffmpeg. It costs nothing, has no row
+in models.yaml (so older installs reading the published list are unaffected) and no key field.
+Settings → Providers shows what was found or, when nothing was, why and the fix (install
+espeak-ng); Settings → Voices lists its voices to add. Detection is cached for a minute. The
+Docker image ships espeak-ng; an image without it says so and names `docker compose pull`.
 
 ## Keys, step by step
 
@@ -18,7 +38,15 @@ permissions a restricted key must have. All links go to the provider's own pages
 **Test** (beside Save) makes the cheapest harmless call the key allows, such as reading the
 account or the model list, so nothing is generated or billed. It says whether the key was
 accepted and, if not, what to do. Only OpenRouter's check also shows missing credit; the others
-report credit problems on the first real generation.
+report credit problems on the first real generation. A key pasted into the field is tested as
+it stands, before **Save**; it is sent only to its provider and is not stored or logged. With
+the field empty, Test checks the saved key. The tutorial's key steps link to the same key pages
+as these guides.
+
+One Gemini API key serves both Google providers: **Google Gemini** voices use the key saved for
+Google images until you save one of their own. Gemini voices are its 30 prebuilt ones (Kore,
+Puck, Charon…); Settings → Voices lists them to pick from instead of asking for an id. Gemini
+answers with raw audio, which Slopify turns into MP3 with its own ffmpeg.
 
 ## Health check
 
@@ -57,7 +85,9 @@ Settings → Models → **Retired models in use** lists every template, schedule
 project with steps still to run whose model is retired or no longer listed, with the
 suggested replacement (the active model of the same provider whose ID shares the longest
 start). Nothing changes by itself: a run that reaches a retired model stops and says so.
-**Switch to <model>** changes that one choice; **Switch all** does every row it can.
+**Switch to <model>** changes that one choice; **Switch all** does every row it can. The same
+flag and **Switch to <model>** button also show under the template's row in Library →
+Templates and the schedule's row in Library → Schedules.
 Switching a template saves a new version and moves the schedules that ran its latest version
 along; a project gets a new saved version, as Edit project would. A schedule pinned to an
 older template version, or a running project, is listed with what to do instead.

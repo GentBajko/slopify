@@ -69,7 +69,12 @@ export function actionRoutes(deps: AppDeps) {
     runner: deps.runner,
     emit: (projectId, event) => deps.hub.emit(projectId, event),
     providers: () =>
-      providerStatuses({ db: deps.db, probe: deps.probe, hostCliStatus: deps.hostCliStatus }),
+      providerStatuses({
+        db: deps.db,
+        probe: deps.probe,
+        hostCliStatus: deps.hostCliStatus,
+        host: deps.speechHost,
+      }),
     allowsCustomModels: deps.catalogue ? () => false : allowsCustomModel,
     modelsFor: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
   };

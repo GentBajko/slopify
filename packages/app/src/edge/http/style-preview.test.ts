@@ -179,3 +179,20 @@ it("draws the preview on a picture the server finds, and on the stills when it f
     400,
   );
 });
+
+it("renders the Shorts layout from its own settings, as long as its speed makes it", async () => {
+  const target = app();
+  const shorts = { ...body, shorts: { titleOnScreen: true, speed: 1.25, title: "Tides" } };
+  const reply = (await (await post(target, shorts)).json()) as { hash: string; seconds: number };
+  expect(reply.seconds).toBe(4.8);
+  expect(calls[0]).toMatchObject({
+    format: "9:16",
+    captions: null,
+    short: { fontId: "default", title: "Tides", speed: 1.25 },
+  });
+  const video = (await (await post(target, body)).json()) as { hash: string; seconds: number };
+  expect(video.hash).not.toBe(reply.hash);
+  expect(video.seconds).toBe(6);
+  const refused = await post(target, { ...body, shorts: { titleOnScreen: true, speed: 2 } });
+  expect(refused.status).toBe(400);
+});

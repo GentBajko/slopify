@@ -9,6 +9,7 @@ describe("key test calls", () => {
         "elevenlabs",
         "fal",
         "google-image",
+        "google-tts",
         "inworld",
         "openai-image",
         "openai-tts",

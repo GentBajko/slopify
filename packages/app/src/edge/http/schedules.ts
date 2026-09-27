@@ -7,6 +7,7 @@ import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.
 import {
   calendarMaxDays,
   calendarSchema,
+  heldTopicEditSchema,
   heldTopicSchema,
   queueMax,
   scheduleCreateSchema,
@@ -14,6 +15,7 @@ import {
   scheduleSummarySchema,
   scheduleUpdateSchema,
   topicMoveSchema,
+  topicQueueSchema,
   topicTransferSchema,
 } from "../../slices/schedules/schema.js";
 import {
@@ -32,6 +34,7 @@ import {
   heldTopics,
   moveTopic,
   rejectHeldTopic,
+  replaceTopics,
   transferTopic,
 } from "../../slices/schedules/topics.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -258,11 +261,20 @@ function routes(deps: ScheduleDeps | undefined) {
       .put(
         "/:id/topics/held/:topicId",
         zValidator("param", topicParam, onInvalid),
-        zValidator("json", z.object({ title: z.string() }).strict(), onInvalid),
+        zValidator("json", heldTopicEditSchema, onInvalid),
         (c) => {
           const { id: scheduleId, topicId } = c.req.valid("param");
-          const result = editHeldTopic(service(), scheduleId, topicId, c.req.valid("json").title);
+          const result = editHeldTopic(service(), scheduleId, topicId, c.req.valid("json"));
           return result.ok ? c.json(heldTopicSchema.parse(result.value)) : refused(c, result);
+        },
+      )
+      .put(
+        "/:id/topics",
+        zValidator("param", id, onInvalid),
+        zValidator("json", topicQueueSchema, onInvalid),
+        (c) => {
+          const result = replaceTopics(service(), c.req.valid("param").id, c.req.valid("json"));
+          return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
         },
       )
       .post(

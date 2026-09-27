@@ -403,9 +403,26 @@ export function DesignRoute(): ReactElement {
         />
       </Specimen>
 
-      <Specimen title="Player" meta="a real video element with its poster">
-        <div className="max-w-[640px]">
-          <Player src="" poster={art(20, "Poster")} label="Sample player with no video loaded" />
+      <Specimen title="Player" meta="poster, own controls, chapter marks; 9:16 for shorts">
+        <div className="flex flex-wrap items-start gap-6">
+          <Player
+            className="w-full max-w-[640px]"
+            src=""
+            poster={art(20, "Poster")}
+            label="Sample player with no video loaded"
+            chapters={[
+              { start: 0, title: "Tiamat over Avernus" },
+              { start: 1.5, title: "The five heads" },
+              { start: 3.2, title: "The Well of Dragons" },
+            ]}
+          />
+          <Player
+            className="w-[200px]"
+            portrait
+            src=""
+            poster={art(200, "Short", 900, 1600)}
+            label="Sample short with no video loaded"
+          />
         </div>
       </Specimen>
 

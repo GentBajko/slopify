@@ -89,4 +89,29 @@ describe("groupTurns", () => {
       [false, [2]],
     ]);
   });
+
+  it("gives Gemini at most two voices per request, splitting where a third would join", () => {
+    const gemini = (id: string, voice: string): Speaker => ({
+      id,
+      name: id,
+      role: "host",
+      voice: { provider: "google-tts", model: "gemini-2.5-flash-preview-tts", voice },
+    });
+    const speakers = [gemini("a", "Kore"), gemini("b", "Puck"), gemini("c", "Leda")];
+    const groups = groupTurns(
+      [turn(1, "a"), turn(2, "b"), turn(3, "a"), turn(4, "c"), turn(5, "a")],
+      speakers,
+      true,
+    );
+    expect(shape(groups)).toEqual([
+      [true, [1, 2, 3]],
+      [true, [4, 5]],
+    ]);
+    // A model Gemini has no two-speaker mode for is spoken turn by turn.
+    const other = speakers.map((one) => ({ ...one, voice: { ...one.voice, model: "other" } }));
+    expect(shape(groupTurns([turn(1, "a"), turn(2, "b")], other, true))).toEqual([
+      [false, [1]],
+      [false, [2]],
+    ]);
+  });
 });

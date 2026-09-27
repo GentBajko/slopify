@@ -45,7 +45,10 @@ Speakers panel says which entries of which speaker are skipped and why as you ty
 rebuild review lists them again for speakers on Inworld TTS-2 voices.
 
 **Speakers are cast.** A channel's cast member can have a voice (Channels → the channel → Cast
-→ edit a member → Voice). **Add from the cast** on the Speakers panel adds any member with a
+→ edit a member → Voice). Turn on **One of the channel's hosts** for the channel's recurring
+voices: a new Podcast or Interview on Play starts with every host who has a voice as its hosts
+(an interview keeps its guest; a podcast with one host keeps one placeholder host), and the
+cast grid marks them Host. **Add from the cast** on the Speakers panel adds any member with a
 voice; every run started later takes that member's voice, pace and pronunciations as they are
 then, so a host or a character sounds the same in every episode. That holds however the run
 starts: Play (one video or a batch of variations), a schedule, or a draft sent to the API.
@@ -58,7 +61,10 @@ is listed for other languages.
 
 Every turn is its own request in its speaker's voice, joined with the **gap between turns**.
 Consecutive turns of speakers on ElevenLabs v3 go to ElevenLabs' Text to Dialogue in one
-request unless **One request for consecutive turns** is off. Narration aliases apply to every
+request unless **One request for consecutive turns** is off. Speakers on **Google Gemini** TTS
+(the 2.5 Flash, 2.5 Pro and 3.1 Flash TTS models) do the same with Gemini's two-speaker mode: a
+request holds at most two voices, so a run of turns among three or more Gemini voices starts a
+new request wherever a third voice would join. Narration aliases apply to every
 line of that request, each turn on its own, and the request's size limit counts the aliased
 text. Changing one speaker's voice remakes only that speaker's turns.
 
@@ -112,3 +118,18 @@ join, so the captions and chapter marks do not move.
 
 **Pause between sentences** ([pauses.md](pauses.md)) lengthens the quiet between sentences
 inside a speaker's turn; the gap between turns stays the Turn gap.
+
+## Books
+
+An audiobook can be one chapter of a book: turn on **A chapter of a book** under Speakers (Play →
+Audio, Audiobook format) and give the book's title and the chapter number. The MP3 and M4B are
+then tagged with the book as their album and the chapter as their track, and the project page
+and its row in Projects say "Book · Chapter N". Only the listening files are remade when the
+book or chapter changes; a project that is no chapter keeps its recipes exactly.
+
+When a chapter is finished, **Make the next chapter** on its project page opens a new Play draft
+with the same format, speakers and voices, channel (and so its cast), prompts and settings, the
+chapter number one higher and the chapter's own text left empty to write or paste. Files the
+last chapter was given are listed to attach again. An audiobook made on its own becomes a book
+named after it, and its next chapter is chapter 2. A template saved from a chapter leaves the
+book out.

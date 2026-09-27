@@ -65,7 +65,9 @@ describe("key setup", () => {
     expect(tested).toBe(1);
   });
 
-  it("keeps Test disabled until a key is saved", async () => {
+  it("tests a pasted key before it is saved, and is off with nothing to test", async () => {
+    const sent: unknown[] = [];
+    let saved = 0;
     renderApp(
       <ProviderKeys />,
       testDeps({
@@ -79,11 +81,30 @@ describe("key setup", () => {
             },
           ],
         }),
+        "POST /api/providers/fal/key/test": async (request) => {
+          sent.push(await request.json());
+          return jsonAnswer({
+            provider: "fal",
+            result: "valid",
+            ok: true,
+            message: "fal.ai accepted this key. It is not saved yet: choose Save to keep it.",
+            checkedAt: "2026-09-27T10:00:00.000Z",
+          })(request);
+        },
+        "PUT /api/providers/fal/key": () => {
+          saved++;
+          return new Response("{}", { status: 500 });
+        },
       }),
     );
-    expect(
-      (await screen.findByRole("button", { name: "Test fal.ai key" })).hasAttribute("disabled"),
-    ).toBe(true);
+    const test = await screen.findByRole("button", { name: "Test fal.ai key" });
+    expect(test.hasAttribute("disabled")).toBe(true);
+    await userEvent.type(screen.getByLabelText("fal.ai API key"), " fal-pasted ");
+    expect(test.hasAttribute("disabled")).toBe(false);
+    await userEvent.click(test);
+    expect((await screen.findByRole("status")).textContent).toMatch(/not saved yet/u);
+    expect(sent).toEqual([{ key: "fal-pasted" }]);
+    expect(saved).toBe(0);
   });
 });
 

@@ -87,6 +87,29 @@ describe("the projects list", () => {
     expect(within(list).getByText("Done")).not.toBeNull();
   });
 
+  it("says a run waits for a CLI's limits, and when they reset", async () => {
+    const resetsAt = new Date();
+    resetsAt.setHours(14, 0, 0, 0);
+    renderRouted(
+      <ProjectsRoute />,
+      deps([
+        listing("p1", "Rope Tricks", "running", {
+          limitWaits: [
+            {
+              name: "Codex",
+              stage: "images",
+              resetsAt: resetsAt.toISOString(),
+              retryAt: resetsAt.toISOString(),
+            },
+          ],
+        }),
+      ]),
+    );
+    const time = resetsAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    const list = await screen.findByRole("list", { name: "Projects" });
+    expect(within(list).getByText(`Waiting for Codex limits (resets at ${time})`)).not.toBeNull();
+  });
+
   it("says what the run was made of and when it started", async () => {
     renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "done")]));
     // The clock is the machine's, so the expectation is built the same way the row is.

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
+import { redoStarting } from "../../slices/rebuild/review-redo.js";
 import { actOnVerdict, listVerdicts, verdictById } from "../../slices/reviews/repo.js";
 import { latestReviews } from "../../slices/reviews/view.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -56,6 +57,16 @@ export function reviewRoutes(deps: AppDeps) {
     })
     .post("/:id/reviews/:verdictId/overrule", zValidator("param", verdictParam, onInvalid), (c) => {
       const { id: projectId, verdictId } = c.req.valid("param");
+      const busy = () =>
+        problem(c, {
+          status: 409,
+          title: titleOf(409),
+          detail:
+            "This verdict can't be overruled: it passed, or Slopify has already started making the item again. Wait for the new version to land, then reload the project page and overrule its review if it fails again.",
+          extensions: { reason: "conflict" },
+        });
+      // Checked and changed in one synchronous step, so a redo cannot start in between.
+      if (redoStarting(verdictId)) return busy();
       const result = actOnVerdict(
         deps.db,
         projectId,
@@ -63,16 +74,13 @@ export function reviewRoutes(deps: AppDeps) {
         "overruled",
         deps.clock.now().toISOString(),
       );
-      if (!result.ok)
-        return result.reason === "not-found"
-          ? gone(c)
-          : problem(c, {
-              status: 409,
-              title: titleOf(409),
-              detail:
-                "This verdict can't be overruled: it passed, or Slopify is already making the item again. Reload the project page to see where it is.",
-              extensions: { reason: "conflict" },
-            });
+      if (!result.ok) return result.reason === "not-found" ? gone(c) : busy();
+      // A called-off redo released the work that was waiting on the item.
+      try {
+        deps.runner.tick(projectId);
+      } catch {
+        // The next tick of this project picks the released work up.
+      }
       notify(projectId);
       return c.json({ review: result.value });
     })

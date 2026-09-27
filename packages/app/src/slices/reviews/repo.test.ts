@@ -41,7 +41,7 @@ describe("review verdicts", () => {
     expect(latestVerdict(db, "p1", "image:hill")?.action).toBe("overruled");
   });
 
-  it("refuses to overrule a pass, a missing verdict, or one being made again", () => {
+  it("refuses to overrule a pass, a missing verdict, or one already being made again", () => {
     saveVerdict(db, { ...failed, passed: true, reasons: [], outcome: "passed" });
     expect(actOnVerdict(db, "p1", "v1", "overruled", "t")).toEqual({
       ok: false,
@@ -56,16 +56,28 @@ describe("review verdicts", () => {
       id: "v2",
       reviewFingerprint: "rev-2",
       outcome: "redo",
-      redoState: "pending",
+      redoState: "started",
     });
     expect(actOnVerdict(db, "p1", "v2", "overruled", "t")).toEqual({
       ok: false,
       reason: "conflict",
     });
-    expect(pendingRedos(db, "p1").map((row) => row.id)).toEqual(["v2"]);
     setRedoState(db, "v2", "failed", "Provider not ready.");
-    expect(pendingRedos(db)).toEqual([]);
     expect(actOnVerdict(db, "p1", "v2", "overruled", "t").ok).toBe(true);
+  });
+
+  it("calls off a redo still waiting to start when the person overrules it", () => {
+    saveVerdict(db, { ...failed, outcome: "redo", redoState: "pending" });
+    expect(pendingRedos(db, "p1").map((row) => row.id)).toEqual(["v1"]);
+    expect(actOnVerdict(db, "p1", "v1", "redone", "t")).toEqual({
+      ok: false,
+      reason: "conflict",
+    });
+    expect(actOnVerdict(db, "p1", "v1", "overruled", "t")).toMatchObject({
+      ok: true,
+      value: { action: "overruled", redoState: null },
+    });
+    expect(pendingRedos(db)).toEqual([]);
   });
 
   it("keeps one verdict per review step and marks which ones are about the current output", () => {

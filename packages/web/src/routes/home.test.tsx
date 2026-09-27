@@ -291,6 +291,61 @@ describe("home", () => {
     });
   });
 
+  it("says under Running now when a run waits for a CLI's limits", async () => {
+    const resetsAt = new Date();
+    resetsAt.setHours(14, 0, 0, 0);
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-run", "Demogorgon", "running", {
+              limitWaits: [
+                {
+                  name: "Codex",
+                  stage: "images",
+                  resetsAt: resetsAt.toISOString(),
+                  retryAt: resetsAt.toISOString(),
+                },
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+    const running = await screen.findByRole("region", { name: "Running now" });
+    const time = resetsAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    expect(
+      await within(running).findByText(`Waiting for Codex limits (resets at ${time})`),
+    ).not.toBeNull();
+  });
+
+  it("copies a signed-out CLI's sign-in command from Needs you", async () => {
+    const user = userEvent.setup();
+    const signedOut = body({
+      status: "failed",
+      stages: [
+        stage("images", "failed", {
+          failureReason: "The Codex CLI is not signed in, or its sign-in has expired.",
+        }),
+      ],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-fail": jsonAnswer({
+          ...signedOut,
+          project: { ...signedOut.project, id: "p-fail" },
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    await user.click(await within(needs).findByRole("button", { name: "Copy sign-in command" }));
+    expect(await navigator.clipboard.readText()).toBe("codex login");
+    expect(within(needs).getByRole("link", { name: "Open to retry" })).not.toBeNull();
+  });
+
   it("lists a paused run under Needs you, not Running now", async () => {
     renderRouted(
       <HomeRoute />,

@@ -56,10 +56,10 @@ export function DraftList(): ReactElement {
         className={cn(
           "engraved min-w-[112px] text-right",
           session.status === "saved"
-            ? "text-done"
+            ? "text-accent-ink"
             : session.status === "error" || session.status === "conflict"
-              ? "text-red"
-              : "text-ink3",
+              ? "text-danger"
+              : "text-ink-3",
         )}
       >
         {
@@ -114,7 +114,7 @@ export function DraftList(): ReactElement {
             </p>
           ) : null}
           {list.error ? (
-            <p role="alert" className="px-3 py-2 text-red">
+            <p role="alert" className="px-3 py-2 text-danger">
               {list.error.message}{" "}
               <Button variant="ghost" onClick={() => void list.refetch()}>
                 Retry
@@ -123,7 +123,7 @@ export function DraftList(): ReactElement {
           ) : null}
           {list.data?.length === 0 ? <p className="px-3 py-2">No saved drafts</p> : null}
           {error ? (
-            <p role="alert" className="px-3 py-2 text-red">
+            <p role="alert" className="px-3 py-2 text-danger">
               {error}
             </p>
           ) : null}
@@ -141,12 +141,12 @@ export function DraftList(): ReactElement {
                   >
                     <span className="block">{draft.title || "Untitled draft"}</span>
                   </button>
-                  <time dateTime={draft.updatedAt} className="block text-label text-ink3">
+                  <time dateTime={draft.updatedAt} className="block text-label text-ink-3">
                     Last edited {startedAt(draft.updatedAt)}
                   </time>
                 </div>
                 {!draft.readable ? (
-                  <p className="basis-full text-label text-amber">
+                  <p className="basis-full text-label text-waiting">
                     Unsupported or corrupt draft. Try opening it to recover, or discard it.
                   </p>
                 ) : null}

@@ -538,14 +538,16 @@ describe("the settings commands", () => {
         },
       }),
     );
+    // Besides the palette's own Show keyboard shortcuts.
+    const own = () => registry.list().filter((command) => command.id !== "help.shortcuts");
     await waitFor(() => {
-      expect(registry.list().map((command) => command.title)).toEqual([
+      expect(own().map((command) => command.title)).toEqual([
         "Check all providers",
         "Back up now",
         "Download diagnostics",
       ]);
     });
-    expect(new Set(registry.list().map((command) => command.group))).toEqual(new Set(["Settings"]));
+    expect(new Set(own().map((command) => command.group))).toEqual(new Set(["Settings"]));
     const run = (title: string) =>
       registry
         .list()

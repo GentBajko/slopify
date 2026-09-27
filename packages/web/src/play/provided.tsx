@@ -11,7 +11,7 @@ import type { Upload } from "@/play/state";
 // progress of each picked file under it.
 
 const fileInput =
-  "text-small text-ink2 file:mr-3 file:h-8 file:rounded-control file:border file:border-line2 file:bg-panel2 file:px-3 file:text-ink";
+  "text-small text-ink-2 file:mr-3 file:h-8 file:rounded-control file:border file:border-line-strong file:bg-raised file:px-3 file:text-ink";
 
 export function PasteArea({
   label,
@@ -36,7 +36,7 @@ export function PasteArea({
 
   return (
     <div {...(tip === undefined ? {} : helpScope)}>
-      <span className="mb-[5px] flex items-center gap-1">
+      <span className="mb-1 flex items-center gap-1">
         <Label htmlFor={fieldId}>{label}</Label>
         {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
       </span>
@@ -53,7 +53,7 @@ export function PasteArea({
         }}
       />
       {problem === undefined ? null : (
-        <p id={noteId} className="mt-1 text-label text-red">
+        <p id={noteId} className="mt-1 text-label text-danger">
           {problem}
         </p>
       )}
@@ -93,7 +93,7 @@ export function FilePick({
 
   return (
     <div>
-      <Label htmlFor={fieldId} className="mb-[5px]">
+      <Label htmlFor={fieldId} className="mb-1">
         {label}
       </Label>
       <input
@@ -112,7 +112,7 @@ export function FilePick({
         }}
       />
       {problem === undefined ? null : (
-        <p id={noteId} className="mt-1 text-label text-red">
+        <p id={noteId} className="mt-1 text-label text-danger">
           {problem}
         </p>
       )}
@@ -120,10 +120,10 @@ export function FilePick({
         <ul className="mt-2 flex flex-col gap-1">
           {uploads.map((upload, at) => (
             <li key={upload.key} className="flex flex-wrap items-center gap-3">
-              {numbered ? <span className="engraved w-6 text-ink3">{String(at + 1)}</span> : null}
+              {numbered ? <span className="engraved w-6 text-ink-3">{String(at + 1)}</span> : null}
               <UploadRow upload={upload} />
               {upload.error !== undefined && onReattach ? (
-                <label className="text-small text-ink2">
+                <label className="text-small text-ink-2">
                   Reattach
                   <input
                     aria-label={`Reattach ${upload.name}`}
@@ -161,13 +161,13 @@ export function FilePick({
 export function UploadRow({ upload }: { readonly upload: Upload }) {
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-3 text-small [overflow-wrap:anywhere]">
-      <span className={upload.error === undefined ? "text-ink" : "text-red"}>{upload.name}</span>
+      <span className={upload.error === undefined ? "text-ink" : "text-danger"}>{upload.name}</span>
       {upload.error === undefined ? (
-        <span className="engraved text-ink3">
+        <span className="engraved text-ink-3">
           {upload.file === undefined ? "Copying" : "Staged"}
         </span>
       ) : (
-        <span className="text-small text-red">{upload.error}</span>
+        <span className="text-small text-danger">{upload.error}</span>
       )}
     </span>
   );

@@ -10,6 +10,17 @@ ticked with one image, a thumbnail prompt switches the thumbnail to From prompt,
 Description or Shorts prompt turns that step on. The rest of the draft stays as it was. While
 Play is starting a run from its draft the button is off.
 
+### Renaming in the list
+
+The pencil beside a name on **Library → Prompts**, **Intros & Outros** and **Templates** renames
+it in the row (`library/inline-name.tsx`): Enter or **Save name** saves, Escape or **Cancel**
+keeps the old name, and the notice carries **Undo**. The text stays as it is. A prompt or
+intro/outro is saved through the same endpoint as its editor, so the rename is one version in
+History (a version is the whole row, name included, so Restore can put the old name back);
+templates that picked it by the old name use the copy saved with them until it is picked again.
+A template is saved as a new version with its setup unchanged; schedules keep the version they
+were made from. None of these rows has a description to edit.
+
 ## Narration aliases
 
 **Library → Aliases** lists words the narrator should say differently from how they are
@@ -88,16 +99,27 @@ once the video is made.
 
 ## Channel links and placeholders
 
-**Settings → Channel links** holds named links (Patreon, Discord, …). Write `{{Patreon}}` in a
-description, or ask for it in a Description prompt, and it is replaced by that link when the
-description is shown or copied; matching ignores case and extra spaces. A placeholder with no
-link stays as typed, is highlighted, and the page says which link to add. Each project can set
-its own **Previous video** under YouTube; it wins over a Settings link of the same name.
+Each channel keeps named links (Patreon, Discord, …) under **Channel links** on its **Brand**
+tab; **Save channel** keeps them. Write `{{Patreon}}` in a description, or ask for it in a
+Description prompt, and it is replaced by the link of the project's channel when the
+description is shown, copied, downloaded or put in the upload pack; matching ignores case and
+extra spaces. A placeholder with no link stays as typed, is highlighted, and the page links to
+the channel's Brand tab. Each project can set its own **Previous video** under YouTube; it wins
+over a channel link of the same name.
+
+Links saved in **Settings → Channel links** before channels had their own still fill the
+default channel's projects until its Brand tab is saved; that Settings page now points to it.
+
+The **youtube-description** and **youtube-tags** downloads are the text as the page shows it:
+your edits, fitted chapters and filled links. The file in the project folder stays the written
+text.
 
 ## Reading view
 
 The article, its research notes and sources, and the narration text (Audio section) are shown
-as a reading view: a ~70-character measure, a contents list from the headings, **Search** with
+as a reading view: a ~70-character measure, a contents list from the headings (the two highest
+levels of `#`, `##` and `###`, the second indented under the first; a single `#` title that
+opens the text stays above the list), **Search** with
 every hit marked (Enter / Shift+Enter or the arrows step through them), **Copy section** beside
 each heading and Copy all as Markdown.
 
@@ -108,9 +130,18 @@ same renderer as the finished video, at a small size, with the project's format,
 size and position, the Look, the transition and a chapter card (when chapter cards are on). It
 renders when the section opens and again a moment after a setting changes; **Render again**
 renders it from scratch. Captions show in the preview only when they are burned in, because a
-caption file is drawn by the player in its own style. The pictures are three stills and the
-sound is silence, all made by ffmpeg on your computer, so a preview never calls a provider and
-costs nothing.
+caption file is drawn by the player in its own style. The pictures are three of the bundled
+sample project's images (landscape or portrait by format) and the sound is six seconds of its
+narration, with the word timing its alignment found (`assets/style-preview/`,
+`slices/style-preview/narration.ts`), so the captions follow the voice word by word. A typed
+Sample text other than the default is spread over the stretches the narration speaks. A
+preview never calls a provider and costs nothing.
+
+**Shorts preview**: Play's and Edit project's Shorts section shows one under **More shorts
+options** while Shorts is on. It renders the same sample as a 9:16 short through the Shorts
+renderer (`renderShort`, at preview size): the big word-by-word captions in the caption font,
+the title as a headline when **Title on screen** is on (the sample's title), and the chosen
+**Speed**. The request's `shorts: {titleOnScreen, speed?, title?}` picks this layout.
 
 On Play the preview is drawn on a real picture when there is one, so the Look and captions are
 judged on something like the video's own images: the establishing image the draft uploaded
@@ -119,7 +150,7 @@ the channel's cast member the title or a keyword names, else the first cast memb
 picture. The rail says which ("Drawn on Tiamat's picture"). The server reads it from the
 upload, the project output or the cast picture itself (`slices/style-preview/images.ts`); the
 request can also name a project's own output, for Edit project. A picture the server can no
-longer find, or a file that is not a PNG, JPEG or WebP, falls back to the stills.
+longer find, or a file that is not a PNG, JPEG or WebP, falls back to the sample's images.
 
 Previews are saved in `<data-dir>/cache/style-preview/`, named by a hash of the settings, so a
 style you have seen before plays at once; the 200 most recent are kept, and deleting the folder

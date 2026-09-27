@@ -55,6 +55,10 @@ export function PlayDraftProvider({ children }: { readonly children: ReactNode }
   const session = useDraftSession();
   return <DraftContext.Provider value={session}>{children}</DraftContext.Provider>;
 }
+// The same, or null outside the shell (a page rendered on its own in a test).
+export function useOptionalPlaySession(): PlaySession | null {
+  return useContext(DraftContext);
+}
 export function usePlaySession(): PlaySession {
   const context = useContext(DraftContext);
   if (!context) throw new Error("PlayDraftProvider is required");

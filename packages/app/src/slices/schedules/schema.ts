@@ -1,9 +1,13 @@
 import { z } from "zod";
-import { projectStates } from "../../kernel/pipeline.js";
+import { projectStates, stageKinds } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { cadenceSchema, validTimeZone } from "./calendar.js";
 
 const id = z.uuid();
+// What a project on the calendar waits on the person for: a failed or paused run, or a review
+// (a checkpoint holding the run, or an automatic review's failed item).
+export const calendarNeeds = ["failed", "paused", "review"] as const;
+export type CalendarNeed = (typeof calendarNeeds)[number];
 const keywordName = z
   .string()
   .min(1)
@@ -157,10 +161,22 @@ export type ScheduleCreate = z.infer<typeof scheduleCreateSchema>;
 export type ScheduleUpdate = z.infer<typeof scheduleUpdateSchema>;
 export type ScheduleSummary = z.infer<typeof scheduleSummarySchema>;
 export type ScheduleRun = z.infer<typeof scheduleRunSchema>;
+// `values` are the keywords the person set on a held topic before approving it; they go with it
+// into the queue. Absent from a reply of a Slopify before they existed: none.
 export const heldTopicSchema = z
-  .object({ id, title: z.string(), rank: z.number().int(), createdAt: z.string() })
+  .object({
+    id,
+    title: z.string(),
+    values: z.record(z.string(), z.string()).readonly().default({}),
+    rank: z.number().int(),
+    createdAt: z.string(),
+  })
   .strict()
   .readonly();
+// Edit on a held topic: its title, and its keywords when given (replacing the ones it had).
+export const heldTopicEditSchema = z
+  .object({ title: z.string(), values: z.record(keywordName, z.string()).optional() })
+  .strict();
 export type HeldTopic = z.infer<typeof heldTopicSchema>;
 // Reordering is by position against the version the person saw, so a run taking the first
 // topic meanwhile makes the move refuse instead of moving the wrong one.
@@ -169,6 +185,15 @@ export const topicMoveSchema = z
     baseVersion: z.number().int().positive(),
     from: z.number().int().nonnegative(),
     to: z.number().int().nonnegative(),
+  })
+  .strict()
+  .readonly();
+// The whole queue at once: the schedule page adds, renames, removes and reorders topics in
+// place, and Undo puts the queue back as it was.
+export const topicQueueSchema = z
+  .object({
+    baseVersion: z.number().int().positive(),
+    items: z.array(item).max(queueMax).readonly(),
   })
   .strict()
   .readonly();
@@ -204,6 +229,25 @@ export const calendarProjectSchema = z
     createdAt: z.string(),
     finishedAt: z.string().nullable(),
     scheduleId: z.string().nullable(),
+    // What the project waits on the person for; left out when nothing.
+    needs: z.enum(calendarNeeds).optional(),
+    // Finished, makes a video, not marked uploaded and not a bundled sample.
+    readyToUpload: z.literal(true).optional(),
+    // Stages waiting for a CLI plan's limits to reset.
+    limitWaits: z
+      .array(
+        z
+          .object({
+            name: z.string(),
+            stage: z.enum(stageKinds),
+            resetsAt: z.string().nullable(),
+            retryAt: z.string(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly()
+      .optional(),
   })
   .strict()
   .readonly();

@@ -10,6 +10,7 @@ import {
 } from "@app/slices/schedules/topic-list.js";
 import { CopyIcon, DownloadIcon, PlusIcon, XIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
+import { KeywordList, keywordFeeds } from "@/components/keyword-list";
 import { Button, IconButton } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
@@ -67,6 +68,9 @@ export interface QueueContext {
     | undefined;
   // The saved queue: its topics are not checked again.
   readonly kept: readonly TopicRow[];
+  // What each keyword feeds (the title, the article prompt, an image prompt), for the same
+  // "Feeds …" line Play, Edit project and templates show.
+  readonly origins?: ReadonlyMap<string, readonly string[]>;
 }
 
 // A keyword with no every-run value must be set by every topic of a list or table.
@@ -161,6 +165,7 @@ export function TopicFields({
   const [switchProblems, setSwitchProblems] = useState<readonly string[]>([]);
   const [exported, setExported] = useState<string | null>(null);
   const { keywords, topicKeyword: keyword, form, everyRun } = context;
+  const feedsOf = (name: string): readonly string[] => context.origins?.get(name) ?? [];
   const result = queueResult(queue, context);
   const rows = queue.mode === "yaml" ? result.rows : queue.rows;
   const titleOf = (row: TopicRow): string | undefined =>
@@ -324,37 +329,40 @@ export function TopicFields({
           title.
         </p>
       ) : (
-        <div className="grid gap-4 min-[700px]:grid-cols-2">
-          <Field
-            label="Each topic fills"
-            id="schedule-topic-keyword"
-            tip="planning.schedule.topic-keyword"
-          >
-            <Select value={keyword ?? ""} onChange={(event) => onKeyword(event.target.value)}>
-              {keywords.map((name) => (
-                <option key={name} value={name}>
-                  {`{{${name}}}`}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {keywords
-            .filter((name) => name !== keyword)
-            .map((name) => (
-              <Field
-                key={name}
-                label={`${name} (every run)`}
-                tip="planning.schedule.every-run"
-                {...(queue.columns.includes(name) ? { help: "Unless a topic sets its own." } : {})}
-              >
-                <Input
-                  maxLength={10000}
-                  aria-label={`${name} for every run`}
-                  value={everyRun[name] ?? ""}
-                  onChange={(event) => onValue(name, event.target.value)}
-                />
-              </Field>
-            ))}
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 min-[700px]:grid-cols-2">
+            <Field
+              label="Each topic fills"
+              id="schedule-topic-keyword"
+              tip="planning.schedule.topic-keyword"
+              {...(keyword === null ? {} : { help: keywordFeeds({ feeds: feedsOf(keyword) }) })}
+            >
+              <Select value={keyword ?? ""} onChange={(event) => onKeyword(event.target.value)}>
+                {keywords.map((name) => (
+                  <option key={name} value={name}>
+                    {`{{${name}}}`}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          {/* The every-run values: the same keyword list as Play, each with what it feeds. */}
+          <KeywordList
+            keywords={keywords
+              .filter((name) => name !== keyword)
+              .map((name) => ({
+                name,
+                value: everyRun[name] ?? "",
+                feeds: feedsOf(name),
+                ...(queue.columns.includes(name) ? { note: "Unless a topic sets its own." } : {}),
+              }))}
+            onChange={onValue}
+            fieldPrefix="everyRun"
+            label={(name) => `${name} (every run)`}
+            inputLabel={(name) => `${name} for every run`}
+            tip="planning.schedule.every-run"
+            maxLength={10000}
+          />
         </div>
       )}
       {queue.mode === "lines" && preview !== undefined && next !== undefined ? (

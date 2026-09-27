@@ -325,6 +325,16 @@ export async function next(user: UserEvent, id: TutorialStepId): Promise<void> {
   await at(id);
 }
 
+// From Home to the last step: each screen a channel runs on, then Finish tutorial.
+export async function finishAppTour(user: UserEvent): Promise<void> {
+  await next(user, "channels");
+  await next(user, "calendar");
+  await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull(),
+  );
+}
+
 export function nextHeld(): boolean {
   return (guide().getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled;
 }

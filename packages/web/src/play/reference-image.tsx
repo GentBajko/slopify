@@ -80,7 +80,7 @@ export function ReferenceImage({
       <div className="col-span-full flex min-h-9 items-center gap-1" {...helpScope}>
         <label
           htmlFor={thumbnailId}
-          className="flex cursor-pointer items-center gap-2 text-small text-ink2"
+          className="flex cursor-pointer items-center gap-2 text-small text-ink-2"
         >
           <input
             id={thumbnailId}

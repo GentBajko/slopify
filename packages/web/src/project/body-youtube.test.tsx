@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
 import type { Answer } from "@/test-app";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { YoutubeBlock } from "./body-youtube.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
@@ -45,7 +45,7 @@ function mount({
       state: "ready" as const,
     })),
   };
-  renderApp(
+  renderRouted(
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
         <YoutubeBlock stage={video} project={project} outputs={outputs} />
@@ -56,7 +56,7 @@ function mount({
       "GET /files/p1/revisions/r1/youtube_description": () => new Response(description),
       "GET /files/p1/revisions/r1/youtube_tags": () => new Response("rope, knots, sailing knots"),
       [`GET /api/projects/${project.id}/youtube-edits`]: jsonAnswer(edits),
-      "GET /api/settings/channel-links": jsonAnswer({ links }),
+      [`GET /api/projects/${project.id}/channel-links`]: jsonAnswer({ channelId: "c1", links }),
       ...extra,
     }),
   );
@@ -101,6 +101,10 @@ it("marks a placeholder with no link and keeps it in the copy", async () => {
   const summary = await screen.findByRole("region", { name: "Summary" });
   await waitFor(() => expect(within(summary).getByText("{{Patreon}}").tagName).toBe("MARK"));
   expect(screen.getByText(/No link is saved for \{\{Patreon\}\}/u)).not.toBeNull();
+  // The links are the project's channel's: the note leads to its Brand tab.
+  expect(screen.getByRole("link", { name: "the channel's Brand tab" }).getAttribute("href")).toBe(
+    "/channels/c1",
+  );
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
   expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Support: {{Patreon}}"));
 });
@@ -211,9 +215,9 @@ it("leaves out a chapter list YouTube would ignore", async () => {
   ).not.toBeNull();
 });
 
-it("keeps the block in place with Copy and Edit disabled until the step has written", () => {
+it("keeps the block in place with Copy and Edit disabled until the step has written", async () => {
   mount({ outputs: [] });
-  const block = screen.getByRole("region", { name: "YouTube" });
+  const block = await screen.findByRole("region", { name: "YouTube" });
   // A part of the stage body under a rule, not a bordered box inside the stage's own card.
   expect(block.className).not.toContain("rounded");
   expect(screen.getByRole("region", { name: "Summary" }).textContent).toBe(

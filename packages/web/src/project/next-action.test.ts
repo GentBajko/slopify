@@ -108,7 +108,7 @@ describe("the next action", () => {
     expect(next?.section).toBe("article");
   });
 
-  it("gives a signed-out CLI's command and still retries", () => {
+  it("offers a signed-out CLI's sign-in command, whose Check again retries the step", () => {
     const next = nextActionFor(
       input({
         project: { status: "failed", config },
@@ -117,7 +117,14 @@ describe("the next action", () => {
     );
     expect(next?.title).toBe("Codex is signed out, so images stopped.");
     expect(next?.why).toContain("codex login");
-    expect(next?.action?.intent).toEqual({ kind: "retry", stage: "images" });
+    expect(next?.action).toEqual({
+      label: "Copy sign-in command",
+      intent: {
+        kind: "sign-in",
+        stage: "images",
+        fix: { kind: "sign-in", label: "Sign in to Codex", cli: "codex", command: "codex login" },
+      },
+    });
   });
 
   it("softens a refused image prompt", () => {
@@ -218,8 +225,12 @@ describe("the next action", () => {
         ],
       }),
     );
-    expect(next).toMatchObject({ situation: "waiting", title: "Waiting for your Codex limits." });
-    expect(next?.why).toContain("14:05");
+    // The roadmap's words, the same ones the lists show.
+    expect(next).toMatchObject({
+      situation: "waiting",
+      title: "Waiting for Codex limits (resets at 14:05).",
+    });
+    expect(next?.why).toContain("carries on by itself");
     expect(next?.action).toBeUndefined();
   });
 
@@ -375,5 +386,19 @@ describe("the next action", () => {
         project: { status: "done", config },
       })?.situation,
     ).toBe("outdated");
+  });
+
+  it("leads a finished short to the full video on its topic, ahead of Prepare upload", () => {
+    const short = { ...config, mode: "short" } as ProjectSummary["config"];
+    expect(nextActionFor(input({ project: { status: "done", config: short } }))).toMatchObject({
+      situation: "done",
+      title: "The short is ready.",
+      action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
+    });
+    // Not before it is done, and never for a long video.
+    expect(
+      nextActionFor(input({ project: { status: "partial", config: short }, uploadReady: false })),
+    ).toBeUndefined();
+    expect(nextActionFor(input())?.action?.intent.kind).toBe("prepare-upload");
   });
 });

@@ -52,6 +52,10 @@ export const planningHelp = {
     title: "Topics",
     body: "Each run takes the first topic, starts one project with it and removes it from the list. The schedule completes when the list is empty, unless topic generation is on. With no topics and generation off, every run uses the template as saved. Up to 500 topics.",
   },
+  "planning.schedule.inline-topics": {
+    title: "Queued topics",
+    body: "Change the queue right here: type a topic and press Enter to add it, edit one in its field and press Enter to rename it, use the arrows to move it and the cross to remove it. Each change saves at once and changes only the queue; Undo on the notice puts it back. For a topic's own keyword values, press Edit.",
+  },
   "planning.schedule.topic-format": {
     title: "How to write the topics",
     body: "Three ways to write the same list; switching keeps everything. One per line fills only the topic keyword. Table adds a column for each keyword a topic sets itself, such as its word count. YAML / JSON holds the same as text, for pasting or keeping in a file.",
@@ -99,6 +103,10 @@ export const planningHelp = {
   "planning.schedule.generate-now": {
     title: "Generate topics now",
     body: "Asks the LLM for new topics right away, at least 5, even when the queue is full and even during the 5 minutes Slopify waits after a failed try. One LLM call. When holding for approval they wait for you; otherwise they join the queue.",
+  },
+  "planning.schedule.held-keywords": {
+    title: "Keywords of a waiting topic",
+    body: "The template's other keywords, set for this one topic's run, the same as a column in the queue's table. Leave one empty to use the schedule's every-run value (shown greyed). They go with the topic into the queue when you approve it.",
   },
   "planning.schedule.held": {
     title: "Topics waiting",
@@ -238,6 +246,10 @@ export const planningHelp = {
     title: "Cast voice",
     body: "How this member speaks in multi-voice runs: pick them under Speakers on Play and they read with this voice, model and pace in every episode. The list shows voices that speak the channel's language. Leave the provider empty for no voice. A run keeps the voice it started with.",
   },
+  "planning.cast.host": {
+    title: "Channel host",
+    body: "A recurring voice of this channel. When you pick Podcast or Interview on Play, the draft starts with the channel's hosts that have a voice as its hosts, so you don't add them every episode. You can still remove or add speakers on the draft. Projects already made are unchanged.",
+  },
   "planning.cast.pictures": {
     title: "Reference pictures",
     body: "Up to 4 pictures per member, sent with every image whose brief, or the video's title, names it, so it looks the same each time. Upload a PNG or JPEG up to 10 MB, or generate one below. Videos already made keep the pictures they started with.",
@@ -254,6 +266,6 @@ export const planningHelp = {
   // YouTube
   "planning.links.named": {
     title: "Named links",
-    body: "Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it becomes the link of that name when the description is shown or copied, such as {{Patreon}} or {{Discord}}. A project's own {{Previous video}} wins over the one here. A name with no link stays as typed.",
+    body: "Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it becomes the link of that name when the description is shown, copied or downloaded, such as {{Patreon}} or {{Discord}}. Each channel keeps its own list on its Brand tab, so a project fills from its channel's links; its own {{Previous video}} wins over the channel's. A name with no link stays as typed. Save channel keeps the list.",
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

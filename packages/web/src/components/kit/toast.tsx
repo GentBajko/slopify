@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
 
 // The 3.0 toast (kit.css `.sl-toast`): raised, shadow-pop, bottom right, with an icon for its
 // tone. Acknowledgements ("Template saved.", "Resumed.") are toasts, not paragraphs inserted into the
@@ -19,15 +20,24 @@ import { cn } from "@/lib/utils";
 
 type Tone = "info" | "success" | "error";
 
+// One button on the toast, such as Undo for a change saved the moment it was made.
+export interface ToastAction {
+  readonly label: string;
+  readonly run: () => void;
+}
+
 interface Toast {
   readonly id: number;
   readonly message: string;
   readonly tone: Tone;
+  readonly action?: ToastAction | undefined;
 }
 
 export const toastMs = 4000;
+// A toast with an action stays long enough to reach its button.
+export const actionToastMs = 8000;
 
-type Notify = (message: string, tone?: Tone) => void;
+type Notify = (message: string, tone?: Tone, action?: ToastAction) => void;
 
 const ToastContext = createContext<Notify | undefined>(undefined);
 
@@ -44,17 +54,17 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
   }, []);
 
   const notify = useCallback<Notify>(
-    (message, tone = "info") => {
+    (message, tone = "info", action) => {
       next.current += 1;
       const id = next.current;
       // The same words twice in a row are one toast, restarted.
       setToasts((current) => [
         ...current.filter((toast) => toast.message !== message).slice(-2),
-        { id, message, tone },
+        { id, message, tone, action },
       ]);
       timers.current.set(
         id,
-        setTimeout(() => dismiss(id), toastMs),
+        setTimeout(() => dismiss(id), action === undefined ? toastMs : actionToastMs),
       );
     },
     [dismiss],
@@ -91,6 +101,18 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
               <InfoIcon aria-hidden="true" strokeWidth={1.75} className="text-ink-2" />
             )}
             <p className="sl-toast__text m-0 min-w-0 break-words">{toast.message}</p>
+            {toast.action === undefined ? null : (
+              <Button
+                variant="quiet"
+                size="small"
+                onClick={() => {
+                  dismiss(toast.id);
+                  toast.action?.run();
+                }}
+              >
+                {toast.action.label}
+              </Button>
+            )}
             <button
               type="button"
               aria-label="Dismiss notification"

@@ -224,7 +224,9 @@ export function changeProviders(
         readiness:
           provider.auth === "cli"
             ? { kind: "cli" as const, installed: true }
-            : { kind: "keyed" as const, hasKey: hasKey(deps.db, provider.id) },
+            : provider.auth === "local"
+              ? { kind: "local" as const, available: true }
+              : { kind: "keyed" as const, hasKey: hasKey(deps.db, provider.id) },
       })),
       voices: listVoices(deps.db),
     });

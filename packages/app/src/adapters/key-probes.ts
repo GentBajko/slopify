@@ -24,6 +24,15 @@ function listed(ids: (value: unknown) => readonly unknown[]) {
 }
 const field = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined;
+const google = {
+  url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+  headers: (key: string) => ({ "x-goog-api-key": key }),
+  badKey: (status: number, body: string) => status === 400 && body.includes("API_KEY_INVALID"),
+  model: {
+    url: (model: string) =>
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace(/^models\//, ""))}`,
+  },
+};
 
 export const keyProbes: KeyProbes = {
   openrouter: {
@@ -39,15 +48,8 @@ export const keyProbes: KeyProbes = {
   },
   "openai-tts": { url: "https://api.openai.com/v1/models", headers: bearer, model: openAiModel },
   "openai-image": { url: "https://api.openai.com/v1/models", headers: bearer, model: openAiModel },
-  "google-image": {
-    url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
-    headers: (key) => ({ "x-goog-api-key": key }),
-    badKey: (status, body) => status === 400 && body.includes("API_KEY_INVALID"),
-    model: {
-      url: (model) =>
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace(/^models\//, ""))}`,
-    },
-  },
+  "google-image": google,
+  "google-tts": google,
   // fal.ai's model list answers without a key; its price lookup requires one.
   fal: {
     url: "https://api.fal.ai/v1/models/pricing?endpoint_id=fal-ai/flux/dev",

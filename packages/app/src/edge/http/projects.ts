@@ -18,6 +18,7 @@ import { stagesWithEta } from "../../slices/eta/view.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
+import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
@@ -74,14 +75,17 @@ export function projectRoutes(deps: AppDeps) {
         const standings = stageStandingsByProject(deps.db);
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
+        const waits = limitWaitsByProject(deps.db);
         const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
+          const waiting = waits.get(project.id);
           return {
             ...project,
             status: derive(stages, project.paused),
             progress: progressOf(stages),
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
+            ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };
         });
         return c.json({ projects });

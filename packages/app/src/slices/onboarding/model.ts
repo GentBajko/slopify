@@ -19,6 +19,22 @@ export type SampleProjects = z.infer<typeof sampleProjectsSchema>;
 export const firstRunViewSchema = z
   .object({
     show: z.boolean(),
+    // A real project exists but the screen was never recorded as done: the client records it
+    // with POST /dismiss, so deleting every project later does not bring the screen back.
+    // Reading this view writes nothing.
+    settle: z.boolean(),
+    // Who narrates a first short: a voice provider with a saved key, else the computer's own.
+    voice: z.object({
+      // The keyed voice provider that would be used, by name ("OpenAI"), or null.
+      keyed: z.string().nullable(),
+      system: z.object({
+        available: z.boolean(),
+        // The speech program found ("eSpeak NG", "macOS voices").
+        engine: z.string().nullable(),
+        // Why none can be used, with the fix.
+        issue: z.string().nullable(),
+      }),
+    }),
     // The Library of Alexandria's project, as before the demos; `samples` has all three.
     sampleProjectId: z.string().nullable(),
     samples: sampleProjectsSchema,
@@ -55,6 +71,12 @@ export const quickShortInputSchema = z
   })
   .strict();
 export type QuickShortInput = z.infer<typeof quickShortInputSchema>;
+
+// A finished short's "Make the full video on this topic": the draft id is the browser's, so a
+// repeated press opens the same Play draft instead of making another.
+export const fullVideoInputSchema = z
+  .object({ projectId: z.string().min(1).max(64), draftId: z.uuid() })
+  .strict();
 
 export const quickShortResultSchema = z.object({
   projectId: z.string(),

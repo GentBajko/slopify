@@ -186,16 +186,18 @@ export async function rejectHeldTopic(
   );
 }
 
+// `values` replaces the keywords the topic sets; left out, it keeps them.
 export async function editHeldTopic(
   api: Api,
   id: string,
   topicId: string,
   title: string,
+  values?: Readonly<Record<string, string>>,
 ): Promise<ScheduleReply<HeldTopic>> {
   return responseOf(
     await api.fetch(
       topicPath(api, id, `held/${encodeURIComponent(topicId)}`),
-      json("PUT", { title }),
+      json("PUT", values === undefined ? { title } : { title, values }),
     ),
     heldTopicSchema,
   );
@@ -209,6 +211,19 @@ export async function moveTopic(
 ): Promise<ScheduleReply<ScheduleSummary>> {
   return responseOf(
     await api.fetch(topicPath(api, id, "move"), json("POST", input)),
+    scheduleSummarySchema,
+  );
+}
+
+// The whole queue as the schedule page's inline list edits it; nothing else about the schedule
+// changes.
+export async function replaceTopics(
+  api: Api,
+  id: string,
+  input: { readonly baseVersion: number; readonly items: ScheduleSummary["items"] },
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(`${root(api)}/${encodeURIComponent(id)}/topics`, json("PUT", input)),
     scheduleSummarySchema,
   );
 }

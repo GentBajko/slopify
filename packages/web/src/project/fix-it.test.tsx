@@ -3,7 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
-import { renderRouted, testDeps } from "@/test-app";
+import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import type { SectionId } from "./next-action.js";
 import { NextActionBeside, NextActionPanel, useNextAction } from "./next-action-view.js";
 import { revisionView } from "./revision-fixture.js";
@@ -60,7 +60,11 @@ function Harness({
   );
 }
 
-function setup(kind: Stage["kind"], over: Partial<Stage>) {
+function setup(
+  kind: Stage["kind"],
+  over: Partial<Stage>,
+  routes: Readonly<Record<string, Answer>> = {},
+) {
   const run = vi.fn((_action: Action) => undefined);
   const openSection = vi.fn();
   const review = vi.fn();
@@ -77,7 +81,7 @@ function setup(kind: Stage["kind"], over: Partial<Stage>) {
       openSection={openSection}
       review={review}
     />,
-    testDeps({}),
+    testDeps(routes),
   );
   return { run, openSection };
 }
@@ -85,17 +89,54 @@ function setup(kind: Stage["kind"], over: Partial<Stage>) {
 const rail = () => screen.findByRole("region", { name: "Next action" });
 const beside = () => screen.findByRole("region", { name: "Beside the step" });
 
-it("names a signed-out CLI, gives its command, and retries the step", async () => {
-  const { run } = setup("article", {
-    failureKind: "missing_key",
-    failureReason:
-      'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Try again.',
+const signedOut =
+  'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Try again.';
+
+function health(signedIn: "ok" | "problem"): Answer {
+  return jsonAnswer({
+    checkedAt: "2026-09-27T10:00:00.000Z",
+    providers: [
+      {
+        id: "codex",
+        displayName: "Codex",
+        family: "llm",
+        state: signedIn,
+        checks: [
+          { label: "Installed", state: "ok", detail: "Found codex." },
+          { label: "Signed in", state: signedIn, detail: "" },
+        ],
+      },
+    ],
   });
-  const next = await screen.findByRole("region", { name: "Next action" });
+}
+
+it("copies a signed-out CLI's sign-in command and, once Check again finds it signed in, retries", async () => {
+  const user = userEvent.setup();
+  const asked: string[] = [];
+  let answer = health("problem");
+  const { run } = setup(
+    "article",
+    { failureKind: "missing_key", failureReason: signedOut },
+    {
+      "POST /api/providers/health": (request) => {
+        asked.push(new URL(request.url).search);
+        return answer(request);
+      },
+    },
+  );
+  const next = await rail();
   expect(within(next).getByText("Codex is signed out, so the article stopped.")).not.toBeNull();
-  expect(within(next).getByText(/codex login/)).not.toBeNull();
-  await userEvent.click(within(next).getByRole("button", { name: "Try the article again" }));
-  expect(run).toHaveBeenCalledWith({ kind: "retry", stage: "article" });
+  await user.click(within(next).getByRole("button", { name: "Copy sign-in command" }));
+  expect(await navigator.clipboard.readText()).toBe("codex login");
+  // Still signed out: nothing is retried, and the toast says what to do.
+  await user.click(within(next).getByRole("button", { name: "Check again" }));
+  expect(await screen.findByText(/Codex is still signed out/)).not.toBeNull();
+  expect(run).not.toHaveBeenCalled();
+  answer = health("ok");
+  await user.click(within(next).getByRole("button", { name: "Check again" }));
+  await vi.waitFor(() => expect(run).toHaveBeenCalledWith({ kind: "retry", stage: "article" }));
+  // Only the CLI is asked about, not every key.
+  expect(asked).toEqual(["?provider=codex", "?provider=codex"]);
 });
 
 it("softens a refused image prompt after saying what it will do", async () => {

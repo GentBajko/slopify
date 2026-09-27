@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { legacyVideoEdit } from "../video/edit-settings.js";
+import { sampleNarrationText, sampleNarrationWords, sampleShortTitle } from "./narration.js";
 import type { StylePreviewRequest } from "./schema.js";
 import {
   normalizeStylePreview,
-  sampleCues,
-  sampleWords,
+  previewCues,
+  previewSeconds,
+  previewWords,
   stableJson,
   stylePreviewHash,
 } from "./settings.js";
@@ -89,28 +91,77 @@ describe("style preview settings", () => {
   });
 });
 
-describe("sample captions", () => {
-  it("spreads the text over the preview as up to three timed cues", () => {
-    const cues = sampleCues("Every story begins with a word.");
-    expect(cues.map((cue) => cue.text).join(" ")).toBe("Every story begins with a word.");
-    expect(cues).toHaveLength(3);
-    for (const [at, cue] of cues.entries()) {
-      expect(cue.start).toBeGreaterThanOrEqual(0);
-      expect(cue.end).toBeLessThanOrEqual(6);
-      expect(cue.end).toBeGreaterThan(cue.start);
-      expect(cue.start).toBeGreaterThanOrEqual(cues[at - 1]?.end ?? 0);
+describe("the Shorts layout", () => {
+  const shorts = { ...request, shorts: { titleOnScreen: true, speed: 1.1 } };
+
+  it("is 9:16 with the caption font, the headline and the speed, and nothing a short lacks", () => {
+    const settings = normalizeStylePreview({
+      ...shorts,
+      format: "16:9",
+      videoEdit: {
+        ...legacyVideoEdit,
+        chapterCards: true,
+        transition: "crossfade",
+        grain: "strong",
+      },
+    });
+    expect(settings).toMatchObject({
+      version: 2,
+      format: "9:16",
+      captions: null,
+      transition: null,
+      chapterCard: null,
+      look: { vignette: "off", grain: "off", grade: "none", atmosphere: "none" },
+      short: { fontId: "default", text: sampleNarrationText, title: sampleShortTitle, speed: 1.1 },
+    });
+    expect(previewSeconds(settings)).toBeCloseTo(5.455, 3);
+  });
+
+  it("hashes each Shorts setting that shows, apart from the video's", () => {
+    const base = hashOf(shorts);
+    expect(base).not.toBe(hashOf(request));
+    expect(hashOf({ ...shorts, shorts: { titleOnScreen: false, speed: 1.1 } })).not.toBe(base);
+    expect(hashOf({ ...shorts, shorts: { ...shorts.shorts, speed: 1.2 } })).not.toBe(base);
+    expect(hashOf({ ...shorts, shorts: { ...shorts.shorts, title: "Tides" } })).not.toBe(base);
+    // The caption size and position are the Shorts renderer's own.
+    expect(hashOf({ ...shorts, subtitles: { ...request.subtitles, fontSize: 90 } })).toBe(base);
+    // No headline shows no title, whatever it says.
+    const off = { ...shorts, shorts: { titleOnScreen: false } };
+    expect(hashOf({ ...off, shorts: { ...off.shorts, title: "Tides" } })).toBe(hashOf(off));
+  });
+});
+
+describe("preview captions", () => {
+  it("captions the sample narration with its own timed words by default", () => {
+    expect(previewWords(sampleNarrationText)).toBe(sampleNarrationWords);
+    expect(normalizeStylePreview(request).captions?.text).toBe(sampleNarrationText);
+    expect(
+      normalizeStylePreview({ ...request, previewText: "Every story begins with a word." }).captions
+        ?.text,
+    ).toBe(sampleNarrationText);
+    const cues = previewCues(sampleNarrationText);
+    expect(cues.map((cue) => cue.text).join(" ")).toBe(sampleNarrationText);
+    expect(cues[0]?.start).toBe(0.5);
+  });
+
+  it("spreads other text over the stretches the narration speaks", () => {
+    const words = previewWords("One two three four five six");
+    expect(words.map((word) => word.text)).toEqual(["One", "two", "three", "four", "five", "six"]);
+    // The narration speaks from 0.5 s to 3.4 s, pauses, then 4.18 s to 5.4 s.
+    expect(words[0]?.start).toBe(0.5);
+    expect(words.at(-1)?.end).toBe(5.4);
+    for (const word of words) expect(word.start >= 3.4 && word.end <= 4.18).toBe(false);
+    for (const [at, word] of words.entries()) {
+      expect(word.end).toBeGreaterThan(word.start);
+      expect(word.start).toBeGreaterThanOrEqual(words[at - 1]?.end ?? 0);
     }
   });
 
-  it("gives a short text one cue per word and an empty one none", () => {
-    expect(sampleCues("Hello there").map((cue) => cue.text)).toEqual(["Hello", "there"]);
-    expect(sampleWords("   ")).toEqual([]);
-  });
-
-  it("times a long text without breaking the caption rules", () => {
-    const text = Array.from({ length: 30 }, (_value, at) => `word${String(at)}`).join(" ");
-    const cues = sampleCues(text);
-    expect(cues.length).toBeGreaterThanOrEqual(3);
-    expect(cues.at(-1)?.end).toBeLessThanOrEqual(6);
+  it("gives every phrase a word while there are words, and an empty text none", () => {
+    expect(previewWords("Hello there").map((word) => word.start)).toEqual([0.5, 4.18]);
+    expect(previewWords("Hello")).toHaveLength(1);
+    expect(previewWords("   ")).toEqual([]);
+    const long = Array.from({ length: 30 }, (_value, at) => `word${String(at)}`).join(" ");
+    expect(previewCues(long).at(-1)?.end).toBeLessThanOrEqual(6);
   });
 });

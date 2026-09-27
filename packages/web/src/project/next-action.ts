@@ -3,6 +3,7 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
+import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { finalOutput } from "./summary.js";
 
 // The next action rule (docs/design-system.md, "Controls that say what they do"): a project
@@ -89,10 +90,17 @@ export type NextIntent =
   | { readonly kind: "approve"; readonly gate: HeldGate }
   | { readonly kind: "remake"; readonly workKeys: readonly string[] }
   | { readonly kind: "retry"; readonly stage: StageKind }
+  // A signed-out CLI: copy its sign-in command, then Check again retries the step.
+  | {
+      readonly kind: "sign-in";
+      readonly stage: StageKind;
+      readonly fix: Extract<Fix, { readonly kind: "sign-in" }>;
+    }
   | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "edit" }
   | { readonly kind: "open-settings"; readonly section: "providers" | "storage" }
-  | { readonly kind: "prepare-upload" };
+  | { readonly kind: "prepare-upload" }
+  | { readonly kind: "full-video" };
 
 export type Situation =
   | "sample"
@@ -184,8 +192,11 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         return {
           ...base,
           title: `${fix.label.replace(/^Sign in to /, "")} is signed out, so ${lower(plural(stageLabel))} stopped.`,
-          why: `Run ${fix.command} in a terminal and sign in, then try again.`,
-          action: retry,
+          why: `Copy the sign-in command (${fix.command}), run it in a terminal on the computer running Slopify and sign in, then press Check again. Once ${fix.label.replace(/^Sign in to /, "")} is signed in, Slopify tries ${lower(plural(stageLabel))} again.`,
+          action: {
+            label: "Copy sign-in command",
+            intent: { kind: "sign-in", stage: failed.kind, fix },
+          },
         };
       case "refused":
         return {
@@ -250,16 +261,14 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   const wait = input.waits[0];
   if (wait !== undefined || retrying !== undefined) {
     if (wait !== undefined) {
-      const names = list([...new Set(input.waits.map((one) => one.name))]);
+      const names = limitNames(input.waits);
       return {
         situation: "waiting",
         tone: "waiting",
         status: "Waiting for limits",
-        title: `Waiting for your ${names} limits.`,
-        why:
-          wait.resetsAt === null
-            ? `Checking again at ${input.clock(wait.retryAt)}. The run carries on by itself; work that does not need ${names} keeps going.`
-            : `They reset at ${input.clock(wait.resetsAt)}. The run carries on by itself; work that does not need ${names} keeps going.`,
+        // "Waiting for Codex limits (resets at 14:00)." - the words every list uses too.
+        title: `${limitWaitLine(input.waits, input.clock) ?? ""}.`,
+        why: `Nothing to do: the run carries on by itself when they reset, and work that does not need ${names} keeps going.`,
         section: sectionForStage(wait.stage),
       };
     }
@@ -332,6 +341,18 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         intent: { kind: "remake", workKeys: group.workKeys },
       },
       section: group.section,
+    };
+
+  // The first thing a person makes is a short; the long video comes second. A finished short
+  // leads there, with the same topic and starter pack. Prepare upload stays in its section.
+  if (project.status === "done" && config.mode === "short")
+    return {
+      situation: "done",
+      tone: "done",
+      status: "Done",
+      title: "The short is ready.",
+      why: "Play opens set up for a long video on the same topic, with the same starter pack and providers. Nothing starts until you press Play.",
+      action: { label: "Make the full video on this topic", intent: { kind: "full-video" } },
     };
 
   if ((project.status === "done" || project.status === "partial") && input.uploadReady)

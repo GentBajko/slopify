@@ -155,8 +155,9 @@ export type VerdictActionResult =
   | { readonly ok: false; readonly reason: "not-found" | "conflict" };
 
 // Overrule accepts a failed item as it is; Redo records that the person had it made again.
-// A passed verdict has nothing to overrule, and an automatic redo already under way owns the
-// item until it lands.
+// A passed verdict has nothing to overrule. Overrule also calls off an automatic redo that is
+// still waiting to start (what depends on the item then goes ahead with it as it is), but a
+// redo already under way owns the item until it lands.
 export function actOnVerdict(
   db: DatabaseSync,
   projectId: string,
@@ -167,9 +168,18 @@ export function actOnVerdict(
   const record = verdictById(db, projectId, id);
   if (record === undefined) return { ok: false, reason: "not-found" };
   if (action === "overruled" && record.passed) return { ok: false, reason: "conflict" };
-  if (record.redoState === "pending" || record.redoState === "started")
-    return { ok: false, reason: "conflict" };
-  db.prepare("UPDATE review_verdicts SET action=?, action_at=? WHERE id=?").run(action, at, id);
+  if (record.redoState === "started") return { ok: false, reason: "conflict" };
+  if (record.redoState === "pending") {
+    if (action !== "overruled") return { ok: false, reason: "conflict" };
+    const called = db
+      .prepare(
+        "UPDATE review_verdicts SET action=?, action_at=?, redo_state=NULL WHERE id=? AND redo_state='pending'",
+      )
+      .run(action, at, id);
+    if (Number(called.changes) !== 1) return { ok: false, reason: "conflict" };
+  } else {
+    db.prepare("UPDATE review_verdicts SET action=?, action_at=? WHERE id=?").run(action, at, id);
+  }
   const updated = verdictById(db, projectId, id);
   return updated === undefined ? { ok: false, reason: "not-found" } : { ok: true, value: updated };
 }

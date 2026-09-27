@@ -7,6 +7,8 @@ import { providerError } from "../../kernel/ports/model.js";
 import { standaloneOver } from "../../kernel/runner/standalone.fake.js";
 import { standaloneLlm } from "../../kernel/runner/standalone.js";
 import { defaultChannelId } from "../channels/model.js";
+import { setProjectChannel } from "../channels/repo.js";
+import { createChannel } from "../channels/service.js";
 import { importChannelVideos } from "../channels/videos.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
@@ -24,9 +26,12 @@ import {
   generationDue,
   generationRetryMs,
   heldTopics,
+  heldValuesKey,
+  knownTitles,
   moveTopic,
   parseTopics,
   rejectHeldTopic,
+  replaceTopics,
   transferTopic,
 } from "./topics.js";
 
@@ -42,6 +47,8 @@ function setup(options: {
   readonly answers: (call: Call) => Promise<string>;
   // In place of the fake: the real standalone call, for the tests that meter it.
   readonly topicLlm?: TopicLlm;
+  // More keywords the template stores values for, beside {{Topic}}.
+  readonly keywords?: Readonly<Record<string, string>>;
 }) {
   const h = startFixture();
   const templateId = randomUUID();
@@ -53,7 +60,7 @@ function setup(options: {
       form: {
         ...h.document.form,
         title: "D&D Lore: {{Topic}}",
-        values: { Topic: "" },
+        values: { Topic: "", ...options.keywords },
         llm: { provider: "template-llm", model: "template-model" },
       },
     },
@@ -89,12 +96,14 @@ function setup(options: {
     topicGeneration: options.generation,
   });
   if (!schedule.ok) throw new Error(`schedule refused: ${schedule.reason}`);
-  const project = (title: string): void => {
+  const project = (title: string): string => {
+    const projectId = randomUUID();
     h.deps.db
       .prepare(
         "INSERT INTO projects (id,title,format,config,created_at,updated_at) VALUES (?,?,?,?,?,?)",
       )
-      .run(randomUUID(), title, "16:9", "{}", now.toISOString(), now.toISOString());
+      .run(projectId, title, "16:9", "{}", now.toISOString(), now.toISOString());
+    return projectId;
   };
   return {
     h,
@@ -152,6 +161,27 @@ it("merges only new topics, dropping near-duplicates of what was queued or made,
     expect(prompt).toContain("{{Topic}}");
     expect(prompt).toContain("Suggest 7 new topics");
     expect(s.read().topics).toMatchObject({ error: null, generatingSince: null });
+  } finally {
+    s.h.close();
+  }
+});
+
+it("compares only with the projects of the schedule's own channel", async () => {
+  const s = setup({
+    generation: queue(2),
+    answers: async () => JSON.stringify(["Vecna", "Lolth", "Orcus"]),
+  });
+  try {
+    const other = randomUUID();
+    createChannel(s.h.deps, { id: other, name: "Sleep" });
+    s.project("D&D Lore: Lolth");
+    const elsewhere = s.project("Sleep Stories: Vecna");
+    setProjectChannel(s.h.deps.db, elsewhere, other);
+    expect(knownTitles(s.deps, s.id).projects).toEqual(["D&D Lore: Lolth"]);
+    expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 2, mode: "queue" });
+    expect(s.read().items.map((item) => item.title)).toEqual(["Vecna", "Orcus"]);
+    const prompt = s.calls[0]?.messages.map((message) => message.content).join("\n") ?? "";
+    expect(prompt).not.toContain("Sleep Stories: Vecna");
   } finally {
     s.h.close();
   }
@@ -259,7 +289,9 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     if (first === undefined || second === undefined || third === undefined)
       throw new Error("three held topics");
     expect([first.title, second.title, third.title]).toEqual(["Tarrasque", "Orcus", "Demogorgon"]);
-    expect(editHeldTopic(s.deps, s.id, third.id, "Demogorgon, Prince of Demons").ok).toBe(true);
+    expect(
+      editHeldTopic(s.deps, s.id, third.id, { title: "Demogorgon, Prince of Demons" }).ok,
+    ).toBe(true);
     expect(rejectHeldTopic(s.deps, s.id, second.id).ok).toBe(true);
     const approved = approveHeldTopics(s.deps, s.id, [first.id], { [first.id]: "The Tarrasque" });
     expect(approved.ok && approved.value.items.map((item) => item.title)).toEqual([
@@ -281,6 +313,49 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     expect(heldTopics(s.deps, s.id).map((topic) => topic.title)).toEqual(["Asmodeus"]);
     const second_call = s.calls[1]?.messages.map((message) => message.content).join("\n") ?? "";
     expect(second_call).toContain("- Orcus");
+  } finally {
+    s.h.close();
+  }
+});
+
+it("lets Edit set a held topic's keywords, checks them, and queues them with it", async () => {
+  const s = setup({
+    generation: hold(2),
+    keywords: { "Word Count": "8000", Tone: "calm" },
+    answers: async () => JSON.stringify(["Tiamat", "Vecna"]),
+  });
+  try {
+    await generateTopics(s.deps, s.id);
+    const [first, second] = heldTopics(s.deps, s.id);
+    if (first === undefined || second === undefined) throw new Error("two held topics");
+    expect(first.values).toEqual({});
+    const refused = editHeldTopic(s.deps, s.id, first.id, {
+      title: "Tiamat",
+      values: { Mood: "grim" },
+    });
+    expect(refused).toMatchObject({ ok: false, reason: "invalid-topics" });
+    expect(!refused.ok && refused.message).toContain("“Mood” is not a keyword of this template");
+    const edited = editHeldTopic(s.deps, s.id, first.id, {
+      title: "Tiamat, Queen of Dragons",
+      values: { "Word Count": " 12000 ", Tone: "" },
+    });
+    expect(edited).toMatchObject({
+      ok: true,
+      value: { title: "Tiamat, Queen of Dragons", values: { "Word Count": "12000" } },
+    });
+    // A title-only edit keeps the keywords set before.
+    editHeldTopic(s.deps, s.id, first.id, { title: "Tiamat" });
+    expect(heldTopics(s.deps, s.id)[0]?.values).toEqual({ "Word Count": "12000" });
+    editHeldTopic(s.deps, s.id, second.id, { title: "Vecna", values: { Tone: "grim" } });
+    rejectHeldTopic(s.deps, s.id, second.id);
+    const approved = approveHeldTopics(s.deps, s.id, "all");
+    expect(approved.ok && approved.value.items).toEqual([
+      { title: "Tiamat", values: { "Word Count": "12000" } },
+    ]);
+    // Nothing is left behind for topics no longer held.
+    expect(
+      s.h.deps.db.prepare("SELECT value FROM settings WHERE key=?").get(heldValuesKey),
+    ).toEqual({ value: "{}" });
   } finally {
     s.h.close();
   }
@@ -423,6 +498,44 @@ it("counts an answer of only duplicates as a failure", async () => {
     expect(await generateTopics(s.deps, s.id)).toMatchObject({ ok: false, reason: "failed" });
     expect(s.read().topics.error).toContain("already made, queued or turned down");
     expect(s.read().items).toHaveLength(1);
+  } finally {
+    s.h.close();
+  }
+});
+
+it("saves an edited queue in place, keeping the next run, and refuses a stale or unfit one", () => {
+  const s = setup({
+    generation: { mode: "off", keepAtLeast: 10, llm: null },
+    items: ["A", "B"],
+    answers: async () => "[]",
+  });
+  try {
+    const base = s.read();
+    const saved = replaceTopics(s.deps, s.id, {
+      baseVersion: base.version,
+      items: [
+        { title: "B", values: {} },
+        { title: "  Vecna ", values: {} },
+      ],
+    });
+    expect(saved.ok && saved.value.items.map((item) => item.title)).toEqual(["B", "Vecna"]);
+    expect(saved.ok && saved.value.version).toBe(base.version + 1);
+    // Only the queue changes: the next run and every other setting stay as they were.
+    expect(saved.ok && saved.value.nextRunAt).toBe(base.nextRunAt);
+    expect(saved.ok && saved.value.name).toBe(base.name);
+    expect(replaceTopics(s.deps, s.id, { baseVersion: base.version, items: [] })).toEqual({
+      ok: false,
+      reason: "conflict",
+    });
+    const refused = replaceTopics(s.deps, s.id, {
+      baseVersion: base.version + 1,
+      items: [{ title: "Tiamat", values: { Mood: "grim" } }],
+    });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.reason).toBe("invalid-topics");
+    expect(refused.message).toContain("“Mood” is not a keyword of this template");
+    expect(s.read().items.map((item) => item.title)).toEqual(["B", "Vecna"]);
   } finally {
     s.h.close();
   }

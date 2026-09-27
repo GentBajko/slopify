@@ -5,7 +5,6 @@ import { Button } from "@/components/kit/button";
 import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
-import { Rail, RailGroup } from "@/components/rail";
 import {
   type AutostartView,
   answerAutostart,
@@ -112,7 +111,7 @@ export function AutostartOffer(): ReactElement | null {
   const { view, turn, decline } = useAutostart();
   if (turn.isSuccess && view.data?.enabled === true)
     return (
-      <p role="status" className="mb-6 text-small text-ink-2">
+      <p role="status" className="m-0 text-small text-ink-2">
         Slopify now starts when you log in. Change it any time in Settings → General.
       </p>
     );
@@ -129,35 +128,34 @@ export function AutostartOffer(): ReactElement | null {
     );
   if (view.data?.offer !== true) return null;
   const error = turn.error ?? decline.error;
+  // A section of its own, separated by space: never a box inside the page's surface.
   return (
-    <>
+    <section>
       <SectionHead title={title} info="settings.autostart" />
-      <RailGroup className="mb-6">
-        <Rail className="flex-wrap">
-          <span className="min-w-0 flex-1 text-small text-ink-2">
-            Have Slopify ready whenever you open your bookmark, without starting it from a terminal.
-          </span>
-          <Button
-            variant="primary"
-            disabled={turn.isPending || decline.isPending}
-            onClick={() => turn.mutate(true)}
-          >
-            Start when I log in
-          </Button>
-          <Button
-            variant="quiet"
-            disabled={turn.isPending || decline.isPending}
-            onClick={() => decline.mutate()}
-          >
-            No thanks
-          </Button>
-        </Rail>
-      </RailGroup>
+      <p className="m-0 mb-3 text-small text-ink-2">
+        Have Slopify ready whenever you open your bookmark, without starting it from a terminal.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="primary"
+          disabled={turn.isPending || decline.isPending}
+          onClick={() => turn.mutate(true)}
+        >
+          Start when I log in
+        </Button>
+        <Button
+          variant="quiet"
+          disabled={turn.isPending || decline.isPending}
+          onClick={() => decline.mutate()}
+        >
+          No thanks
+        </Button>
+      </div>
       {error === null ? null : (
-        <p role="alert" className="-mt-4 mb-6 text-small text-danger">
+        <p role="alert" className="m-0 mt-3 text-small text-danger">
           {error.message}
         </p>
       )}
-    </>
+    </section>
   );
 }

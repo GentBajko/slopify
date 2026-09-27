@@ -163,7 +163,7 @@ export const playHelp = {
   // Speakers
   "play.speakers.format": {
     title: "Speakers format",
-    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the text model to write or split the script.",
+    body: "Narration uses one voice. Audiobook, Podcast, Radio drama and Interview give lines to several speakers, each with a voice. Several speakers need the text model to write or split the script. A new Podcast or Interview starts with the channel's hosts (cast members marked as hosts, with a voice).",
   },
   "play.speakers.script": {
     title: "Script",
@@ -172,6 +172,18 @@ export const playHelp = {
   "play.speakers.add-from-cast": {
     title: "Add from the cast",
     body: "Adds a member of this channel's cast as a speaker, with their name and voice. Only members with a voice are listed. Edit the cast on the channel's page.",
+  },
+  "play.speakers.book": {
+    title: "A chapter of a book",
+    body: "Makes this audiobook one chapter of a book. The MP3 and M4B are tagged with the book as their album and the chapter as their track, so a player keeps the chapters together and in order. When the chapter is done, Make the next chapter on its project page starts the next one with the same speakers and settings.",
+  },
+  "play.speakers.book-title": {
+    title: "Book title",
+    body: "The book this chapter belongs to, the same for every chapter. It becomes the album of the MP3 and M4B files.",
+  },
+  "play.speakers.book-chapter": {
+    title: "Chapter",
+    body: "This chapter's number in the book, from 1 to 9999. It becomes the track number of the MP3 and M4B files.",
   },
   "play.speakers.turn-gap": {
     title: "Gap between turns",
@@ -183,7 +195,7 @@ export const playHelp = {
   },
   "play.speakers.native-dialogue": {
     title: "One request for consecutive turns",
-    body: "Sends back-to-back turns as one multi-speaker request where the provider has one (ElevenLabs v3), so the voices react to each other. Fewer requests, same characters charged. Other providers read each turn on its own.",
+    body: "Sends back-to-back turns as one multi-speaker request where the provider has one (ElevenLabs v3 with up to 10 voices, Gemini TTS with 2), so the voices react to each other. Fewer requests, same characters charged. Other providers read each turn on its own.",
   },
   "play.speakers.audio-files": {
     title: "MP3 and M4B files",
@@ -331,6 +343,10 @@ export const playHelp = {
     title: "Title on screen",
     body: "Keeps the short's title at the top for the whole clip, large and bold in the caption font, below where the apps draw their own buttons. Default: on.",
   },
+  "play.shorts.preview": {
+    title: "Shorts preview",
+    body: "A few seconds of the sample project's narration and images as a short: vertical, through the same renderer your shorts use, with the big word-by-word captions in your caption font, the title on screen when it is on, and the speed you chose. It renders again by itself a moment after you change a setting, costs no API calls, and Render again forces a fresh one.",
+  },
   "play.shorts.speed": {
     title: "Speed",
     body: "Plays each short faster than the narration, 1.00× to 1.25× in steps of 0.05, with the pitch kept. A little faster suits short-form viewers. Default: 1.00×.",
@@ -417,7 +433,7 @@ export const playHelp = {
   },
   "play.voices.voice-id": {
     title: "Voice ID",
-    body: "The provider's own id for the voice, copied from its voice library. It is not checked now; a wrong id fails when a run's narration uses it.",
+    body: "The provider's own id for the voice, copied from its voice library. It is not checked now; a wrong id fails when a run's narration uses it. For Google Gemini, pick one of its 30 prebuilt voices instead.",
   },
   "play.voices.languages": {
     title: "Voice languages",

@@ -66,3 +66,8 @@ freed. Outputs from every revision and anything you uploaded are never removed, 
 project record names. Changing the project afterwards (an image, a caption style, the narration,
 a re-render) has to make the removed files again first, which the confirmation says before
 anything is removed.
+
+A finished project's own page offers the same beside its next action: **Free 1.2 GB: keep the
+outputs, drop the working files**, with the outputs' and working files' sizes and the same
+confirmation (`GET /api/storage/projects/:id` says what it would free). It is not offered on the
+bundled samples, while the project runs or waits, or when nothing is left to drop.

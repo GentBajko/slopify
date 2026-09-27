@@ -2,20 +2,25 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { liveProject } from "../admission/repo.js";
-import { scheduleChannel } from "../channels/repo.js";
+import { defaultChannelId } from "../channels/model.js";
+import { projectChannels, scheduleChannel } from "../channels/repo.js";
 import { channelVideoTitles } from "../channels/videos.js";
+import { readSetting, writeSetting } from "../settings/repo.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
 import {
   type HeldTopic,
+  heldTopicEditSchema,
   heldTopicSchema,
   queueMax,
   type ScheduleSummary,
   topicMoveSchema,
+  topicQueueSchema,
   topicTitleSchema,
   topicTransferSchema,
 } from "./schema.js";
 import { newTopics } from "./similar.js";
+import { templateKeywords, topicRowProblems } from "./topic-list.js";
 
 // A schedule that finds its own topics asks an LLM whenever its queue holds fewer than
 // `keepAtLeast`. Only one generation per schedule runs at a time: a lease on the schedule row
@@ -244,8 +249,10 @@ function nextRank(deps: ScheduleDeps, scheduleId: string): number {
   return rank === null ? 0 : rank + 1;
 }
 
-// Everything this schedule has queued, held, turned down or used, every project's title, and
-// the titles of the videos its channel made before Slopify (Channel page → Existing videos).
+// Everything this schedule has queued, held, turned down or used, the titles of the projects in
+// its channel, and the titles of the videos its channel made before Slopify (Channel page →
+// Existing videos). Another channel's videos are its own business: a sleep channel may cover a
+// subject a lore channel already did.
 export function knownTitles(
   deps: Pick<ScheduleDeps, "db">,
   scheduleId: string,
@@ -255,11 +262,16 @@ export function knownTitles(
     .prepare("SELECT title FROM schedule_topics WHERE schedule_id=? ORDER BY created_at DESC")
     .all(scheduleId)
     .map((row) => z.object({ title: z.string() }).parse(row).title);
-  const projects = deps.db
-    .prepare(`SELECT title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
-    .all()
-    .map((row) => z.object({ title: z.string() }).parse(row).title);
   const channel = scheduleChannel(deps.db, scheduleId);
+  const channels = projectChannels(deps.db);
+  const projects = deps.db
+    .prepare(`SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
+    .all()
+    .map((row) => z.object({ id: z.string(), title: z.string() }).parse(row))
+    .filter(
+      (row) => channel === undefined || (channels.get(row.id) ?? defaultChannelId) === channel.id,
+    )
+    .map((row) => row.title);
   const existing = channel === undefined ? [] : channelVideoTitles(deps.db, channel.id);
   return {
     topics: [...new Set([...(schedule?.items.map((item) => item.title) ?? []), ...logged])],
@@ -351,10 +363,48 @@ export function parseTopics(answer: string): string[] {
     .filter((line) => line !== "" && line !== "[" && line !== "]" && line.length <= 200);
 }
 
+// The keywords set on held topics, by topic id. Kept in a settings row, since a held topic's row
+// has only its title; an entry leaves when its topic is approved or turned down.
+export const heldValuesKey = "schedules.held-topic-values";
+const heldValuesSchema = z.record(z.string(), z.record(z.string(), z.string()));
+type HeldValues = z.infer<typeof heldValuesSchema>;
+
+function readHeldValues(db: ScheduleDeps["db"]): HeldValues {
+  const raw = readSetting(db, heldValuesKey);
+  if (raw === undefined) return {};
+  try {
+    const parsed = heldValuesSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : {};
+  } catch {
+    return {};
+  }
+}
+
+// Entries of topics that are no longer held (approved, turned down, or gone with their
+// schedule) are dropped on every write.
+function writeHeldValues(
+  db: ScheduleDeps["db"],
+  change: (values: HeldValues) => HeldValues = (values) => values,
+): void {
+  const held = new Set(
+    db
+      .prepare("SELECT id FROM schedule_topics WHERE state='held'")
+      .all()
+      .map((row) => String(row.id)),
+  );
+  const next = Object.fromEntries(
+    Object.entries(change(readHeldValues(db))).filter(
+      ([id, values]) => held.has(id) && Object.keys(values).length > 0,
+    ),
+  );
+  writeSetting(db, heldValuesKey, JSON.stringify(next));
+}
+
 export function heldTopics(
   deps: Pick<ScheduleDeps, "db">,
   scheduleId: string,
 ): readonly HeldTopic[] {
+  const stored = readHeldValues(deps.db);
   return deps.db
     .prepare(
       `SELECT id,title,rank,created_at FROM schedule_topics
@@ -368,6 +418,7 @@ export function heldTopics(
       return heldTopicSchema.parse({
         id: value.id,
         title: value.title,
+        values: stored[value.id] ?? {},
         rank: value.rank,
         createdAt: value.created_at,
       });
@@ -398,24 +449,22 @@ export function approveHeldTopics(
     const chosen = ids === "all" ? held : held.filter((topic) => ids.includes(topic.id));
     if (ids !== "all" && chosen.length !== ids.length)
       return { ok: false, reason: "topic-not-found" };
-    const titles: string[] = [];
+    const items: { readonly title: string; readonly values: Readonly<Record<string, string>> }[] =
+      [];
     for (const topic of chosen) {
       const title = topicTitleSchema.safeParse(edits[topic.id] ?? topic.title);
       if (!title.success) return { ok: false, reason: "invalid-input" };
-      titles.push(title.data);
+      items.push({ title: title.data, values: topic.values });
     }
-    if (open.value.items.length + titles.length > queueMax)
+    if (open.value.items.length + items.length > queueMax)
       return { ok: false, reason: "queue-full" };
     const at = deps.clock.now().toISOString();
     for (const topic of chosen)
       deps.db.prepare("DELETE FROM schedule_topics WHERE id=?").run(topic.id);
     deps.db
       .prepare("UPDATE schedules SET items_json=?,version=version+1,updated_at=? WHERE id=?")
-      .run(
-        JSON.stringify([...open.value.items, ...titles.map((title) => ({ title, values: {} }))]),
-        at,
-        scheduleId,
-      );
+      .run(JSON.stringify([...open.value.items, ...items]), at, scheduleId);
+    writeHeldValues(deps.db);
     return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
   });
 }
@@ -433,21 +482,59 @@ export function rejectHeldTopic(
     )
     .run(deps.clock.now().toISOString(), topicId, scheduleId);
   if (Number(changed.changes) !== 1) return { ok: false, reason: "topic-not-found" };
+  writeHeldValues(deps.db);
   return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
 }
 
+// Edit on a held topic: its title, and the keywords it sets for its run, checked against the
+// template the way the queue's are. Without `values` the ones it had are kept; an empty value
+// is dropped, so the every-run value applies.
 export function editHeldTopic(
   deps: ScheduleDeps,
   scheduleId: string,
   topicId: string,
-  title: string,
+  input: unknown,
 ): ScheduleResult<HeldTopic> {
-  const parsed = topicTitleSchema.safeParse(title);
+  const edit = heldTopicEditSchema.safeParse(input);
+  if (!edit.success) return { ok: false, reason: "invalid-input" };
+  const parsed = topicTitleSchema.safeParse(edit.data.title);
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
-  const changed = deps.db
-    .prepare("UPDATE schedule_topics SET title=? WHERE id=? AND schedule_id=? AND state='held'")
-    .run(parsed.data, topicId, scheduleId);
-  if (Number(changed.changes) !== 1) return { ok: false, reason: "topic-not-found" };
+  const values =
+    edit.data.values === undefined
+      ? undefined
+      : Object.fromEntries(
+          Object.entries(edit.data.values)
+            .map(([name, value]) => [name, value.trim()] as const)
+            .filter(([, value]) => value !== ""),
+        );
+  if (values !== undefined && Object.keys(values).length > 0) {
+    const schedule = scheduleById(deps.db, scheduleId);
+    if (schedule === undefined) return { ok: false, reason: "not-found" };
+    const template = deps.template(schedule.templateId, schedule.templateVersion);
+    if (template === undefined) return { ok: false, reason: "missing-template" };
+    const problems = topicRowProblems([{ title: parsed.data, values }], {
+      keywords: templateKeywords(template.document.form).filter(
+        (name) => name !== schedule.topicKeyword,
+      ),
+      topicKeyword: schedule.topicKeyword,
+    });
+    if (problems.length > 0)
+      return {
+        ok: false,
+        reason: "invalid-topics",
+        message: `The topic wasn't saved. ${problems.join(" ")}`,
+      };
+  }
+  const changed = transact(deps.db, () => {
+    const row = deps.db
+      .prepare("UPDATE schedule_topics SET title=? WHERE id=? AND schedule_id=? AND state='held'")
+      .run(parsed.data, topicId, scheduleId);
+    if (Number(row.changes) !== 1) return false;
+    if (values !== undefined)
+      writeHeldValues(deps.db, (stored) => ({ ...stored, [topicId]: values }));
+    return true;
+  });
+  if (!changed) return { ok: false, reason: "topic-not-found" };
   const topic = heldTopics(deps, scheduleId).find((row) => row.id === topicId);
   return topic === undefined
     ? { ok: false, reason: "topic-not-found" }
@@ -475,6 +562,34 @@ export function moveTopic(
     if (topic === undefined) return { ok: false, reason: "invalid-input" };
     items.splice(Math.min(parsed.data.to, items.length), 0, topic);
     writeItems(deps, scheduleId, schedule.version, items);
+    return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
+  });
+}
+
+// Saves the queue as sent, without touching the schedule's other settings or its next run.
+// Topics already queued are not checked again; a new or renamed one must suit the template.
+export function replaceTopics(
+  deps: ScheduleDeps,
+  scheduleId: string,
+  input: unknown,
+): ScheduleResult<ScheduleSummary> {
+  const parsed = topicQueueSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "invalid-input" };
+  return transact(deps.db, () => {
+    const open = openSchedule(deps, scheduleId);
+    if (!open.ok) return open;
+    const schedule = open.value;
+    if (schedule.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
+    const template = deps.template(schedule.templateId, schedule.templateVersion);
+    if (!template) return { ok: false, reason: "missing-template" };
+    const problems = topicRowProblems(parsed.data.items, {
+      keywords: templateKeywords(template.document.form),
+      topicKeyword: schedule.topicKeyword,
+      kept: schedule.items,
+    });
+    if (problems.length > 0)
+      return { ok: false, reason: "invalid-topics", message: problems.slice(0, 5).join(" ") };
+    writeItems(deps, scheduleId, schedule.version, parsed.data.items);
     return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
   });
 }

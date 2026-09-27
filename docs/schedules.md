@@ -35,6 +35,23 @@ rules when a schedule is saved: a keyword the template doesn't use, or a topic's
 left as they are until edited. The parser and the checks live in
 `packages/app/src/slices/schedules/topic-list.ts`, shared by the server and the form.
 
+### Changing the queue in place
+
+The picked schedule's detail on **Calendar → Schedules** lists its queued topics under **Queued
+topics**: type a topic in **New topic** and press Enter to add it at the end, edit a topic in its
+field and press Enter (or click away) to rename it, and use the arrows and the cross to move or
+remove it. Each change is saved at once and its notice carries **Undo**. Only the queue changes
+(`PUT /api/schedules/:id/topics`, `replaceTopics` in `slices/schedules/topics.ts`): the next run,
+the cadence and every other setting stay as they are, and a topic's own keyword values travel
+with it. A new or renamed topic is checked against the template like a saved form; one already
+queued is not checked again. A schedule that changed meanwhile (a run just took a topic) refuses
+the change and the list shows the latest. **Edit** keeps the full form for the table and YAML ways
+and for a topic's own keyword values.
+
+The every-run keywords in the form are the same keyword list Play, Edit project and templates
+draw, each with the line saying what it feeds ("Feeds Project title · Article"), read from the
+template's saved prompts.
+
 ## Topics that find themselves
 
 Under **Edit → Topic generation** a schedule can ask an LLM for its next topics:
@@ -42,7 +59,10 @@ Under **Edit → Topic generation** a schedule can ask an LLM for its next topic
 - **Series brief**: what the channel covers, its style and what makes a topic worth watching.
 - **New topics**: *Off* (you add them), *Generate and queue directly*, or *Generate and hold for
   approval*. Held topics appear under **Topics waiting** on the schedule, with Approve, Edit and
-  Reject on each row and **Approve all**. A Notification URL (Settings) gets
+  Reject on each row and **Approve all**. Edit sets the topic's title and any of the template's
+  other keywords for its run (the same values as a column of the queue's table, checked the
+  same way; an empty one uses the every-run value); they go with it into the queue when it is
+  approved. They are kept in the settings row `schedules.held-topic-values` until then. A Notification URL (Settings) gets
   "5 new topics are waiting for you".
 - **Keep at least N queued** (default 10). Held topics count toward N, so nothing more is asked
   while they wait for you.
@@ -50,8 +70,9 @@ Under **Edit → Topic generation** a schedule can ask an LLM for its next topic
 
 When the queue (plus held topics) drops below N, the next tick (every 15 s) starts one
 generation in the background. The prompt carries the brief and every title already known: the
-schedule's queued, held, rejected and used topics, every project's title, and the titles on
-its channel's **Existing videos** tab (see [Channels](channels.md)). Suggestions are
+schedule's queued, held, rejected and used topics, the titles of the projects in the
+schedule's channel (another channel's projects don't count), and the titles on its channel's
+**Existing videos** tab (see [Channels](channels.md)). Suggestions are
 ranked most view-worthy first and checked against those titles, dropping near-duplicates:
 
 - texts equal after normalising (accents dropped, lower case, punctuation to spaces, `&` as
@@ -59,8 +80,11 @@ ranked most view-worthy first and checked against those titles, dropping near-du
 - word sets overlapping by at least **0.6** (Jaccard, filler words and a plural "s" ignored), or
 - one's words all inside the other's and covering at least **half** of it ("Tiamat" and
   "Tiamat's Lair" are one video; "Red Dragons" and "Blue Dragons" are two), or
-- every word of the topic inside a project's or existing video's title ("Vecna" and "D&D
-  Lore: Vecna").
+- every word of the topic inside a project's or existing video's title ("Strahd von Zarovich"
+  and "Who was Strahd von Zarovich really?"). A topic of one or two words must instead match a
+  clause of the title (split at `:`, `|`, `-`, brackets and sentence punctuation) exactly, apart
+  from question and framing words: "Vecna" matches "D&D Lore: Vecna" and "Who is Vecna? The
+  Lich God Explained", but "Dragons" doesn't match "The Red Dragons of Krynn".
 
 Only one generation per schedule runs at a time (a lease on the schedule row, taken over after
 15 minutes if Slopify died mid-call). A failure is shown on the schedule with its reason and
@@ -81,17 +105,29 @@ shows the channel picked in the rail, or every channel.
   schedule's run to move it into that schedule's queue at that place. Without a mouse: focus a
   topic and press Alt+← or Alt+→, or use the list view's Earlier, Later and **Move to…**.
   A drop the calendar can't carry out (a day with no run, a run with no queued topic) says why.
+- **Needs you**, above the weeks, lists the projects in the range that wait for the person
+  (failed, paused, held at a review checkpoint, or an automatic review's failed item waiting for
+  Overrule or Redo) with **Open to fix / continue / review**, then the finished videos ready to
+  upload (not marked uploaded, not a bundled sample) with **Prepare upload**. On its day, a
+  project says the same, or "Waiting for Codex limits (resets at 14:00)".
+- The **Batch queue** is only here now (Projects no longer repeats it): each queued video in
+  its order, running now, waiting its turn, or paused (which holds the queue).
 - **Add to calendar** puts topics typed one per line at the end of a schedule's queue.
 - **Suggested topics**, beside the weeks, lists what each schedule with topic generation
   suggested, with **Queue** and **Reject** on each and **Queue all**; **Suggest topics now**
   asks for more. **Edit schedules** opens `/schedules`, which sits under the same rail item.
 
 Each run carries `renderedTitle`, the project title it will get (built as the run builds it),
-or null while its topic waits for approval or generation.
+or null while its topic waits for approval or generation. Each project carries, when they
+apply, `needs` (`failed`, `paused`, `review`), `readyToUpload: true` and `limitWaits`.
+
+A failed topic generation shows its fix-it beside the error (on the calendar and on Schedules):
+a signed-out CLI gets Copy sign-in command and Check again, which asks for topics again once the
+CLI is signed in; a rejected key links to Settings → Providers.
 
 API: `GET /api/calendar?from=&to=` (at most 92 days; four weeks from now by default),
 `POST /api/schedules/:id/topics/move` `{baseVersion, from, to}`,
 `POST /api/schedules/:id/topics/transfer` `{baseVersion, index, targetId, position?}`,
 `GET /api/schedules/:id/topics/held`, `POST …/topics/held/:topicId/approve` `{title?}`,
-`POST …/topics/held/:topicId/reject`, `PUT …/topics/held/:topicId` `{title}`,
+`POST …/topics/held/:topicId/reject`, `PUT …/topics/held/:topicId` `{title, values?}`,
 `POST …/topics/held/approve-all`, `POST …/topics/generate`.

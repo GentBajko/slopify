@@ -11,7 +11,7 @@ export interface ChannelLink {
 }
 
 // The link YouTube descriptions most often point at, and the one that changes per project:
-// the project page offers it by name, and a project's own value wins over the Settings list.
+// the project page offers it by name, and a project's own value wins over its channel's list.
 export const previousVideoLink = "Previous video";
 
 export const channelLinkNameMax = 60;
@@ -93,7 +93,7 @@ export function fillPlaceholders(text: string, links: readonly ChannelLink[]): F
 // Why a list of links cannot be saved, in the words Settings shows; undefined when it can.
 export function channelLinksProblem(links: readonly ChannelLink[]): string | undefined {
   if (links.length > channelLinksMax)
-    return `Keep at most ${String(channelLinksMax)} channel links. Remove some in Settings → Channel links.`;
+    return `Keep at most ${String(channelLinksMax)} links. Remove some.`;
   const seen = new Set<string>();
   for (const [index, link] of links.entries()) {
     const row = `Link ${String(index + 1)}`;

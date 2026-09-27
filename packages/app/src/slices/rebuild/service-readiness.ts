@@ -5,7 +5,7 @@ import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
 import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
-import { isLocalCliProvider } from "../settings/model.js";
+import { isLocalCliProvider, isUncataloguedProvider } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
 import type { ExecutionSnapshot } from "./preview-plan.js";
 import { requiresNewSubmission } from "./preview-retained.js";
@@ -54,7 +54,7 @@ export async function checkReadiness(
       fields.push({
         field: choice.family,
         message:
-          provider?.readiness.kind === "cli" && provider.readiness.issue
+          provider !== undefined && provider.readiness.kind !== "keyed" && provider.readiness.issue
             ? provider.readiness.issue
             : "Configure this provider before rebuilding.",
       });
@@ -96,7 +96,7 @@ export function localReadiness(
         row.enabled &&
         !row.deprecated,
     );
-    if (model === undefined && !isLocalCliProvider(choice.provider))
+    if (model === undefined && !isUncataloguedProvider(choice.provider))
       fields.push({
         field: `${choice.family}.model`,
         message: "The selected model is no longer available.",

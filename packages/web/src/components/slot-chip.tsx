@@ -18,7 +18,7 @@ export function SlotChip({
     <span
       data-slot-chip={name}
       className={cn(
-        "animate-tick-in rounded-control border border-line-strong bg-sunken px-[7px] py-[2px] font-mono text-label text-ink-2 motion-reduce:animate-none",
+        "animate-tick-in rounded-control border border-line-strong bg-sunken px-2 py-0.5 font-mono text-label text-ink-2 motion-reduce:animate-none",
         className,
       )}
     >

@@ -81,11 +81,11 @@ export function YoutubeDescription({
         <InfoTip id="play.description-prompt" />
       </span>
       {issue ? (
-        <p id={`${id}-error`} className="basis-full text-small text-red">
+        <p id={`${id}-error`} className="basis-full text-small text-danger">
           {issue}
         </p>
       ) : !narrated ? (
-        <p className="basis-full text-label text-ink3">Needs narration.</p>
+        <p className="basis-full text-label text-ink-3">Needs narration.</p>
       ) : null}
     </div>
   );

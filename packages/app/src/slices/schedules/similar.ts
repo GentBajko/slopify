@@ -8,7 +8,10 @@
 //   ("Tiamat" and "Tiamat's Lair" are one video; "Red Dragons" and "Blue Dragons" are two).
 // Words are compared without filler words ("the", "of", …) and without a plural "s".
 // A project title is compared more loosely: every word of the topic appearing in it is enough,
-// because the title wraps the topic in the template's own words ("D&D Lore: Tiamat").
+// because the title wraps the topic in the template's own words ("D&D Lore: Tiamat"). A topic
+// of one or two words is too easily found inside an unrelated title ("Dragons" in "The Red
+// Dragons of Krynn"), so one of the title's clauses must hold exactly its words, leaving aside
+// question and framing words ("Vecna" in "Who is Vecna? The Lich God Explained").
 
 export const jaccardMin = 0.6;
 export const containmentMin = 0.5;
@@ -69,12 +72,52 @@ export function similarTopics(a: string, b: string): boolean {
   return common === small && small / large >= containmentMin;
 }
 
-// A topic already made as a project: all of its words appear in the project's title.
+export const shortTopicWords = 2;
+
+// A topic already made as a project: all of its words appear in the project's title, or for a
+// short topic, the title or one of its parts is near the same.
 export function topicInTitle(topic: string, title: string): boolean {
   if (similarTopics(topic, title)) return true;
   const words = topicWords(topic);
   if (words.size === 0) return false;
+  if (words.size <= shortTopicWords) {
+    const wanted = subjectWords(topic);
+    return titleClauses(title).some((clause) => sameWords(subjectWords(clause), wanted));
+  }
   return shared(words, topicWords(title)) === words.size;
+}
+
+// Words that frame a subject in a title without being part of it.
+const framing = new Set([
+  "who",
+  "what",
+  "why",
+  "how",
+  "when",
+  "where",
+  "which",
+  "is",
+  "was",
+  "are",
+  "were",
+  "really",
+  "explained",
+]);
+
+function subjectWords(text: string): ReadonlySet<string> {
+  return new Set([...topicWords(text)].filter((word) => !framing.has(word)));
+}
+
+function sameWords(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size > 0 && a.size === b.size && shared(a, b) === a.size;
+}
+
+// "D&D Lore: Tiamat (Part 2) | Who is Vecna?" → ["D&D Lore", "Tiamat", "Part 2", "Who is Vecna"].
+function titleClauses(title: string): string[] {
+  return title
+    .split(/\s*[:|()[\]?!.,;\u2013\u2014]\s*|\s+-\s+/u)
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
 }
 
 export interface KnownTitles {

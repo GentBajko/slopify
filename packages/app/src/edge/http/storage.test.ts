@@ -43,7 +43,16 @@ it("drops working files only for a finished project that exists", async () => {
     });
     expect(running.status).toBe(409);
     expect(await running.json()).toMatchObject({ detail: expect.stringMatching(/finished/) });
+    // The project page asks what dropping the working files would free.
+    expect((await app.request("/api/storage/projects/nope")).status).toBe(404);
+    expect(await (await app.request("/api/storage/projects/p1")).json()).toMatchObject({
+      finished: false,
+      removableBytes: 0,
+    });
     h.deps.db.exec("UPDATE stages SET state='done'");
+    expect(await (await app.request("/api/storage/projects/p1")).json()).toMatchObject({
+      finished: true,
+    });
     const done = await app.request("/api/storage/projects/p1/keep-outputs", { method: "POST" });
     expect(await done.json()).toEqual({ ok: true, files: 0, bytesFreed: 0 });
   } finally {

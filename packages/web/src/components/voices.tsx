@@ -1,4 +1,9 @@
-import type { ProviderId, ProviderStatus, Voice } from "@app/slices/settings/model.js";
+import {
+  geminiVoices,
+  type ProviderId,
+  type ProviderStatus,
+  type Voice,
+} from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { VoiceField, VoiceRefusal } from "@/api";
@@ -10,6 +15,7 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
+import { SystemVoicePicker } from "@/components/system-voices";
 import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
@@ -266,16 +272,51 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
             ? { help: "Use an Inworld voice ID, such as Dennis, or one from your workspace." }
             : {})}
         >
-          <Input
-            className="tabular-nums"
-            value={voiceId}
-            onChange={(event) => {
-              const next = event.target.value;
-              edit("voiceId", () => {
-                setVoiceId(next);
-              });
-            }}
-          />
+          {provider === "system-voice" ? (
+            // The computer's own voices are listed, not typed; picking one names it too.
+            <SystemVoicePicker
+              value={voiceId}
+              onPick={(voice) => {
+                edit("voiceId", () => {
+                  setVoiceId(voice.id);
+                });
+                if (name.trim() === "") setName(voice.name);
+                const language = /^([a-z]{2,3})(?:[-_]|$)/i.exec(voice.language ?? "")?.[1];
+                if (languages.trim() === "" && language !== undefined)
+                  setLanguages(language.toLowerCase());
+              }}
+            />
+          ) : provider === "google-tts" ? (
+            // Gemini speaks only its prebuilt voices, so they are picked rather than typed.
+            <Select
+              value={voiceId}
+              options={[
+                { value: "", label: "Pick a Gemini voice" },
+                ...geminiVoices.map((one) => ({
+                  value: one.name,
+                  label: `${one.name} (${one.style})`,
+                })),
+              ]}
+              onChange={(event) => {
+                const next = event.target.value;
+                edit("voiceId", () => {
+                  setVoiceId(next);
+                  if (name.trim() === "") setName(next);
+                });
+              }}
+            />
+          ) : (
+            <Input
+              className="tabular-nums"
+              value={voiceId}
+              onChange={(event) => {
+                const next = event.target.value;
+                edit("voiceId", () => {
+                  setVoiceId(next);
+                });
+              }}
+            />
+          )}
         </Field>
 
         <Field
@@ -298,7 +339,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
         <Button
           variant="primary"
-          className="md:mt-[22px]"
+          className="md:mt-6"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {

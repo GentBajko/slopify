@@ -16,9 +16,11 @@ import { useApp } from "@/app-context";
 import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
+import { GlobalCommands } from "@/components/global-commands";
 import { SupportGlyph } from "@/components/glyph";
 import { PlayKey } from "@/components/kit/button";
 import {
+  ariaKeyShortcuts,
   CommandPaletteProvider,
   useCommand,
   useCommandPalette,
@@ -30,6 +32,7 @@ import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
+import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { useRunNotifications } from "@/notifications/use-run-notifications";
 import { PatchNotesCommand, PatchNotesPopup } from "@/patch-notes/popup";
@@ -162,13 +165,20 @@ function NavigationCommands() {
   const go = (to: string) => () => {
     void navigate({ to });
   };
-  useCommand({ id: "nav.home", title: "Open home", group: "Go to", run: go("/") });
+  useCommand({
+    id: "nav.home",
+    title: "Open home",
+    group: "Go to",
+    shortcut: shortcuts.goHome,
+    run: go("/"),
+  });
   useCommand({
     id: "nav.channels",
     title: "Open channels",
     group: "Go to",
     run: go("/channels"),
     keywords: ["cast", "brand"],
+    shortcut: shortcuts.goChannels,
   });
   useCommand({
     id: "nav.schedules",
@@ -176,6 +186,7 @@ function NavigationCommands() {
     group: "Go to",
     run: go("/schedules"),
     keywords: ["calendar", "topics"],
+    shortcut: shortcuts.goSchedules,
   });
   useCommand({
     id: "channel.all",
@@ -191,14 +202,22 @@ function NavigationCommands() {
     group: "Create",
     run: go("/play"),
     keywords: ["play", "make", "start"],
+    shortcut: shortcuts.newVideo,
   });
-  useCommand({ id: "nav.projects", title: "Open projects", group: "Go to", run: go("/projects") });
+  useCommand({
+    id: "nav.projects",
+    title: "Open projects",
+    group: "Go to",
+    shortcut: shortcuts.goProjects,
+    run: go("/projects"),
+  });
   useCommand({
     id: "nav.calendar",
     title: "Open calendar",
     group: "Go to",
     run: go("/calendar"),
     keywords: ["schedules"],
+    shortcut: shortcuts.goCalendar,
   });
   useCommand({
     id: "nav.library",
@@ -206,6 +225,7 @@ function NavigationCommands() {
     group: "Go to",
     run: go("/prompts"),
     keywords: ["prompts", "templates"],
+    shortcut: shortcuts.goLibrary,
   });
   useCommand({
     id: "nav.settings",
@@ -213,6 +233,7 @@ function NavigationCommands() {
     group: "Go to",
     run: go("/settings"),
     keywords: ["providers", "keys", "appearance"],
+    shortcut: shortcuts.goSettings,
   });
   useCommand({
     id: "nav.usage",
@@ -288,6 +309,7 @@ function ShellContent() {
   return (
     <div className="sl-app">
       <NavigationCommands />
+      <GlobalCommands />
       <PatchNotesCommand />
       <ChannelCommands />
       <aside className="sl-app__rail" aria-label="App">
@@ -319,10 +341,10 @@ function ShellContent() {
         <div className="sl-app__foot">
           <div className="flex items-end gap-1" {...helpScope}>
             <ChannelPicker className="min-w-0 flex-1" />
-            <InfoTip id="home.channel" className="mb-[5px]" />
+            <InfoTip id="home.channel" className="mb-1" />
           </div>
           <PlayKey asChild className="h-12 text-[16px]">
-            <Link to="/play">
+            <Link to="/play" aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}>
               <PlusIcon {...iconProps} />
               New video
             </Link>
@@ -368,7 +390,7 @@ function ShellContent() {
                 target="_blank"
                 rel="noreferrer"
                 title={link.label}
-                className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-[6px] whitespace-nowrap text-small text-ink-2 no-underline hover:text-ink sm:flex"
+                className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-2 whitespace-nowrap text-small text-ink-2 no-underline hover:text-ink sm:flex"
               >
                 <SupportGlyph name={link.glyph} className={link.tone} />
                 <span className="sr-only min-[1280px]:not-sr-only">{link.label}</span>

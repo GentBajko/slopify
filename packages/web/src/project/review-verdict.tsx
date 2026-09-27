@@ -42,8 +42,8 @@ function statusOf(review: Review): {
       : { label: "Review passed", tone: "neutral" };
   if (review.action === "overruled") return { label: "Accepted by you", tone: "neutral" };
   if (review.action === "redone") return { label: "Being made again", tone: "running" };
-  if (review.redoState === "pending" || review.redoState === "started")
-    return { label: "Being made again", tone: "running" };
+  if (review.redoState === "pending") return { label: "Waiting to be made again", tone: "running" };
+  if (review.redoState === "started") return { label: "Being made again", tone: "running" };
   return { label: "Flagged by review", tone: "info" };
 }
 
@@ -83,6 +83,7 @@ function Reasons({ review }: { readonly review: Review }): ReactElement {
 
 // Overrule (accept anyway) and Redo (make it again, through Re-run's path). Shown while the
 // verdict is a failure nobody has acted on; disabled, not removed, while a redo is under way.
+// A redo still waiting to start can be called off with Overrule.
 export function ReviewActions({
   review,
   projectId,
@@ -116,14 +117,19 @@ export function ReviewActions({
     onError: (error) => setMessage(error.message),
   });
   if (review.passed || review.action !== null) return null;
-  const moving = review.redoState === "pending" || review.redoState === "started";
+  const waiting = review.redoState === "pending";
+  const moving = waiting || review.redoState === "started";
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       <Button
         variant="quiet"
         size="small"
-        disabled={busy || moving || act.isPending}
-        disabledReason="Wait until the work on this project is done"
+        disabled={(busy && !waiting) || review.redoState === "started" || act.isPending}
+        disabledReason={
+          review.redoState === "started"
+            ? "Slopify is already making this item again; wait for the new version"
+            : "Wait until the work on this project is done"
+        }
         onClick={() => act.mutate("overrule")}
       >
         Overrule

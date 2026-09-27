@@ -6,10 +6,14 @@ import { type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button, buttonClass } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
+import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { NextAction as NextActionCard } from "@/components/kit/next-action";
+import { copyText, SignInActions } from "@/fixes/fix-actions";
 import { sentence } from "@/http";
-import { copySample } from "@/onboarding/api";
+import { shortcuts } from "@/lib/shortcuts";
+import { copySample, fullVideoDraft } from "@/onboarding/api";
+import { useOptionalPlaySession } from "@/play/draft-context";
 import { keys } from "@/queries";
 import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
 import { fixOf } from "./fix-it.js";
@@ -107,6 +111,30 @@ export function useNextAction({
         `${sentence(error.message)} The copy was not made. Press Make my own copy to try again.`,
       ),
   });
+  // One draft identity per project page, so a retried press opens the same draft.
+  const fullDraft = useRef<string | null>(null);
+  const session = useOptionalPlaySession();
+  const full = useMutation({
+    mutationFn: async () => {
+      if (session === null) throw new Error("Play isn't available on this page. Reload the page");
+      if (session.review.starting || session.review.uncertain || session.review.created !== null)
+        throw new Error("Play is starting a run from its open draft. Wait for it to start");
+      if (!(await session.flush()))
+        throw new Error("The draft open in Play couldn't be saved. Open Play, save or discard it");
+      fullDraft.current ??= crypto.randomUUID();
+      const { draft } = await fullVideoDraft(api, {
+        projectId: project.id,
+        draftId: fullDraft.current,
+      });
+      await client.invalidateQueries({ queryKey: ["play-drafts"] });
+      if (!(await session.open(draft.id)))
+        throw new Error("The full video's draft was made but didn't open. Open Play and pick it");
+      fullDraft.current = null;
+      await navigate({ to: "/play" });
+    },
+    onError: (error) =>
+      setMessage(`${sentence(error.message)} Then press Make the full video on this topic again.`),
+  });
   const approve = useMutation({
     mutationFn: async (gate: HeldGate) => {
       const full = gates.find((one) => one.checkpointId === gate.checkpointId);
@@ -148,6 +176,17 @@ export function useNextAction({
       case "soften":
         actions.run({ kind: intent.kind, stage: intent.stage });
         return;
+      // From the command palette: the command goes on the clipboard; Check again is the
+      // button beside it on the page.
+      case "sign-in":
+        void copyText(intent.fix.command).then((copied) =>
+          setMessage(
+            copied
+              ? `Copied ${intent.fix.command}. Run it in a terminal on the computer running Slopify, sign in, then press Check again.`
+              : `Couldn't copy: the browser blocked the clipboard. Type ${intent.fix.command} in a terminal, sign in, then press Check again.`,
+          ),
+        );
+        return;
       case "approve":
         approve.mutate(intent.gate);
         return;
@@ -163,9 +202,13 @@ export function useNextAction({
       case "prepare-upload":
         openUpload();
         return;
+      case "full-video":
+        full.mutate();
+        return;
     }
   };
-  const pending = copy.isPending || approve.isPending || actions.pending || controller.pending;
+  const pending =
+    copy.isPending || full.isPending || approve.isPending || actions.pending || controller.pending;
   return { next, run, pending, message };
 }
 
@@ -186,6 +229,8 @@ function busyLabel(intent: NextIntent): string | undefined {
       return "Trying again…";
     case "soften":
       return "Softening…";
+    case "full-video":
+      return "Opening Play…";
     default:
       return undefined;
   }
@@ -204,6 +249,17 @@ function ActionButton({
   const action = state.next?.action;
   if (action === undefined) return null;
   const intent = action.intent;
+  if (intent.kind === "sign-in")
+    return (
+      <SignInActions
+        fix={intent.fix}
+        variant={variant}
+        retry={{
+          run: () => state.run({ kind: "retry", stage: intent.stage }),
+          busy: state.pending,
+        }}
+      />
+    );
   if (intent.kind === "open-settings")
     return (
       <Link
@@ -222,6 +278,9 @@ function ActionButton({
         className={className}
         disabled={state.pending}
         disabledReason="Working on the last press"
+        aria-keyshortcuts={
+          variant === "primary" ? ariaKeyShortcuts(shortcuts.nextAction) : undefined
+        }
         onClick={() => (intent.kind === "soften" ? setSoftening(true) : state.run(intent))}
       >
         {label}
