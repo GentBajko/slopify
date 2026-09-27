@@ -45,7 +45,13 @@ export function reviewRoutes(deps: AppDeps) {
       const projectId = c.req.valid("param").id;
       const head = currentRevisionId(deps.db, projectId);
       const view = head === undefined ? undefined : getRevisionView(deps, projectId, head);
-      const outputs = (view?.outputs ?? []).filter((row) => row.selected);
+      const outputs = (view?.outputs ?? [])
+        .filter((row) => row.selected)
+        .map((row) => ({
+          workKey: row.workKey,
+          fingerprint: row.fingerprint,
+          outputId: row.output.id,
+        }));
       return c.json({ reviews: latestReviews(listVerdicts(deps.db, projectId), outputs) });
     })
     .post("/:id/reviews/:verdictId/overrule", zValidator("param", verdictParam, onInvalid), (c) => {

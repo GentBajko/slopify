@@ -523,3 +523,38 @@ it("carries the shorts' background music only while Shorts is on, and names its 
     h.close();
   }
 });
+it("carries only the reviews of stages that make something, and none when all are off", () => {
+  const h = draftFixture();
+  try {
+    const reviews = {
+      provider: "codex",
+      model: "gpt",
+      retries: "1",
+      stages: {
+        images: { mode: "redo" as const, prompt: "" },
+        article: { mode: "flag" as const, prompt: "Strict" },
+        thumbnail: { mode: "off" as const, prompt: "" },
+      },
+    };
+    const form = { ...h.document.form, reviews };
+    const on = convert({ ...h.document, form });
+    const made = (stage: "images" | "article") =>
+      (stage === "images" ? form.sources.images : form.sources.article) === "generate";
+    expect(on.ok && on.draft.reviews).toEqual({
+      provider: "codex",
+      model: "gpt",
+      retries: 1,
+      stages: {
+        ...(made("images") ? { images: { mode: "redo" } } : {}),
+        ...(made("article") ? { article: { mode: "flag", prompt: "Strict" } } : {}),
+      },
+    });
+    const off = convert({
+      ...h.document,
+      form: { ...form, reviews: { ...reviews, stages: { images: { mode: "off", prompt: "" } } } },
+    });
+    expect(off.ok && off.draft.reviews).toBe(undefined);
+  } finally {
+    h.close();
+  }
+});

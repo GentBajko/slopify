@@ -30,6 +30,7 @@ export type EditSection =
   | "article"
   | "providers"
   | "prompts"
+  | "reviews"
   | "shorts"
   | "subtitles"
   | "images"

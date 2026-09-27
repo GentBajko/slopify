@@ -81,11 +81,12 @@ describe("review verdicts", () => {
       createdAt: "2026-09-27T12:00:00.000Z",
     });
     const records = [latestVerdict(db, "p1", "image:hill")].flatMap((row) => (row ? [row] : []));
-    expect(latestReviews(records, [{ workKey: "image:hill", fingerprint: "out-2" }])).toMatchObject(
-      [{ id: "v3", current: true }],
-    );
     expect(
-      latestReviews(records, [{ workKey: "image:hill", fingerprint: "out-1" }])[0]?.current,
+      latestReviews(records, [{ workKey: "image:hill", fingerprint: "out-2", outputId: "o2" }]),
+    ).toMatchObject([{ id: "v3", current: true }]);
+    expect(
+      latestReviews(records, [{ workKey: "image:hill", fingerprint: "out-1", outputId: "o1" }])[0]
+        ?.current,
     ).toBe(false);
   });
 });

@@ -114,6 +114,41 @@ export function reviewSettingsForm(settings: ReviewSettings): ReviewSettingsForm
   };
 }
 
+// The form back to settings: only the reviews of stages that make something (`makes`), and
+// none left is no reviews at all, which is what every project saved before them has. Retries
+// that are not a number are left out and reported, so the form marks the field.
+export function reviewSettingsFromForm(
+  form: ReviewSettingsForm,
+  makes: (stage: ReviewStage) => boolean,
+): { readonly settings: ReviewSettings | undefined; readonly retriesProblem?: string } {
+  const stages = Object.fromEntries(
+    reviewStages.flatMap((stage) => {
+      const picked = form.stages[stage];
+      if (picked === undefined || picked.mode === "off" || !makes(stage)) return [];
+      return [
+        [stage, { mode: picked.mode, ...(picked.prompt.trim() ? { prompt: picked.prompt } : {}) }],
+      ];
+    }),
+  );
+  if (Object.keys(stages).length === 0) return { settings: undefined };
+  const retries = form.retries.trim() === "" ? undefined : Number(form.retries);
+  const valid = retries === undefined || Number.isFinite(retries);
+  return {
+    settings: {
+      provider: form.provider,
+      model: form.model,
+      ...(form.thinking === undefined ? {} : { thinking: form.thinking }),
+      ...(retries === undefined || !valid ? {} : { retries }),
+      stages,
+    },
+    ...(valid
+      ? {}
+      : {
+          retriesProblem: `Enter a number of redos between ${String(reviewRetriesMin)} and ${String(reviewRetriesMax)} in the Reviews section.`,
+        }),
+  };
+}
+
 export type ReviewOutcome = "passed" | "flagged" | "redo";
 
 export interface ReviewVerdict {

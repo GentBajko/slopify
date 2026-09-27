@@ -8,6 +8,7 @@ import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
 import { pendingReviewUpload } from "./review-state";
 import { ReviewSummary } from "./review-summary";
+import { PlayReviews } from "./reviews";
 import { BatchEditor, RunReview } from "./run-review";
 
 export function ReviewSection({
@@ -104,6 +105,7 @@ export function ReviewSection({
         )}
       </div>
       <CheckpointControls problem={problem} />
+      <PlayReviews problem={problem} />
       <ReviewSummary fields={fields} onReveal={onReveal}>
         <details className="mt-5 border-t border-line py-3">
           <summary className="cursor-pointer text-small">

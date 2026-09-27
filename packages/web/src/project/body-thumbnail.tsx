@@ -6,6 +6,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload } from "./parts.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 
 // The thumbnail at the top of the Images section: the picture itself, large, with Regenerate
@@ -27,6 +28,7 @@ export function ThumbnailPanel({
   const image = roleOf(outputsOf(outputs, stage), "thumbnail");
   const media = useOutputMedia(image);
   const tall = project.format === "9:16";
+  const reviews = useReviews(project.id);
   return (
     <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-[10px]">
       <h3 id={`${id}-title`} className="engraved text-ink3">
@@ -51,6 +53,11 @@ export function ThumbnailPanel({
           />
         )}
       </div>
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: "thumbnail:image" })}
+        projectId={project.id}
+        busy={busy}
+      />
       <ActionRow>
         <ConfirmedButton
           action={{ kind: "rerun", stage: stage.kind }}
