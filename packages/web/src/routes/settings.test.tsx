@@ -50,6 +50,44 @@ describe("the silence gap field", () => {
   });
 });
 
+describe("the backups section", () => {
+  const view = {
+    config: { enabled: true, time: "03:00", timeZone: "UTC", keep: 5, folder: null },
+    folder: "/data/projects/Backups",
+    defaultFolder: "/data/projects/Backups",
+    hostFolder: "/home/u/Slopify/Projects/Backups",
+    container: true,
+    running: false,
+    nextRunAt: "2026-09-28T03:00:00.000Z",
+    overdue: false,
+    status: {
+      lastAttemptAt: "2026-09-27T03:00:00.000Z",
+      lastResult: "failed",
+      lastTrigger: "scheduled",
+      lastSlot: "2026-09-27T03:00:00.000Z",
+      detail: "The backup was not saved: the disk holding /data/projects/Backups ran out of space.",
+      lastSuccessAt: "2026-09-26T03:01:00.000Z",
+      lastSuccessFile: "/data/projects/Backups/slopify-backup-2026-09-26T030100Z.tar",
+      lastSuccessBytes: 2048,
+      lastDurationMs: 1000,
+    },
+    files: [],
+  };
+
+  it("shows the last result, where backups land on the host, and refuses a bad keep count", async () => {
+    const user = userEvent.setup();
+    renderApp(<SettingsRoute section="backups" />, deps({ "GET /api/backups": jsonAnswer(view) }));
+    expect(await screen.findByText(/ran out of space/)).not.toBeNull();
+    expect(screen.getByText(/failed\.$/)).not.toBeNull();
+    expect(screen.getByText(/\/home\/u\/Slopify\/Projects\/Backups/)).not.toBeNull();
+    const keep = screen.getByLabelText("Keep last");
+    await user.clear(keep);
+    await user.type(keep, "31");
+    expect(screen.getByText("Keep between 1 and 30 backups.")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
+  });
+});
+
 describe("the settings screen", () => {
   it("shows one section at a time, picked from the section list", async () => {
     const user = userEvent.setup();
@@ -81,6 +119,7 @@ describe("the settings screen", () => {
       "Models",
       "Playback & appearance",
       "Backup & storage",
+      "Backups",
       "Usage",
     ]);
     expect(

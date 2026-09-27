@@ -8,6 +8,7 @@ import type {
   Stage,
 } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
 import type {
@@ -230,6 +231,19 @@ export interface BackupExportSummary {
 
 export async function readBackupExportSummary(api: Api): Promise<BackupExportSummary> {
   return read<BackupExportSummary>(await api.fetch(`${api.origin}/api/storage/export/summary`));
+}
+
+export async function readBackups(api: Api): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.$get());
+}
+
+export async function saveBackups(api: Api, config: BackupConfigInput): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.$put({ json: { ...config } }));
+}
+
+// Starts writing a backup and answers at once; Settings → Backups polls readBackups for the result.
+export async function runBackupNow(api: Api): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.run.$post());
 }
 
 export async function listProjects(api: Api): Promise<ProjectListBody> {

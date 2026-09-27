@@ -26,7 +26,8 @@ a dedicated folder. Later launches remember that absolute path when the override
 is omitted. `--port 7070` changes the localhost port. Custom installations sharing
 a machine need distinct `SLOPIFY_DOCKER_NAME` and `SLOPIFY_DOCKER_VOLUME` values.
 Do not store unrelated documents in the managed Projects tree: storage
-reconciliation owns it. Moving to another folder performs a verified copy;
+reconciliation owns it. The one exception is its `Backups` folder, where scheduled
+backups land by default (see [backups.md](backups.md)). Moving to another folder performs a verified copy;
 existing unrelated contents are never merged or overwritten.
 
 Existing installations are stopped, copied and verified before the new folder
