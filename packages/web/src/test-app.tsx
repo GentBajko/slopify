@@ -161,6 +161,11 @@ function testRouter(ui: ReactNode) {
         path: "channels/$channelId",
         component: nowhere,
       }),
+      tutorial: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "help/tutorials/$page",
+        component: nowhere,
+      }),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });

@@ -605,6 +605,40 @@
     gap: 28px;
     min-width: 0;
   }
+  /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
+     stays in reach however long the page is. */
+  .sl-workspace.sl-workspace--tutorials {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  .sl-workspace--tutorials .sl-workspace__sections {
+    max-height: calc(100dvh - var(--space-5) * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+  }
+  .sl-tutorials-nav__link,
+  .sl-tutorials-hit {
+    display: block;
+    padding: 5px 10px;
+    border-radius: var(--radius-control);
+    color: var(--color-ink-2);
+    font-size: 13px;
+    line-height: 19px;
+    text-decoration: none;
+  }
+  .sl-tutorials-nav__link:hover,
+  .sl-tutorials-hit:hover {
+    color: var(--color-ink);
+    background: var(--color-raised);
+  }
+  .sl-tutorials-nav__link[aria-current="page"] {
+    color: var(--color-ink);
+    background: var(--color-accent-tint);
+    font-weight: 600;
+  }
+  .sl-tutorials-hit {
+    padding: 8px 10px;
+  }
   .sl-listdetail {
     display: grid;
     grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
@@ -802,6 +836,13 @@
     }
   }
   @media (max-width: 899px) {
+    .sl-workspace.sl-workspace--tutorials {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-workspace--tutorials .sl-workspace__sections {
+      position: static;
+      max-height: 40dvh;
+    }
     .sl-workspace.sl-workspace--play {
       grid-template-columns: minmax(0, 1fr);
     }

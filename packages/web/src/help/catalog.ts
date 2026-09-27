@@ -5,7 +5,7 @@ import { projectHelp } from "./entries/project.js";
 import { settingsHelp } from "./entries/settings.js";
 import type { HelpEntry } from "./entry.js";
 
-export type { HelpEntry } from "./entry.js";
+export type { HelpEntry, TutorialRef } from "./entry.js";
 
 // Every info button's text, in one place. An id is `area.thing` (`play.voice`,
 // `settings.backups.keep`); the area files only split the list so it stays readable. A test
@@ -24,5 +24,5 @@ export function helpEntry(id: HelpId, vars?: Readonly<Record<string, string>>): 
   const entry: HelpEntry = catalog[id];
   if (vars === undefined) return entry;
   const fill = (text: string) => text.replace(/\{(\w+)\}/g, (all, name) => vars[name] ?? all);
-  return { title: fill(entry.title), body: fill(entry.body) };
+  return { ...entry, title: fill(entry.title), body: fill(entry.body) };
 }

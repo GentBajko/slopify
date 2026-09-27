@@ -5,6 +5,7 @@ import {
   createRouter,
   lazyRouteComponent,
   redirect,
+  useLocation,
   useNavigate,
 } from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
@@ -30,6 +31,7 @@ import { PromptsRoute } from "@/routes/prompts";
 import { SchedulesRoute } from "@/routes/schedules";
 import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
+import { TutorialsRoute } from "@/routes/tutorials";
 import { WelcomeRoute } from "@/routes/welcome";
 
 // A code-based route tree: a handful of screens need no file convention, and the
@@ -302,6 +304,43 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+// Help → Tutorials: the wiki's pages. The page is in the path, the section in the hash (the
+// wiki's own anchors), and `q` the words a search result was opened with.
+interface TutorialsSearch {
+  readonly q?: string;
+}
+
+const tutorialsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "help/tutorials/$page",
+  validateSearch: (search: Record<string, unknown>): TutorialsSearch =>
+    typeof search.q === "string" && search.q.trim() !== "" ? { q: search.q.slice(0, 200) } : {},
+  component: TutorialsPage,
+});
+
+function TutorialsPage() {
+  const { page } = tutorialsRoute.useParams();
+  const { q } = tutorialsRoute.useSearch();
+  const hash = useLocation({ select: (location) => location.hash });
+  return <TutorialsRoute page={page} anchor={hash === "" ? undefined : hash} words={q} />;
+}
+
+// /help and /help/tutorials open the tutorials' home page.
+const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "help",
+  beforeLoad: () => {
+    throw redirect({ to: "/help/tutorials/$page", params: { page: "Home" } });
+  },
+});
+const tutorialsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "help/tutorials",
+  beforeLoad: () => {
+    throw redirect({ to: "/help/tutorials/$page", params: { page: "Home" } });
+  },
+});
+
 // Usage is a Settings section now; the old address still works.
 const usageRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -532,6 +571,9 @@ const routeTree = rootRoute.addChildren({
   documentThemeRoute,
   settingsRoute,
   usageRoute,
+  helpRoute,
+  tutorialsIndexRoute,
+  tutorialsRoute,
   ...devRoutes,
 });
 

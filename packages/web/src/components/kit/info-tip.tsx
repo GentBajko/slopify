@@ -1,13 +1,16 @@
-import { InfoIcon } from "lucide-react";
+import { Link, useRouter } from "@tanstack/react-router";
+import { ArrowRightIcon, InfoIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import { type HelpId, helpEntry } from "@/help/catalog";
+import { type HelpId, helpEntry, type TutorialRef } from "@/help/catalog";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover.js";
+import { tutorialHref } from "@/tutorials/links";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "./popover.js";
 
 // Help hides until asked. A press (not a hover) opens it, so touch and keyboard reach the same
 // text a pointer does, and nothing below the control moves when it opens. Esc closes it. The
 // words come from the help catalogue (src/help/catalog.ts), never from the call site, so one
-// thing is explained the same way on every screen.
+// thing is explained the same way on every screen. An entry with a tutorial section ends in
+// Learn more, which opens Help → Tutorials there and closes the popover.
 export function InfoTip({
   id,
   label,
@@ -43,8 +46,40 @@ export function InfoTip({
             {paragraph}
           </p>
         ))}
+        {entry.tutorial === undefined ? null : <LearnMore tutorial={entry.tutorial} />}
       </PopoverContent>
     </Popover>
+  );
+}
+
+// Learn more: the tutorial section, in the app. A router link that closes the popover; a plain
+// link where no router is mounted (a component drawn on its own).
+function LearnMore({ tutorial }: { readonly tutorial: TutorialRef }): ReactElement {
+  const router = useRouter({ warn: false });
+  const look = "sl-link inline-flex items-center gap-1 text-small";
+  const words = (
+    <>
+      Learn more
+      <ArrowRightIcon aria-hidden="true" className="size-[13px]" />
+    </>
+  );
+  if (!router)
+    return (
+      <a href={tutorialHref(tutorial.page, tutorial.anchor)} className={look}>
+        {words}
+      </a>
+    );
+  return (
+    <PopoverClose asChild>
+      <Link
+        to="/help/tutorials/$page"
+        params={{ page: tutorial.page }}
+        {...(tutorial.anchor === undefined ? {} : { hash: tutorial.anchor })}
+        className={look}
+      >
+        {words}
+      </Link>
+    </PopoverClose>
   );
 }
 

@@ -8,6 +8,8 @@ node_modules
 docs
 # The patch notes ship inside the app (packages/app/scripts/copy-assets.mjs).
 !docs/patch-notes
+# So do the tutorials (Help → Tutorials).
+!docs/wiki
 .slopify*
 *.log
 *.tgz

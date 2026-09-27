@@ -17,3 +17,12 @@ cpSync(
   new URL("../dist/patch-notes/", import.meta.url),
   { recursive: true },
 );
+
+// The tutorials Help → Tutorials shows and GET /api/tutorials serves: the GitHub wiki's pages.
+cpSync(
+  new URL("../../../docs/wiki/", import.meta.url),
+  new URL("../dist/tutorials/", import.meta.url),
+  {
+    recursive: true,
+  },
+);

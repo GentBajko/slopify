@@ -62,6 +62,7 @@ import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { trashRoutes } from "./trash.js";
 import { tutorialRoutes } from "./tutorial.js";
+import { tutorialPagesRoutes } from "./tutorials.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 import { whatsNewRoutes } from "./whats-new.js";
@@ -135,6 +136,9 @@ export interface AppDeps {
   readonly version: string;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
   readonly patchNotesDir?: string;
+  // Where the bundled tutorials are (the wiki's <Page>.md and _Sidebar.md); the build's own
+  // copy when left out.
+  readonly tutorialsDir?: string;
   readonly webDist: string;
   // Where the build put the Slopify Studio extension's zips (`scripts/copy-extension.mjs`);
   // absent, Settings' Download answers that this copy doesn't include them.
@@ -213,6 +217,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/tutorial", tutorialRoutes(deps))
       .route("/whats-new", whatsNewRoutes(deps))
       .route("/patch-notes", patchNotesRoutes(deps))
+      .route("/tutorials", tutorialPagesRoutes(deps))
       .route("/providers", providerRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
   );

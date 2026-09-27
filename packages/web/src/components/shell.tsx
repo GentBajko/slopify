@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   BookIcon,
+  BookOpenIcon,
   CalendarIcon,
   FilmIcon,
   HouseIcon,
@@ -26,6 +27,7 @@ import {
   useCommandPalette,
 } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { ButtonLink } from "@/components/kit/link";
 import { Lamp } from "@/components/kit/status";
 import { Logo } from "@/components/logo";
 import { FirstRunNotice } from "@/components/notice";
@@ -42,6 +44,7 @@ import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
 import { TutorialProvider } from "@/tutorial/context";
 import { TutorialLauncher } from "@/tutorial/launcher";
+import { TutorialCommands } from "@/tutorials/commands";
 import { UpdateWidget } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
@@ -120,6 +123,22 @@ const destinations: readonly Destination[] = [
     phone: true,
   },
 ];
+
+// Help → Tutorials, beside the interactive tutorial's button: the guides to every screen.
+function TutorialsLink(): ReactElement {
+  return (
+    <ButtonLink
+      to="/help/tutorials/$page"
+      params={{ page: "Home" }}
+      variant="icon"
+      aria-label="Tutorials"
+      data-tip="Tutorials"
+      className="shrink-0"
+    >
+      <BookOpenIcon {...iconProps} />
+    </ButtonLink>
+  );
+}
 
 export function isActive(pathname: string, match: readonly string[]): boolean {
   return match.some((path) =>
@@ -237,6 +256,15 @@ function NavigationCommands() {
     shortcut: shortcuts.goSettings,
   });
   useCommand({
+    id: "nav.tutorials",
+    title: "Open tutorials",
+    group: "Go to",
+    run: () => {
+      void navigate({ to: "/help/tutorials/$page", params: { page: "Home" } });
+    },
+    keywords: ["help", "guide", "wiki", "docs", "how"],
+  });
+  useCommand({
     id: "nav.usage",
     title: "Open usage and costs",
     group: "Go to",
@@ -330,6 +358,7 @@ function ShellContent() {
       <NavigationCommands />
       <GlobalCommands />
       <PatchNotesCommand />
+      <TutorialCommands />
       <ChannelCommands />
       <aside className="sl-app__rail" aria-label="App">
         <Link to="/" className="sl-wordmark">
@@ -402,6 +431,7 @@ function ShellContent() {
             {wide ? (
               <>
                 <UpdateWidget reload={() => window.location.reload()} />
+                <TutorialsLink />
                 <TutorialLauncher />
               </>
             ) : null}
@@ -450,6 +480,7 @@ function ShellContent() {
                 </a>
               ))}
               <UpdateWidget reload={() => window.location.reload()} />
+              <TutorialsLink />
               <TutorialLauncher />
             </div>
           </header>
