@@ -1,25 +1,16 @@
 WEBVTT
 
-1
-00:00:00.000 --> 00:00:04.551
-One workflow. A finished video.
+00:00:00.000 --> 00:00:02.506
+Projects: every run with its state. The demo project is finished.
 
-2
-00:00:04.551 --> 00:00:10.644
-Write once. Reuse with {{keywords}}.
+00:00:02.506 --> 00:00:10.726
+Play: type the topic, pick the saved prompts, check what the run will make.
 
-3
-00:00:10.644 --> 00:00:17.268
-Choose your prompts. Fill in the details.
+00:00:10.726 --> 00:00:13.226
+The finished project: the video with captions, ready to download.
 
-4
-00:00:17.268 --> 00:00:26.016
-Keep the outputs you need: video, PDF, YouTube description.
+00:00:13.226 --> 00:00:16.947
+The YouTube description with chapter timestamps, and the tags, each with a Copy button.
 
-5
-00:00:26.016 --> 00:00:30.670
-Review everything before it runs.
-
-6
-00:00:30.670 --> 00:00:40.867
-A completed project. Every output in one place.
+00:00:16.947 --> 00:00:21.161
+Shorts: vertical clips picked from the video, each with its own title and hashtags.
