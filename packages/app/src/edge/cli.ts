@@ -1,31 +1,25 @@
 #!/usr/bin/env node
-import { parseArgs } from "node:util";
 import { type Config, configFrom } from "../kernel/config/index.js";
 import { readVersion } from "../kernel/version.js";
 import { boot } from "../main.js";
 import { forwardManagedUpdate } from "../updater/forward.js";
 import { askTerminal, autostartFlag, settleAutostart } from "./autostart/prompt.js";
+import { helpText, parseCli } from "./cli-args.js";
 import { openBrowser } from "./open-browser.js";
 import { installSignalShutdown } from "./signal-shutdown.js";
 
-const { values, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    port: { type: "string" },
-    host: { type: "string" },
-    "data-dir": { type: "string" },
-    "projects-dir": { type: "string" },
-    "no-open": { type: "boolean" },
-    docker: { type: "boolean" },
-    "host-cli": { type: "string" },
-    "accept-host-cli": { type: "boolean" },
-    autostart: { type: "boolean" },
-    "no-autostart": { type: "boolean" },
-  },
-});
-
 let config: Config | undefined;
 try {
+  const parsed = parseCli(process.argv.slice(2));
+  if (parsed.kind === "help") {
+    console.log(helpText(readVersion()));
+    process.exit(0);
+  }
+  if (parsed.kind === "version") {
+    console.log(readVersion());
+    process.exit(0);
+  }
+  const { values, positionals } = parsed;
   const autostart = autostartFlag(values);
   const [action, ...extra] = positionals;
   if (extra.length > 0 || (action !== undefined && action !== "install" && action !== "update"))
