@@ -24,13 +24,30 @@ export interface CatalogueStatus {
 
 const post = { method: "POST" } as const;
 
-export async function testKey(api: Api, provider: ProviderId): Promise<KeyTestOutcome> {
+// With `pasted`, that unsaved key is tried instead of the saved one; the server neither stores
+// nor logs it.
+export async function testKey(
+  api: Api,
+  provider: ProviderId,
+  pasted?: string,
+): Promise<KeyTestOutcome> {
   return read<KeyTestOutcome>(
-    await api.fetch(`${api.origin}/api/providers/${provider}/key/test`, post),
+    await api.fetch(
+      `${api.origin}/api/providers/${provider}/key/test`,
+      pasted === undefined
+        ? post
+        : {
+            ...post,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ key: pasted }),
+          },
+    ),
   );
 }
-export async function checkHealth(api: Api): Promise<HealthReport> {
-  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health`, post));
+// Every provider, or only `provider` (a sign-in fix-it's Check again).
+export async function checkHealth(api: Api, provider?: ProviderId): Promise<HealthReport> {
+  const only = provider === undefined ? "" : `?provider=${encodeURIComponent(provider)}`;
+  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health${only}`, post));
 }
 export async function readCatalogue(api: Api): Promise<CatalogueStatus> {
   return read<CatalogueStatus>(await api.fetch(`${api.origin}/api/providers/catalogue`));

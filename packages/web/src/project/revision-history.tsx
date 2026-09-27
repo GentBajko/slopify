@@ -3,6 +3,8 @@ import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { MediaFrame } from "@/components/kit/media";
+import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
@@ -137,11 +139,9 @@ export function RevisionHistory({
                   <details>
                     <summary>Preview retained output</summary>
                     {output.output.role === "video" ? (
-                      // biome-ignore lint/a11y/useMediaCaption: retained revisions may predate subtitles; their original files remain inspectable.
-                      <video
-                        className="max-h-[480px] max-w-full"
-                        controls
-                        preload="metadata"
+                      <Player
+                        className="max-w-[640px]"
+                        label={outputLabel(output.output)}
                         src={revisionFileUrl(
                           api,
                           projectId,
@@ -165,10 +165,11 @@ export function RevisionHistory({
                         )}
                       />
                     ) : output.output.role === "image" || output.output.role === "thumbnail" ? (
-                      <img
-                        className="max-h-[480px] max-w-full object-contain"
+                      <MediaFrame
+                        className="max-w-[480px]"
                         alt={outputLabel(output.output)}
-                        loading="lazy"
+                        title={outputLabel(output.output)}
+                        meta={output.selected ? "Current" : "Earlier result"}
                         src={revisionFileUrl(
                           api,
                           projectId,

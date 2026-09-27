@@ -1,3 +1,4 @@
+import { tutorialSessionSchema } from "@app/slices/settings/tutorial-schema.js";
 import { describe, expect, it } from "vitest";
 import { playSections } from "@/play/sections";
 import { settingsSections } from "@/routes/settings";
@@ -11,6 +12,12 @@ describe("tutorial steps point at screens that exist", () => {
     // runner.tsx opens "voices" for the voice step and "providers" for the key steps.
     for (const step of tutorialSteps.filter((one) => one.page === "settings"))
       expect(sections.has(step.id === "voice" ? "voices" : "providers")).toBe(true);
+  });
+
+  it("saves every step the server accepts, so a reload resumes at any of them", () => {
+    expect(tutorialSteps.map((step) => step.id)).toEqual(
+      tutorialSessionSchema.shape.stepId.options,
+    );
   });
 
   it("opens Play sections that Play still has, for every Play step", () => {

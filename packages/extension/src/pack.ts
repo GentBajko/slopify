@@ -29,11 +29,15 @@ export interface PackItem {
 export interface ActivePack {
   readonly pack: { readonly projectId: string; readonly projectTitle: string };
   readonly item: PackItem;
+  // How many items wait to be filled, this one included. Absent from an older Slopify.
+  readonly waiting?: number | undefined;
 }
 
 // What the background worker hands the Studio page: the item, and its thumbnails' bytes, so
 // the page never talks to Slopify itself.
 export interface FillPayload {
+  readonly projectId: string;
+  readonly waiting?: number | undefined;
   readonly item: PackItem;
   readonly thumbnails: readonly {
     readonly filename: string;
@@ -47,7 +51,26 @@ export interface FillPayload {
 export type WorkerRequest =
   | { readonly type: "pair"; readonly base: string; readonly token: string }
   | { readonly type: "status" }
-  | { readonly type: "payload" };
+  | { readonly type: "payload" }
+  // The page filled this item: Slopify takes it out of the queue, so the next upload dialog
+  // gets the next one.
+  | { readonly type: "filled"; readonly projectId: string; readonly short: number | null };
+
+// The whole item as text, for pasting by hand when the dialog can't be filled.
+export function packText(item: PackItem): string {
+  const parts = [
+    `Title:\n${item.title}`,
+    `Description:\n${item.description}`,
+    `Tags:\n${item.tags.join(", ")}`,
+    `Playlist: ${item.playlist ?? "(none)"}`,
+    "Audience: No, it's not made for kids",
+  ];
+  if (item.alteredContent !== undefined)
+    parts.push(
+      `AI use (under Show more): ${item.alteredContent.altered ? "Yes" : "No"}. ${item.alteredContent.why}`,
+    );
+  return `${parts.join("\n\n")}\n`;
+}
 
 export type WorkerAnswer<T> =
   | { readonly ok: true; readonly value: T }

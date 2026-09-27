@@ -376,7 +376,7 @@ it("shows a template's keywords with what each feeds, the topic saved empty", as
   expect(rows[1]?.textContent).toContain("Feeds Article");
 });
 
-it("renames a template from Edit, saving on top of the version it read", async () => {
+it("opens a template beside the list from Edit or a press on its row, and renames it with the pencil", async () => {
   const user = userEvent.setup();
   const sent: unknown[] = [];
   renderRouted(
@@ -400,16 +400,19 @@ it("renames a template from Edit, saving on top of the version it read", async (
     }),
   );
   await user.click(await screen.findByRole("button", { name: `Edit ${template.name}` }));
-  const form = await screen.findByRole("form", { name: `Edit ${template.name}` });
-  const name = within(form).getByLabelText("Template name");
+  expect(
+    await screen.findByRole("region", { name: `Keywords of ${template.name}` }),
+  ).not.toBeNull();
+  // The row's name is its select button; the whole row is that button's target.
+  const row = screen.getByRole("button", { name: template.name });
+  expect(row.closest("li")?.getAttribute("aria-current")).toBe("true");
+  await user.click(screen.getByRole("button", { name: `Rename ${template.name}` }));
+  const name = screen.getByLabelText(`New name for ${template.name}`);
   await user.clear(name);
   await user.type(name, "Monthly documentary");
-  await user.click(within(form).getByRole("button", { name: "Save name" }));
+  await user.click(screen.getByRole("button", { name: "Save name" }));
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0]).toMatchObject({ baseVersion: 1, name: "Monthly documentary" });
-  await waitFor(() =>
-    expect(screen.queryByRole("form", { name: `Edit ${template.name}` })).toBeNull(),
-  );
 });
 
 it("duplicates a template as a named copy", async () => {

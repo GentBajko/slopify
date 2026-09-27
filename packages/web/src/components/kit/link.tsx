@@ -40,8 +40,8 @@ export const ButtonLink = createLink(ButtonAnchor);
 // A router link that reads as a link: `<TextLink to="/calendar">Calendar</TextLink>`.
 export const TextLink = createLink(TextAnchor);
 
-// A link to a file - a download, or a file opened in a new tab - that sits among the row's
-// buttons and so wears their look: [Download PDF] [Open PDF].
+// A plain href - a download, a file or an outside page opened in a new tab - that sits among
+// the row's buttons and so wears their look: [Download PDF] [Open PDF] [Open YouTube Studio].
 export function FileLink({
   href,
   ...props

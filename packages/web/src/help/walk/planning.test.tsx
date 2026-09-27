@@ -294,7 +294,7 @@ describe("the planning screens explain every control", () => {
       testDeps(channelRoutes),
     );
     await screen.findByRole("option", { name: "My channel" });
-    await screen.findByLabelText("Name of link 1");
+    await screen.findByRole("link", { name: "Open the default channel's links" });
     await waitFor(expectExplained);
   });
 });

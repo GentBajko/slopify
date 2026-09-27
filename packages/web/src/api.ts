@@ -37,7 +37,13 @@ import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { FilesView } from "@app/slices/storage/files-location.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
-import type { StudioPairingView, UploadPack } from "@app/slices/studio/model.js";
+import type { ProjectStorage } from "@app/slices/storage/trim.js";
+import type {
+  FillQueueItem,
+  StudioExtensionBrowser,
+  StudioPairingView,
+  UploadPack,
+} from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import type { DescriptionField } from "@app/slices/youtube/edits.js";
 import type { ProjectDescriptionEdits } from "@app/slices/youtube/edits-repo.js";
@@ -337,6 +343,13 @@ export async function openFilesFolder(
   );
 }
 
+// One project's outputs and working files, and what Keep outputs only would free now.
+export async function readProjectStorage(api: Api, projectId: string): Promise<ProjectStorage> {
+  return read<ProjectStorage>(
+    await api.fetch(`${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}`),
+  );
+}
+
 // Keep outputs only: a finished project drops the working files it was made from.
 export async function keepOutputsOnly(
   api: Api,
@@ -453,9 +466,12 @@ export async function sendTestNotification(api: Api, url: string): Promise<void>
   );
 }
 
-// Settings → YouTube Studio: the playlist every upload pack names, and the extension's pairing.
+// Settings → YouTube Studio: the default playlist, each channel's own, and the extension's
+// pairing.
 export interface StudioSettingsBody {
   readonly playlist: string | null;
+  // By channel id; a channel missing here uses `playlist`.
+  readonly channelPlaylists: Readonly<Record<string, string>>;
   readonly pairing: StudioPairingView;
 }
 
@@ -463,11 +479,40 @@ export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> 
   return read<StudioSettingsBody>(await api.client.studio.settings.$get());
 }
 
+// The default playlist, or a channel's own when `channelId` is given.
 export async function saveStudioPlaylist(
   api: Api,
   playlist: string,
+  channelId?: string,
 ): Promise<{ readonly playlist: string | null }> {
-  return detailed(await api.client.studio.settings.playlist.$put({ json: { playlist } }));
+  return detailed(
+    await api.client.studio.settings.playlist.$put({
+      json: channelId === undefined ? { playlist } : { playlist, channelId },
+    }),
+  );
+}
+
+// Where Settings' and Prepare upload's Download fetch the extension from.
+export function studioExtensionUrl(api: Api, browser: StudioExtensionBrowser): string {
+  return `${api.origin}/api/studio/extension/${browser}.zip`;
+}
+
+// What waits for the extension, oldest first.
+export async function readStudioQueue(api: Api): Promise<readonly FillQueueItem[]> {
+  return (await read<{ queue: readonly FillQueueItem[] }>(await api.client.studio.queue.$get()))
+    .queue;
+}
+
+export async function removeFromStudioQueue(
+  api: Api,
+  projectId: string,
+  short: number | null,
+): Promise<readonly FillQueueItem[]> {
+  return (
+    await detailed<{ queue: readonly FillQueueItem[] }>(
+      await api.client.studio.queue.remove.$post({ json: { projectId, short } }),
+    )
+  ).queue;
 }
 
 export async function newStudioPairing(api: Api): Promise<{ readonly pairing: StudioPairingView }> {
@@ -495,18 +540,20 @@ export async function saveRealFootage(
   );
 }
 
-// Makes this pack item the one the Studio extension fills in next.
+// Puts this pack item in the queue the Studio extension fills from, one upload dialog each;
+// answers the queue as it now is.
 export async function chooseUploadPack(
   api: Api,
   projectId: string,
   short: number | undefined,
-): Promise<void> {
-  await detailed(
+): Promise<readonly FillQueueItem[]> {
+  const answer = await detailed<{ queue?: readonly FillQueueItem[] }>(
     await api.client.studio.packs[":projectId"].choose.$post({
       param: { projectId },
       json: short === undefined ? {} : { short },
     }),
   );
+  return answer.queue ?? [];
 }
 
 export async function listVoices(api: Api): Promise<VoiceListBody> {
@@ -652,7 +699,7 @@ export type {
   UsedBy,
 };
 
-// Settings → Channel links: the named links `{{Name}}` fills from in YouTube descriptions.
+// The older Settings list of named links: the default channel's until its Brand tab saves its own.
 export async function readChannelLinks(api: Api): Promise<readonly ChannelLink[]> {
   return (
     await read<{ links: readonly ChannelLink[] }>(await api.client.settings["channel-links"].$get())
@@ -668,6 +715,16 @@ export async function saveChannelLinks(
       await api.client.settings["channel-links"].$put({ json: { links: [...links] } }),
     )
   ).links;
+}
+
+// The links of a project's channel (its Brand tab), which its placeholders fill from.
+export async function readProjectChannelLinks(
+  api: Api,
+  projectId: string,
+): Promise<{ readonly channelId: string; readonly links: readonly ChannelLink[] }> {
+  return read<{ channelId: string; links: readonly ChannelLink[] }>(
+    await api.client.projects[":id"]["channel-links"].$get({ param: { id: projectId } }),
+  );
 }
 
 // The project page's hand edits to the YouTube description (`slices/youtube/edits.ts`).

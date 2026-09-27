@@ -40,7 +40,13 @@ import { listVoices } from "../settings/repo.js";
 import { realPersonVoicesKey, voiceIdMax, voiceNameMax } from "../settings/voices.js";
 import { whatsNewSeenKey } from "../settings/whats-new.js";
 import { studioPlaylistMax } from "../studio/model.js";
-import { studioPairingKey, studioPlaylistKey, studioRealFootageKey } from "../studio/settings.js";
+import {
+  studioChannelPlaylistPrefix,
+  studioFillQueuePrefix,
+  studioPairingKey,
+  studioPlaylistKey,
+  studioRealFootageKey,
+} from "../studio/settings.js";
 import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
@@ -478,6 +484,8 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
       key === "first-run.done" ||
       key === notificationUrlKey ||
       key === studioPairingKey ||
+      // What waits to be filled in Studio belongs to this install's pairing.
+      key.startsWith(studioFillQueuePrefix) ||
       key === whatsNewSeenKey ||
       key === patchNotesSeenKey
     )
@@ -486,7 +494,8 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === "loudness") storedLoudness.parse(parsed);
-    else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
+    else if (key === studioPlaylistKey || key.startsWith(studioChannelPlaylistPrefix))
+      storedPlaylist.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
     else if (
       key === realPersonVoicesKey ||

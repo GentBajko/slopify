@@ -38,7 +38,6 @@
             <span class="glyph glyph-coffee" aria-hidden="true"></span>
             Buy Me a Coffee
           </a>
-          <span data-donate hidden></span>
           <a href="/channel.html" aria-current="page">How I run a channel</a>
         </nav>
       </header>
@@ -46,6 +45,8 @@
       <main id="main">
         <article class="reading">
           <h1>How I run a channel with it</h1>
+          <!-- NEEDS USER: the channel's real name and YouTube URL, if it should be named and
+               linked here. The lede reads fine without them. -->
           <p class="lede">
             Slopify was built to run one channel: slow, narrated lore for people falling
             asleep. This is how a lore channel runs on it, including the parts that are still
@@ -96,9 +97,10 @@
           <template data-release="3.0">
             <p>
               From 3.0 the schedule also has a series brief: what the channel covers and which
-              topics are worth a video first. When the queue runs low, it asks for the next
-              topics itself, never repeats a title it has made or queued, and can hold them for
-              approval.
+              topics are worth a video first. When the queue runs low, it suggests the next
+              topics itself and never repeats a title it has made or queued. This channel has it
+              hold them: the suggestions wait on the Calendar, and only the ones approved there
+              join the queue.
             </p>
           </template>
 
@@ -136,6 +138,8 @@
           </template>
 
           <h2 id="cost">What it costs</h2>
+          <!-- NEEDS USER: a real per-video cost from the channel's Settings → Usage, if it
+               should be quoted here. The paragraph reads fine without it. -->
           <p>
             The review before Start shows the estimate for the run. Articles written with the
             Claude Code, Codex or Gemini CLI cost nothing extra on a subscription; narration and
@@ -145,7 +149,9 @@
 
           <h2 id="by-hand">What is still by hand</h2>
           <ul>
-            <li>Picking the topics, and reading the article before it is narrated.</li>
+            <li>
+              Deciding which topics get made, and reading the article before it is narrated.
+            </li>
             <li>Watching the finished video once before it goes up.</li>
             <li>Pressing Publish in YouTube Studio. That stays with the person on purpose.</li>
           </ul>
@@ -169,7 +175,6 @@
           <span class="glyph glyph-coffee" aria-hidden="true"></span>
           Buy Me a Coffee
         </a>
-        <span data-donate="donate" hidden></span>
       </footer>
     </div>
   </body>

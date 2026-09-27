@@ -23,6 +23,7 @@ import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const providerParam = z.object({ id: z.enum(providerIds) });
+const healthQuery = z.object({ provider: z.enum(providerIds).optional() });
 // ceiling: no format check is allowed on a key, so the only thing said about the value is
 // that it is a string of a length a key could plausibly have. Raise the bound if a provider
 // ever issues something longer.
@@ -79,20 +80,24 @@ export function providerRoutes(deps: AppDeps) {
         return c.body(null, 204);
       })
       // "Check all": every CLI signed in, every key valid, every chosen model still offered.
-      .post("/health", async (c) => {
+      // `?provider=codex` checks that one only (a sign-in fix-it's Check again).
+      .post("/health", zValidator("query", healthQuery, onInvalid), async (c) => {
         if (deps.fetch === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
         const catalogue = deps.catalogue;
         return c.json(
-          await checkProviderHealth({
-            ...readiness,
-            clock: deps.clock,
-            fetch: deps.fetch,
-            probes: keyProbes,
-            ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
-            ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }),
-            ...(deps.cliLogin === undefined ? {} : { login: deps.cliLogin }),
-          }),
+          await checkProviderHealth(
+            {
+              ...readiness,
+              clock: deps.clock,
+              fetch: deps.fetch,
+              probes: keyProbes,
+              ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
+              ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }),
+              ...(deps.cliLogin === undefined ? {} : { login: deps.cliLogin }),
+            },
+            c.req.valid("query").provider,
+          ),
         );
       })
       // Checks for new, repriced and retired models now instead of waiting for the daily check.
@@ -229,16 +234,27 @@ export function providerRoutes(deps: AppDeps) {
           return c.json(keyStatus(keys, id));
         },
       )
-      // The Test button: the cheapest read the provider offers, answered in plain words.
+      // The Test button: the cheapest read the provider offers, answered in plain words. With
+      // a `key` in the body, that pasted key is tried instead of the saved one and is neither
+      // stored nor logged; with no body, the saved key is.
       .post("/:id/key/test", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
         if (providerById(id).auth === "cli") return refusal(c, id, "cli-provider");
         if (deps.fetch === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        const raw: unknown = await c.req.json().catch(() => undefined);
+        const candidate = raw === undefined ? undefined : keyBody.safeParse(raw);
+        if (candidate !== undefined && !candidate.success)
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
+          });
         return c.json(
           await testProviderKey(
             { db: deps.db, clock: deps.clock, fetch: deps.fetch, probes: keyProbes },
             id,
+            candidate?.data.key,
           ),
         );
       })

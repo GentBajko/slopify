@@ -112,6 +112,27 @@ export async function updateProjectTemplate(
     templateReplySchema,
   );
 }
+// A rename from the Library list: the template's setup as saved, under a new name. The server
+// keeps it as a new version, the way every template change is kept. Resolves to null when saved,
+// else the sentence to show beside the name.
+export async function renameProjectTemplate(
+  api: Api,
+  id: string,
+  name: string,
+): Promise<string | null> {
+  const current = await readProjectTemplate(api, id);
+  if (!current.ok)
+    return `The name wasn't saved: ${current.message} Press Refresh templates, then rename it again.`;
+  const reply = await updateProjectTemplate(api, id, {
+    baseVersion: current.value.version,
+    mutationId: crypto.randomUUID(),
+    name,
+    document: current.value.document,
+  });
+  return reply.ok
+    ? null
+    : `The name wasn't saved: ${reply.message}${reply.reason === "conflict" ? " Press Refresh templates, then rename it again." : ""}`;
+}
 export async function saveTemplateFromProject(
   api: Api,
   projectId: string,
@@ -142,6 +163,23 @@ export async function deleteProjectTemplate(
   );
   if (response.ok) return { ok: true, value: null };
   return responseOf(response, z.null());
+}
+// A finished audiobook chapter's next chapter, as a new Play draft (`next-chapter.ts`).
+export async function makeNextChapter(
+  api: Api,
+  projectId: string,
+  draftId: string,
+): Promise<TemplateReply<DraftView>> {
+  return responseOf(
+    await api.fetch(
+      `${root(api)}/next-chapter/${encodeURIComponent(projectId)}`,
+      json("POST", { id: z.uuid().parse(draftId) }),
+    ),
+    z.union([
+      draftViewSchema,
+      z.object({ draft: draftViewSchema }).transform((value) => value.draft),
+    ]),
+  );
 }
 export async function instantiateProjectTemplate(
   api: Api,

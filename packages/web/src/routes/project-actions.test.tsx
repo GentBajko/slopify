@@ -2,6 +2,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CommandPaletteProvider,
+  CommandRegistry,
+  matchCommands,
+} from "@/components/kit/command-palette";
+import { intents, requestIntent } from "@/lib/intents";
+import {
   jsonAnswer,
   openProjectEditor,
   openProjectTab,
@@ -84,6 +90,49 @@ describe("the destructive actions", () => {
     await waitFor(() => {
       expect(made).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("opens the Images section and asks to regenerate image 1 when asked from another screen", async () => {
+    const made = vi.fn();
+    // What "Regenerate image 1 in …" from Home leaves before it navigates here.
+    requestIntent(intents.showImages("p1"));
+    requestIntent(intents.regenerateImage("p1"), 1);
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "POST /api/projects/p1/images/o-image-1/regenerate": (request) => {
+          made();
+          return jsonAnswer(finished)(request);
+        },
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
+    expect(made).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+    await waitFor(() => {
+      expect(made).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole("region", { name: "Images" })).not.toBeNull();
+  });
+
+  it("regenerates any image by number from the palette, shown or not", async () => {
+    const registry = new CommandRegistry();
+    renderRouted(
+      <CommandPaletteProvider registry={registry}>
+        <ProjectRoute projectId="p1" />
+      </CommandPaletteProvider>,
+      deps({}),
+    );
+    await waitFor(() =>
+      expect(registry.list().some((one) => one.id === "project.image.regenerate")).toBe(true),
+    );
+    const [found] = matchCommands(registry.list(), "regenerate image 1");
+    expect(found?.title).toBe("Regenerate image 1");
+    void found?.run();
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
   });
 
   it("confirms before making a whole stage again, from the section's More", async () => {

@@ -335,6 +335,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clock,
         probe: nodeCliProbe,
         hostCli,
+        ffmpeg,
       }),
       catalogue,
     );
@@ -641,6 +642,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       log,
       version,
       webDist: fileURLToPath(new URL("../dist/web", import.meta.url)),
+      extensionDist: fileURLToPath(new URL("../dist/extension", import.meta.url)),
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,

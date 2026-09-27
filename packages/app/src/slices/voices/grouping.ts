@@ -7,8 +7,11 @@ import type { ScriptTurn } from "./script.js";
 // ElevenLabs text-to-dialogue (POST /v1/text-to-dialogue/stream): `inputs` of {text, voice_id},
 // at most 10 distinct voices and about 2,000 characters across the inputs per request, on
 // eleven_v3 (https://elevenlabs.io/docs/api-reference/text-to-dialogue/stream).
-// ceiling: Gemini's two-speaker TTS is the other native model, but Slopify has no Google TTS
-// adapter yet; adding it is a row here plus the adapter.
+// Gemini TTS (generateContent with multiSpeakerVoiceConfig): exactly two speakers per request,
+// so a run of turns among three or more voices splits wherever a third voice would join; turns
+// all in one voice are one request too. The input limit is counted in tokens (about 8,000 on
+// the preview models); 3,000 characters keeps a conversation well inside it
+// (https://ai.google.dev/gemini-api/docs/speech-generation).
 export interface DialogueCapability {
   readonly provider: string;
   readonly models: readonly string[];
@@ -17,6 +20,16 @@ export interface DialogueCapability {
 }
 export const dialogueCapabilities: readonly DialogueCapability[] = [
   { provider: "elevenlabs", models: ["eleven_v3"], maxVoices: 10, maxCharacters: 2000 },
+  {
+    provider: "google-tts",
+    models: [
+      "gemini-2.5-flash-preview-tts",
+      "gemini-2.5-pro-preview-tts",
+      "gemini-3.1-flash-tts-preview",
+    ],
+    maxVoices: 2,
+    maxCharacters: 3000,
+  },
 ];
 
 export function dialogueCapability(

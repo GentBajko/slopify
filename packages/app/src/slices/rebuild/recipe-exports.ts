@@ -98,6 +98,11 @@ export function exportRecipes(
             (audio.sections ?? []).map((section) => [section.title, section.firstTurn]),
             config.title,
             ...master.values,
+            // The book's title and chapter become the files' album and track tags; a project
+            // that is no chapter of a book keeps the values it always had.
+            ...(voices.book === undefined
+              ? []
+              : [["book-v1", voices.book.title, voices.book.chapter]]),
           ],
         },
         [...audio.keys, timing.key, ...master.keys],

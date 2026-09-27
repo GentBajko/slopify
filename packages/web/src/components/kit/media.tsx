@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./button.js";
+import { Player } from "./player.js";
 import { Lamp } from "./status.js";
 
 // Images and video live in a media frame: `screen` behind, a fixed aspect box so grids never
@@ -95,20 +96,37 @@ export function MediaFrame({
   );
 }
 
-// The one gallery grid: auto-fill 220px columns, or 150px portrait tiles for shorts.
+// The one gallery grid: auto-fill 220px columns, or 150px portrait tiles for shorts. Compact
+// is the same grid at 140px with a tighter gap, for a gallery inside a drawer, a side panel or
+// a Home card. `list` makes it a list whose children are `<li>` tiles.
 export function MediaGrid({
   shorts = false,
+  density = "default",
+  list = false,
   className,
   children,
   label,
 }: {
   readonly shorts?: boolean;
+  readonly density?: "default" | "compact";
+  readonly list?: boolean;
   readonly className?: string;
   readonly children: ReactNode;
   readonly label?: string;
 }): ReactElement {
-  return (
-    <section aria-label={label} className={cn("sl-grid", shorts && "sl-grid--shorts", className)}>
+  const classes = cn(
+    "sl-grid",
+    shorts && "sl-grid--shorts",
+    density === "compact" && "sl-grid--compact",
+    list && "m-0 list-none p-0",
+    className,
+  );
+  return list ? (
+    <ul aria-label={label} className={classes} data-slot="media-grid">
+      {children}
+    </ul>
+  ) : (
+    <section aria-label={label} className={classes} data-slot="media-grid">
       {children}
     </section>
   );
@@ -189,8 +207,13 @@ export function Lightbox({
               </div>
               <div className="sl-lightbox__stage">
                 {item.kind === "video" ? (
-                  // biome-ignore lint/a11y/useMediaCaption: generated narration has no caption track here; subtitles are burned in or shipped separately.
-                  <video key={item.src} src={item.src} poster={item.poster} controls />
+                  <Player
+                    key={item.src}
+                    src={item.src}
+                    label={item.alt}
+                    className="sl-lightbox__player"
+                    {...(item.poster === undefined ? {} : { poster: item.poster })}
+                  />
                 ) : (
                   <img key={item.src} src={item.src} alt={item.alt} />
                 )}

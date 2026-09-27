@@ -16,7 +16,7 @@ import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
 import { ambientBedFormOf } from "../video/ambient-bed.js";
-import { usesScriptPrompt } from "../voices/model.js";
+import { usesScriptPrompt, type VoicesSettings } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { createTemplate, readTemplate } from "./service.js";
 
@@ -77,7 +77,10 @@ export function createTemplateFromProject(
   });
 }
 
-function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): PlayDraftDocument {
+export function documentFromProject(
+  deps: TemplateDeps,
+  revision: ProjectRevision,
+): PlayDraftDocument {
   const config = revision.config;
   const prompts: LibrarySnapshot["prompts"][number][] = [];
   const entries: LibrarySnapshot["entries"][number][] = [];
@@ -232,7 +235,9 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       // it cuts every N seconds like the project did.
       ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
       ...(config.reviews === undefined ? {} : { reviews: reviewSettingsForm(config.reviews) }),
-      ...(config.voices === undefined ? {} : { voices: config.voices }),
+      // Without the book: every run of a template would otherwise be the same chapter. "Make the
+      // next chapter" (`next-chapter.ts`) sets it itself.
+      ...(config.voices === undefined ? {} : { voices: withoutBook(config.voices) }),
       ...(config.ambientBed === undefined
         ? {}
         : { ambientBed: ambientBedFormOf(config.ambientBed) }),
@@ -287,4 +292,9 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     previewText: "Every story begins with a word.",
     fontUpload: null,
   };
+}
+
+function withoutBook(voices: VoicesSettings): VoicesSettings {
+  const { book: _book, ...rest } = voices;
+  return rest;
 }

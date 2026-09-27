@@ -48,6 +48,13 @@ export function fileRoutes(deps: AppDeps) {
           return missing(c, result.reason);
         }
         const { download } = result;
+        // The YouTube description and tags as the page shows them, edits and links in.
+        if (download.text !== undefined)
+          return c.body(download.text, 200, {
+            "content-type": download.contentType,
+            "content-length": String(download.text.byteLength),
+            "content-disposition": disposition(download.filename),
+          });
         // ceiling: whole-file responses only. Seeking inside the finished video would
         // need a Range handler answering 206 with the requested slice.
         return c.body(Readable.toWeb(createReadStream(download.path)), 200, {

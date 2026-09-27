@@ -19,23 +19,25 @@ import {
   previousVideoLink,
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { CopyIcon, PencilIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
-  readChannelLinks,
   readDescriptionEdits,
+  readProjectChannelLinks,
   saveDescriptionEdit,
   saveProjectLinks,
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand } from "@/components/kit/command-palette";
 import { Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
+import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -61,10 +63,10 @@ const fieldTips = {
 // written, each editable in place. An edit is kept as the user's own and survives the next
 // regeneration: when the description is written again, a field the user changed keeps their
 // text and offers the new one (`slices/youtube/edits.ts`). `{{Name}}` placeholders fill from
-// Settings → Channel links and this project's own Previous video when shown and copied; one
-// without a link stays as typed and is marked. It is a part of the stage body, set off by a rule
-// and a heading rather than a box of its own; everything stays mounted while the step runs or
-// waits, so nothing moves when the text lands.
+// the project's channel's links (its Brand tab) and this project's own Previous video when
+// shown, copied and downloaded; one without a link stays as typed and is marked. It is a part
+// of the stage body, set off by a rule and a heading rather than a box of its own; everything
+// stays mounted while the step runs or waits, so nothing moves when the text lands.
 export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const id = useId();
   const { api } = useApp();
@@ -79,8 +81,8 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     queryFn: () => readDescriptionEdits(api, project.id),
   });
   const channelLinks = useQuery({
-    queryKey: keys.channelLinks,
-    queryFn: () => readChannelLinks(api),
+    queryKey: keys.projectChannelLinks(project.id),
+    queryFn: () => readProjectChannelLinks(api, project.id),
   });
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const notify = useToast();
@@ -111,6 +113,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     group: "This project",
     context: project.title,
     keywords: ["youtube", "description", "chapters", "clipboard"],
+    shortcut: shortcuts.copyDescription,
     run: () =>
       copyLatest.current.description === undefined
         ? notify("The description has not been written yet.", "info")
@@ -133,7 +136,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     descriptionText === undefined ? undefined : splitDescription(descriptionText, tagsText ?? "");
   const resolved = resolveFields(generated, edits.data?.fields ?? {});
   const shown = shownFields(resolved);
-  const links = mergeLinks(channelLinks.data ?? [], edits.data?.links ?? []);
+  const links = mergeLinks(channelLinks.data?.links ?? [], edits.data?.links ?? []);
   // The chapters as YouTube will take them (`slices/youtube/chapters.ts`): shown and copied
   // fitted, with a note saying what changed; the stored text and the user's edit stay as they
   // are, so editing starts from what was written.
@@ -229,6 +232,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             id={`${id}-description`}
             label="Description"
             copy={written ? () => copy(filledDescription.text, "description") : undefined}
+            keyshortcuts={ariaKeyShortcuts(shortcuts.copyDescription)}
             count={
               written
                 ? `${String(filledDescription.text.length)} / ${String(descriptionMaxCharacters)} characters`
@@ -266,7 +270,19 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       </div>
       {unknown.length === 0 ? null : (
         <p className="text-small text-waiting">
-          {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it in Settings → Channel links${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
+          {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it under Channel links on `}
+          {channelLinks.data === undefined ? (
+            "the channel's Brand tab"
+          ) : (
+            <Link
+              to="/channels/$channelId"
+              params={{ channelId: channelLinks.data.channelId }}
+              className="underline"
+            >
+              the channel's Brand tab
+            </Link>
+          )}
+          {`${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
         </p>
       )}
       <PreviousVideo
@@ -289,9 +305,12 @@ function PartHead({
   copy,
   count,
   over,
+  keyshortcuts,
 }: {
   readonly id: string;
   readonly label: string;
+  // The Copy button's key, as `aria-keyshortcuts`.
+  readonly keyshortcuts?: string | undefined;
   // Undefined until there is text to copy.
   readonly copy: (() => void) | undefined;
   readonly count: string | undefined;
@@ -313,6 +332,7 @@ function PartHead({
         variant="quiet"
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
+        aria-keyshortcuts={keyshortcuts}
         onClick={copy}
       >
         <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
@@ -554,7 +574,7 @@ function TagChips({
 }
 
 // This project's own Previous video, which `{{Previous video}}` fills with ahead of the one in
-// Settings → Channel links.
+// its channel's links.
 function PreviousVideo({
   projectId,
   edits,

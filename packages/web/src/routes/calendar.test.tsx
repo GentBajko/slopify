@@ -190,7 +190,173 @@ describe("the calendar", () => {
   });
 });
 
+describe("what needs you and what is ready", () => {
+  const project = (id: string, title: string, over: Record<string, unknown>) => ({
+    id,
+    title,
+    state: "done",
+    createdAt: inDays(0, 1),
+    finishedAt: inDays(0, 2),
+    scheduleId: null,
+    ...over,
+  });
+
+  it("lists the projects waiting for the person and the ones ready to upload, each with its action", async () => {
+    renderRouted(
+      <CalendarRoute />,
+      testDeps({
+        "GET /api/calendar": jsonAnswer({
+          from: inDays(0, 0),
+          to: inDays(28, 0),
+          runs: [],
+          projects: [
+            project("p-ready", "Ready one", { readyToUpload: true }),
+            project("p-review", "Held one", {
+              state: "pending",
+              finishedAt: null,
+              needs: "review",
+            }),
+            project("p-failed", "Broken one", { state: "failed", needs: "failed" }),
+            project("p-wait", "Waiting one", {
+              state: "running",
+              finishedAt: null,
+              limitWaits: [
+                {
+                  name: "Codex",
+                  stage: "images",
+                  resetsAt: inDays(0, 14),
+                  retryAt: inDays(0, 14),
+                },
+              ],
+            }),
+            project("p-done", "Uploaded one", {}),
+          ],
+          queued: [],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    const needs = await screen.findByRole("list", { name: "Needs you" });
+    const rows = within(needs).getAllByRole("listitem");
+    // Waiting for the person first, then ready to upload; a plain finished one is not here.
+    expect(rows.map((row) => within(row).getAllByRole("link")[0]?.textContent)).toEqual([
+      "Held one",
+      "Broken one",
+      "Ready one",
+    ]);
+    expect(within(rows[0] as HTMLElement).getByText("Waiting for your review")).not.toBeNull();
+    expect(
+      within(rows[0] as HTMLElement)
+        .getByRole("link", { name: "Open to review" })
+        .getAttribute("href"),
+    ).toBe("/projects/p-review");
+    expect(
+      within(rows[1] as HTMLElement).getByRole("link", { name: "Open to fix" }),
+    ).not.toBeNull();
+    expect(
+      within(rows[2] as HTMLElement).getByRole("button", { name: "Prepare upload" }),
+    ).not.toBeNull();
+    // On its day, a project waiting for CLI limits says when they reset.
+    const time = new Date(inDays(0, 14)).toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    expect(screen.getByText(`Waiting for Codex limits (resets at ${time})`)).not.toBeNull();
+    // The schedules themselves are edited from here.
+    expect(screen.getByRole("link", { name: "Edit schedules" }).getAttribute("href")).toBe(
+      "/schedules",
+    );
+  });
+});
+
+describe("the batch queue", () => {
+  it("shows every queued video in its order, and a paused one as paused (Projects no longer repeats it)", async () => {
+    const item = (projectId: string, title: string, position: number, state: string) => ({
+      projectId,
+      title,
+      batchId: "batch-1",
+      position,
+      state,
+      queuedAt: inDays(0, 1),
+    });
+    renderRouted(
+      <CalendarRoute />,
+      testDeps({
+        "GET /api/calendar": jsonAnswer({
+          from: inDays(0, 0),
+          to: inDays(28, 0),
+          runs: [],
+          projects: [
+            {
+              id: "q2",
+              title: "Second",
+              state: "paused",
+              createdAt: inDays(0, 1),
+              finishedAt: null,
+              scheduleId: null,
+              needs: "paused",
+            },
+          ],
+          queued: [item("q2", "Second", 1, "active"), item("q1", "First", 0, "queued")],
+        }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    const queue = await screen.findByRole("list", { name: "Batch queue" });
+    const rows = within(queue).getAllByRole("listitem");
+    expect(rows.map((row) => within(row).getByRole("link").textContent)).toEqual([
+      "First",
+      "Second",
+    ]);
+    expect(within(rows[0] as HTMLElement).getByText("1 in line")).not.toBeNull();
+    expect(within(rows[0] as HTMLElement).getByText("Waiting its turn")).not.toBeNull();
+    expect(within(rows[1] as HTMLElement).getByText("Paused")).not.toBeNull();
+  });
+});
+
 describe("suggested topics", () => {
+  it("offers the sign-in fix when suggesting topics failed, and asks again once signed in", async () => {
+    const user = userEvent.setup();
+    const failing = summary(scheduleId, "Lore", ["Tiamat"], {
+      topicGeneration: { mode: "hold", keepAtLeast: 10, llm: { provider: "codex", model: "gpt" } },
+      topics: {
+        held: 0,
+        generatingSince: null,
+        generatedAt: null,
+        failedAt: inDays(0, 1),
+        error:
+          "Couldn't generate topics: codex (gpt) did not answer: The Codex CLI is not signed in, or its sign-in has expired. Slopify tries again in 5 minutes.",
+      },
+    });
+    const generate = vi.fn(jsonAnswer({ started: true }));
+    renderRouted(
+      <CalendarRoute />,
+      deps(
+        {
+          "POST /api/providers/health": jsonAnswer({
+            checkedAt: inDays(0, 1),
+            providers: [
+              {
+                id: "codex",
+                displayName: "Codex",
+                family: "llm",
+                state: "ok",
+                checks: [{ label: "Signed in", state: "ok", detail: "" }],
+              },
+            ],
+          }),
+          [`POST /api/schedules/${scheduleId}/topics/generate`]: generate,
+        },
+        [failing],
+      ),
+    );
+    const panel = await screen.findByRole("region", { name: "Suggested topics for Lore" });
+    const alert = within(panel).getByRole("alert");
+    expect(within(alert).getByRole("button", { name: "Copy sign-in command" })).not.toBeNull();
+    await user.click(within(alert).getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(generate).toHaveBeenCalledOnce());
+  });
+
   const holding = summary(scheduleId, "Lore", ["Tiamat"], {
     topicGeneration: { mode: "hold", keepAtLeast: 10, llm: null },
     topics: { held: 2, generatingSince: null, generatedAt: null, failedAt: null, error: null },

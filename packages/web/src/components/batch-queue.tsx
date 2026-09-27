@@ -5,34 +5,10 @@ import { ListVideoIcon } from "lucide-react";
 import type { ProjectListing } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { SectionHead } from "@/components/kit/section-head";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
 import { projectsQuery } from "@/queries";
-export function BatchQueue() {
-  const { api } = useApp();
-  const queue = useQuery({
-    queryKey: ["batch-queue"],
-    queryFn: async () =>
-      read<{ queue: QueueEntry[] }>(await api.fetch(`${api.origin}/api/projects/queue`)),
-    refetchInterval: 2000,
-    retry: false,
-  });
-  const projects = useQuery(projectsQuery(api));
-  if (!queue.data?.queue.length) return null;
-  return (
-    <section aria-label="Video queue" className="mb-5 border-y border-line [&_ol]:px-0">
-      <SectionHead
-        title={`Video queue · ${String(queue.data.queue.length)} remaining`}
-        info="play.queue"
-        size="small"
-        className="min-h-10 items-center border-b border-line py-2"
-      />
-      <QueueList queue={queue.data.queue} projects={projects.data?.projects} />
-    </section>
-  );
-}
 
 // The queue as a count, for the project page bar: the list opens in a popover, so the page
 // under it never moves when a batch starts or drains.

@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
 import type { ProviderId } from "./model.js";
-import { providerById } from "./model.js";
+import { providerById, sharedKeyOf } from "./model.js";
 import { deleteKey, hasKey, keyOf, upsertKey } from "./repo.js";
 
 export interface KeysDeps {
@@ -75,8 +75,14 @@ export function keyForAttempt(deps: KeysDeps, provider: ProviderId): KeyLookup {
   if (providerById(provider).auth === "cli") {
     return { ok: false, reason: "cli-provider" };
   }
-  const key = keyOf(deps.db, provider);
+  const key = keyWithShared(deps.db, provider);
   return key === undefined ? { ok: false, reason: "key-missing" } : { ok: true, key };
+}
+
+// The provider's own key, else the key of the provider it shares one with (`sharedKeyOf`).
+export function keyWithShared(db: DatabaseSync, provider: ProviderId): string | undefined {
+  const shared = sharedKeyOf[provider];
+  return keyOf(db, provider) ?? (shared === undefined ? undefined : keyOf(db, shared));
 }
 
 function codeOf(error: unknown): string {

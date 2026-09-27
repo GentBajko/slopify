@@ -81,7 +81,7 @@ export function ChannelsRoute(): ReactElement {
     else rename.mutate(naming);
   };
   return (
-    <div>
+    <div data-tour="channels">
       <PageHeader
         title="Channels"
         meta={

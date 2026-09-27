@@ -1,8 +1,10 @@
 import { skippedSpeakerPronunciations } from "@app/slices/narration/pronunciation.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { auditionLine } from "@app/slices/voices/audition.js";
-import { speakerFromCast } from "@app/slices/voices/cast.js";
+import { castHosts, speakerFromCast } from "@app/slices/voices/cast.js";
 import {
+  bookChapterMax,
+  bookTitleMax,
   defaultVoicesSettings,
   paceSteps,
   type Speaker,
@@ -80,7 +82,8 @@ export function SpeakersEditor({
     if (next === undefined) return;
     onChange(
       value === undefined
-        ? defaultVoicesSettings(next)
+        ? // A new podcast or interview starts with the channel's hosts.
+          defaultVoicesSettings(next, castHosts(cast))
         : {
             ...value,
             format: next,
@@ -216,7 +219,7 @@ export function SpeakersEditor({
               onChange={(nameTags) => set({ nameTags })}
             />
             <Switch
-              label="One request for consecutive turns where the voice provider can (ElevenLabs v3)"
+              label="One request for consecutive turns where the voice provider can (ElevenLabs v3, Gemini)"
               tip="play.speakers.native-dialogue"
               checked={value.nativeDialogue}
               onChange={(nativeDialogue) => set({ nativeDialogue })}
@@ -228,6 +231,9 @@ export function SpeakersEditor({
               onChange={(audioFiles) => set({ audioFiles })}
             />
           </div>
+          {value.format === "audiobook" ? (
+            <BookFields value={value} onChange={onChange} problem={problem} />
+          ) : null}
           {value.format === "podcast" || value.format === "interview" ? (
             <p className="text-small text-ink-2">
               The speaker panel (a tile per speaker, the one talking lit, their name below) is drawn
@@ -235,6 +241,68 @@ export function SpeakersEditor({
             </p>
           ) : null}
         </>
+      )}
+    </div>
+  );
+}
+
+// An audiobook can be a chapter of a book: its MP3 and M4B are tagged with the book and the
+// chapter, and a finished chapter offers Make the next chapter.
+function BookFields({
+  value,
+  onChange,
+  problem,
+}: {
+  readonly value: VoicesSettings;
+  readonly onChange: (next: VoicesSettings) => void;
+  readonly problem?: ((field: string) => string | undefined) | undefined;
+}): ReactElement {
+  const book = value.book;
+  const set = (patch: Partial<VoicesSettings>): void => onChange({ ...value, ...patch });
+  return (
+    <div className="flex flex-col gap-3">
+      <Switch
+        label="A chapter of a book"
+        tip="play.speakers.book"
+        checked={book !== undefined}
+        onChange={(on) => {
+          if (on) set({ book: { title: "", chapter: 1 } });
+          else {
+            const { book: _book, ...rest } = value;
+            onChange(rest);
+          }
+        }}
+      />
+      {book === undefined ? null : (
+        <div className="grid grid-cols-1 gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_160px]">
+          <Field
+            label="Book title"
+            tip="play.speakers.book-title"
+            error={problem?.("voices.book.title")}
+          >
+            <Input
+              value={book.title}
+              maxLength={bookTitleMax}
+              onChange={(event) => set({ book: { ...book, title: event.target.value } })}
+            />
+          </Field>
+          <Field
+            label="Chapter"
+            tip="play.speakers.book-chapter"
+            error={problem?.("voices.book.chapter")}
+          >
+            <Input
+              type="number"
+              min={1}
+              max={bookChapterMax}
+              step={1}
+              value={book.chapter === 0 ? "" : String(book.chapter)}
+              onChange={(event) =>
+                set({ book: { ...book, chapter: Number(event.target.value) || 0 } })
+              }
+            />
+          </Field>
+        </div>
       )}
     </div>
   );

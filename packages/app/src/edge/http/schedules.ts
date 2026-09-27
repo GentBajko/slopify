@@ -14,6 +14,7 @@ import {
   scheduleSummarySchema,
   scheduleUpdateSchema,
   topicMoveSchema,
+  topicQueueSchema,
   topicTransferSchema,
 } from "../../slices/schedules/schema.js";
 import {
@@ -32,6 +33,7 @@ import {
   heldTopics,
   moveTopic,
   rejectHeldTopic,
+  replaceTopics,
   transferTopic,
 } from "../../slices/schedules/topics.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -263,6 +265,15 @@ function routes(deps: ScheduleDeps | undefined) {
           const { id: scheduleId, topicId } = c.req.valid("param");
           const result = editHeldTopic(service(), scheduleId, topicId, c.req.valid("json").title);
           return result.ok ? c.json(heldTopicSchema.parse(result.value)) : refused(c, result);
+        },
+      )
+      .put(
+        "/:id/topics",
+        zValidator("param", id, onInvalid),
+        zValidator("json", topicQueueSchema, onInvalid),
+        (c) => {
+          const result = replaceTopics(service(), c.req.valid("param").id, c.req.valid("json"));
+          return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
         },
       )
       .post(

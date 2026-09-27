@@ -1,9 +1,13 @@
 import { z } from "zod";
-import { projectStates } from "../../kernel/pipeline.js";
+import { projectStates, stageKinds } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { cadenceSchema, validTimeZone } from "./calendar.js";
 
 const id = z.uuid();
+// What a project on the calendar waits on the person for: a failed or paused run, or a review
+// (a checkpoint holding the run, or an automatic review's failed item).
+export const calendarNeeds = ["failed", "paused", "review"] as const;
+export type CalendarNeed = (typeof calendarNeeds)[number];
 const keywordName = z
   .string()
   .min(1)
@@ -172,6 +176,15 @@ export const topicMoveSchema = z
   })
   .strict()
   .readonly();
+// The whole queue at once: the schedule page adds, renames, removes and reorders topics in
+// place, and Undo puts the queue back as it was.
+export const topicQueueSchema = z
+  .object({
+    baseVersion: z.number().int().positive(),
+    items: z.array(item).max(queueMax).readonly(),
+  })
+  .strict()
+  .readonly();
 // The calendar: what will run, what is running or finished, and what waits in the batch queue.
 // `topicSource` says where a run's topic comes from: the queue (`topic` names it), topics held
 // for approval, a generation still to come, or none (the template as saved).
@@ -204,6 +217,25 @@ export const calendarProjectSchema = z
     createdAt: z.string(),
     finishedAt: z.string().nullable(),
     scheduleId: z.string().nullable(),
+    // What the project waits on the person for; left out when nothing.
+    needs: z.enum(calendarNeeds).optional(),
+    // Finished, makes a video, not marked uploaded and not a bundled sample.
+    readyToUpload: z.literal(true).optional(),
+    // Stages waiting for a CLI plan's limits to reset.
+    limitWaits: z
+      .array(
+        z
+          .object({
+            name: z.string(),
+            stage: z.enum(stageKinds),
+            resetsAt: z.string().nullable(),
+            retryAt: z.string(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly()
+      .optional(),
   })
   .strict()
   .readonly();

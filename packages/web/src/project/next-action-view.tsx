@@ -6,10 +6,13 @@ import { type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
+import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { ButtonLink } from "@/components/kit/link";
 import { NextAction as NextActionCard } from "@/components/kit/next-action";
+import { copyText, SignInActions } from "@/fixes/fix-actions";
 import { sentence } from "@/http";
+import { shortcuts } from "@/lib/shortcuts";
 import { copySample } from "@/onboarding/api";
 import { keys } from "@/queries";
 import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
@@ -149,6 +152,17 @@ export function useNextAction({
       case "soften":
         actions.run({ kind: intent.kind, stage: intent.stage });
         return;
+      // From the command palette: the command goes on the clipboard; Check again is the
+      // button beside it on the page.
+      case "sign-in":
+        void copyText(intent.fix.command).then((copied) =>
+          setMessage(
+            copied
+              ? `Copied ${intent.fix.command}. Run it in a terminal on the computer running Slopify, sign in, then press Check again.`
+              : `Couldn't copy: the browser blocked the clipboard. Type ${intent.fix.command} in a terminal, sign in, then press Check again.`,
+          ),
+        );
+        return;
       case "approve":
         approve.mutate(intent.gate);
         return;
@@ -205,6 +219,17 @@ function ActionButton({
   const action = state.next?.action;
   if (action === undefined) return null;
   const intent = action.intent;
+  if (intent.kind === "sign-in")
+    return (
+      <SignInActions
+        fix={intent.fix}
+        variant={variant}
+        retry={{
+          run: () => state.run({ kind: "retry", stage: intent.stage }),
+          busy: state.pending,
+        }}
+      />
+    );
   if (intent.kind === "open-settings")
     return (
       <ButtonLink
@@ -224,6 +249,9 @@ function ActionButton({
         className={className}
         disabled={state.pending}
         disabledReason="Working on the last press"
+        aria-keyshortcuts={
+          variant === "primary" ? ariaKeyShortcuts(shortcuts.nextAction) : undefined
+        }
         onClick={() => (intent.kind === "soften" ? setSoftening(true) : state.run(intent))}
       >
         {label}

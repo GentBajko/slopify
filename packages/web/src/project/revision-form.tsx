@@ -34,6 +34,7 @@ import { StylePreview } from "@/video/style-preview";
 import { EditChannel } from "./edit-channel.js";
 import { editPreviewImageOf } from "./edit-preview-image.js";
 import { EditAmbientBed, EditLoudness, EditPauses } from "./edit-sound-and-scale.js";
+import { revisionFileUrl } from "./revision-api.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -115,6 +116,21 @@ export function RevisionForm(
   // The style preview draws on the establishing image or a cast picture, as Play's does.
   const cast = useQuery(channelQuery(api, config.channelId ?? defaultChannelId));
   const drawn = editPreviewImageOf(view, edit, cast.data?.cast ?? []);
+  // The establishing image the preview is drawn on is its poster too.
+  const drawnRecord =
+    drawn?.image.kind === "output"
+      ? view.outputs.find(
+          (row) =>
+            row.selected &&
+            row.available &&
+            drawn.image.kind === "output" &&
+            row.output.id === drawn.image.outputId,
+        )
+      : undefined;
+  const previewPoster =
+    drawnRecord === undefined
+      ? undefined
+      : revisionFileUrl(api, view.revision.projectId, view.revision.id, drawnRecord.recordId);
   const problem = (field: string) =>
     fields.find(
       (one) =>
@@ -655,6 +671,7 @@ export function RevisionForm(
           {current !== "subtitles" || !video ? null : (
             <StylePreview
               drawnOn={drawn?.drawnOn}
+              poster={previewPoster}
               settings={{
                 format: config.format,
                 subtitles: {

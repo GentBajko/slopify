@@ -1,5 +1,7 @@
+import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
+import { readChannelLinks } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
@@ -8,13 +10,17 @@ import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
 import { LanguageSelect } from "@/language/language-select";
-import { documentThemesQuery, entriesQuery } from "@/queries";
+import { documentThemesQuery, entriesQuery, keys } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
+import { ChannelLinksEditor } from "@/youtube/channel-links";
 import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
 import { type BrandKit, type Channel, channelKey, channelsKey, saveChannel } from "./api";
 
-// The ambient sound is not text; `ambient-bed-kit.tsx` keeps it.
-type Draft = Required<{ readonly [K in Exclude<keyof BrandKit, "ambientBed">]-?: string }>;
+// The ambient sound and the links are not text; `ambient-bed-kit.tsx` and
+// `youtube/channel-links.tsx` keep them.
+type Draft = Required<{
+  readonly [K in Exclude<keyof BrandKit, "ambientBed" | "links">]-?: string;
+}>;
 const fields: readonly (keyof Draft)[] = [
   "captionFontId",
   "captionColor",
@@ -46,6 +52,19 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
   const [kit, setKit] = useState<Draft>(draftOf(channel.brand));
   const [bed, setBed] = useState(channelBedForm(channel.brand));
   const bedSave = channelBedOf(bed);
+  // The default channel shows the older Settings list until it saves a list of its own.
+  const legacyLinks = useQuery({
+    queryKey: keys.channelLinks,
+    queryFn: () => readChannelLinks(api),
+    enabled: channel.isDefault && channel.brand.links === undefined,
+  });
+  const [linksDraft, setLinksDraft] = useState<readonly ChannelLink[] | undefined>();
+  const links = linksDraft ?? channel.brand.links ?? legacyLinks.data ?? [];
+  // Left out while there is nothing to keep, so a channel that never had links saves as before.
+  const sendLinks =
+    linksDraft !== undefined ||
+    channel.brand.links !== undefined ||
+    (legacyLinks.data?.length ?? 0) > 0;
   const save = useMutation({
     mutationFn: () =>
       saveChannel(api, channel.id, {
@@ -58,6 +77,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             ),
           ),
           ...bedSave.brand,
+          ...(sendLinks ? { links } : {}),
         },
         baseVersion: channel.version,
       }),
@@ -66,7 +86,11 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
       client.setQueryData(channelKey(saved.id), (current: unknown) =>
         current !== null && typeof current === "object" ? { ...current, channel: saved } : current,
       );
-      await client.invalidateQueries({ queryKey: channelsKey });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: channelsKey }),
+        // Every project page's placeholders fill from its channel's links.
+        client.invalidateQueries({ queryKey: keys.channelLinks }),
+      ]);
     },
   });
   const set = (field: keyof Draft) => (value: string) => setKit({ ...kit, [field]: value });
@@ -205,6 +229,9 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           />
         </section>
         <ChannelAmbientBed value={bed} onChange={setBed} />
+        <div className="border-t border-line pt-6">
+          <ChannelLinksEditor rows={links} onChange={setLinksDraft} />
+        </div>
       </div>
       <ActionBar
         status={

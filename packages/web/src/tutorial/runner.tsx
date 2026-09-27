@@ -9,7 +9,7 @@ import { usePlaySession } from "@/play/draft-context";
 import { finalOutput } from "@/project/summary";
 import { noticeQuery, projectQuery, providersQuery, voicesQuery } from "@/queries";
 import type { TutorialSession, TutorialStepId } from "./model";
-import { playTargetSection, tutorialSteps } from "./model";
+import { appTourStart, playTargetSection, tutorialSteps } from "./model";
 import { Spotlight } from "./spotlight";
 import { StepContent } from "./step-content";
 
@@ -66,6 +66,12 @@ export function TutorialRunner({
     }
     if (step.page === "play") {
       if (location.pathname !== "/play") void navigate({ to: "/play" });
+    }
+    // The screens a channel runs on have no parameters; open each by its route.
+    const screen = { home: "/", channels: "/channels", calendar: "/calendar" } as const;
+    if (step.page === "home" || step.page === "channels" || step.page === "calendar") {
+      const to = screen[step.page];
+      if (location.pathname !== to) void navigate({ to });
     }
     if (
       step.page === "project" &&
@@ -151,17 +157,33 @@ export function TutorialRunner({
     "play-start": false,
   };
   const close = () => update((current) => ({ ...current, active: false }));
+  const appTour = tutorialSteps.findIndex((one) => one.id === appTourStart);
+  const last = session.step === tutorialSteps.length - 1;
   const advance = () => {
-    if (session.step === tutorialSteps.length - 1 || step.id === "play-start") close();
+    if (last) close();
+    // Without a project there is nothing to follow; the tour goes on to the app's screens.
+    else if (step.id === "play-start") update((current) => ({ ...current, step: appTour }));
     else update((current) => ({ ...current, step: current.step + 1 }));
   };
+  // Back from the app's screens skips the project steps when no project was made.
+  const back = () =>
+    update((current) => ({
+      ...current,
+      step:
+        step.id === appTourStart && session.projectId === undefined
+          ? tutorialSteps.findIndex((one) => one.id === "play-start")
+          : current.step - 1,
+    }));
   const output = project.data ? finalOutput(project.data.project.config) : "video";
   const target =
     step.id === "download" && output === "article"
       ? "project-article"
       : step.id === "play-keywords" && progress.playHasKeywords === false
         ? "play-options"
-        : step.target;
+        : // Prepare upload follows a finished video; without one, the project header.
+          step.id === "studio-prep" && output !== "video"
+          ? "project-controls"
+          : step.target;
   const waitingForSave = step.id === "article-save" || step.id === "image-save";
   const saving =
     (step.page === "article" || step.page === "image") && progress.promptSaving === true;
@@ -173,9 +195,7 @@ export function TutorialRunner({
       title={step.title}
       progress={`${session.step + 1} of ${tutorialSteps.length} · First project`}
       onClose={close}
-      {...(session.step === 0 || step.id === "project" || saving
-        ? {}
-        : { onBack: () => update((current) => ({ ...current, step: current.step - 1 })) })}
+      {...(session.step === 0 || step.id === "project" || saving ? {} : { onBack: back })}
       onNext={advance}
       nextDisabled={saving || canNext[step.id] === false}
       nextLabel={
@@ -183,14 +203,14 @@ export function TutorialRunner({
           ? "Use Save in the editor"
           : step.id === "play-start"
             ? "Use Start run / Queue N on the page"
-            : step.id === "download"
+            : last
               ? "Finish tutorial"
               : "Next"
       }
       {...(saving ? {} : { onSkip: advance })}
       skipLabel={
         step.id === "play-start"
-          ? "Finish without generating"
+          ? "Skip generating"
           : waitingForSave
             ? "Skip without saving"
             : "Skip this step"

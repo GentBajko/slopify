@@ -253,7 +253,33 @@ describe("Channels", () => {
       name: "Waterdeep",
       aliases: ["City of Splendors"],
       description: "",
+      host: false,
     });
+  });
+
+  it("marks a cast member as one of the channel's hosts", async () => {
+    const user = userEvent.setup();
+    const seen: unknown[] = [];
+    renderRouted(
+      <Page start="cast" />,
+      testDeps({
+        ...common,
+        [`PUT /api/channels/cast/${tiamat.id}`]: recording(
+          jsonAnswer({ ...tiamat, host: true }),
+          seen,
+        ),
+      }),
+    );
+    const grid = await screen.findByRole("region", { name: "Cast" });
+    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    await user.click(screen.getByRole("switch", { name: "One of the channel's hosts" }));
+    // A host without a voice joins nothing yet, and the editor says so.
+    expect(
+      screen.getByText(/A host joins new podcasts and interviews only with a voice/),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toMatchObject({ name: "Tiamat", host: true });
   });
 
   it("offers a cast member the voices that speak the channel's language, with Show all voices", async () => {

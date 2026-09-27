@@ -1,16 +1,20 @@
+import { fixFor } from "@app/slices/fixes/rules.js";
 import { paceSteps } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
-import { MediaFrame } from "@/components/kit/media";
+import { FileLink } from "@/components/kit/link";
+import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
+import { Switch } from "@/components/kit/switch";
+import { FixActions } from "@/fixes/fix-actions";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
@@ -55,6 +59,7 @@ export function CastEditor({
   const [alias, setAlias] = useState("");
   const [description, setDescription] = useState(member?.description ?? "");
   const [voice, setVoice] = useState<CastVoice | undefined>(member?.voice);
+  const [host, setHost] = useState(member?.host === true);
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: channelKey(channelId) }),
@@ -72,6 +77,7 @@ export function CastEditor({
           voice !== undefined && voice.provider !== "" && voice.model !== "" && voice.voice !== ""
             ? voice
             : null,
+        host,
       };
       return member === undefined
         ? createCastMember(api, channelId, crypto.randomUUID(), input)
@@ -181,6 +187,20 @@ export function CastEditor({
           />
         </Field>
         <CastVoiceFields channelId={channelId} value={voice} onChange={setVoice} />
+        <div className="flex flex-col items-start gap-1">
+          <Switch
+            label="One of the channel's hosts"
+            tip="planning.cast.host"
+            checked={host}
+            onChange={setHost}
+          />
+          {host && (voice === undefined || voice.voice === "") ? (
+            <p className="m-0 text-small text-waiting">
+              A host joins new podcasts and interviews only with a voice. Pick one under Voice
+              above.
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <StatusSlot tone={save.error ? "error" : "info"}>
             {save.error?.message ??
@@ -212,6 +232,7 @@ function Pictures({
   const client = useQueryClient();
   const providers = useQuery(providersQuery(api));
   const file = useRef<HTMLInputElement>(null);
+  const promptField = useRef<HTMLTextAreaElement>(null);
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState(
@@ -235,6 +256,13 @@ function Pictures({
     onSettled: refresh,
   });
   const error = upload.error ?? generate.error ?? remove.error;
+  // The made pictures, full size in the lightbox.
+  const ready = member.images.flatMap((image, index) =>
+    image.state === "ready" && image.sha256 !== null
+      ? [{ id: image.id, number: index + 1, src: pictureUrl(api, image.sha256) }]
+      : [],
+  );
+  const [open, setOpen] = useState<number | null>(null);
   return (
     <section aria-label="Reference pictures" className="mt-6">
       <Rule className="mb-6" />
@@ -245,10 +273,7 @@ function Pictures({
         info="planning.cast.pictures"
       />
       {member.images.length > 0 ? (
-        <ul
-          aria-label={`Pictures of ${member.name}`}
-          className="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0 min-[600px]:grid-cols-3"
-        >
+        <MediaGrid list density="compact" label={`Pictures of ${member.name}`} className="mt-3">
           {member.images.map((image, index) => (
             <li key={image.id} className="min-w-0">
               <MediaFrame
@@ -258,6 +283,8 @@ function Pictures({
                   ? { src: pictureUrl(api, image.sha256) }
                   : {})}
                 {...(image.state === "generating" ? { generating: "Making the picture…" } : {})}
+                onOpen={() => setOpen(ready.findIndex((one) => one.id === image.id))}
+                openLabel={`Open picture ${String(index + 1)} of ${member.name} full size`}
                 {...(image.state === "failed"
                   ? { badge: <Badge tone="failed">Failed</Badge> }
                   : {})}
@@ -276,14 +303,44 @@ function Pictures({
                 }
               />
               {image.state === "failed" && image.error ? (
-                <p className="m-0 mt-1 text-small text-danger">{image.error}</p>
+                <PictureFailure
+                  error={image.error}
+                  retry={
+                    provider === "" || model === "" || prompt.trim() === ""
+                      ? undefined
+                      : { run: () => generate.mutate(), busy: generate.isPending }
+                  }
+                  onReword={() => promptField.current?.focus()}
+                />
               ) : null}
             </li>
           ))}
-        </ul>
+        </MediaGrid>
       ) : (
         <p className="m-0 mt-3 text-small text-ink-3">No pictures yet.</p>
       )}
+      <Lightbox
+        items={ready.map((one) => ({
+          src: one.src,
+          alt: `${member.name}, reference ${String(one.number)}`,
+        }))}
+        index={open}
+        onIndex={setOpen}
+        onClose={() => setOpen(null)}
+        actions={(_, index) => {
+          const one = ready[index];
+          return one === undefined ? null : (
+            <FileLink
+              href={one.src}
+              download
+              size="small"
+              aria-label={`Download picture ${String(one.number)} of ${member.name}`}
+            >
+              Download
+            </FileLink>
+          );
+        }}
+      />
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <input
           ref={file}
@@ -332,6 +389,7 @@ function Pictures({
         </div>
         <Field label="Picture to make" tip="planning.cast.picture-prompt">
           <Textarea
+            ref={promptField}
             rows={3}
             value={prompt}
             maxLength={4000}
@@ -448,5 +506,42 @@ function CastVoiceFields({
         </Button>
       )}
     </fieldset>
+  );
+}
+
+// A picture that could not be made: the provider's words and the fix-it the same rules as a
+// failed project step name (`slices/fixes/rules.ts`). A signed-out CLI ends with Check again
+// making the picture once more; a refused prompt is reworded in the box below.
+export function PictureFailure({
+  error,
+  retry,
+  onReword,
+}: {
+  readonly error: string;
+  readonly retry: { readonly run: () => void; readonly busy: boolean } | undefined;
+  readonly onReword: () => void;
+}): ReactElement {
+  const fix = fixFor({ stage: "images", reason: error });
+  return (
+    <>
+      <p className="m-0 mt-1 text-small text-danger">{error}</p>
+      {fix === undefined ? null : (
+        <ButtonRow className="mt-2">
+          <FixActions
+            fix={fix}
+            retry={retry}
+            variant="secondary"
+            size="small"
+            edit={
+              fix.kind === "refused" ? (
+                <Button variant="secondary" size="small" onClick={onReword}>
+                  Reword the picture
+                </Button>
+              ) : undefined
+            }
+          />
+        </ButtonRow>
+      )}
+    </>
   );
 }

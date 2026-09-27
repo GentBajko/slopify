@@ -1,61 +1,33 @@
-import { type ChannelLink, channelLinksProblem } from "@app/slices/youtube/placeholders.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { type ReactElement, useState } from "react";
-import { readChannelLinks, saveChannelLinks } from "@/api";
-import { useApp } from "@/app-context";
-import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import type { ReactElement } from "react";
+import { defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
+import { ButtonLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
-import { keys } from "@/queries";
 
-// Settings → Channel links: the named links a YouTube description's `{{Name}}` placeholders
-// fill from when it is shown or copied, such as {{Patreon}} or {{Discord}}. A project can set
-// its own Previous video on its page, which wins over the one here.
-export function ChannelLinksSettings(): ReactElement {
-  const { api } = useApp();
-  const queryClient = useQueryClient();
-  const saved = useQuery({ queryKey: keys.channelLinks, queryFn: () => readChannelLinks(api) });
-  const [draft, setDraft] = useState<readonly ChannelLink[] | undefined>();
-  const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
-  const rows = draft ?? saved.data ?? [];
-  const save = useMutation({
-    mutationFn: (links: readonly ChannelLink[]) => saveChannelLinks(api, links),
-    onSuccess: (links) => {
-      queryClient.setQueryData(keys.channelLinks, links);
-      setDraft(undefined);
-      setStatus({ text: "Saved the channel links.", tone: "success" });
-    },
-    onError: (error) => setStatus({ text: error.message, tone: "error" }),
-  });
+// A channel's named links, edited on its Brand tab: the links a YouTube description's
+// `{{Name}}` placeholders fill from when it is shown, copied or downloaded, such as {{Patreon}}
+// or {{Discord}}. A project can set its own Previous video on its page, which wins over these.
+// The list is part of the Brand form, so Save channel keeps it.
+export function ChannelLinksEditor({
+  rows,
+  onChange,
+}: {
+  readonly rows: readonly ChannelLink[];
+  readonly onChange: (rows: readonly ChannelLink[]) => void;
+}): ReactElement {
   const change = (index: number, next: Partial<ChannelLink>) =>
-    setDraft(rows.map((row, at) => (at === index ? { ...row, ...next } : row)));
-
+    onChange(rows.map((row, at) => (at === index ? { ...row, ...next } : row)));
   return (
-    <div {...helpScope}>
-      <SectionHead title="Named links" info="planning.links.named">
-        <Button
-          variant="primary"
-          disabled={draft === undefined || save.isPending}
-          onClick={() => {
-            const problem = channelLinksProblem(rows);
-            if (problem !== undefined) {
-              setStatus({ text: `The channel links weren't saved: ${problem}`, tone: "error" });
-              return;
-            }
-            save.mutate(rows);
-          }}
-        >
-          Save
-        </Button>
-      </SectionHead>
-      {saved.error === null ? null : (
-        <p role="alert" className="m-0 mb-3 text-body text-danger">
-          The channel links couldn't be read: {saved.error.message}
-        </p>
-      )}
+    <section aria-label="Channel links" {...helpScope}>
+      <SectionHead
+        title="Channel links"
+        meta="Write a link's name in braces in a description, such as {{Patreon}}."
+        info="planning.links.named"
+      />
       {rows.length === 0 ? (
         <p className="m-0 border-y border-line py-4 text-ink-2">
           No channel links yet. Add one, then write its name in braces in a description.
@@ -86,7 +58,7 @@ export function ChannelLinksSettings(): ReactElement {
                 size="small"
                 className="justify-self-start"
                 aria-label={`Remove link ${String(index + 1)}`}
-                onClick={() => setDraft(rows.filter((_row, at) => at !== index))}
+                onClick={() => onChange(rows.filter((_row, at) => at !== index))}
               >
                 <Trash2Icon aria-hidden="true" className="size-[14px]" />
                 Remove
@@ -95,12 +67,31 @@ export function ChannelLinksSettings(): ReactElement {
           ))}
         </ul>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button onClick={() => setDraft([...rows, { name: "", url: "" }])}>
+      <div className="mt-3">
+        <Button onClick={() => onChange([...rows, { name: "", url: "" }])}>
           <PlusIcon aria-hidden="true" className="size-[14px]" />
           Add link
         </Button>
-        <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+      </div>
+    </section>
+  );
+}
+
+// Settings → Channel links: the links moved to each channel's Brand tab, so every channel fills
+// `{{Patreon}}` with its own. A list saved here before still fills the default channel's
+// projects until its Brand tab is saved.
+export function ChannelLinksSettings(): ReactElement {
+  return (
+    <div {...helpScope}>
+      <SectionHead title="Named links" info="planning.links.named" />
+      <p className="m-0 max-w-[60ch] text-ink-2">
+        Each channel keeps its own links now, on its Brand tab under Channel links. Links saved here
+        before fill the default channel's descriptions until you save its Brand tab.
+      </p>
+      <div className="mt-3">
+        <ButtonLink to="/channels/$channelId" params={{ channelId: defaultChannelId }}>
+          Open the default channel's links
+        </ButtonLink>
       </div>
     </div>
   );

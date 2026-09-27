@@ -21,7 +21,7 @@ export const settingsHelp = {
   },
   "settings.providers.test-key": {
     title: "Test",
-    body: "Asks the provider whether the saved key works, with the cheapest harmless call it allows, such as listing its models. Nothing is generated or billed. The answer says what is wrong when it fails: a rejected key, missing permission, no credit, or the provider being down.",
+    body: "Asks the provider whether the key works, with the cheapest harmless call it allows. A key pasted in the field is tested before you save it; with the field empty, the saved key is. Nothing is generated, billed or stored. When it fails, the answer says why: a rejected key, missing permission, no credit, or the provider being down.",
   },
   "settings.provider.openrouter": {
     title: "OpenRouter",
@@ -58,6 +58,10 @@ export const settingsHelp = {
   "settings.provider.inworld": {
     title: "Inworld",
     body: "Narrates the script with Inworld voices, billed per character from your Inworld account. Paste the Base64 credentials of a Standard key exactly as shown; Realtime-only keys do not work.",
+  },
+  "settings.provider.google-tts": {
+    title: "Google Gemini voices",
+    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Play).",
   },
   "settings.provider.fal": {
     title: "fal.ai",
@@ -133,11 +137,15 @@ export const settingsHelp = {
   // YouTube Studio
   "settings.studio.extension": {
     title: "Upload pack and extension",
-    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install steps are in docs/studio-extension.md in the Slopify repository.",
+    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install it from Install the Studio extension below: Download, three steps, then pair it with the token.",
   },
   "settings.studio.playlist": {
     title: "Playlist",
-    body: "The YouTube playlist every upload pack names, so the extension ticks it in Studio's dialog. Type it exactly as it is called in Studio, up to 150 characters. Leave it empty for no playlist. Default: empty.",
+    body: "The YouTube playlist an upload pack names, so the extension ticks it in Studio's dialog. Pick Every channel for the default, or a channel to give it its own; a channel without its own uses the default. Type it exactly as it is called in Studio, up to 150 characters. Empty means no playlist (for a channel: the default). Default: empty.",
+  },
+  "settings.studio.install": {
+    title: "Install the Studio extension",
+    body: "The extension comes with Slopify: Download saves it for the browser picked, nothing is fetched from a store. Chrome, Edge and Brave load the unzipped folder with Load unpacked (Developer mode); Firefox 128 or newer loads the zip as a temporary add-on, which it forgets on restart. Then pair it with the token above. A new Slopify may bring a new extension: download and load it again after updating.",
   },
   "settings.studio.pairing": {
     title: "Extension pairing token",

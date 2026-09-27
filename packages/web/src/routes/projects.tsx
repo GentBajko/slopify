@@ -1,21 +1,21 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
+import { bookLabel } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
-import { BatchQueue } from "@/components/batch-queue";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, IconButton } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
-import { ButtonLink } from "@/components/kit/link";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter, Stat, Stats } from "@/components/kit/stats";
@@ -27,12 +27,14 @@ import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { limitWaitLine } from "@/project/limit-wait";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
 // Every run ever started, newest first, for the channel picked in the rail. Each row says what
 // the run was made of, when it started and where it stands, with its actions visible on it.
-// Beside the list on a desktop: the counts per state and the video queue.
+// Beside the list on a desktop: the counts per state, and where the video queue is (the
+// calendar, which shows it once for every screen).
 
 type Filter = "all" | "running" | "waiting" | "ready" | "failed";
 
@@ -70,14 +72,22 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
     done: { tone: "done", word: "Done" },
     canceled: { tone: "off", word: "Canceled" },
   };
-  return isWaiting(project) ? { tone: "waiting", word: "Waiting for you" } : words[project.status];
+  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
+  // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
+  const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
+  return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
 }
 
 // "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
 // generated no article from a template names only its format.
 export function madeOf(project: ProjectListing): string {
   const prompt = project.config.articlePrompt;
-  return [prompt === undefined || prompt === "" ? undefined : prompt, project.format]
+  const book = project.config.voices?.book;
+  return [
+    book === undefined ? undefined : bookLabel(book),
+    prompt === undefined || prompt === "" ? undefined : prompt,
+    project.format,
+  ]
     .filter((part) => part !== undefined)
     .join(" · ");
 }
@@ -96,6 +106,8 @@ export function ProjectsRoute(): ReactElement {
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
   const [search, setSearch] = useState("");
+  const searchBox = useRef<HTMLInputElement>(null);
+  const searchKeys = useSearchShortcut(searchBox, "projects");
 
   const remove = useMutation({
     mutationFn: (id: string) => removeProject(api, id),
@@ -199,7 +211,9 @@ export function ProjectsRoute(): ReactElement {
                 />
                 <input
                   type="search"
+                  ref={searchBox}
                   aria-label="Search projects"
+                  aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
                   placeholder="Search projects"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -252,7 +266,15 @@ export function ProjectsRoute(): ReactElement {
                   ))}
               </Stats>
             </section>
-            <BatchQueue />
+            <section aria-label="Video queue" className="flex flex-col gap-2">
+              <SectionHead title="Video queue" info="play.queue" />
+              <p className="m-0 text-small text-ink-2">
+                Videos started together, in the order they run, are on the calendar.
+              </p>
+              <div>
+                <TextLink to="/calendar">Open calendar</TextLink>
+              </div>
+            </section>
           </BoardColumn>
         </Board>
       )}

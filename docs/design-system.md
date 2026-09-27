@@ -57,8 +57,9 @@ the label; Input, Select, Textarea, Code) · `kit/switch` (Switch, Segmented, bo
 `kit/section-head` (kicker, title, meta, info, a status beside the title, `size="small"` for a
 sub-head, `id` for `aria-labelledby`, actions) · `kit/status` (Lamp, Status, Badge,
 Chip) · `kit/media` (MediaFrame with aspect, caption, badge, hover and focus actions and a
-generating state; MediaGrid; Lightbox with arrow paging and Esc) · `kit/player` (a real
-`<video controls>` with its poster) · `kit/rail` (Rail, RailLink with `aria-current`,
+generating state; MediaGrid, the one gallery grid: `shorts` for 9:16 tiles, `density="compact"`
+for a drawer, side panel or Home card, `list` for `<li>` tiles; Lightbox with arrow paging, Esc
+and `actions` for the picture shown) · `kit/player` (Player, see below) · `kit/rail` (Rail, RailLink with `aria-current`,
 RailButton) · `kit/steps` · `kit/next-action` · `kit/callout` (danger, waiting, info, with
 actions) · `kit/list-row` (List, ListRow with visible actions and an inline body; the whole row is its
 target; `hitArea` and `hitTarget` for a row or card made by hand) · `kit/stats` (Stats, Stat,
@@ -89,9 +90,10 @@ A button does something; a link goes somewhere. The kit holds the line:
 - **A row or tile is one target.** A ListRow with `onSelect` or a title link is picked or opened
   by a press anywhere on it, not only on its name: the title's button or link stretches over the
   row (`::after`), and the row's own buttons, links and fields sit above it. It stays one tab
-  stop, with the focus ring round the whole row. A row or card made by hand gets `hitArea` on
-  itself and `hitTarget` on its one link or button; a MediaFrame with `onOpen` is its figure,
-  caption included.
+  stop, with the focus ring round the whole row. A title made of more than the name (a name
+  with a Rename pencil) picks the row through `RowSelect`. A row or card made by hand gets
+  `hitArea` on itself and `hitTarget` on its one link or button; a MediaFrame with `onOpen` is
+  its figure, caption included.
 - **Library rows** carry the same visible actions in the same order on every tab
   (`library/row-actions.tsx`): Edit, Duplicate, Use in Play, History, Delete.
 
@@ -115,8 +117,38 @@ useCommand({
 });
 ```
 
-Matching is fuzzy (letters in order, word starts and runs score higher). Arrow keys move,
-Enter runs, Esc closes; focus stays in the palette while it is open.
+Matching is fuzzy (letters in order, word starts and runs score higher). Several words match
+across the title, the context and the keywords in any order, so "tiamat regenerate image 3"
+finds "Regenerate image 3" in the project Tiamat. A `numbered` command takes the number typed
+with it ("Regenerate image 3", handed to `run(3)`); a `searchOnly` command waits until
+something is typed. Arrow keys move, Enter runs, Esc closes; focus stays in the palette
+while it is open.
+
+From anywhere (`components/global-commands.tsx`, searched only): "Open ‹project›", "Regenerate
+image N in ‹project›" (opens the project on Images and asks to regenerate that image, as the
+button does), New schedule and Add to calendar. A command that finishes on another screen
+navigates there and leaves an intent that screen takes once loaded (`lib/intents.ts`).
+
+### Keyboard shortcuts
+
+A command's `shortcut` is its label and its binding: the palette's provider runs it when the
+keys are pressed, so the two cannot drift. Keys live in `lib/shortcuts.ts`; the button that
+does the same thing carries `aria-keyshortcuts` (`ariaKeyShortcuts(shortcut)`). Keys without
+Ctrl wait while a field, a textarea or an editable area has focus; Ctrl ones (Cmd on a Mac)
+work from a field too. Nothing fires while the palette or a modal dialog is open. `?` or "Show
+keyboard shortcuts" lists every key that works on the current screen.
+
+| Keys | Does |
+| --- | --- |
+| Ctrl+K | Search or run a command |
+| ? | Show keyboard shortcuts |
+| C | New video |
+| G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings |
+| / | Search the list (Projects, Prompts, Intros and outros) |
+| Shift+N | The project's next action (Soften and retry still asks at its button) |
+| Shift+D | Copy the YouTube description |
+| Ctrl+Enter | Play: review the whole setup |
+| Ctrl+S | Save in a Library editor (prompt, intro or outro, PDF theme) |
 
 ### Shell
 
@@ -144,11 +176,29 @@ outdated outputs, then the views that replace the main column (Settings, Checkpo
 "1 held", History). The right rail has the next action, the run's steps with their times and
 one detail line each, and the cost so far with each CLI plan's share. Below 1180px the rails
 sit above the column; on phones the section rail scrolls sideways as tabs and only the next
-action stays above it.
+action stays above it. The page opens where the next action points, else on the stage the run
+is at; a finished video whose YouTube description is written opens on YouTube.
 
-Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox; the video plays
-in the Player; shorts are 9:16 players in their own grid; review verdicts are badges on the
-frame with Overrule and Redo among its actions. Making a whole stage again is rare, so it sits
+Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox, whose bar carries
+the picture's Regenerate and Download; the video plays in the Player with the first thumbnail as
+its poster and the YouTube chapters on its track; shorts are 9:16 players in the shorts grid,
+each with its first still as the poster; review verdicts are badges on the frame with Overrule
+and Redo among its actions.
+
+**Player.** Every video that plays uses `kit/player`, never the browser's own controls (a muted
+preview inside a MediaFrame may stay plain). Before it starts: the poster and a big lime play
+key in the middle. Then a bar on a dark gradient: play/pause, current / total time in tabular
+numerals, the lime track (buffered range behind, chapter marks with their title on hover, a
+time tip under the pointer, click or drag to seek, touch too), mute and volume, playback speed
+0.75–2× in its own menu, captions (only when there is a text track), picture in picture (when
+the browser has it) and full screen on the whole player. The bar hides while the video plays
+and nobody touches it, never while a menu is open or focus is inside. Keys, anywhere inside
+the player: Space or K play and pause, J and L jump 10 s, ← and → 5 s, M mutes, F full screen,
+C captions, 0–9 jump to that tenth. Seek and volume are sliders whose value reads in words
+("12:40 of 2:04:11"). Props: `src`, `poster`, `label`, `portrait` (9:16), `captions`,
+`chapters` (`{ start, title }[]`), `ref` to the `<video>`, `className`, `children`. The screen is
+dark in both themes, so the bar's colours are fixed. A narrow player puts the track on its own
+row and drops time, volume and speed; the keys still do all of it. Making a whole stage again is rare, so it sits
 behind each section's More, confirmed first.
 
 ### Controls that say what they do: the next action
@@ -172,10 +222,19 @@ section callouts and Ctrl+K all read it. The first situation that holds wins, in
 | Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
 | Done | done or done with problems, and a video exists | Done | Prepare upload | YouTube |
 
-The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI says the command to
-run and offers Try … again; a refused image prompt offers Soften and retry (confirmed); a
+The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI offers Copy sign-in
+command (`codex login`, `claude auth login`) and Check again, which asks that CLI alone whether
+it is signed in (`POST /api/providers/health?provider=`) and then tries the step again; a refused image prompt offers Soften and retry (confirmed); a
 refused text prompt and a retired model open the settings (Edit the prompt, Switch model); a
 rejected key links to Settings → Providers → the provider; a full disk to Settings → Storage.
+The same rules and buttons (`fixes/fix-actions.tsx`) serve a schedule's failed topic generation
+(Check again asks for topics again) and a cast picture that could not be made (Check again
+makes it again; a refused prompt offers Reword the picture). Home's Needs you offers Copy
+sign-in command beside Open to retry.
+
+A wait for CLI limits reads the same everywhere (`project/limit-wait.ts`): "Waiting for Codex
+limits (resets at 14:00)" on the project page, Home's Running now, the Projects row and the
+calendar.
 
 Remake uses the rebuild flow for exactly those outputs: a preview of the outdated outputs' work
 keys, started at once when it needs no consent (nothing blocked, no provided content to
@@ -210,6 +269,24 @@ calls, money, time, disk), in the Voice below. One thing has one id, reused wher
   nearest `data-help-scope` has no info button. Self-explanatory controls (search boxes, row
   checkboxes) go in an explicit allowlist with a reason.
 
+### Fewer clicks
+
+Every common task is counted in clicks from the screen it starts on to done, and
+`packages/web/src/click-budget.test.tsx` fails when one goes over its budget. A click is a press
+on a button, link, row or field (focusing a field to type is one; typing and Enter are not);
+picking from a select is two. Change a value where it is shown when that is safe and undoable
+(the change saves at once and its notice carries Undo); keep menus for the rare actions.
+
+| Task | Before | Now | Budget |
+| --- | --- | --- | --- |
+| Queue a video (Play: template, topic, Start) | 6 in 2.5 (Library → Templates → Apply to Play, the topic, Review and start, Start run) | 4 | 4 |
+| Regenerate an image (project → Images → Regenerate → confirm) | 3 in 2.5 | 3 | 3 |
+| Copy the description (project → Copy description) | 2 in 3.0 before this (YouTube, then Copy) | 1: a finished video with its description opens on YouTube | 1 |
+| Edit a prompt (Library → Edit → change the text → Save) | 3 in 2.5 | 3 | 3 |
+| Change a schedule's topics | 3 (Edit, the topics field, Save changes; measured in the test) | 1 (New topic, type, Enter) | 1 |
+
+The regenerate confirmation stays: it spends money on a paid model and cannot be undone.
+
 ## Rules in short
 
 - **Voice.** Name actions for their result ("Remake 3 outdated images", never "Submit" or
@@ -231,7 +308,8 @@ calls, money, time, disk), in the Voice below. One thing has one id, reused wher
   buttons, links go somewhere. A project shows exactly one primary action for its situation
   (the next action rule). Row actions are visible. Every frequent action is in the palette.
 - **Media.** A media frame with a fixed aspect box, a caption, actions on hover and focus, a
-  status badge; one gallery grid; click opens the lightbox; video plays in a real player.
+  status badge; one gallery grid; click opens the lightbox with the picture's actions; video
+  plays in the kit Player with its poster.
 - **States and motion.** The lamp is the status mark and always sits next to its word. Hover
   lifts to `raised`, focus draws a 2px ring offset 2px, disabled controls say why. 120ms for
   hover and toggles, 200ms for things entering; reduced motion stops the pulse and the slides.

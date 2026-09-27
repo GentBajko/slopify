@@ -7,7 +7,7 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
-import { MediaFrame } from "@/components/kit/media";
+import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
@@ -92,7 +92,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
             : "Not made yet. They are made with the video."}
         </p>
       ) : (
-        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-5 gap-y-7 p-0">
+        <MediaGrid shorts list label="Shorts" className="gap-y-7">
           {clips.map((clip) => (
             <ShortCard
               key={clip.number}
@@ -100,10 +100,9 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
               projectId={project.id}
               review={reviewFor(reviews, { itemKey: `shorts:${String(clip.number)}` })}
               video={videos.find((output) => ofClip(output, clip))}
-              images={
-                currentShorts(own, "short_image", clips).filter((output) => ofClip(output, clip))
-                  .length
-              }
+              stills={currentShorts(own, "short_image", clips)
+                .filter((output) => ofClip(output, clip))
+                .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
               link={fullVideoLine(settings?.fullVideoLink)}
               wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
               state={stage.state}
@@ -120,7 +119,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
                 : {})}
             />
           ))}
-        </ul>
+        </MediaGrid>
       )}
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
@@ -132,7 +131,7 @@ function ShortCard({
   projectId,
   review,
   video,
-  images,
+  stills,
   wanted,
   state,
   failed,
@@ -145,7 +144,8 @@ function ShortCard({
   // The automatic review's verdict on this short, when it had one.
   readonly review: Review | undefined;
   readonly video: Output | undefined;
-  readonly images: number;
+  // The short's own 9:16 images in order; the first is its poster until it plays.
+  readonly stills: readonly Output[];
   readonly wanted: number;
   readonly state: BodyProps["stage"]["state"];
   readonly failed: boolean;
@@ -155,6 +155,8 @@ function ShortCard({
 }) {
   const id = useId();
   const media = useOutputMedia(video);
+  const poster = useOutputMedia(stills[0]);
+  const images = stills.length;
   const progress = failed
     ? "Couldn't make this short. Open Error details in the Video section to see why."
     : state !== "running"
@@ -165,7 +167,13 @@ function ShortCard({
   return (
     <li aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
       {video !== undefined && media !== undefined ? (
-        <Player key={video.id} src={media.url} label={`Short ${String(clip.number)}`} portrait />
+        <Player
+          key={video.id}
+          src={media.url}
+          label={`Short ${String(clip.number)}`}
+          portrait
+          {...(poster === undefined ? {} : { poster: poster.url })}
+        />
       ) : failed || state !== "running" ? (
         <div className="sl-media__frame sl-media__frame--portrait">
           <p

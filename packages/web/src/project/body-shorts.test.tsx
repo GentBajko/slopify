@@ -231,6 +231,22 @@ it("opens Edit project to make one short again, or to pick different moments", a
   expect(again?.content.shortsRanges).toBeUndefined();
 });
 
+it("lays the shorts out in the shorts media grid, each player showing its first still as the poster", async () => {
+  const second = output("short_video", "video", {
+    id: "o-short-2",
+    durationMs: 90_000,
+    meta: { short: 2 },
+  });
+  mount([pick, first, second, ...images.toReversed()]);
+  const grid = await screen.findByRole("list", { name: "Shorts" });
+  expect(grid.getAttribute("data-slot")).toBe("media-grid");
+  expect(grid.className).toContain("sl-grid--shorts");
+  const two = await screen.findByLabelText("Short 2", { selector: "video" });
+  expect(two.getAttribute("poster")).toBe(`${testOrigin}/files/p1/revisions/r1/o-short-2-1`);
+  // A short with no stills of its own plays without one.
+  expect(screen.getByLabelText("Short 1", { selector: "video" }).getAttribute("poster")).toBeNull();
+});
+
 it("offers no remake outside a project that has versions", async () => {
   mount([pick, first]);
   await screen.findAllByRole("listitem");

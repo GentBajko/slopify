@@ -11,6 +11,7 @@ import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { insertProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { writeSetting } from "../settings/repo.js";
+import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
 import { libraryTables, projectTables, usageTables } from "./backup-format.js";
 import { importBackup } from "./backup-import.js";
@@ -113,7 +114,10 @@ function seed(db: DatabaseSync): void {
     db.prepare(sql).run(...params);
   run(
     "INSERT INTO channels(id,name,is_default,brand_json,series_brief,version,episode_memory,ai_disclosure,created_at,updated_at) VALUES ('c2','Night stories',0,?,?,3,1,'yes',?,?)",
-    JSON.stringify({ captionColor: "#FFD700" }),
+    JSON.stringify({
+      captionColor: "#FFD700",
+      links: [{ name: "Discord", url: "https://discord.test/night" }],
+    }),
     "Calm stories for sleep.",
     at,
     at,
@@ -189,6 +193,9 @@ function seed(db: DatabaseSync): void {
   writeSetting(db, "library.photorealisticPrompts", JSON.stringify(["prompt-1"]));
   writeSetting(db, "studio.realFootage", JSON.stringify(["p1"]));
   writeSetting(db, "channels.importFilter.c2", JSON.stringify("Lore"));
+  // A channel's own Studio playlist travels; what waits to be filled in Studio does not.
+  writeSetting(db, "studio.playlist.c2", JSON.stringify("Lore tales"));
+  writeSetting(db, "studio.fillQueue.0123456789abcdef", JSON.stringify([]));
 }
 
 const rows = (db: DatabaseSync, sql: string) => db.prepare(sql).all();
@@ -222,6 +229,14 @@ describe("backups carry everything added since 2.5.0", () => {
 
     const same = (sql: string) => expect(rows(target.db, sql)).toEqual(rows(source.db, sql));
     same("SELECT * FROM channels ORDER BY id");
+    // Each channel's own links travel in its brand kit; the default channel reads the older
+    // Settings list until its Brand tab is saved.
+    expect(readChannelLinksFor(target.db, "c2")).toEqual([
+      { name: "Discord", url: "https://discord.test/night" },
+    ]);
+    expect(readChannelLinksFor(target.db, defaultChannelId)).toEqual([
+      { name: "Patreon", url: "https://x.test" },
+    ]);
     same("SELECT * FROM cast_members ORDER BY id");
     same("SELECT * FROM cast_images ORDER BY id");
     same("SELECT sha256,mime,hex(bytes) AS bytes FROM image_blobs ORDER BY sha256");
@@ -236,8 +251,14 @@ describe("backups carry everything added since 2.5.0", () => {
     same("SELECT * FROM project_trash ORDER BY project_id");
     same("SELECT * FROM standalone_usage ORDER BY id");
     same(
-      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2') ORDER BY key",
+      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2') ORDER BY key",
     );
+    expect(rows(target.db, "SELECT key FROM settings WHERE key LIKE 'studio.fillQueue.%'")).toEqual(
+      [],
+    );
+    expect(rows(target.db, "SELECT value FROM settings WHERE key = 'studio.playlist.c2'")).toEqual([
+      { value: JSON.stringify("Lore tales") },
+    ]);
 
     // Imported twice: nothing is added again.
     const again = await importBackup(target, once(archive));

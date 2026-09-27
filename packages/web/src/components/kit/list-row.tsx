@@ -63,16 +63,7 @@ export function ListRow({
           {onSelect === undefined ? (
             <span className="sl-row__title">{title}</span>
           ) : (
-            <button
-              type="button"
-              onClick={onSelect}
-              className={cn(
-                "sl-row__title border-0 bg-transparent p-0 text-left text-ink",
-                hitTarget,
-              )}
-            >
-              {title}
-            </button>
+            <RowSelect onSelect={onSelect}>{title}</RowSelect>
           )}
           {meta === undefined ? null : <span className="sl-row__meta">{meta}</span>}
         </div>
@@ -82,5 +73,32 @@ export function ListRow({
         <div className="sl-row__body">{children}</div>
       )}
     </li>
+  );
+}
+
+// The button that picks a row. ListRow renders it for `onSelect`; a title made of more than the
+// name (a name with a Rename pencil beside it) uses it for the name, so a press anywhere on the
+// row still picks it.
+export function RowSelect({
+  onSelect,
+  className,
+  children,
+}: {
+  readonly onSelect: () => void;
+  readonly className?: string;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "sl-row__title border-0 bg-transparent p-0 text-left font-[inherit] text-ink",
+        hitTarget,
+        className,
+      )}
+    >
+      {children}
+    </button>
   );
 }

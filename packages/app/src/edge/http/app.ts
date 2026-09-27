@@ -136,6 +136,9 @@ export interface AppDeps {
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
   readonly patchNotesDir?: string;
   readonly webDist: string;
+  // Where the build put the Slopify Studio extension's zips (`scripts/copy-extension.mjs`);
+  // absent, Settings' Download answers that this copy doesn't include them.
+  readonly extensionDist?: string | undefined;
   // Runs a local agent CLI to learn whether it is installed. Handed in so a test can answer for
   // both branches without depending on this machine's PATH.
   readonly probe: CliProbe;

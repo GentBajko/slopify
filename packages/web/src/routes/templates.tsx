@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -16,6 +16,8 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
+import { RetiredModelRow } from "@/components/retired-models";
+import { InlineName } from "@/library/inline-name";
 import { ListSkeleton, libraryListDetail } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
@@ -24,6 +26,7 @@ import {
   deleteProjectTemplate,
   instantiateProjectTemplate,
   readProjectTemplate,
+  renameProjectTemplate,
   saveProjectTemplate,
   type TemplateSummary,
   templatesKey,
@@ -34,8 +37,8 @@ import { LibraryToolbar } from "./library.js";
 
 // Library → Templates: saved Play setups, each used in Play as a fresh draft to review. The
 // rows carry the Library's row actions in view (Edit, Duplicate, Use in Play, History,
-// Delete); the picked row's keywords, and its name while editing, sit beside the list. Save a
-// setup opens a drawer.
+// Delete) and a pencil to rename in place; the picked row's keywords sit beside the list.
+// Save a setup opens a drawer.
 export function TemplatesRoute({
   onApplied,
   beforeApply,
@@ -76,9 +79,8 @@ export function TemplatesRoute({
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
-  // The template shown beside the list, and whether its name is being edited there.
+  // The template shown beside the list: its keywords and how to change its settings.
   const [picked, setPicked] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
   const [historyOf, setHistoryOf] = useState<TemplateSummary | null>(null);
   const duplicates = useRef(new Map<string, string>());
   const active = useRef(false);
@@ -306,77 +308,76 @@ export function TemplatesRoute({
           list={
             <List label="Project templates">
               {shown.map((template) => (
-                <ListRow
-                  key={template.id}
-                  className="max-md:grid-cols-1"
-                  title={template.name}
-                  selected={template.id === picked}
-                  onSelect={() => {
-                    setPicked(template.id);
-                    setEditing(false);
-                  }}
-                  meta={
-                    <>
-                      {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                      Version {template.version} · updated{" "}
-                      <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                    </>
-                  }
-                  actions={
-                    <LibraryRowActions
-                      name={template.name}
-                      edit={
-                        <Button
-                          variant="quiet"
-                          size="small"
-                          aria-label={`Edit ${template.name}`}
-                          aria-expanded={editing && picked === template.id}
-                          onClick={() => {
-                            setPicked(template.id);
-                            setEditing(true);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      }
-                      duplicate={
-                        <Button
-                          variant="quiet"
-                          size="small"
-                          aria-label={`Duplicate ${template.name}`}
-                          disabled={pending}
-                          disabledReason="Working on the last press"
-                          onClick={() => void execute(() => duplicate(template))}
-                        >
-                          Duplicate
-                        </Button>
-                      }
-                      play={{
-                        run: () => void execute(() => apply(template)),
-                        blocked: blocked
-                          ? "A run is still starting in Play. Wait for it, then use the template."
-                          : pending
-                            ? "Working on the last press"
-                            : undefined,
-                      }}
-                      onHistory={() => setHistoryOf(template)}
-                      onDelete={() => {
-                        setDeleting(template);
-                        setError(null);
-                      }}
-                    />
-                  }
-                />
+                <Fragment key={template.id}>
+                  <ListRow
+                    className="max-md:grid-cols-1"
+                    title={
+                      <InlineName
+                        name={template.name}
+                        maxLength={120}
+                        onSelect={() => setPicked(template.id)}
+                        onRename={async (next) => {
+                          const refused = await renameProjectTemplate(api, template.id, next);
+                          await client.invalidateQueries({ queryKey: templatesKey });
+                          return refused;
+                        }}
+                      />
+                    }
+                    selected={template.id === picked}
+                    meta={
+                      <>
+                        {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                        Version {template.version} · updated{" "}
+                        <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                      </>
+                    }
+                    actions={
+                      <LibraryRowActions
+                        name={template.name}
+                        edit={
+                          <Button
+                            variant="quiet"
+                            size="small"
+                            aria-label={`Edit ${template.name}`}
+                            onClick={() => setPicked(template.id)}
+                          >
+                            Edit
+                          </Button>
+                        }
+                        duplicate={
+                          <Button
+                            variant="quiet"
+                            size="small"
+                            aria-label={`Duplicate ${template.name}`}
+                            disabled={pending}
+                            disabledReason="Working on the last press"
+                            onClick={() => void execute(() => duplicate(template))}
+                          >
+                            Duplicate
+                          </Button>
+                        }
+                        play={{
+                          run: () => void execute(() => apply(template)),
+                          blocked: blocked
+                            ? "A run is still starting in Play. Wait for it, then use the template."
+                            : pending
+                              ? "Working on the last press"
+                              : undefined,
+                        }}
+                        onHistory={() => setHistoryOf(template)}
+                        onDelete={() => {
+                          setDeleting(template);
+                          setError(null);
+                        }}
+                      />
+                    }
+                  />
+                  <RetiredModelRow kind="template" id={template.id} name={template.name} />
+                </Fragment>
               ))}
             </List>
           }
-          detail={
-            <TemplateDetail
-              template={shown.find((one) => one.id === picked)}
-              editing={editing}
-              onDone={() => setEditing(false)}
-            />
-          }
+          detail={<TemplateDetail template={shown.find((one) => one.id === picked)} />}
         />
       ) : null}
       <Drawer

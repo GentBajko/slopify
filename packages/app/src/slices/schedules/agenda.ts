@@ -1,12 +1,19 @@
+import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type { ProjectState } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { liveProject, projectPaused, stageStandingsByProject } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
+import { sampleIds } from "../onboarding/model.js";
+import { readSampleRecord } from "../onboarding/state.js";
+import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
+import { uploadedProjects } from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
 import { scheduleRows } from "./repo.js";
 import {
   type Calendar,
+  type CalendarNeed,
   type CalendarRun,
   calendarMaxDays,
   type ScheduleSummary,
@@ -117,14 +124,69 @@ function upcomingRuns(
 const projectRow = z.object({
   id: z.string(),
   title: z.string(),
+  config: z.string(),
   created_at: z.string(),
   finished_at: z.string().nullable(),
 });
 
+// Projects the person has something to decide on in the current revision: a review
+// checkpoint holding the run, or an automatic review that failed an item and waits for
+// Overrule or Redo (its latest verdict, with no redo under way).
+function awaitingReview(db: DatabaseSync): ReadonlySet<string> {
+  const ids = db
+    .prepare(
+      `SELECT c.project_id AS id FROM review_checkpoints c
+       JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
+       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL
+       UNION
+       SELECT v.project_id AS id FROM review_verdicts v
+       JOIN project_heads h ON h.project_id=v.project_id AND h.revision_id=v.revision_id
+       WHERE v.passed=0 AND v.action IS NULL AND (v.redo_state IS NULL OR v.redo_state='failed')
+       AND NOT EXISTS (SELECT 1 FROM review_verdicts n WHERE n.project_id=v.project_id
+         AND n.item_key=v.item_key AND (n.created_at>v.created_at OR (n.created_at=v.created_at AND n.rowid>v.rowid)))`,
+    )
+    .all();
+  return new Set(ids.map((row) => z.string().parse(row.id)));
+}
+
+// Whether a finished project's settings make a video: projects stored before sources were
+// recorded made one.
+const videoSource = z.object({ sources: z.object({ video: z.string() }).partial() }).partial();
+function makesVideo(config: string): boolean {
+  try {
+    const parsed = videoSource.safeParse(JSON.parse(config));
+    return !parsed.success || parsed.data.sources?.video !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(
+    sampleIds.flatMap((id) => {
+      const record = readSampleRecord(db, id);
+      return record?.projectId === undefined ? [] : [record.projectId];
+    }),
+  );
+}
+
+// What a project on the calendar asks of the person, if anything. The same readings Home's
+// Needs you uses: a failed or paused run, or one waiting for a review.
+function needsOf(state: ProjectState, reviewing: boolean): CalendarNeed | undefined {
+  if (state === "failed") return "failed";
+  if (state === "paused") return "paused";
+  if (reviewing && state !== "canceled") return "review";
+  return undefined;
+}
+
 // Running (or waiting) projects made before `to`, and finished ones whose last stage ended in
-// the range.
+// the range, with what each needs from the person and whether its video is ready to upload.
 function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calendar["projects"] {
   const standings = stageStandingsByProject(deps.db);
+  const reviewing = awaitingReview(deps.db);
+  const uploads = uploadedProjects(deps.db);
+  const samples = sampleProjectIds(deps.db);
+  const waits = limitWaitsByProject(deps.db);
   const fromSchedule = new Map<string, string>();
   for (const row of deps.db
     .prepare(
@@ -137,7 +199,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
   }
   return deps.db
     .prepare(
-      `SELECT projects.id,projects.title,projects.created_at,max(stages.finished_at) AS finished_at
+      `SELECT projects.id,projects.title,projects.config,projects.created_at,max(stages.finished_at) AS finished_at
        FROM projects LEFT JOIN stages ON stages.project_id=projects.id
        WHERE projects.created_at<? AND ${liveProject()} GROUP BY projects.id ORDER BY projects.created_at,projects.id`,
     )
@@ -151,6 +213,13 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         const ended = project.finished_at ?? project.created_at;
         if (ended < from.toISOString() || ended >= to.toISOString()) return [];
       }
+      const needs = needsOf(state, reviewing.has(project.id));
+      const ready =
+        (state === "done" || state === "partial") &&
+        makesVideo(project.config) &&
+        !uploads.has(project.id) &&
+        !samples.has(project.id);
+      const waiting = waits.get(project.id);
       return [
         {
           id: project.id,
@@ -159,6 +228,9 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           createdAt: project.created_at,
           finishedAt: terminal ? (project.finished_at ?? project.created_at) : null,
           scheduleId: fromSchedule.get(project.id) ?? null,
+          ...(needs === undefined ? {} : { needs }),
+          ...(ready ? { readyToUpload: true } : {}),
+          ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
         },
       ];
     });

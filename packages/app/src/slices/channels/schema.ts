@@ -4,6 +4,12 @@ import { aiDisclosureSettings } from "../studio/disclosure.js";
 import { ambientBedProblems } from "../video/ambient-bed.js";
 import { channelAmbientBedSchema } from "../video/ambient-bed-schema.js";
 import { paceSteps } from "../voices/model.js";
+import {
+  channelLinkNameMax,
+  channelLinksMax,
+  channelLinksProblem,
+  channelLinkUrlMax,
+} from "../youtube/placeholders.js";
 import { castKinds } from "./model.js";
 
 const id = z.uuid();
@@ -42,6 +48,28 @@ export const brandKitSchema = z
       })
       .optional(),
     language: languageSchema.optional(),
+    // Kept even when empty: an empty list on the default channel says "no links", where an
+    // absent one still reads the older Settings list.
+    links: z
+      .array(
+        z
+          .object({
+            name: z.string().max(channelLinkNameMax * 4),
+            url: z.string().max(channelLinkUrlMax * 2),
+          })
+          .strict(),
+      )
+      .max(channelLinksMax * 2)
+      .transform((links) => links.map((link) => ({ name: link.name.trim(), url: link.url.trim() })))
+      .superRefine((links, context) => {
+        const refused = channelLinksProblem(links);
+        if (refused !== undefined)
+          context.addIssue({
+            code: "custom",
+            message: `The channel's links weren't saved: ${refused} Then press Save channel on the channel's Brand tab.`,
+          });
+      })
+      .optional(),
   })
   .strict()
   .transform((kit) =>
@@ -105,6 +133,8 @@ export const castMemberInputSchema = z
       .default(""),
     // Absent keeps the saved voice; null removes it.
     voice: castVoiceSchema.nullable().optional(),
+    // One of the channel's hosts. Absent keeps what is saved.
+    host: z.boolean().optional(),
   })
   .strict();
 export const castMemberCreateSchema = castMemberInputSchema.extend({ id }).strict();

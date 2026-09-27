@@ -3,7 +3,6 @@ import type { Output } from "@app/slices/storage/model.js";
 import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Rule } from "@/components/kit/layout";
 import { FileLink } from "@/components/kit/link";
@@ -23,6 +22,7 @@ import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
 import { useOutdated, useOutputChange } from "./output-change.js";
 import { DownloadLink } from "./parts.js";
+import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
@@ -32,10 +32,6 @@ import { SectionMore } from "./stage-section.js";
 // grouped by the prompt that made them. Every picture is a media frame: a fixed aspect box on
 // `screen`, its caption, its review badge in the corner, Regenerate, Download and Delete on
 // hover and focus, and a press opens it full size in the lightbox.
-
-export function aspectOf(format: Format): string {
-  return format === "9:16" ? "aspect-[9/16]" : "aspect-video";
-}
 
 export function frameAspect(format: Format): Aspect {
   return format === "9:16" ? "portrait" : "landscape";
@@ -55,27 +51,23 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
     )
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
   const shown = [...all, ...cards];
+  const regenerate = useRegenerateByNumber(project, all, cards, actions, busy);
   const files = useOutputMediaList(shown);
   const [open, setOpen] = useState<number | null>(null);
-  const items: LightboxItem[] = shown.flatMap((image) => {
-    const file = files.get(image.id);
-    return file === undefined
-      ? []
-      : [
-          {
-            src: file.url,
-            alt:
-              image.role === "figure_card"
-                ? `On-screen card ${String(image.meta.index ?? "")}`
-                : (image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`),
-            ...(isClip(image) ? { kind: "video" as const } : {}),
-            caption:
-              image.role === "figure_card"
-                ? "Shown while the narration describes it"
-                : (image.meta.prompt ?? image.meta.promptName ?? "Slideshow image"),
-          },
-        ];
-  });
+  // The pictures the lightbox pages through, and the output behind each, for its actions.
+  const openable = shown.filter((image) => files.has(image.id));
+  const items: LightboxItem[] = openable.map((image) => ({
+    src: files.get(image.id)?.url ?? "",
+    alt:
+      image.role === "figure_card"
+        ? `On-screen card ${String(image.meta.index ?? "")}`
+        : (image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`),
+    ...(isClip(image) ? { kind: "video" as const } : {}),
+    caption:
+      image.role === "figure_card"
+        ? "Shown while the narration describes it"
+        : (image.meta.prompt ?? image.meta.promptName ?? "Slideshow image"),
+  }));
   const reference =
     project.config.reference === undefined ? null : (
       <ReferencePanel
@@ -113,6 +105,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
     .join(" · ");
   return (
     <>
+      {regenerate}
       {reference}
       {reference === null || (thumbnail === null && stage.state === "skipped") ? null : (
         <Rule className="m-0" />
@@ -153,9 +146,9 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
               }
             >
               {(limit) =>
-                group.images.slice(0, limit).map((image) => {
-                  const at = all.indexOf(image);
-                  return (
+                group.images
+                  .slice(0, limit)
+                  .map((image) => (
                     <ImageTile
                       key={image.id}
                       image={image}
@@ -164,10 +157,9 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                       format={project.format}
                       actions={actions}
                       busy={busy}
-                      onOpen={() => setOpen(at)}
+                      onOpen={() => setOpen(opened(openable, image))}
                     />
-                  );
-                })
+                  ))
               }
             </ImageGroup>
           ))}
@@ -186,7 +178,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                       actions={actions}
                       busy={busy}
                       card
-                      onOpen={() => setOpen(shown.indexOf(card))}
+                      onOpen={() => setOpen(opened(openable, card))}
                     />
                   ))
               }
@@ -205,7 +197,29 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
               ))}
             </MediaGrid>
           ) : null}
-          <Lightbox items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+          <Lightbox
+            items={items}
+            index={open}
+            onIndex={setOpen}
+            onClose={() => setOpen(null)}
+            actions={(_, index) => {
+              const image = openable[index];
+              return image === undefined ? null : (
+                <OutputLightboxActions
+                  key={image.id}
+                  output={image}
+                  name={
+                    image.role === "figure_card"
+                      ? `on-screen card${numberOf(image)}`
+                      : `image${numberOf(image)}`
+                  }
+                  actions={actions}
+                  busy={busy}
+                  onLeave={() => setOpen(null)}
+                />
+              );
+            }}
+          />
         </section>
       )}
     </>
@@ -213,6 +227,87 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
 }
 
 const isClip = (image: Output): boolean => /\.(mp4|mov|m4v|webm|mkv)$/i.test(image.path);
+
+const numberOf = (image: Output): string =>
+  image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
+
+// Where a tile's picture sits in the lightbox, or closed when its file is not there yet.
+function opened(openable: readonly Output[], image: Output): number | null {
+  const at = openable.indexOf(image);
+  return at === -1 ? null : at;
+}
+
+// Regenerate and Download on the lightbox's bar, for the picture shown full size. A change
+// that opens in Edit project closes the lightbox first, so the form is not behind it.
+export function OutputLightboxActions({
+  output,
+  name,
+  actions,
+  busy,
+  onLeave,
+}: {
+  readonly output: Output;
+  // "image 4", "thumbnail 2", "the establishing image".
+  readonly name: string;
+  readonly actions: BodyProps["actions"];
+  readonly busy: boolean;
+  readonly onLeave: () => void;
+}): ReactElement {
+  const media = useOutputMedia(output);
+  const change = useOutputChange(output, actions, busy);
+  const copy =
+    change.asking === undefined
+      ? undefined
+      : confirmationFor({ kind: change.asking, outputId: output.id });
+  return (
+    <>
+      <Button
+        size="small"
+        disabled={change.unavailable}
+        disabledReason="Wait until the work on this project is done"
+        onClick={() => {
+          change.act("regenerate-image");
+          if (change.viaEdit) onLeave();
+        }}
+        aria-label={`Regenerate ${name}`}
+      >
+        <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+        Regenerate
+      </Button>
+      {media === undefined ? null : <DownloadButton href={media.url} label={`Download ${name}`} />}
+      <ConfirmDialog
+        open={change.asking !== undefined}
+        tone="primary"
+        title={copy?.title ?? ""}
+        consequence={copy?.consequence ?? ""}
+        confirmLabel="Regenerate it"
+        cancelLabel="Keep it"
+        pending={actions.pending}
+        onConfirm={change.confirm}
+        onCancel={change.dismiss}
+      />
+    </>
+  );
+}
+
+// A download that looks like the small secondary button beside it; the label is its name.
+export function DownloadButton({
+  href,
+  label,
+  text,
+}: {
+  readonly href: string;
+  readonly label: string;
+  // Shown beside the icon; icon only when absent.
+  readonly text?: string;
+}): ReactElement {
+  return (
+    <FileLink href={href} download aria-label={label} title={label} size="small">
+      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+      {text}
+    </FileLink>
+  );
+}
 
 // The establishing image, above the slideshow it is never part of: labelled as the reference
 // the other images are drawn from, with Regenerate when it was made from a prompt.
@@ -234,6 +329,7 @@ function ReferencePanel({
 }) {
   const media = useOutputMedia(image);
   const change = useOutputChange(image, actions, busy);
+  const [open, setOpen] = useState<number | null>(null);
   return (
     <section aria-label="Establishing image" className="flex min-w-0 flex-col gap-5">
       <SectionHead
@@ -251,36 +347,70 @@ function ReferencePanel({
           </Button>
         ) : null}
       </SectionHead>
-      <div className="grid min-w-0 items-start gap-6 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <MediaFrame
-          alt={image?.meta.prompt ?? "Establishing image"}
-          aspect={frameAspect(format)}
-          {...(media === undefined ? {} : { src: media.url })}
-          title="Establishing image"
-          {...(image === undefined ? { meta: "Not made yet" } : {})}
-          {...(image === undefined || media === undefined
-            ? {}
-            : {
-                actions: (
-                  <FileLink
-                    href={media.url}
-                    download
-                    aria-label="Download the establishing image"
-                    variant="secondary"
-                    size="small"
-                  >
-                    <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                    Download
-                  </FileLink>
-                ),
-              })}
-        />
-        {generated && affected > 0 ? (
-          <p className="m-0 text-small text-ink-2">
-            {`Making it again marks ${String(affected)} image${affected === 1 ? "" : "s"} outdated. They keep their current version until you remake them.`}
-          </p>
-        ) : null}
-      </div>
+      <MediaFrame
+        className="w-full max-w-[360px]"
+        alt={image?.meta.prompt ?? "Establishing image"}
+        aspect={frameAspect(format)}
+        {...(media === undefined ? {} : { src: media.url })}
+        title="Establishing image"
+        {...(image === undefined ? { meta: "Not made yet" } : {})}
+        onOpen={() => setOpen(0)}
+        openLabel="Open the establishing image full size"
+        {...(image === undefined || media === undefined
+          ? {}
+          : {
+              actions: (
+                <DownloadButton
+                  href={media.url}
+                  label="Download the establishing image"
+                  text="Download"
+                />
+              ),
+            })}
+      />
+      {generated && affected > 0 ? (
+        <p className="m-0 text-small text-ink-2">
+          {`Making it again marks ${String(affected)} image${affected === 1 ? "" : "s"} outdated. They keep their current version until you remake them.`}
+        </p>
+      ) : null}
+      <Lightbox
+        items={
+          media === undefined
+            ? []
+            : [
+                {
+                  src: media.url,
+                  alt: "Establishing image",
+                  caption: image?.meta.prompt ?? "The reference every image follows",
+                },
+              ]
+        }
+        index={open}
+        onIndex={setOpen}
+        onClose={() => setOpen(null)}
+        actions={() =>
+          media === undefined ? null : (
+            <>
+              {generated ? (
+                <Button
+                  size="small"
+                  disabled={change.unavailable}
+                  disabledReason="Wait until the work on this project is done"
+                  onClick={() => {
+                    setOpen(null);
+                    change.act("regenerate-image");
+                  }}
+                  aria-label="Make the establishing image again"
+                >
+                  <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+                  Regenerate
+                </Button>
+              ) : null}
+              <DownloadButton href={media.url} label="Download the establishing image" />
+            </>
+          )
+        }
+      />
       <ConfirmDialog
         open={change.asking !== undefined}
         tone="primary"
@@ -358,18 +488,10 @@ function ImageTile({
   readonly onOpen: () => void;
 }): ReactElement {
   const media = useOutputMedia(image);
-  const number = image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
+  const number = numberOf(image);
   const name = card ? `on-screen card${number}` : `image${number}`;
   const change = useOutputChange(image, actions, busy);
   const outdated = useOutdated(image);
-  // Every image is a palette command too: "Regenerate image 4".
-  useCommand({
-    id: `project.image.${image.id}`,
-    title: `Regenerate ${name}`,
-    group: "This project",
-    keywords: ["image", "redraw", "remake", image.meta.promptName ?? ""],
-    run: () => change.act("regenerate-image"),
-  });
   const flagged = review !== undefined && !review.passed && review.action === null;
   const copy =
     change.asking === undefined
@@ -413,16 +535,7 @@ function ImageTile({
               Regenerate
             </Button>
             {media === undefined ? null : (
-              <FileLink
-                href={media.url}
-                download
-                aria-label={`Download ${name}`}
-                title={`Download ${name}`}
-                variant="secondary"
-                size="small"
-              >
-                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-              </FileLink>
+              <DownloadButton href={media.url} label={`Download ${name}`} />
             )}
             {card ? null : (
               <Button

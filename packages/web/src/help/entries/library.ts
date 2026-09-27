@@ -78,6 +78,10 @@ export const libraryHelp = {
     title: "Intro or outro",
     body: "An intro is narrated before the body of the video, an outro after it, in the same voice. Play offers each in its own picker. A name only needs to be unique within its category.",
   },
+  "library.inline-rename": {
+    title: "Rename in the list",
+    body: "Changes only the name, right in the list; the text stays as it is. Enter saves, Escape keeps the old name, and Undo on the notice renames it back. A prompt or intro/outro keeps the rename in History; templates that picked the old name use the copy saved with them until you pick it again. A template saves a new version; schedules keep the version they were made from.",
+  },
   "library.entry.name": {
     title: "Entry name",
     body: "What Play and Edit project list this intro or outro by. Up to 200 characters, and unique within its category.",
@@ -134,7 +138,7 @@ export const libraryHelp = {
   },
   "templates.edit": {
     title: "Edit a template",
-    body: "Renames the template; the keywords it fills are listed below. Saving adds a version, and History keeps the old one. To change its settings, use it in Play, change the draft, then Save a setup.",
+    body: "Shows the keywords the template fills and what each feeds. The pencil beside its name renames it; every save adds a version that History keeps. To change its settings, use it in Play, change the draft, then Save a setup.",
   },
   "templates.history": {
     title: "Template versions",

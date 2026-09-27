@@ -100,7 +100,7 @@ export function HomeRoute(): ReactElement {
   const loading = projects.isPending;
 
   return (
-    <div>
+    <div data-tour="home">
       <PageHeader
         display
         crumb={today.format(new Date())}

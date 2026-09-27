@@ -14,6 +14,7 @@ import { ButtonLink } from "@/components/kit/link";
 import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { copyText } from "@/fixes/fix-actions";
 import { cn } from "@/lib/utils";
 import {
   type ApprovalIdentity,
@@ -275,6 +276,16 @@ export function FailedItem({
     queryFn: () => readProject(api, project.id),
   });
   const stage = body.data?.stages.find((one) => one.state === "failed");
+  const notify = useToast();
+  const copySignIn = async (command: string) => {
+    const copied = await copyText(command);
+    notify(
+      copied
+        ? `Copied ${command}. Run it in a terminal on the computer running Slopify and sign in, then open the project and press Check again.`
+        : `Couldn't copy: the browser blocked the clipboard. Type ${command} in a terminal, sign in, then open the project and press Check again.`,
+      copied ? "success" : "error",
+    );
+  };
   const fix =
     stage === undefined || body.data === undefined ? undefined : fixOf(stage, body.data.project);
   const reason = shortReason(stage?.failureReason) ?? "The run stopped with an error.";
@@ -289,9 +300,19 @@ export function FailedItem({
       <ButtonLink to="/settings" search={{ section: "storage" }} variant={variant}>
         {fix.label}
       </ButtonLink>
+    ) : fix?.kind === "sign-in" ? (
+      // The command to copy here; Check again on the project retries the step once signed in.
+      <>
+        <Button variant={variant} onClick={() => void copySignIn(fix.command)}>
+          Copy sign-in command
+        </Button>
+        <ButtonLink to="/projects/$projectId" params={{ projectId: project.id }}>
+          Open to retry
+        </ButtonLink>
+      </>
     ) : (
       <ButtonLink to="/projects/$projectId" params={{ projectId: project.id }} variant={variant}>
-        {fix?.kind === "sign-in" ? "Open to retry" : (fix?.label ?? "Open to retry")}
+        {fix?.label ?? "Open to retry"}
       </ButtonLink>
     );
   return (
@@ -303,7 +324,7 @@ export function FailedItem({
         fix?.kind === "sign-in" ? (
           <>
             {reason} Run <code className="sl-code">{fix.command}</code> in a terminal to sign in,
-            then retry the step on the project.
+            then press Check again on the project to retry the step.
           </>
         ) : (
           reason

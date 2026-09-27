@@ -217,37 +217,6 @@ export function wireInstallTabs(root) {
   );
 }
 
-// The donation page. Not known yet: this is a clearly marked placeholder, and while it is
-// the placeholder (or anything that is not an https URL) nothing on the page links to it.
-// Replace it with the real page to switch on every [data-donate] link at once. The app's
-// Settings → About and the README carry the same value and the same rule.
-export const donationPlaceholder = "https://example.com/donate";
-export const donationUrl = "https://example.com/donate";
-
-// The donation address to link to, or null when there is none yet.
-export function donationHref(url) {
-  if (typeof url !== "string" || url === donationPlaceholder) return null;
-  const parsed = URL.parse(url);
-  return parsed !== null && parsed.protocol === "https:" && parsed.hostname !== "example.com"
-    ? parsed.href
-    : null;
-}
-
-// The pages ship an empty, hidden <span data-donate="class"> where the link goes, so a page
-// without this script, or with the placeholder, has no donation link at all. With a real
-// address each slot becomes a link carrying the class its slot names.
-export function wireDonation(root, url) {
-  const href = donationHref(url);
-  if (href === null) return;
-  for (const slot of root.querySelectorAll("[data-donate]")) {
-    const link = root.createElement("a");
-    link.href = href;
-    link.textContent = "Donate";
-    if (slot.dataset.donate) link.className = slot.dataset.donate;
-    slot.replaceWith(link);
-  }
-}
-
 // The 3.0 features are written down but not published: other work is still landing. They
 // ship inside an inert <template data-release>, which no browser renders and no screen
 // reader reads, and are put on the page only when this is true. Flip it at release time.
@@ -276,7 +245,6 @@ export function wireShowcase(root) {
 }
 
 if (typeof document !== "undefined") {
-  wireDonation(document, donationUrl);
   wireNextRelease(document, nextReleasePublished);
   // The tally board is only on the home page.
   if (document.querySelector("[data-tally]") !== null)
