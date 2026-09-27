@@ -37,9 +37,43 @@ async function saveAgain(
   return reply.value;
 }
 
-// Edit, under a template's row: its name, and the keywords it fills. The settings themselves
-// are changed in Play: Use in Play, change the draft, then Save a setup.
-export function TemplateEditor({
+// Beside the Templates list: the picked template's keywords, with what each feeds, and its
+// name while Edit is open. The settings themselves are changed in Play: Use in Play, change
+// the draft, then Save a setup.
+export function TemplateDetail({
+  template,
+  editing,
+  onDone,
+}: {
+  readonly template: TemplateSummary | undefined;
+  readonly editing: boolean;
+  readonly onDone: () => void;
+}): ReactElement {
+  if (template === undefined)
+    return (
+      <p className="m-0 py-3 text-small text-ink-2">
+        Pick a template to see the keywords it fills. Edit renames it.
+      </p>
+    );
+  return (
+    <section aria-label={`Keywords of ${template.name}`} className="flex flex-col gap-4">
+      <SectionHead title={template.name} as="h3" className="pb-0" />
+      {editing ? (
+        <RenameForm
+          key={`${template.id}:${String(template.version)}`}
+          template={template}
+          onDone={onDone}
+        />
+      ) : null}
+      <TemplateKeywords template={template} />
+      <p className="m-0 text-small text-ink-2">
+        To change the settings, press Use in Play, change the draft, then Save a setup.
+      </p>
+    </section>
+  );
+}
+
+function RenameForm({
   template,
   onDone,
 }: {
@@ -69,7 +103,7 @@ export function TemplateEditor({
   });
   const trimmed = name.trim();
   return (
-    <div className="flex flex-col gap-4 pt-2">
+    <div className="flex flex-col gap-2">
       <form
         aria-label={`Edit ${template.name}`}
         className="flex flex-wrap items-end gap-3"
@@ -81,12 +115,13 @@ export function TemplateEditor({
         <Field
           label="Template name"
           tip="templates.edit"
-          className="min-w-[min(100%,280px)] flex-1"
+          className="min-w-[min(100%,240px)] flex-1"
         >
           <Input
             value={name}
             maxLength={120}
             required
+            autoFocus
             disabled={rename.isPending}
             onChange={(event) => setName(event.target.value)}
           />
@@ -108,11 +143,6 @@ export function TemplateEditor({
       <StatusSlot tone="error">
         {rename.error === null ? undefined : `The name wasn't saved: ${rename.error.message}`}
       </StatusSlot>
-      <SectionHead title="Keywords" as="h3" className="pb-0" />
-      <TemplateKeywords template={template} />
-      <p className="m-0 text-small text-ink-2">
-        To change the settings, press Use in Play, change the draft, then Save a setup.
-      </p>
     </div>
   );
 }

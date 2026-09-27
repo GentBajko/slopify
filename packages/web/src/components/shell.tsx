@@ -317,7 +317,7 @@ function ShellContent() {
         <div className="sl-app__foot">
           <div className="flex items-end gap-1" {...helpScope}>
             <ChannelPicker className="min-w-0 flex-1" />
-            <InfoTip id="home.channel" className="mb-[5px]" />
+            <InfoTip id="home.channel" className="mb-1" />
           </div>
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play">
@@ -365,7 +365,7 @@ function ShellContent() {
                 target="_blank"
                 rel="noreferrer"
                 title={link.label}
-                className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-[6px] whitespace-nowrap text-small text-ink-2 no-underline hover:text-ink sm:flex"
+                className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-2 whitespace-nowrap text-small text-ink-2 no-underline hover:text-ink sm:flex"
               >
                 <SupportGlyph name={link.glyph} className={link.tone} />
                 <span className="sr-only min-[1280px]:not-sr-only">{link.label}</span>

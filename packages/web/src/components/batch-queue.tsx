@@ -5,7 +5,6 @@ import { ListVideoIcon } from "lucide-react";
 import type { ProjectListing } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { helpEntry } from "@/help/catalog";
@@ -23,12 +22,12 @@ export function BatchQueue() {
   const projects = useQuery(projectsQuery(api));
   if (!queue.data?.queue.length) return null;
   return (
-    <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
+    <section aria-label="Video queue" className="mb-5 border-y border-line [&_ol]:px-0">
       <SectionHead
         title={`Video queue · ${String(queue.data.queue.length)} remaining`}
         info="play.queue"
         size="small"
-        className="min-h-10 items-center border-b border-line px-4 py-2"
+        className="min-h-10 items-center border-b border-line py-2"
       />
       <QueueList queue={queue.data.queue} projects={projects.data?.projects} />
     </section>

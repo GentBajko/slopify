@@ -13,9 +13,10 @@ import { Drawer } from "@/components/kit/drawer";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
-import { ListSkeleton } from "@/library/list-states";
+import { ListSkeleton, libraryListDetail } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
@@ -28,12 +29,13 @@ import {
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
-import { TemplateEditor, TemplateHistoryDrawer } from "@/templates/row-parts";
+import { TemplateDetail, TemplateHistoryDrawer } from "@/templates/row-parts";
 import { LibraryToolbar } from "./library.js";
 
 // Library → Templates: saved Play setups, each used in Play as a fresh draft to review. The
 // rows carry the Library's row actions in view (Edit, Duplicate, Use in Play, History,
-// Delete); Save a setup opens a drawer beside the list.
+// Delete); the picked row's keywords, and its name while editing, sit beside the list. Save a
+// setup opens a drawer.
 export function TemplatesRoute({
   onApplied,
   beforeApply,
@@ -74,8 +76,9 @@ export function TemplatesRoute({
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
-  // The template whose editor (name and keywords) is open under its row.
-  const [editing, setEditing] = useState<string | null>(null);
+  // The template shown beside the list, and whether its name is being edited there.
+  const [picked, setPicked] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [historyOf, setHistoryOf] = useState<TemplateSummary | null>(null);
   const duplicates = useRef(new Map<string, string>());
   const active = useRef(false);
@@ -298,69 +301,83 @@ export function TemplatesRoute({
       ) : null}
       {templates.isPending && !templates.error ? <ListSkeleton label="Project templates" /> : null}
       {shown?.length ? (
-        <List label="Project templates">
-          {shown.map((template) => (
-            <ListRow
-              key={template.id}
-              className="max-md:grid-cols-1"
-              title={template.name}
-              meta={
-                <>
-                  {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                  Version {template.version} · updated{" "}
-                  <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                </>
-              }
-              actions={
-                <LibraryRowActions
-                  name={template.name}
-                  edit={
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-label={`Edit ${template.name}`}
-                      aria-expanded={editing === template.id}
-                      onClick={() =>
-                        setEditing((current) => (current === template.id ? null : template.id))
+        <ListDetail
+          className={libraryListDetail}
+          list={
+            <List label="Project templates">
+              {shown.map((template) => (
+                <ListRow
+                  key={template.id}
+                  className="max-md:grid-cols-1"
+                  title={template.name}
+                  selected={template.id === picked}
+                  onSelect={() => {
+                    setPicked(template.id);
+                    setEditing(false);
+                  }}
+                  meta={
+                    <>
+                      {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                      Version {template.version} · updated{" "}
+                      <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                    </>
+                  }
+                  actions={
+                    <LibraryRowActions
+                      name={template.name}
+                      edit={
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          aria-label={`Edit ${template.name}`}
+                          aria-expanded={editing && picked === template.id}
+                          onClick={() => {
+                            setPicked(template.id);
+                            setEditing(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
                       }
-                    >
-                      Edit
-                    </Button>
+                      duplicate={
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          aria-label={`Duplicate ${template.name}`}
+                          disabled={pending}
+                          disabledReason="Working on the last press"
+                          onClick={() => void execute(() => duplicate(template))}
+                        >
+                          Duplicate
+                        </Button>
+                      }
+                      play={{
+                        run: () => void execute(() => apply(template)),
+                        blocked: blocked
+                          ? "A run is still starting in Play. Wait for it, then use the template."
+                          : pending
+                            ? "Working on the last press"
+                            : undefined,
+                      }}
+                      onHistory={() => setHistoryOf(template)}
+                      onDelete={() => {
+                        setDeleting(template);
+                        setError(null);
+                      }}
+                    />
                   }
-                  duplicate={
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-label={`Duplicate ${template.name}`}
-                      disabled={pending}
-                      disabledReason="Working on the last press"
-                      onClick={() => void execute(() => duplicate(template))}
-                    >
-                      Duplicate
-                    </Button>
-                  }
-                  play={{
-                    run: () => void execute(() => apply(template)),
-                    blocked: blocked
-                      ? "A run is still starting in Play. Wait for it, then use the template."
-                      : pending
-                        ? "Working on the last press"
-                        : undefined,
-                  }}
-                  onHistory={() => setHistoryOf(template)}
-                  onDelete={() => {
-                    setDeleting(template);
-                    setError(null);
-                  }}
                 />
-              }
-            >
-              {editing === template.id ? (
-                <TemplateEditor template={template} onDone={() => setEditing(null)} />
-              ) : null}
-            </ListRow>
-          ))}
-        </List>
+              ))}
+            </List>
+          }
+          detail={
+            <TemplateDetail
+              template={shown.find((one) => one.id === picked)}
+              editing={editing}
+              onDone={() => setEditing(false)}
+            />
+          }
+        />
       ) : null}
       <Drawer
         open={saving}
@@ -390,7 +407,7 @@ export function TemplatesRoute({
           </Link>{" "}
           to prepare one.
         </p>
-        <p className="mb-4 text-small text-ink2">
+        <p className="mb-4 text-small text-ink-2">
           A template keeps the settings, not one video&apos;s topic.
         </p>
         <form

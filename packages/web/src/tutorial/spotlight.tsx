@@ -145,7 +145,7 @@ export function Spotlight({
           aria-label="Interactive getting started guide"
           aria-describedby={`${id}-instructions`}
           data-tutorial="card"
-          className="pointer-events-auto fixed z-[101] flex flex-col gap-3 rounded-panel border border-line2 bg-panel p-4 text-body text-ink shadow-[0_8px_24px_var(--color-shadow)]"
+          className="pointer-events-auto fixed z-[101] flex flex-col gap-3 rounded-media border border-line-strong bg-surface p-4 text-body text-ink shadow-[var(--shadow-pop)]"
           style={{
             left: layout.left,
             top: layout.top,
@@ -157,7 +157,7 @@ export function Spotlight({
           }}
         >
           <div className="flex shrink-0 items-center justify-between gap-3">
-            <span className="engraved text-run-text">Getting started · {progress}</span>
+            <span className="engraved text-accent-ink">Getting started · {progress}</span>
             <Button variant="quiet" onClick={onClose} aria-label="Exit guide" className="h-7 px-2">
               Exit
             </Button>
@@ -166,17 +166,17 @@ export function Spotlight({
             ref={titleRef}
             id={`${id}-title`}
             tabIndex={-1}
-            className="shrink-0 text-title font-bold outline-none"
+            className="shrink-0 text-title-3 font-bold outline-none"
           >
             {title}
           </h2>
           <div
             id={`${id}-instructions`}
-            className="min-h-0 overflow-y-auto text-ink2 [&_p+p]:mt-2 [&_code]:text-ink"
+            className="min-h-0 overflow-y-auto text-ink-2 [&_p+p]:mt-2 [&_code]:text-ink"
           >
             {children}
             {!currentTarget && (
-              <p role="status" className="mt-3 text-amber">
+              <p role="status" className="mt-3 text-waiting">
                 This section is not available yet. Wait for the page to load, go back, or exit the
                 guide.
               </p>

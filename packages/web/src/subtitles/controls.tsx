@@ -76,7 +76,7 @@ export function SubtitleControls({
               onChange={(event) =>
                 onChange({ ...value, mode: event.target.value as SubtitleConfig["mode"] })
               }
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+              className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
             >
               <option value="off">Off</option>
               <option value="files">Subtitle files (.srt + .vtt)</option>
@@ -85,11 +85,11 @@ export function SubtitleControls({
               </option>
             </select>
           </div>
-          <span className="pb-1 text-label text-ink3">English · local · no paid API</span>
+          <span className="pb-1 text-label text-ink-3">English · local · no paid API</span>
         </div>
         {value.mode !== "off" && audioEnabled ? (
           <>
-            <p className="text-small text-ink2">
+            <p className="text-small text-ink-2">
               Timed from your narration on this computer. First use downloads an approximately 95 MB
               speech model. Review the subtitles before publishing.
             </p>
@@ -152,7 +152,7 @@ export function SubtitleControls({
                     />
                   </div>
                   {!validSubtitleStyle(value) || sizeProblem ? (
-                    <p role="alert" className="mt-1 text-label text-red">
+                    <p role="alert" className="mt-1 text-label text-danger">
                       {sizeProblem ?? "Choose a whole font size from 16 to 120."}
                     </p>
                   ) : null}
@@ -188,7 +188,7 @@ export function SubtitleControls({
                               ? "subtitles.position"
                               : undefined
                           }
-                          className="flex min-w-0 flex-col items-center gap-2 rounded-control border border-line2 bg-panel px-1 py-3 text-[10px] last:border-r data-[state=on]:border-focus data-[state=on]:text-run-text data-[state=on]:shadow-none"
+                          className="flex min-w-0 flex-col items-center gap-2 rounded-control border border-line-strong bg-surface px-1 py-3 text-[10px] last:border-r data-[state=on]:border-focus data-[state=on]:text-accent-ink data-[state=on]:shadow-none"
                         >
                           <span
                             aria-hidden="true"
@@ -217,7 +217,7 @@ export function SubtitleControls({
                         );
                         if (position) onChange({ ...value, position });
                       }}
-                      className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+                      className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
                     >
                       {subtitlePositions.map((position) => (
                         <option key={position} value={position}>
@@ -241,12 +241,12 @@ export function SubtitleControls({
               <p role="alert">Reattach {session.fontUpload.name}, or select a font.</p>
             ) : null}
             {fontProblem ? (
-              <p role="alert" className="text-small text-red">
+              <p role="alert" className="text-small text-danger">
                 {fontProblem}
               </p>
             ) : null}
             {value.mode === "files" ? (
-              <p className="text-label text-ink3">
+              <p className="text-label text-ink-3">
                 Font, size and position apply to burned captions. SRT/VTT players choose their own
                 styling.
               </p>
@@ -256,13 +256,13 @@ export function SubtitleControls({
       </fieldset>
       {session?.fontUpload && (value.mode === "off" || !audioEnabled) ? (
         <div className="flex flex-col items-start gap-3">
-          <p role={session.fontUploading ? "status" : "alert"} className="text-small text-ink2">
+          <p role={session.fontUploading ? "status" : "alert"} className="text-small text-ink-2">
             {session.fontUploading
               ? `Uploading ${session.fontUpload.name}…`
               : `Unfinished font upload: ${session.fontUpload.name}`}
           </p>
           {fontUpload?.error ? (
-            <p role="alert" className="text-small text-red">
+            <p role="alert" className="text-small text-danger">
               {fontUpload.error}
             </p>
           ) : null}
@@ -276,11 +276,11 @@ export function SubtitleControls({
         </div>
       ) : null}
       {modeProblem ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {modeProblem}
         </p>
       ) : null}
-      <p id={hintId} className="text-small text-ink2">
+      <p id={hintId} className="text-small text-ink-2">
         {!audioEnabled
           ? "Turn Audio on to add subtitles."
           : !videoEnabled

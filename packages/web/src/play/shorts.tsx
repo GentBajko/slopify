@@ -141,7 +141,7 @@ export function Shorts({
         {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
         <span aria-hidden="true">to</span>
         {number("maxSeconds", "Longest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
-        <span className="text-ink3">seconds</span>
+        <span className="text-ink-3">seconds</span>
         <InfoTip id="play.shorts.length" className="-ml-1" />
       </span>
       <PromptPicker
@@ -167,18 +167,18 @@ export function Shorts({
         onChange={(imagePrompt) => onChange({ ...value, imagePrompt })}
       />
       {issue ? (
-        <p id={`${id}-error`} className="basis-full text-small text-red">
+        <p id={`${id}-error`} className="basis-full text-small text-danger">
           {issue}
         </p>
       ) : !narrated ? (
-        <p className="basis-full text-label text-ink3">Needs narration.</p>
+        <p className="basis-full text-label text-ink-3">Needs narration.</p>
       ) : null}
       <details
         className="basis-full rounded-control border border-line px-3"
         open={open || moreIssue !== undefined || musicIssue !== undefined}
         onToggle={(event) => setOpen(event.currentTarget.open)}
       >
-        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
           More shorts options · {summary}
         </summary>
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 pt-2 pb-3">
@@ -237,7 +237,7 @@ export function Shorts({
                 value={volume}
                 onChange={(event) => onChange({ ...value, musicVolume: event.target.value })}
               />
-              <span className="text-ink3">%</span>
+              <span className="text-ink-3">%</span>
             </label>
             <InfoTip id="play.shorts.music-volume" />
           </span>
@@ -265,7 +265,7 @@ export function Shorts({
           </span>
           {music}
           {moreIssue ? (
-            <p role="alert" className="basis-full text-small text-red">
+            <p role="alert" className="basis-full text-small text-danger">
               {moreIssue}
             </p>
           ) : null}

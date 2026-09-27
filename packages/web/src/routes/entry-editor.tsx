@@ -145,8 +145,8 @@ export function EntryEditorRoute({
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
-          <div className="flex flex-wrap items-end gap-[14px]">
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
+          <div className="flex flex-wrap items-end gap-4">
             <div className="min-w-[200px] flex-1">
               <Field
                 label="Name"
@@ -188,12 +188,12 @@ export function EntryEditorRoute({
           {/* The hint belongs under the Mode switch, which sits at the right end of the
               row, so the sentence is set flush right rather than under the Name field it
               says nothing about. */}
-          <p id={modeHintId} className="-mt-[6px] text-right text-small text-ink-2">
+          <p id={modeHintId} className="-mt-2 text-right text-small text-ink-2">
             {modeHint(draft.mode)}
           </p>
 
           <div {...helpScope}>
-            <div className="mb-[5px] flex items-center gap-1">
+            <div className="mb-1 flex items-center gap-1">
               <label htmlFor={bodyId} className="sl-field__label">
                 Body
               </label>

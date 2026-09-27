@@ -176,7 +176,7 @@ function PreflightSummary({
   if (!required.length)
     return (
       <SummaryGroup name="Run readiness">
-        <p className="text-body text-ink2">
+        <p className="text-body text-ink-2">
           No generated providers required. Supplied content is ready for processing.
         </p>
       </SummaryGroup>
@@ -188,7 +188,7 @@ function PreflightSummary({
   };
   return (
     <SummaryGroup name="Run readiness">
-      <p className="mb-3 text-small text-ink2">
+      <p className="mb-3 text-small text-ink-2">
         These checks are refreshed with Review and checked again when you start.
       </p>
       <ul className="divide-y divide-line" aria-label="Run readiness checks">
@@ -224,7 +224,7 @@ function PreflightSummary({
               className="flex flex-wrap items-center justify-between gap-3 py-3"
             >
               <span className="font-medium">{choice.label}</span>
-              <span className={ready ? "text-lime" : "text-red"}>
+              <span className={ready ? "text-lime" : "text-danger"}>
                 {ready
                   ? "Ready"
                   : checks
@@ -286,7 +286,7 @@ export function ReviewSummary({
       key={field ?? label}
       className="grid min-w-0 grid-cols-[90px_minmax(0,1fr)_auto] items-start gap-x-3 py-1 sm:grid-cols-[145px_minmax(0,1fr)_auto]"
     >
-      <dt className="break-words py-2 text-ink2">{label}</dt>
+      <dt className="break-words py-2 text-ink-2">{label}</dt>
       <dd className="min-w-0 whitespace-pre-wrap break-words py-2">{value || "Not selected"}</dd>
       {field ? (
         <dd>
@@ -544,7 +544,7 @@ export function ReviewSummary({
           ) : null}
         </dl>
         {form.sources.audio !== "off" && form.subtitles.mode === "files" ? (
-          <p className="mt-3 text-small text-ink2">
+          <p className="mt-3 text-small text-ink-2">
             Font, size and position apply to burned captions. SRT/VTT players choose their own
             styling.
           </p>

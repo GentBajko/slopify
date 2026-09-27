@@ -78,17 +78,17 @@ export function FirstRunNotice() {
         <Column heading="Tracked" items={tracked} />
         <Column heading="Never tracked" items={never} />
       </div>
-      <p className="text-small text-ink2">
+      <p className="text-small text-ink-2">
         Every event carries a random ID of its own and this machine's random ID, and nothing else.
         Nothing you write, upload, or paste ever leaves your machine.
       </p>
       {version === undefined ? null : (
-        <p className="engraved text-ink3">
+        <p className="engraved text-ink-3">
           {`Slopify ${version} · this version is included in each report`}
         </p>
       )}
       {dismiss.error === null ? null : (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {dismiss.error.message}
         </p>
       )}
@@ -105,11 +105,11 @@ function Column({
 }) {
   const id = `notice-${heading.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <div className="flex flex-col gap-[6px]">
-      <p id={id} className="engraved border-b border-line pb-1 text-ink3">
+    <div className="flex flex-col gap-2">
+      <p id={id} className="engraved border-b border-line pb-1 text-ink-3">
         {heading}
       </p>
-      <ul aria-labelledby={id} className="m-0 flex list-none flex-col gap-[6px] p-0 text-small">
+      <ul aria-labelledby={id} className="m-0 flex list-none flex-col gap-2 p-0 text-small">
         {items.map((item) => (
           <li key={item}>{item}</li>
         ))}

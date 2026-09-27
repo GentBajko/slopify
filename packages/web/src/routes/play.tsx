@@ -33,6 +33,7 @@ import { pendingReviewUpload, startLabel } from "@/play/review-state";
 import { lookSummary } from "@/play/review-summary";
 import { SaveTemplateDialog } from "@/play/save-template-dialog";
 import type { PlaySection } from "@/play/sections";
+import { SeenBefore } from "@/play/seen-before";
 import { SetupList, type SetupListRow } from "@/play/setup-list";
 import {
   rowOf,
@@ -550,6 +551,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           <TemplateField topics={topics} onError={setTemplateError} />
           <TopicFields topics={topics} problem={problem} />
         </div>
+        <SeenBefore topics={topics} />
         {templateError ? <Callout tone="danger" title={templateError} /> : null}
         <MoreVideos
           topics={topics}

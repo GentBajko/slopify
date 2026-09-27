@@ -93,10 +93,7 @@ export function StartRail({
   return (
     <>
       {preview}
-      <section
-        aria-label="Start"
-        className="flex min-w-0 flex-col gap-4 rounded-panel border border-line bg-surface p-5"
-      >
+      <section aria-label="Start" className="flex min-w-0 flex-col gap-4 border-t border-line pt-5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-ink-2">{count === 1 ? "1 video" : `${String(count)} videos`}</span>
           <span className="text-small text-ink-3">

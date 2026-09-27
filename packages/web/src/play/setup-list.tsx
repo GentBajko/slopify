@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Button } from "@/components/kit/button";
-import { Status } from "@/components/kit/status";
 import { SectionHead } from "@/components/kit/section-head";
+import { Status } from "@/components/kit/status";
 import type { SetupRowId } from "./setup-rows";
 
 export interface SetupListRow {

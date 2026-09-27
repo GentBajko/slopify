@@ -72,12 +72,10 @@ const article: Components = {
     </a>
   ),
   code: ({ children }) => (
-    <code className="rounded-control bg-sunken px-[4px] py-[1px] font-mono text-small">
-      {children}
-    </code>
+    <code className="rounded-control bg-sunken px-1 py-0.5 font-mono text-small">{children}</code>
   ),
   pre: ({ children }) => (
-    <pre className="m-0 overflow-x-auto rounded-control bg-sunken p-[10px] font-mono text-small">
+    <pre className="m-0 overflow-x-auto rounded-control bg-sunken p-3 font-mono text-small">
       {children}
     </pre>
   ),
@@ -91,11 +89,9 @@ const article: Components = {
     <table className="w-full border-collapse text-left text-small">{children}</table>
   ),
   th: ({ children }) => (
-    <th className="sl-kicker border-b border-line py-[6px] pr-4 text-left">{children}</th>
+    <th className="sl-kicker border-b border-line py-2 pr-4 text-left">{children}</th>
   ),
-  td: ({ children }) => (
-    <td className="border-b border-line py-[6px] pr-4 align-top">{children}</td>
-  ),
+  td: ({ children }) => <td className="border-b border-line py-2 pr-4 align-top">{children}</td>,
 };
 
 // The article's own title, typeset on the row that carries it: a heading's worth of
@@ -162,7 +158,7 @@ export function RefusalLine({
   readonly onDismiss: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-control bg-danger-tint px-[10px] py-[6px] text-small text-danger">
+    <div className="flex items-center gap-3 rounded-control bg-danger-tint px-3 py-2 text-small text-danger">
       <span role="alert" className="min-w-0 break-words">
         {message}
       </span>

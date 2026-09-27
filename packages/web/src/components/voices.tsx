@@ -298,7 +298,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
         <Button
           variant="primary"
-          className="md:mt-[22px]"
+          className="md:mt-6"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {

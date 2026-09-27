@@ -57,10 +57,10 @@ export function DraftList(): ReactElement {
         className={cn(
           "engraved min-w-[112px] text-right",
           session.status === "saved"
-            ? "text-done"
+            ? "text-accent-ink"
             : session.status === "error" || session.status === "conflict"
-              ? "text-red"
-              : "text-ink3",
+              ? "text-danger"
+              : "text-ink-3",
         )}
       >
         {
@@ -115,7 +115,7 @@ export function DraftList(): ReactElement {
             </p>
           ) : null}
           {list.error ? (
-            <p role="alert" className="px-3 py-2 text-red">
+            <p role="alert" className="px-3 py-2 text-danger">
               {list.error.message}{" "}
               <Button variant="quiet" onClick={() => void list.refetch()}>
                 Retry
@@ -124,7 +124,7 @@ export function DraftList(): ReactElement {
           ) : null}
           {list.data?.length === 0 ? <p className="px-3 py-2">No saved drafts</p> : null}
           {error ? (
-            <p role="alert" className="px-3 py-2 text-red">
+            <p role="alert" className="px-3 py-2 text-danger">
               {error}
             </p>
           ) : null}
@@ -153,7 +153,7 @@ export function DraftList(): ReactElement {
                   }
                 >
                   {draft.readable ? null : (
-                    <p className="m-0 text-label text-amber">
+                    <p className="m-0 text-label text-waiting">
                       Unsupported or corrupt draft. Try opening it to recover, or discard it.
                     </p>
                   )}

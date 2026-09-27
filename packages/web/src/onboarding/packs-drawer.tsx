@@ -5,7 +5,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Rail, RailGroup } from "@/components/rail";
+import { List, ListRow } from "@/components/kit/list-row";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
 
 // Library → Templates → Add pack: the four starter packs, each adding its prompts, a suggested
@@ -48,27 +48,28 @@ export function PacksDrawer({
         </StatusSlot>
       }
     >
-      <p className="mb-4 flex items-center gap-1 text-small text-ink2">
+      <p className="mb-4 flex items-center gap-1 text-small text-ink-2">
         Prompts, a suggested voice and a template for one kind of channel.
         <InfoTip id="welcome.packs" />
       </p>
-      <RailGroup>
+      <List label="Starter packs" className="[&_.sl-row__meta]:whitespace-normal">
         {(view.data?.packs ?? []).map((pack) => (
-          <Rail key={pack.id}>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="font-semibold">{pack.name}</span>
-              <span className="text-small text-ink2">{pack.summary}</span>
-            </span>
-            <Button
-              disabled={pack.installed || install.isPending}
-              onClick={() => install.mutate(pack.id)}
-            >
-              {pack.installed ? "Added" : "Add pack"}
-            </Button>
-          </Rail>
+          <ListRow
+            key={pack.id}
+            title={pack.name}
+            meta={pack.summary}
+            actions={
+              <Button
+                disabled={pack.installed || install.isPending}
+                onClick={() => install.mutate(pack.id)}
+              >
+                {pack.installed ? "Added" : "Add pack"}
+              </Button>
+            }
+          />
         ))}
-        {view.data === undefined ? <Rail>Loading packs…</Rail> : null}
-      </RailGroup>
+        {view.data === undefined ? <ListRow title="Loading packs…" /> : null}
+      </List>
     </Drawer>
   );
 }
