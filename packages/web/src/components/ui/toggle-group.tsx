@@ -31,7 +31,7 @@ function ToggleGroupItem({
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        "min-h-8 shrink-0 border-r border-line-strong px-[10px] py-[5px] text-label text-ink-2 last:border-r-0",
+        "min-h-8 shrink-0 border-r border-line-strong px-3 py-1 text-label text-ink-2 last:border-r-0",
         "transition-colors duration-150 ease-out motion-reduce:transition-none hover:bg-raised hover:text-ink",
         "data-[state=on]:bg-raised data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_-2px_0_var(--color-accent)]",
         "disabled:cursor-not-allowed disabled:opacity-40",

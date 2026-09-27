@@ -292,7 +292,7 @@ export function TemplatesRoute({
                   <div
                     role="group"
                     aria-label={`Actions for ${template.name}`}
-                    className="flex flex-wrap items-center gap-[2px]"
+                    className="flex flex-wrap items-center gap-0.5"
                   >
                     <Button
                       variant="quiet"

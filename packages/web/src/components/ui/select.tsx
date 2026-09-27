@@ -20,7 +20,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       className={cn(
         "flex h-8 w-full items-center justify-between gap-2 rounded-control border border-line-strong",
-        "bg-raised px-[10px] text-left text-small text-ink data-[placeholder]:text-ink-3",
+        "bg-raised px-3 text-left text-small text-ink data-[placeholder]:text-ink-3",
         className,
       )}
       {...props}
@@ -67,7 +67,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex cursor-default items-center rounded-control py-[5px] pr-8 pl-[10px]",
+        "relative flex cursor-default items-center rounded-control py-1 pr-8 pl-3",
         "text-small text-ink outline-hidden select-none",
         "focus:bg-raised data-highlighted:bg-raised",
         className,

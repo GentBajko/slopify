@@ -47,7 +47,7 @@ export function ImagePrompts({
   }
 
   return (
-    <div className="flex basis-full flex-col items-start gap-[6px]" {...helpScope}>
+    <div className="flex basis-full flex-col items-start gap-2" {...helpScope}>
       <span className="flex items-center gap-1">
         <span id={listId} className="engraved text-ink-3">
           Image prompts

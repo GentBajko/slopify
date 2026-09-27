@@ -14,7 +14,7 @@ export function ListSkeleton({ label }: { readonly label: string }): ReactElemen
     <ul aria-label={`${label}, loading`} aria-busy="true" className="sl-list m-0 list-none p-0">
       {[0, 1, 2].map((index) => (
         <li key={index} className="sl-row" aria-hidden="true">
-          <span className="flex flex-col gap-2 py-[2px]">
+          <span className="flex flex-col gap-2 py-0.5">
             <span className="h-3 w-40 rounded-control bg-sunken" />
             <span className="h-3 w-56 rounded-control bg-sunken" />
           </span>

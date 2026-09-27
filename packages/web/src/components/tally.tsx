@@ -16,7 +16,7 @@ export function TallyBoard({ counters }: { readonly counters: readonly Tally[] }
         // makes neighbouring cells share one divider, the way rails do.
         <div
           key={counter.label}
-          className="-ml-px flex flex-col-reverse gap-2 border-l border-line p-[18px]"
+          className="-ml-px flex flex-col-reverse gap-2 border-l border-line p-4"
         >
           <dt className="engraved text-ink-3">{counter.label}</dt>
           <dd className="m-0 text-counter font-bold tabular-nums tracking-[-0.01em]">
@@ -33,7 +33,7 @@ export function TallySkeleton({ cells }: { readonly cells: number }) {
   return (
     <div className="grid grid-cols-2 overflow-hidden rounded-media border border-line bg-surface md:grid-cols-5">
       {Array.from({ length: cells }, (_, index) => index).map((index) => (
-        <div key={index} className="-ml-px flex flex-col gap-2 border-l border-line p-[18px]">
+        <div key={index} className="-ml-px flex flex-col gap-2 border-l border-line p-4">
           <span className="h-8 w-20 rounded-control bg-raised" />
           <span className="h-3 w-24 rounded-control bg-raised" />
         </div>

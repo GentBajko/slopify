@@ -130,7 +130,7 @@ function TableSkeleton() {
   return (
     <div className="border-t border-line">
       {[0, 1, 2, 3].map((index) => (
-        <div key={index} className="flex items-center gap-[14px] border-b border-line py-3">
+        <div key={index} className="flex items-center gap-4 border-b border-line py-3">
           <span className="h-3 w-24 rounded-control bg-raised" />
           <span className="h-3 w-56 max-w-[40%] rounded-control bg-raised" />
           <span className="ml-auto h-3 w-20 rounded-control bg-raised" />

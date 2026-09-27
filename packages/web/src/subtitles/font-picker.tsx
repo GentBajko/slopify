@@ -87,7 +87,7 @@ function FontPickerFields({
             value={value}
             disabled={uploading}
             onChange={(event) => onPick(event.target.value)}
-            className="h-8 w-full rounded-control border border-line-strong bg-raised px-[10px] text-small text-ink"
+            className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
           >
             {!listed.some((font) => font.id === "default") ? (
               <option value="default">Default font · bundled</option>

@@ -76,7 +76,7 @@ export function SubtitleControls({
               onChange={(event) =>
                 onChange({ ...value, mode: event.target.value as SubtitleConfig["mode"] })
               }
-              className="h-8 w-full rounded-control border border-line-strong bg-raised px-[10px] text-small text-ink"
+              className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
             >
               <option value="off">Off</option>
               <option value="files">Subtitle files (.srt + .vtt)</option>
@@ -217,7 +217,7 @@ export function SubtitleControls({
                         );
                         if (position) onChange({ ...value, position });
                       }}
-                      className="h-8 w-full rounded-control border border-line-strong bg-raised px-[10px] text-small text-ink"
+                      className="h-8 w-full rounded-control border border-line-strong bg-raised px-3 text-small text-ink"
                     >
                       {subtitlePositions.map((position) => (
                         <option key={position} value={position}>

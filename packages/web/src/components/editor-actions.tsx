@@ -36,7 +36,7 @@ export function EditorActions({
   return (
     <div
       data-slot="editor-actions"
-      className="sticky bottom-0 z-10 -mx-[18px] -mb-[18px] flex flex-wrap items-center gap-[10px] rounded-b-media border-t border-line bg-surface px-[18px] py-3"
+      className="sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-wrap items-center gap-3 rounded-b-media border-t border-line bg-surface px-4 py-3"
     >
       <Button
         variant="destructive"

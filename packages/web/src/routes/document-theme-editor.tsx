@@ -151,7 +151,7 @@ export function DocumentThemeEditorRoute({
         meta="How a project's PDF looks"
       />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]">
-        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
           <Field
             label="Name"
             tip="library.theme.name"
@@ -544,7 +544,7 @@ function Setting({
               type="color"
               aria-label={`${field.label} colour`}
               value={full}
-              className="h-8 w-10 cursor-pointer rounded-control border border-line-strong bg-sunken p-[2px]"
+              className="h-8 w-10 cursor-pointer rounded-control border border-line-strong bg-sunken p-0.5"
               onChange={(event) => {
                 set(event.target.value);
               }}

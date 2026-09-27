@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // The mark is never colour alone: the same errors are listed as sentences beside the field, and
 // `describedBy` points the textarea at them.
 const metrics =
-  "px-3 py-[10px] font-sans text-body leading-[1.5] break-words [scrollbar-gutter:stable]";
+  "px-3 py-3 font-sans text-body leading-[1.5] break-words [scrollbar-gutter:stable]";
 
 export function SlotBody({
   id,

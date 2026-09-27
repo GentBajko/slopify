@@ -8,7 +8,7 @@ export function TutorialLauncher() {
   return (
     <button
       type="button"
-      className="flex shrink-0 items-center gap-[6px] whitespace-nowrap text-ink-2 hover:text-ink"
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap text-ink-2 hover:text-ink"
       onClick={tutorial.start}
       disabled={tutorial.active}
       aria-label="Start interactive tutorial"
@@ -24,7 +24,7 @@ export function TutorialInvite() {
   const tutorial = useTutorial();
   if (!tutorial || tutorial.active) return null;
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-4 rounded-media border border-line bg-surface px-4 py-[14px]">
+    <div className="mb-4 flex flex-wrap items-center gap-4 rounded-media border border-line bg-surface px-4 py-4">
       <div className="min-w-0 flex-1">
         <h2 className="font-semibold">Make your first video</h2>
         <p className="mt-1 text-small text-ink-2">

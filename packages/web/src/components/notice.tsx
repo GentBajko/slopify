@@ -112,11 +112,11 @@ function Column({
 }) {
   const id = `notice-${heading.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <div className="flex flex-col gap-[6px]">
+    <div className="flex flex-col gap-2">
       <p id={id} className="engraved border-b border-line pb-1 text-ink-3">
         {heading}
       </p>
-      <ul aria-labelledby={id} className="m-0 flex list-none flex-col gap-[6px] p-0 text-small">
+      <ul aria-labelledby={id} className="m-0 flex list-none flex-col gap-2 p-0 text-small">
         {items.map((item) => (
           <li key={item}>{item}</li>
         ))}

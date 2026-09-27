@@ -36,7 +36,7 @@ export function PasteArea({
 
   return (
     <div {...(tip === undefined ? {} : helpScope)}>
-      <span className="mb-[5px] flex items-center gap-1">
+      <span className="mb-1 flex items-center gap-1">
         <Label htmlFor={fieldId}>{label}</Label>
         {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
       </span>
@@ -93,7 +93,7 @@ export function FilePick({
 
   return (
     <div>
-      <Label htmlFor={fieldId} className="mb-[5px]">
+      <Label htmlFor={fieldId} className="mb-1">
         {label}
       </Label>
       <input

@@ -102,7 +102,7 @@ export function NarrationAliasesRoute(): ReactElement {
 
       {listing.error === null ? null : (
         <RailGroup>
-          <p className="px-4 py-[14px] text-body text-danger">
+          <p className="px-4 py-4 text-body text-danger">
             Couldn't load the aliases: {listing.error.message} Reload the page to try again.
           </p>
         </RailGroup>
@@ -110,7 +110,7 @@ export function NarrationAliasesRoute(): ReactElement {
 
       {rows === undefined ? null : shown.length === 0 ? (
         <RailGroup>
-          <p className="px-4 py-[14px] text-body text-ink-2">
+          <p className="px-4 py-4 text-body text-ink-2">
             No aliases yet. Use Add alias to say a word differently from how it is written.
           </p>
         </RailGroup>
@@ -143,7 +143,7 @@ export function NarrationAliasesRoute(): ReactElement {
                 return (
                   <li
                     key={row.key}
-                    className="grid grid-cols-1 gap-x-[14px] gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-end"
+                    className="grid grid-cols-1 gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-end"
                   >
                     <label className="grid gap-1 text-label text-ink-2" htmlFor={`${id}-written`}>
                       Written

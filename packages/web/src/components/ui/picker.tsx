@@ -15,7 +15,7 @@ function Picker({ className, children, ...props }: React.ComponentProps<"select"
         data-slot="picker"
         className={cn(
           "h-8 w-full min-w-0 appearance-none rounded-control border border-line-strong bg-raised",
-          "py-[5px] pr-[26px] pl-[10px] text-small text-ink aria-invalid:border-danger",
+          "py-1 pr-6 pl-3 text-small text-ink aria-invalid:border-danger",
           className,
         )}
         {...props}

@@ -35,7 +35,7 @@ export function Rail({
     <div
       data-tour={tour}
       className={cn(
-        "relative flex items-center gap-[14px] border-b border-line px-4 py-[14px] last:border-b-0",
+        "relative flex items-center gap-4 border-b border-line px-4 py-4 last:border-b-0",
         className,
       )}
     >
