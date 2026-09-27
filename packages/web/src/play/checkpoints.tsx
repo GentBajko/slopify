@@ -86,7 +86,9 @@ export function CheckpointControls({
               </label>
               <p
                 id={`${id}-detail`}
-                className={error || (checked && !enabled) ? "pl-7 text-small text-danger" : "sr-only"}
+                className={
+                  error || (checked && !enabled) ? "pl-7 text-small text-danger" : "sr-only"
+                }
               >
                 {error ??
                   (enabled
