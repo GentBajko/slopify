@@ -477,7 +477,7 @@ describe("key setup, health and model upkeep routes", () => {
     const sent: string[] = [];
     const { app } = harness(notFound, {
       fetch: (async (_input: string | URL | Request, init?: RequestInit) => {
-        sent.push(String((init?.headers as Record<string, string>).Authorization));
+        sent.push(String((init?.headers as Record<string, string> | undefined)?.Authorization));
         return new Response("{}", { status: 200 });
       }) as typeof globalThis.fetch,
     });
