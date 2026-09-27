@@ -27,6 +27,13 @@ describe("edit settings", () => {
     expect(usesNarrationCuts({ sources: sources("generate", "off"), videoEdit: edit })).toBe(false);
   });
 
+  it("cuts every N seconds in a language without word timing", () => {
+    const edit = defaultVideoEdit;
+    const narrated = { sources: sources("generate"), videoEdit: edit };
+    expect(usesNarrationCuts({ ...narrated, language: "de" })).toBe(true);
+    expect(usesNarrationCuts({ ...narrated, language: "ja" })).toBe(false);
+  });
+
   it("needs the word timing for chapter openers but not for every Nth image", () => {
     const animated = (animate: VideoEditSettings["animate"]) => ({
       sources: sources("generate"),

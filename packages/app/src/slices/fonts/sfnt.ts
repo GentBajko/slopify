@@ -281,3 +281,77 @@ function checksum(bytes: Buffer): number {
   for (let at = 0; at < bytes.length; at += 4) sum = (sum + bytes.readUInt32BE(at)) >>> 0;
   return sum;
 }
+
+// Which of `codepoints` the face maps to a glyph, read from its Unicode cmap (format 4 or 12,
+// the two every modern font carries). Undefined when the font has neither; the caller then
+// cannot tell, and treats the font as covering what it was chosen for.
+export function mappedCodepoints(
+  content: Uint8Array,
+  index: number,
+  codepoints: readonly number[],
+): ReadonlySet<number> | undefined {
+  const bytes = Buffer.from(content.buffer, content.byteOffset, content.byteLength);
+  const face = directories(bytes)?.[index];
+  const table = face?.tables.get("cmap");
+  if (face === undefined || table === undefined || !validCmap(bytes, table)) return undefined;
+  const count = bytes.readUInt16BE(table.offset + 2);
+  let best: { readonly at: number; readonly format: number } | undefined;
+  for (let entry = 0; entry < count; entry += 1) {
+    const record = table.offset + 4 + entry * 8;
+    const platform = bytes.readUInt16BE(record);
+    const encoding = bytes.readUInt16BE(record + 2);
+    const at = table.offset + bytes.readUInt32BE(record + 4);
+    const format = bytes.readUInt16BE(at);
+    const unicode = platform === 0 || (platform === 3 && (encoding === 1 || encoding === 10));
+    if (!unicode || (format !== 4 && format !== 12)) continue;
+    if (best === undefined || format > best.format) best = { at, format };
+  }
+  if (best === undefined) return undefined;
+  const end = table.offset + table.length;
+  const found = new Set<number>();
+  for (const codepoint of codepoints)
+    if (glyphOf(bytes, best.at, best.format, codepoint, end) !== 0) found.add(codepoint);
+  return found;
+}
+
+function glyphOf(
+  bytes: Buffer,
+  at: number,
+  format: number,
+  codepoint: number,
+  end: number,
+): number {
+  if (format === 12) {
+    const groups = bytes.readUInt32BE(at + 12);
+    if (at + 16 + groups * 12 > end) return 0;
+    for (let group = 0; group < groups; group += 1) {
+      const row = at + 16 + group * 12;
+      const first = bytes.readUInt32BE(row);
+      const last = bytes.readUInt32BE(row + 4);
+      if (codepoint >= first && codepoint <= last)
+        return bytes.readUInt32BE(row + 8) + (codepoint - first);
+    }
+    return 0;
+  }
+  if (codepoint > 0xffff) return 0;
+  const segments = bytes.readUInt16BE(at + 6) / 2;
+  const ends = at + 14;
+  const starts = ends + segments * 2 + 2;
+  const deltas = starts + segments * 2;
+  const ranges = deltas + segments * 2;
+  if (ranges + segments * 2 > end) return 0;
+  for (let segment = 0; segment < segments; segment += 1) {
+    const last = bytes.readUInt16BE(ends + segment * 2);
+    if (codepoint > last) continue;
+    const first = bytes.readUInt16BE(starts + segment * 2);
+    if (codepoint < first) return 0;
+    const delta = bytes.readInt16BE(deltas + segment * 2);
+    const range = bytes.readUInt16BE(ranges + segment * 2);
+    if (range === 0) return (codepoint + delta) & 0xffff;
+    const glyphAt = ranges + segment * 2 + range + (codepoint - first) * 2;
+    if (glyphAt + 2 > end) return 0;
+    const glyph = bytes.readUInt16BE(glyphAt);
+    return glyph === 0 ? 0 : (glyph + delta) & 0xffff;
+  }
+  return 0;
+}

@@ -7,6 +7,7 @@ import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
+import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { validateCues } from "../revisions/rules.js";
@@ -252,10 +253,18 @@ async function files(
         .optional(),
     })
     .parse(JSON.parse(previousFiles?.piece.payload ?? "{}")).font;
+  // Another language's captions may need a font with its letters (`fonts/coverage.ts`); an
+  // English project keeps the saved font as it always did.
+  const language = projectLanguage(view.revision.config);
   const font =
-    savedFont?.id === config.fontId && previous !== undefined
-      ? { ...savedFont, path: outputPath(deps.paths, context.work.projectId, previous.output.path) }
-      : await resolveFont(deps.paths, config.fontId);
+    language !== "en"
+      ? await captionFont(captionFontDeps(deps.paths), config.fontId, language)
+      : savedFont?.id === config.fontId && previous !== undefined
+        ? {
+            ...savedFont,
+            path: outputPath(deps.paths, context.work.projectId, previous.output.path),
+          }
+        : await resolveFont(deps.paths, config.fontId);
   if (!context.maySubmit(piece.id)) return "held";
   const prepared: PreparedOutput[] = [];
   try {

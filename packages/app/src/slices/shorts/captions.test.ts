@@ -175,3 +175,19 @@ it("holds a group until the next begins, when that comes sooner than half a seco
     "0:00:00.85-0:00:01.50",
   ]);
 });
+
+it("shows each group whole, with no word lit, when word times are only estimates", () => {
+  const ass = shortCaptionsAss(
+    [
+      { text: "Привет.", start: 0, end: 0.5 },
+      { text: "Как", start: 0.7, end: 0.9 },
+      { text: "дела?", start: 0.9, end: 1.2 },
+    ],
+    { width: 1080, height: 1920, fontName: "Sans", wordByWord: false },
+  );
+  const events = ass.split("\n").filter((line) => line.startsWith("Dialogue:"));
+  expect(events).toHaveLength(2);
+  expect(ass).not.toContain("\\fscx108");
+  expect(events[1]).toContain("Как дела?");
+  expect(events[1]?.split(",").slice(1, 3).join("-")).toBe("0:00:00.70-0:00:01.70");
+});

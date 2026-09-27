@@ -16,6 +16,7 @@ import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
+import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
@@ -99,7 +100,15 @@ export async function prepareSubtitles(
   const dir = projectDir(deps.paths, projectId);
   const directory = mkdtempSync(join(dir, "captions-"));
   try {
-    const font = await snapshotFont(deps, projectId, outputs, config.fontId, cache, directory);
+    const font = await snapshotFont(
+      deps,
+      projectId,
+      outputs,
+      config.fontId,
+      cache,
+      directory,
+      language,
+    );
     const omissions: SubtitleOmission[] = cache?.key === key ? [...cache.omissions] : [];
     const words =
       cache?.key === key
@@ -254,14 +263,17 @@ async function snapshotFont(
   id: string,
   cache: Cache | undefined,
   directory: string,
+  language: string,
 ): Promise<Cache["font"]> {
   const previous = outputs.find((one) => one.role === "subtitle_font");
   const previousPath =
     previous === undefined ? undefined : outputPath(deps.paths, projectId, previous.path);
   const saved =
-    cache?.font.id === id && previousPath !== undefined && existsSync(previousPath)
-      ? { ...cache.font, path: previousPath }
-      : await resolveFont(deps.paths, id);
+    language !== "en"
+      ? await captionFont(captionFontDeps(deps.paths), id, language)
+      : cache?.font.id === id && previousPath !== undefined && existsSync(previousPath)
+        ? { ...cache.font, path: previousPath }
+        : await resolveFont(deps.paths, id);
   mkdirSync(join(directory, "fonts"), { mode: 0o700 });
   copyFileSync(saved.path, join(directory, "fonts", `selected${saved.extension}`));
   return { id: saved.id, name: saved.name, assName: saved.assName, extension: saved.extension };

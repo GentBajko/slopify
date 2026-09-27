@@ -133,6 +133,43 @@ export function wordTimingUnavailable(code: string | undefined): string | undefi
   return `Word timing isn't available for ${language.name} yet, so captions are timed sentence by sentence: each sentence is shown for the part of the narration that reads it. Word-by-word captions and cuts that follow the narration need word timing and are off.`;
 }
 
+// The letters a caption font needs for a language: its alphabet beyond a–z, or a sample of
+// its script. A font missing any of them draws empty boxes in that language's captions.
+const extraLetters: Readonly<Record<string, string>> = {
+  es: "áéíóúüñ¿¡",
+  de: "äöüß",
+  fr: "àâæçèéêëîïôœùûüÿ",
+  it: "àèéìíîòóù",
+  pt: "áâãàçéêíóôõú",
+  ca: "àèéíïòóúüç·",
+  nl: "éëïóöü",
+  pl: "ąćęłńóśźż",
+  cs: "áčďéěíňóřšťúůýž",
+  ro: "ăâîșț",
+  sv: "åäö",
+  da: "æøå",
+  nb: "æøå",
+  fi: "äö",
+  hu: "áéíóöőúüű",
+  tr: "çğıöşü",
+  vi: "ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ",
+  el: "αβγδεζηθικλμνξοπρστυφχψωάέήίόύώΑΩ",
+  ru: "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАЯ",
+  uk: "абвгґдеєжзиіїйклмнопрстуфхцчшщьюяАЯ",
+  ar: "ابتثجحخدذرزسشصضطظعغفقكلمنهوي",
+  he: "אבגדהוזחטיכלמנסעפצקרשת",
+  hi: "अआइईउऊएऐओऔकखगघचछजझटठडढणतथदधनपफबभमयरलवशषसह",
+  th: "กขคงจฉชซญดตถทนบปผพฟภมยรลวสหอฮ",
+  ja: "あいうえおかきくけこアイウエオ日本語",
+  zh: "的一是不了人我在有他这中大来上国个到说们为子和你地出道也时年",
+  ko: "가나다라마바사아자차카타파하한국어",
+};
+export function languageLetters(code: string | undefined): readonly number[] {
+  const info = languageInfo(code);
+  const letters = `${info.script === "latin" ? "abcdefghijklmnopqrstuvwxyz" : ""}${extraLetters[info.code] ?? ""}`;
+  return [...new Set(Array.from(letters, (letter) => letter.codePointAt(0) ?? 0))];
+}
+
 // Whether a codepoint belongs to a writing system; used to decide whether a caption font
 // covers the project's letters without reading the font for every character.
 export function writingSystemOf(codepoint: number): WritingSystem | undefined {
