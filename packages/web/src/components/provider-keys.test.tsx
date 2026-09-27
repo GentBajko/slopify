@@ -23,9 +23,38 @@ function cli(id: ProviderId, displayName: string, readiness: ProviderStatus["rea
 const listing = (providers: readonly ProviderStatus[]) => jsonAnswer({ providers });
 
 describe("the API key rails", () => {
-  it("shows skeleton rails while the providers are coming", () => {
-    const { container } = renderApp(<ProviderKeys />, testDeps({}));
-    expect(container.querySelectorAll(".bg-panel2").length).toBeGreaterThan(0);
+  it("shows the list's shape while the providers are coming", () => {
+    renderApp(<ProviderKeys />, testDeps({}));
+    expect(screen.getByRole("status", { name: "Loading providers" })).not.toBeNull();
+  });
+
+  it("lists every provider with its state in words, beside the first one still to set up", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      <ProviderKeys />,
+      testDeps({
+        "GET /api/providers": listing([
+          keyed("openrouter", "llm", "OpenRouter", true),
+          keyed("elevenlabs", "tts", "ElevenLabs", false),
+          keyed("fal", "image", "fal.ai", false),
+        ]),
+      }),
+    );
+    const text = await screen.findByRole("list", { name: "Text providers" });
+    expect(within(text).getByText("Key saved")).not.toBeNull();
+    expect(
+      within(screen.getByRole("list", { name: "Speech providers" })).getByText("No key"),
+    ).not.toBeNull();
+    // The first provider without a key is open, with its setup steps in view.
+    expect(screen.getByRole("heading", { name: "Set up ElevenLabs" })).not.toBeNull();
+    expect(screen.getByLabelText("ElevenLabs API key")).not.toBeNull();
+    expect(screen.queryByLabelText("OpenRouter API key")).toBeNull();
+
+    await user.click(within(text).getByRole("button", { name: "OpenRouter" }));
+    expect(screen.getByRole("heading", { name: "OpenRouter" })).not.toBeNull();
+    expect(screen.getByLabelText("OpenRouter API key")).not.toBeNull();
+    expect(screen.queryByLabelText("ElevenLabs API key")).toBeNull();
+    expect(within(text).getByRole("listitem").getAttribute("aria-current")).toBe("true");
   });
 
   it("names the problem when the providers cannot be read", async () => {
@@ -51,9 +80,10 @@ describe("the API key rails", () => {
     );
     expect(await screen.findByText("Installed, version 2.1.258")).not.toBeNull();
     expect(screen.queryByLabelText(/Claude Code CLI API key/)).toBeNull();
+    expect(screen.getByRole("region", { name: "Claude Code CLI" }).dataset.ready).toBe("true");
     expect(
-      screen.getByText("Claude Code CLI").closest<HTMLElement>("[data-ready]")?.dataset.ready,
-    ).toBe("true");
+      within(screen.getByRole("list", { name: "Text providers" })).getByText("Ready"),
+    ).not.toBeNull();
   });
 
   it("lists a CLI provider that ran but printed no version as installed", async () => {
@@ -86,9 +116,8 @@ describe("the API key rails", () => {
     );
 
     expect(await screen.findByText(issue)).not.toBeNull();
-    expect(screen.getByText("Codex CLI").closest<HTMLElement>("[data-ready]")?.dataset.ready).toBe(
-      "false",
-    );
+    expect(screen.getByRole("region", { name: "Codex CLI" }).dataset.ready).toBe("false");
+    expect(screen.getByText("Needs attention")).not.toBeNull();
   });
 
   it("greys a CLI that is not on PATH and says what to do about it", async () => {
@@ -104,9 +133,8 @@ describe("the API key rails", () => {
     await userEvent.click(screen.getByRole("button", { name: "Change path" }));
     expect(screen.getByRole("button", { name: "Save Codex CLI path" })).not.toBeNull();
 
-    const name = screen.getByText("Codex CLI");
-    expect(name.className).toContain("text-ink3");
-    expect(name.closest<HTMLElement>("[data-ready]")?.dataset.ready).toBe("false");
+    expect(screen.getByRole("region", { name: "Codex CLI" }).dataset.ready).toBe("false");
+    expect(screen.getByText("Not found")).not.toBeNull();
   });
 
   it("teaches what a key is for while none is stored", async () => {
@@ -247,7 +275,7 @@ describe("the API key rails", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove OpenRouter key" }));
     const again = await screen.findByRole("dialog");
-    await user.click(within(again).getByRole("button", { name: "Remove" }));
+    await user.click(within(again).getByRole("button", { name: "Remove key" }));
     await waitFor(() => {
       expect(deleted).toBe(1);
     });
@@ -268,7 +296,7 @@ describe("the API key rails", () => {
 
     await user.click(await screen.findByRole("button", { name: "Remove OpenRouter key" }));
     const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Remove" }));
+    await user.click(within(dialog).getByRole("button", { name: "Remove key" }));
     expect(await screen.findByText("No key is stored for OpenRouter.")).not.toBeNull();
   });
 });

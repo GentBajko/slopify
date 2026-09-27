@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
 import { dismissWelcome, readFirstRun, upkeepKeys } from "@/components/provider-upkeep-api";
-import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { type FreshProviderDefaults, setFreshProviderDefaults } from "@/play/draft-state";
 
 // The first launch's welcome: which AI command-line tools were found and that a video can be
@@ -37,28 +37,33 @@ export function Welcome({
   if (data === undefined || !data.firstRun || data.message === null) return null;
   const found = data.detected.filter((cli) => cli.usable);
   return (
-    <RailGroup className="mb-4">
-      <Rail className="flex-wrap items-start gap-y-2">
-        <div role="status" className="min-w-0 flex-1">
-          <p className="font-semibold">{data.message}</p>
-          {data.detail === null ? null : <p className="text-small text-ink2">{data.detail}</p>}
-          {found.length === 0 ? null : (
-            <p className="text-small text-ink2">
-              Found:{" "}
-              {found
-                .map(
-                  (cli) =>
-                    `${cli.displayName}${cli.version === undefined ? "" : ` ${cli.version}`}`,
-                )
-                .join(", ")}
-            </p>
-          )}
-          {dismiss.error ? <p className="text-small text-red">{dismiss.error.message}</p> : null}
-        </div>
-        <Button variant="ghost" disabled={dismiss.isPending} onClick={() => dismiss.mutate()}>
+    <Callout
+      title={data.message}
+      actions={
+        <Button
+          variant="quiet"
+          size="small"
+          disabled={dismiss.isPending}
+          onClick={() => dismiss.mutate()}
+        >
           Got it
         </Button>
-      </Rail>
-    </RailGroup>
+      }
+    >
+      {data.detail === null ? null : <p className="m-0">{data.detail}</p>}
+      {found.length === 0 ? null : (
+        <p className="m-0">
+          Found:{" "}
+          {found
+            .map((cli) => `${cli.displayName}${cli.version === undefined ? "" : ` ${cli.version}`}`)
+            .join(", ")}
+        </p>
+      )}
+      {dismiss.error ? (
+        <p role="alert" className="m-0 text-danger">
+          {dismiss.error.message}
+        </p>
+      ) : null}
+    </Callout>
   );
 }

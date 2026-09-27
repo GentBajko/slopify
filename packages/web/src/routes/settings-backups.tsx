@@ -1,15 +1,15 @@
 import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { readBackups, runBackupNow, saveBackups } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
+import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
-import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export const backupsQueryKey = ["backups"] as const;
 const keepMin = 1;
@@ -43,10 +43,23 @@ function draftOf(view: BackupView): Draft {
   };
 }
 
-export function BackupSettings() {
+// Back up now, from the section's button or from Ctrl+K anywhere on Settings.
+export function useBackUpNow() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
+  return useMutation({
+    mutationFn: () => runBackupNow(api),
+    onSuccess: (view: BackupView) => {
+      queryClient.setQueryData(backupsQueryKey, view);
+      notify("Backup started. Its result shows here when it finishes.", "success");
+    },
+  });
+}
+
+export function BackupSettings() {
+  const { api } = useApp();
+  const queryClient = useQueryClient();
   const backups = useQuery({
     queryKey: backupsQueryKey,
     queryFn: () => readBackups(api),
@@ -55,12 +68,6 @@ export function BackupSettings() {
   });
   const [draft, setDraft] = useState<Draft | undefined>(undefined);
   const [saved, setSaved] = useState(false);
-  const toggleId = useId();
-  const timeId = useId();
-  const keepId = useId();
-  const keepErrorId = useId();
-  const folderId = useId();
-
   const save = useMutation({
     mutationFn: (config: BackupConfigInput) => saveBackups(api, config),
     onSuccess: (view) => {
@@ -69,13 +76,7 @@ export function BackupSettings() {
       setSaved(true);
     },
   });
-  const run = useMutation({
-    mutationFn: () => runBackupNow(api),
-    onSuccess: (view) => {
-      queryClient.setQueryData(backupsQueryKey, view);
-      notify("Backup started. Its result shows here when it finishes.", "success");
-    },
-  });
+  const run = useBackUpNow();
 
   useEffect(() => {
     if (!saved) return;
@@ -93,111 +94,95 @@ export function BackupSettings() {
   return (
     <div>
       <SectionHead
-        title="Backups"
+        title="Daily backup"
         info="Once a day Slopify writes the same file Export everything downloads (every project with its files, your library, templates, schedules, settings and usage; never provider keys) into the backup folder, and deletes its own oldest backups beyond the number you keep. Nothing else in the folder is touched. A backup waits while projects are being made, because their files are still being written. If Slopify was off at the backup time, it backs up a couple of minutes after it starts again."
       >
         <Button
-          type="button"
+          variant="primary"
           disabled={view === undefined || view.running || run.isPending}
           onClick={() => run.mutate()}
         >
           Back up now
         </Button>
       </SectionHead>
-      <RailGroup className="mb-4">
-        <Rail className="flex-wrap justify-between gap-y-1 text-small">
-          <span role="status" className="text-ink2">
+      <div className="mb-6 flex flex-col gap-3">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-small text-ink-2">
+          <span role="status">
             {view === undefined ? (
-              <span className="inline-block h-4 w-48 rounded-control bg-panel2" />
+              <span className="inline-block h-4 w-48 rounded-control bg-raised" />
             ) : (
               lastLine(view)
             )}
           </span>
-          <span className="text-ink2">{view === undefined ? null : nextLine(view)}</span>
-        </Rail>
+          <span>{view === undefined ? null : nextLine(view)}</span>
+        </div>
         {view?.status.detail ? (
-          <Rail
-            className={
-              view.status.lastResult === "failed" ? "text-small text-red" : "text-small text-ink2"
-            }
-          >
-            {view.status.detail}
-          </Rail>
+          view.status.lastResult === "failed" ? (
+            <Callout tone="danger" title="Why the last backup stopped">
+              {view.status.detail}
+            </Callout>
+          ) : (
+            <p className="m-0 text-small text-ink-2">{view.status.detail}</p>
+          )
         ) : null}
         {run.error ? (
-          <Rail className="text-small text-red">
-            <span role="alert">{run.error.message}</span>
-          </Rail>
+          <p role="alert" className="m-0 text-small text-danger">
+            {run.error.message}
+          </p>
         ) : null}
-      </RailGroup>
+      </div>
       {backups.error ? (
-        <RailGroup>
-          <Rail className="text-small text-red">{backups.error.message}</Rail>
-        </RailGroup>
+        <p role="alert" className="m-0 text-small text-danger">
+          The backup settings couldn't be read: {backups.error.message}
+        </p>
       ) : (
-        <RailGroup>
-          <Row label="Back up automatically" labelId={toggleId}>
-            <ToggleGroup
-              type="single"
-              value={current?.enabled === true ? "on" : "off"}
-              aria-labelledby={toggleId}
-              disabled={current === undefined}
-              onValueChange={(next) => {
-                if (next === "on" || next === "off") edit({ enabled: next === "on" });
-              }}
+        <div className="flex flex-col gap-6">
+          <Switch
+            label="Back up automatically"
+            checked={current?.enabled === true}
+            disabled={current === undefined}
+            className="self-start"
+            onChange={(next) => edit({ enabled: next })}
+          />
+          <div className="grid items-start gap-6 md:grid-cols-2">
+            <Field label="Time of day" help={`${browserTimeZone()} time`}>
+              <Input
+                type="time"
+                className="w-[140px] tabular-nums"
+                value={current?.time ?? "03:00"}
+                disabled={current === undefined}
+                onChange={(event) => edit({ time: event.target.value })}
+              />
+            </Field>
+            <Field label="Keep last" help="Backups kept in the folder." error={keepError}>
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={keepMin}
+                max={keepMax}
+                step={1}
+                className="w-[88px] tabular-nums"
+                value={current?.keep ?? "5"}
+                disabled={current === undefined}
+                onChange={(event) => edit({ keep: event.target.value })}
+              />
+            </Field>
+            <Field
+              label="Folder"
+              className="md:col-span-2"
+              {...(view === undefined ? {} : { help: whereLine(view) })}
             >
-              <ToggleGroupItem value="off">Off</ToggleGroupItem>
-              <ToggleGroupItem value="on">On</ToggleGroupItem>
-            </ToggleGroup>
-          </Row>
-          <Row label="Time of day" htmlFor={timeId}>
-            <Input
-              id={timeId}
-              type="time"
-              className="w-[120px] tabular-nums"
-              value={current?.time ?? "03:00"}
-              disabled={current === undefined}
-              onChange={(event) => edit({ time: event.target.value })}
-            />
-            <span className="text-small text-ink2">{browserTimeZone()} time</span>
-          </Row>
-          <Row label="Keep last" htmlFor={keepId}>
-            <Input
-              id={keepId}
-              type="number"
-              inputMode="numeric"
-              min={keepMin}
-              max={keepMax}
-              step={1}
-              className="w-[72px] tabular-nums"
-              value={current?.keep ?? "5"}
-              disabled={current === undefined}
-              aria-invalid={keepError !== undefined}
-              aria-describedby={keepError === undefined ? undefined : keepErrorId}
-              onChange={(event) => edit({ keep: event.target.value })}
-            />
-            <span className="text-small text-ink2">backups</span>
-            {keepError === undefined ? null : (
-              <p id={keepErrorId} className="basis-full text-label text-red">
-                {keepError}
-              </p>
-            )}
-          </Row>
-          <Row label="Folder" htmlFor={folderId}>
-            <Input
-              id={folderId}
-              className="min-w-0 flex-1"
-              value={current?.folder ?? ""}
-              placeholder={view?.defaultFolder ?? ""}
-              disabled={current === undefined}
-              onChange={(event) => edit({ folder: event.target.value })}
-            />
-            {view === undefined ? null : (
-              <p className="basis-full text-label text-ink2">{whereLine(view)}</p>
-            )}
-          </Row>
-          <div className="flex flex-wrap items-center gap-[10px] px-4 py-[14px]">
+              <Input
+                value={current?.folder ?? ""}
+                placeholder={view?.defaultFolder ?? ""}
+                disabled={current === undefined}
+                onChange={(event) => edit({ folder: event.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
+              variant="primary"
               disabled={current === undefined || keepError !== undefined || save.isPending}
               onClick={() => {
                 if (current === undefined) return;
@@ -215,40 +200,13 @@ export function BackupSettings() {
             </Button>
             <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
             {save.error === null ? null : (
-              <p role="alert" className="basis-full text-label text-red">
+              <p role="alert" className="m-0 basis-full text-small text-danger">
                 {save.error.message}
               </p>
             )}
           </div>
-        </RailGroup>
+        </div>
       )}
-    </div>
-  );
-}
-
-function Row({
-  label,
-  htmlFor,
-  labelId,
-  children,
-}: {
-  readonly label: string;
-  readonly htmlFor?: string;
-  readonly labelId?: string;
-  readonly children: React.ReactNode;
-}) {
-  return (
-    <div className="grid items-center gap-[14px] border-b border-line px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-      {htmlFor === undefined ? (
-        <span id={labelId} className="font-semibold">
-          {label}
-        </span>
-      ) : (
-        <label htmlFor={htmlFor} className="font-semibold">
-          {label}
-        </label>
-      )}
-      <div className="flex min-w-0 flex-wrap items-center gap-[10px]">{children}</div>
     </div>
   );
 }

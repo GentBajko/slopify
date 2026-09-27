@@ -4,34 +4,40 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useState } from "react";
 import { type ProviderListBody, saveProviderPath } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Code, Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Lamp } from "@/components/lamp";
+import { Lamp } from "@/components/kit/status";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 
-// One line per provider: name, lamp and state word, the key field, then the actions. The columns
-// line up across every family, so the eye runs down a single list.
-export const providerRow =
-  "grid grid-cols-1 items-center gap-x-4 gap-y-2 border-t border-line px-4 py-[10px] first:border-t-0 md:grid-cols-[170px_150px_minmax(0,1fr)_auto]";
+type CliReadiness = Extract<ProviderStatus["readiness"], { readonly kind: "cli" }>;
 
-export function CliProviderRow({
+// The list's word for a command-line provider: ready, found but not usable, or not found.
+export function cliState(readiness: CliReadiness): {
+  readonly tone: "done" | "waiting" | "off";
+  readonly word: string;
+} {
+  if (readinessIsUsable(readiness)) return { tone: "done", word: "Ready" };
+  if (readiness.installed) return { tone: "waiting", word: "Needs attention" };
+  return { tone: "off", word: "Not found" };
+}
+
+// The detail column for a command-line provider: what was found, the command Slopify runs,
+// and the executable path behind Change path.
+export function CliProviderDetail({
   provider,
   readiness,
+  kind,
 }: {
   readonly provider: ProviderStatus;
-  readonly readiness: Extract<ProviderStatus["readiness"], { readonly kind: "cli" }>;
+  readonly readiness: CliReadiness;
+  // "Text" or "Images": which list the provider sits in.
+  readonly kind: string;
 }): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const nameId = useId();
-  const fieldId = useId();
-  const labelId = useId();
-  const helpId = useId();
-  const errorId = useId();
+  const headingId = useId();
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const configured = provider.cliPath?.configured ?? null;
@@ -75,12 +81,16 @@ export function CliProviderRow({
   const formId = useId();
 
   return (
-    <div data-ready={usable} className="border-t border-line first:border-t-0">
-      <div className={cn(providerRow, "border-t-0")}>
-        <span className="flex min-w-0 items-center gap-1">
-          <span id={nameId} className={cn("font-semibold", usable ? "text-ink" : "text-ink3")}>
+    <section
+      aria-labelledby={headingId}
+      data-ready={usable}
+      className="flex min-w-0 flex-col gap-5"
+    >
+      <div>
+        <div className="flex items-center gap-2">
+          <h3 id={headingId} className="sl-section-head__title">
             {provider.displayName}
-          </span>
+          </h3>
           <InfoTip label={`${provider.displayName} sign-in`}>
             {onHost ? (
               <p>
@@ -96,81 +106,85 @@ export function CliProviderRow({
                 : null}
             </p>
           </InfoTip>
-        </span>
-        <p className="flex min-w-0 items-center gap-2 text-small text-ink2" aria-live="polite">
-          <Lamp state={usable ? "done" : "pending"} />
+        </div>
+        <p className="sl-section-head__meta">{kind} · command line, no key needed</p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="m-0 flex min-w-0 items-center gap-2" aria-live="polite">
+          <Lamp tone={cliState(readiness).tone} />
           <span className="min-w-0 break-words">{statusOf(readiness, configured)}</span>
         </p>
-        <p className="min-w-0 truncate text-label text-ink3" title={command}>
-          <span className="sr-only">Command: </span>
-          <code>{command}</code>
+        <p className="m-0 flex min-w-0 items-center gap-2 text-small text-ink-2">
+          <span>Command</span>
+          <Code className="min-w-0 truncate" title={command}>
+            {command}
+          </Code>
         </p>
-        <div className="flex min-h-8 items-center gap-2">
-          {onHost ? (
-            <span className="engraved text-ink3">Managed on host</span>
-          ) : (
-            <Button
-              variant="ghost"
-              aria-expanded={editing}
-              aria-controls={formId}
-              onClick={() => setEditing((open) => !open)}
-            >
-              {editing ? "Close path" : "Change path"}
-            </Button>
-          )}
-          <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-        </div>
       </div>
+
+      <div className="sl-btn-row">
+        {onHost ? (
+          <span className="text-small text-ink-2">Managed on host</span>
+        ) : (
+          <Button
+            aria-expanded={editing}
+            aria-controls={formId}
+            onClick={() => setEditing((open) => !open)}
+          >
+            {editing ? "Close path" : "Change path"}
+          </Button>
+        )}
+        <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+      </div>
+
       {onHost || !editing ? null : (
         <form
           id={formId}
-          className="border-t border-line bg-bg/40 px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             if (!save.isPending) save.mutate(value);
           }}
         >
-          <Label htmlFor={fieldId} id={labelId} className="mb-[5px]">
-            Executable path
-          </Label>
-          <div className="flex max-w-[640px] items-center gap-2">
-            <Input
-              id={fieldId}
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={4096}
-              aria-labelledby={`${nameId} ${labelId}`}
-              aria-invalid={save.error !== null}
-              aria-describedby={`${helpId}${save.error ? ` ${errorId}` : ""}`}
-              placeholder={defaultCommand}
-              value={value}
-              disabled={save.isPending}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setSaved(false);
-                save.reset();
-              }}
-            />
-            <Button
-              type="submit"
-              aria-label={`Save ${provider.displayName} path`}
-              disabled={save.isPending}
-            >
-              {save.isPending ? "Checking…" : "Save path"}
-            </Button>
-          </div>
-          <p id={helpId} className="mt-1 text-label text-ink3">
-            Leave blank to find <code>{defaultCommand}</code> on PATH. Use an absolute path without
-            quotes or arguments.
-          </p>
-          {save.error ? (
-            <p id={errorId} role="alert" className="mt-1 text-label text-red">
-              {save.error.message}
-            </p>
-          ) : null}
+          <Field
+            label="Executable path"
+            help={
+              <>
+                Leave blank to find <Code>{defaultCommand}</Code> on PATH. Use an absolute path
+                without quotes or arguments.
+              </>
+            }
+            error={save.error?.message}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={4096}
+                aria-label={`${provider.displayName} Executable path`}
+                className="min-w-0 flex-1 basis-[220px]"
+                placeholder={defaultCommand}
+                value={value}
+                disabled={save.isPending}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setSaved(false);
+                  save.reset();
+                }}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                aria-label={`Save ${provider.displayName} path`}
+                disabled={save.isPending}
+              >
+                {save.isPending ? "Checking…" : "Save path"}
+              </Button>
+            </div>
+          </Field>
         </form>
       )}
-    </div>
+    </section>
   );
 }
 

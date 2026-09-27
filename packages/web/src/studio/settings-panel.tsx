@@ -4,11 +4,10 @@ import { CopyIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { newStudioPairing, readStudioSettings, saveStudioPlaylist } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
-import { RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
@@ -18,13 +17,13 @@ export function StudioSettings() {
   return (
     <div>
       <SectionHead
-        title="YouTube Studio"
+        title="Upload pack and extension"
         info="Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install steps: docs/studio-extension.md in the Slopify repository."
       />
-      <RailGroup>
+      <div className="flex flex-col gap-8">
         <Playlist />
         <Pairing />
-      </RailGroup>
+      </div>
     </div>
   );
 }
@@ -33,7 +32,6 @@ function Playlist() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
-  const inputId = useId();
   const errorId = useId();
   const saved = useQuery({ queryKey: studioSettingsKey, queryFn: () => readStudioSettings(api) });
   const [typed, setTyped] = useState<string | undefined>(undefined);
@@ -52,16 +50,12 @@ function Playlist() {
   });
   const error = tooLong ?? save.error?.message;
   return (
-    <div className="grid items-center gap-[14px] border-b border-line px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-      <label htmlFor={inputId} className="font-semibold">
-        Playlist
-      </label>
-      <div className="flex flex-wrap items-center gap-[10px]">
+    <Field label="Playlist" help="The playlist every upload pack names.">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
-          id={inputId}
           autoComplete="off"
           placeholder="The playlist's name in Studio"
-          className="min-w-[220px] flex-1"
+          className="min-w-0 flex-1 basis-[220px]"
           value={value}
           disabled={saved.data === undefined}
           aria-invalid={tooLong !== undefined}
@@ -72,19 +66,19 @@ function Playlist() {
           }}
         />
         <Button
-          type="button"
+          variant="primary"
           disabled={save.isPending || typed === undefined || tooLong !== undefined}
           onClick={() => save.mutate(value)}
         >
           Save
         </Button>
-        {error === undefined ? null : (
-          <p id={errorId} role="alert" className="basis-full text-label text-red">
-            {error}
-          </p>
-        )}
       </div>
-    </div>
+      {error === undefined ? null : (
+        <p id={errorId} role="alert" className="m-0 text-small text-danger">
+          {error}
+        </p>
+      )}
+    </Field>
   );
 }
 
@@ -113,37 +107,34 @@ function Pairing() {
     );
   };
   return (
-    <div className="grid items-center gap-[14px] px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-      <span className="font-semibold">Extension pairing token</span>
-      <div className="flex min-w-0 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-[10px]">
-          <code className="min-w-0 flex-1 truncate rounded-control border border-line bg-panel2 px-3 py-[6px] text-small select-all">
-            {pairing?.token ?? "…"}
-          </code>
-          <Button type="button" variant="ghost" disabled={pairing === undefined} onClick={copy}>
-            <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
-            Copy
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={reset.isPending || pairing === undefined}
-            onClick={() => reset.mutate()}
-          >
-            New pairing token
-          </Button>
-        </div>
-        <p className="text-small text-ink2">
-          {pairing?.origin == null
-            ? "No extension is paired. Paste this token into the Slopify Studio extension's options and press Pair."
-            : `Paired with the extension at ${pairing.origin}. A new token unpairs it.`}
-        </p>
-        {reset.error === null ? null : (
-          <p role="alert" className="text-label text-red">
-            {reset.error.message}
-          </p>
-        )}
+    <div className="sl-field">
+      <span className="sl-field__label">Extension pairing token</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <code className="sl-code min-w-0 flex-1 basis-[220px] truncate py-[6px] select-all">
+          {pairing?.token ?? "…"}
+        </code>
+        <Button variant="quiet" disabled={pairing === undefined} onClick={copy}>
+          <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
+          Copy
+        </Button>
+        <Button
+          variant="quiet"
+          disabled={reset.isPending || pairing === undefined}
+          onClick={() => reset.mutate()}
+        >
+          New pairing token
+        </Button>
       </div>
+      <p className="sl-field__help m-0">
+        {pairing?.origin == null
+          ? "No extension is paired. Paste this token into the Slopify Studio extension's options and press Pair."
+          : `Paired with the extension at ${pairing.origin}. A new token unpairs it.`}
+      </p>
+      {reset.error === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {reset.error.message}
+        </p>
+      )}
     </div>
   );
 }
