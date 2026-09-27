@@ -121,6 +121,7 @@ function byHand(result: FieldResult): string {
   return result.message
     .replace("the text is copied", "press Copy on this message")
     .replace("It is copied", "Press Copy on this message")
+    .replace("The text is copied", "Press Copy on this message")
     .replace("the name is copied", "press Copy for the name")
     .replace(/the playlist name "(.*)" is copied/, 'press Copy for the playlist name "$1"');
 }

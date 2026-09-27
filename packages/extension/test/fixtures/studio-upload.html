@@ -1,11 +1,16 @@
 <!doctype html>
 <!--
-  A HAND-MADE copy of YouTube Studio's upload dialog, Details step, after a video file is in.
-  It is NOT saved from the live page: it was written from knowledge of Studio's markup
-  (Polymer custom elements, ids like #textbox, #file-loader, #tags-container) and holds only
-  what the filler touches. It is the contract src/selectors.ts is tested against. When Studio's
-  live page disagrees, save the live dialog's markup over the matching parts here and fix
-  src/selectors.ts until test/fill.test.ts passes again. See docs/studio-extension.md.
+  A copy of YouTube Studio's upload dialog, Details step, after a video file is in, holding
+  only what the filler touches. Its structure, ids, names and aria-labels follow the live
+  Studio page as read on 2026-09-27 (a video's Details editor, which uses the same components):
+  web components are plain custom elements here, the title and description are contenteditable
+  div#textbox, radios are tp-yt-paper-radio-button with name attributes (the chosen one gets
+  class iron-selected and the checked attribute), Show more (#toggle-button) reveals the AI use
+  question (#altered-content) and Tags (a ytcp-chip-bar with input#text-input).
+  NOT inspected on the live page, so still guesses: the playlist list the dropdown opens
+  (ytcp-playlist-dialog) and the dialog A/B Testing opens (ytcp-ab-test-dialog).
+  All content is invented. It is the contract src/selectors.ts is tested against; see
+  docs/studio-extension.md.
 -->
 <html lang="en">
   <head>
@@ -14,7 +19,7 @@
   </head>
   <body>
     <ytcp-uploads-dialog>
-      <tp-yt-paper-dialog id="dialog">
+      <tp-yt-paper-dialog id="dialog" opened>
         <h1 id="dialog-title">my-video-file</h1>
         <ytcp-video-metadata-editor>
           <div id="basics">
@@ -27,6 +32,8 @@
                   aria-label="Add a title that describes your video (type @ to mention a channel)"
                 >my-video-file</div>
               </ytcp-social-suggestions-textbox>
+              <ytcp-button id="ab-test-button">A/B Testing</ytcp-button>
+              <button id="preview-button" aria-label="A/B Testing">Test</button>
             </ytcp-video-title>
             <ytcp-video-description>
               <ytcp-social-suggestions-textbox id="description-textarea">
@@ -38,53 +45,69 @@
                 ></div>
               </ytcp-social-suggestions-textbox>
             </ytcp-video-description>
-            <div id="still-picker">
-              <ytcp-thumbnails-compact-editor-uploader>
+            <ytcp-video-custom-still-editor>
+              <ytcp-thumbnail-uploader>
                 <button id="select-button" aria-label="Upload file">Upload file</button>
                 <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
-              </ytcp-thumbnails-compact-editor-uploader>
-              <ytcp-button id="test-and-compare-button" aria-label="Test & compare"
-                >Test &amp; compare</ytcp-button
-              >
-            </div>
-            <ytcp-video-metadata-playlists>
+              </ytcp-thumbnail-uploader>
+            </ytcp-video-custom-still-editor>
+            <ytcp-video-metadata-playlists aria-label="Add to playlist">
               <ytcp-text-dropdown-trigger>
                 <ytcp-dropdown-trigger aria-label="Select playlists">Select</ytcp-dropdown-trigger>
               </ytcp-text-dropdown-trigger>
             </ytcp-video-metadata-playlists>
             <div id="audience">
-              <tp-yt-paper-radio-button
-                name="VIDEO_MADE_FOR_KIDS_MFK"
-                role="radio"
-                aria-checked="false"
-                >Yes, it's made for kids</tp-yt-paper-radio-button
-              >
-              <tp-yt-paper-radio-button
-                name="VIDEO_MADE_FOR_KIDS_NOT_MFK"
-                role="radio"
-                aria-checked="false"
-                >No, it's not made for kids</tp-yt-paper-radio-button
-              >
+              <tp-yt-paper-radio-group>
+                <tp-yt-paper-radio-button name="VIDEO_MADE_FOR_KIDS_MFK" role="radio"
+                  >Yes, it's made for kids</tp-yt-paper-radio-button
+                >
+                <tp-yt-paper-radio-button name="VIDEO_MADE_FOR_KIDS_NOT_MFK" role="radio"
+                  >No, it's not made for kids</tp-yt-paper-radio-button
+                >
+              </tp-yt-paper-radio-group>
             </div>
-            <ytcp-button id="toggle-button" aria-label="Show more">Show more</ytcp-button>
+            <ytcp-button id="toggle-button" aria-label="Show advanced settings"
+              >Show more</ytcp-button
+            >
           </div>
           <div id="advanced" hidden>
+            <tp-yt-paper-radio-group>
+              <tp-yt-paper-radio-button name="VIDEO_AGE_RESTRICTION_SELF" role="radio"
+                >Yes, restrict my video to viewers over 18</tp-yt-paper-radio-button
+              >
+              <tp-yt-paper-radio-button name="VIDEO_AGE_RESTRICTION_NONE" role="radio"
+                >No, don't restrict my video to viewers over 18 only</tp-yt-paper-radio-button
+              >
+            </tp-yt-paper-radio-group>
             <div id="altered-content">
-              <tp-yt-paper-radio-button
-                name="VIDEO_HAS_ALTERED_CONTENT_YES"
-                role="radio"
-                aria-checked="false"
-                >Yes</tp-yt-paper-radio-button
-              >
-              <tp-yt-paper-radio-button
-                name="VIDEO_HAS_ALTERED_CONTENT_NO"
-                role="radio"
-                aria-checked="false"
-                >No</tp-yt-paper-radio-button
-              >
+              <h3>AI use</h3>
+              <p>Was AI used to generate or edit your content in any of the following ways?</p>
+              <ul>
+                <li>Makes a real person appear to say or do something they didn't say or do</li>
+                <li>Alters footage of a real event or place</li>
+                <li>Generates a realistic-looking scene that didn't actually occur</li>
+              </ul>
+              <tp-yt-paper-radio-group>
+                <tp-yt-paper-radio-button
+                  name="VIDEO_HAS_ALTERED_CONTENT_YES"
+                  role="radio"
+                  aria-label="Yes, AI was used"
+                  >Yes</tp-yt-paper-radio-button
+                >
+                <tp-yt-paper-radio-button
+                  name="VIDEO_HAS_ALTERED_CONTENT_NO"
+                  role="radio"
+                  aria-label="No, AI wasn't used"
+                  >No</tp-yt-paper-radio-button
+                >
+              </tp-yt-paper-radio-group>
+              <p>Selecting 'yes' adds a label to your content.</p>
             </div>
             <ytcp-form-input-container id="tags-container">
-              <input id="text-input" type="text" aria-label="Tags" />
+              <ytcp-chip-bar id="chip-bar">
+                <div id="chip-list"></div>
+                <input id="text-input" type="text" aria-label="Tags" />
+              </ytcp-chip-bar>
             </ytcp-form-input-container>
           </div>
         </ytcp-video-metadata-editor>
@@ -108,10 +131,10 @@
       </div>
       <ytcp-button class="done-button" label="Done">Done</ytcp-button>
     </ytcp-playlist-dialog>
-    <ytcp-thumbnails-test-and-compare-dialog hidden>
+    <ytcp-ab-test-dialog hidden>
       <input type="file" accept="image/jpeg,image/png" />
       <input type="file" accept="image/jpeg,image/png" />
       <input type="file" accept="image/jpeg,image/png" />
-    </ytcp-thumbnails-test-and-compare-dialog>
+    </ytcp-ab-test-dialog>
   </body>
 </html>
