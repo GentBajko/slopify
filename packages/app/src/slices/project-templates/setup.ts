@@ -17,6 +17,10 @@ export function templateSetup(
     { kind: "thumbnail" as const, name: input.form.thumbnailPrompt },
     { kind: "shorts" as const, name: input.form.shorts?.prompt ?? "" },
     { kind: "image" as const, name: input.form.shorts?.imagePrompt ?? "" },
+    ...Object.values(input.form.reviews?.stages ?? {}).map((stage) => ({
+      kind: "review" as const,
+      name: stage.mode === "off" ? "" : stage.prompt,
+    })),
     {
       kind: "image" as const,
       name: input.form.reference?.source === "prompt" ? input.form.reference.prompt : "",

@@ -11,6 +11,12 @@ import {
   documentToolName,
   documentWorkspace,
 } from "./document-workspace.js";
+import {
+  type ImageWorkspace,
+  imageWorkspace,
+  readFileName,
+  unseenImages,
+} from "./image-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import {
   cliEvent,
@@ -51,7 +57,18 @@ const writingRole =
 // never something a stage does quietly, and no stage should touch the disk. `--tools ""`
 // empties the built-in set and `--strict-mcp-config` drops the user's MCP servers; the init
 // event of a run with both reports `"tools":[]` and `"mcp_servers":[]`.
-export function claudeCodeArgs(req: LlmCompletion, documents?: DocumentWorkspace): string[] {
+//
+// Pictures (a review's) are copied into a private folder that becomes the working directory,
+// and only the Read tool is allowed: `claude --help` 2.1.281 says `--restricted` confines the
+// file tools to the working directories, and Read hands an image file to the model as an
+// image. The run's tool calls are checked afterwards: every picture must have been read.
+export function claudeCodeArgs(
+  req: LlmCompletion,
+  documents?: DocumentWorkspace,
+  images?: ImageWorkspace,
+): string[] {
+  const isolated = documents !== undefined || images !== undefined;
+  const tools = [req.webSearch === true ? "WebSearch" : "", images ? "Read" : ""].filter(Boolean);
   return [
     "-p",
     "--output-format",
@@ -61,7 +78,7 @@ export function claudeCodeArgs(req: LlmCompletion, documents?: DocumentWorkspace
     "--include-partial-messages",
     // `claude --help` 2.1.263: safe mode excludes CLAUDE.md, output styles, skills and
     // hooks while retaining login and managed policy. --bare would discard OAuth.
-    ...(documents
+    ...(isolated
       ? [
           "--restricted",
           "--setting-sources",
@@ -82,18 +99,17 @@ export function claudeCodeArgs(req: LlmCompletion, documents?: DocumentWorkspace
     writingRole +
       (documents
         ? " Use the explicitly supplied research MCP tool to read request documents; it is the only permitted local reference source."
+        : "") +
+      (images
+        ? " Open the supplied image files in the current folder with the Read tool; they are the only local files you may open."
         : ""),
     "--strict-mcp-config",
     "--tools",
-    req.webSearch === true ? "WebSearch" : "",
-    ...(documents ? ["--mcp-config", documents.config, "--permission-mode", "dontAsk"] : []),
-    ...(req.webSearch === true || documents
-      ? [
-          "--allowedTools",
-          [req.webSearch === true ? "WebSearch" : "", documents ? documentToolName : ""]
-            .filter(Boolean)
-            .join(","),
-        ]
+    tools.join(","),
+    ...(documents ? ["--mcp-config", documents.config] : []),
+    ...(isolated ? ["--permission-mode", "dontAsk"] : []),
+    ...(tools.length > 0 || documents
+      ? ["--allowedTools", [...tools, documents ? documentToolName : ""].filter(Boolean).join(",")]
       : []),
     ...(req.model === "" ? [] : ["--model", req.model]),
     ...(req.thinking !== undefined && req.thinking !== "off" ? ["--effort", req.thinking] : []),
@@ -104,7 +120,14 @@ export function claudeCodeArgs(req: LlmCompletion, documents?: DocumentWorkspace
 
 const assistantEvent = z.object({
   message: z.object({
-    content: z.array(z.object({ type: z.string(), text: z.string().optional() })),
+    content: z.array(
+      z.object({
+        type: z.string(),
+        text: z.string().optional(),
+        name: z.string().optional(),
+        input: z.object({ file_path: z.unknown().optional() }).loose().optional(),
+      }),
+    ),
   }),
 });
 
@@ -129,22 +152,28 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
     const documents = documentWorkspace(req.documents);
+    let images: ImageWorkspace | undefined;
+    const read = new Set<string>();
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     try {
-      run = deps.run(binary, claudeCodeArgs(req, documents), req.signal, {
-        ...(documents
+      images = imageWorkspace(req.images);
+      const folder = images?.directory ?? documents?.directory;
+      run = deps.run(binary, claudeCodeArgs(req, documents, images), req.signal, {
+        ...(folder !== undefined
           ? {
-              cwd: documents.directory,
+              cwd: folder,
               env: {
                 ...(deps.env ?? process.env),
                 CLAUDE_CODE_SAFE_MODE: "0",
-                PWD: documents.directory,
+                PWD: folder,
               },
             }
           : {}),
         stdin: cliInput(
-          [documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n"),
+          [documents?.instructions, images?.instructions, promptOf(req.messages)]
+            .filter(Boolean)
+            .join("\n\n"),
         ),
       });
       for await (const line of lines(run.stdout, req.signal)) {
@@ -156,6 +185,16 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         // messages remain the sole prose source so text is never appended twice.
         yield { type: "activity" };
         req.signal.throwIfAborted();
+        if (event.type === "assistant" && images) {
+          for (const block of cliShaped(binary, assistantEvent, event.value).message.content) {
+            const file =
+              block.type === "tool_use" && block.name === "Read"
+                ? readFileName(block.input?.file_path)
+                : undefined;
+            if (file !== undefined) read.add(file);
+          }
+          continue;
+        }
         if (event.type === "assistant" && !documents) {
           for (const block of cliShaped(binary, assistantEvent, event.value).message.content) {
             // A turn also carries `thinking` and `tool_use` blocks; only the prose is the
@@ -192,7 +231,8 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           });
         }
         documents?.verifyRead();
-        if (documents && result.result) yield { type: "delta", text: result.result };
+        if (images && images.unread(read).length > 0) throw unseenImages();
+        if ((documents || images) && result.result) yield { type: "delta", text: result.result };
         yield {
           type: "done",
           usage: usageOf(result.modelUsage),
@@ -212,6 +252,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         if (run) ended = await stopCliRun(run);
       } finally {
         documents?.remove();
+        images?.remove();
       }
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
@@ -234,7 +275,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
   return {
     id: "claude-code",
     // Partial messages keep the deadline alive; complete assistant turns supply prose.
-    capabilities: { streams: true, reportsUsage: true, webSearch: true },
+    capabilities: { streams: true, reportsUsage: true, webSearch: true, images: true },
     models: deps.readModels ?? (() => nodeClaudeCodeModels(binary)),
     complete,
   };

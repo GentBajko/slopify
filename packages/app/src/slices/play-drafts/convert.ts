@@ -13,6 +13,8 @@ import {
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
+import { type ReviewSettings, reviewRetriesMax, reviewStages } from "../reviews/model.js";
+import { stageMakesItems } from "../reviews/rules.js";
 import {
   defaultShorts,
   type ShortsSettings,
@@ -148,7 +150,41 @@ export function toAdmissionDraft(input: {
         : defaultShorts.maxSeconds,
     };
   };
+  // Only the reviews of stages that make something; none left is no reviews at all, which is
+  // what every draft saved before them was.
+  const reviewsOf = (raw: NonNullable<typeof form.reviews>): ReviewSettings | undefined => {
+    const shorts = shortsOn ? { enabled: true } : undefined;
+    const stages = Object.fromEntries(
+      reviewStages.flatMap((stage) => {
+        const picked = raw.stages[stage];
+        if (picked === undefined || picked.mode === "off") return [];
+        if (!stageMakesItems({ sources, shorts }, stage)) return [];
+        return [
+          [
+            stage,
+            { mode: picked.mode, ...(picked.prompt.trim() ? { prompt: picked.prompt } : {}) },
+          ],
+        ];
+      }),
+    );
+    if (Object.keys(stages).length === 0) return undefined;
+    const retries = raw.retries.trim() === "" ? undefined : Number(raw.retries);
+    if (retries !== undefined && !Number.isFinite(retries))
+      fields.push({
+        field: "reviews.retries",
+        message: `Enter a number of redos between 0 and ${String(reviewRetriesMax)} in the Reviews section.`,
+      });
+    return {
+      provider: raw.provider,
+      model: raw.model,
+      ...(raw.thinking === undefined ? {} : { thinking: raw.thinking }),
+      ...(retries === undefined || !Number.isFinite(retries) ? {} : { retries }),
+      stages,
+    };
+  };
+  const reviews = form.reviews === undefined ? undefined : reviewsOf(form.reviews);
   const draft: RunDraft = {
+    ...(reviews === undefined ? {} : { reviews }),
     ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
     format: form.format,

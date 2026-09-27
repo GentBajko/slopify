@@ -52,6 +52,7 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
+import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectById, projectPaused } from "./slices/admission/repo.js";
@@ -70,6 +71,7 @@ import { readNotificationUrl } from "./slices/notifications/settings.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
+import { createReviewRedos, reviewHold } from "./slices/rebuild/review-redo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
@@ -265,7 +267,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       catalogue,
     );
     const audioPreviews = createAudioPreviewStore();
+    const reviewRedos = createReviewRedos();
     const runner = wireRunner({
+      onFinished: (work) => reviewRedos.kick(work.projectId),
       db,
       paths,
       clock,
@@ -381,6 +385,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    // Redos a review asked for before the last shutdown start now.
+    reviewRedos.bind(rebuild);
+    reviewRedos.kick();
     const draftDeps: DraftStartDeps = {
       db,
       paths,
@@ -574,9 +581,12 @@ interface Wiring {
   readonly flusher: Flusher;
   readonly registry: Registry;
   readonly catalogue: CatalogueStore;
+  // Told after a step's row is written: a review that sent its item back starts the redo.
+  readonly onFinished?: ((work: WorkRef) => void) | undefined;
 }
 
 export function wireRunner({
+  onFinished,
   audioPreviews,
   db,
   paths,
@@ -612,7 +622,11 @@ export function wireRunner({
     ),
   };
   const checkpoints = createCheckpointAuthority<CheckpointRow>({
-    decide: (work) => checkpointDecisionForWork(execution, work),
+    // A review waiting to send its item back holds the item's dependents like a checkpoint.
+    decide: (work) => {
+      const review = reviewHold(execution, work);
+      return review.kind === "held" ? review : checkpointDecisionForWork(execution, work);
+    },
     approve: (projectId, checkpointId, identity) =>
       approveCheckpoint(db, {
         ...identity,
@@ -648,6 +662,7 @@ export function wireRunner({
           projectStandings(execution, work.projectId);
           settleReleasedCheckpoints(execution, work.projectId);
         });
+        onFinished?.(work);
       },
     },
     runs: Object.fromEntries(

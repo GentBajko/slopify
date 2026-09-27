@@ -374,7 +374,12 @@ describe("codexLlm surface", () => {
     const models = [{ id: "installed", name: "Installed" }];
     const port = codexLlm({ run: replaying("").run, readModels: async () => models });
     expect(port.id).toBe("codex");
-    expect(port.capabilities).toEqual({ streams: true, reportsUsage: true, webSearch: true });
+    expect(port.capabilities).toEqual({
+      streams: true,
+      reportsUsage: true,
+      webSearch: true,
+      images: true,
+    });
     expect(await port.models()).toBe(models);
   });
 });

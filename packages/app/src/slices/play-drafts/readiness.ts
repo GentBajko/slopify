@@ -7,6 +7,7 @@ import {
   usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
+import { usesReviews } from "../reviews/rules.js";
 import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
@@ -48,6 +49,8 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
               usesShorts(d) ||
               usesAnimation(d),
           },
+          // The reviewer is its own text model, checked like the LLM row.
+          { field: "reviews", family: "llm", choice: d.reviews, needed: usesReviews(d) },
         ] as const,
     )
     .flatMap((c) => (c.needed && c.choice ? [{ ...c, ...c.choice }] : []));

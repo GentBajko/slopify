@@ -1,4 +1,5 @@
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
+import { reviewsNarration } from "../reviews/rules.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
 import type { AudioRecipes } from "./recipe-audio.js";
@@ -42,7 +43,8 @@ export function exportRecipes(
     !captions &&
     !usesYoutubeDescription(config) &&
     !usesShorts(config) &&
-    !editNeedsTiming(config)
+    !editNeedsTiming(config) &&
+    !reviewsNarration(config)
   )
     return recipes;
   const timing = recipe(

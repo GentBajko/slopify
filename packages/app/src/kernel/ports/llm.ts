@@ -37,6 +37,16 @@ export interface LlmCapabilities {
   readonly streams: boolean;
   readonly reportsUsage: boolean;
   readonly webSearch: boolean;
+  // Whether `images` reach the model. Absent is no: the adapter refuses a request with images
+  // rather than answering without having seen them.
+  readonly images?: boolean | undefined;
+}
+
+// A picture the model is asked to look at: a local file (PNG, JPEG or WebP) and the name the
+// prompt calls it by.
+export interface LlmImage {
+  readonly path: string;
+  readonly name: string;
 }
 
 // "max" and "ultra" are the Codex CLI's two highest reasoning efforts (its model list reports
@@ -66,6 +76,7 @@ export interface LlmCompletion {
   // A provider or model that cannot ground on the web refuses the whole stage rather than
   // answering from its own knowledge, so this is never quietly dropped.
   readonly webSearch?: boolean | undefined;
+  readonly images?: readonly LlmImage[] | undefined;
   readonly signal: AbortSignal;
 }
 

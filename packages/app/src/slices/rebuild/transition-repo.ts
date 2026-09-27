@@ -196,6 +196,10 @@ function existingWork(
     : { workId: z.string().parse(row.work_id), pieceId: z.string().parse(row.piece_id) };
 }
 function stageForKey(key: string): StageKind {
+  // A review runs in its item's stage; the narration's review in Audio.
+  if (key === "review:narration") return "audio";
+  if (key.startsWith("review:shorts:")) return "video";
+  if (key.startsWith("review:")) return stageForKey(key.slice("review:".length));
   const prefix = key.split(":")[0];
   if (prefix === "research") return "research";
   if (prefix === "article" || prefix === "entry") return "article";

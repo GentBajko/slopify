@@ -13,6 +13,7 @@ import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schem
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
+import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 
 const id = z.uuid();
@@ -85,6 +86,28 @@ export const playDraftFormSchema = z
         fullVideoLink: text.optional(),
         musicVolume: text.optional(),
         speed: text.optional(),
+      })
+      .strict()
+      .readonly()
+      .optional(),
+    // Absent on drafts and templates saved before automatic reviews: every review Off. The
+    // retries are raw text like every other number on Play; a stage's prompt is a Review
+    // prompt's name, "" being the built-in one.
+    reviews: z
+      .object({
+        provider: text,
+        model: text,
+        thinking: z.enum(thinkingModes).optional(),
+        retries: text,
+        stages: z
+          .partialRecord(
+            z.enum(reviewStages),
+            z
+              .object({ mode: z.enum(reviewModes), prompt: text })
+              .strict()
+              .readonly(),
+          )
+          .readonly(),
       })
       .strict()
       .readonly()

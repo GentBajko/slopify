@@ -3,7 +3,7 @@ import type { Clock } from "../clock.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage, GeneratedVideo } from "../ports/image.js";
-import type { LlmEvent, Message, ThinkingConfig, Usage } from "../ports/llm.js";
+import type { LlmEvent, LlmImage, Message, ThinkingConfig, Usage } from "../ports/llm.js";
 import type { LlmDocument } from "../ports/llm-documents.js";
 import { providerError } from "../ports/model.js";
 import type { Registry } from "../ports/registry.js";
@@ -33,6 +33,7 @@ export interface LlmCall {
   readonly messages: readonly Message[];
   readonly previewLabel?: string | undefined;
   readonly webSearch?: boolean | undefined;
+  readonly images?: readonly LlmImage[] | undefined;
   // An answer that arrived but is unusable counts as a failed attempt, so the check runs inside
   // the wrapper. It returns the sentence the stage would show rather than throwing, so a slice
   // never names a failure.
@@ -158,6 +159,7 @@ export function stageProviders(
               messages: call.messages,
               ...(call.documents === undefined ? {} : { documents: call.documents }),
               ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
+              ...(call.images === undefined ? {} : { images: call.images }),
               signal,
             })) {
               signal.throwIfAborted();
