@@ -227,6 +227,10 @@ export const projectHelp = {
     title: "Fill in YouTube Studio",
     body: "Opens Studio's upload page and hands this item's details to the optional Slopify Studio browser extension (Settings, YouTube Studio). Drop the video file in and the extension fills in the rest. You check it and press Publish yourself; Slopify never uploads or publishes.",
   },
+  "project.free-space": {
+    title: "Free space",
+    body: "Once a project has finished, it can drop the working files it was made from (images, narration parts, subtitle timing, render settings) and keep what gets published: the video, shorts, thumbnail, article, description, document and anything you uploaded. The button says how much space that frees. Changing the project later makes those files again first, which takes time and provider credits. Settings → Storage offers the same for every project.",
+  },
   "project.mark-uploaded": {
     title: "Mark uploaded",
     body: "Records that you uploaded this finished video to YouTube yourself, so it leaves the ready-to-upload lists on Home and here and shows an Uploaded badge. Slopify does not upload anything or check YouTube. Undo takes the mark off.",
