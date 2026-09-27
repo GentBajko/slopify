@@ -1,8 +1,8 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { ReadingView } from "@/components/kit/reading-view";
 import { LiveWriting } from "./live-writing.js";
 import { useOutputText } from "./parts.js";
-import { ReadingView } from "./reading-view.js";
 
 // The Article section's Research tab: the notes in the reading view, and the live writing above
 // them while the research runs. Its actions sit in the Article body's action row with the tab.
@@ -28,6 +28,8 @@ export function ResearchNotes({
         <ReadingView
           markdown={text.data ?? ""}
           label="Research notes"
+          regionLabel="Research notes"
+          anchorPrefix="research-"
           what="research notes"
           onCopy={onCopy}
           copyAll={false}

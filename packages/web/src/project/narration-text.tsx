@@ -1,8 +1,8 @@
 import type { Output } from "@app/slices/storage/model.js";
 import { type ReactElement, useCallback, useId, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { ReadingView } from "@/components/kit/reading-view";
 import { useOutputText } from "./parts.js";
-import { ReadingView } from "./reading-view.js";
 
 // The Audio section's narration text - the clean text that was spoken, intro, body and outro -
 // in the reading view, so it can be read, searched and copied rather than only downloaded.
@@ -49,7 +49,14 @@ export function NarrationText({
       <h3 id={`${id}-title`} className="engraved text-ink3">
         Narration text
       </h3>
-      <ReadingView markdown={markdown} label="Narration text" what="narration text" onCopy={copy}>
+      <ReadingView
+        markdown={markdown}
+        label="Narration text"
+        regionLabel="Narration text"
+        anchorPrefix="narration-"
+        what="narration text"
+        onCopy={copy}
+      >
         <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
       </ReadingView>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
