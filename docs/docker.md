@@ -72,6 +72,11 @@ docker pull ghcr.io/gentbajko/slopify:latest
 npx @gentbajko/slopify@latest --docker
 ```
 
+If a project is being made when you run it, the launcher does not stop the old
+container: it prints "Update to X.Y.Z will install when 'Title' finishes" and
+checks again every 15 seconds, then carries on by itself. Press Ctrl+C to keep
+the current version for now; nothing has changed at that point.
+
 The launcher keeps the configured named volume, the original project tree,
 a stopped previous container and a private recovery-volume clone. It waits up
 to 120 seconds for the replacement application. Before commit, a failed copy,
