@@ -51,15 +51,20 @@ const article = (ipa = "dʒɑn", extra = "") =>
   `John reads.\n\nQuiet words.\n\n## Pronunciation Glossary\nJohn: /${ipa}/\n${extra}`;
 
 it.each([false, true])(
-  "refuses Unicode-equivalent conflicting terms before preparation=%s",
+  "keeps the first of Unicode-equivalent conflicting terms, preparation=%s",
   (prepare) => {
     const recipes = buildRecipes(
       context("Σ σ ς.\n\n## Pronunciation Glossary\nΣ: /s/\nς: /z/", prepare),
     );
-    expect(recipes.some((row) => row.refusal?.includes("conflicting pronunciations"))).toBe(true);
-    expect(
-      recipes.some((row) => row.input.kind === "tts" || row.key.startsWith("narration:prepare:")),
-    ).toBe(false);
+    expect(recipes.some((row) => row.refusal !== undefined)).toBe(false);
+    const glossary = textRecipes(
+      context("Σ σ ς.\n\n## Pronunciation Glossary\nΣ: /s/\nς: /z/", prepare),
+    ).glossary;
+    expect(glossary).toMatchObject({
+      ok: true,
+      entries: [{ term: "Σ", ipa: ["s"] }],
+      skipped: [{ row: 2 }],
+    });
   },
 );
 
@@ -166,17 +171,23 @@ it("keeps the flag dormant for unsupported audio providers", () => {
 });
 
 it.each([false, true])(
-  "rejects unused malformed mappings before cue/TTS recipes (prep=%s)",
+  "skips an unused malformed mapping and narrates exactly as without it (prep=%s)",
   (prepare) => {
-    const base = context(article("dʒɑn", "Unused: not IPA"), prepare);
-    const recipes = buildRecipes(base);
-    expect(recipes.some((row) => row.input.kind === "tts")).toBe(false);
-    expect(recipes.some((row) => row.input.kind === "llm" && row.input.preparation)).toBe(false);
-    expect(recipes.some((row) => row.unresolved && row.refusal)).toBe(true);
+    const skipped = buildRecipes(context(article("dʒɑn", "Unused: not IPA"), prepare));
+    const clean = buildRecipes(context(article("dʒɑn"), prepare));
+    expect(skipped.some((row) => row.refusal !== undefined)).toBe(false);
+    // Narration requests and their preparation are the same as for the glossary without the
+    // bad row: only the article's own text (which holds the row) differs.
+    const narration = (rows: readonly ResolvedWorkRecipe[]) =>
+      rows
+        .filter((row) => row.input.kind === "tts" || row.key.startsWith("narration:prepare:"))
+        .map((row) => ({ key: row.key, input: row.input }));
+    expect(narration(skipped).length).toBeGreaterThan(0);
+    expect(narration(skipped)).toEqual(narration(clean));
   },
 );
 
-it("does not hold generated entry TEXT solely because the glossary is invalid", () => {
+it("does not hold generated entry TEXT because a glossary row is skipped", () => {
   const base = context(article("dʒɑn", "Unused: invalid"), true);
   const next = {
     ...base,
@@ -191,7 +202,7 @@ it("does not hold generated entry TEXT solely because the glossary is invalid", 
     deferred: false,
     input: { kind: "llm" },
   });
-  expect(recipes.some((row) => row.input.kind === "llm" && row.input.preparation)).toBe(false);
+  expect(recipes.some((row) => row.refusal !== undefined)).toBe(false);
 });
 
 it("applies mappings after a text override and bypasses a supplied chunk", () => {

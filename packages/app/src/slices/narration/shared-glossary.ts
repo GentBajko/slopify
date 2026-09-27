@@ -40,7 +40,7 @@ export function collectSharedGlossary(
       continue;
     }
     const parsed = parsePronunciationGlossary(text);
-    // A glossary that doesn't parse can't be trusted in someone else's narration either.
+    // Rows it had to skip are left out; a glossary that does not parse at all shares nothing.
     if (!parsed.ok) continue;
     for (const entry of parsed.entries) {
       const key = glossaryKey(entry.term);

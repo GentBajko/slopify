@@ -208,11 +208,14 @@ export function planPreview(
       snapshot,
     ),
     wholeRequestNotice: plan.wholeRequestNotice,
-    warnings: submissions.some((row) => row.uncertain)
-      ? [
-          "A previous request was submitted without a saved result or resumable job. Retrying may charge you again.",
-        ]
-      : [],
+    warnings: [
+      ...(submissions.some((row) => row.uncertain)
+        ? [
+            "A previous request was submitted without a saved result or resumable job. Retrying may charge you again.",
+          ]
+        : []),
+      ...(plan.glossaryNotice ? [plan.glossaryNotice] : []),
+    ],
   };
   return { ok: true, value: { preview, execution } };
 }

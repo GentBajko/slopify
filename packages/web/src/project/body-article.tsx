@@ -1,9 +1,11 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import { sourceEntries } from "@app/slices/article/source-lines.js";
 import { splitEndMatter } from "@app/slices/article/split.js";
+import { parsePronunciationGlossary } from "@app/slices/narration/pronunciation.js";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { Callout } from "@/components/kit/callout";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
@@ -78,6 +80,12 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
   );
   const entries = useMemo(() => sourceEntries(parts.sources), [parts.sources]);
   const table = withoutHeading(parts.glossary);
+  // The rows narration leaves out, numbered as the narration counts them, never quoted.
+  const skipped = useMemo(() => {
+    if (parts.glossary.trim() === "") return [];
+    const parsed = parsePronunciationGlossary(parts.glossary);
+    return parsed.ok ? (parsed.skipped ?? []) : [];
+  }, [parts.glossary]);
   const tabs = [
     { id: "article" as const, label: "Article" },
     ...(research === undefined ? [] : [{ id: "research" as const, label: "Research" }]),
@@ -263,6 +271,24 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
       )}
       {table === "" ? null : (
         <TabPanel idPrefix={idPrefix} id="pronunciation" active={open === "pronunciation"}>
+          {skipped.length === 0 ? null : (
+            <Callout
+              className="mb-3"
+              title={`${skipped.length === 1 ? "1 entry is" : `${skipped.length} entries are`} skipped by the narration and read as ordinary text`}
+            >
+              <ul className="space-y-1">
+                {skipped.map((row) => (
+                  <li key={row.row}>
+                    Entry {row.row}: {row.reason}.
+                  </li>
+                ))}
+              </ul>
+              <p>
+                The other entries are used. To fix these, edit the Pronunciation Glossary at the end
+                of the article in Edit project → Article.
+              </p>
+            </Callout>
+          )}
           <div className="max-h-[min(58vh,640px)] overflow-auto pr-3">
             <Prose markdown={table} />
           </div>

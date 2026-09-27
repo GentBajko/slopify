@@ -13,5 +13,17 @@ alive, and automatic polling/download retries reuse the accepted job. Pausing st
 local requests; Inworld may still finish and bill an accepted job. Resuming after a
 pause or app restart starts a new request for unfinished narration.
 
+## Pronunciation Glossary
+
+With **Use Pronunciation Glossary** on, the article's `## Pronunciation Glossary` section
+gives names their pronunciation, as `Term: /IPA/` lines or a `| Term | IPA |` table (a
+table cell may leave out the slashes). Only standard-English IPA works, one IPA word per
+written word, so ask your article prompt for an English approximation of foreign names.
+An entry that can't be used (other alphabets or sounds, ARPAbet, a word-count mismatch, a
+second different pronunciation for the same term) is skipped and that name is read as
+ordinary text; the rest of the glossary still applies. The article's **Pronunciation** tab
+and the rebuild review list skipped entries by number and reason; fix them in
+**Edit project → Article**.
+
 See [Inworld's async API](https://docs.inworld.ai/api-reference/ttsAPI/texttospeech/synthesize-speech-async)
 for account limits. Both model IDs are bundled; Inworld's LLM catalogue does not list TTS models.

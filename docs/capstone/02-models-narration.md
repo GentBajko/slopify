@@ -33,7 +33,7 @@ paths_covered:
 | Name | Definition site | Storage | Purpose |
 |---|---|---|---|
 | GlossaryEntry | `packages/app/src/slices/narration/pronunciation.ts:4` | In-memory | Written term paired with IPA words. |
-| GlossaryResult | `packages/app/src/slices/narration/pronunciation.ts:4` | In-memory | Successful entries or a refusal reason. |
+| GlossaryResult | `packages/app/src/slices/narration/pronunciation.ts:4` | In-memory | Usable entries plus optional `skipped` rows (row number and reason). |
 | PronunciationSpan | `packages/app/src/slices/narration/pronunciation.ts:100` | In-memory | Source range and replacement IPA text. |
 | PronunciationMatch | `packages/app/src/slices/narration/pronunciation.ts:100` | In-memory | Source range associated with a glossary entry. |
 | NarrationSource | `packages/app/src/slices/narration/pronunciation-chunks.ts:10` | In-memory; nested revision-content JSON | Source identity for a merged narration group; persistence crosses through `RevisionContent`. |
@@ -172,7 +172,7 @@ TTS request fingerprints include exact request text, voice/model/provider, segme
 
 ### Glossary syntax and English IPA
 
-The parser uses remark with GFM, accepts paragraph lines, lists and tables, ignores the glossary title, and takes the first two table columns after the header. Unsupported blocks become invalid rows. Terms must contain a Unicode letter or number and cannot contain slash, square brackets, angle brackets or control characters. Pronunciations require slash-delimited notation; trailing non-slash annotations are permitted. `packages/app/src/slices/narration/pronunciation.ts:23`, `packages/app/src/slices/narration/pronunciation.ts:65`
+The parser uses remark with GFM, accepts paragraph lines, lists and tables, ignores the glossary title, and takes the first two table columns after the header. Unsupported blocks become skipped rows. A table IPA cell without a slash is wrapped as `/cell/`. Terms must contain a Unicode letter or number and cannot contain slash, square brackets, angle brackets or control characters. Pronunciations require slash-delimited notation; trailing non-slash annotations are permitted. `packages/app/src/slices/narration/pronunciation.ts:23`, `packages/app/src/slices/narration/pronunciation.ts:65`
 
 The implemented English-IPA allow-list is:
 
