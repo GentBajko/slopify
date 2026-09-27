@@ -5,8 +5,15 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readSetting, writeSetting } from "../settings/repo.js";
 import type { DescriptionEdits } from "./edits.js";
-import { descriptionFields } from "./edits.js";
+import {
+  composeDescription,
+  descriptionFields,
+  resolveFields,
+  shownFields,
+  splitDescription,
+} from "./edits.js";
 import type { ChannelLink } from "./placeholders.js";
+import { fillPlaceholders, mergeLinks } from "./placeholders.js";
 
 export const channelLinksKey = "channel_links";
 
@@ -71,4 +78,23 @@ export function writeChannelLinks(db: DatabaseSync, links: readonly ChannelLink[
     channelLinksKey,
     JSON.stringify(links.map((link) => ({ name: link.name.trim(), url: link.url.trim() }))),
   );
+}
+
+// The description and tags as the project page shows and copies them: the user's edits over
+// the generated text, placeholders filled from the project's and Settings' links (one with no
+// link stays as typed). For anything that hands the description on, such as Prepare upload.
+export function effectiveDescription(
+  db: DatabaseSync,
+  projectId: string,
+  generated: { readonly description: string; readonly tags: string },
+): { readonly description: string; readonly tags: string } {
+  const edits = readDescriptionEdits(db, projectId);
+  const shown = shownFields(
+    resolveFields(splitDescription(generated.description, generated.tags), edits.fields),
+  );
+  const links = mergeLinks(readChannelLinks(db), edits.links);
+  return {
+    description: fillPlaceholders(composeDescription(shown), links).text,
+    tags: fillPlaceholders(shown.tags, links).text,
+  };
 }

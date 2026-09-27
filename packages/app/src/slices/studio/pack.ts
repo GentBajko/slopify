@@ -10,6 +10,7 @@ import { contentTypeOf, downloadName, slugOf } from "../storage/downloads.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
+import { effectiveDescription } from "../youtube/edits-repo.js";
 import {
   type PackFile,
   type PackItem,
@@ -72,14 +73,24 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       "The video isn't made yet. Let the Video stage finish (or use Continue the run on the project page), then open Prepare upload again.",
     );
-  const description = text(outputs.find((output) => output.role === "youtube_description"));
+  const written = text(outputs.find((output) => output.role === "youtube_description"));
+  const writtenTags = text(outputs.find((output) => output.role === "youtube_tags"));
+  // As the project page shows it: the user's edits, and channel links filled in.
+  const edited =
+    written === undefined
+      ? undefined
+      : effectiveDescription(deps.db, projectId, {
+          description: written,
+          tags: writtenTags ?? "",
+        });
+  const tagsFile = edited?.tags ?? writtenTags;
+  const description = edited?.description;
   if (description === undefined)
     missing.push(
       config.youtubeDescription === true
         ? "The YouTube description isn't written yet. It is written after the video's subtitle timing; wait for the Video stage to finish."
         : "No YouTube description is written for this project. Turn on YouTube description in Edit project → Video to have one written with chapters and tags.",
     );
-  const tagsFile = text(outputs.find((output) => output.role === "youtube_tags"));
   const count = thumbnailCountOf(config);
   // The first thumbnail, then the second and third, and never one left from when the project
   // made three and now makes one.

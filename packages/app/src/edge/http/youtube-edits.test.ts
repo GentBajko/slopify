@@ -9,6 +9,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { effectiveDescription } from "../../slices/youtube/edits-repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -135,6 +136,27 @@ describe("/api/projects/:id/youtube-edits", () => {
     db.prepare("DELETE FROM projects WHERE id='p1'").run();
     expect(db.prepare("SELECT count(*) AS n FROM youtube_description_edits").get()).toEqual({
       n: 0,
+    });
+  });
+});
+
+describe("effectiveDescription", () => {
+  it("hands on the user's edits with the links filled, as Prepare upload uses it", async () => {
+    const { app, db } = harness();
+    const generated = {
+      description: "Generated summary. {{Patreon}}\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
+      tags: "rope, knots",
+    };
+    await send(app, "PUT", "/api/settings/channel-links", {
+      links: [{ name: "Patreon", url: "https://patreon.com/me" }],
+    });
+    await send(app, "PUT", "/api/projects/p1/youtube-edits/fields/tags", {
+      text: "rope, {{Discord}}",
+      base: "rope, knots",
+    });
+    expect(effectiveDescription(db, "p1", generated)).toEqual({
+      description: "Generated summary. https://patreon.com/me\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
+      tags: "rope, {{Discord}}",
     });
   });
 });
