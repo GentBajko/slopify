@@ -124,8 +124,9 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 3. When the Details step appears, the extension fills the title, description, thumbnail(s),
    playlist, audience, the AI use answer (Yes or No, with why) and tags, then says what it did.
    **Fill again from Slopify** (bottom right) repeats it.
-4. Check everything, go through Studio's remaining steps, and publish yourself. The extension
-   never presses Next, Save, Schedule or Publish.
+4. Check everything (with two or three thumbnails, check them in the A/B Testing dialog left
+   open and press Set test), go through Studio's remaining steps, and publish yourself. The
+   extension never presses Next, Save, Schedule, Publish or Set test.
 
 **Several uploads in a row.** Each Fill in YouTube Studio adds the item to **Waiting for
 Studio**, which Prepare upload lists (oldest first, from every project, each with Remove). Each
@@ -164,12 +165,18 @@ How it fills each field, following Studio's own components:
   Studio didn't turn into a chip are copied for pasting.
 - **Radios** (audience, AI use) are clicked by their `name` and checked for Studio's selected
   mark.
-- **Playlist**: it opens the Playlists dropdown, ticks the checkbox whose label is the playlist's
-  name, and closes the list with its Done (or Escape).
-- **Three thumbnails**: it looks for Studio's **A/B Testing** button beside the title and, when
-  its dialog offers picture uploads, puts all three in. If the button isn't there, or its dialog
-  can't be filled, it sets the first as the thumbnail and says to add the others in A/B Testing
-  by hand.
+- **Playlist**: it opens the Playlists dropdown and waits up to 5 seconds for the rows (Studio
+  draws them only once the list shows). It ticks the row whose name is the playlist's, unless
+  it is already ticked, and closes the list with its **Done**, or Escape if Done isn't there.
+  It never presses the list's **Save**.
+- **Two or three thumbnails** are handled last, after every other field. The extension presses
+  Studio's **A/B Testing** button beside the title with a full mouse press, since a plain
+  script click doesn't open it. It then waits up to 3 seconds for the dialog, picks **Thumbnail
+  only** and puts thumbnails 1, 2 and 3 into its Thumbnail 1, 2 and 3 slots. It leaves the
+  dialog open, never presses **Set test**, and asks you to check the pictures and press Set test
+  yourself. Closing the dialog drops the pictures. If the button isn't there, the dialog doesn't
+  open, or the dialog has no picture slots, the extension sets the first picture as the
+  thumbnail and tells you to add the others in A/B Testing by hand.
 
 ### How it talks to Slopify
 
@@ -192,22 +199,55 @@ trigger (`ytcp-dropdown-trigger[aria-label="Select playlists"]`), the audience r
 (`VIDEO_MADE_FOR_KIDS_NOT_MFK`), Show more (`#toggle-button[aria-label="Show advanced
 settings"]`), the AI use radios (`#altered-content`, `VIDEO_HAS_ALTERED_CONTENT_YES`/`_NO`), the
 Tags chip bar (`#tags-container ytcp-chip-bar input#text-input`) and the A/B Testing button
-(`ytcp-button#ab-test-button`). The fixture the tests use,
-`packages/extension/test/fixtures/studio-upload.html`, is hand-built with invented content: its
-Details fields copy that editor, while the upload dialog around them and its footer buttons
-follow `selectors.ts`. The tests check that each field is found inside the dialog by its checked
-selector. Older selectors stay behind the checked ones as fallbacks.
+(`button#preview-button[aria-label="A/B Testing"]` inside `ytcp-button#ab-test-button`).
 
-Still unverified, because opening them wasn't part of the read-only look:
+The same day, the two overlays were opened and read (still without saving anything):
 
-- **The playlist list** the dropdown opens: its dialog, rows, checkbox and Done are guesses
-  (`ytcp-playlist-dialog`, `ytcp-checkbox-group`, `ytcp-checkbox-lit`, `.done-button`). A row is
-  also matched by its whole text, so a different row element with the name in it still works.
-- **The A/B Testing dialog**: where it takes pictures is a guess (an image file input in
-  `ytcp-ab-test-dialog`, or in any open dialog other than the thumbnail's own). The button may
-  also only appear once the upload is saved.
+- **The playlist list**: `ytcp-playlist-dialog` > `tp-yt-paper-dialog` >
+  `ytcp-checkbox-group#playlists-list` > `div#checkbox-group` > `ul` > `tp-yt-iron-list` >
+  `div#items[role=list]`, with one `ytcp-ve` per playlist. Each row is `li.row` >
+  `label.ytcp-checkbox-label`, holding `ytcp-checkbox-lit` (which wraps
+  `div#checkbox[role=checkbox]`, `aria-checked="true"` once ticked, and a hidden checkbox input)
+  and the name in `span.checkbox-label .label-text`. Its buttons are `ytcp-button.done-button`
+  (Done), `ytcp-button.save-button` (Save, which the extension refuses to press) and
+  `ytcp-button.new-playlist-button`, and there is a `ytcp-search-bar`. The iron-list draws its
+  rows only after the list shows, so right after the click it can be empty.
+- **The A/B Testing dialog**: `ytcp-creator-experiment-create-dialog` > `ytcp-dialog` >
+  `tp-yt-paper-dialog#dialog`, titled "A/B Testing". Its mode chips are
+  `ytcp-static-chip-bar ytcp-chip#chip-0` "Title only" (the default), `#chip-1` "Thumbnail
+  only" and `#chip-2` "Title and thumbnail", with no aria-selected. With Thumbnail only chosen,
+  it shows three `ytcp-thumbnail-uploader`s (Thumbnail 1 and 2 required, Thumbnail 3 optional),
+  each with its own `input#file-loader[type=file]` (the same id three times). It is committed
+  with "Set test", which the extension refuses to press (matched by its text, since no id was
+  read), and closed with an X in its header. Calling `.click()` on the A/B Testing button from
+  a script did not open it, but a real pointer click did.
+- Neither overlay's paper-dialog had an `opened` attribute while showing, so the extension goes
+  by whether an element is laid out (it has client rects and isn't `display: none`).
+
+The single thumbnail's selectors are scoped to the metadata editor and skip anything inside
+`ytcp-creator-experiment-create-dialog`, whose inputs share the id `file-loader`.
+
+The fixture the tests use, `packages/extension/test/fixtures/studio-upload.html`, is
+hand-built with invented content. Its Details fields, playlist list and A/B Testing dialog copy
+what was read, and the rows and uploaders Studio draws later sit in `<template>`s that the tests
+render at the right moment. The upload dialog around the fields and its footer buttons follow
+`selectors.ts`. The tests check that each field is found by its checked selector. Older
+selectors stay behind the checked ones as fallbacks.
+
+Still unverified:
+
 - **Whether the upload dialog behaves like the Details editor**: the ids match, but the upload
-  dialog itself wasn't inspected.
+  dialog itself wasn't inspected. The A/B Testing button may only appear once the upload is
+  saved.
+- **Whether the pointer sequence the extension sends opens A/B Testing**: a real click did and
+  a script `.click()` didn't. The extension's events come from a script too, so on some pages
+  it may still fall back to "add them by hand".
+- **Whether "Thumbnail only" is chosen by a click on its chip**, and whether Studio accepts
+  files set on the uploaders' inputs from a script. Nothing was uploaded during the look, and
+  Set test was never pressed.
+- **A long playlist list**: the iron-list only draws the rows in view, so a playlist far down
+  may not be found. The extension then says so and copies the name. It doesn't type into the
+  list's search bar.
 - **Whether Studio makes a chip on Enter or on comma**, and whether it keeps the line breaks typed
   this way; the extension tries both keys and checks what it can.
 

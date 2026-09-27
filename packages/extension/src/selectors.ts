@@ -2,21 +2,26 @@
 //
 // Checked against the live Studio page on 2026-09-27 (read-only, on a video's Details editor,
 // which uses the same components as the upload dialog's Details step): the title and
-// description boxes, the thumbnail input, the playlist trigger, the audience, Show more, the
-// "AI use" radios, the Tags chip bar and the A/B Testing button are the ids, names and
-// aria-labels seen there, listed first. What was NOT inspected: the list the playlist trigger
-// opens and the dialog A/B Testing opens; their selectors are still educated guesses.
+// description boxes, the thumbnail input, the playlist trigger and the list it opens, the
+// audience, Show more, the "AI use" radios, the Tags chip bar, the A/B Testing button and the
+// dialog it opens are the ids, classes and aria-labels seen there, listed first. Studio's
+// overlays (the playlist list, the A/B Testing dialog) did NOT carry an `opened` attribute
+// while showing, so the filler goes by whether they are laid out, never by `[opened]`.
+// Not inspected: the upload dialog itself, and anything past the A/B dialog's "Set test".
 // `test/fixtures/studio-upload.html` mirrors the same structure. When a field stops filling,
 // inspect it and put the new selector in front of the field's list (each field lists several,
 // tried in order). See docs/studio-extension.md.
 //
-// The filler never touches Studio's Next, Save, Schedule or Publish buttons; `forbidden` lists
-// them so the tests can check that nothing the filler clicks is one of them.
+// The filler never touches Studio's Next, Save, Schedule or Publish buttons, the playlist
+// list's Save, or the A/B dialog's Set test; `forbidden` and `forbiddenLabels` list them so the
+// filler refuses them and the tests can check it.
 
 export interface FieldSelectors {
   // What the toast calls the field when it can't be found: "the Tags field".
   readonly label: string;
   readonly selectors: readonly string[];
+  // An element inside this is never the field, whichever selector found it.
+  readonly exclude?: string;
 }
 
 // The dialog the details are filled in. Its title box only appears once a video file is in.
@@ -45,41 +50,72 @@ export const description: FieldSelectors = {
   ],
 };
 
-// The single thumbnail's file input ("Upload file" under Thumbnail).
+// The single thumbnail's file input ("Upload file" under Thumbnail), in the metadata editor.
+// The A/B Testing dialog holds three more `ytcp-thumbnail-uploader input#file-loader`s, so
+// anything inside it is excluded.
 export const thumbnailInput: FieldSelectors = {
   label: "the Thumbnail upload",
   selectors: [
+    "ytcp-video-metadata-editor ytcp-video-custom-still-editor ytcp-thumbnail-uploader input#file-loader[type=file]",
     "ytcp-video-custom-still-editor ytcp-thumbnail-uploader input#file-loader[type=file]",
-    "ytcp-thumbnail-uploader input#file-loader[type=file]",
-    "ytcp-thumbnails-compact-editor-uploader input#file-loader[type=file]",
+    "ytcp-video-metadata-editor ytcp-thumbnails-compact-editor-uploader input#file-loader[type=file]",
     'ytcp-video-metadata-editor input[type=file][accept*="image"]',
   ],
+  exclude: "ytcp-creator-experiment-create-dialog",
 };
 
-// A/B Testing (what Studio shows where "Test & compare" was): the button beside the title that
-// opens Studio's title and thumbnail test. Its dialog was not inspected, so the inputs below are
-// guesses: an image file input in a known test dialog, else in any open dialog other than the
-// thumbnail's own input.
+// A/B Testing (what Studio shows where "Test & compare" was): the button beside the title.
+// Checked live: `.click()` from a script did NOT open the dialog, a real pointer click did, so
+// the filler sends the whole pointer sequence to the inner button.
 export const abTestButton: FieldSelectors = {
   label: "A/B Testing",
   selectors: [
-    "ytcp-button#ab-test-button",
+    'ytcp-button#ab-test-button button#preview-button[aria-label="A/B Testing"]',
     'button#preview-button[aria-label="A/B Testing"]',
+    "ytcp-button#ab-test-button",
     "ytcp-button#test-and-compare-button",
   ],
 };
+// The dialog it opens (titled "A/B Testing", headed "Test and compare your thumbnails and
+// titles"). Checked live; its paper-dialog has no `opened` attribute while showing. The host
+// element may stay on the page while the dialog is closed, so only the paper-dialog, which is
+// laid out just while it shows, tells whether it opened.
+export const abTestDialog: FieldSelectors = {
+  label: "the A/B Testing dialog",
+  selectors: [
+    "ytcp-creator-experiment-create-dialog ytcp-dialog tp-yt-paper-dialog#dialog",
+    "ytcp-creator-experiment-create-dialog tp-yt-paper-dialog",
+  ],
+};
+// Its mode chips: #chip-0 "Title only" (the default), #chip-1 "Thumbnail only", #chip-2 "Title
+// and thumbnail". They carry no aria-selected. The filler picks "Thumbnail only" by its text
+// (`abThumbnailOnlyText`), with the id as the fallback.
+export const abTestChips: FieldSelectors = {
+  label: "the A/B Testing modes",
+  selectors: ["ytcp-static-chip-bar ytcp-chip", "ytcp-chip"],
+};
+export const abThumbnailOnlyText = "Thumbnail only";
+export const abThumbnailOnlyChip: FieldSelectors = {
+  label: 'the A/B Testing "Thumbnail only" choice',
+  selectors: ["ytcp-static-chip-bar ytcp-chip#chip-1", "ytcp-chip#chip-1"],
+};
+// With Thumbnail only chosen: three uploaders, "Thumbnail 1 (required)", "Thumbnail 2
+// (required)" and "Thumbnail 3", each a `ytcp-thumbnail-uploader` holding an
+// `input#file-loader[type=file]` (the same id three times, not multiple). Taken in document
+// order: thumbnails 1, 2 and 3 go into slots 1, 2 and 3.
 export const abTestInputs: FieldSelectors = {
   label: "the A/B Testing thumbnail uploads",
   selectors: [
-    'ytcp-ab-test-dialog input[type=file][accept*="image"]',
-    'ytcp-thumbnails-test-and-compare-dialog input[type=file][accept*="image"]',
-    'tp-yt-paper-dialog[opened] input[type=file][accept*="image"]:not(#file-loader)',
+    "ytcp-creator-experiment-create-dialog ytcp-thumbnail-uploader input[type=file]",
+    'ytcp-creator-experiment-create-dialog input[type=file][accept*="image"]',
   ],
 };
 
-// `ytcp-video-metadata-playlists` holds a `ytcp-dropdown-trigger` that opens a checkbox list.
-// The list itself was not inspected: its dialog, row, name, checkbox and Done selectors are
-// guesses, which is why a row is also matched by its whole text.
+// `ytcp-video-metadata-playlists` holds a `ytcp-dropdown-trigger` that opens the playlist list.
+// All checked live: the list is `ytcp-playlist-dialog` > `tp-yt-paper-dialog` (no `opened`
+// attribute while showing) holding `ytcp-checkbox-group#playlists-list` > `div#checkbox-group`
+// > `ul` > `tp-yt-iron-list` > `div#items[role=list]`, one `ytcp-ve` per playlist. The
+// iron-list renders its rows lazily, only once the list shows, so the filler waits for them.
 export const playlistTrigger: FieldSelectors = {
   label: "the Playlists field",
   selectors: [
@@ -90,25 +126,41 @@ export const playlistTrigger: FieldSelectors = {
 };
 export const playlistDialog: FieldSelectors = {
   label: "the playlist list",
-  selectors: ["ytcp-playlist-dialog", "#playlists-dialog", "ytcp-playlist-dialog-lit"],
+  // The paper-dialog, not its host, which may stay on the page while the list is closed.
+  selectors: ["ytcp-playlist-dialog tp-yt-paper-dialog", "ytcp-playlist-dialog [role=dialog]"],
 };
-// One row per playlist inside the list: a checkbox whose label is the playlist's name.
+// One row per playlist: `ytcp-ve` > `li.row` > `label.ytcp-checkbox-label`, which holds the
+// checkbox and the name.
 export const playlistItems: FieldSelectors = {
   label: "the playlists",
-  selectors: ["ytcp-checkbox-group", "#items li", "li"],
+  selectors: ["#items li.row", "#items > ytcp-ve", '[role="list"] li.row'],
 };
+// `span.checkbox-label#checkbox-label-N` > `span.label.label-text` holds the playlist's name.
 export const playlistItemName: FieldSelectors = {
   label: "a playlist's name",
-  selectors: [".checkbox-label", "span.label", "label"],
+  selectors: [".checkbox-label .label-text", ".label-text", ".checkbox-label"],
 };
+// `ytcp-checkbox-lit#checkbox-N` wraps `div#checkbox[role=checkbox]`, whose aria-checked is
+// "true" once ticked, and a hidden `input[type=checkbox]`.
 export const playlistItemCheckbox: FieldSelectors = {
   label: "a playlist's checkbox",
-  selectors: ["ytcp-checkbox-lit", "tp-yt-paper-checkbox", '[role="checkbox"]'],
+  selectors: [
+    'ytcp-checkbox-lit #checkbox[role="checkbox"]',
+    '[role="checkbox"][aria-checked]',
+    "ytcp-checkbox-lit",
+  ],
 };
-// The playlist list's own Done, searched inside the list only. Not the upload's.
+// The playlist list's own Done, searched inside the list only. Not the upload's. The list also
+// has a Save (`ytcp-button.save-button`), which the filler never presses (see `forbidden`), a
+// New playlist (`ytcp-button.new-playlist-button`) and a search bar (`ytcp-search-bar`).
 export const playlistDone: FieldSelectors = {
   label: "the playlist list's Done button",
-  selectors: [".done-button", 'ytcp-button[label="Done"]', 'ytcp-button[aria-label="Done"]'],
+  selectors: [
+    "ytcp-button.done-button",
+    ".done-button",
+    'ytcp-button[label="Done"]',
+    'ytcp-button[aria-label="Done"]',
+  ],
 };
 
 // Radios are `tp-yt-paper-radio-button`s told apart by their `name`; the chosen one gets the
@@ -171,7 +223,9 @@ export const tagChips: FieldSelectors = {
   ],
 };
 
-// Buttons the filler must never press: the upload's own Next, Back, Save, Schedule and Publish.
+// Buttons the filler must never press: the upload's own Next, Back, Save, Schedule and Publish,
+// and the playlist list's Save (checked live: `ytcp-button.save-button`, disabled until
+// something changes; the list is closed with its Done instead).
 export const forbidden: readonly string[] = [
   "#next-button",
   "#back-button",
@@ -179,20 +233,27 @@ export const forbidden: readonly string[] = [
   "#save-button",
   "#schedule-button",
   "#publish-button",
+  "ytcp-button.save-button",
 ];
+// Buttons refused by their text or aria-label, where no id or class was read: the A/B Testing
+// dialog's "Set test" (bottom right), which the person presses after checking the pictures.
+export const forbiddenLabels: readonly string[] = ["Set test"];
+
+const allowed = (field: FieldSelectors) => (element: Element) =>
+  field.exclude === undefined || element.closest(field.exclude) === null;
 
 // The first element any of a field's selectors finds, searched in `root`.
 export function findField(root: ParentNode, field: FieldSelectors): Element | null {
   for (const selector of field.selectors) {
-    const found = root.querySelector(selector);
-    if (found !== null) return found;
+    const found = [...root.querySelectorAll(selector)].find(allowed(field));
+    if (found !== undefined) return found;
   }
   return null;
 }
 
 export function findAll(root: ParentNode, field: FieldSelectors): readonly Element[] {
   for (const selector of field.selectors) {
-    const found = [...root.querySelectorAll(selector)];
+    const found = [...root.querySelectorAll(selector)].filter(allowed(field));
     if (found.length > 0) return found;
   }
   return [];

@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { click, type FieldResult, fillStudio, RefusedClick, setEditableText } from "../src/fill.js";
+import {
+  click,
+  type FieldResult,
+  fillStudio,
+  press,
+  RefusedClick,
+  setEditableText,
+} from "../src/fill.js";
 import { type PackItem, packText } from "../src/pack.js";
 import * as selectors from "../src/selectors.js";
 
@@ -19,7 +26,15 @@ const item: PackItem = {
   playlist: "Fox tales",
 };
 const png = (name: string) => new File(["png"], name, { type: "image/png" });
-const noWait = { sleep: () => Promise.resolve(), timeoutMs: 300 };
+// What Studio does "a moment later" (render the playlist rows); it runs when the filler waits.
+let later: (() => void)[] = [];
+const noWait = {
+  sleep: () => {
+    later.shift()?.();
+    return Promise.resolve();
+  },
+  timeoutMs: 300,
+};
 
 // Fills and expects every field the item needs to be there; answers each field's result.
 async function fillFields(...args: Parameters<typeof fillStudio>): Promise<readonly FieldResult[]> {
@@ -29,11 +44,20 @@ async function fillFields(...args: Parameters<typeof fillStudio>): Promise<reado
 }
 
 // The fixture is static markup; this plays the part of Studio's scripts for what the filler
-// clicks: Show more reveals AI use and Tags and flips its label, the playlist list opens and
-// closes, checkboxes tick, radios take `iron-selected` and `checked`, typing a tag then Enter
-// (or a comma) makes a chip, A/B Testing opens its dialog. Presses of Next, Back or Publish are
-// recorded.
+// clicks: Show more reveals AI use and Tags and flips its label, the playlist list opens (its
+// rows rendered a moment later, as the iron-list does) and closes with Done, checkboxes tick,
+// radios take `iron-selected` and `checked`, typing a tag then Enter (or a comma) makes a chip.
+// A/B Testing opens its dialog on a pointer press only (a plain `.click()` didn't, live), and
+// "Thumbnail only" shows its three uploaders. Presses of Next, Back, Publish, the list's Save
+// and Set test are recorded.
 let pressed: string[];
+const paperDialog = (host: string) =>
+  document.querySelector<HTMLElement>(`${host} tp-yt-paper-dialog`);
+const shown = (host: string) => paperDialog(host)?.style.display !== "none";
+function render(template: string, into: string): void {
+  const rows = document.querySelector<HTMLTemplateElement>(template);
+  document.querySelector(into)?.replaceChildren(rows?.content.cloneNode(true) ?? "");
+}
 function loadStudio(
   edit: (doc: Document) => void = () => {},
   chipKeys: readonly string[] = ["Enter", ","],
@@ -42,9 +66,10 @@ function loadStudio(
   document.body.innerHTML = parsed.body.innerHTML;
   edit(document);
   pressed = [];
-  const on = (selector: string, run: (element: Element) => void) => {
+  later = [];
+  const on = (selector: string, run: (element: Element) => void, type = "click") => {
     for (const element of document.querySelectorAll(selector))
-      element.addEventListener("click", () => run(element));
+      element.addEventListener(type, () => run(element));
   };
   on("#toggle-button", (toggle) => {
     const advanced = document.querySelector("#advanced");
@@ -55,17 +80,20 @@ function loadStudio(
       opening ? "Hide advanced settings" : "Show advanced settings",
     );
   });
-  on("ytcp-dropdown-trigger", () =>
-    document.querySelector("ytcp-playlist-dialog")?.removeAttribute("hidden"),
-  );
+  on("ytcp-dropdown-trigger", () => {
+    paperDialog("ytcp-playlist-dialog")?.style.removeProperty("display");
+    later.push(() => {
+      render("#playlist-rows", "ytcp-playlist-dialog #items");
+      on("ytcp-checkbox-lit #checkbox", (box) =>
+        box.setAttribute(
+          "aria-checked",
+          box.getAttribute("aria-checked") === "true" ? "false" : "true",
+        ),
+      );
+    });
+  });
   on("ytcp-playlist-dialog .done-button", () =>
-    document.querySelector("ytcp-playlist-dialog")?.setAttribute("hidden", ""),
-  );
-  on("ytcp-checkbox-lit", (box) =>
-    box.setAttribute(
-      "aria-checked",
-      box.getAttribute("aria-checked") === "true" ? "false" : "true",
-    ),
+    paperDialog("ytcp-playlist-dialog")?.style.setProperty("display", "none"),
   );
   // A radio unselects the others of its own group only.
   on("tp-yt-paper-radio-button", (radio) => {
@@ -76,10 +104,20 @@ function loadStudio(
     radio.classList.add("iron-selected");
     radio.setAttribute("checked", "");
   });
-  on("#ab-test-button", () =>
-    document.querySelector("ytcp-ab-test-dialog")?.removeAttribute("hidden"),
+  on(
+    "#ab-test-button",
+    () => paperDialog("ytcp-creator-experiment-create-dialog")?.style.removeProperty("display"),
+    "pointerup",
   );
-  on("#next-button, #back-button, #done-button", (button) => pressed.push(button.id));
+  on("ytcp-creator-experiment-create-dialog #chip-1", () =>
+    render("#ab-thumbnail-uploaders", "#experiment-content"),
+  );
+  on("#next-button, #back-button, #done-button, .save-button", (button) =>
+    pressed.push(button.id || button.className),
+  );
+  on("ytcp-creator-experiment-create-dialog ytcp-button", (button) =>
+    pressed.push(button.textContent ?? ""),
+  );
   const input = document.querySelector<HTMLInputElement>("#chip-bar #text-input");
   input?.addEventListener("keydown", (event) => {
     if (!chipKeys.includes(event.key)) return;
@@ -97,13 +135,25 @@ const selected = (name: string) =>
   document.querySelector(`[name="${name}"]`)?.classList.contains("iron-selected") ?? false;
 const chips = () =>
   [...document.querySelectorAll("#chip-list ytcp-chip")].map((chip) => chip.textContent);
+// Each playlist row's aria-checked, in order.
+const ticks = () =>
+  [...document.querySelectorAll("ytcp-playlist-dialog #items li.row")].map((row) =>
+    row.querySelector("ytcp-checkbox-lit #checkbox")?.getAttribute("aria-checked"),
+  );
+const abInputs = () => [
+  ...document.querySelectorAll<HTMLInputElement>(
+    "ytcp-creator-experiment-create-dialog input[type=file]",
+  ),
+];
+const mainThumbnail = () =>
+  document.querySelector<HTMLInputElement>("ytcp-video-custom-still-editor #file-loader");
 // Nothing the filler writes has been written: the title Studio put in (when the box is there),
 // an empty description, no thumbnail, no ticked playlist, no chosen radio, no tag chips.
 const untouched = () =>
   ["", "my-video-file"].includes(text("#title-textarea #textbox")) &&
   text("#description-textarea #textbox") === "" &&
   (document.querySelector<HTMLInputElement>("#file-loader")?.files?.length ?? 0) === 0 &&
-  document.querySelector('ytcp-checkbox-lit[aria-checked="true"]') === null &&
+  document.querySelector('[role="checkbox"][aria-checked="true"]') === null &&
   document.querySelector("tp-yt-paper-radio-button.iron-selected") === null &&
   chips().length === 0;
 
@@ -124,11 +174,9 @@ describe("filling Studio's upload dialog", () => {
     expect(text("#title-textarea #textbox")).toBe("The Fox of Cliffside");
     const thumbnail = document.querySelector<HTMLInputElement>("#file-loader");
     expect(thumbnail?.files?.[0]?.name).toBe("thumb.png");
-    const rows = [...document.querySelectorAll("ytcp-checkbox-group")];
-    expect(
-      rows.map((row) => row.querySelector("ytcp-checkbox-lit")?.getAttribute("aria-checked")),
-    ).toEqual(["false", "true"]);
-    expect(document.querySelector("ytcp-playlist-dialog")?.hasAttribute("hidden")).toBe(true);
+    expect(ticks()).toEqual(["false", "true"]);
+    // Closed with its Done, never its Save.
+    expect(shown("ytcp-playlist-dialog")).toBe(false);
     expect(selected("VIDEO_MADE_FOR_KIDS_NOT_MFK")).toBe(true);
     expect(selected("VIDEO_HAS_ALTERED_CONTENT_YES")).toBe(true);
     expect(selected("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe(false);
@@ -256,53 +304,116 @@ describe("filling Studio's upload dialog", () => {
     expect(selected("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe(false);
   });
 
-  it("puts three thumbnails into A/B Testing when Studio offers it", async () => {
+  it("puts three thumbnails into A/B Testing, Thumbnail only, and leaves Set test to the person", async () => {
     const results = await fillFields(
       document,
       item,
       [png("one.png"), png("two.png"), png("three.png")],
       noWait,
     );
+    // Still reported in Studio's order, though A/B Testing is filled last.
+    expect(results.map((result) => result.field)).toEqual([
+      "title",
+      "description",
+      "thumbnails",
+      "playlist",
+      "audience",
+      "altered",
+      "tags",
+    ]);
     const thumbnails = results.find((result) => result.field === "thumbnails");
     expect(thumbnails).toMatchObject({ ok: true });
-    expect(thumbnails?.message).toContain("A/B Testing");
-    const inputs = [...document.querySelectorAll<HTMLInputElement>("ytcp-ab-test-dialog input")];
-    expect(inputs.map((input) => input.files?.[0]?.name)).toEqual([
+    expect(thumbnails?.message).toContain("A/B Testing (Thumbnail only)");
+    expect(thumbnails?.message).toContain("press Set test yourself");
+    expect(abInputs().map((input) => input.files?.[0]?.name)).toEqual([
       "one.png",
       "two.png",
       "three.png",
     ]);
+    // The single Thumbnail slot is left alone, the dialog stays open, and neither Set test nor
+    // any other of its buttons was pressed.
+    expect(mainThumbnail()?.files?.length ?? 0).toBe(0);
+    expect(shown("ytcp-creator-experiment-create-dialog")).toBe(true);
     expect(pressed).toEqual([]);
+    // Everything else was filled before A/B Testing opened.
+    expect(ticks()).toEqual(["false", "true"]);
+    expect(chips()).toEqual(["fox", "cliff diving"]);
+  });
+
+  it("puts two thumbnails into A/B Testing's first two slots", async () => {
+    const results = await fillFields(document, item, [png("one.png"), png("two.png")], noWait);
+    expect(results.find((result) => result.field === "thumbnails")?.message).toContain(
+      "Both thumbnails",
+    );
+    expect(abInputs().map((input) => input.files?.[0]?.name)).toEqual([
+      "one.png",
+      "two.png",
+      undefined,
+    ]);
   });
 
   it("sets the first thumbnail and says so when A/B Testing isn't there", async () => {
-    loadStudio((doc) => {
-      doc.querySelector("#ab-test-button")?.remove();
-      doc.querySelector("#preview-button")?.remove();
-    });
+    loadStudio((doc) => doc.querySelector("#ab-test-button")?.remove());
     const results = await fillFields(
       document,
       item,
       [png("one.png"), png("two.png"), png("three.png")],
       noWait,
     );
-    expect(document.querySelector<HTMLInputElement>("#file-loader")?.files?.[0]?.name).toBe(
-      "one.png",
-    );
+    expect(mainThumbnail()?.files?.[0]?.name).toBe("one.png");
     const message = results.find((result) => result.field === "thumbnails")?.message;
     expect(message).toContain("A/B Testing button wasn't found");
     expect(message).toContain("add thumbnails 2 and 3 by hand");
   });
 
-  it("sets the first thumbnail when A/B Testing opens something it can't fill", async () => {
-    loadStudio((doc) => doc.querySelector("ytcp-ab-test-dialog")?.replaceChildren());
+  it("sets the first thumbnail when A/B Testing doesn't open", async () => {
+    // Studio's own opener is bound to the host's id; without it the press opens nothing.
+    loadStudio((doc) => doc.querySelector("#ab-test-button")?.removeAttribute("id"));
     const results = await fillFields(document, item, [png("one.png"), png("two.png")], noWait);
-    expect(document.querySelector<HTMLInputElement>("#file-loader")?.files?.[0]?.name).toBe(
-      "one.png",
+    expect(mainThumbnail()?.files?.[0]?.name).toBe("one.png");
+    expect(results.find((result) => result.field === "thumbnails")?.message).toContain(
+      "A/B Testing didn't open",
     );
+    expect(shown("ytcp-creator-experiment-create-dialog")).toBe(false);
+  });
+
+  it("presses A/B Testing like a mouse, since a plain click doesn't open it", () => {
+    const button = document.querySelector("#preview-button");
+    if (button === null) throw new Error("fixture lacks the A/B Testing button");
+    click(button);
+    expect(shown("ytcp-creator-experiment-create-dialog")).toBe(false);
+    press(button);
+    expect(shown("ytcp-creator-experiment-create-dialog")).toBe(true);
+  });
+
+  it("sets the first thumbnail when A/B Testing opens something it can't fill", async () => {
+    loadStudio((doc) => doc.querySelector("#ab-thumbnail-uploaders")?.remove());
+    const results = await fillFields(document, item, [png("one.png"), png("two.png")], noWait);
+    expect(mainThumbnail()?.files?.[0]?.name).toBe("one.png");
     expect(results.find((result) => result.field === "thumbnails")?.message).toContain(
       "add thumbnail 2 there by hand",
     );
+  });
+
+  it("never puts the single thumbnail into an A/B Testing slot", async () => {
+    // A/B Testing's uploaders, already showing and placed before the Thumbnail slot inside the
+    // metadata editor, share its id and accept list.
+    loadStudio((doc) => {
+      const ab = doc.querySelector("ytcp-creator-experiment-create-dialog");
+      const template = doc.querySelector<HTMLTemplateElement>("#ab-thumbnail-uploaders");
+      doc.querySelector("#experiment-content")?.append(template?.content.cloneNode(true) ?? "");
+      if (ab !== null) doc.querySelector("ytcp-video-metadata-editor")?.prepend(ab);
+    });
+    await fillFields(document, item, [png("thumb.png")], noWait);
+    expect(mainThumbnail()?.files?.[0]?.name).toBe("thumb.png");
+    expect(abInputs().every((input) => (input.files?.length ?? 0) === 0)).toBe(true);
+    // No selector of the single slot, even the loosest, answers one of A/B Testing's.
+    for (const selector of selectors.thumbnailInput.selectors)
+      for (const found of selectors.findAll(document, {
+        ...selectors.thumbnailInput,
+        selectors: [selector],
+      }))
+        expect(found.closest("ytcp-creator-experiment-create-dialog")).toBeNull();
   });
 
   it("fills nothing when a field behind Show more is missing, and names it", async () => {
@@ -358,7 +469,27 @@ describe("filling Studio's upload dialog", () => {
       copy: "Owls",
     });
     expect(results.find((result) => result.field === "playlist")?.message).toContain('"Owls"');
-    expect(document.querySelector("ytcp-playlist-dialog")?.hasAttribute("hidden")).toBe(true);
+    expect(shown("ytcp-playlist-dialog")).toBe(false);
+    expect(pressed).toEqual([]);
+  });
+
+  it("waits for the playlist rows, which Studio renders only after the list shows", async () => {
+    // Nothing waits the first time the filler looks; the rows come later.
+    const results = await fillFields(document, item, [], noWait);
+    expect(results.find((result) => result.field === "playlist")?.ok).toBe(true);
+    expect(ticks()).toEqual(["false", "true"]);
+  });
+
+  it("leaves a playlist that is already ticked as it is", async () => {
+    loadStudio((doc) =>
+      doc
+        .querySelector<HTMLTemplateElement>("#playlist-rows")
+        ?.content.querySelectorAll("#checkbox")[1]
+        ?.setAttribute("aria-checked", "true"),
+    );
+    const results = await fillFields(document, item, [], noWait);
+    expect(results.find((result) => result.field === "playlist")?.ok).toBe(true);
+    expect(ticks()).toEqual(["false", "true"]);
   });
 
   it("finds the title by its aria-label when the id it had is gone", async () => {
@@ -368,11 +499,20 @@ describe("filling Studio's upload dialog", () => {
     expect(text('[aria-label^="Add a title"]')).toBe("The Fox of Cliffside");
   });
 
-  it("refuses to press the upload's own Publish, Next or Back", () => {
-    for (const id of ["#done-button", "#next-button", "#back-button"]) {
-      const button = document.querySelector(id);
-      if (button === null) throw new Error(`fixture lacks ${id}`);
+  it("refuses to press the upload's own Publish, Next or Back, the list's Save or Set test", () => {
+    const setTest = [
+      ...document.querySelectorAll("ytcp-creator-experiment-create-dialog ytcp-button"),
+    ].find((button) => button.textContent?.trim() === "Set test");
+    const buttons = [
+      ...["#done-button", "#next-button", "#back-button", "ytcp-playlist-dialog .save-button"].map(
+        (selector) => document.querySelector(selector),
+      ),
+      setTest,
+    ];
+    for (const button of buttons) {
+      if (button === null || button === undefined) throw new Error("fixture lacks a button");
       expect(() => click(button)).toThrow(RefusedClick);
+      expect(() => press(button)).toThrow(RefusedClick);
     }
     expect(pressed).toEqual([]);
   });
@@ -382,7 +522,7 @@ describe("filling Studio's upload dialog", () => {
 // `selectors.ts` describes it. Each Details field is found inside the dialog by its first
 // selector (the one checked on the live Details editor), the dialog by every one of its
 // selectors, and the footer's Next, Back and Publish sit inside it. The playlist list and the
-// A/B Testing dialog are overlays outside it, and their selectors are guesses.
+// A/B Testing dialog (both read live) are overlays outside it.
 describe("the fixture's upload dialog", () => {
   beforeEach(() => loadStudio());
   const first = (field: selectors.FieldSelectors) => field.selectors[0] ?? "";
@@ -415,8 +555,6 @@ describe("the fixture's upload dialog", () => {
     // The fields behind Show more start hidden.
     for (const field of [selectors.alteredYes, selectors.tags])
       expect(dialog.querySelector(first(field))?.closest("[hidden]")).not.toBeNull();
-    for (const id of selectors.forbidden.filter((one) => document.querySelector(one) !== null))
-      expect(dialog.querySelector(id)).not.toBeNull();
     expect(
       ["#next-button", "#back-button", "#done-button"].map((id) => dialog.querySelector(id)),
     ).not.toContain(null);
@@ -424,15 +562,48 @@ describe("the fixture's upload dialog", () => {
 
   it("keeps the playlist list and the A/B Testing dialog outside the upload dialog", () => {
     const dialog = selectors.findField(document, selectors.uploadDialog);
-    for (const field of [selectors.playlistDialog, selectors.abTestInputs]) {
+    for (const field of [selectors.playlistDialog, selectors.abTestDialog]) {
       const found = selectors.findField(document, field);
       expect(found).not.toBeNull();
+      expect(found?.tagName.toLowerCase()).toBe("tp-yt-paper-dialog");
+      expect(found?.hasAttribute("opened")).toBe(false);
       expect(dialog?.contains(found)).toBe(false);
     }
+  });
+
+  it("holds the playlist list's rows, names, checkboxes and buttons at their first selectors", () => {
+    document.querySelector<HTMLElement>("ytcp-dropdown-trigger")?.click();
+    later.shift()?.();
     const list = selectors.findField(document, selectors.playlistDialog);
     if (list === null) throw new Error("fixture lacks the playlist list");
-    expect(selectors.findAll(list, selectors.playlistItems)).toHaveLength(2);
-    expect(selectors.findField(list, selectors.playlistDone)).not.toBeNull();
+    const rows = [...list.querySelectorAll(first(selectors.playlistItems))];
+    expect(rows).toHaveLength(2);
+    expect(
+      rows.map((row) => row.querySelector(first(selectors.playlistItemName))?.textContent),
+    ).toEqual(["Cooking", "Fox tales"]);
+    for (const row of rows)
+      expect(row.querySelector(first(selectors.playlistItemCheckbox))).not.toBeNull();
+    expect(list.querySelectorAll("#items > ytcp-ve")).toHaveLength(2);
+    expect(list.querySelector(first(selectors.playlistDone))?.textContent).toBe("Done");
+    const save = list.querySelector("ytcp-button.save-button");
+    expect(selectors.forbidden.some((selector) => save?.closest(selector))).toBe(true);
+  });
+
+  it("holds A/B Testing's chips and, with Thumbnail only, its three uploads", () => {
+    const ab = selectors.findField(document, selectors.abTestDialog);
+    if (ab === null) throw new Error("fixture lacks the A/B Testing dialog");
+    const chips = selectors.findAll(ab, selectors.abTestChips);
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Title only",
+      "Thumbnail only",
+      "Title and thumbnail",
+    ]);
+    const chip = ab.querySelector(first(selectors.abThumbnailOnlyChip));
+    expect(chip?.textContent).toBe(selectors.abThumbnailOnlyText);
+    if (chip !== null) press(chip);
+    const inputs = [...document.querySelectorAll(first(selectors.abTestInputs))];
+    expect(inputs).toHaveLength(3);
+    expect(inputs.every((input) => ab.contains(input) && input.id === "file-loader")).toBe(true);
   });
 });
 

@@ -1,7 +1,11 @@
 import type { PackItem } from "./pack.js";
 import {
   abTestButton,
+  abTestChips,
+  abTestDialog,
   abTestInputs,
+  abThumbnailOnlyChip,
+  abThumbnailOnlyText,
   alteredNo,
   alteredYes,
   description,
@@ -9,6 +13,7 @@ import {
   findAll,
   findField,
   forbidden,
+  forbiddenLabels,
   notForKids,
   playlistDialog,
   playlistDone,
@@ -29,7 +34,8 @@ import {
 // fills nothing at all, so the person never gets a half-filled dialog, and says which fields
 // it couldn't find. Then each field fills and is checked, or fails on its own with a sentence
 // saying what to do by hand (Studio didn't take the text, a playlist Studio doesn't have).
-// Nothing here presses Next, Save or Publish. The person reviews and publishes.
+// Nothing here presses Next, Save, Publish or A/B Testing's Set test. The person reviews and
+// publishes.
 
 export type FieldName =
   | "title"
@@ -53,7 +59,8 @@ export interface FillOptions {
   // Waits between looks for a field that appears after a click; a test passes one that
   // doesn't wait.
   readonly sleep?: (ms: number) => Promise<void>;
-  // How long to look for a field that appears after a click.
+  // How long to look for a field that appears after a click. When given, it is also how long
+  // to wait for A/B Testing's dialog (else 3 s) and the playlist rows (else 5 s).
   readonly timeoutMs?: number;
 }
 
@@ -65,7 +72,15 @@ export type FillReport =
   | { readonly filled: true; readonly results: readonly FieldResult[] }
   | { readonly filled: false; readonly missing: readonly string[] };
 
-type WaitFor = (field: FieldSelectors, within?: ParentNode) => Promise<Element | null>;
+// Looks every 100 ms until `look` finds something, for up to `ms`.
+type Until = <T>(look: () => T | null | undefined, ms?: number) => Promise<T | null>;
+type WaitFor = (field: FieldSelectors, within?: ParentNode, ms?: number) => Promise<Element | null>;
+interface Waits {
+  readonly until: Until;
+  readonly waitFor: WaitFor;
+  readonly abDialogMs: number;
+  readonly rowsMs: number;
+}
 
 export async function fillStudio(
   root: Document,
@@ -75,13 +90,23 @@ export async function fillStudio(
 ): Promise<FillReport> {
   const sleep = options.sleep ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
   const timeoutMs = options.timeoutMs ?? 4000;
-  const waitFor: WaitFor = async (field, within = root) => {
+  const until: Until = async (look, ms = timeoutMs) => {
     for (let waited = 0; ; waited += 100) {
-      const found = findField(within, field);
-      if (found !== null && visible(found)) return found;
-      if (waited >= timeoutMs) return null;
+      const found = look();
+      if (found !== null && found !== undefined) return found;
+      if (waited >= ms) return null;
       await sleep(100);
     }
+  };
+  // Studio's overlays carry no `opened` attribute while showing, so a field counts once it is
+  // laid out (see `visible`).
+  const waitFor: WaitFor = (field, within = root, ms = timeoutMs) =>
+    until(() => findShown(within, field), ms);
+  const waits: Waits = {
+    until,
+    waitFor,
+    abDialogMs: options.timeoutMs ?? 3000,
+    rowsMs: options.timeoutMs ?? 5000,
   };
   // Show more is a toggle: it is pressed at most once, only while its label still offers to
   // show the advanced settings and the field it reveals isn't showing, so a second field never
@@ -141,16 +166,25 @@ export async function fillStudio(
       ),
     missingText("description", "the Description field", item.description),
   );
-  if (thumbnails.length > 0)
-    await attempt(() => fillThumbnails(root, thumbnails, waitFor), {
-      field: "thumbnails",
-      ok: false,
-      message:
-        "Couldn't find the Thumbnail upload — press Upload file under Thumbnail and pick the thumbnail from the project folder (Slopify → Prepare upload → Open folder).",
-    });
+  // One thumbnail goes in its slot now. Two or three go into A/B Testing, but last of all: its
+  // dialog is left open for the person to press Set test, and pressing anything else while it
+  // shows could close it and drop the pictures. Their result still takes this place.
+  const thumbnailFallback: FieldResult = {
+    field: "thumbnails",
+    ok: false,
+    message:
+      "Couldn't find the Thumbnail upload — press Upload file under Thumbnail and pick the thumbnail from the project folder (Slopify → Prepare upload → Open folder).",
+  };
+  let abSlot = -1;
+  if (thumbnails.length === 1)
+    await attempt(async () => setThumbnail(root, thumbnails), thumbnailFallback);
+  else if (thumbnails.length > 1) {
+    abSlot = results.length;
+    results.push(thumbnailFallback);
+  }
   if (item.playlist !== null) {
     const playlist = item.playlist;
-    await attempt(() => fillPlaylist(root, playlist, waitFor), {
+    await attempt(() => fillPlaylist(root, playlist, waits), {
       field: "playlist",
       ok: false,
       message: `Couldn't find the Playlists field — the playlist name "${playlist}" is copied, pick it by hand.`,
@@ -209,6 +243,12 @@ export async function fillStudio(
       missingText("tags", "the Tags field", line),
     );
   }
+  if (abSlot >= 0) {
+    const at = results.length;
+    await attempt(() => fillAbTest(root, thumbnails, waits), thumbnailFallback);
+    const [done] = results.splice(at, 1);
+    if (done !== undefined) results[abSlot] = done;
+  }
   return { filled: true, results };
 }
 
@@ -240,68 +280,81 @@ function textField(
   return { field, ok: true, message: `${capitalized(label.replace(/^the /, ""))} filled.` };
 }
 
-async function fillThumbnails(
-  root: Document,
-  files: readonly File[],
-  waitFor: WaitFor,
-): Promise<FieldResult> {
-  const HTMLInput = viewOf(root).HTMLInputElement;
+// The first thumbnail in the single Thumbnail slot of the metadata editor (never one of A/B
+// Testing's slots, which `thumbnailInput` excludes).
+function setThumbnail(root: Document, files: readonly File[]): FieldResult {
   const input = findField(root, thumbnailInput);
   const first = files[0];
-  if (first === undefined) throw new Error("no files");
-  // Two or three for A/B Testing, when Studio offers it; otherwise the first in the one slot.
-  let abOpened = false;
-  if (files.length > 1) {
-    const button = findField(root, abTestButton);
-    if (button !== null && visible(button)) {
-      click(button);
-      abOpened = true;
-      await waitFor(abTestInputs);
-      const inputs = findAll(root, abTestInputs).filter(
-        (candidate): candidate is HTMLInputElement =>
-          candidate instanceof HTMLInput && candidate !== input,
-      );
-      if (inputs.length >= files.length) {
-        files.forEach((file, index) => {
-          const slot = inputs[index];
-          if (slot !== undefined) setFiles(slot, [file]);
-        });
-        return {
-          field: "thumbnails",
-          ok: true,
-          message: `All ${String(files.length)} thumbnails are in A/B Testing. Check them there and confirm the test in Studio yourself.`,
-        };
-      }
-    }
-  }
-  if (!(input instanceof HTMLInput)) throw new Error("missing");
+  if (first === undefined || !(input instanceof viewOf(root).HTMLInputElement))
+    throw new Error("missing");
   setFiles(input, [first]);
-  if (files.length === 1) return { field: "thumbnails", ok: true, message: "Thumbnail set." };
+  return { field: "thumbnails", ok: true, message: "Thumbnail set." };
+}
+
+// Two or three thumbnails: presses A/B Testing (with a whole pointer sequence; Studio ignored a
+// plain `.click()` from a script), picks "Thumbnail only", and puts thumbnails 1, 2 and 3 into
+// its slots 1, 2 and 3. The dialog is left open: the person checks the pictures and presses
+// Set test. When A/B Testing isn't there, doesn't open or can't be filled, the first goes in the
+// single Thumbnail slot and the message says to add the others by hand.
+async function fillAbTest(
+  root: Document,
+  files: readonly File[],
+  waits: Waits,
+): Promise<FieldResult> {
   const others = files.length === 2 ? "thumbnail 2" : "thumbnails 2 and 3";
+  const folder = "the project folder (Slopify → Prepare upload → Open folder)";
+  const firstOnly = (why: string): FieldResult => {
+    setThumbnail(root, files);
+    return { field: "thumbnails", ok: true, message: `Thumbnail 1 is set. ${why}` };
+  };
+  const button = findShown(root, abTestButton);
+  if (button === undefined)
+    return firstOnly(
+      `Studio's A/B Testing button wasn't found, so add ${others} by hand: press A/B Testing beside the title (it may only appear after the upload is saved), choose Thumbnail only and pick them from ${folder}.`,
+    );
+  press(button);
+  const dialog = await waits.waitFor(abTestDialog, root, waits.abDialogMs);
+  if (dialog === null)
+    return firstOnly(
+      `Studio's A/B Testing didn't open when Slopify pressed it, so add ${others} by hand: press A/B Testing beside the title, choose Thumbnail only and pick them from ${folder}.`,
+    );
+  const chip =
+    findAll(dialog, abTestChips).find(
+      (one) => (one.textContent ?? "").trim().toLowerCase() === abThumbnailOnlyText.toLowerCase(),
+    ) ?? findField(dialog, abThumbnailOnlyChip);
+  if (chip !== null) press(chip);
+  const HTMLInput = viewOf(root).HTMLInputElement;
+  const inputs = await waits.until(() => {
+    const found = findAll(root, abTestInputs).filter(
+      (one): one is HTMLInputElement => one instanceof HTMLInput,
+    );
+    return found.length >= files.length ? found : null;
+  }, waits.abDialogMs);
+  if (inputs === null)
+    return firstOnly(
+      `Studio's A/B Testing opened, but Slopify couldn't find where it takes the pictures, so add ${others} there by hand (choose Thumbnail only) from ${folder}.`,
+    );
+  files.forEach((file, index) => {
+    const slot = inputs[index];
+    if (slot !== undefined) setFiles(slot, [file]);
+  });
+  const count = files.length === 2 ? "Both" : `All ${String(files.length)}`;
+  const pictures = files.length === 2 ? "two" : "three";
   return {
     field: "thumbnails",
     ok: true,
-    message: abOpened
-      ? `Thumbnail 1 is set. Studio's A/B Testing opened, but Slopify couldn't find where it takes the pictures, so add ${others} there by hand from the project folder (Slopify → Prepare upload → Open folder).`
-      : `Thumbnail 1 is set. Studio's A/B Testing button wasn't found, so add ${others} by hand: press A/B Testing beside the title (it may only appear after the upload is saved) and pick them from the project folder.`,
+    message: `${count} thumbnails are in Studio's A/B Testing (Thumbnail only), which is left open. Check the ${pictures} pictures there, then press Set test yourself; closing the dialog drops them.`,
   };
 }
 
-// Opens the Playlists list, ticks the one row named `name` (leaving the others as they are)
-// and closes the list with its own Done.
-async function fillPlaylist(root: Document, name: string, waitFor: WaitFor): Promise<FieldResult> {
+// Opens the Playlists list, waits for its rows (an iron-list, which renders them only once the
+// list shows), ticks the one row named `name` (leaving the others as they are) and closes the
+// list with its own Done, never its Save.
+async function fillPlaylist(root: Document, name: string, waits: Waits): Promise<FieldResult> {
   const trigger = findField(root, playlistTrigger);
   if (trigger === null) throw new Error("missing");
   click(trigger);
-  const dialog = await waitFor(playlistDialog);
-  const close = () => {
-    const done = dialog === null ? null : findField(dialog, playlistDone);
-    if (done !== null) click(done);
-    else
-      (dialog ?? trigger).dispatchEvent(
-        new (viewOf(root).KeyboardEvent)("keydown", { bubbles: true, key: "Escape" }),
-      );
-  };
+  const dialog = await waits.waitFor(playlistDialog);
   if (dialog === null)
     return {
       field: "playlist",
@@ -309,8 +362,27 @@ async function fillPlaylist(root: Document, name: string, waitFor: WaitFor): Pro
       message: `Couldn't open the playlist list — the playlist name "${name}" is copied, press Select under Playlists and pick it by hand.`,
       copy: name,
     };
+  const list = dialog.closest("ytcp-playlist-dialog") ?? dialog;
+  const close = () => {
+    const done = findField(list, playlistDone);
+    if (done !== null)
+      try {
+        click(done);
+        return;
+      } catch (error) {
+        // A Done that turns out to be one of the forbidden buttons: Escape closes the list.
+        if (!(error instanceof RefusedClick)) throw error;
+      }
+    list.dispatchEvent(
+      new (viewOf(root).KeyboardEvent)("keydown", { bubbles: true, key: "Escape" }),
+    );
+  };
+  const rows =
+    (await waits.until(() => {
+      const found = findAll(dialog, playlistItems);
+      return found.length > 0 ? found : null;
+    }, waits.rowsMs)) ?? [];
   const wanted = name.trim().toLowerCase();
-  const rows = findAll(dialog, playlistItems);
   const nameOf = (row: Element) =>
     (findField(row, playlistItemName)?.textContent ?? row.textContent ?? "").trim().toLowerCase();
   const row = rows.find((candidate) => nameOf(candidate) === wanted);
@@ -325,7 +397,8 @@ async function fillPlaylist(root: Document, name: string, waitFor: WaitFor): Pro
   }
   const box = findField(row, playlistItemCheckbox) ?? row;
   if (!checked(box)) click(box);
-  const ticked = checked(box);
+  // The checkbox may re-render after the click, so its tick is looked for a moment.
+  const ticked = (await waits.until(() => (checked(box) ? true : null), 1000)) === true;
   close();
   return ticked
     ? { field: "playlist", ok: true, message: `Added to the playlist "${name}".` }
@@ -369,14 +442,48 @@ function typeTags(root: Document, input: HTMLInputElement, wanted: readonly stri
   return { field: "tags", ok: true, message: `Tags filled (${String(wanted.length)}).` };
 }
 
-// Presses a control, never one of the upload's own Next/Save/Publish buttons.
+// Presses a control, never one of the upload's own Next/Save/Publish buttons, the playlist
+// list's Save or A/B Testing's Set test.
 export function click(element: Element): void {
-  for (const selector of forbidden)
-    if (element.closest(selector) !== null)
-      throw new RefusedClick(
-        "Slopify's filler stopped before pressing one of Studio's Next, Save or Publish buttons. Nothing was published; finish the upload by hand.",
-      );
+  refuseForbidden(element);
   (element as HTMLElement).click();
+}
+
+// Presses a control the way a mouse does: pointerdown, mousedown, pointerup, mouseup, click, all
+// bubbling, at the control's middle. Studio's A/B Testing button ignored a plain `.click()`.
+export function press(element: Element): void {
+  refuseForbidden(element);
+  const view = viewOf(element.ownerDocument);
+  const box = element.getBoundingClientRect();
+  const at: MouseEventInit = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    button: 0,
+    clientX: box.left + box.width / 2,
+    clientY: box.top + box.height / 2,
+  };
+  const Pointer = view.PointerEvent ?? view.MouseEvent;
+  const pointer = { ...at, pointerId: 1, pointerType: "mouse", isPrimary: true };
+  element.dispatchEvent(new Pointer("pointerdown", { ...pointer, buttons: 1 }));
+  element.dispatchEvent(new view.MouseEvent("mousedown", { ...at, buttons: 1, detail: 1 }));
+  element.dispatchEvent(new Pointer("pointerup", { ...pointer, buttons: 0 }));
+  element.dispatchEvent(new view.MouseEvent("mouseup", { ...at, buttons: 0, detail: 1 }));
+  element.dispatchEvent(new view.MouseEvent("click", { ...at, buttons: 0, detail: 1 }));
+}
+
+function refuseForbidden(element: Element): void {
+  const control = element.closest("button, ytcp-button, [role=button]") ?? element;
+  const labels = [control.getAttribute("aria-label"), control.textContent].map((one) =>
+    (one ?? "").trim().toLowerCase(),
+  );
+  if (
+    forbidden.some((selector) => element.closest(selector) !== null) ||
+    forbiddenLabels.some((label) => labels.includes(label.toLowerCase()))
+  )
+    throw new RefusedClick(
+      "Slopify's filler stopped before pressing one of Studio's Next, Save, Publish or Set test buttons. Nothing was published or set; finish the upload by hand.",
+    );
 }
 
 // Studio's title and description are contenteditable divs whose Polymer bindings listen for
@@ -500,8 +607,24 @@ function collapsed(toggle: Element): boolean {
   return label === "" || /^show/i.test(label);
 }
 
+// Shown: not under a `hidden` attribute or `display: none`, and, where the page is laid out,
+// with a box. Studio's overlays (paper-dialogs) carry no `opened` attribute while showing, and
+// are `display: none` while closed, which leaves them no client rects.
 function visible(element: Element): boolean {
-  return element.closest("[hidden]") === null;
+  if (element.closest("[hidden]") !== null) return false;
+  const view = element.ownerDocument.defaultView;
+  for (let at: Element | null = element; at !== null; at = at.parentElement)
+    if (view?.getComputedStyle(at).display === "none") return false;
+  return element.getClientRects().length > 0;
+}
+
+// The first shown element any of a field's selectors finds.
+function findShown(root: ParentNode, field: FieldSelectors): Element | undefined {
+  for (const selector of field.selectors) {
+    const found = findAll(root, { ...field, selectors: [selector] }).find(visible);
+    if (found !== undefined) return found;
+  }
+  return undefined;
 }
 
 // Line breaks come back as <br>, <div> or "\n" depending on how the editor took the text (and

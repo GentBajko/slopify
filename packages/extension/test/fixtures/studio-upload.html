@@ -12,11 +12,21 @@
     attribute), Show more (#toggle-button), which reveals AI use (#altered-content) and Tags
     (a ytcp-chip-bar with input#text-input), and the A/B Testing button. Web components are
     plain custom elements here.
+  - Also read live the same day: the playlist list the dropdown opens (ytcp-playlist-dialog >
+    tp-yt-paper-dialog > ytcp-checkbox-group#playlists-list > div#checkbox-group > ul >
+    tp-yt-iron-list > div#items[role=list] > one ytcp-ve per playlist, each li.row >
+    label.ytcp-checkbox-label > ytcp-checkbox-lit + span.checkbox-label; its New playlist, Save
+    and Done buttons and its search bar) and the dialog A/B Testing opens
+    (ytcp-creator-experiment-create-dialog > ytcp-dialog > tp-yt-paper-dialog#dialog, the
+    Title only / Thumbnail only / Title and thumbnail chips, three ytcp-thumbnail-uploaders
+    once Thumbnail only is chosen, and Set test). Neither paper-dialog had an `opened`
+    attribute while showing; closed, they are display: none here. The playlist rows (an
+    iron-list renders them only once the list shows) and the A/B uploaders are in <template>s,
+    which test/fill.test.ts renders when Studio would. The close X and Set test have no id
+    here, since none was read.
   - The upload dialog around them (ytcp-uploads-dialog > tp-yt-paper-dialog#dialog) and its
     footer (#back-button, #next-button, #done-button) follow src/selectors.ts; the live upload
     dialog was not inspected, so that it wraps the same fields is an assumption.
-  - Guesses, never inspected: the playlist list the dropdown opens (ytcp-playlist-dialog) and
-    the dialog A/B Testing opens (ytcp-ab-test-dialog).
   It is the contract src/selectors.ts is tested against (test/fill.test.ts checks the
   structure); see docs/studio-extension.md.
 -->
@@ -40,8 +50,9 @@
                   aria-label="Add a title that describes your video (type @ to mention a channel)"
                 >my-video-file</div>
               </ytcp-social-suggestions-textbox>
-              <ytcp-button id="ab-test-button">A/B Testing</ytcp-button>
-              <button id="preview-button" aria-label="A/B Testing">Test</button>
+              <ytcp-button id="ab-test-button">
+                <button id="preview-button" aria-label="A/B Testing">A/B Testing</button>
+              </ytcp-button>
             </ytcp-video-title>
             <ytcp-video-description>
               <ytcp-social-suggestions-textbox id="description-textarea">
@@ -126,23 +137,87 @@
         </div>
       </tp-yt-paper-dialog>
     </ytcp-uploads-dialog>
-    <ytcp-playlist-dialog hidden>
-      <div id="items">
-        <ytcp-checkbox-group>
-          <ytcp-checkbox-lit role="checkbox" aria-checked="false"></ytcp-checkbox-lit>
-          <span class="checkbox-label">Cooking</span>
+    <ytcp-playlist-dialog>
+      <tp-yt-paper-dialog style="display: none">
+        <ytcp-search-bar>
+          <input id="query-input" type="text" aria-label="Search for a playlist" />
+        </ytcp-search-bar>
+        <ytcp-checkbox-group id="playlists-list">
+          <div id="checkbox-group">
+            <ul>
+              <tp-yt-iron-list>
+                <div id="items" role="list"></div>
+              </tp-yt-iron-list>
+            </ul>
+          </div>
         </ytcp-checkbox-group>
-        <ytcp-checkbox-group>
-          <ytcp-checkbox-lit role="checkbox" aria-checked="false"></ytcp-checkbox-lit>
-          <span class="checkbox-label">Fox tales</span>
-        </ytcp-checkbox-group>
-      </div>
-      <ytcp-button class="done-button" label="Done">Done</ytcp-button>
+        <template id="playlist-rows">
+          <ytcp-ve>
+            <li class="row">
+              <label class="ytcp-checkbox-label">
+                <ytcp-checkbox-lit id="checkbox-0" aria-labelledby="checkbox-label-0">
+                  <div id="checkbox" role="checkbox" aria-checked="false"></div>
+                  <input type="checkbox" hidden />
+                </ytcp-checkbox-lit>
+                <span id="checkbox-label-0" class="checkbox-label"
+                  ><span class="label label-text">Cooking</span></span
+                >
+              </label>
+            </li>
+          </ytcp-ve>
+          <ytcp-ve>
+            <li class="row">
+              <label class="ytcp-checkbox-label">
+                <ytcp-checkbox-lit id="checkbox-1" aria-labelledby="checkbox-label-1">
+                  <div id="checkbox" role="checkbox" aria-checked="false"></div>
+                  <input type="checkbox" hidden />
+                </ytcp-checkbox-lit>
+                <span id="checkbox-label-1" class="checkbox-label"
+                  ><span class="label label-text">Fox tales</span></span
+                >
+              </label>
+            </li>
+          </ytcp-ve>
+        </template>
+        <ytcp-button class="new-playlist-button">New playlist</ytcp-button>
+        <ytcp-button class="save-button" disabled>Save</ytcp-button>
+        <ytcp-button class="done-button">Done</ytcp-button>
+      </tp-yt-paper-dialog>
     </ytcp-playlist-dialog>
-    <ytcp-ab-test-dialog hidden>
-      <input type="file" accept="image/jpeg,image/png" />
-      <input type="file" accept="image/jpeg,image/png" />
-      <input type="file" accept="image/jpeg,image/png" />
-    </ytcp-ab-test-dialog>
+    <ytcp-creator-experiment-create-dialog>
+      <ytcp-dialog>
+        <tp-yt-paper-dialog id="dialog" style="display: none">
+          <div class="header">
+            <h1>A/B Testing</h1>
+            <ytcp-icon-button aria-label="Close">X</ytcp-icon-button>
+          </div>
+          <h2>Test and compare your thumbnails and titles</h2>
+          <ytcp-static-chip-bar>
+            <ytcp-chip id="chip-0">Title only</ytcp-chip>
+            <ytcp-chip id="chip-1">Thumbnail only</ytcp-chip>
+            <ytcp-chip id="chip-2">Title and thumbnail</ytcp-chip>
+          </ytcp-static-chip-bar>
+          <div id="experiment-content"></div>
+          <template id="ab-thumbnail-uploaders">
+            <ytcp-thumbnail-uploader class="ytcpCreatorExperimentCreateDialogThumbnailUploader">
+              <span>Thumbnail 1 (required)</span>
+              <button aria-label="Add thumbnail">Add thumbnail</button>
+              <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
+            </ytcp-thumbnail-uploader>
+            <ytcp-thumbnail-uploader class="ytcpCreatorExperimentCreateDialogThumbnailUploader">
+              <span>Thumbnail 2 (required)</span>
+              <button aria-label="Add thumbnail">Add thumbnail</button>
+              <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
+            </ytcp-thumbnail-uploader>
+            <ytcp-thumbnail-uploader class="ytcpCreatorExperimentCreateDialogThumbnailUploader">
+              <span>Thumbnail 3</span>
+              <button aria-label="Add thumbnail">Add thumbnail</button>
+              <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
+            </ytcp-thumbnail-uploader>
+          </template>
+          <ytcp-button>Set test</ytcp-button>
+        </tp-yt-paper-dialog>
+      </ytcp-dialog>
+    </ytcp-creator-experiment-create-dialog>
   </body>
 </html>
