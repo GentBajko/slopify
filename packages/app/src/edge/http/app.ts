@@ -85,6 +85,15 @@ export interface AppDeps {
   readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
   // Speaks one voice audition through the attempt wrapper (`kernel/runner/audition.ts`).
   readonly audition?: Audition | undefined;
+  // Settings → Voices: what a voice's provider says it speaks, asked when a voice is added
+  // without languages. Absent, or undefined from it, is unknown.
+  readonly voiceLanguages?:
+    | ((
+        provider: string,
+        voiceId: string,
+        signal: AbortSignal,
+      ) => Promise<readonly string[] | undefined>)
+    | undefined;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;

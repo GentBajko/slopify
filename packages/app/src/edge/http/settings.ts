@@ -16,6 +16,7 @@ import type { AddVoiceReason, VoicesDeps } from "../../slices/settings/voices.js
 import {
   addVoice,
   removeVoice,
+  setVoiceLanguages,
   voiceIdMax,
   voiceNameMax,
   voices,
@@ -37,7 +38,9 @@ const voiceBody = z.object({
   provider: z.enum(providerIds),
   name: z.string(),
   voiceId: z.string(),
+  languages: z.array(z.string().max(20)).max(60).optional(),
 });
+const voiceLanguagesBody = z.object({ languages: z.array(z.string().max(20)).max(60) });
 // Length and scheme are the slice's rules, so their sentences reach the field; this bound only
 // keeps a pasted novel off the parser.
 const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
@@ -133,8 +136,17 @@ export function settingsRoutes(deps: AppDeps) {
         return c.json({ sent: true });
       })
       .get("/voices", (c) => c.json({ voices: voices(voiceDeps) }))
-      .post("/voices", zValidator("json", voiceBody, onInvalid), (c) => {
-        const result = addVoice(voiceDeps, c.req.valid("json"));
+      .post("/voices", zValidator("json", voiceBody, onInvalid), async (c) => {
+        const body = c.req.valid("json");
+        // Languages left blank are asked of the provider, when it says; no answer is unknown.
+        const languages =
+          body.languages !== undefined && body.languages.length > 0
+            ? body.languages
+            : await deps.voiceLanguages?.(body.provider, body.voiceId.trim(), c.req.raw.signal);
+        const result = addVoice(voiceDeps, {
+          ...body,
+          ...(languages === undefined ? {} : { languages }),
+        });
         if (!result.ok) {
           // A voice ID already listed for its provider is a conflict with
           // a row that exists, which the form shows under the Voice ID input.
@@ -154,6 +166,32 @@ export function settingsRoutes(deps: AppDeps) {
         }
         return c.json(result.voice, 201);
       })
+      .put(
+        "/voices/:id/languages",
+        zValidator("param", idParam, onInvalid),
+        zValidator("json", voiceLanguagesBody, onInvalid),
+        (c) => {
+          const result = setVoiceLanguages(
+            voiceDeps,
+            c.req.valid("param").id,
+            c.req.valid("json").languages,
+          );
+          if (result.ok) return c.body(null, 204);
+          return result.reason === "missing"
+            ? problem(c, {
+                status: 404,
+                title: titleOf(404),
+                detail:
+                  "This voice no longer exists; it may have been deleted. Reload Settings → Voices to see your voices.",
+              })
+            : problem(c, {
+                status: 400,
+                title: titleOf(400),
+                detail: "The languages weren't saved. Fix the highlighted field and try again.",
+                extensions: { fields: [fieldOf("unknown-language")] },
+              });
+        },
+      )
       .delete("/voices/:id", zValidator("param", idParam, onInvalid), (c) => {
         if (!removeVoice(voiceDeps, c.req.valid("param").id).ok) {
           return problem(c, {
@@ -189,6 +227,12 @@ function fieldOf(reason: Exclude<AddVoiceReason, "duplicate-voice-id">): {
       return {
         field: "voiceId",
         message: `A voice ID is at most ${String(voiceIdMax)} characters. Check you copied only the ID.`,
+      };
+    case "unknown-language":
+      return {
+        field: "languages",
+        message:
+          "Enter language codes separated by commas, such as es, de or pt, or leave it blank to ask the provider.",
       };
     case "not-a-tts-provider":
       return {

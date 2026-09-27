@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import { paceSteps } from "../voices/model.js";
 import { castKinds } from "./model.js";
 
@@ -26,6 +27,7 @@ export const brandKitSchema = z
     outro: optionalText(200),
     endScreenText: optionalText(200),
     documentTheme: optionalText(200),
+    language: languageSchema.optional(),
   })
   .strict()
   .transform((kit) =>

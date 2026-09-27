@@ -73,7 +73,18 @@ const libraryRow = z
   })
   .strict();
 const voiceRow = z
-  .object({ id: z.string(), provider: z.enum(providerIds), name: z.string(), voice_id: z.string() })
+  .object({
+    id: z.string(),
+    provider: z.enum(providerIds),
+    name: z.string(),
+    voice_id: z.string(),
+    // Absent from backups made before voice languages, and on a voice whose languages are
+    // unknown.
+    languages: z
+      .array(z.string().regex(/^[a-z]{2,3}$/))
+      .max(60)
+      .optional(),
+  })
   .strict();
 const stagedMeta = z
   .object({
@@ -197,6 +208,7 @@ export function exportPortable(deps: PortableDeps): Uint8Array<ArrayBuffer> {
     provider: voice.provider,
     name: voice.name,
     voice_id: voice.voiceId,
+    ...(voice.languages === undefined ? {} : { languages: voice.languages }),
   }));
   const templates = deps.db
     .prepare(
@@ -289,9 +301,15 @@ export function importPortable(deps: PortableDeps, bytes: Uint8Array): PortableI
       for (const row of manifest.voices) {
         deps.db
           .prepare(
-            "INSERT INTO voices(id,provider,name,voice_id) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET provider=excluded.provider,name=excluded.name,voice_id=excluded.voice_id",
+            "INSERT INTO voices(id,provider,name,voice_id,languages_json) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET provider=excluded.provider,name=excluded.name,voice_id=excluded.voice_id,languages_json=excluded.languages_json",
           )
-          .run(row.id, row.provider, row.name, row.voice_id);
+          .run(
+            row.id,
+            row.provider,
+            row.name,
+            row.voice_id,
+            row.languages === undefined ? null : JSON.stringify(row.languages),
+          );
         voices += 1;
       }
       let templateCount = 0;

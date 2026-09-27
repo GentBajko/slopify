@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formats, stageKinds } from "../../kernel/pipeline.js";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { motionStyles, referenceSources, stageSources } from "../admission/model.js";
 import {
@@ -73,6 +74,10 @@ export const playDraftFormSchema = z
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),
+    // The project language (`kernel/ports/languages.ts`). Absent on drafts and templates saved
+    // before it, and on a draft nobody picked one for: the channel's language, else English.
+    // English picked on purpose is kept as "en", so a channel's language does not replace it.
+    language: languageSchema.optional(),
     // Absent on drafts and templates saved before Shorts: off. The numbers are raw text, like
     // every other number on Play; the prompts are names, "" being the built-in ones.
     shorts: z

@@ -208,6 +208,8 @@ export function toAdmissionDraft(input: {
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()
       ? { narrationPrompt: form.narrationPrompt }
       : {}),
+    // English is never stored on the run, so an English project is the run it always was.
+    ...(form.language === undefined || form.language === "en" ? {} : { language: form.language }),
     // Timed from the narration, so a switch left on with narration Off asks for nothing.
     ...(sources.audio !== "off" && form.youtubeDescription === true
       ? {

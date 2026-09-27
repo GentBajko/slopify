@@ -13,7 +13,9 @@ const voiceRow = z.object({
   provider: z.enum(providerIds),
   name: z.string(),
   voice_id: z.string(),
+  languages_json: z.string().nullable(),
 });
+const languagesJson = z.array(z.string());
 const settingRow = z.object({ value: z.string() });
 
 export function upsertKey(
@@ -53,17 +55,36 @@ export function hasKey(db: DatabaseSync, provider: ProviderId): boolean {
 }
 
 export function insertVoice(db: DatabaseSync, voice: Voice): void {
-  db.prepare("INSERT INTO voices (id, provider, name, voice_id) VALUES (?, ?, ?, ?)").run(
+  db.prepare(
+    "INSERT INTO voices (id, provider, name, voice_id, languages_json) VALUES (?, ?, ?, ?, ?)",
+  ).run(
     voice.id,
     voice.provider,
     voice.name,
     voice.voiceId,
+    voice.languages === undefined ? null : JSON.stringify(voice.languages),
+  );
+}
+
+export function updateVoiceLanguages(
+  db: DatabaseSync,
+  id: string,
+  languages: readonly string[] | undefined,
+): boolean {
+  return (
+    Number(
+      db
+        .prepare("UPDATE voices SET languages_json = ? WHERE id = ?")
+        .run(languages === undefined ? null : JSON.stringify(languages), id).changes,
+    ) > 0
   );
 }
 
 export function listVoices(db: DatabaseSync): readonly Voice[] {
   return db
-    .prepare("SELECT id, provider, name, voice_id FROM voices ORDER BY provider, name, voice_id")
+    .prepare(
+      "SELECT id, provider, name, voice_id, languages_json FROM voices ORDER BY provider, name, voice_id",
+    )
     .all()
     .map((row) => toVoice(voiceRow.parse(row)));
 }
@@ -85,5 +106,13 @@ export function writeSetting(db: DatabaseSync, key: string, value: string): void
 }
 
 function toVoice(row: z.infer<typeof voiceRow>): Voice {
-  return { id: row.id, provider: row.provider, name: row.name, voiceId: row.voice_id };
+  const languages =
+    row.languages_json === null ? undefined : languagesJson.parse(JSON.parse(row.languages_json));
+  return {
+    id: row.id,
+    provider: row.provider,
+    name: row.name,
+    voiceId: row.voice_id,
+    ...(languages === undefined ? {} : { languages }),
+  };
 }

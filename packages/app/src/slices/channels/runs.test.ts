@@ -73,6 +73,15 @@ describe("brand kit defaults", () => {
     expect(brandedForm(h.deps.db, off, channel.brand, [])).toEqual(off);
   });
 
+  it("gives a draft without a language the channel's, even with the kit off", () => {
+    const brand = { ...channel.brand, language: "de" };
+    expect(brandedForm(h.deps.db, form, brand, []).language).toBe("de");
+    expect(brandedForm(h.deps.db, { ...form, useBrandKit: false }, brand, []).language).toBe("de");
+    // English picked on Play is the draft's own choice.
+    expect(brandedForm(h.deps.db, { ...form, language: "en" }, brand, []).language).toBe("en");
+    expect(brandedForm(h.deps.db, form, channel.brand, []).language).toBeUndefined();
+  });
+
   const draft = {
     title: "T",
     subtitles: {

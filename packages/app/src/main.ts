@@ -518,6 +518,13 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       audioPreviews,
       ...modelSources(registry),
       audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
+      voiceLanguages: async (provider, voiceId, signal) => {
+        try {
+          return await registry.tts(provider).voiceLanguages?.(voiceId, signal);
+        } catch {
+          return undefined;
+        }
+      },
       catalogue,
       clock,
       ids,

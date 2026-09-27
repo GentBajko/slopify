@@ -26,6 +26,9 @@ export interface BrandKit {
   readonly endScreenText?: string | undefined;
   // A saved theme's id or a built-in theme's name (Library → Documents).
   readonly documentTheme?: string | undefined;
+  // The language new projects in this channel are made in (`kernel/ports/languages.ts`),
+  // unless Play picks one. Absent is English.
+  readonly language?: string | undefined;
 }
 
 export interface Channel {

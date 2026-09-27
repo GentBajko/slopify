@@ -1,4 +1,5 @@
 import { stageKinds } from "../../kernel/pipeline.js";
+import { languageInfo } from "../../kernel/ports/languages.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
@@ -174,6 +175,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     add(`${name} model`, a?.model, b?.model);
     add(`${name} thinking`, a?.thinking, b?.thinking);
   }
+  add("Language", languageInfo(before.language).name, languageInfo(after.language).name);
   add("Narration voice", before.audio?.voice, after.audio?.voice);
   add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);

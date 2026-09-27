@@ -131,6 +131,9 @@ export interface Voice {
   readonly provider: ProviderId;
   readonly name: string;
   readonly voiceId: string;
+  // The languages it speaks, as primary codes ("es"); absent is unknown, which Play offers for
+  // every language (`slices/voices/languages.ts`).
+  readonly languages?: readonly string[] | undefined;
 }
 
 // The theme override the Appearance control writes.

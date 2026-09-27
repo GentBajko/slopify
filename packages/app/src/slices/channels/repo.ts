@@ -21,6 +21,7 @@ const brandSchema = z
     outro: z.string().optional(),
     endScreenText: z.string().optional(),
     documentTheme: z.string().optional(),
+    language: z.string().optional(),
   })
   .readonly();
 const channelRow = z.object({
