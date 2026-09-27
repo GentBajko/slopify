@@ -13,6 +13,7 @@ import { CatalogueSettings } from "@/components/catalogue";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { ProviderHealthCheck } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Rail, RailGroup, RailMeter } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
+import { Welcome } from "@/components/welcome";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { keys, settingsQuery } from "@/queries";
@@ -150,7 +152,9 @@ export function SettingsRoute({
               info="Provider readiness is checked again before each run. Keys stay on this machine and go only to the provider they belong to."
             />
           ) : null}
+          {section === "providers" ? <Welcome /> : null}
           {section === "providers" ? <ProviderKeys /> : null}
+          {section === "providers" ? <ProviderHealthCheck /> : null}
           {section === "voices" ? (
             <SectionHead
               title="Voices"

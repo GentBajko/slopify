@@ -71,7 +71,7 @@ function parseStoredJson(value: string): unknown {
     throw error;
   }
 }
-function documentOf(row: DraftRow): PlayDraftDocument | null {
+export function documentOf(row: DraftRow): PlayDraftDocument | null {
   if (row.schema_version !== 1) return null;
   const parsed = playDraftDocumentSchema.safeParse(parseStoredJson(row.document_json));
   return parsed.success ? parsed.data : null;

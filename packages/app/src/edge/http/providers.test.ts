@@ -34,7 +34,10 @@ interface Harness {
 
 function harness(
   probe: CliProbe = notFound,
-  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor" | "catalogue" | "hostCliStatus"> = {},
+  models: Pick<
+    AppDeps,
+    "modelsFor" | "fallbackModelsFor" | "catalogue" | "hostCliStatus" | "fetch" | "cliLogin"
+  > = {},
 ): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-providers-")));
   ensureDirs(paths, { mode: 0o700 });
@@ -442,5 +445,66 @@ describe("GET /api/providers/:id/models", () => {
       notice: expect.stringContaining("models.yaml"),
     });
     expect(calls).toEqual(["codex"]);
+  });
+});
+
+describe("key setup, health and model upkeep routes", () => {
+  it("tests a saved key against its provider and refuses a CLI provider", async () => {
+    const seen: string[] = [];
+    const { app } = harness(notFound, {
+      fetch: (async (input: string | URL | Request) => {
+        seen.push(String(input));
+        return new Response("{}", { status: 401 });
+      }) as typeof globalThis.fetch,
+    });
+    await saveKey(app, "openrouter", standIn);
+    const response = await app.request("/api/providers/openrouter/key/test", { method: "POST" });
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({ result: "rejected", ok: false });
+    expect(body).not.toContain(standIn);
+    expect(seen).toEqual(["https://openrouter.ai/api/v1/key"]);
+    expect((await app.request("/api/providers/codex/key/test", { method: "POST" })).status).toBe(
+      400,
+    );
+    const guides = (await (await app.request("/api/providers/key-guides")).json()) as {
+      guides: Record<string, { keyPage: { url: string } }>;
+    };
+    expect(guides.guides.openrouter?.keyPage.url).toBe("https://openrouter.ai/settings/keys");
+  });
+
+  it("reports first-run detection and lists no retired models on a fresh install", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-providers-cat-"));
+    const { app } = harness(installed, {
+      catalogue: createCatalogueStore({ dataDir, fetch: globalThis.fetch }),
+    });
+    const first = await (await app.request("/api/providers/first-run")).json();
+    expect(first).toMatchObject({
+      firstRun: true,
+      message: expect.stringContaining("no API keys"),
+    });
+    expect((await app.request("/api/providers/first-run/dismiss", { method: "POST" })).status).toBe(
+      204,
+    );
+    expect(
+      ((await (await app.request("/api/providers/first-run")).json()) as { firstRun: boolean })
+        .firstRun,
+    ).toBe(false);
+    expect(await (await app.request("/api/providers/catalogue/retired")).json()).toEqual({
+      usages: [],
+    });
+    const refused = await app.request("/api/providers/catalogue/retired/switch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "draft",
+        id: "missing",
+        slot: "llm",
+        from: { provider: "openrouter", model: "x" },
+        to: "not-a-model",
+      }),
+    });
+    expect(refused.status).toBe(409);
+    expect(((await refused.json()) as { detail: string }).detail).toContain("not an active model");
   });
 });
