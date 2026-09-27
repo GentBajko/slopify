@@ -93,7 +93,7 @@ export function HomeRoute(): ReactElement {
                 Open calendar
               </Link>
             </Button>
-            <Button asChild variant="primary">
+            <Button asChild variant="secondary">
               <Link to="/play">
                 <PlusIcon aria-hidden="true" strokeWidth={1.75} />
                 New video

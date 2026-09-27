@@ -614,7 +614,7 @@
     gap: var(--space-2);
     min-height: 150px;
     min-width: 0;
-    padding: var(--space-3);
+    padding: var(--space-2);
     border-right: 1px solid var(--color-line);
     transition: background 120ms;
   }
@@ -631,13 +631,18 @@
   .sl-cal-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 10px;
+    gap: 2px;
+    padding: 8px;
     min-width: 0;
     border-radius: 8px;
     background: var(--color-raised);
     border: 1px solid var(--color-line);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .sl-cal-item .sl-status {
+    font-size: 12px;
+    white-space: nowrap;
   }
   .sl-cal-item--movable {
     cursor: grab;

@@ -177,7 +177,7 @@ function ScheduleSuggestions({
         </List>
       )}
       <Callout
-        title={`Keeps at least ${String(schedule.topicGeneration.keepAtLeast)} topics queued.`}
+        title={`Keeps at least ${String(schedule.topicGeneration.keepAtLeast)} ${schedule.topicGeneration.keepAtLeast === 1 ? "topic" : "topics"} queued.`}
       >
         {hold
           ? "New suggestions wait here for you. Change this under Schedules → Edit."

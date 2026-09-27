@@ -405,7 +405,7 @@ function DayCell({
             <Link
               to="/projects/$projectId"
               params={{ projectId: project.id }}
-              className="font-semibold"
+              className="text-small font-semibold"
             >
               {project.title}
             </Link>
@@ -462,8 +462,9 @@ function RunChip({
       onKeyDown={onKeyDown}
       className={cn("sl-cal-item", movable && "sl-cal-item--movable")}
     >
-      <span className="text-small text-ink-3">{`${time.format(new Date(run.at))} · ${run.scheduleName}`}</span>
-      <b className={cn("break-words", run.topic === null && "font-normal text-ink-2")}>{title}</b>
+      <span className="text-label text-ink-3 tabular-nums">{time.format(new Date(run.at))}</span>
+      <b className={cn("text-small", run.topic === null && "font-normal text-ink-2")}>{title}</b>
+      <span className="text-label text-ink-3">{run.scheduleName}</span>
       {run.paused ? (
         <Status tone="waiting">Paused</Status>
       ) : run.topicSource === "held" ? (
