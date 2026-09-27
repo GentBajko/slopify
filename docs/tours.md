@@ -57,7 +57,12 @@ fragments in `docs/capstone/changelog.d/` that the previous `x.y.z` tag does not
 
 The question-mark button in the top bar starts a walkthrough of a first project: provider keys
 and a voice in Settings, an article and an image prompt in the Library editor, each part of
-Play, then the project page. Steps highlight elements marked `data-tour="…"` and open their
+Play, then the project page (following the run, downloading it, its Cost and Prepare upload),
+and last the screens a channel runs on: Home, Channels and the Calendar. **Skip generating** on
+the Review step goes straight to Home, and Back from Home returns to it, so a tutorial finished
+without a run still sees those screens. Steps highlight elements marked `data-tour="…"` and open their
 screen by route (Settings sections and Play sections by id); `tutorial/model.test.ts` checks
-those ids against Settings' and Play's own section lists. Progress is saved in the
+those ids against Settings' and Play's own section lists, and the step ids against the server's
+`tutorial.session` schema (`slices/settings/tutorial-schema.ts`), which must list every step for
+it to be saved. Progress is saved in the
 `tutorial.session` setting, so it survives a reload.

@@ -252,8 +252,8 @@ export function StepContent({
             which may charge your account.
           </p>
           <p>
-            The tour will follow you to the project. You can also finish the tutorial without
-            generating anything.
+            The tour will follow you to the project. You can also skip generating and go on to the
+            screens you run a channel from.
           </p>
         </>
       );
@@ -312,6 +312,51 @@ export function StepContent({
             If subtitles are enabled, download the <strong>.srt</strong> or <strong>.vtt</strong>{" "}
             files beside the final export. File-mode captions are also available in the video
             player.
+          </p>
+        </>
+      );
+    case "run-cost":
+      return (
+        <p>
+          <strong>Cost</strong> in the project's sections shows what this run really cost, per stage
+          and model. Totals for every project are in Settings, <strong>Usage</strong>.
+        </p>
+      );
+    case "studio-prep":
+      return (
+        <>
+          <p>
+            Slopify never uploads for you. When the video is made, <strong>Prepare upload</strong>{" "}
+            is the next action: it lists everything YouTube Studio asks for, in the order it asks,
+            from the file and title to the thumbnail, tags and the AI disclosure.
+          </p>
+          <p>
+            The browser extension in Settings, <strong>YouTube Studio</strong>, can fill those in
+            for you.
+          </p>
+        </>
+      );
+    case "home":
+      return (
+        <p>
+          <strong>Home</strong> is the day at a glance: what needs you, what is running and at which
+          step, what is coming up this week and what is ready to upload.
+        </p>
+      );
+    case "channels":
+      return (
+        <p>
+          A <strong>channel</strong> keeps its brand kit, series brief, templates, schedules and a
+          cast that looks the same in every video. It also remembers finished episodes and your
+          existing videos, so new topics do not repeat them.
+        </p>
+      );
+    case "calendar":
+      return (
+        <>
+          <p>
+            The <strong>Calendar</strong> shows the coming weeks of uploads: what is ready, what
+            needs you, and the topics a schedule suggested, waiting for your approval.
           </p>
           <p>
             You have reached the end. Press the question-mark button in the top bar anytime to walk

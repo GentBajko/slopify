@@ -212,7 +212,7 @@ export function CalendarRoute(): ReactElement {
   const today = dayKey(new Date());
 
   return (
-    <div>
+    <div data-tour="calendar">
       <PageHeader
         title="Calendar"
         meta={`${current.channel?.name ?? "Every channel"} · ${String(allRuns.length)} scheduled ${allRuns.length === 1 ? "run" : "runs"} in the next ${String(weeks)} weeks · ${String(queued)} ${queued === 1 ? "topic" : "topics"} queued`}

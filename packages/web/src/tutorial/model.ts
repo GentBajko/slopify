@@ -87,10 +87,35 @@ export const tutorialSteps = [
     page: "project",
   },
   { id: "download", title: "20. Download your results", target: "project-video", page: "project" },
+  // After the first project: the screens a channel runs on. Skipping generation at
+  // "play-start" jumps here, so these are seen either way.
+  {
+    id: "run-cost",
+    title: "21. See what the run cost",
+    target: "project-rail-cost",
+    page: "project",
+  },
+  {
+    id: "studio-prep",
+    title: "22. Prepare the YouTube upload",
+    target: "project-rail-video",
+    page: "project",
+  },
+  { id: "home", title: "23. Check Home each day", target: "home", page: "home" },
+  { id: "channels", title: "24. Set up a channel", target: "channels", page: "channels" },
+  {
+    id: "calendar",
+    title: "25. Plan uploads on the calendar",
+    target: "calendar",
+    page: "calendar",
+  },
 ] as const;
 
 export type TutorialStep = (typeof tutorialSteps)[number];
 export type TutorialStepId = TutorialStep["id"];
+
+// The first step that needs no project: where skipping generation at "play-start" continues.
+export const appTourStart: TutorialStepId = "home";
 
 export function receiveTutorialEvent(
   session: TutorialSession,

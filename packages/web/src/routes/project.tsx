@@ -700,6 +700,7 @@ function SectionLink({
     <RailButton
       // On phones the rail is a row of tabs, each as wide as its name.
       className="max-md:w-auto"
+      data-tour={`project-rail-${item.id}`}
       current={item.id === selected}
       onClick={() => onSelect(item.id)}
       {...(item.tone === undefined ? {} : { icon: <Lamp tone={item.tone} /> })}
