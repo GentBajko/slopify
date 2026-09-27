@@ -1,0 +1,1 @@
+Slopify is free and open source under the [Apache License 2.0](https://github.com/GentBajko/slopify/blob/main/LICENSE). Source: [github.com/GentBajko/slopify](https://github.com/GentBajko/slopify) · Website: [slopify.stream](https://slopify.stream)
