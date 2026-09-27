@@ -92,7 +92,9 @@ export async function* inworldAsync(
                 ? "rate_limit"
                 : code === 3 || code === 5 || code === 9
                   ? "unsupported"
-                  : "other",
+                  : code === 14
+                    ? "dropped"
+                    : "other",
           message: streamFailure(code, clean(message ?? "", key), request.voiceId),
         });
       }
@@ -161,7 +163,9 @@ async function check(response: Response, key: string, voiceId: string): Promise<
           ? "rate_limit"
           : response.status === 400 || response.status === 404
             ? "unsupported"
-            : "other",
+            : response.status >= 500
+              ? "dropped"
+              : "other",
     message: httpFailure({
       provider: "Inworld",
       status: response.status,

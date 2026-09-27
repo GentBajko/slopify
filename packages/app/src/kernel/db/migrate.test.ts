@@ -59,6 +59,7 @@ describe("migrate", () => {
       "project_template_revisions",
       "project_templates",
       "projects",
+      "prompt_softening",
       "prompts",
       "provider_keys",
       "rebuild_admissions",
@@ -101,6 +102,7 @@ describe("migrate", () => {
       "revision_pieces_revision",
       "revision_pieces_selected",
       "revision_work_dispatch",
+      "revision_work_retry",
       "revision_work_revision_identity",
       "revision_work_stage",
       "schedule_runs_schedule",
@@ -136,6 +138,7 @@ describe("migrate", () => {
       { version: 19, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 30, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -145,7 +148,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 21 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 22 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -154,7 +157,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (24)",
+      "database schema 42 is newer than this app knows (30)",
     );
   });
 
@@ -259,7 +262,8 @@ describe("migrate", () => {
           db
             .prepare(`SELECT * FROM ${table}`)
             .all()
-            .filter((row) => row.kind !== "document"),
+            .filter((row) => row.kind !== "document")
+            .map(withoutRetryColumns),
         ),
       ).toEqual(before);
       expect(
@@ -470,7 +474,8 @@ describe("migrate", () => {
         db
           .prepare(`SELECT * FROM ${table}`)
           .all()
-          .filter((row) => row.kind !== "document"),
+          .filter((row) => row.kind !== "document")
+          .map(withoutRetryColumns),
       ),
     ).toEqual(before);
     for (const table of [
@@ -504,3 +509,12 @@ describe("migrate", () => {
     expect(db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });
   });
 });
+
+// Version 30 adds the automatic retry's columns to every stage and step row, empty.
+function withoutRetryColumns(row: Record<string, unknown>): Record<string, unknown> {
+  const { failure_kind: kind, retry_at: at, auto_retries: count, ...rest } = row;
+  if ((kind !== undefined && kind !== null) || (at !== undefined && at !== null))
+    throw new Error("an existing row gained a retry");
+  if (count !== undefined && count !== 0) throw new Error("an existing row gained a retry");
+  return rest;
+}

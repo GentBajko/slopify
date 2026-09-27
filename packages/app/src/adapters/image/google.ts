@@ -184,6 +184,8 @@ function kindOf(
   // ceiling: everything else is `other` and is retried, so a prompt past the model's limit
   // fails the same way four times over. A terminal "this will never work" kind has to reach
   // the port's error contract first, which is not this adapter's to widen.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

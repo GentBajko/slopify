@@ -21,6 +21,7 @@ import {
   cliInput,
   cliShaped,
   deliveredInput,
+  endedKind,
   endedWithout,
   promptOf,
   stopCliRun,
@@ -247,7 +248,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     const login = cliLoginError("codex", run.stderr());
     if (login) throw login;
     throw providerError({
-      kind: "other",
+      kind: endedKind(ended),
       message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     });
   }

@@ -107,7 +107,7 @@ async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult
     if (paused) setProjectPaused(deps.db, projectId, false, at);
     deps.db
       .prepare(
-        "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=? WHERE project_id=? AND state!='done'",
+        "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=?,retry_at=NULL WHERE project_id=? AND state!='done'",
       )
       .run(canceledByUser, projectId);
     deps.db

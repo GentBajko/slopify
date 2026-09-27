@@ -70,6 +70,7 @@ import { readNotificationUrl } from "./slices/notifications/settings.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
+import { waitToRetry, wakeRetries } from "./slices/rebuild/retry.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
@@ -473,6 +474,19 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const scheduleTimer = setInterval(() => {
       void scheduleTicks.tick();
     }, 15_000);
+    // A step waiting out a rate limit or a timeout runs again once its wait is over; the wait
+    // is in the database, so this also picks up the ones a restart left waiting.
+    const retryTimer = setInterval(() => {
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        wakeRetries(updateDb, clock, runner);
+      } catch (error) {
+        log.write("error", "stage.retry", { detail: causedBy(error) });
+      } finally {
+        release();
+      }
+    }, 5_000);
     void scheduleTicks.tick();
     // Once a minute is plenty for a daily slot; the decision itself (slices/backups/schedule)
     // holds the first run back for a couple of minutes after a start.
@@ -508,6 +522,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         notifier.close();
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
+        clearInterval(retryTimer);
         clearInterval(backupTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
@@ -641,9 +656,15 @@ export function wireRunner({
         return claimed;
       },
       maySubmit: (work, pieceId) => maySubmit(db, work, pieceId),
-      finish: (work, state, reason) => {
+      waitToRetry: (work, fault, reason) =>
         transact(db, () => {
-          finishWork(db, work, state, reason);
+          const at = waitToRetry(execution, work, fault, reason, Math.random);
+          if (at !== undefined) projectStandings(execution, work.projectId);
+          return at;
+        }),
+      finish: (work, state, reason, kind) => {
+        transact(db, () => {
+          finishWork(db, work, state, reason, kind ?? null);
           materializeAdmittedWork(execution, work.projectId);
           projectStandings(execution, work.projectId);
           settleReleasedCheckpoints(execution, work.projectId);

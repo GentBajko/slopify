@@ -48,6 +48,7 @@ export function ProjectHeader({
     resumable ||
     project.status === "paused" ||
     project.status === "failed" ||
+    project.status === "partial" ||
     project.status === "canceled";
   const cancelCopy = confirmationFor({ kind: "cancel" });
   return (

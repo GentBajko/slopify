@@ -186,6 +186,10 @@ export interface Stage {
   readonly progressTotal: number | null;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
+  // The provider error's kind behind `failureReason`, which picks the fix-it button.
+  readonly failureKind?: string;
+  // Waiting to run again by itself after a failure time can fix (a rate limit, a timeout).
+  readonly retryAt?: string;
 }
 
 export interface ProjectSummary extends Project {

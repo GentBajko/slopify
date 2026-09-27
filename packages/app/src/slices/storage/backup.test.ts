@@ -307,7 +307,12 @@ describe("import validation", () => {
         ...part,
         tables: {
           ...part.tables,
-          stages: part.tables.stages.filter((row: { kind: string }) => row.kind !== "document"),
+          stages: part.tables.stages
+            .filter((row: { kind: string }) => row.kind !== "document")
+            .map(beforeRetries),
+          ...(part.tables.revision_work === undefined
+            ? {}
+            : { revision_work: part.tables.revision_work.map(beforeRetries) }),
         },
       }),
     );
@@ -379,3 +384,9 @@ describe("import merge rules", () => {
     expect(importedName("x".repeat(200), 200, () => false)).toHaveLength(200);
   });
 });
+
+// The columns version 30 added for automatic retries, which a 2.1 backup does not have.
+function beforeRetries(row: Record<string, unknown>): Record<string, unknown> {
+  const { retry_at: _at, failure_kind: _kind, auto_retries: _count, ...rest } = row;
+  return rest;
+}

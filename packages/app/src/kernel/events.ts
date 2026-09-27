@@ -16,6 +16,10 @@ export interface StageStateEvent extends EventOrigin {
   readonly stage: StageKind;
   readonly state: StageState;
   readonly failureReason?: string;
+  // The provider error's kind on a failed step, which picks its fix-it button.
+  readonly failureKind?: string;
+  // A step waiting to run again by itself after a failure time can fix.
+  readonly retryAt?: string;
 }
 
 export interface StageProgressEvent extends EventOrigin {

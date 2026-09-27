@@ -110,7 +110,9 @@ async function* synthesizeRequest(
             ? "rate_limit"
             : response.status === 400 || response.status === 404
               ? "unsupported"
-              : "other",
+              : response.status >= 500
+                ? "dropped"
+                : "other",
       message: clean(
         httpFailure({
           provider: "Inworld",
@@ -146,7 +148,9 @@ async function* synthesizeRequest(
               ? "rate_limit"
               : code === 3 || code === 5
                 ? "unsupported"
-                : "other",
+                : code === 14
+                  ? "dropped"
+                  : "other",
         message: streamFailure(code, clean(message ?? "", key), request.voiceId),
       });
     }

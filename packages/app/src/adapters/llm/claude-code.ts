@@ -16,6 +16,7 @@ import {
   cliEvent,
   cliInput,
   cliShaped,
+  endedKind,
   endedWithout,
   promptOf,
   stopCliRun,
@@ -226,7 +227,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     const login = cliLoginError("claude-code", run.stderr());
     if (login) throw login;
     throw providerError({
-      kind: "other",
+      kind: endedKind(ended),
       message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     });
   }
@@ -249,6 +250,8 @@ function kindOf(status: number | null): ProviderErrorKind {
   if (status === 429) {
     return "rate_limit";
   }
+  // The provider's own server failed; the same request may well succeed later.
+  if (status !== null && status >= 500) return "dropped";
   return "other";
 }
 

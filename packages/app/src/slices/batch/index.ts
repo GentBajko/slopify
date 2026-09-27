@@ -80,7 +80,7 @@ export function pumpQueue(db: DatabaseSync, runner: Runner): void {
     const stages = stagesOf(db, entry.projectId);
     const status = derive(stages, projectPaused(db, entry.projectId));
     if (runner.hasInflight?.(entry.projectId)) return;
-    if (["done", "failed", "canceled"].includes(status)) {
+    if (["done", "partial", "failed", "canceled"].includes(status)) {
       db.prepare("UPDATE project_queue SET state = 'finished' WHERE project_id = ?").run(
         entry.projectId,
       );

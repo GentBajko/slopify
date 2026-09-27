@@ -238,6 +238,8 @@ function kindOf(status: number): ProviderErrorKind {
   // ceiling: everything else is `other` and is retried, so a 402 with no credit left fails the
   // same way four times over. A terminal "this will never work" kind has to reach the port's
   // error contract first, which is not this adapter's to widen.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

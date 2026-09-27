@@ -24,15 +24,19 @@ export const timeoutMs: Readonly<Record<ProviderCallKind, number>> = {
 };
 
 // A refusal and an unsupported capability are the provider's final answer; retrying only
-// spends the user's money again. The third is a key removed mid-run, which leaves nothing
-// to call with. A key the provider rejected is different: that is an `auth` failure,
-// retried like any other.
+// spends the user's money again. A key the provider rejected, or one removed mid-run, needs
+// the user in Settings before any call can succeed.
 const terminalKinds: readonly ProviderErrorKind[] = [
   "refusal",
   "unsupported",
+  "auth",
   "missing_key",
   "unavailable",
 ];
+
+// A Retry-After longer than this is not slept through with the stage holding its provider
+// slot: the call fails here and the runner's persisted wait (`retry-policy.ts`) takes over.
+export const inCallRetryAfterCeilingMs = 60_000;
 
 export type ProviderCallKind = "llm" | "tts" | "image" | "video";
 
@@ -132,7 +136,11 @@ export async function attempt<T>(
       stage: ctx.stage,
       detail: `${opts.kind} attempt ${n} of ${attemptLimit} failed (${failure.fault.kind}): ${failure.message}`,
     });
-    if (terminalKinds.includes(failure.fault.kind) || n >= attemptLimit) {
+    if (
+      terminalKinds.includes(failure.fault.kind) ||
+      n >= attemptLimit ||
+      (failure.fault.retryAfterMs ?? 0) > inCallRetryAfterCeilingMs
+    ) {
       throw failure;
     }
     // A 429 that names a Retry-After replaces the fixed wait with the provider's.
@@ -174,7 +182,7 @@ function classify(
     // `fetch` names only itself; the cause's code (ENOTFOUND, ECONNREFUSED) is the clue.
     const code = causeCode(error);
     return providerError({
-      kind: "other",
+      kind: "dropped",
       message: `Slopify could not reach the ${callee[opts.kind]} over the internet${code === undefined ? "" : ` (${code})`}. Check your internet connection, firewall or VPN, then use Retry stage.`,
     });
   }

@@ -13,7 +13,14 @@ import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
-import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
+import {
+  cliEvent,
+  cliShaped,
+  endedKind,
+  endedWithout,
+  type RunCli,
+  stopCliRun,
+} from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
 
@@ -277,7 +284,7 @@ export function codexImage(deps: {
           throw (
             cliLoginError("codex", run.stderr()) ??
             providerError({
-              kind: unavailable ? "unsupported" : "other",
+              kind: unavailable ? "unsupported" : endedKind(ended),
               message: endedWithout(binary, ended, run.stderr()),
             })
           );

@@ -3,6 +3,8 @@ import type { ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { StageKind, StageState } from "../pipeline.js";
 import { stageKinds } from "../pipeline.js";
+import { providerError } from "../ports/model.js";
+import { deps as graph, satisfied } from "./graph.js";
 import type { Runner, RunnerStage, StageRun, StageStore } from "./index.js";
 import { createRunner } from "./index.js";
 import type { StageRunResult, WorkRef } from "./work.js";
@@ -889,4 +891,84 @@ it("settles old work independently while changed current audio holds video and a
     finishImage();
     await runner.settled();
   }
+});
+
+describe("a failure that does not concern the rest of the run", () => {
+  it("renders the video when the thumbnail failed and ends done with problems", async () => {
+    const { runner, events, stages } = harness(
+      {
+        audio: ok,
+        images: ok,
+        thumbnail: async (): Promise<StageRunResult> => {
+          throw new Error("the image provider said no");
+        },
+        video: ok,
+      },
+      { research: "skipped", article: "provided" },
+    );
+
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(stages.stateOf("thumbnail")).toBe("failed");
+    expect(stages.stateOf("video")).toBe("done");
+    expect(projectStates(events).at(-1)).toBe("partial");
+  });
+
+  it("puts a rate-limited stage back to wait instead of failing it", async () => {
+    const waits: string[] = [];
+    const stages = store({ research: "skipped", article: "provided", audio: "provided" });
+    const events: ProjectEvent[] = [];
+    const runner = createRunner({
+      stages: {
+        ...stages,
+        // The real store's readiness holds a waiting step back until its time comes.
+        ready: (work) =>
+          !waits.includes(work.stageId) &&
+          graph[work.kind].every((kind) => satisfied(stages.stateOf(kind))),
+        waitToRetry: (work, fault) => {
+          if (fault?.kind !== "rate_limit") return undefined;
+          waits.push(work.stageId);
+          // The real store writes the row back to pending; the fake does the same.
+          stages.finish(work, "pending", null);
+          return "2026-09-27T10:02:00.000Z";
+        },
+      },
+      runs: {
+        images: async (): Promise<StageRunResult> => {
+          throw new Error("Image 3: limited", {
+            cause: providerError({ kind: "rate_limit", message: "429" }),
+          });
+        },
+        thumbnail: async (): Promise<StageRunResult> => {
+          throw providerError({ kind: "refusal", message: "blocked by the safety filter" });
+        },
+      },
+      emit: (_projectId, event) => {
+        events.push(event);
+      },
+      emitRunningCount: () => {},
+      log,
+    });
+
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(waits).toEqual(["images"]);
+    expect(stages.stateOf("images")).toBe("pending");
+    expect(
+      events.find(
+        (event) =>
+          event.type === "stage.state" && event.stage === "images" && event.state === "pending",
+      ),
+    ).toMatchObject({ retryAt: "2026-09-27T10:02:00.000Z", failureKind: "rate_limit" });
+    // A refusal is the provider's final answer: shown at once, with its kind.
+    expect(stages.stateOf("thumbnail")).toBe("failed");
+    expect(
+      events.find(
+        (event) =>
+          event.type === "stage.state" && event.stage === "thumbnail" && event.state === "failed",
+      ),
+    ).toMatchObject({ failureKind: "refusal" });
+  });
 });
