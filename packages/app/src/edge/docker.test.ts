@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { readBridgeToken } from "../host-cli/paths.js";
 import { startHostServer } from "../host-cli/server.js";
-import { type DockerHostOptions, prepareDockerHostCli } from "./docker.js";
+import { type DockerHostOptions, planDockerHostCli } from "./docker.js";
+
+async function prepareDockerHostCli(options: DockerHostOptions) {
+  const plan = await planDockerHostCli(options);
+  return plan.enabled ? { directory: await plan.ensure() } : {};
+}
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -19,7 +24,6 @@ async function setup() {
   const options: DockerHostOptions = {
     root: join(root, "state"),
     version: "1.4.0",
-    image: "candidate",
     disabled: false,
     accepted: false,
     interactive: false,
@@ -47,11 +51,10 @@ it.skipIf(process.platform === "win32")(
     expect(h.calls).toEqual([]);
   },
 );
-it.skipIf(process.platform !== "linux").each([true, false])(
-  "sets up only after consent with a compatible image (cached: %s), then reuses the receipt",
-  async (cached) => {
+it.skipIf(process.platform !== "linux")(
+  "sets up only after consent, then reuses the receipt",
+  async () => {
     const h = await setup();
-    let inspected = 0;
     let installed = false;
     let server: Awaited<ReturnType<typeof startHostServer>> | undefined;
     let prompts = 0;
@@ -65,11 +68,6 @@ it.skipIf(process.platform !== "linux").each([true, false])(
       runner: {
         exec: async (file, args) => {
           h.calls.push([file, ...args]);
-          if (file === "docker")
-            return {
-              code: 0,
-              stdout: args.includes("inspect") && (cached || inspected++ > 0) ? "1" : "",
-            };
           if (args.includes("install")) {
             const prefix = args[args.indexOf("--prefix") + 1];
             if (!prefix) throw new Error("Missing install prefix");
@@ -121,7 +119,7 @@ it.skipIf(process.platform !== "linux").each([true, false])(
       await prepareDockerHostCli({ ...options, interactive: false });
       expect(prompts).toBe(1);
       expect(h.calls.filter((c) => c.includes("install"))).toHaveLength(1);
-      expect(h.calls.filter((c) => c.includes("pull"))).toHaveLength(cached ? 0 : 1);
+      expect(h.calls.some((c) => c[0] === "docker")).toBe(false);
       expect(JSON.parse(await readFile(join(options.root, "consent.json"), "utf8"))).toEqual({
         version: 1,
         automaticStartup: true,
@@ -141,15 +139,3 @@ it("keeps API-only mode free of helper setup", async () => {
   ).toEqual({});
   expect(h.calls).toEqual([]);
 });
-it.skipIf(process.platform === "win32")(
-  "pulls and rechecks incompatible images before attempting service changes",
-  async () => {
-    const h = await setup();
-    await expect(prepareDockerHostCli({ ...h.options, accepted: true })).rejects.toThrow("image");
-    expect(h.calls.map((c) => c.slice(0, 2))).toEqual([
-      ["docker", "image"],
-      ["docker", "pull"],
-      ["docker", "image"],
-    ]);
-  },
-);

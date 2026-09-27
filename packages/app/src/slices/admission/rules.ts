@@ -5,6 +5,7 @@ import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
 import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
+import { usesVoices, voicesProblems } from "../voices/model.js";
 import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
 import { sourceOf } from "./model.js";
 
@@ -116,7 +117,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
     draft.outro?.mode === "llm" ||
     usesNarrationPreparation(draft) ||
     usesYoutubeDescription(draft) ||
-    usesShorts(draft);
+    usesShorts(draft) ||
+    (usesVoices(draft) && draft.voices?.source === "attribute");
   if (needsLlm && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
@@ -127,6 +129,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
 
   const voiced = draft.audio;
   fields.push(...narrationPreparationFields(draft));
+  fields.push(...voicesFields(draft));
   if (sources.audio === "generate") {
     if (voiced === undefined || !chosen(voiced)) {
       fields.push({ field: "audio", message: "Choose a narration provider and model." });
@@ -406,6 +409,22 @@ export function narrationPreparationFields(draft: RunDraft): readonly FieldError
         },
       ]
     : [];
+}
+
+// Multiple voices, checked only while narration is generated: a format left set with
+// narration Off or uploaded asks for nothing.
+export function voicesFields(
+  draft: Pick<RunDraft, "sources" | "voices" | "narrationPrompt">,
+): readonly FieldError[] {
+  if (draft.voices === undefined || !usesVoices(draft)) return [];
+  const fields: FieldError[] = [...voicesProblems(draft.voices)];
+  if (!blank(draft.narrationPrompt))
+    fields.push({
+      field: "narrationPrompt",
+      message:
+        "Narration preparation works with one voice only. Clear it in Audio → Advanced, or set the format back to Narration.",
+    });
+  return fields;
 }
 
 // The YouTube description is written from the narration's word timings, so it needs

@@ -204,6 +204,10 @@ export interface RunDraft {
   readonly titleStyle?: TitleStyle | undefined;
   // A card over the video's last seconds, from the brand kit. Absent is none.
   readonly endScreen?: { readonly text: string } | undefined;
+  // Multiple voices: an audiobook, podcast, radio drama or interview narrated by several
+  // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
+  // reading the article, which is what every project saved before it was.
+  readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
 }
 
 export interface TitleStyle {

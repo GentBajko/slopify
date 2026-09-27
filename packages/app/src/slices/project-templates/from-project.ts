@@ -14,6 +14,7 @@ import { reviewSettingsForm } from "../reviews/model.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
+import { usesScriptPrompt } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { createTemplate, readTemplate } from "./service.js";
 
@@ -91,7 +92,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       updatedAt: revision.createdAt,
     });
   };
-  addPrompt("article", config.articlePrompt, "article");
+  addPrompt(usesScriptPrompt(config) ? "script" : "article", config.articlePrompt, "article");
   addPrompt("narration", config.narrationPrompt, "narration");
   addPrompt("description", config.descriptionPrompt, "description");
   for (const [stage, picked] of Object.entries(config.reviews?.stages ?? {}))
@@ -221,6 +222,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       // it cuts every N seconds like the project did.
       ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
       ...(config.reviews === undefined ? {} : { reviews: reviewSettingsForm(config.reviews) }),
+      ...(config.voices === undefined ? {} : { voices: config.voices }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

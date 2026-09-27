@@ -20,6 +20,8 @@ export function kindLabel(kind: PromptKind): string {
       return "Shorts";
     case "review":
       return "Review";
+    case "script":
+      return "Script (speakers)";
   }
 }
 

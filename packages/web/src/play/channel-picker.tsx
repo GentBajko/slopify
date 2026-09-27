@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
-import { channelsQuery, defaultChannelId } from "@/channels/api";
+import { type CastMember, channelQuery, channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
@@ -12,18 +12,33 @@ import { usePlaySession } from "./draft-context";
 // Which channel the run belongs to: its brand kit fills what this setup leaves at its default
 // and its cast goes with the images. A draft that never picked one runs in its template's
 // channel, or the default one, which is what the server does too (`draftChannel`).
+// The channel the draft runs in, as the server reads it.
+export function useDraftChannelId(): string {
+  const { api } = useApp();
+  const { document } = usePlaySession();
+  const templates = useQuery(templatesQuery(api));
+  const source = document.templateSource;
+  const template = templates.data?.find((one) => one.id === source?.id);
+  return (
+    document.channelId ?? (template === undefined ? defaultChannelId : channelOfTemplate(template))
+  );
+}
+
+// The draft channel's cast, for the Speakers panel's "Add from the cast".
+export function useDraftCast(): readonly CastMember[] {
+  const { api } = useApp();
+  const cast = useQuery(channelQuery(api, useDraftChannelId()));
+  return cast.data?.cast ?? [];
+}
+
 export function ChannelPicker({ disabled = false }: { readonly disabled?: boolean }): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
   const channels = useQuery(channelsQuery(api));
-  const templates = useQuery(templatesQuery(api));
   const pickerId = useId();
   const kitId = useId();
   const { document } = session;
-  const source = document.templateSource;
-  const template = templates.data?.find((one) => one.id === source?.id);
-  const current =
-    document.channelId ?? (template === undefined ? defaultChannelId : channelOfTemplate(template));
+  const current = useDraftChannelId();
   const channel = channels.data?.find((one) => one.id === current);
   const useKit = document.form.useBrandKit !== false;
   const edit = (next: typeof document) => {

@@ -21,7 +21,9 @@ export function sectionRoots(
       if (stage === "video")
         return (
           row.input.kind === "local" &&
-          (row.key.startsWith("export:") || row.key === "subtitles:files")
+          (row.key.startsWith("export:") ||
+            row.key === "subtitles:files" ||
+            row.key === "voices:files")
         );
       if (stage === "audio")
         return (
@@ -29,7 +31,10 @@ export function sectionRoots(
           (row.input.kind === "deferred" &&
             ["body-narration", "intro-narration", "outro-narration"].includes(row.input.operation))
         );
-      if (stage === "article") return row.key === "article:body" && row.kind === "provider";
+      if (stage === "article")
+        return (
+          (row.key === "article:body" || row.key === "script:attribute") && row.kind === "provider"
+        );
       if (stage === "document") return row.key === "document:pdf";
       return row.kind === "provider";
     })

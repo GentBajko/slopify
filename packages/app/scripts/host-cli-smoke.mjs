@@ -14,13 +14,15 @@ if (process.platform !== "linux") throw new Error("The host/container smoke requ
 const exec = promisify(execFile);
 const root = await mkdtemp(join(tmpdir(), "sb-pack-"));
 const name = `slopify-host-smoke-${process.pid}`;
-const volume = name;
+const volume = `${name}-data`;
+const image = process.env.SLOPIFY_SMOKE_IMAGE || "slopify:smoke";
 const home = join(root, "home");
 const state = join(root, "state");
 const bin = join(home, "bin");
 const npm = join(dirname(process.execPath), "../lib/node_modules/npm/bin/npm-cli.js");
 const signal = AbortSignal.timeout(15 * 60_000);
 let child;
+let compose;
 let childExit;
 let childError;
 const run = async (file, args) =>
@@ -113,6 +115,17 @@ try {
   const version = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   ).version;
+  compose = [
+    "compose",
+    "--project-directory",
+    join(root, "compose"),
+    "--file",
+    join(state, "versions", version, "node_modules/@gentbajko/slopify/dist/compose.yaml"),
+    "--env-file",
+    join(root, "compose/.env"),
+    "--project-name",
+    name,
+  ];
   const { entry } = await installHostPackage({
     root: state,
     version,
@@ -121,29 +134,48 @@ try {
     packageSource: join(root, pack[0].filename),
   });
   await startHelper(entry);
+  // The container comes from the packaged compose.yaml, exactly as the --docker install runs it.
   await run("docker", ["volume", "create", volume]);
+  await mkdir(join(root, "compose/projects"), { recursive: true });
+  await mkdir(join(root, "compose/activation"), { recursive: true });
+  await writeFile(
+    join(root, "compose/.env"),
+    [
+      `SLOPIFY_NAME='${name}'`,
+      `SLOPIFY_IMAGE='${image}'`,
+      `SLOPIFY_USER='${process.getuid()}:${process.getgid()}'`,
+      "SLOPIFY_PORT=''",
+      `SLOPIFY_VOLUME='${volume}'`,
+      `SLOPIFY_PROJECTS_DIR='${join(root, "compose/projects")}'`,
+      `SLOPIFY_HOST_CLI_SHARE='${join(state, "share")}'`,
+      `SLOPIFY_ACTIVATION_DIR='${join(root, "compose/activation")}'`,
+      "",
+    ].join("\n"),
+  );
   await run("docker", [
     "run",
-    "-d",
-    "--name",
-    name,
-    "-p",
-    "127.0.0.1::6969",
+    "--rm",
+    "--user",
+    "0:0",
     "--mount",
     `type=volume,source=${volume},target=/data`,
-    "--mount",
-    `type=bind,source=${join(state, "share")},target=/opt/slopify-host,readonly`,
-    "-e",
-    "SLOPIFY_HOST_CLI_DIR=/opt/slopify-host",
-    "slopify:smoke",
+    "--entrypoint",
+    "node",
+    image,
+    "/opt/slopify/packages/app/dist/edge/docker-install/volume.js",
+    "own",
+    `${process.getuid()}:${process.getgid()}`,
   ]);
+  await run("docker", [...compose, "up", "--detach"]);
   const inspected = JSON.parse(await run("docker", ["inspect", name]))[0];
   assert.deepEqual(inspected.Mounts.map((mount) => mount.Destination).sort(), [
     "/data",
+    "/data/projects",
     "/opt/slopify-host",
+    "/opt/slopify-install",
   ]);
   assert.equal(
-    inspected.Mounts.find((mount) => mount.Type === "bind").Source,
+    inspected.Mounts.find((mount) => mount.Destination === "/opt/slopify-host").Source,
     join(state, "share"),
   );
   const url = `http://${await run("docker", ["port", name, "6969/tcp"])}`;
@@ -281,6 +313,7 @@ try {
     "Packaged host bridge smoke passed: host processes, image publication, complete document reads, stable socket mount, no real credentials or paid calls.",
   );
 } finally {
+  if (compose) await exec("docker", [...compose, "down"]).catch(() => {});
   await exec("docker", ["rm", "-f", name]).catch(() => {});
   await exec("docker", ["volume", "rm", volume]).catch(() => {});
   await stopHelper();

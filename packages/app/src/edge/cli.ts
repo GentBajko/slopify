@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { createInterface } from "node:readline/promises";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { type Config, configFrom } from "../kernel/config/index.js";
 import { readVersion } from "../kernel/version.js";
@@ -12,7 +7,8 @@ import { forwardManagedUpdate } from "../updater/forward.js";
 import { openBrowser } from "./open-browser.js";
 import { installSignalShutdown } from "./signal-shutdown.js";
 
-const { values } = parseArgs({
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
   options: {
     port: { type: "string" },
     host: { type: "string" },
@@ -27,74 +23,58 @@ const { values } = parseArgs({
 
 let config: Config | undefined;
 try {
-  if (values["projects-dir"] !== undefined && !values.docker)
+  const [action, ...extra] = positionals;
+  if (extra.length > 0 || (action !== undefined && action !== "install" && action !== "update"))
+    throw new Error(
+      `Unknown command "${positionals.join(" ")}". Use npx @gentbajko/slopify to start Slopify, npx @gentbajko/slopify --docker to install it in Docker, or npx @gentbajko/slopify@latest update to update it.`,
+    );
+  if (action === "install" && !values.docker)
+    throw new Error(
+      "Without Docker there is nothing to install: npx @gentbajko/slopify starts Slopify directly. To install it in Docker, run npx @gentbajko/slopify install --docker.",
+    );
+  // `update` goes to the Docker installation when this user has one.
+  const docker =
+    values.docker === true ||
+    (action === "update" &&
+      (await (await import("./docker-install/run.js")).hasDockerInstall(process.env)));
+  if (values["projects-dir"] !== undefined && !docker)
     throw new Error(
       "--projects-dir only works together with --docker. Without Docker, choose where Slopify keeps its files with --data-dir <folder>.",
     );
-  if (
-    (values["host-cli"] !== undefined || values["accept-host-cli"] !== undefined) &&
-    !values.docker
-  )
+  if ((values["host-cli"] !== undefined || values["accept-host-cli"] !== undefined) && !docker)
     throw new Error(
       "--host-cli and --accept-host-cli only work together with --docker. Add --docker, or remove those options.",
     );
   if (values["host-cli"] !== undefined && values["host-cli"] !== "off")
     throw new Error(
-      `--host-cli=${values["host-cli"]} is not supported. The only value is --host-cli=off, which starts Docker using API keys only; leave the option out to use the AI CLIs installed on this machine.`,
+      `--host-cli=${values["host-cli"]} is not supported. The only value is --host-cli=off, which installs Docker using API keys only; leave the option out to use the AI CLIs installed on this machine.`,
     );
-  if (values.docker) {
+  if (docker) {
     if (values.host !== undefined || values["data-dir"] !== undefined)
       throw new Error(
         "--host and --data-dir can't be used with --docker: the Docker version always listens on localhost and keeps its data in a Docker volume. Use --projects-dir <folder> for project files and --port <number> for the port.",
       );
-    const docker: typeof import("./docker.js") = await import("./docker.js");
-    docker.assertManagedDockerHost(process.platform, process.getuid?.(), process.getgid?.());
-    const { prepareDockerHostCli } = docker;
-    const { nodeHostSetupRunner } = await import("../host-cli/install.js");
-    const bridge = await prepareDockerHostCli({
-      root: join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "slopify/host-cli"),
-      version: readVersion(),
-      image: process.env.SLOPIFY_DOCKER_IMAGE ?? "ghcr.io/gentbajko/slopify:latest",
-      disabled: values["host-cli"] === "off",
-      accepted: values["accept-host-cli"] === true,
-      interactive: process.stdin.isTTY === true,
-      env: process.env,
-      signal: AbortSignal.timeout(20 * 60_000),
-      runner: nodeHostSetupRunner,
-      prompt: async (message) => {
-        const terminal = createInterface({ input: process.stdin, output: process.stdout });
-        try {
-          return /^(?:y|yes)$/i.test((await terminal.question(message)).trim());
-        } finally {
-          terminal.close();
-        }
-      },
+    const { runDockerCommand } = await import("./docker-install/run.js");
+    await runDockerCommand({
+      mode: action === "update" ? "update" : "install",
+      ...(values.port === undefined ? {} : { port: values.port }),
+      ...(values["projects-dir"] === undefined ? {} : { projectsDir: values["projects-dir"] }),
+      ...(values["host-cli"] === undefined ? {} : { hostCli: values["host-cli"] }),
+      ...(values["accept-host-cli"] === undefined
+        ? {}
+        : { acceptHostCli: values["accept-host-cli"] }),
     });
-    console.log(
-      bridge.directory
-        ? "Host CLI helper ready. Existing CLI logins stay on the host."
-        : "Starting API-only Docker. Rerun the launcher after installing host CLIs to enable them.",
-    );
-    const result = spawnSync(
-      "bash",
-      [fileURLToPath(new URL("../../scripts/docker-run.sh", import.meta.url))],
-      {
-        stdio: "inherit",
-        env: {
-          ...process.env,
-          SLOPIFY_HOST_CLI_DIR: bridge.directory ?? "",
-          ...(values.port === undefined ? {} : { SLOPIFY_DOCKER_HOST_PORT: values.port }),
-          ...(values["projects-dir"] === undefined
-            ? {}
-            : { SLOPIFY_DOCKER_PROJECTS_DIR: values["projects-dir"] }),
-        },
-      },
-    );
-    if (result.error)
-      throw new Error(
-        `Could not start the Docker launcher script (${result.error.message}). Make sure bash is installed and on your PATH, then try again.`,
-      );
-    process.exit(result.status ?? 1);
+    process.exit(0);
+  }
+  if (action === "update") {
+    config = configFrom(values, process.env);
+    const { runNativeUpdate } = await import("./native-update.js");
+    await runNativeUpdate({
+      origin: `http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${config.port}`,
+      fetch: globalThis.fetch,
+      report: (line) => console.log(line),
+    });
+    process.exit(0);
   }
   config = configFrom(values, process.env);
   const forwarded = await forwardManagedUpdate(

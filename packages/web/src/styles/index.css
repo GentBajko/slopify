@@ -38,6 +38,15 @@
   --color-info-tint: rgb(134 183 242 / 0.12);
   --color-focus: var(--color-accent);
   --color-scrim: rgb(8 8 10 / 0.64);
+  /* One colour per speaker of a multi-voice run, by place in the speaker list. The same six
+     values colour the captions and the speaker panel the renderer burns into the video
+     (`packages/app/src/slices/voices/palette.ts`), so they stay the same on both themes. */
+  --color-speaker-1: #f2c14e;
+  --color-speaker-2: #6ec3f4;
+  --color-speaker-3: #f28482;
+  --color-speaker-4: #9bcb4f;
+  --color-speaker-5: #c39bd3;
+  --color-speaker-6: #f5a65b;
 
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;

@@ -30,5 +30,5 @@ is licensed under the **GPL-3.0-or-later**. Slopify does not link against it, do
 embed it, and does not distribute it inside the `slopify` package; `ffmpeg-static`
 downloads it to `node_modules/ffmpeg-static/` at install time, and its licence text and
 the location of its corresponding source ship there beside it. Slopify's own code is
-MIT and stays MIT. Anyone redistributing the downloaded binary takes on the GPL's
+Apache-2.0 and stays Apache-2.0. Anyone redistributing the downloaded binary takes on the GPL's
 obligations for it, including offering that corresponding source.

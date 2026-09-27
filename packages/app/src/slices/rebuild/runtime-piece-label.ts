@@ -29,6 +29,10 @@ export function pieceLabel(
           : pieceLabel(deps, context, { key: item });
     return `Review of ${itemLabel ?? "an item"}`;
   }
+  if (key === "voices:files") return "MP3 and M4B files";
+  if (key === "script:attribute") return "Speaker split";
+  const turn = /^audio:body:turn:(\d+):\d+$/.exec(key);
+  if (turn !== null) return `Turn ${turn[1] ?? ""}`;
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
   if (key === "animate:future") return "Animated images";
   const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);

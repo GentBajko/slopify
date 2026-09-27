@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { keywordOrigins } from "./admission";
+import { articleKind } from "./article-kind";
 import { KeywordBlock } from "./keywords";
 import { ModelPicker, ProviderPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -26,7 +27,7 @@ export function ContentSection(
   const { form, problem, update, fields, entries, onLibrary } = props;
   const id = useId();
   const prompt = props.prompts.find(
-    (item) => item.kind === "article" && item.name === form.articlePrompt,
+    (item) => item.kind === articleKind(form) && item.name === form.articlePrompt,
   );
   return (
     <>
@@ -62,9 +63,9 @@ export function ContentSection(
             </details>
           ) : (
             <p className="text-small text-ink2">
-              {props.prompts.some((item) => item.kind === "article")
-                ? "Choose a saved article prompt."
-                : "No article prompts saved. Create a prompt to begin."}
+              {props.prompts.some((item) => item.kind === articleKind(form))
+                ? `Choose a saved ${articleKind(form)} prompt.`
+                : `No ${articleKind(form)} prompts saved. Create a prompt to begin.`}
             </p>
           )}
           <Button variant="ghost" onClick={() => onLibrary("/prompts")}>

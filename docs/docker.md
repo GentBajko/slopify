@@ -1,113 +1,147 @@
 # Docker
 
-
-On Linux with Docker, Node 26+ and util-linux (`flock`), run:
-
-```sh
-npx @gentbajko/slopify@latest --docker
-```
-
-The launcher detects Codex, Claude Code and Gemini on your host. It asks once
-before installing a private helper that runs those CLIs under your user account.
-That permission includes automatic startup and user lingering, which keeps your
-user services running after logout and starts them at boot. CLI logins stay on
-the host; you don't sign in again inside Docker.
-
-Slopify runs in the background at `http://127.0.0.1:6969` and restarts with Docker.
-The managed Linux launcher saves generated project files in `~/Slopify/Projects`.
-Custom container names use `~/Slopify/<container>/Projects`. The database,
-credentials, logs and staging stay private in the named `slopify-data` volume.
-Run as your normal user with Node 26+, Docker access and util-linux (`flock`).
-Systemd is needed only for the optional host CLI helper. Native installs continue
-using their configured data directory and need no helper.
-
-Use `--projects-dir "/path/to/Projects"` or `SLOPIFY_DOCKER_PROJECTS_DIR` to choose
-a dedicated folder. Later launches remember that absolute path when the override
-is omitted. `--port 7070` changes the localhost port. Custom installations sharing
-a machine need distinct `SLOPIFY_DOCKER_NAME` and `SLOPIFY_DOCKER_VOLUME` values.
-Do not store unrelated documents in the managed Projects tree: storage
-reconciliation owns it. The one exception is its `Backups` folder, where scheduled
-backups land by default (see [backups.md](backups.md)). Moving to another folder performs a verified copy;
-existing unrelated contents are never merged or overwritten.
-
-Existing installations are stopped, copied and verified before the new folder
-is activated. Open folder on current and historical outputs opens the real host
-folder in your file manager through the host helper when it is installed;
-otherwise (for example with `--host-cli=off`, or a helper from an older launcher)
-it shows that folder's path on the machine running Slopify. Downloads remain
-available either way. The helper only opens folders inside the project folder the
-launcher set up, and needs `xdg-open` (xdg-utils) on the host.
-
-The helper uses a private authenticated socket, not a public port or remote shell.
-Docker receives model metadata and generated text/image bytes. It doesn't mount
-your CLI executables, home directory or login files. Settings shows host commands
-read-only. Rerun the launcher after changing CLI installations or search paths.
-CLI authentication that depends on secret environment variables must be configured
-in the host service; the launcher does not copy those variables into Docker.
-
-For API-only Docker, add `--host-cli=off`. Non-interactive helper setup requires
-`--accept-host-cli`, which grants the same host-access and startup permission.
-If no CLIs are installed, the launcher starts API-only; install them on the host
-and rerun it when needed. Managed helper setup is not available on Windows/macOS.
-
-Plain `docker run` is API-only unless connected to an already configured helper.
-It does not set up a host project folder or install host services; its files stay
-in the private named volume. Use the managed launcher for automatic migration
-and host-folder access.
+On Linux with Docker Engine, the Docker Compose plugin and Node 26+, run as your
+normal user:
 
 ```sh
-docker run -d --name slopify --restart always \
-  -p 127.0.0.1:6969:6969 \
-  -v slopify-data:/data \
-  ghcr.io/gentbajko/slopify:latest
+npx @gentbajko/slopify@latest --docker     # install (or re-apply settings)
+npx @gentbajko/slopify@latest update       # update to the newest release
 ```
 
-Keep the localhost binding: anyone who reaches Slopify's port can control the app
-and its providers. FFmpeg is already installed in the image.
+Slopify then runs in the background at `http://127.0.0.1:6969` and restarts with
+Docker. Project files go to `~/Slopify/Projects`; the database, keys, logs and
+staging stay private in the `slopify-data` volume.
 
-To update a launcher-managed installation:
+## What gets installed
 
-```sh
-docker pull ghcr.io/gentbajko/slopify:latest
-npx @gentbajko/slopify@latest --docker
-```
+One image, one compose file, one host helper:
 
-If a project is being made when you run it, the launcher does not stop the old
-container: it prints "Update to X.Y.Z will install when 'Title' finishes" and
-checks again every 15 seconds, then carries on by itself. Press Ctrl+C to keep
-the current version for now; nothing has changed at that point.
+- **Image** `ghcr.io/gentbajko/slopify:<version>`: multi-stage, runs as a non-root
+  user, FFmpeg and the caption model included, with a healthcheck on `/api/health`.
+  The install pins the tag to the release you ran, so the image and the installer
+  are always the same version.
+- **[compose.yaml](../compose.yaml)** (shipped in the package) is copied to
+  `~/.local/share/slopify/docker/slopify/` with a private `.env` beside it. One
+  service `slopify`, `restart: unless-stopped`, port bound to `127.0.0.1` only, the
+  `slopify-data` volume at `/data`, your Projects folder at `/data/projects`. The
+  volume is declared `external`, so `docker compose down` (even with `-v`) never
+  deletes it.
+- **The host CLI bridge** (optional, see below).
 
-The launcher keeps the configured named volume, the original project tree,
-a stopped previous container and a private recovery-volume clone. It waits up
-to 120 seconds for the replacement application. Before commit, a failed copy,
-ownership change or replacement restores the previous private bytes and ownership
-when verification succeeds; an incomplete rollback is reported explicitly.
-Installation receipts, transaction journals and the setup lock live under
-`$XDG_DATA_HOME/slopify/docker` or `~/.local/share/slopify/docker`, outside Projects.
-Budget temporary space for one volume clone plus one project copy.
+Beside them, `install.json` records what was installed (version, port, project
+folder, user, whether the bridge is on). Change a setting by running the install
+again with it: `--port 7070`, `--projects-dir <folder>`, `--host-cli=off`. Settings
+you leave out are remembered. Moving to another project folder copies and verifies
+the files first; the old folder is left as it was, and the new one must be empty.
+Several installations on one machine need their own `SLOPIFY_DOCKER_NAME` and
+`SLOPIFY_DOCKER_VOLUME`.
 
-If setup is interrupted, rerun the same launcher. Keep the printed recovery
-volume and stopped containers until you have verified your outputs. A missing
-remembered folder, stale failed copy, conflicting container or changed daemon
-is an error; restore the original folder/daemon. For a stale failed copy, keep
-the printed recovery material and select a new empty `--projects-dir` for a
-fresh verified copy. Do not delete the receipt to bypass
-these checks, start a stopped recovery container while another writer uses its
-volume, or run a recursive permission fix on your data. Rootful userns-remap and
-remote daemons are unsupported; use a supported rootless daemon or native
-Slopify without weakening daemon isolation. Installation does not regenerate
-failed or paused work.
+Running the install again with nothing changed does nothing besides starting the
+container if it was stopped.
 
-The launcher refuses to replace a helper while it is generating. For a direct
-Docker installation, recreate the container after pulling, using the same named volume.
+## Updating
 
-Check or disable only the dedicated host helper:
+`npx @gentbajko/slopify@latest update` (or `--docker` with the newest version) runs
+one transaction:
+
+1. Waits until nothing is generating (the app's own update gate). Ctrl+C here
+   changes nothing.
+2. Stops the container and copies the whole data volume into a recovery volume
+   `slopify-data-recovery-<id>`, verified file by file.
+3. Starts the new version through compose and waits up to 2 minutes for it to answer
+   as that version.
+4. On success it commits (`install.json`) and removes the older recovery volume, so
+   only the newest one is kept, plus stopped `slopify-previous-*` containers the
+   2.5.0 launcher left behind.
+5. If the new version doesn't answer, it removes it, copies the data back from the
+   recovery volume (the new version may already have changed the database), and
+   starts the previous version with its previous settings.
+
+If an install or update is cut off (Ctrl+C, reboot), the next run first finishes the
+undo from `update.json`, then continues. The Update button inside the Docker app
+points to the same command, since a container can't replace itself.
+
+Keep the named volume and your Projects folder when backing up; the recovery volume
+covers the database and settings, not the Projects folder.
+
+## Coming from 2.5.0 or earlier
+
+The first run of the new install takes the existing installation over as it is:
+
+- It reuses the container's data volume by name (`slopify-data`); it is never
+  deleted or recreated. A container on another volume is refused, with the
+  `SLOPIFY_DOCKER_VOLUME` value to use.
+- It keeps the project folder the old container used (the 2.5.0 launcher's
+  `~/Slopify/Projects`, or your `--projects-dir`). A plain `docker run` container
+  that kept projects inside the volume gets them copied, verified, to
+  `~/Slopify/Projects`; the copy in the volume stays.
+- The old container is stopped and renamed `slopify-previous-<id>` while the new
+  one starts, restored exactly (name, restart policy, running) if it fails, and
+  removed once the new one is committed.
+- If a 2.5.0 launcher update was left unfinished, nothing is changed: run
+  `npx @gentbajko/slopify@2.5.0 --docker` once so it finishes or undoes it, then
+  install again.
+
+The old launcher's `receipt.json`, `journal.json` and per-update folders stay in
+`~/.local/share/slopify/docker/slopify/`; nothing reads them after the takeover.
+
+## The host CLI bridge
+
+If Claude Code, Codex or Gemini is installed on the host, the install asks once
+(`--accept-host-cli` to approve without a prompt, `--host-cli=off` to skip it). With
+your OK it installs the helper at the same version as the image and keeps it in
+step on every install and update.
+
+- **Process.** The helper is the package's `dist/edge/host-cli.js`, run by the
+  systemd user service `slopify-cli-bridge.service` (user lingering is enabled so it
+  runs at boot and after logout). It runs as you, with the `HOME`, `PATH` and CLI
+  config variables it was installed with, so the CLIs use their existing logins.
+  Nothing about the logins is copied into Docker.
+- **Transport.** HTTP over a Unix socket, `share/cli.sock`, in
+  `~/.local/share/slopify/host-cli/`. Only the `share` folder (socket and token) is
+  mounted into the container, read-only, at `/opt/slopify-host`. No network port.
+- **Auth.** Every request carries `Authorization: Bearer <token>`, the 64-hex token
+  in `share/token`, created once.
+- **Protocol 1.** `GET /v1/health`, `GET /v1/status/:provider`,
+  `GET /v1/models/:provider`, `POST /v1/llm/:provider` (streamed text),
+  `POST /v1/image` (Codex images) and `POST /v1/open-folder` (only folders inside
+  the Projects folder recorded in `install.json`, through `xdg-open`). Providers are
+  `claude-code`, `codex` and `gemini`; request and response sizes are capped.
+- **Lifecycle.** Installs and updates pause its admissions and refuse to replace it
+  while it runs a CLI. With the bridge off, compose mounts an empty folder and
+  Settings shows the CLIs as unavailable.
+
+Check or disable it:
 
 ```sh
 systemctl --user status slopify-cli-bridge.service
 systemctl --user disable --now slopify-cli-bridge.service
 ```
 
-Disabling it leaves Docker, API providers, data and host logins intact. It does
-not disable user lingering, which may support other services. Helper files live
-under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
+Disabling it leaves Docker, API providers, data and host logins intact. Rerun the
+install after installing or moving a CLI.
+
+## Running the compose file yourself
+
+Without the installer (any OS with Docker Compose), API keys only:
+
+```sh
+docker volume create slopify-data
+mkdir -p ~/Slopify/Projects
+SLOPIFY_PROJECTS_DIR=~/Slopify/Projects SLOPIFY_USER="$(id -u):$(id -g)" \
+  docker compose -f compose.yaml up -d
+```
+
+Variables: `SLOPIFY_IMAGE`, `SLOPIFY_PORT` (default 6969), `SLOPIFY_USER`,
+`SLOPIFY_VOLUME` (default `slopify-data`), `SLOPIFY_PROJECTS_DIR` (required),
+`SLOPIFY_HOST_CLI_SHARE`, `SLOPIFY_NAME`. Update by changing `SLOPIFY_IMAGE` and
+running `up -d` again; that path has no automatic snapshot or rollback.
+
+Keep the localhost binding: anyone who reaches Slopify's port can control the app
+and its providers.
+
+## Limits
+
+Linux only for the installer. Docker Desktop, remote Docker daemons and rootful
+`userns-remap` are refused; rootless Docker works (the container then runs as
+`0:0`, which is you on the host). Don't run the installer with sudo.

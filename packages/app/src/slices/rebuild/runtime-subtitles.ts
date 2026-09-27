@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { subtitleModelDir } from "../../kernel/paths.js";
-import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.js";
+import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import type { RunConfig } from "../admission/model.js";
 import { narrationAliasesOf } from "../admission/rules.js";
 import { resolveFont } from "../fonts/index.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
@@ -13,6 +14,10 @@ import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "../subtitles/captions.js";
 import { spoken } from "../video/plan.js";
+import { usesVoices, type VoicesSettings } from "../voices/model.js";
+import { type CaptionSpeakers, speakerColour } from "../voices/palette.js";
+import { speakerPanelEvents, usesSpeakerPanel } from "../voices/panel.js";
+import { attributeWords, type SpeakerWord } from "../voices/timing.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import {
   type ExportSnapshot,
@@ -20,6 +25,7 @@ import {
   retainedOutput,
   revisionAudio,
   revisionTranscript,
+  revisionTurns,
 } from "./runtime-export-inputs.js";
 import {
   type NarrationChunk,
@@ -39,6 +45,9 @@ export const wordsSchema = z.object({
       start: z.number().finite().nonnegative(),
       end: z.number().finite().positive(),
       confidence: z.number().optional(),
+      // A multi-voice run's speaker id and script turn (`voices/timing.ts`).
+      speaker: z.string().optional(),
+      turn: z.number().int().positive().optional(),
     }),
   ),
   omissions: z
@@ -51,6 +60,7 @@ const cuesSchema = z.object({
       text: z.string(),
       start: z.number().finite().nonnegative(),
       end: z.number().finite().positive(),
+      speaker: z.string().optional(),
     }),
   ),
   omissions: wordsSchema.shape.omissions,
@@ -88,8 +98,9 @@ async function timing(
       "Slopify hit an internal error (the caption timing tool is missing from this build). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
     );
   if (!context.maySubmit(piece.id)) return "held";
-  const words: TimedWord[] = [];
+  const words: SpeakerWord[] = [];
   const omissions: SubtitleOmission[] = [];
+  const turns = revisionTurns(snapshot);
   let offset = 0;
   const total = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   for (const segment of audio) {
@@ -117,7 +128,9 @@ async function timing(
             }),
         }),
       );
-      for (const word of aligned) {
+      for (const word of kind === "body" && turns.length > 0
+        ? attributeWords(turns, aligned)
+        : aligned) {
         if (word.end > segment.seconds + 0.1)
           throw new Error(
             "Caption timing came out longer than the narration audio. Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
@@ -249,9 +262,27 @@ async function files(
       view.revision.config.format === "16:9"
         ? { width: 1920, height: 1080 }
         : { width: 1080, height: 1920 };
+    const voices = captionVoices(view.revision.config);
+    const overlay =
+      voices !== undefined && usesSpeakerPanel(voices.format)
+        ? speakerPanelEvents(
+            value.cues,
+            voices.speakers.map((speaker, index) => ({
+              id: speaker.id,
+              name: speaker.name.trim(),
+              colour: speakerColour(index),
+            })),
+            frame,
+            (await revisionAudio(deps, context, view)).reduce(
+              (sum, segment) => sum + segment.seconds,
+              0,
+            ),
+          )
+        : [];
+    const speakers = voices === undefined ? undefined : captionSpeakers(voices);
     for (const [role, filename, text] of [
-      ["subtitles_srt", "subtitles.srt", serializeSrt(value.cues)],
-      ["subtitles_vtt", "subtitles.vtt", serializeVtt(value.cues)],
+      ["subtitles_srt", "subtitles.srt", serializeSrt(value.cues, speakers)],
+      ["subtitles_vtt", "subtitles.vtt", serializeVtt(value.cues, speakers)],
       [
         "subtitle_ass",
         "subtitles.ass",
@@ -262,6 +293,8 @@ async function files(
           position: config.position,
           color: config.color,
           outlineColor: config.outlineColor,
+          speakers,
+          overlay,
         }),
       ],
     ] as const)
@@ -390,4 +423,19 @@ function clock(seconds: number): string {
   return hours > 0
     ? `${String(hours)}:${String(minutes).padStart(2, "0")}:${rest}`
     : `${String(minutes)}:${rest}`;
+}
+
+function captionVoices(config: RunConfig): VoicesSettings | undefined {
+  return usesVoices(config) ? config.voices : undefined;
+}
+function captionSpeakers(voices: VoicesSettings): CaptionSpeakers {
+  return {
+    styles: Object.fromEntries(
+      voices.speakers.map((speaker, index) => [
+        speaker.id,
+        { name: speaker.name.trim(), colour: speakerColour(index) },
+      ]),
+    ),
+    nameTags: voices.nameTags,
+  };
 }

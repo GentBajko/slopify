@@ -14,6 +14,7 @@ import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
+import { articleKind } from "./article-kind";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
 // sentence the form shows and the refusal the server writes are one rule, and the only
@@ -55,7 +56,7 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
     push(text, bodyOf(input.prompts, "narration", form.narrationPrompt ?? ""));
 
   if (form.sources.article === "generate") {
-    push(text, bodyOf(input.prompts, "article", form.articlePrompt));
+    push(text, bodyOf(input.prompts, articleKind(form), form.articlePrompt));
   }
   if (form.sources.audio === "generate") {
     push(text, entryBody(input.entries, "intro", form.intro));
@@ -123,6 +124,7 @@ const readingOrder: readonly string[] = [
   "provided.article",
   "audio",
   "provided.audio",
+  "voices",
   "narrationPrompt",
   "imagePrompts",
   "images",
@@ -240,7 +242,9 @@ function hintOf(form: PlayFormState, error: FieldError): string {
     case "llm":
       return "Pick an LLM provider and model to play";
     case "articlePrompt":
-      return "Pick an article prompt to play";
+      return articleKind(form) === "script"
+        ? "Pick a script prompt to play"
+        : "Pick an article prompt to play";
     case "audio":
       return "Pick a narration provider to play";
     case "audio.voice":
@@ -328,7 +332,7 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
   if (usesNarrationPreparation(form))
     add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
   if (form.sources.article === "generate")
-    add(bodyOf(prompts, "article", form.articlePrompt), "Article");
+    add(bodyOf(prompts, articleKind(form), form.articlePrompt), "Article");
   if (form.sources.images === "generate")
     for (const prompt of form.imagePrompts)
       add(bodyOf(prompts, "image", prompt.name), `Image: ${prompt.name}`);

@@ -2,7 +2,7 @@
   "name": "@gentbajko/slopify",
   "version": "2.5.0",
   "description": "Turn a prompt into a finished video, locally, with your own provider keys",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Gent Bajko",
   "repository": {
     "type": "git",
@@ -18,15 +18,15 @@
   },
   "files": [
     "dist",
+    "NOTICE",
     "SUBTITLES.md",
-    "scripts/docker-run.sh",
     "!dist/**/*.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-assets.mjs && node scripts/copy-web.mjs",
     "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "typecheck": "tsc --noEmit",
-    "smoke:docker-projects": "node scripts/docker-projects-smoke.mjs"
+    "smoke:docker-install": "node scripts/docker-install-smoke.mjs"
   },
   "dependencies": {
     "@fastify/busboy": "^3.2.2",

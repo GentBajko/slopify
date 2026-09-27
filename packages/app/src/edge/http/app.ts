@@ -21,6 +21,7 @@ import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
+import { type Audition, auditionRoutes } from "./auditions.js";
 import { backupRoutes } from "./backups.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
@@ -82,6 +83,8 @@ export interface AppDeps {
   readonly fetch?: typeof globalThis.fetch;
   // Asks a CLI on this computer whether it is signed in, for the health check.
   readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
+  // Speaks one voice audition through the attempt wrapper (`kernel/runner/audition.ts`).
+  readonly audition?: Audition | undefined;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
@@ -153,6 +156,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
       .route("/pronunciations", pronunciationRoutes(deps))
+      .route("/auditions", auditionRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))

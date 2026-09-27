@@ -1,5 +1,6 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { emptyReviews } from "./reviews";
 import type { PlaySection } from "./sections";
 import { freshShorts } from "./shorts";
@@ -58,6 +59,18 @@ export function pickInPlay(document: PlayDraftDocument, item: Prompt | Entry): U
         { shorts: { ...(form.shorts ?? freshShorts), enabled: true, prompt: item.name } },
         "outputs",
         "shorts.prompt",
+      );
+    // A Script prompt writes speaker turns, so a draft in the Narration format becomes a
+    // podcast; one that already has speakers keeps them.
+    case "script":
+      return next(
+        {
+          articlePrompt: item.name,
+          sources: { ...form.sources, article: "generate", audio: "generate" },
+          voices: { ...(form.voices ?? defaultVoicesSettings("podcast")), source: "script" },
+        },
+        "content",
+        "articlePrompt",
       );
     // A Review prompt goes to every review that is on; with none on, it turns the article's on.
     case "review": {

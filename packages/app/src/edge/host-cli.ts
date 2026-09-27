@@ -12,7 +12,7 @@ import { startHostServer } from "../host-cli/server.js";
 import { resolveHostCommand } from "../host-cli/status.js";
 import { readVersion } from "../kernel/version.js";
 import { nodeCliProbe } from "../slices/settings/cli-status.js";
-import { dockerRoot } from "./docker-projects/state.js";
+import { dockerRoot } from "./docker-install/state.js";
 
 const { values } = parseArgs({ options: { "state-dir": { type: "string" } }, strict: true });
 if (!values["state-dir"]) throw new Error("A host helper state directory is required.");

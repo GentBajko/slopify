@@ -3,6 +3,7 @@ import {
   usesPronunciationGlossary,
 } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
+import { usesVoices } from "@app/slices/voices/model.js";
 import { useState } from "react";
 import {
   type ProviderStatus,
@@ -17,6 +18,7 @@ import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { PronunciationGlossary } from "@/play/pronunciation-glossary";
 import { ThinkingPicker } from "@/play/thinking";
+import { SpeakersEditor } from "@/voices/speakers-editor";
 
 // "Also use pronunciations from my other projects" in Edit project: turning it on copies the
 // other projects' glossaries into this one, and the button copies them again, so a project
@@ -162,6 +164,7 @@ export function RevisionProviders({
     config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||
+    (usesVoices(config) && config.voices?.source === "attribute") ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   const imagesNeeded =
@@ -255,6 +258,22 @@ export function RevisionProviders({
             }
           />
           <NarrationAliasesToggle {...aliases} />
+          <section aria-label="Speakers" className="col-span-full border-t border-line pt-3">
+            <h3 className="mb-2 text-small font-semibold">Speakers</h3>
+            <SpeakersEditor
+              value={config.voices}
+              providers={providers}
+              voices={voices}
+              script={edit.content.articleMarkdown ?? undefined}
+              onChange={(next) => {
+                const { voices: _old, ...rest } = config;
+                onChange({
+                  ...edit,
+                  config: next === undefined ? rest : { ...rest, voices: next },
+                });
+              }}
+            />
+          </section>
         </>
       ) : null}
       {imagesNeeded ? (

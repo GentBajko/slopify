@@ -1,0 +1,62 @@
+# Slopify on Docker: one service, one private data volume, one host folder for project files.
+#
+# `npx @gentbajko/slopify --docker` copies this file to ~/.local/share/slopify/docker/<name>/
+# and writes the .env beside it, then runs `docker compose up`. You can also run it by hand; see
+# docs/docker.md for the variables. The data volume is external on purpose: `docker compose down`
+# (even with -v) never deletes it.
+name: ${SLOPIFY_NAME:-slopify}
+
+services:
+  slopify:
+    image: ${SLOPIFY_IMAGE:-ghcr.io/gentbajko/slopify:latest}
+    container_name: ${SLOPIFY_NAME:-slopify}
+    # Your own user id, so project files on the host belong to you (0:0 under rootless Docker).
+    user: ${SLOPIFY_USER:-1000:1000}
+    restart: unless-stopped
+    # Localhost only: anyone who reaches this port controls the app and its provider keys.
+    # An empty SLOPIFY_PORT picks a free port.
+    ports:
+      - 127.0.0.1:${SLOPIFY_PORT-6969}:6969
+    volumes:
+      - type: volume
+        source: data
+        target: /data
+      - type: bind
+        source: ${SLOPIFY_PROJECTS_DIR:?set SLOPIFY_PROJECTS_DIR to the folder for your project files}
+        target: /data/projects
+      # The host CLI bridge: a folder holding the helper's socket and token, nothing else.
+      # With the bridge off it is an empty folder and Settings shows the CLIs as unavailable.
+      - type: bind
+        source: ${SLOPIFY_HOST_CLI_SHARE:-./host-cli-off}
+        target: /opt/slopify-host
+        read_only: true
+        bind:
+          create_host_path: true
+      # The update handshake: activation.json says when the installer has committed this version.
+      - type: bind
+        source: ${SLOPIFY_ACTIVATION_DIR:-./activation}
+        target: /opt/slopify-install
+        read_only: true
+        bind:
+          create_host_path: true
+    environment:
+      SLOPIFY_DOCKER_PROJECTS_DIR: ${SLOPIFY_PROJECTS_DIR}
+      SLOPIFY_HOST_CLI_DIR: /opt/slopify-host
+      SLOPIFY_DOCKER_INSTALL_STATE: /opt/slopify-install/activation.json
+      SLOPIFY_UPDATE_TOKEN: ${SLOPIFY_UPDATE_TOKEN:-}
+      SLOPIFY_UPDATE_PENDING: ${SLOPIFY_UPDATE_PENDING:-0}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:6969/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      start_interval: 2s
+
+volumes:
+  data:
+    external: true
+    name: ${SLOPIFY_VOLUME:-slopify-data}

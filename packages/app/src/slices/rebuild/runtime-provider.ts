@@ -15,6 +15,8 @@ import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
+import { parseAttribution } from "../voices/attribution.js";
+import { parseScript } from "../voices/script.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
@@ -79,7 +81,17 @@ export async function executeProviderRecipe(
   }
   if (input.kind === "tts") {
     const spoken = await wrapped.tts(
-      { provider: input.provider, model: input.model, voiceId: input.voice, text: input.text },
+      {
+        provider: input.provider,
+        model: input.model,
+        voiceId: input.voice,
+        text: input.text,
+        ...(input.dialogue === undefined
+          ? {}
+          : {
+              dialogue: input.dialogue.map((line) => ({ voiceId: line.voice, text: line.text })),
+            }),
+      },
       observeNarration(
         deps.audioPreviews,
         context.work.projectId,
@@ -236,7 +248,19 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
       : undefined;
   if (piece.key === "research:notes" || piece.key.startsWith("research:chapter:"))
     return sourcedAnswer(piece.key, answer.text);
+  // A speaker split that loses or adds words is asked for again rather than narrated.
+  if (piece.input.kind === "llm" && piece.input.script?.attribute === true) {
+    const checked = parseAttribution(
+      answer.text,
+      attributionSource(piece.input.messages),
+      piece.input.script.speakers,
+    );
+    return checked.ok ? undefined : checked.reason;
+  }
   return undefined;
+}
+function attributionSource(messages: readonly { readonly content: string }[]): string {
+  return messages.at(-1)?.content ?? "";
 }
 async function publishText(
   deps: RevisionDeps,
@@ -257,6 +281,15 @@ async function publishText(
   }
   if (piece.key === "article:body") {
     const parts = splitEndMatter(answer.text);
+    // A script is read before it is kept: one the narration could not speak fails here, with
+    // the line to fix, rather than at the narration.
+    if (piece.input.kind === "llm" && piece.input.script !== undefined) {
+      const checked = parseScript(parts.body, piece.input.script.speakers);
+      if (!checked.ok)
+        throw new Error(
+          `The text model's script can't be read: ${checked.reason} Retry stage to have it written again, or fix it in Edit project → Article.`,
+        );
+    }
     await publishResult(
       deps,
       context,
@@ -268,6 +301,16 @@ async function publishText(
         ...(parts.sources ? [["sources", "sources.md", parts.sources] as const] : []),
         ...(parts.glossary ? [["glossary", "glossary.md", parts.glossary] as const] : []),
       ]),
+      { text: answer.text },
+    );
+    return;
+  }
+  if (piece.key === "script:attribute") {
+    await publishResult(
+      deps,
+      context,
+      piece,
+      preparedTexts(deps, context, piece, [["script_md", "script.md", answer.text]]),
       { text: answer.text },
     );
     return;
