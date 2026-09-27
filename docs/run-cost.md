@@ -14,7 +14,10 @@ does not price, or a call whose provider reported no usage, is counted as unknow
 free. Per-minute voices are left unpriced rather than guessed from characters.
 
 The project page's **Run cost** tab shows the total, then the cost, API equivalent, usage and
-time per stage and per model. Data: `GET /api/projects/:id/run-cost`.
+time per stage and per model. Data: `GET /api/projects/:id/run-cost`. Once the run ends (done,
+done with problems, failed or canceled), the top of the project page sums it up in one line,
+such as "This run cost $3.37 · ~$9.10 via API · 12 min 4 s end to end", with **See cost by
+stage** to open the Cost section.
 
 ## CLI runs
 

@@ -62,6 +62,42 @@ describe("the project workspace", () => {
     );
   });
 
+  it("sums up a finished run's cost at the top and opens the Cost section from it", async () => {
+    const line = {
+      calls: 3,
+      cost: 1.25,
+      unpriced: 0,
+      apiEquivalent: null,
+      apiUnpriced: 0,
+      tokensIn: 0,
+      tokensOut: 0,
+      cachedTokens: 0,
+      characters: 0,
+      images: 0,
+      seconds: 0,
+    };
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1/run-cost": jsonAnswer({
+          ...line,
+          currency: "USD",
+          totals: { ...line, wallMs: 90_000 },
+          byStage: [{ ...line, stage: "article", wallMs: 90_000 }],
+          byModel: [],
+          plans: [],
+          waits: [],
+          catalogueDate: null,
+        }),
+      }),
+    );
+    const summary = await screen.findByRole("region", { name: "Run cost" });
+    expect(summary.textContent).toContain("This run cost $1.25 · 1 min 30 s end to end");
+    await userEvent.click(within(summary).getByRole("button", { name: "See cost by stage" }));
+    expect(await screen.findByRole("region", { name: "Run cost summary" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "See cost by stage" })).toBeNull();
+  });
+
   it("adds the PDF section once the run makes one", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
