@@ -65,7 +65,19 @@ async function fixture() {
     join(gemini, "models.js"),
     'export const DEFAULT_GEMINI_FLASH_MODEL = "gemini-3.8-flash";',
   );
+  // Gemini CLI has no status command: Slopify reads its sign-in from ~/.gemini, so the
+  // fixture home carries a Google sign-in of its own.
+  await mkdir(join(home, ".gemini"));
+  await writeFile(
+    join(home, ".gemini/settings.json"),
+    JSON.stringify({ security: { auth: { selectedType: "oauth-personal" } } }),
+  );
+  await writeFile(
+    join(home, ".gemini/oauth_creds.json"),
+    JSON.stringify({ refresh_token: "fixture-refresh-token" }),
+  );
   vi.stubEnv("HOME", home);
+  vi.stubEnv("GEMINI_API_KEY", undefined);
   vi.stubEnv("CODEX_HOME", join(home, ".codex"));
   vi.stubEnv("CLAUDE_CONFIG_DIR", join(home, ".claude"));
   vi.stubEnv("PATH", bin);
@@ -250,10 +262,7 @@ describe.skipIf(process.platform === "win32")(
       const f = await fixture();
       const server = await f.start();
       for (const id of ["claude-code", "codex", "gemini"] as const) {
-        expect(await f.client.status(id)).toMatchObject({
-          installed: true,
-          login: id === "gemini" ? "unknown" : "signed-in",
-        });
+        expect(await f.client.status(id)).toMatchObject({ installed: true, login: "signed-in" });
         expect((await f.client.llm(id).models()).length).toBeGreaterThan(0);
         expect(await collect(f.client.llm(id).complete(request("hello")))).toContainEqual({
           type: "delta",
