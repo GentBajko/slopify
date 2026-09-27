@@ -36,7 +36,12 @@ export function ensureDirs(paths: Paths, options: EnsureDirsOptions): void {
 }
 
 // The subtitle-timing model's cache. The app readies it at start and every captioned render
-// reads it, so both name it through here.
-export function subtitleModelDir(dataDir: string): string {
-  return join(dataDir, "models", "english-subtitles");
+// reads it, so both name it through here. Other languages use the multilingual model, kept
+// in a folder of its own and downloaded on first use, never at start.
+export function subtitleModelDir(dataDir: string, language = "en"): string {
+  return join(
+    dataDir,
+    "models",
+    language === "en" ? "english-subtitles" : "multilingual-subtitles",
+  );
 }

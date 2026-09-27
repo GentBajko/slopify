@@ -1,6 +1,8 @@
+import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { reviewsNarration } from "../reviews/rules.js";
+import { timingOperation } from "../subtitles/model.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
@@ -58,12 +60,13 @@ export function exportRecipes(
     {
       kind: "local",
       version: 1,
-      operation: "wav2vec2-en-a19f851-v2-omissions",
+      operation: timingOperation(projectLanguage(config)),
       // The lead-in moves every word, so the edge silence is part of the timing.
       values: [
         audio.timeline,
         config.silenceGapSeconds,
-        config.subtitles?.language ?? "en",
+        // The project language; an English project reads "en" here as it always did.
+        config.language ?? config.subtitles?.language ?? "en",
         config.edgeSilenceSeconds,
         // Each word learns its speaker and turn on a multi-voice run.
         ...(voices === undefined ? [] : ["voice-words-v1"]),

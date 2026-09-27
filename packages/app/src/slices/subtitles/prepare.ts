@@ -12,6 +12,7 @@ import {
 import { join, relative, sep } from "node:path";
 import { z } from "zod";
 import { subtitleModelDir } from "../../kernel/paths.js";
+import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
@@ -22,7 +23,7 @@ import { outputsOf } from "../storage/repo.js";
 import { type AudioSegment, spoken } from "../video/plan.js";
 import type { VideoDeps } from "../video/run.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "./captions.js";
-import { defaultSubtitles, type TimedWord } from "./model.js";
+import { defaultSubtitles, type TimedWord, timingOperation } from "./model.js";
 import { spokenText } from "./transcript.js";
 
 export const subtitleRoles = [
@@ -92,7 +93,8 @@ export async function prepareSubtitles(
     ...segment,
     text: spoken(segment.kind) ? spokenText(deps, projectId, segment.kind, outputs) : "",
   }));
-  const key = await timingKey(segments, context.signal);
+  const language = projectLanguage(project.config);
+  const key = await timingKey(segments, language, context.signal);
   const cache = readCache(deps, projectId, outputs);
   const dir = projectDir(deps.paths, projectId);
   const directory = mkdtempSync(join(dir, "captions-"));
@@ -100,12 +102,14 @@ export async function prepareSubtitles(
     const font = await snapshotFont(deps, projectId, outputs, config.fontId, cache, directory);
     const omissions: SubtitleOmission[] = cache?.key === key ? [...cache.omissions] : [];
     const words =
-      cache?.key === key ? cache.words : await alignSegments(deps, context, segments, omissions);
+      cache?.key === key
+        ? cache.words
+        : await alignSegments(deps, context, segments, omissions, language);
     context.signal.throwIfAborted();
     const cues = captionCues(words);
     if (cues.length === 0)
       throw new Error(
-        "None of the narration could be matched to the article text, so captions can't be timed. Captions only work for English narration; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
+        "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
       );
     writeFileSync(join(directory, "subtitles.srt"), serializeSrt(cues), { mode: 0o600 });
     writeFileSync(join(directory, "subtitles.vtt"), serializeVtt(cues), { mode: 0o600 });
@@ -153,9 +157,14 @@ export async function prepareSubtitles(
 interface SpokenSegment extends AudioSegment {
   readonly text: string;
 }
-async function timingKey(segments: readonly SpokenSegment[], signal: AbortSignal): Promise<string> {
+async function timingKey(
+  segments: readonly SpokenSegment[],
+  language: string,
+  signal: AbortSignal,
+): Promise<string> {
   // Bump when alignment normalization/model changes. Hash file contents, not timestamps.
-  const hash = createHash("sha256").update("wav2vec2-en-a19f851-v2-omissions");
+  // English hashes the operation it always did (`timingOperation`).
+  const hash = createHash("sha256").update(timingOperation(language));
   for (const segment of segments) {
     signal.throwIfAborted();
     hash.update(
@@ -173,6 +182,7 @@ async function alignSegments(
   context: StageContext,
   segments: readonly SpokenSegment[],
   omissions: SubtitleOmission[],
+  language: string,
 ): Promise<readonly TimedWord[]> {
   if (deps.alignSubtitles === undefined)
     throw new Error(
@@ -188,7 +198,8 @@ async function alignSegments(
         audioPath: segment.path,
         onOmission: (omission) => omissions.push({ ...omission, start: omission.start + offset }),
         text: segment.text,
-        cacheDir: subtitleModelDir(deps.paths.dataDir),
+        cacheDir: subtitleModelDir(deps.paths.dataDir, language),
+        ...(language === "en" ? {} : { language }),
         ffmpeg: deps.ffmpeg,
         signal: context.signal,
         onProgress: (current, maximum) => {

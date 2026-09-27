@@ -201,6 +201,9 @@ export interface RunDraft {
   // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
   // reading the article, which is what every project saved before it was.
   readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
+  // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
+  // what every project saved before it was; English is never stored.
+  readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;
 }
 
 export interface TitleStyle {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
@@ -176,6 +177,8 @@ export const runDraftSchema = z.object({
     .optional(),
   // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
   voices: voicesSettingsSchema.optional(),
+  // Absent is English (`kernel/ports/languages.ts`).
+  language: languageSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

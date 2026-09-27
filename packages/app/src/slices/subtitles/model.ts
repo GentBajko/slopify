@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageInfo } from "../../kernel/ports/languages.js";
 
 export const subtitleModes = ["off", "files", "burn-in"] as const;
 export const subtitlePositions = [
@@ -37,5 +38,19 @@ export const defaultSubtitles: Readonly<SubtitleConfig> = {
   fontSize: 48,
   position: "bottom",
 };
+
+// The word-timing operation of a project language, which is part of the timing's fingerprint:
+// English keeps the operation it always had, so no English project is re-timed; the other
+// languages each name the model (or the sentence fallback) that times them.
+export const timingOperations = {
+  english: "wav2vec2-en-a19f851-v2-omissions",
+  multilingual: "wav2vec2-xlsr56-2d48b01-v1",
+  sentences: "sentence-timing-v1",
+} as const;
+export function timingOperation(
+  language: string,
+): (typeof timingOperations)[keyof typeof timingOperations] {
+  return timingOperations[languageInfo(language).timing];
+}
 
 export type { AlignmentRequest, SubtitleAligner, TimedWord } from "../../kernel/ports/subtitles.js";

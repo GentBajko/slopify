@@ -4,6 +4,8 @@ export const workerInput = z.object({
   modelPath: z.string(),
   pcmPath: z.string(),
   text: z.string(),
+  // The project language; absent is English and its model.
+  language: z.string().optional(),
 });
 export type WorkerInput = z.infer<typeof workerInput>;
 export const omissionSchema = z.object({

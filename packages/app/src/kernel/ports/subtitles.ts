@@ -14,6 +14,9 @@ export interface AlignmentRequest {
   readonly cacheDir: string;
   readonly ffmpeg: string;
   readonly signal: AbortSignal;
+  // The project language (`kernel/ports/languages.ts`); absent is English. It picks the model, and
+  // a language no model can time is timed sentence by sentence.
+  readonly language?: string | undefined;
   readonly onOmission?: (omission: SubtitleOmission) => void;
   readonly onProgress?: (current: number, total: number) => void;
 }

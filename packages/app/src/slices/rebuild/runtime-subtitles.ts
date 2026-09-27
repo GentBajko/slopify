@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { subtitleModelDir } from "../../kernel/paths.js";
+import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -100,6 +101,7 @@ async function timing(
   const words: SpeakerWord[] = [];
   const omissions: SubtitleOmission[] = [];
   const turns = revisionTurns(snapshot);
+  const language = projectLanguage(snapshot.view.revision.config);
   let offset = 0;
   const total = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   for (const segment of audio) {
@@ -110,7 +112,8 @@ async function timing(
         alignSubtitles({
           audioPath: path,
           text: revisionTranscript(deps, snapshot, kind),
-          cacheDir: subtitleModelDir(deps.paths.dataDir),
+          cacheDir: subtitleModelDir(deps.paths.dataDir, language),
+          ...(language === "en" ? {} : { language }),
           ffmpeg: deps.ffmpeg,
           signal: context.signal,
           onOmission: (value) => omissions.push({ ...value, start: value.start + offset }),
@@ -144,7 +147,7 @@ async function timing(
   }
   if (captionCues(words).length === 0)
     throw new Error(
-      "None of the narration could be matched to the article text, so captions can't be timed. Captions only work for English narration; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
+      "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
     );
   context.signal.throwIfAborted();
   const output = preparedText(
