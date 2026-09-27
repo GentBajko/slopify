@@ -16,6 +16,7 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
+import { RetiredModelRow } from "@/components/retired-models";
 import { ListSkeleton } from "@/library/list-states";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
@@ -328,6 +329,7 @@ export function TemplatesRoute({
                   </div>
                 }
               />
+              <RetiredModelRow kind="template" id={template.id} name={template.name} />
               {keywordsOf === template.id ? (
                 <li className="px-3 pb-3">
                   <TemplateKeywords template={template} />

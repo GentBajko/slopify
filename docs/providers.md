@@ -53,7 +53,9 @@ Settings → Models → **Retired models in use** lists every template, schedule
 project with steps still to run whose model is retired or no longer listed, with the
 suggested replacement (the active model of the same provider whose ID shares the longest
 start). Nothing changes by itself: a run that reaches a retired model stops and says so.
-**Switch to <model>** changes that one choice; **Switch all** does every row it can.
+**Switch to <model>** changes that one choice; **Switch all** does every row it can. The same
+flag and **Switch to <model>** button also show under the template's row in Library →
+Templates and the schedule's row in Library → Schedules.
 Switching a template saves a new version and moves the schedules that ran its latest version
 along; a project gets a new saved version, as Edit project would. A schedule pinned to an
 older template version, or a running project, is listed with what to do instead.
