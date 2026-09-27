@@ -179,7 +179,8 @@ it("holds a group until the next begins, when that comes sooner than half a seco
 it("shows each group whole, with no word lit, when word times are only estimates", () => {
   const ass = shortCaptionsAss(
     [
-      { text: "Привет.", start: 0, end: 0.5 },
+      { text: "Привет,", start: 0, end: 0.3 },
+      { text: "друг.", start: 0.3, end: 0.5 },
       { text: "Как", start: 0.7, end: 0.9 },
       { text: "дела?", start: 0.9, end: 1.2 },
     ],
