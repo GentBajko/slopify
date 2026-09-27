@@ -235,6 +235,10 @@ export const projectHelp = {
     title: "Waiting for Studio",
     body: "The videos and shorts Fill in YouTube Studio added, oldest first, from every project. Each new upload dialog in Studio is filled with the first, which then leaves the list. It survives restarting Slopify; an item waits up to 24 hours, and a new pairing token clears the list. Remove takes an item out without filling it.",
   },
+  "project.free-space": {
+    title: "Free space",
+    body: "Once a project has finished, it can drop the working files it was made from (images, narration parts, subtitle timing, render settings) and keep what gets published: the video, shorts, thumbnail, article, description, document and anything you uploaded. The button says how much space that frees. Changing the project later makes those files again first, which takes time and provider credits. Settings → Storage offers the same for every project.",
+  },
   "project.mark-uploaded": {
     title: "Mark uploaded",
     body: "Records that you uploaded this finished video to YouTube yourself, so it leaves the ready-to-upload lists on Home and here and shows an Uploaded badge. Slopify does not upload anything or check YouTube. Undo takes the mark off.",

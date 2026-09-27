@@ -25,6 +25,7 @@ import {
 import { CheckpointPanel } from "@/project/checkpoint-panel";
 import { confirmationFor } from "@/project/confirmations";
 import { OpenProjectTab } from "@/project/fix-it";
+import { FreeSpaceOffer } from "@/project/free-space";
 import { type MoreAction, ProjectHeader } from "@/project/header";
 import { LiveBuild } from "@/project/live-build";
 import {
@@ -544,6 +545,14 @@ function ProjectWorkspace({
               aside={
                 <>
                   <NextActionPanel state={next} feedback={feedback} />
+                  {summary === undefined ? null : (
+                    <FreeSpaceOffer
+                      projectId={projectId}
+                      title={summary.title}
+                      status={summary.status}
+                      sample={isSample || sample.isPending}
+                    />
+                  )}
                   <div className="flex flex-col gap-6 max-[1180px]:hidden">
                     <RunSteps steps={steps} />
                     <CostSoFar cost={runCost.data} />

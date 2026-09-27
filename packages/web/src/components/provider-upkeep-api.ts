@@ -44,8 +44,10 @@ export async function testKey(
     ),
   );
 }
-export async function checkHealth(api: Api): Promise<HealthReport> {
-  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health`, post));
+// Every provider, or only `provider` (a sign-in fix-it's Check again).
+export async function checkHealth(api: Api, provider?: ProviderId): Promise<HealthReport> {
+  const only = provider === undefined ? "" : `?provider=${encodeURIComponent(provider)}`;
+  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health${only}`, post));
 }
 export async function readCatalogue(api: Api): Promise<CatalogueStatus> {
   return read<CatalogueStatus>(await api.fetch(`${api.origin}/api/providers/catalogue`));

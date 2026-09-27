@@ -1,4 +1,3 @@
-import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { Calendar, CalendarRun } from "@app/slices/schedules/schema.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -6,6 +5,12 @@ import { ArrowDownIcon, ArrowUpIcon, PlusIcon } from "lucide-react";
 import { type DragEvent, type KeyboardEvent, type ReactElement, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
 import { AddToCalendar } from "@/calendar/add-topics";
+import {
+  attentionMeta,
+  type CalendarProject,
+  needingAttention,
+  projectLook,
+} from "@/calendar/attention";
 import {
   byDay,
   type Day,
@@ -27,7 +32,7 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Status, type Tone } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
 import { intents, useIntent } from "@/lib/intents";
 import { cn } from "@/lib/utils";
@@ -41,6 +46,7 @@ import {
   schedulesQuery,
   transferTopic,
 } from "@/schedules/api";
+import { PrepareUpload } from "@/studio/prepare-upload";
 import { templatesQuery } from "@/templates/api";
 
 const weeks = 4;
@@ -49,17 +55,6 @@ type View = "weeks" | "list";
 const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric" });
 const fullDay = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
 const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
-
-const projectTone: Readonly<Record<ProjectState, { readonly tone: Tone; readonly word: string }>> =
-  {
-    running: { tone: "running", word: "Running" },
-    paused: { tone: "waiting", word: "Paused" },
-    pending: { tone: "waiting", word: "Waiting" },
-    failed: { tone: "failed", word: "Failed" },
-    partial: { tone: "info", word: "Done with problems" },
-    done: { tone: "done", word: "Done" },
-    canceled: { tone: "off", word: "Canceled" },
-  };
 
 const viewKey = "slopify.calendar.view";
 
@@ -118,6 +113,7 @@ export function CalendarRoute(): ReactElement {
     [visible],
   );
   const allRuns = visible?.runs ?? [];
+  const attention = needingAttention(visible?.projects ?? []);
 
   const action = useMutation({
     mutationFn: (job: () => Promise<ScheduleReply<unknown>>) => job(),
@@ -249,6 +245,16 @@ export function CalendarRoute(): ReactElement {
       </StatusSlot>
       <Board split="aside">
         <BoardColumn label="Coming weeks">
+          {attention.length === 0 ? null : (
+            <section aria-label="Needs you">
+              <SectionHead title="Needs you" meta={attentionMeta(attention)} />
+              <List label="Needs you">
+                {attention.map((project) => (
+                  <ProjectRow key={project.id} project={project} />
+                ))}
+              </List>
+            </section>
+          )}
           {calendar.isPending ? (
             <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
           ) : view === "weeks" ? (
@@ -309,23 +315,38 @@ export function CalendarRoute(): ReactElement {
               <SectionHead
                 title="Batch queue"
                 meta={`${String(visible.queued.length)} waiting to start`}
+                info="play.queue"
               />
               <List label="Batch queue">
-                {visible.queued.map((item) => (
-                  <ListRow
-                    key={item.projectId}
-                    title={
-                      <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
-                        {item.title}
-                      </Link>
-                    }
-                    actions={
-                      <Status tone={item.state === "active" ? "running" : "off"}>
-                        {item.state === "active" ? "Running now" : "Waiting its turn"}
-                      </Status>
-                    }
-                  />
-                ))}
+                {visible.queued
+                  .toSorted((a, b) => a.position - b.position)
+                  .map((item, index) => {
+                    // Pausing a queued project holds the whole queue, so it says so.
+                    const paused =
+                      visible.projects.find((one) => one.id === item.projectId)?.state === "paused";
+                    return (
+                      <ListRow
+                        key={item.projectId}
+                        title={
+                          <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
+                            {item.title}
+                          </Link>
+                        }
+                        meta={`${String(index + 1)} in line`}
+                        actions={
+                          <Status
+                            tone={paused ? "waiting" : item.state === "active" ? "running" : "off"}
+                          >
+                            {paused
+                              ? "Paused"
+                              : item.state === "active"
+                                ? "Running now"
+                                : "Waiting its turn"}
+                          </Status>
+                        }
+                      />
+                    );
+                  })}
               </List>
             </section>
           ) : null}
@@ -404,7 +425,7 @@ function DayCell({
         />
       ))}
       {(day?.projects ?? []).map((project) => {
-        const state = projectTone[project.state];
+        const look = projectLook(project);
         return (
           <div key={project.id} className="sl-cal-item sl-cal-item--project">
             <Link
@@ -414,7 +435,7 @@ function DayCell({
             >
               {project.title}
             </Link>
-            <Status tone={state.tone}>{state.word}</Status>
+            <Status tone={look.tone}>{look.word}</Status>
           </div>
         );
       })}
@@ -478,6 +499,35 @@ function RunChip({
         <Status tone="off">Queued</Status>
       )}
     </article>
+  );
+}
+
+// A project as a list row: its state in words and, when it asks something of the person or
+// its video is ready, the button that acts on it.
+function ProjectRow({ project }: { readonly project: CalendarProject }): ReactElement {
+  const look = projectLook(project);
+  return (
+    <ListRow
+      title={
+        <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+          {project.title}
+        </Link>
+      }
+      actions={
+        <>
+          <Status tone={look.tone}>{look.word}</Status>
+          {look.action === undefined ? null : look.action.kind === "upload" ? (
+            <PrepareUpload projectId={project.id} ready />
+          ) : (
+            <Button asChild size="small" variant="secondary">
+              <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+                {look.action.label}
+              </Link>
+            </Button>
+          )}
+        </>
+      }
+    />
   );
 }
 
@@ -571,20 +621,9 @@ function ListView({
                 />
               );
             })}
-            {day.projects.map((project) => {
-              const state = projectTone[project.state];
-              return (
-                <ListRow
-                  key={project.id}
-                  title={
-                    <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-                      {project.title}
-                    </Link>
-                  }
-                  actions={<Status tone={state.tone}>{state.word}</Status>}
-                />
-              );
-            })}
+            {day.projects.map((project) => (
+              <ProjectRow key={project.id} project={project} />
+            ))}
           </List>
         </section>
       ))}

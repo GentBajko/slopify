@@ -37,6 +37,7 @@ import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { FilesView } from "@app/slices/storage/files-location.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
+import type { ProjectStorage } from "@app/slices/storage/trim.js";
 import type {
   FillQueueItem,
   StudioExtensionBrowser,
@@ -339,6 +340,13 @@ export async function openFilesFolder(
 ): Promise<{ readonly opened: boolean; readonly path: string }> {
   return read<{ readonly opened: boolean; readonly path: string }>(
     await api.fetch(`${api.origin}/api/storage/files/open`, { method: "POST" }),
+  );
+}
+
+// One project's outputs and working files, and what Keep outputs only would free now.
+export async function readProjectStorage(api: Api, projectId: string): Promise<ProjectStorage> {
+  return read<ProjectStorage>(
+    await api.fetch(`${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}`),
   );
 }
 

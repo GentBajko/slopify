@@ -8,7 +8,6 @@ import { type ReactElement, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
-import { BatchQueue } from "@/components/batch-queue";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, IconButton } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
@@ -27,12 +26,14 @@ import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { limitWaitLine } from "@/project/limit-wait";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
 // Every run ever started, newest first, for the channel picked in the rail. Each row says what
 // the run was made of, when it started and where it stands, with its actions visible on it.
-// Beside the list on a desktop: the counts per state and the video queue.
+// Beside the list on a desktop: the counts per state, and where the video queue is (the
+// calendar, which shows it once for every screen).
 
 type Filter = "all" | "running" | "waiting" | "ready" | "failed";
 
@@ -70,7 +71,10 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
     done: { tone: "done", word: "Done" },
     canceled: { tone: "off", word: "Canceled" },
   };
-  return isWaiting(project) ? { tone: "waiting", word: "Waiting for you" } : words[project.status];
+  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
+  // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
+  const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
+  return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
 }
 
 // "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
@@ -263,7 +267,17 @@ export function ProjectsRoute(): ReactElement {
                   ))}
               </Stats>
             </section>
-            <BatchQueue />
+            <section aria-label="Video queue" className="flex flex-col gap-2">
+              <SectionHead title="Video queue" info="play.queue" />
+              <p className="m-0 text-small text-ink-2">
+                Videos started together, in the order they run, are on the calendar.
+              </p>
+              <div>
+                <Button asChild variant="secondary" size="small">
+                  <Link to="/calendar">Open calendar</Link>
+                </Button>
+              </div>
+            </section>
           </BoardColumn>
         </Board>
       )}

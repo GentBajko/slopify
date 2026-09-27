@@ -48,8 +48,9 @@ runs read the same as local ones (see "The host CLI bridge" in `docker.md`).
 When a CLI says its plan allowance is used up (Claude Code's `usage limit reached|<time>`,
 Codex's "You've hit your usage limit … try again at …", Gemini's daily quota), the call does
 not fail. The reset time is stored per CLI, and every call to that CLI, from any project, waits
-until two minutes after it; the project page's status line says "Waiting for Codex limits
-(resets at 14:00)". Without a stated time it checks again every 30 minutes. Other providers are
+until two minutes after it; the project page, Home's Running now, the Projects row and the
+calendar say "Waiting for Codex limits (resets at 14:00)" (the project listing and the calendar
+carry the waits as `limitWaits`). Without a stated time it checks again every 30 minutes. Other providers are
 not held up, and a waiting call holds no slot in the provider queue.
 
 The wait survives a restart: a stage that was waiting when Slopify stopped is resumed at the

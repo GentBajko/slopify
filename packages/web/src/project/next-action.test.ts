@@ -108,7 +108,7 @@ describe("the next action", () => {
     expect(next?.section).toBe("article");
   });
 
-  it("gives a signed-out CLI's command and still retries", () => {
+  it("offers a signed-out CLI's sign-in command, whose Check again retries the step", () => {
     const next = nextActionFor(
       input({
         project: { status: "failed", config },
@@ -117,7 +117,14 @@ describe("the next action", () => {
     );
     expect(next?.title).toBe("Codex is signed out, so images stopped.");
     expect(next?.why).toContain("codex login");
-    expect(next?.action?.intent).toEqual({ kind: "retry", stage: "images" });
+    expect(next?.action).toEqual({
+      label: "Copy sign-in command",
+      intent: {
+        kind: "sign-in",
+        stage: "images",
+        fix: { kind: "sign-in", label: "Sign in to Codex", cli: "codex", command: "codex login" },
+      },
+    });
   });
 
   it("softens a refused image prompt", () => {
@@ -218,8 +225,12 @@ describe("the next action", () => {
         ],
       }),
     );
-    expect(next).toMatchObject({ situation: "waiting", title: "Waiting for your Codex limits." });
-    expect(next?.why).toContain("14:05");
+    // The roadmap's words, the same ones the lists show.
+    expect(next).toMatchObject({
+      situation: "waiting",
+      title: "Waiting for Codex limits (resets at 14:05).",
+    });
+    expect(next?.why).toContain("carries on by itself");
     expect(next?.action).toBeUndefined();
   });
 

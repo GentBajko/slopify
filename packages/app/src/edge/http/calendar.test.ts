@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
+import { writeSampleRecord } from "../../slices/onboarding/state.js";
 import { startFixture } from "../../slices/play-drafts/draft.fake.js";
 import { templateById } from "../../slices/project-templates/repo.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
@@ -136,6 +137,86 @@ it("lists every coming run with its topic, and projects and batch items in the r
     // Four weeks from now when no range is given.
     const fallback = calendarSchema.parse(await (await routes.request("/")).json());
     expect(fallback.to).toBe("2026-10-10T00:00:00.000Z");
+  } finally {
+    f.h.close();
+  }
+});
+
+it("says which projects need the person, which are ready to upload and which wait for limits", () => {
+  const f = fixture();
+  try {
+    const db = f.h.deps.db;
+    const finished = "2026-09-11T05:00:00.000Z";
+    f.project("Broken", "failed", finished);
+    const paused = f.project("On hold", "running", null);
+    db.prepare("INSERT INTO project_controls (project_id, paused) VALUES (?, 1)").run(paused);
+    f.project("Ready", "done", finished);
+    const uploaded = f.project("Uploaded", "done", finished);
+    db.prepare("INSERT INTO project_uploads (project_id, uploaded_at) VALUES (?, ?)").run(
+      uploaded,
+      finished,
+    );
+    const audioOnly = f.project("Audio only", "done", finished);
+    db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({ sources: { video: "off" } }),
+      audioOnly,
+    );
+    const sample = f.project("Sample", "done", finished);
+    writeSampleRecord(db, { projectId: sample, seededAt: finished }, "library");
+    // Held at a checkpoint on its current revision, and one with a failed automatic review.
+    const held = f.project("Held", "pending", null);
+    const flagged = f.project("Flagged", "done", finished);
+    db.exec("PRAGMA foreign_keys=OFF");
+    for (const id of [held, flagged])
+      db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+        id,
+        `rev-${id}`,
+      );
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,?,'audio','work',?,'held',?)`,
+    ).run(held, `rev-${held}`, "cp-1", "a".repeat(64), finished);
+    db.prepare(
+      `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,created_at)
+       VALUES ('v-1',?,?,'article','article','f','r1',0,'[]','flagged',1,?)`,
+    ).run(flagged, `rev-${flagged}`, finished);
+    db.exec("PRAGMA foreign_keys=ON");
+    const waiting = f.project("Waiting", "running", null);
+    db.prepare(
+      "INSERT INTO plan_limit_waits (account, resets_at, retry_at, detected_at) VALUES ('codex', ?, ?, ?)",
+    ).run("2026-09-12T14:00:00.000Z", "2026-09-12T14:02:00.000Z", finished);
+    db.prepare(
+      "INSERT INTO plan_limit_waiters (project_id, stage, account, since) VALUES (?, 'article', 'codex', ?)",
+    ).run(waiting, finished);
+
+    const result = calendarRange(
+      f.deps,
+      new Date("2026-09-11T00:00:00.000Z"),
+      new Date("2026-09-15T00:00:00.000Z"),
+    );
+    if (!result.ok) throw new Error("calendar refused");
+    const parsed = calendarSchema.parse(result.value);
+    const byTitle = new Map(parsed.projects.map((project) => [project.title, project]));
+    expect(byTitle.get("Broken")?.needs).toBe("failed");
+    expect(byTitle.get("On hold")?.needs).toBe("paused");
+    expect(byTitle.get("Held")?.needs).toBe("review");
+    expect(byTitle.get("Flagged")?.needs).toBe("review");
+    expect(byTitle.get("Ready")?.needs).toBeUndefined();
+    expect(
+      parsed.projects
+        .filter((project) => project.readyToUpload === true)
+        .map((project) => project.title)
+        .sort(),
+    ).toEqual(["Flagged", "Ready"]);
+    expect(byTitle.get("Waiting")?.limitWaits).toEqual([
+      {
+        name: "Codex",
+        stage: "article",
+        resetsAt: "2026-09-12T14:00:00.000Z",
+        retryAt: "2026-09-12T14:02:00.000Z",
+      },
+    ]);
+    expect(byTitle.get("Ready")?.limitWaits).toBeUndefined();
   } finally {
     f.h.close();
   }

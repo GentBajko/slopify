@@ -15,6 +15,7 @@ import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
 import { runCostQuery } from "@/queries";
+import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { stageNames } from "./summary.js";
 
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
@@ -190,14 +191,10 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
 
 // What the status line says while a stage waits for a CLI's plan to reset.
 export function limitWaitMessage(waits: readonly LimitWait[]): string | undefined {
-  const first = waits[0];
-  if (first === undefined) return undefined;
-  const names = [...new Set(waits.map((wait) => wait.name))].join(" and ");
-  const when =
-    first.resetsAt === null
-      ? `checking again at ${clock(first.retryAt)}`
-      : `resets at ${clock(first.resetsAt)}`;
-  return `Waiting for ${names} limits (${when}). The run carries on by itself; work that does not need ${names} keeps going.`;
+  const line = limitWaitLine(waits, clock);
+  if (line === undefined) return undefined;
+  const names = limitNames(waits);
+  return `${line}. The run carries on by itself; work that does not need ${names} keeps going.`;
 }
 
 // "CLI calls: $0 on your plan · ~$1.20 via API".
