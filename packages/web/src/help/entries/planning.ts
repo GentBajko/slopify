@@ -52,6 +52,10 @@ export const planningHelp = {
     title: "Topics",
     body: "Each run takes the first topic, starts one project with it and removes it from the list. The schedule completes when the list is empty, unless topic generation is on. With no topics and generation off, every run uses the template as saved. Up to 500 topics.",
   },
+  "planning.schedule.inline-topics": {
+    title: "Queued topics",
+    body: "Change the queue right here: type a topic and press Enter to add it, edit one in its field and press Enter to rename it, use the arrows to move it and the cross to remove it. Each change saves at once and changes only the queue; Undo on the notice puts it back. For a topic's own keyword values, press Edit.",
+  },
   "planning.schedule.topic-format": {
     title: "How to write the topics",
     body: "Three ways to write the same list; switching keeps everything. One per line fills only the topic keyword. Table adds a column for each keyword a topic sets itself, such as its word count. YAML / JSON holds the same as text, for pasting or keeping in a file.",

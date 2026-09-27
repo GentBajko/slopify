@@ -29,6 +29,7 @@ import {
 } from "@/schedules/api";
 import { ScheduleForm } from "@/schedules/form";
 import { TopicGenerationPanel } from "@/schedules/held-topics";
+import { InlineTopics } from "@/schedules/inline-topics";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
 
@@ -567,6 +568,7 @@ function ScheduleDetail({
           </div>
         ))}
       </dl>
+      {editable ? <InlineTopics schedule={schedule} /> : null}
       <TopicGenerationPanel schedule={schedule} />
       <Rule className="my-6" />
       <SectionHead as="h3" title="Run history" />
