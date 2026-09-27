@@ -189,6 +189,20 @@ describe("multi-voice narration recipes", () => {
     );
   });
 
+  it("keeps an edited caption's speaker in the manual cues, and nothing extra without one", () => {
+    const cue = { id: "one", text: "Welcome.", start: 0, end: 1 };
+    const values = (cues: RevisionContent["subtitleCues"]) => {
+      const recipe = plan(voiced, { ...scripted, subtitleCues: cues }).find(
+        (one) => one.key === "subtitles:cues",
+      );
+      return recipe?.input.kind === "local" ? (recipe.input.values as unknown[])[1] : undefined;
+    };
+    expect(values({ audioFingerprint: "f", cues: [cue] })).toEqual([cue]);
+    expect(values({ audioFingerprint: "f", cues: [{ ...cue, speaker: "alex" }] })).toEqual([
+      { ...cue, speaker: "alex" },
+    ]);
+  });
+
   it("leaves a Narration-format run's recipes exactly as they were", () => {
     const without = plan(narrated);
     expect(plan({ ...narrated, voices: undefined })).toEqual(without);

@@ -49,6 +49,28 @@ export function attributeWords(
   });
 }
 
+// Who speaks a caption cue edited by hand: the speaker whose words fill most of its time, or,
+// for a cue moved into a pause, the speaker of the nearest word. Undefined when no word has a
+// speaker (a one-voice run).
+export function cueSpeaker(
+  cue: { readonly start: number; readonly end: number },
+  words: readonly Pick<SpeakerWord, "start" | "end" | "speaker">[],
+): string | undefined {
+  const overlap = new Map<string, number>();
+  let nearest: { speaker: string; distance: number } | undefined;
+  for (const word of words) {
+    if (word.speaker === undefined) continue;
+    const shared = Math.min(cue.end, word.end) - Math.max(cue.start, word.start);
+    if (shared > 0) overlap.set(word.speaker, (overlap.get(word.speaker) ?? 0) + shared);
+    const distance = Math.max(0, word.start - cue.end, cue.start - word.end);
+    if (nearest === undefined || distance < nearest.distance)
+      nearest = { speaker: word.speaker, distance };
+  }
+  let best: [string, number] | undefined;
+  for (const entry of overlap) if (best === undefined || entry[1] > best[1]) best = entry;
+  return best?.[0] ?? nearest?.speaker;
+}
+
 // Where each turn starts on the final timeline: its first timed word.
 export function turnStarts(words: readonly SpeakerWord[]): ReadonlyMap<number, number> {
   const starts = new Map<number, number>();

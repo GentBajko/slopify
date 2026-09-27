@@ -123,7 +123,14 @@ export function exportRecipes(
             kind: "local",
             version: 1,
             operation: "manual-cues-v1",
-            values: [cues.audioFingerprint, cues.cues.map((cue) => ({ ...cue }))],
+            // A cue's speaker only when it has one, so captions edited before speakers were
+            // kept (and every one-voice run's) keep their fingerprint.
+            values: [
+              cues.audioFingerprint,
+              cues.cues.map(({ speaker, ...cue }) =>
+                speaker === undefined ? { ...cue } : { ...cue, speaker },
+              ),
+            ],
           },
           audio.keys,
         );
