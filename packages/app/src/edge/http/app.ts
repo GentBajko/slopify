@@ -68,6 +68,11 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // The network for Settings → Providers' Test and Check all. Handed in so a test never
+  // reaches a real provider.
+  readonly fetch?: typeof globalThis.fetch;
+  // Asks a CLI on this computer whether it is signed in, for the health check.
+  readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;

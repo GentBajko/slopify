@@ -24,6 +24,7 @@ import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { limitRequestTimes } from "./edge/http/timeouts.js";
 import { openFolder } from "./edge/open-folder.js";
+import { readHostLogin } from "./host-cli/status.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
 import type { Clock } from "./kernel/clock.js";
@@ -121,6 +122,9 @@ export interface BootOptions {
   readonly prefetchSubtitleModel?: boolean;
   // A verified model shipped with the install, copied instead of downloaded.
   readonly subtitleModelSeed?: string | undefined;
+  // Check the published model catalogue and OpenRouter's live list at start and once a day.
+  // The CLI turns it on; tests boot without it so they never reach the network.
+  readonly refreshModels?: boolean;
 }
 
 export interface ScheduleTickLifecycle {
@@ -457,6 +461,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
+      fetch: globalThis.fetch,
+      ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
     const server = await listen(app, config, log);
     const queueTimer = setInterval(() => {
@@ -476,6 +482,22 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     void scheduleTicks.tick();
     // Once a minute is plenty for a daily slot; the decision itself (slices/backups/schedule)
     // holds the first run back for a couple of minutes after a start.
+    // The model catalogue keeps itself current: once at start, then whenever a day has passed
+    // since the last check (looked at hourly, so a laptop that slept catches up).
+    const syncModels = (): void => {
+      if (!options.refreshModels || !catalogue.sync) return;
+      catalogue.sync().then(
+        (status) => {
+          if (status.warning !== null)
+            log.write("warn", "model-catalog.sync", { detail: status.warning });
+        },
+        (error: unknown) => log.write("warn", "model-catalog.sync", { detail: causedBy(error) }),
+      );
+    };
+    syncModels();
+    const modelTimer = setInterval(() => {
+      if (catalogue.syncDue?.(Date.now()) === true) syncModels();
+    }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {
         log.write("error", "backups.tick", { detail: causedBy(error) });
@@ -509,6 +531,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
         clearInterval(backupTimer);
+        clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         // A backup being written is stopped and its partial file removed, not waited for.
