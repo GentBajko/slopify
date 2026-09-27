@@ -157,7 +157,7 @@ describe("providerStatuses", () => {
       "espeak-ng",
       "gemini",
       "sh pico2wave",
-      "sh piper",
+      // Piper is asked only when SLOPIFY_PIPER_VOICES names a voice model.
     ]);
   });
 

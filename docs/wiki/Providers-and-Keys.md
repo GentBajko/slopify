@@ -159,7 +159,7 @@ Slopify looks for a speech program each time and uses the best one it finds:
 |---|---|
 | macOS | macOS voices (the built-in `say`) |
 | Windows | Windows voices (System.Speech, through PowerShell). Add voices in Windows Settings → Time & language → Speech. |
-| Linux | Piper, SVOX Pico, eSpeak NG or eSpeak, best first. Install one, for example `sudo apt install espeak-ng`, `sudo pacman -S espeak-ng` or `sudo dnf install espeak-ng`. Piper needs its voice models listed in `SLOPIFY_PIPER_VOICES`. |
+| Linux | Piper, SVOX Pico, eSpeak NG or eSpeak, best first. Install one, for example `sudo apt install espeak-ng`, `sudo pacman -S espeak-ng` or `sudo dnf install espeak-ng`. Piper needs its voice models listed in `SLOPIFY_PIPER_VOICES`, and counts only when `piper --help` shows Piper's own options (the mouse settings app also called piper is left out). |
 | Docker | The image includes eSpeak NG. If it is missing, update the image. |
 
 Pick **System voice** in the **Speech** list to see what was found: "Found *engine*. Narration with it is free; a keyed voice (ElevenLabs, OpenAI) sounds better.", each program with its number of voices, and **Add a system voice**, which opens Settings → **Voices**. When nothing is found, it says what to install on your system. On Play it is offered as a TTS provider like the others, greyed out as **Speech Program Missing** when nothing is found.

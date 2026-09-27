@@ -20,7 +20,10 @@ to build on.
   from `GetInstalledVoices`). The text, voice and file reach the script in environment
   variables, never inside it.
 - **Linux**: Piper (only with voice models listed in `SLOPIFY_PIPER_VOICES`, `.onnx` paths
-  separated by `:`), SVOX Pico (`pico2wave`), eSpeak NG or eSpeak, best first.
+  separated by `:`), SVOX Pico (`pico2wave`), eSpeak NG or eSpeak, best first. A `piper` on
+  PATH counts only when `piper --help` names `--model` and an output option (`--output_file`,
+  `--output-file`, `--output_dir` or `--output_raw`), or `piper --version` names piper-tts:
+  libratbag's mouse settings app is also called `piper`.
 
 Its "models" are the programs found and its voices are theirs; each request speaks the text from
 a file into a WAV/AIFF and converts it to mp3 with the app's ffmpeg. It costs nothing, has no row

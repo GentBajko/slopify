@@ -110,13 +110,15 @@ export async function detectSpeech(given: SpeechProbe, host: SpeechHost): Promis
           issue: `Windows' built-in speech didn't answer through PowerShell, or no voice is installed. Add a voice in Windows Settings → Time & language → Speech, ${noSpeechFix}`,
         };
   }
+  const piperModels = piperVoices(host.env);
   const [piper, pico, espeakNg, espeak] = await Promise.all([
-    onPath(probe, "piper"),
+    // Without a voice model Piper can't speak, so it isn't even asked.
+    piperModels.length > 0 ? isPiperTts(probe) : Promise.resolve(false),
     onPath(probe, "pico2wave"),
     probe("espeak-ng", ["--voices"], probeTimeoutMs),
     probe("espeak", ["--voices"], probeTimeoutMs),
   ]);
-  if (piper) add("piper", piperVoices(host.env));
+  if (piper) add("piper", piperModels);
   if (pico) add("pico2wave", picoVoices);
   if (espeakNg.ran) add("espeak-ng", parseEspeakVoices(espeakNg.stdout));
   if (espeak.ran) add("espeak", parseEspeakVoices(espeak.stdout));
@@ -134,6 +136,27 @@ async function onPath(probe: SpeechProbe, binary: string): Promise<boolean> {
   // `command -v` answers for a program on PATH without running it: Pico and Piper have no
   // harmless flag that exits cleanly.
   return (await probe("sh", ["-c", 'command -v "$1"', "sh", binary], probeTimeoutMs)).ran;
+}
+
+// `piper` on PATH is not always Piper the voice engine: libratbag's mouse settings app has the
+// same name (/usr/bin/piper on many desktops). The engine is told apart by its help, which names
+// --model and an output option (the C++ build prints it on stderr, hence 2>&1), or failing that
+// by a version line that names piper-tts. Anything else, or no answer, is not Piper.
+async function isPiperTts(probe: SpeechProbe): Promise<boolean> {
+  const ask = (flag: string) =>
+    probe("sh", ["-c", '"$1" "$2" 2>&1; exit 0', "sh", "piper", flag], probeTimeoutMs);
+  const help = await ask("--help");
+  if (help.ran && isPiperTtsHelp(help.stdout)) return true;
+  const version = await ask("--version");
+  return version.ran && isPiperTtsVersion(version.stdout);
+}
+
+export function isPiperTtsHelp(text: string): boolean {
+  return /--model\b/.test(text) && /--output[-_](?:file|dir|raw)\b/.test(text);
+}
+
+export function isPiperTtsVersion(text: string): boolean {
+  return /\bpiper[-_ ]tts\b/i.test(text);
 }
 
 // Piper needs a voice model file; SLOPIFY_PIPER_VOICES lists them (.onnx paths, separated like

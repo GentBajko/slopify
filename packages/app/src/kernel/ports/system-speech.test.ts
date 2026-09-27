@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   defaultSpeechVoice,
   detectSpeech,
+  isPiperTtsHelp,
+  isPiperTtsVersion,
   parseEspeakVoices,
   parseSayVoices,
   parseWindowsVoices,
@@ -70,6 +72,57 @@ describe("the system voice's speech programs", () => {
     ).toEqual([
       { id: "/v/en_US-lessac-medium.onnx", name: "en_US-lessac-medium", language: "en_US" },
     ]);
+  });
+
+  it("takes a piper on PATH for the voice engine only when its help or version says so", async () => {
+    const env = { SLOPIFY_PIPER_VOICES: "/v/en_US-lessac-medium.onnx" };
+    // What each `piper <flag>` prints, through the probe's `sh -c`.
+    const piper =
+      (help: string, version = ""): SpeechProbe =>
+      (binary, args) =>
+        Promise.resolve(
+          binary === "sh" && args[3] === "piper"
+            ? { ran: true, stdout: args[4] === "--help" ? help : version }
+            : { ran: false, stdout: "" },
+        );
+    // libratbag's mouse settings app, /usr/bin/piper on many desktops.
+    const mouse = await detectSpeech(
+      piper(
+        "Usage:\n  piper [OPTION…]\n\nHelp Options:\n  -h, --help                 Show help options\n",
+      ),
+      { platform: "linux", env },
+    );
+    expect(mouse.engines).toEqual([]);
+    expect(mouse.issue).toMatch(/No speech program was found/);
+    const tts = await detectSpeech(
+      piper(
+        "usage: piper [options]\n\n   -m  FILE  --model          FILE  path to onnx model file\n   -f  FILE  --output_file    FILE  path to output WAV file\n",
+      ),
+      { platform: "linux", env },
+    );
+    expect(tts.engines.map((engine) => engine.id)).toEqual(["piper"]);
+    const byVersion = await detectSpeech(piper("", "piper-tts 1.3.0\n"), {
+      platform: "linux",
+      env,
+    });
+    expect(byVersion.engines.map((engine) => engine.id)).toEqual(["piper"]);
+    // No voice model: Piper isn't asked at all.
+    const asked: string[] = [];
+    await detectSpeech(
+      (binary, args) => {
+        asked.push([binary, ...args].join(" "));
+        return Promise.resolve({ ran: false, stdout: "" });
+      },
+      { platform: "linux", env: {} },
+    );
+    expect(asked.some((line) => line.includes("piper"))).toBe(false);
+    expect(
+      isPiperTtsHelp("  -m MODEL, --model MODEL\n  -f OUTPUT_FILE, --output-file OUTPUT_FILE"),
+    ).toBe(true);
+    expect(isPiperTtsHelp("Usage:\n  piper [OPTION…]\n\nHelp Options:\n  -h, --help …")).toBe(
+      false,
+    );
+    expect(isPiperTtsVersion("piper 0.8\n")).toBe(false);
   });
 
   it("lists every program found on Linux, best first", async () => {
