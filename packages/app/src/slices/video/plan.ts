@@ -128,7 +128,23 @@ export interface PlanEdit {
   // Moving clips shown in place of the image at the same place in `images`: uploaded clips
   // and animated images.
   readonly clips?: readonly (VideoSource | undefined)[] | undefined;
+  // "Show tables and figures on screen": each card, shown still from `start` to `end` (seconds
+  // into the video, where its description is spoken); the images take turns around them.
+  readonly figures?: readonly FigureShot[] | undefined;
 }
+
+export interface FigureShot {
+  readonly path: string;
+  readonly start: number;
+  readonly end: number;
+}
+
+// ceiling: the owner's eye. A card comes up a moment before its description starts and stays
+// a moment after it ends; a gap between two cards, or before the first or after the last,
+// shorter than a second is given to the card rather than flashing an image.
+export const figureLeadSeconds = 0.3;
+export const figureTailSeconds = 0.3;
+const figureGapSeconds = 1;
 
 export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
@@ -149,17 +165,23 @@ export function planRender(input: PlanInput): RenderPlan {
   const totalFrames = Math.max(1, Math.round(totalSeconds * fps));
   const edit = input.edit;
   const narration = input.body === undefined ? undefined : edit?.narration;
-  const lengths =
+  const lengthsFor = (from: number, frameCount: number): readonly number[] =>
     narration === undefined
-      ? everyLengths(Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames)
+      ? everyLengths(Math.max(1, Math.round(input.imageSeconds * fps)), frameCount)
       : narrationShotFrames({
-          totalFrames,
+          totalFrames: frameCount,
           fps,
           imageSeconds: input.imageSeconds,
-          cutPoints: narration.cutPoints,
-          chapterStarts: narration.chapterStarts,
+          cutPoints: narration.cutPoints.map((point) => point - from / fps),
+          chapterStarts: narration.chapterStarts
+            .map((start) => start - from / fps)
+            .filter((start) => start >= 0 && start < frameCount / fps),
         });
-  const planned = shots(input, lengths);
+  const figures = figureFrames(edit?.figures ?? [], totalFrames);
+  const planned =
+    figures.length === 0
+      ? shots(input, lengthsFor(0, totalFrames))
+      : aroundFigures(input, figures, totalFrames, lengthsFor);
   const transition = edit?.transition;
   const cards =
     edit?.cards === undefined
@@ -328,8 +350,10 @@ function everyLengths(each: number, totalFrames: number): readonly number[] {
 function shots(
   input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent" | "edit">,
   lengths: readonly number[],
+  first = 0,
 ): readonly Shot[] {
-  return lengths.map((frames, at) => {
+  return lengths.map((frames, place) => {
+    const at = first + place;
     const index = at % input.images.length;
     const clip = input.edit?.clips?.[index];
     return clip === undefined
@@ -340,4 +364,69 @@ function shots(
         }
       : { source: clip, frames, motion: { kind: "still" } };
   });
+}
+
+interface FigureFrames {
+  readonly path: string;
+  readonly startFrame: number;
+  readonly frames: number;
+}
+
+// The cards on the frame grid, in order, with the lead-in and tail added, a card that would
+// overlap the one before it starting where that one ends, and gaps too short for an image
+// given to the card beside them.
+export function figureFrames(
+  figures: readonly FigureShot[],
+  totalFrames: number,
+): readonly FigureFrames[] {
+  const gap = Math.round(figureGapSeconds * fps);
+  const placed: { path: string; from: number; to: number }[] = [];
+  for (const figure of [...figures].toSorted((a, b) => a.start - b.start)) {
+    const previous = placed.at(-1);
+    const from = Math.max(
+      previous?.to ?? 0,
+      Math.round(Math.max(0, figure.start - figureLeadSeconds) * fps),
+    );
+    const to = Math.min(totalFrames, Math.round((figure.end + figureTailSeconds) * fps));
+    if (to - from < 1) continue;
+    if (previous !== undefined && from - previous.to < gap) previous.to = from;
+    placed.push({ path: figure.path, from, to });
+  }
+  const first = placed[0];
+  if (first !== undefined && first.from < gap) first.from = 0;
+  const last = placed.at(-1);
+  if (last !== undefined && totalFrames - last.to < gap) last.to = totalFrames;
+  return placed.map((one) => ({ path: one.path, startFrame: one.from, frames: one.to - one.from }));
+}
+
+// The images take turns in the stretches between the cards, laid as they would be over a
+// whole video of that length, and keep counting across them so no image or motion repeats
+// where a card interrupts. Each card is shown still, whole.
+function aroundFigures(
+  input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent" | "edit">,
+  figures: readonly FigureFrames[],
+  totalFrames: number,
+  lengthsFor: (from: number, frames: number) => readonly number[],
+): readonly Shot[] {
+  const out: Shot[] = [];
+  let cursor = 0;
+  let slot = 0;
+  const stretch = (to: number): void => {
+    if (to <= cursor) return;
+    const lengths = lengthsFor(cursor, to - cursor);
+    out.push(...shots(input, lengths, slot));
+    slot += lengths.length;
+    cursor = to;
+  };
+  for (const figure of figures) {
+    stretch(figure.startFrame);
+    out.push({
+      source: { kind: "image", path: figure.path },
+      frames: figure.frames,
+      motion: { kind: "still" },
+    });
+    cursor = figure.startFrame + figure.frames;
+  }
+  stretch(totalFrames);
+  return out;
 }

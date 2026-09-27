@@ -1,15 +1,19 @@
+import { basename } from "node:path";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
+import type { LlmImage, Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { spokenPassage } from "../narration/describe.js";
 import { observeNarration } from "../narration/live.js";
 import { validatePreparation } from "../narration/preparation.js";
 import { prepareRequests } from "../narration/steering.js";
 import { chaptersFrom } from "../research/planner.js";
 import { sourcedAnswer } from "../research/synthesis.js";
+import { imageReviewers } from "../reviews/model.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
@@ -20,6 +24,7 @@ import { parseScript } from "../voices/script.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
+import { articlePicture } from "./runtime-pictures.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
 import { clearSoftening, softenedPrompt, softeningRequested, softenMessages } from "./soften.js";
@@ -46,6 +51,8 @@ export async function executeProviderRecipe(
   const input = piece.input;
   const wrapped = providers.forPiece(piece.id);
   if (input.kind === "llm") {
+    // A described figure's own picture, when the project has it and the model can look.
+    const picture = describedPicture(deps, context, input);
     const answer =
       piece.key === "article:body"
         ? await executeArticleRequests(deps, context, providers, piece)
@@ -54,7 +61,8 @@ export async function executeProviderRecipe(
             model: input.model,
             ...(input.thinking === null ? {} : { thinking: input.thinking }),
             thinkingConfig: input.thinkingConfig,
-            messages: input.messages,
+            messages: picture === undefined ? input.messages : withPicture(input.messages),
+            ...(picture === undefined ? {} : { images: [picture] }),
             documents: input.documents,
             webSearch: input.webSearch,
             previewLabel: piece.key,
@@ -251,6 +259,10 @@ async function softenIfAsked(
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
   if (answer.text.trim() === "")
     return "The AI model sent back an empty answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+  if (piece.input.kind === "llm" && piece.input.describe !== undefined)
+    return spokenPassage(answer.text) === ""
+      ? "The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project, or turn off Describe tables and figures there."
+      : undefined;
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -286,6 +298,11 @@ async function publishText(
       cues: checked.cues,
       logicalFingerprint: piece.logicalFingerprint ?? piece.fingerprint,
     });
+    return;
+  }
+  if (piece.input.kind === "llm" && piece.input.describe !== undefined) {
+    // The passage the narration says, as it says it; nothing to download.
+    await publishResult(deps, context, piece, [], { text: spokenPassage(answer.text) });
     return;
   }
   if (piece.key === "article:body") {
@@ -413,4 +430,31 @@ function checkPreparation(
   );
   const prepared = prepareRequests(source, checked.cues, model?.tts.maxCharacters ?? 4000);
   return prepared.ok ? undefined : prepared.reason;
+}
+
+// A described figure's own picture (`runtime-pictures.ts`), sent only to a text provider that
+// looks at pictures (`reviews/model.ts`). Otherwise the figure is described from its caption
+// and alt text alone.
+function describedPicture(
+  deps: RevisionDeps,
+  context: StageContext,
+  input: Extract<WorkPiece["input"], { kind: "llm" }>,
+): LlmImage | undefined {
+  const named = input.describe?.image;
+  if (named === undefined || !imageReviewers.includes(input.provider)) return undefined;
+  const view = executionView(deps, context.work.projectId, context.work.revisionId);
+  const path = view === undefined ? undefined : articlePicture(deps, view, named);
+  return path === undefined ? undefined : { path, name: basename(path) };
+}
+
+function withPicture(messages: readonly Message[]): readonly Message[] {
+  const last = messages.findLastIndex((message) => message.role === "user");
+  return messages.map((message, index) =>
+    index === last
+      ? {
+          ...message,
+          content: `${message.content}\n\nThe picture itself is attached: look at it before you answer.`,
+        }
+      : message,
+  );
 }

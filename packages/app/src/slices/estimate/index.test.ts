@@ -34,6 +34,42 @@ const draft: RunDraft = {
   edgeSilenceSeconds: 0,
 };
 describe("cost planning", () => {
+  it("adds one text call per table, figure, equation or code block described", () => {
+    const described = {
+      ...draft,
+      llm: { provider: "codex", model: "test" },
+      audio: { provider: "inworld", model: "inworld-tts-2", voice: "voice", describeFigures: true },
+      provided: {
+        article: "Intro.\n\n| a |\n|---|\n| 1 |\n\n![Map](map.png)\n\n```js\nx()\n```\n",
+      },
+    } satisfies RunDraft;
+    const row = estimateRun(described, {}, 1500, catalogue).rows.find(
+      (one) => one.stage === "Narration descriptions",
+    );
+    expect(row?.detail).toContain("3 LLM calls");
+    expect(
+      estimateRun(
+        { ...described, audio: { ...described.audio, skipCode: true } },
+        {},
+        1500,
+        catalogue,
+      ).rows.find((one) => one.stage === "Narration descriptions")?.detail,
+    ).toContain("2 LLM calls");
+    const generated = estimateRun(
+      { ...described, sources: { ...described.sources, article: "generate" }, articlePrompt: "x" },
+      { article: "x" },
+      1500,
+      catalogue,
+    );
+    expect(generated.rows.find((one) => one.stage === "Narration descriptions")?.low).toBeNull();
+    const { describeFigures: _off, ...plain } = described.audio;
+    expect(
+      estimateRun({ ...described, audio: plain }, {}, 1500, catalogue).rows.some(
+        (one) => one.stage === "Narration descriptions",
+      ),
+    ).toBe(false);
+  });
+
   it("counts preparation groups using the shared LLM and prices CLI calls on the plan", () => {
     const selected = {
       ...draft,

@@ -22,7 +22,10 @@ export function reservationKey(recipe: ResolvedWorkRecipe, view: RevisionView): 
       ? `audio:${recipe.input.segment}:future`
       : recipe.input.kind === "llm" && recipe.input.preparation
         ? `narration:prepare:${recipe.input.preparation.segment}:future`
-        : key;
+        : (recipe.input.kind === "llm" && recipe.input.describe) ||
+            recipe.key.startsWith("figure:card:")
+          ? "narration:describe:future"
+          : key;
   return view.revision.fingerprints[future] === undefined ? key : future;
 }
 

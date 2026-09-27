@@ -17,6 +17,7 @@ import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
+import { ShowFiguresToggle } from "./describe-figures.js";
 import { PlayLoudness } from "./loudness";
 import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
@@ -328,6 +329,12 @@ export function VideoExtras({
 >) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
+      {form.sources.audio === "generate" && form.audio.describeFigures === true ? (
+        <ShowFiguresToggle
+          value={form.showFigures}
+          onChange={(showFigures) => update({ showFigures })}
+        />
+      ) : null}
       <div>
         <YoutubeDescription
           enabled={form.youtubeDescription === true}

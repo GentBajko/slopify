@@ -17,6 +17,7 @@ import { channelQuery, defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { ChunkingControl } from "@/play/chunking";
+import { DescribeFiguresToggle } from "@/play/describe-figures";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { PronunciationGlossary } from "@/play/pronunciation-glossary";
@@ -168,6 +169,7 @@ export function RevisionProviders({
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
     usesNarrationPreparation(config) ||
+    (config.sources.audio === "generate" && config.audio?.describeFigures === true) ||
     config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||
@@ -270,6 +272,26 @@ export function RevisionProviders({
             }
           />
           <NarrationAliasesToggle {...aliases} />
+          <DescribeFiguresToggle
+            tip="project.edit.describe-figures"
+            value={audio.describeFigures}
+            skipCode={audio.skipCode}
+            onChange={({ describeFigures, skipCode }) => {
+              // Stored only when on, so turning it off again plans what the project had.
+              const { describeFigures: _on, skipCode: _code, ...rest } = audio;
+              onChange({
+                ...edit,
+                config: {
+                  ...config,
+                  audio: {
+                    ...rest,
+                    ...(describeFigures ? { describeFigures } : {}),
+                    ...(describeFigures && skipCode ? { skipCode } : {}),
+                  },
+                },
+              });
+            }}
+          />
           <section aria-label="Speakers" className="col-span-full border-t border-line pt-3">
             <h3 className="mb-2 text-small font-semibold">Speakers</h3>
             <SpeakersEditor

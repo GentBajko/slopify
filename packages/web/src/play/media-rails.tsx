@@ -9,6 +9,7 @@ import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { SpeakersEditor, voiceFormatLabel } from "@/voices/speakers-editor";
+import { DescribeFiguresToggle } from "./describe-figures.js";
 import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
@@ -182,6 +183,11 @@ export function AudioRail({
                   onChange={(useNarrationAliases) =>
                     update({ audio: { ...form.audio, useNarrationAliases } })
                   }
+                />
+                <DescribeFiguresToggle
+                  value={form.audio.describeFigures}
+                  skipCode={form.audio.skipCode}
+                  onChange={(next) => update({ audio: { ...form.audio, ...next } })}
                 />
               </div>
             </details>

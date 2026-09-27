@@ -38,6 +38,9 @@ export const outputRoles = [
   "short_video",
   // An image of the slideshow brought to life by an image-to-video model (Animate images).
   "animated_image",
+  // "Show tables and figures on screen": a table, figure, equation or code block of the
+  // article drawn as a card, in the video's format (and upright for Shorts).
+  "figure_card",
   // The Images stage's establishing image: made or uploaded first, drawn from by the other
   // images, never shown in the video.
   "reference",
@@ -69,6 +72,8 @@ export interface OutputMeta {
   readonly index?: number | undefined;
   // Which short (1-based) a short's image or video belongs to.
   readonly short?: number | undefined;
+  // A figure card's frame: the video's, or upright for the Shorts of a 16:9 video.
+  readonly format?: "16:9" | "9:16" | undefined;
   // The first and last sentence of the narration that short was cut from, so a clip picked
   // again with the same sentences still finds its video.
   readonly sentences?: readonly [number, number] | undefined;

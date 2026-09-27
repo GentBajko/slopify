@@ -41,6 +41,8 @@ export function shortsRecipes(
   exports: readonly ResolvedWorkRecipe[],
   // The establishing image the shorts' images are drawn from, when it is on.
   reference?: ImageReference,
+  // "Show tables and figures on screen": the cards a short shows where it describes one.
+  cards: readonly ResolvedWorkRecipe[] = [],
   // Level the volume: the levelled narration and the master (`recipe-loudness.ts`).
   master: MasterPlan = noMaster,
 ): readonly ResolvedWorkRecipe[] {
@@ -184,11 +186,20 @@ export function shortsRecipes(
             // Only when one of the later settings is in use, so a short rendered before
             // they existed keeps its fingerprint.
             ...(extras === undefined ? [] : [extras]),
+            // Only with cards, so a short rendered before them keeps its fingerprint.
+            ...(cards.length === 0
+              ? []
+              : [["figure-cards-v1", cards.map((card) => resourceIdentity(context, card))]]),
             // Only while the volume is levelled, so every short without it keeps its fingerprint.
             ...master.values,
           ],
         },
-        [pick.key, ...stills.map((still) => still.key), ...master.keys],
+        [
+          pick.key,
+          ...stills.map((still) => still.key),
+          ...cards.map((card) => card.key),
+          ...master.keys,
+        ],
         { token },
       ),
     );

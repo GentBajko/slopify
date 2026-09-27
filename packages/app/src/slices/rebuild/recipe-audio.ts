@@ -35,15 +35,17 @@ export interface AudioRecipes {
   // Level the volume: the levelled joins, intro, body and outro in order (`recipe-loudness.ts`).
   // Empty while the setting is off, and for an uploaded narration, which is never re-levelled.
   readonly levels: readonly ResolvedWorkRecipe[];
+  // "Show tables and figures on screen": the cards of the described blocks, in reading order.
+  readonly cards?: readonly ResolvedWorkRecipe[] | undefined;
 }
 export function bodyNarrationGroups(
   context: RecipeContext,
   text: TextRecipes,
 ): ReturnType<typeof pronunciationChunks> {
-  return text.articleText === null
+  return text.narrationText === null
     ? []
     : pronunciationChunks(
-        normalizeNarrationText(text.articleText),
+        normalizeNarrationText(text.narrationText),
         context.config.chunking ?? defaultChunking,
         usesPronunciationGlossary(context.config) && text.glossary?.ok ? text.glossary.entries : [],
         new Set(Object.keys(context.content.narrationOverrides)),
@@ -59,8 +61,17 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const pronounce = usesPronunciationGlossary(config);
   const narrationFiles = prepare || pronounce;
   let body: ResolvedWorkRecipe;
-  let bodyTranscript: FingerprintValue = text.articleText ?? text.article.fingerprint;
+  let bodyTranscript: FingerprintValue =
+    text.narrationText ??
+    (text.descriptions.length === 0
+      ? text.article.fingerprint
+      : [
+          "described-v1",
+          text.article.fingerprint,
+          text.descriptions.map((row) => row.fingerprint),
+        ]);
   let sections: readonly ScriptSection[] | undefined;
+  let cards: readonly ResolvedWorkRecipe[] = [];
   if (config.sources.audio === "provide") {
     body = recipe(
       context,
@@ -78,7 +89,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     recipes.push(body);
   } else if (text.script !== undefined && config.voices !== undefined) {
     const voiced = voiceBodyRecipes(context, config.voices, text.script, text.glossary);
-    recipes.push(...voiced.preparations, ...voiced.parts);
+    recipes.push(...voiced.preparations, ...voiced.cards, ...voiced.parts);
+    cards = voiced.cards;
     if (narrationFiles) recipes.push(narrationFileRecipe(context, "body", voiced.parts));
     recipes.push(voiced.body);
     body = voiced.body;
@@ -89,7 +101,9 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     const parts: ResolvedWorkRecipe[] = [];
     const transcripts: { original: string; effective: string }[] = [];
     const futurePronunciation: FingerprintValue[] = [];
-    let pending = text.articleText === null;
+    recipes.push(...text.descriptions, ...text.cards);
+    cards = text.cards;
+    let pending = text.narrationText === null;
     for (const { key: logicalKey, text: logicalText } of groups) {
       transcripts.push({
         original: logicalText,
@@ -113,7 +127,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     }
     if (transcripts.some((row) => row.effective !== row.original))
       bodyTranscript = ["narration-transcript-v1", transcripts.map((row) => row.effective)];
-    if (text.articleText === null) {
+    if (text.narrationText === null) {
       futurePronunciation.push(
         ...pronunciationFutureValues(
           context,
@@ -124,7 +138,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         ),
         ...aliasFutureValues(context, "audio:body:future", null),
       );
-      if (prepare) recipes.push(preparationFuture(context, "body", text.article));
+      if (prepare)
+        recipes.push(preparationFuture(context, "body", text.article, text.descriptions));
     }
     if (pending && prepare) parts.length = 0;
     if (pending)
@@ -143,9 +158,16 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
               chunkingValues(context),
               ...(prepare ? [preparationTemplate(context)] : []),
               ...futurePronunciation,
+              ...(text.descriptions.length === 0
+                ? []
+                : [["described-v1", text.descriptions.map((row) => row.fingerprint)]]),
             ],
           },
-          [text.article.key, ...preparationKeys(recipes, "body")],
+          [
+            text.article.key,
+            ...text.descriptions.map((row) => row.key),
+            ...preparationKeys(recipes, "body"),
+          ],
         ),
       );
     recipes.push(...parts);
@@ -175,7 +197,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         ],
       },
       parts.map((part) => part.key),
-      { unresolved: text.articleText !== null && groups.length === 0 },
+      { unresolved: text.narrationText !== null && groups.length === 0 },
     );
     recipes.push(body);
   }
@@ -306,6 +328,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     keys: ordered.map(({ value }) => value.key),
     levels,
     ...(sections === undefined ? {} : { sections }),
+    ...(cards.length === 0 ? {} : { cards }),
   };
 }
 function effectiveText(context: RecipeContext, key: string, original: string): string {

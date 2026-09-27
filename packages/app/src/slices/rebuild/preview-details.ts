@@ -190,6 +190,14 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     before.audio?.useNarrationAliases === true ? aliasLines(before.narrationAliases) : "Off",
     after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
   );
+  const described = (audio: typeof before.audio) =>
+    audio?.describeFigures !== true ? "Off" : audio.skipCode === true ? "On, code left out" : "On";
+  add("Describe tables and figures", described(before.audio), described(after.audio));
+  add(
+    "Show tables and figures on screen",
+    before.showFigures === true ? "On" : "Off",
+    after.showFigures === true ? "On" : "Off",
+  );
   add(
     "Pause between sentences (seconds)",
     before.sentencePauseSeconds ?? 0,

@@ -47,6 +47,7 @@ export function editPlan(
   exports: readonly ResolvedWorkRecipe[],
   youtube: readonly ResolvedWorkRecipe[],
   images: readonly ResolvedWorkRecipe[],
+  cards: readonly ResolvedWorkRecipe[] = [],
 ): EditPlan {
   const { config } = context;
   const edit = videoEditOf(config);
@@ -82,6 +83,11 @@ export function editPlan(
       values.push(["chapters", resourceIdentity(context, description)]);
       dependsOn.push(description.key);
     } else values.push(["chapters", "headings", headingsIdentity(context)]);
+  }
+  // "Show tables and figures on screen": each card, placed where its description is spoken.
+  if (cards.length > 0) {
+    values.push(["figure-cards-v1", cards.map((value) => resourceIdentity(context, value))]);
+    dependsOn.push(...cards.map((value) => value.key));
   }
   const recipes = usesAnimation(config)
     ? animateRecipes(context, images, timing, fromDescription ? description : undefined)

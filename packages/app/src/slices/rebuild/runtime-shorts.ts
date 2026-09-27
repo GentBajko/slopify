@@ -5,7 +5,7 @@ import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { usesShorts } from "../admission/rules.js";
+import { usesFigureCards, usesShorts } from "../admission/rules.js";
 import { captionBoldFont } from "../fonts/coverage.js";
 import { resolveBoldFont } from "../fonts/index.js";
 import { masterGoal } from "../loudness/model.js";
@@ -38,6 +38,7 @@ import { usesVoices } from "../voices/model.js";
 import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
 import { shortsPickKey } from "./recipe-shorts.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
+import { figureShots } from "./runtime-export-edit.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { imageCall } from "./runtime-image.js";
 import { savedCatalogue } from "./runtime-plan.js";
@@ -301,7 +302,22 @@ async function render(
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
-  const words = clipWords(timingWords(deps, context, view), clip.start, clip.end);
+  const allWords = timingWords(deps, context, view);
+  const words = clipWords(allWords, clip.start, clip.end);
+  // The upright cards whose descriptions fall in the clip, on the clip's own timeline.
+  const figures = usesFigureCards(config)
+    ? figureShots(deps, context, view, "9:16", allWords).flatMap((figure) =>
+        figure.end <= clip.start || figure.start >= clip.end
+          ? []
+          : [
+              {
+                path: figure.path,
+                start: Math.max(0, figure.start - clip.start),
+                end: Math.min(clip.end, figure.end) - clip.start,
+              },
+            ],
+      )
+    : [];
   const timeline = await revisionAudio(deps, context, view, { levelled: true });
   // The bundled Barlow is drawn in its own Bold face; any other font is emboldened.
   // In another language, a font that has its letters (`fonts/coverage.ts`).
@@ -332,6 +348,7 @@ async function render(
       ...(wordTimingUnavailable(config.language) === undefined ? {} : { wordByWord: false }),
       font,
       ...(shorts?.titleOnScreen === true ? { title: clip.title } : {}),
+      ...(figures.length === 0 ? {} : { figures }),
       speed,
       music,
       output: pending.absolutePath,

@@ -4,6 +4,7 @@ import type { CatalogueStore } from "../../catalog/store.js";
 import { type RunDraft, sourceOf, thumbnailCountOf } from "../admission/model.js";
 import {
   imageSecondsProblem,
+  usesDescribedNarration,
   usesNarrationPreparation,
   usesReference,
   usesShorts,
@@ -12,7 +13,9 @@ import {
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { narrationMinutes, plannedImageCount, scalesImages } from "../images/scale.js";
+import { describedBlocks, narrationBlocks } from "../narration/blocks.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
+import { describeMessages } from "../narration/describe.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
 import { defaultReviewPrompts, reviewPromptKey, reviewRetriesOf } from "../reviews/model.js";
@@ -156,6 +159,36 @@ export function estimateRun(
   else local("Article", "Provided article; no generation charge.");
   if (draft.intro?.mode === "llm" || draft.outro?.mode === "llm")
     text("Intro / outro text", promptChars + articleChars, 2400);
+  if (usesDescribedNarration(draft)) {
+    // One call per table, figure, equation or code block: counted in a provided article,
+    // unknown until a generated one is written.
+    const blocks = generatedArticle
+      ? undefined
+      : describedBlocks(
+          narrationBlocks(splitEndMatter(draft.provided.article ?? "").body, {
+            code: draft.audio?.skipCode === true ? "skip" : "describe",
+            language: draft.language,
+          }),
+        );
+    if (blocks === undefined)
+      requests.push({
+        kind: "unknown",
+        stage: "Narration descriptions",
+        detail:
+          "One LLM call per table, figure, equation or code block in the article; how many is known once the article is written.",
+      });
+    else
+      for (const block of blocks)
+        text(
+          "Narration descriptions",
+          describeMessages(block, rendered.narration ?? "", draft.language).reduce(
+            (n, message) => n + message.content.length,
+            0,
+          ),
+          600,
+          `${String(blocks.length)} LLM ${blocks.length === 1 ? "call" : "calls"}: one per table, figure, equation or code block.`,
+        );
+  }
   if (draft.sources.audio === "generate") {
     if (usesNarrationPreparation(draft)) {
       const known = generatedArticle

@@ -3,7 +3,7 @@ import { extname } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RunConfig } from "../admission/model.js";
-import { usesYoutubeDescription } from "../admission/rules.js";
+import { usesFigureCards, usesYoutubeDescription } from "../admission/rules.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { RevisionView } from "../revisions/model.js";
@@ -18,7 +18,8 @@ import {
   videoEditOf,
 } from "../video/edit-settings.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
-import type { PlanEdit } from "../video/plan.js";
+import { passageSpans } from "../video/figure-spans.js";
+import type { FigureShot, PlanEdit } from "../video/plan.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { wordsSchema } from "./runtime-subtitles.js";
 
@@ -78,14 +79,16 @@ export async function exportEdit(
     return parsed.success ? [parsed.data.fallback] : [];
   });
   const endScreen = config.endScreen?.text.trim() ?? "";
+  const figures = usesFigureCards(config) ? figureShots(deps, context, view) : [];
+  const withFigures = figures.length === 0 ? {} : { figures };
   if (config.videoEdit === undefined) {
     const titles = endScreen === "" ? undefined : await titleFont(deps, config);
     return {
       edit:
         titles !== undefined
-          ? { clips, cards: { chapters: [], ...titles, endScreen } }
-          : clips.some((clip) => clip !== undefined)
-            ? { clips }
+          ? { clips, cards: { chapters: [], ...titles, endScreen }, ...withFigures }
+          : clips.some((clip) => clip !== undefined) || figures.length > 0
+            ? { clips, ...withFigures }
             : undefined,
       warnings,
       settings: undefined,
@@ -100,6 +103,7 @@ export async function exportEdit(
   return {
     edit: {
       clips,
+      ...withFigures,
       ...(cuts
         ? {
             narration: {
@@ -152,7 +156,7 @@ async function titleFont(
   };
 }
 
-function timingWords(deps: ExportExecutionDeps, context: StageContext, view: RevisionView) {
+export function timingWords(deps: ExportExecutionDeps, context: StageContext, view: RevisionView) {
   const timing = view.outputs.find(
     (row) =>
       row.selected &&
@@ -208,4 +212,48 @@ async function clipSeconds(
       `Image ${String(place)} is a video clip Slopify can't read, so the video can't show it. Replace it with another clip or an image in Edit project → Images, then Try again.`,
     );
   return ms / 1000;
+}
+
+// Each card in the video's frame, shown where its description is spoken: the description's
+// answer found in the word timing (`video/figure-spans.ts`). A card whose description can't be
+// found in the timing is left out rather than shown at the wrong moment.
+export function figureShots(
+  deps: ExportExecutionDeps,
+  context: StageContext,
+  view: RevisionView,
+  format: "16:9" | "9:16" = view.revision.config.format,
+  words: Parameters<typeof passageSpans>[0] = timingWords(deps, context, view),
+): readonly FigureShot[] {
+  const cards = view.outputs
+    .filter(
+      (row) =>
+        row.selected &&
+        row.available &&
+        row.state === "ready" &&
+        row.output.role === "figure_card" &&
+        row.workKey.startsWith("figure:card:") &&
+        (row.output.meta.format ?? view.revision.config.format) === format,
+    )
+    .map((row) => ({
+      index: Number(row.workKey.slice("figure:card:".length)),
+      path: outputPath(deps.paths, context.work.projectId, row.output.path),
+    }))
+    .toSorted((a, b) => a.index - b.index);
+  const passages = cards.map((card) => {
+    const row = view.pieces.find(
+      (one) =>
+        one.key === `narration:describe:${String(card.index)}` &&
+        one.selected &&
+        one.piece.state === "done",
+    );
+    const parsed = z
+      .object({ text: z.string() })
+      .safeParse(JSON.parse(row?.piece.payload ?? "null"));
+    return parsed.success ? parsed.data.text : "";
+  });
+  const spans = passageSpans(words, passages);
+  return cards.flatMap((card, at) => {
+    const span = spans[at];
+    return span === undefined ? [] : [{ path: card.path, start: span.start, end: span.end }];
+  });
 }

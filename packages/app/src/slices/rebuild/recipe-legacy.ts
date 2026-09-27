@@ -87,6 +87,8 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     // Only ever made by a revision, never by the legacy stages.
     case "animated_image":
       return `animate:${String(output.meta.index ?? 1)}`;
+    case "figure_card":
+      return `figure:card:${String(output.meta.index ?? 1)}`;
     case "subtitles_srt":
     case "subtitles_vtt":
     case "subtitle_ass":

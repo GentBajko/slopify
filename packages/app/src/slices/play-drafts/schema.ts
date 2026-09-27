@@ -55,6 +55,8 @@ export const playDraftFormSchema = z
         usePronunciationGlossary: z.boolean().optional(),
         shareGlossary: z.boolean().optional(),
         useNarrationAliases: z.boolean().optional(),
+        describeFigures: z.boolean().optional(),
+        skipCode: z.boolean().optional(),
       })
       .readonly(),
     images: provider.readonly(),
@@ -92,6 +94,7 @@ export const playDraftFormSchema = z
     paragraphPause: text.optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
+    showFigures: z.boolean().optional(),
     descriptionPrompt: text.optional(),
     // The project language (`kernel/ports/languages.ts`). Absent on drafts and templates saved
     // before it, and on a draft nobody picked one for: the channel's language, else English.

@@ -36,6 +36,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
       usePronunciationGlossary: true,
       shareGlossary: true,
       useNarrationAliases: true,
+      describeFigures: true,
     },
     images: { provider: "", model: "" },
     articlePrompt: "",
@@ -53,6 +54,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     // A new project follows the narration; a draft saved before this has none and cuts every
     // N seconds as it did.
     videoEdit: defaultVideoEdit,
+    showFigures: true,
     values: {},
     provided: { research: "", article: "", audio: null, images: [], thumbnail: null },
   },

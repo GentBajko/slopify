@@ -75,7 +75,13 @@ export async function narrationFixture(
   ReturnType<typeof revisionFixture> & {
     readonly deps: ReturnType<typeof revisionFixture>["deps"] & { readonly ffmpeg: string };
     readonly count: ReturnType<typeof vi.fn>;
-    readonly calls: { kind: string; key: string; text: string; dialogue?: readonly string[] }[];
+    readonly calls: {
+      kind: string;
+      key: string;
+      text: string;
+      dialogue?: readonly string[];
+      images?: readonly string[];
+    }[];
     readonly view: () => RevisionView;
     readonly pump: (limit?: number) => Promise<void>;
   }
@@ -102,12 +108,23 @@ export async function narrationFixture(
       .run(kind, h.projectId, kind);
   const base = await ensureBaseline(deps, h.projectId);
   if (!base.ok) throw new Error("Missing baseline");
-  const calls: { kind: string; key: string; text: string; dialogue?: readonly string[] }[] = [];
+  const calls: {
+    kind: string;
+    key: string;
+    text: string;
+    dialogue?: readonly string[];
+    images?: readonly string[];
+  }[] = [];
   let activeKey = "";
   const providers: StageProviders = {
     llm: async (input) => {
       const prompt = input.messages[0]?.content ?? "";
-      calls.push({ kind: "llm", key: activeKey, text: prompt });
+      calls.push({
+        kind: "llm",
+        key: activeKey,
+        text: prompt,
+        ...(input.images === undefined ? {} : { images: input.images.map((one) => one.path) }),
+      });
       const value = {
         text:
           options.answer?.(activeKey, input.messages) ??

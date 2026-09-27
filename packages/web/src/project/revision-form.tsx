@@ -22,6 +22,7 @@ import { Rule } from "@/components/kit/layout";
 import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
 import { cn } from "@/lib/utils";
+import { ShowFiguresToggle } from "@/play/describe-figures";
 import { FormatPicker } from "@/play/format-picker";
 import { sourceOptions } from "@/play/state";
 import { entriesQuery, promptsQuery, providersQuery, voicesQuery } from "@/queries";
@@ -417,6 +418,17 @@ export function RevisionForm(
               <Group title="Cuts and look" columns={false}>
                 {videoEdit.cuts}
                 {videoEdit.look}
+                {config.sources.audio === "generate" && config.audio?.describeFigures === true ? (
+                  <ShowFiguresToggle
+                    tip="project.edit.show-figures"
+                    value={config.showFigures}
+                    onChange={(on) => {
+                      // Stored only when on.
+                      const { showFigures: _old, ...rest } = config;
+                      onChange({ ...edit, config: on ? { ...rest, showFigures: true } : rest });
+                    }}
+                  />
+                ) : null}
               </Group>
               {config.sources.audio === "off" ? null : (
                 <>

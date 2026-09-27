@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { levelPieces } from "../loudness/level-pieces.js";
 import { resolveFfmpeg } from "../video/ffmpeg.js";
 import { joinNarration } from "./concat.js";
 import {
@@ -173,6 +174,35 @@ describe.skipIf(!present)("pauses with the bundled ffmpeg", () => {
     expect(after.durationSeconds - before.durationSeconds).toBeLessThan(0.8);
     const beforeGaps = inner(before.silences, before.durationSeconds);
     expect((gaps[1]?.end ?? 0) - (beforeGaps[1]?.end ?? 0)).toBeGreaterThan(0.6);
+  }, 60_000);
+
+  it("paces the levelled pieces exactly as the plain ones, so what is timed lines up", async () => {
+    // The word timing (and every caption, chapter, cut and figure card placed from it) reads
+    // the plain join; the video plays the levelled one. Both are paced from one plan.
+    const pieces = [rushed("plain-a.mp3", 300), rushed("plain-b.mp3", 420)];
+    const text = "One two three. Four five six. Seven eight nine.";
+    const plans = await planPieces(
+      run,
+      pieces.map((file, at) => ({ file, text, next: at === 0 ? "sentence" : "end" })),
+      settings,
+    );
+    const levelled = await levelPieces(run, pieces, join(scratch, "levelled"));
+    const join2 = async (files: readonly string[], name: string) => {
+      const paced = await applyPauses(run, files, plans, join(scratch, `${name}-paced`));
+      return joinNarration(
+        { bin, log },
+        {
+          files: paced.files,
+          output: join(scratch, `${name}.mp3`),
+          listPath: join(scratch, `${name}.txt`),
+          signal,
+          reencode: true,
+        },
+      );
+    };
+    const plain = await join2(pieces, "plain");
+    const level = await join2(levelled.files, "level");
+    expect(Math.abs(plain - level)).toBeLessThanOrEqual(30);
   }, 60_000);
 
   it("pads the gap between two pieces to the minimum and joins them", async () => {

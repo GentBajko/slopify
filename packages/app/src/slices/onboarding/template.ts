@@ -33,11 +33,13 @@ export function packTemplate(
         voice: voiceId,
         usePronunciationGlossary: true,
         shareGlossary: true,
+        describeFigures: true,
       },
       images: { provider: "", model: "" },
       articlePrompt: name("article"),
       narrationPrompt: "",
       youtubeDescription: name("description") !== "",
+      showFigures: true,
       descriptionPrompt: name("description"),
       shorts: {
         enabled: name("shorts") !== "",
