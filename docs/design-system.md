@@ -43,29 +43,62 @@ light. Change a token in `index.css` first, then copy it to the site.
 (`p-3`, `gap-2`, `mb-1`). An arbitrary pixel spacing (`p-[18px]`, `gap-[6px]`) outside
 `components/kit` fails `styles/grid.test.ts`.
 
-The 2.x `components/ui/button.tsx` and `ui/dialog.tsx` now render the kit's classes (outline
-and accent become secondary, ghost becomes quiet, danger becomes destructive, play becomes the
-Play key). New code imports from `components/kit`.
+The 2.x `components/ui/button.tsx` is gone; every screen uses `kit/button`. `ui/dialog.tsx`
+stays only as the Radix parts `kit/dialog` is built on.
 
 ## Components
 
 `kit/button` (Button: primary, secondary, quiet, destructive, icon; small; `disabledReason`;
-IconButton; PlayKey; ButtonRow) · `kit/field` (Field wires label, help and error into its
+IconButton; PlayKey; ButtonRow) · `kit/link` (ButtonLink and TextLink for router links,
+FileLink for a download or a file opened in a new tab; see Links and buttons) · `kit/field` (Field wires label, help and error into its
 control's `id`, `aria-describedby` and `aria-invalid`, and `tip` puts the info button beside
 the label; Input, Select, Textarea, Code) · `kit/switch` (Switch, Segmented, both with `tip`) ·
 `kit/info-tip` (InfoTip, reading the help catalogue; `helpScope`) · `kit/tabs` (roving focus: arrows, Home, End) ·
-`kit/section-head` (kicker, title, meta, info, actions) · `kit/status` (Lamp, Status, Badge,
+`kit/section-head` (kicker, title, meta, info, a status beside the title, `size="small"` for a
+sub-head, `id` for `aria-labelledby`, actions) · `kit/status` (Lamp, Status, Badge,
 Chip) · `kit/media` (MediaFrame with aspect, caption, badge, hover and focus actions and a
 generating state; MediaGrid; Lightbox with arrow paging and Esc) · `kit/player` (a real
 `<video controls>` with its poster) · `kit/rail` (Rail, RailLink with `aria-current`,
 RailButton) · `kit/steps` · `kit/next-action` · `kit/callout` (danger, waiting, info, with
-actions) · `kit/list-row` (List, ListRow with visible actions) · `kit/stats` (Stats, Stat,
-Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, ConfirmDialog) · `kit/toast`
+actions) · `kit/list-row` (List, ListRow with visible actions and an inline body; the whole row is its
+target; `hitArea` and `hitTarget` for a row or card made by hand) · `kit/stats` (Stats, Stat,
+Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, `dismissible={false}` for a one-action notice; ConfirmDialog) · `kit/toast`
 · `kit/empty-state` · `kit/reading-view` (contents from `##` headings, search that marks every
 hit and steps through them, copy one section or all as Markdown; the one reading view, used by
 the project page too, where `regionLabel` puts the text in a scrolling region) · `kit/layout`
 (PageHeader, Workspace, ListDetail, Rule) · `kit/board` (Board and BoardColumn: `main-side`
 for Home, `aside` for the calendar beside its suggestions, `even`; stacked below 1024px).
+
+### Links and buttons
+
+A button does something; a link goes somewhere. The kit holds the line:
+
+- **Buttons** are `Button`, `IconButton` or `PlayKey` from `kit/button`, named for their result.
+  A button never navigates, and `Button` has no `asChild`.
+- **A link wears a button's look only through `kit/link`**, and only when it is the main call to
+  action of its item or area (New prompt, Open to continue, the fix a Needs you item names, a
+  step's Open in the tour), or one of a row of buttons it sits in (a Library row's Edit and
+  Duplicate, an editor's Cancel beside Save). That is `ButtonLink` for a route and `FileLink`
+  for a download or a file in a new tab (Download PDF, Download diagnostics).
+- **Any other navigation is a `TextLink`**: Open, Calendar, Edit schedules, See all patch notes,
+  Restore samples in Settings.
+- **Nothing that acts looks like text.** A chip's name that opens its keywords is a quiet
+  button with a pencil; the reason under the Play key sits beside a Go to the field button.
+- **Actions sit top right of their section**, through `SectionHead`'s children, in the order
+  primary, secondary, quiet, overflow. A heading is a `SectionHead`, never a hand-set `h2`.
+- **A row or tile is one target.** A ListRow with `onSelect` or a title link is picked or opened
+  by a press anywhere on it, not only on its name: the title's button or link stretches over the
+  row (`::after`), and the row's own buttons, links and fields sit above it. It stays one tab
+  stop, with the focus ring round the whole row. A row or card made by hand gets `hitArea` on
+  itself and `hitTarget` on its one link or button; a MediaFrame with `onOpen` is its figure,
+  caption included.
+- **Library rows** carry the same visible actions in the same order on every tab
+  (`library/row-actions.tsx`): Edit, Duplicate, Use in Play, History, Delete.
+
+`src/kit-rules.test.ts` fails on an import of `ui/button` or `ui/dialog` outside the kit, a hand-written
+`sl-btn`/`sl-key` class or `buttonClass()` outside the kit, an `<a>` with `onClick`, a raw
+`<button>` outside the kit (the shell's search field aside), a button hand-made into a ListRow's
+title, and a click handler on a row or card element.
 
 ### Command palette
 
