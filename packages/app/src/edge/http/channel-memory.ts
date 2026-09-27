@@ -8,6 +8,7 @@ import {
   deleteChannelVideo,
   importChannelVideos,
   listChannelVideos,
+  previewChannelVideos,
 } from "../../slices/channels/videos.js";
 import {
   channelEpisodes,
@@ -31,7 +32,8 @@ type Refusal = {
 };
 
 // Channel page → Episodes (episode memory: the setting and the summaries) and Existing videos
-// (titles made before Slopify). Mounted beside `channelRoutes` under /api/channels.
+// (titles made before Slopify; a CSV is previewed, then its ticked titles are saved). Mounted
+// beside `channelRoutes` under /api/channels.
 export function channelMemoryRoutes(deps: AppDeps) {
   const service = { db: deps.db, clock: deps.clock, uuid: randomUUID };
   return new Hono()
@@ -58,27 +60,18 @@ export function channelMemoryRoutes(deps: AppDeps) {
       return result.ok ? c.json({ videos: result.value }) : refused(c, result, "video");
     })
     .post(
-      "/:id/videos",
+      "/:id/videos/preview",
       zValidator("param", idParam, onInvalid),
-      bodyLimit({
-        maxSize: importMaxBytes,
-        onError: (c) =>
-          refused(
-            c,
-            {
-              ok: false,
-              reason: "invalid-input",
-              message:
-                "This file is larger than 20 MB. Export fewer videos from YouTube Studio, or paste the titles instead.",
-            },
-            "video",
-          ),
-      }),
+      importLimit(),
       async (c) => {
-        const result = importChannelVideos(service, c.req.valid("param").id, await body(c));
-        return result.ok ? c.json(result.value, 201) : refused(c, result, "video");
+        const result = previewChannelVideos(service, c.req.valid("param").id, await body(c));
+        return result.ok ? c.json(result.value) : refused(c, result, "video");
       },
     )
+    .post("/:id/videos", zValidator("param", idParam, onInvalid), importLimit(), async (c) => {
+      const result = importChannelVideos(service, c.req.valid("param").id, await body(c));
+      return result.ok ? c.json(result.value, 201) : refused(c, result, "video");
+    })
     .delete("/:id/videos", zValidator("param", idParam, onInvalid), (c) => {
       const result = clearChannelVideos(service, c.req.valid("param").id);
       return result.ok ? c.json(result.value) : refused(c, result, "video");
@@ -88,6 +81,23 @@ export function channelMemoryRoutes(deps: AppDeps) {
       const result = deleteChannelVideo(service, id, videoId);
       return result.ok ? c.body(null, 204) : refused(c, result, "video");
     });
+}
+
+function importLimit() {
+  return bodyLimit({
+    maxSize: importMaxBytes,
+    onError: (c) =>
+      refused(
+        c,
+        {
+          ok: false,
+          reason: "invalid-input",
+          message:
+            "This file is larger than 20 MB. Export fewer videos from YouTube Studio, or paste the titles instead.",
+        },
+        "video",
+      ),
+  });
 }
 
 async function body(c: Context): Promise<unknown> {
