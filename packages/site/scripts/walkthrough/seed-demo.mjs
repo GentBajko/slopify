@@ -403,6 +403,37 @@ export async function seedDemo(dataDir, browser) {
         at,
       );
     });
+    // What the run cost, for the Run cost view: the calls a run like this makes, priced the
+    // way the meter prices them. The article went through a CLI plan, so it cost nothing
+    // there; `api_cost` is what the same tokens would have cost through the API.
+    const usage = [
+      ["article", "llm", "claude-code", "sonnet", { tokens_in: 2400, tokens_out: 1900 }, 1, 0],
+      ["audio", "tts", "elevenlabs", "eleven_multilingual_v2", { characters: 1800 }, 0, 0.54],
+      ["images", "image", "fal", "fal-ai/flux-2", { images: chapters.length }, 0, 0.18],
+      ["thumbnail", "image", "fal", "fal-ai/flux-2", { images: 1 }, 0, 0.03],
+    ];
+    usage.forEach(([stage, kind, provider, model, amount, onPlan, cost], index) => {
+      db.prepare(
+        "INSERT INTO provider_usage(id,project_id,stage,kind,provider,model,tokens_in,tokens_out,characters,images,wall_ms,on_plan,cost,api_model,api_cost,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      ).run(
+        `demo-usage-${String(index + 1)}`,
+        demoProjectId,
+        stage,
+        kind,
+        provider,
+        model,
+        amount.tokens_in ?? null,
+        amount.tokens_out ?? null,
+        amount.characters ?? null,
+        amount.images ?? null,
+        8_000,
+        onPlan,
+        cost,
+        onPlan === 1 ? "claude-sonnet-4-5" : null,
+        onPlan === 1 ? 0.036 : null,
+        at,
+      );
+    });
   } finally {
     db.close();
   }
