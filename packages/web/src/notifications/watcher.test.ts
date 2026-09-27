@@ -1,7 +1,12 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { claimOnce } from "./browser.js";
-import { createRunWatcher, type RunWatcherDeps, type ShownNotice } from "./watcher.js";
+import {
+  createRunWatcher,
+  type RunWatcherDeps,
+  type ShownNotice,
+  type ShownTopicsNotice,
+} from "./watcher.js";
 
 function harness(
   options: {
@@ -104,6 +109,64 @@ describe("createRunWatcher", () => {
     await watcher.settled();
     expect(shown).toEqual([]);
     expect(reported).toEqual([new Error("offline")]);
+  });
+});
+
+describe("suggested topics", () => {
+  function topicsHarness(
+    enabled: boolean,
+    claim: RunWatcherDeps["claim"] = () => Promise.resolve(true),
+  ) {
+    const shown: ShownTopicsNotice[] = [];
+    const watcher = createRunWatcher({
+      enabled: () => enabled,
+      seed: () => Promise.resolve([]),
+      subject: () => Promise.resolve(undefined),
+      claim,
+      show: () => {},
+      showTopics: (notice) => {
+        shown.push(notice);
+      },
+      report: () => {},
+    });
+    return { watcher, shown };
+  }
+  const event = { scheduleId: "s1", scheduleName: "D&D lore", added: 5, waiting: 7 };
+
+  it("says how many new topics wait and where to find them", async () => {
+    const { watcher, shown } = topicsHarness(true);
+    watcher.observeTopics(event);
+    await watcher.settled();
+    expect(shown).toEqual([
+      {
+        scheduleId: "s1",
+        text: {
+          headline: "5 new topics are waiting for you",
+          detail:
+            "Open Calendar → Suggested topics → D&D lore to queue or reject them. 7 are waiting in all.",
+        },
+      },
+    ]);
+  });
+
+  it("stays quiet when notifications are off, nothing was added, or another tab showed it", async () => {
+    const off = topicsHarness(false);
+    off.watcher.observeTopics(event);
+    await off.watcher.settled();
+    expect(off.shown).toEqual([]);
+    const none = topicsHarness(true);
+    none.watcher.observeTopics({ ...event, added: 0 });
+    await none.watcher.settled();
+    expect(none.shown).toEqual([]);
+    const claimed: string[] = [];
+    const taken = topicsHarness(true, (key) => {
+      claimed.push(key);
+      return Promise.resolve(false);
+    });
+    taken.watcher.observeTopics(event);
+    await taken.watcher.settled();
+    expect(taken.shown).toEqual([]);
+    expect(claimed).toEqual(["topics:s1:7"]);
   });
 });
 

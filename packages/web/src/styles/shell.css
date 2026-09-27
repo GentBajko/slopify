@@ -533,6 +533,175 @@
   .sl-listdetail__detail {
     min-width: 0;
   }
+  /* Home's items: one surface each on the ground, never a box inside a box. */
+  .sl-home-item {
+    display: grid;
+    grid-template-columns: 168px minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--radius-media);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  .sl-home-item > .sl-media__frame {
+    border-radius: 8px;
+  }
+  .sl-home-run {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: var(--space-5);
+    padding: 20px;
+    border-radius: var(--radius-media);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  .sl-home-run__images {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .sl-home-ready {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: center;
+  }
+  .sl-home-ready > .sl-media__frame {
+    border-radius: 8px;
+  }
+  @media (max-width: 1280px) {
+    .sl-home-run {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 767px) {
+    .sl-home-item {
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: var(--space-3);
+      align-items: start;
+    }
+    .sl-home-item__action {
+      grid-column: 1 / -1;
+    }
+    .sl-home-run {
+      padding: var(--space-4);
+    }
+    .sl-home-run__images {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sl-home-ready {
+      grid-template-columns: 96px minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  /* The calendar's weeks: one surface per week, seven day columns split by hairlines. */
+  .sl-cal-week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    overflow: hidden;
+    border-radius: var(--radius-media);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  .sl-cal-day {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 150px;
+    min-width: 0;
+    padding: var(--space-3);
+    border-right: 1px solid var(--color-line);
+    transition: background 120ms;
+  }
+  .sl-cal-day:last-child {
+    border-right: 0;
+  }
+  .sl-cal-day--today {
+    background: var(--color-accent-tint);
+  }
+  .sl-cal-day--over {
+    outline: 2px dashed var(--color-focus);
+    outline-offset: -4px;
+  }
+  .sl-cal-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    min-width: 0;
+    border-radius: 8px;
+    background: var(--color-raised);
+    border: 1px solid var(--color-line);
+    overflow-wrap: anywhere;
+  }
+  .sl-cal-item--movable {
+    cursor: grab;
+  }
+  .sl-cal-item--movable:hover {
+    border-color: var(--color-line-strong);
+  }
+  .sl-cal-item:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .sl-cal-item--project {
+    background: transparent;
+  }
+  @media (max-width: 1180px) {
+    .sl-cal-week {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-cal-day {
+      min-height: 0;
+      border-right: 0;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .sl-cal-day:last-child {
+      border-bottom: 0;
+    }
+    /* An empty day is one line on a narrow screen. */
+    .sl-cal-day:has(> .sl-kicker:only-child) {
+      padding-block: var(--space-2);
+    }
+  }
+
+  /* Board (Home, calendar): full-width columns of sections, stacked below 1024px. */
+  .sl-board {
+    display: grid;
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .sl-board--main-side {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  }
+  .sl-board--aside {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .sl-board--even {
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+  }
+  .sl-board__column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    min-width: 0;
+  }
+  @media (max-width: 1023px) {
+    .sl-board,
+    .sl-board--main-side,
+    .sl-board--aside,
+    .sl-board--even {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-flow: row;
+      gap: var(--space-5);
+    }
+  }
 
   @media (max-width: 1180px) {
     .sl-workspace {

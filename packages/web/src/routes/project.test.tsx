@@ -100,7 +100,7 @@ describe("the project rundown", () => {
   it("carries a back link to the projects list", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const back = await screen.findByText("< Projects");
-    expect(back.getAttribute("href")).toBe("/");
+    expect(back.getAttribute("href")).toBe("/projects");
   });
 });
 

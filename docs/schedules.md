@@ -69,10 +69,20 @@ template without one.
 
 ## Calendar
 
-**Library → Calendar** lists the next four weeks by day: every scheduled run with the topic it
-will use (or whether it waits for approval or a generation), projects running or finished, and
-the batch queue. Up and down move a topic within its schedule's queue; **Move to…** puts it on
-another schedule's queue.
+**Calendar** (in the rail, at `/calendar`) shows four weeks, Monday to Sunday, from this
+week's Monday: every scheduled run with the title it will make (or whether it waits for
+approval or a generation), projects running or finished on their day, and the batch queue. It
+shows the channel picked in the rail, or every channel.
+
+- **Weeks** (the default) and **List** switch the view; the choice is kept per browser.
+- Drag a topic to another day of its schedule to change when it runs, or onto another
+  schedule's run to move it into that schedule's queue at that place. Without a mouse: focus a
+  topic and press Alt+← or Alt+→, or use the list view's Earlier, Later and **Move to…**.
+  A drop the calendar can't carry out (a day with no run, a run with no queued topic) says why.
+- **Add to calendar** puts topics typed one per line at the end of a schedule's queue.
+- **Suggested topics**, beside the weeks, lists what each schedule with topic generation
+  suggested, with **Queue** and **Reject** on each and **Queue all**; **Suggest topics now**
+  asks for more. **Edit schedules** opens `/schedules`, which sits under the same rail item.
 
 Each run carries `renderedTitle`, the project title it will get (built as the run builds it),
 or null while its topic waits for approval or generation.

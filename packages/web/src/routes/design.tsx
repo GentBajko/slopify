@@ -9,6 +9,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useState } from "react";
+import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, ButtonRow, IconButton, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand, useCommandPalette } from "@/components/kit/command-palette";
@@ -537,6 +538,19 @@ export function DesignRoute(): ReactElement {
             </div>
           }
         />
+      </Specimen>
+
+      <Specimen title="Board" meta="Home and the calendar: columns of sections, stacked on phones">
+        <Board split="main-side">
+          <BoardColumn>
+            <SectionHead title="Needs you" meta="2 things are waiting for a decision" />
+            <SectionHead title="Running now" meta="1 video" />
+          </BoardColumn>
+          <BoardColumn>
+            <SectionHead title="Coming up" meta="Next 7 days" />
+            <SectionHead title="This week" />
+          </BoardColumn>
+        </Board>
       </Specimen>
 
       <Specimen title="Stats, meter, table">
