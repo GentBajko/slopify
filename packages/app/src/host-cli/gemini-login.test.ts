@@ -44,8 +44,9 @@ describe("readGeminiLogin", () => {
     );
   });
 
-  it("is signed out when the CLI was never set up, and signed in by a key alone", async () => {
-    expect(await readGeminiLogin(host({}))).toBe("signed-out");
+  it("doesn't block a CLI with nothing saved, and is signed in by a key alone", async () => {
+    // It may be signed in some other way (Vertex, a key in its own environment).
+    expect(await readGeminiLogin(host({}))).toBe("unknown");
     expect(await readGeminiLogin(host({}, { GEMINI_API_KEY: "k" }))).toBe("signed-in");
     expect(await readGeminiLogin(host({ [creds]: oauth }))).toBe("signed-in");
   });

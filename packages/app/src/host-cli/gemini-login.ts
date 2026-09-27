@@ -51,8 +51,9 @@ export async function readGeminiLogin(host: GeminiLoginHost): Promise<HostCliSta
       // No choice saved yet: the CLI still starts without asking when a key or an earlier
       // Google sign-in is there; otherwise it opens its sign-in menu.
       if ((await hasKey("GEMINI_API_KEY")) || (await oauth())) return "signed-in";
-      // A settings file with no sign-in method in it (or not readable as JSON) says nothing.
-      return raw === undefined ? "signed-out" : "unknown";
+      // Nothing saved says nothing either: the CLI can be signed in some other way (Vertex or
+      // a key in its own environment), so only a sign-in the files prove missing blocks a run.
+      return "unknown";
     default:
       // A method this version of Slopify doesn't know.
       return "unknown";
