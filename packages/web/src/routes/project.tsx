@@ -11,6 +11,8 @@ import { Workspace } from "@/components/kit/layout";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { Lamp, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { intents, useIntent } from "@/lib/intents";
+import { shortcuts } from "@/lib/shortcuts";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
@@ -53,12 +55,20 @@ import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
 import { projectQuery, promptsQuery, runCostQuery } from "@/queries";
 import { PrepareUploadDrawer } from "@/studio/prepare-upload";
+import { makeNextChapter } from "@/templates/api";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
 // Project identity resets the entire workspace so drafts cannot cross project boundaries.
-export function ProjectRoute({ projectId }: { readonly projectId: string }) {
-  return <ProjectWorkspace key={projectId} projectId={projectId} />;
+export function ProjectRoute({
+  projectId,
+  openDraft,
+}: {
+  readonly projectId: string;
+  // Opens a Play draft and shows Play: where "Make the next chapter" lands. Absent hides it.
+  readonly openDraft?: ((draftId: string) => Promise<boolean>) | undefined;
+}) {
+  return <ProjectWorkspace key={projectId} projectId={projectId} openDraft={openDraft} />;
 }
 
 interface RailItem {
@@ -84,9 +94,16 @@ const toneOf = (stages: readonly (Stage | undefined)[]): Tone | undefined => {
   return "off";
 };
 
-function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
+function ProjectWorkspace({
+  projectId,
+  openDraft,
+}: {
+  readonly projectId: string;
+  readonly openDraft: ((draftId: string) => Promise<boolean>) | undefined;
+}) {
   const { api } = useApp();
   const notify = useToast();
+  const nextChapter = useNextChapter(projectId, openDraft);
   const project = useQuery(projectQuery(api, projectId));
   const prompts = useQuery(promptsQuery(api));
   const runCost = useQuery(runCostQuery(api, projectId));
@@ -175,8 +192,31 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     group: "This project",
     context: title,
     keywords: ["next", "continue", "resume", "approve", "retry"],
-    run: () => (intent === undefined ? undefined : next.run(intent.intent)),
+    shortcut: shortcuts.nextAction,
+    run: () => {
+      if (intent === undefined)
+        notify("This project has no next action right now: nothing waits on you.", "info");
+      // Softening is charged and asks first, which only its button does.
+      else if (intent.intent.kind === "soften")
+        notify("Soften and retry asks first: press it in the Next action panel on the right.");
+      else next.run(intent.intent);
+    },
   });
+  // "Regenerate image 3 in Tiamat" run from another screen opens the Images section; the
+  // images body then asks to regenerate the image (`project/regenerate-by-number.tsx`).
+  useIntent(
+    intents.showImages(projectId),
+    () => {
+      const stage = project.data?.stages.find((one) => one.kind === "images");
+      if (stage === undefined || stage.state === "skipped")
+        notify(
+          `${title} makes no slideshow images, so there is no image to regenerate. To add them, open Settings in this project and choose how its images are made.`,
+          "error",
+        );
+      else setChosen("images");
+    },
+    project.data !== undefined,
+  );
   useCommand({
     id: "project.pause",
     title: summary?.status === "paused" ? "Continue the run" : "Pause the run",
@@ -417,13 +457,9 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const feedback =
     refusal !== undefined ? (
       <Callout tone="danger" title={refusal.message}>
-        <button
-          type="button"
-          className="sl-btn sl-btn--quiet sl-btn--small mt-1"
-          onClick={actions.dismissRefusal}
-        >
+        <Button variant="quiet" size="small" className="mt-1" onClick={actions.dismissRefusal}>
           Dismiss
-        </button>
+        </Button>
       </Callout>
     ) : actions.notice !== undefined ? (
       <p role="status" className="m-0 text-small text-ink-2">
@@ -469,6 +505,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 editing={selected === "settings"}
                 onEdit={() => setChosen("settings")}
                 more={more}
+                nextChapter={nextChapter}
               />
             </div>
             <StageAnnouncements stages={stages} />
@@ -770,4 +807,47 @@ function SkeletonWorkspace() {
       </Workspace>
     </div>
   );
+}
+
+// "Make the next chapter": the server makes the draft, then Play opens on it. A retry of a press
+// whose answer was lost reuses the same draft id, so it never makes a second draft.
+function useNextChapter(
+  projectId: string,
+  openDraft: ((draftId: string) => Promise<boolean>) | undefined,
+):
+  | { readonly run: () => void; readonly pending: boolean; readonly error: string | undefined }
+  | undefined {
+  const { api } = useApp();
+  const draftId = useRef<string | undefined>(undefined);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+  if (openDraft === undefined) return undefined;
+  return {
+    pending,
+    error,
+    run: () => {
+      if (pending) return;
+      draftId.current ??= crypto.randomUUID();
+      setPending(true);
+      setError(undefined);
+      void makeNextChapter(api, projectId, draftId.current)
+        .then(async (reply) => {
+          if (!reply.ok) {
+            setError(reply.message);
+            return;
+          }
+          if (await openDraft(reply.value.draft.id)) draftId.current = undefined;
+          else
+            setError(
+              "The next chapter's draft was made, but Play could not open it because the draft open there is not saved yet. Open Play, let it save, then press Make the next chapter again.",
+            );
+        })
+        .catch((thrown: unknown) =>
+          setError(
+            `The next chapter could not be made (${thrown instanceof Error ? thrown.message : "the connection dropped"}). Press Make the next chapter again.`,
+          ),
+        )
+        .finally(() => setPending(false));
+    },
+  };
 }

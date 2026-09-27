@@ -1,4 +1,9 @@
-import type { ProviderId, ProviderStatus, Voice } from "@app/slices/settings/model.js";
+import {
+  geminiVoices,
+  type ProviderId,
+  type ProviderStatus,
+  type Voice,
+} from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { VoiceField, VoiceRefusal } from "@/api";
@@ -266,16 +271,37 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
             ? { help: "Use an Inworld voice ID, such as Dennis, or one from your workspace." }
             : {})}
         >
-          <Input
-            className="tabular-nums"
-            value={voiceId}
-            onChange={(event) => {
-              const next = event.target.value;
-              edit("voiceId", () => {
-                setVoiceId(next);
-              });
-            }}
-          />
+          {provider === "google-tts" ? (
+            // Gemini speaks only its prebuilt voices, so they are picked rather than typed.
+            <Select
+              value={voiceId}
+              options={[
+                { value: "", label: "Pick a Gemini voice" },
+                ...geminiVoices.map((one) => ({
+                  value: one.name,
+                  label: `${one.name} (${one.style})`,
+                })),
+              ]}
+              onChange={(event) => {
+                const next = event.target.value;
+                edit("voiceId", () => {
+                  setVoiceId(next);
+                  if (name.trim() === "") setName(next);
+                });
+              }}
+            />
+          ) : (
+            <Input
+              className="tabular-nums"
+              value={voiceId}
+              onChange={(event) => {
+                const next = event.target.value;
+                edit("voiceId", () => {
+                  setVoiceId(next);
+                });
+              }}
+            />
+          )}
         </Field>
 
         <Field
@@ -298,7 +324,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
         <Button
           variant="primary"
-          className="md:mt-[22px]"
+          className="md:mt-6"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {

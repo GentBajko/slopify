@@ -1,11 +1,12 @@
 import type { Entry, EntryCategory } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { removeEntry } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
+import { ariaKeyShortcuts, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input } from "@/components/kit/field";
@@ -40,6 +41,8 @@ export function EntriesRoute({
   const queryClient = useQueryClient();
   const entries = useQuery(entriesQuery(api));
   const [query, setQuery] = useState("");
+  const search = useRef<HTMLInputElement>(null);
+  const searchKeys = useSearchShortcut(search, "intros and outros");
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<Entry | undefined>(undefined);
   const [history, setHistory] = useState<Entry | undefined>(undefined);
@@ -76,7 +79,9 @@ export function EntriesRoute({
       >
         <Input
           type="search"
+          ref={search}
           aria-label="Search intros and outros"
+          aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
           placeholder="Search intros and outros"
           value={query}
           className="w-full min-w-0 sm:w-64"

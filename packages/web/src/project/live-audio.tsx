@@ -30,10 +30,7 @@ export function LiveAudio({
   const items =
     (preview.data?.revisionId ?? null) === expectedRevision ? (preview.data?.previews ?? []) : [];
   return (
-    <section
-      aria-label="Live narration"
-      className="grid gap-3 rounded-control border border-line-strong bg-raised p-3"
-    >
+    <section aria-label="Live narration" className="grid gap-3 border-y border-line py-3">
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="text-small font-semibold text-ink">Listen while it generates</span>
         <span className="text-small text-ink-2">

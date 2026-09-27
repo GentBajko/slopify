@@ -40,16 +40,16 @@ export function ImagePrompts({
 
   if (options.length === 0) {
     return (
-      <p className="basis-full text-right text-small text-ink3">
+      <p className="basis-full text-right text-small text-ink-3">
         No image prompts saved. Write one on Prompts.
       </p>
     );
   }
 
   return (
-    <div className="flex basis-full flex-col items-start gap-[6px]" {...helpScope}>
+    <div className="flex basis-full flex-col items-start gap-2" {...helpScope}>
       <span className="flex items-center gap-1">
-        <span id={listId} className="engraved text-ink3">
+        <span id={listId} className="engraved text-ink-3">
           Image prompts
         </span>
         <InfoTip id="play.image-prompts" className="-my-1" />
@@ -61,7 +61,7 @@ export function ImagePrompts({
           return (
             <li key={prompt.name}>
               {prompt.missing ? (
-                <span className="block text-label text-red">
+                <span className="block text-label text-danger">
                   Missing template · untick to remove
                 </span>
               ) : null}
@@ -101,7 +101,7 @@ export function ImagePrompts({
         })}
       </ul>
       {picked.length === 0 ? null : (
-        <span className="text-label text-ink3 tabular-nums">
+        <span className="text-label text-ink-3 tabular-nums">
           {Number.isFinite(total)
             ? `${String(total)} of ${String(imagesPerRunMax)} images`
             : "Complete image counts to see the total"}
@@ -144,7 +144,7 @@ function PromptTick({
           onTick(event.target.checked);
         }}
       />
-      <label htmlFor={tickId} className={number === undefined ? "text-ink3" : "text-ink"}>
+      <label htmlFor={tickId} className={number === undefined ? "text-ink-3" : "text-ink"}>
         {name}
       </label>
       <Label htmlFor={numberId} className="sr-only">
@@ -176,7 +176,7 @@ function PromptTick({
         }}
       />
       {problem === undefined ? null : (
-        <span id={noteId} className="text-label text-red">
+        <span id={noteId} className="text-label text-danger">
           {problem}
         </span>
       )}

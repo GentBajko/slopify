@@ -15,7 +15,8 @@ the order Studio's upload dialog asks for them:
    Video to have one written).
 4. Thumbnail: the first goes under Thumbnail; with three thumbnails, all three go into
    Studio's A/B Testing (the button beside the title, which replaced Test & compare).
-5. Playlist: set its name once in Settings → YouTube Studio.
+5. Playlist: set it in Settings → YouTube Studio → Playlist, once as the default (Every
+   channel) and, if you like, per channel; a channel without its own uses the default.
 6. Audience: "No, it's not made for kids".
 7. AI use (under Show more): Yes or No, with why (see below).
 8. Tags, under Studio's Show more.
@@ -79,25 +80,31 @@ One (the default) keeps a project's thumbnail and its fingerprints exactly as be
 ## The Slopify Studio extension
 
 `packages/extension` is a small Manifest V3 extension for Chrome/Chromium and Firefox. It has no
-remote code: everything it runs is in the zip.
-
-### Build
-
-```sh
-npm run build -w packages/extension
-```
-
-This writes `packages/extension/dist/chrome/`, `packages/extension/dist/firefox/`, and a zip of
-each (`slopify-studio-chrome.zip`, `slopify-studio-firefox.zip`).
+remote code: everything it runs is in the zip. It isn't in any extension store; it ships inside
+Slopify.
 
 ### Install
 
-- Chrome, Chromium, Edge, Brave: open `chrome://extensions`, turn on Developer mode, press
-  **Load unpacked** and pick `packages/extension/dist/chrome`.
+Open **Settings → YouTube Studio → Install the Studio extension** (Prepare upload shows the same
+steps while no extension is paired). Pick the browser, press **Download**, and follow the three
+steps:
+
+- Chrome, Chromium, Edge, Brave: unzip `slopify-studio-chrome.zip` into a folder you keep, open
+  `chrome://extensions` (`edge://extensions`), turn on Developer mode, press **Load unpacked**
+  and pick that folder.
 - Firefox (128 or newer): open `about:debugging#/runtime/this-firefox`, press
-  **Load Temporary Add-on** and pick `packages/extension/dist/firefox/manifest.json`. A temporary
-  add-on is removed when Firefox restarts; load it again, or sign the zip on
-  addons.mozilla.org for a permanent install.
+  **Load Temporary Add-on** and pick `slopify-studio-firefox.zip`. A temporary add-on is removed
+  when Firefox restarts; load it again then.
+- Then pair it (below).
+
+A new Slopify may bring a new extension: download and load it again after updating.
+
+The download is `GET /api/studio/extension/chrome.zip` or `firefox.zip`, served from
+`packages/app/dist/extension/`. The root `npm run build` builds `packages/extension` before the
+app, and the app's build copies both zips in (`packages/app/scripts/copy-extension.mjs`, which
+fails the build when they are missing). To build only the extension:
+`npm run build -w packages/extension` (writes `packages/extension/dist/chrome/`, `dist/firefox/`
+and the two zips).
 
 ### Pair
 
@@ -111,7 +118,8 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 ### Use
 
 1. On a finished project, press **Prepare upload**, pick the video or a short, and press
-   **Fill in YouTube Studio**. Studio's upload page opens in a new tab.
+   **Fill in YouTube Studio** (it is only offered once an extension is paired). Studio's upload
+   page opens in a new tab.
 2. Drop the video file into Studio's upload dialog.
 3. When the Details step appears, the extension fills the title, description, thumbnail(s),
    playlist, audience, the AI use answer (Yes or No, with why) and tags, then says what it did.
@@ -119,9 +127,28 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 4. Check everything, go through Studio's remaining steps, and publish yourself. The extension
    never presses Next, Save, Schedule or Publish.
 
-A field it can't fill gets its own message, for example "Couldn't find the Tags field — the
-text is copied, paste it by hand". The first such text goes on the clipboard; each message has a
-Copy button for its own.
+**Several uploads in a row.** Each Fill in YouTube Studio adds the item to **Waiting for
+Studio**, which Prepare upload lists (oldest first, from every project, each with Remove). Each
+new upload dialog is filled with the first waiting item, which then leaves the list, so preparing
+shorts 1, 2 and 3 fills three uploads one after another. The list is kept in the settings table
+(`studio.fillQueue.<hash of the pairing token>`), so it survives a restart; an item waits up to
+24 hours, a new pairing token clears the list, and it never travels with a backup.
+
+**Nothing half-filled.** Before writing anything, the extension checks that every field the item
+needs is in Studio's dialog (pressing Show more to see AI use and Tags). If one is missing,
+Studio has changed: it fills nothing, puts the whole pack (title, description, tags, playlist,
+audience, AI use) on the clipboard and says which fields it couldn't find, with a Copy button.
+The item stays waiting.
+
+A field that is there but doesn't take the text gets its own message, for example "Couldn't add
+2 of the tags — Studio didn't turn them into tags". The first such text goes on the clipboard;
+each message has a Copy button for its own. Studio's page may refuse a clipboard write no click
+asked for; the message then says to press Copy, and should even that be refused, the text is
+shown selected to copy with the keyboard.
+
+The extension watches Studio for the upload dialog cheaply: page changes schedule one look at
+most every 250 ms, and the watching stops while a dialog is being handled and starts again once
+that dialog closes.
 
 How it fills each field, following Studio's own components:
 
@@ -150,8 +177,9 @@ The extension's background worker is the only part that talks to Slopify, and on
 `127.0.0.1` or `localhost`. Pairing sends the token from the extension's own origin
 (`chrome-extension://…` or `moz-extension://…`); Slopify stores that origin, and from then on
 the `/api/studio/ext/*` routes answer only requests with the token, and send CORS headers only
-for that origin — never `*`, never a web page's. They serve the chosen pack and its thumbnails,
-nothing else. The choice made with Fill in YouTube Studio is kept in memory for six hours.
+for that origin — never `*`, never a web page's. They serve the first waiting item's pack and
+its thumbnails, and take the extension's word that it filled an item (`POST /ext/filled`),
+nothing else.
 
 ### Selectors and the live page
 
@@ -165,8 +193,10 @@ trigger (`ytcp-dropdown-trigger[aria-label="Select playlists"]`), the audience r
 settings"]`), the AI use radios (`#altered-content`, `VIDEO_HAS_ALTERED_CONTENT_YES`/`_NO`), the
 Tags chip bar (`#tags-container ytcp-chip-bar input#text-input`) and the A/B Testing button
 (`ytcp-button#ab-test-button`). The fixture the tests use,
-`packages/extension/test/fixtures/studio-upload.html`, mirrors that structure with invented
-content. Older selectors stay behind the checked ones as fallbacks.
+`packages/extension/test/fixtures/studio-upload.html`, is hand-built with invented content: its
+Details fields copy that editor, while the upload dialog around them and its footer buttons
+follow `selectors.ts`. The tests check that each field is found inside the dialog by its checked
+selector. Older selectors stay behind the checked ones as fallbacks.
 
 Still unverified, because opening them wasn't part of the read-only look:
 

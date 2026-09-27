@@ -208,7 +208,7 @@ it("adds a cast member with a voice as a speaker, keeping the link to the cast",
   ).toEqual(["Pick one of 1", "Ada"]);
   await user.selectOptions(picker, "0b7c1f2e-0000-4000-8000-000000000001");
   expect(saved()?.speakers.at(-1)).toEqual({
-    id: "cast-0b7c1f2e",
+    id: "cast-0b7c1f2e-0000-4000-8000-000000000001",
     name: "Ada",
     role: "host",
     voice: { provider: "openai-tts", model: "tts-1", voice: "echo" },
@@ -304,4 +304,57 @@ it("lists each speaker only the voices that speak the project language, with Sho
   expect(names()).toEqual(["Pick a voice", "Echo", "Fable"]);
   await user.click(within(row).getByRole("checkbox", { name: /Show all voices/ }));
   expect(names()).toEqual(["Pick a voice", "Alloy", "Echo", "Fable"]);
+});
+
+it("starts a new podcast with the channel's hosts", async () => {
+  const user = userEvent.setup();
+  const ada: CastMember = {
+    id: "0b7c1f2e-0000-4000-8000-000000000001",
+    channelId: "c",
+    kind: "character",
+    name: "Ada",
+    aliases: [],
+    description: "",
+    voice: { provider: "openai-tts", model: "tts-1", voice: "echo" },
+    host: true,
+    version: 1,
+    images: [],
+    createdAt: "",
+    updatedAt: "",
+  };
+  function WithHosts(): ReactElement {
+    const [value, setValue] = useState<VoicesSettings | undefined>(undefined);
+    return (
+      <>
+        <SpeakersEditor
+          value={value}
+          onChange={setValue}
+          providers={providers}
+          voices={voices}
+          cast={[ada]}
+        />
+        <output aria-label="Saved voices">{JSON.stringify(value ?? null)}</output>
+      </>
+    );
+  }
+  renderRouted(<WithHosts />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "podcast");
+  expect(saved()?.speakers.map((one) => [one.name, one.role, one.castId ?? null])).toEqual([
+    ["Ada", "host", ada.id],
+    ["Alex", "host", null],
+  ]);
+});
+
+it("makes an audiobook a chapter of a book and back", async () => {
+  const user = userEvent.setup();
+  renderRouted(<Subject />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "audiobook");
+  await user.click(screen.getByRole("switch", { name: "A chapter of a book" }));
+  expect(saved()?.book).toEqual({ title: "", chapter: 1 });
+  await user.type(screen.getByLabelText("Book title"), "Sea Tales");
+  await user.clear(screen.getByLabelText("Chapter"));
+  await user.type(screen.getByLabelText("Chapter"), "4");
+  expect(saved()?.book).toEqual({ title: "Sea Tales", chapter: 4 });
+  await user.click(screen.getByRole("switch", { name: "A chapter of a book" }));
+  expect(saved()).not.toHaveProperty("book");
 });

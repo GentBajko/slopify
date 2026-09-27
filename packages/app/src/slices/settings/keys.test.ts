@@ -5,6 +5,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { KeysDeps } from "./keys.js";
 import { keyForAttempt, removeProviderKey, saveProviderKey } from "./keys.js";
+import { providerStatuses } from "./readiness.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
@@ -126,4 +127,26 @@ it("changes credential generation on same-clock saves and delete/reinsert only f
   } finally {
     keys.db.close();
   }
+});
+
+describe("a shared key", () => {
+  it("lets Gemini voices use the Google images key until they have their own", async () => {
+    const keys = deps();
+    expect(keyForAttempt(keys, "google-tts")).toEqual({ ok: false, reason: "key-missing" });
+    saveProviderKey(keys, "google-image", standIn);
+    expect(keyForAttempt(keys, "google-tts")).toEqual({ ok: true, key: standIn });
+    const ready = await providerStatuses({
+      db: keys.db,
+      probe: () => Promise.resolve({ ran: false, stdout: "" }),
+    });
+    expect(ready.find((one) => one.id === "google-tts")?.readiness).toEqual({
+      kind: "keyed",
+      hasKey: true,
+    });
+    saveProviderKey(keys, "google-tts", `${standIn}-own`);
+    expect(keyForAttempt(keys, "google-tts")).toEqual({ ok: true, key: `${standIn}-own` });
+    // It runs one way: images never borrow the speech key.
+    removeProviderKey(keys, "google-image");
+    expect(keyForAttempt(keys, "google-image")).toEqual({ ok: false, reason: "key-missing" });
+  });
 });

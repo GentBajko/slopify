@@ -58,7 +58,7 @@ async function payload(): Promise<FillPayload> {
     );
   const response = await call("/api/studio/ext/pack", current);
   if (!response.ok) throw new Error(await failure(response, "the upload pack"));
-  const { pack, item } = (await response.json()) as ActivePack;
+  const { pack, item, waiting } = (await response.json()) as ActivePack;
   const thumbnails = [];
   for (const file of item.thumbnails) {
     const got = await call(`/api/studio/ext/files/${pack.projectId}/${file.asset}`, current);
@@ -69,7 +69,28 @@ async function payload(): Promise<FillPayload> {
       base64: base64(await got.arrayBuffer()),
     });
   }
-  return { item, thumbnails };
+  return { projectId: pack.projectId, waiting, item, thumbnails };
+}
+
+// Tells Slopify the page filled this item, so it leaves the queue; answers how many still wait.
+async function filled(projectId: string, short: number | null): Promise<number> {
+  const current = await pairing();
+  if (current === undefined) return 0;
+  let response: Response;
+  try {
+    response = await fetch(`${current.base}/api/studio/ext/filled`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${current.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ projectId, short }),
+    });
+  } catch {
+    throw new Error(
+      `Couldn't reach Slopify at ${current.base} to mark this upload as filled, so the next upload dialog may be filled with it again. Remove it under Waiting for Studio in Slopify's Prepare upload.`,
+    );
+  }
+  if (!response.ok) throw new Error(await failure(response, "marking the upload as filled"));
+  const body = (await response.json()) as { waiting?: unknown };
+  return typeof body.waiting === "number" ? body.waiting : 0;
 }
 
 async function pair(base: string, token: string): Promise<string> {
@@ -97,6 +118,8 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
     if (request.type === "pair")
       return { ok: true, value: await pair(request.base, request.token) };
     if (request.type === "status") return { ok: true, value: (await pairing())?.base ?? null };
+    if (request.type === "filled")
+      return { ok: true, value: await filled(request.projectId, request.short) };
     return { ok: true, value: await payload() };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };

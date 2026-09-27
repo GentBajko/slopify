@@ -66,7 +66,7 @@ export function ChannelLinksSettings(): ReactElement {
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: rows are edited in place and never reorder
               key={index}
-              className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line py-[10px] md:grid-cols-[220px_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line py-3 md:grid-cols-[220px_minmax(0,1fr)_auto]"
             >
               <Input
                 aria-label={`Name of link ${String(index + 1)}`}

@@ -34,7 +34,7 @@ export function LibraryRowActions({
     <div
       role="group"
       aria-label={`Actions for ${name}`}
-      className={cn("flex flex-wrap items-center gap-[2px]", className)}
+      className={cn("flex flex-wrap items-center gap-0.5", className)}
     >
       {edit}
       {duplicate}

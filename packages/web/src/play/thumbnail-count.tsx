@@ -17,7 +17,7 @@ export function ThumbnailCountPicker({
 }): ReactElement {
   const id = useId();
   return (
-    <div className="flex min-w-0 items-center gap-[10px]" {...helpScope}>
+    <div className="flex min-w-0 items-center gap-3" {...helpScope}>
       <Label id={id} className="shrink-0">
         Thumbnails
       </Label>

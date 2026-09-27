@@ -2,6 +2,10 @@ import type { HelpEntry } from "../entry.js";
 
 // The project page, Edit project and the video, caption and upload screens it opens.
 export const projectHelp = {
+  "project.next-chapter": {
+    title: "Make the next chapter",
+    body: "Opens a new draft on Play for this book's next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. The MP3 and M4B carry the book as their album and the chapter as their track. An audiobook that is not a book yet becomes one, named after it, starting at chapter 2.",
+  },
   // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit project.
   "project.video.cuts": {
     title: "Cuts",
@@ -225,7 +229,11 @@ export const projectHelp = {
   },
   "project.upload.fill-studio": {
     title: "Fill in YouTube Studio",
-    body: "Opens Studio's upload page and hands this item's details to the optional Slopify Studio browser extension (Settings, YouTube Studio). Drop the video file in and the extension fills in the rest. You check it and press Publish yourself; Slopify never uploads or publishes.",
+    body: "Opens Studio's upload page and adds this item to what waits for the Slopify Studio extension, which must be installed and paired (Settings, YouTube Studio). Each upload dialog you start is filled with the first waiting item. If Studio's dialog lacks a field, nothing is filled and the whole pack is copied instead. You check it and press Publish; Slopify never uploads or publishes.",
+  },
+  "project.upload.queue": {
+    title: "Waiting for Studio",
+    body: "The videos and shorts Fill in YouTube Studio added, oldest first, from every project. Each new upload dialog in Studio is filled with the first, which then leaves the list. It survives restarting Slopify; an item waits up to 24 hours, and a new pairing token clears the list. Remove takes an item out without filling it.",
   },
   "project.free-space": {
     title: "Free space",

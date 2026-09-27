@@ -67,9 +67,9 @@ export function LiveWriting({
   }, [follow, selected?.text]);
   if (calls.length === 0 && stage !== "research" && stage !== "article") return null;
   return (
-    <div className={cn("rounded-control border border-line-strong bg-raised", className)}>
+    <div className={cn("border-y border-line", className)}>
       <div
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3"
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3"
         {...helpScope}
       >
         <span className="inline-flex items-center gap-1">
@@ -104,11 +104,11 @@ export function LiveWriting({
         aria-label="Live writing preview"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
         tabIndex={0}
-        className="max-h-[360px] min-h-32 overflow-auto whitespace-pre-wrap break-words p-4 font-sans text-small leading-relaxed text-ink-2"
+        className="max-h-[360px] min-h-32 overflow-auto whitespace-pre-wrap break-words py-4 font-sans text-small leading-relaxed text-ink-2"
       >
         {selected?.text || "Waiting for the provider's first text…"}
       </section>
-      <p className="border-t border-line px-4 py-2 text-label text-ink-3">
+      <p className="border-t border-line py-2 text-label text-ink-3">
         Live preview. The complete output is saved when this stage finishes.
       </p>
     </div>

@@ -2,6 +2,7 @@ import type { UploadPack } from "@app/slices/studio/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StudioSettingsBody } from "@/api";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { PrepareUpload } from "./prepare-upload.js";
 
@@ -49,6 +50,20 @@ const pack: UploadPack = {
   ],
 };
 
+const pairedSettings: StudioSettingsBody = {
+  playlist: null,
+  channelPlaylists: {},
+  pairing: { token: "t".repeat(32), origin: "chrome-extension://abc", pairedAt: "2026-09-27" },
+};
+const unpairedSettings: StudioSettingsBody = {
+  ...pairedSettings,
+  pairing: { ...pairedSettings.pairing, origin: null, pairedAt: null },
+};
+const studioRoutes = (settings = pairedSettings, queue: unknown[] = []) => ({
+  "GET /api/studio/settings": jsonAnswer(settings),
+  "GET /api/studio/queue": jsonAnswer({ queue }),
+});
+
 describe("Prepare upload", () => {
   it("lists Studio's steps in order and hands the chosen item to the extension", async () => {
     const user = userEvent.setup();
@@ -57,10 +72,14 @@ describe("Prepare upload", () => {
     renderApp(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
+        ...studioRoutes(),
         "GET /api/studio/packs/p1": jsonAnswer(pack),
         "POST /api/studio/packs/p1/choose": async (request) => {
           chosen.push(await request.json());
-          return jsonAnswer({ chosen: { projectId: "p1", short: 1 } })(request);
+          return jsonAnswer({
+            chosen: { projectId: "p1", short: 1 },
+            queue: [{ projectId: "p1", projectTitle: "The Fox", short: 1, at: "2026-09-27" }],
+          })(request);
         },
       }),
     );
@@ -131,6 +150,7 @@ describe("Prepare upload", () => {
     renderApp(
       <PrepareUpload projectId="p1" ready />,
       testDeps({
+        ...studioRoutes(),
         "GET /api/studio/packs/p1": jsonAnswer(withClips),
         "PUT /api/studio/packs/p1/real-footage": async (request) => {
           sent.push(await request.json());
@@ -151,6 +171,74 @@ describe("Prepare upload", () => {
     // A short shows new pictures, so it has no such switch.
     await user.click(within(drawer).getByRole("button", { name: "Short 1" }));
     expect(within(drawer).queryByRole("switch")).toBeNull();
+  });
+
+  it("shows how to install and pair the extension when none is paired, instead of filling", async () => {
+    const user = userEvent.setup();
+    const opened = vi.spyOn(window, "open").mockReturnValue(null);
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(unpairedSettings),
+        "GET /api/studio/packs/p1": jsonAnswer(pack),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
+    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    await within(drawer).findByText("The Slopify Studio extension isn't paired.");
+    const steps = within(drawer).getByRole("list", { name: "Install steps" });
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      within(drawer).getByRole("link", { name: "Download for Chrome" }).getAttribute("href"),
+    ).toBe("http://slopify.test/api/studio/extension/chrome.zip");
+    await user.click(within(drawer).getByRole("button", { name: "Firefox" }));
+    expect(
+      within(drawer).getByRole("link", { name: "Download for Firefox" }).getAttribute("href"),
+    ).toBe("http://slopify.test/api/studio/extension/firefox.zip");
+    // The copy steps stay: they are the upload pack without the extension.
+    expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
+    expect(
+      within(drawer).getByRole("link", { name: "Open YouTube Studio" }).getAttribute("href"),
+    ).toBe("https://www.youtube.com/upload");
+    const fill = within(drawer).getByRole("button", { name: "Fill in YouTube Studio" });
+    expect(fill.getAttribute("aria-disabled") ?? fill.getAttribute("disabled")).not.toBeNull();
+    await user.click(fill);
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it("lists what waits for Studio and removes an item", async () => {
+    const user = userEvent.setup();
+    const removed: unknown[] = [];
+    const waiting = [
+      { projectId: "p1", projectTitle: "The Fox", short: 1, at: "2026-09-27T10:00:00.000Z" },
+      { projectId: "p2", projectTitle: "The Owl", short: null, at: "2026-09-27T10:01:00.000Z" },
+    ];
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(pairedSettings, waiting),
+        "GET /api/studio/packs/p1": jsonAnswer(pack),
+        "POST /api/studio/queue/remove": async (request) => {
+          removed.push(await request.json());
+          return jsonAnswer({ queue: waiting.slice(1) })(request);
+        },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
+    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    const list = await within(drawer).findByRole("list", { name: "Waiting to be filled" });
+    expect(within(list).getByText("The Fox · Short 1")).not.toBeNull();
+    expect(within(list).getByText(/Next: filled in the next upload dialog/)).not.toBeNull();
+    expect(within(list).getByText("The Owl · Video")).not.toBeNull();
+    expect(within(drawer).queryByText("The Slopify Studio extension isn't paired.")).toBeNull();
+    await user.click(
+      within(list).getByRole("button", {
+        name: "Remove The Fox short 1 from Waiting for Studio",
+      }),
+    );
+    expect(removed).toEqual([{ projectId: "p1", short: 1 }]);
+    await within(drawer).findByText("Next: filled in the next upload dialog you open in Studio.");
+    expect(within(drawer).queryByText("The Fox · Short 1")).toBeNull();
   });
 
   it("is disabled until the video is made", () => {

@@ -57,7 +57,7 @@ export function LabelledField({
     <div
       className={cn(
         inline
-          ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-[10px] gap-y-1"
+          ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1"
           : "sl-field [&>span]:w-full [&>select]:w-full",
       )}
       {...(tip === undefined ? {} : helpScope)}

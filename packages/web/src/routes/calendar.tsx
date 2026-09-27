@@ -34,6 +34,7 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
+import { intents, useIntent } from "@/lib/intents";
 import { cn } from "@/lib/utils";
 import { projectsQuery } from "@/queries";
 import {
@@ -187,6 +188,8 @@ export function CalendarRoute(): ReactElement {
     keywords: ["topics", "batch", "queue"],
     run: () => setAdding(true),
   });
+  // "Add to calendar" run from another screen lands here (`components/global-commands.tsx`).
+  useIntent(intents.addToCalendar, () => setAdding(true));
   useCommand({
     id: "calendar.weeks",
     title: "Show the calendar as weeks",

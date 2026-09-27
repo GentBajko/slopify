@@ -8,6 +8,7 @@ import {
   templateFromProjectSchema,
 } from "../../slices/project-templates/from-project.js";
 import type { TemplateResult } from "../../slices/project-templates/model.js";
+import { makeNextChapter, nextChapterSchema } from "../../slices/project-templates/next-chapter.js";
 import {
   templateCreateSchema,
   templateDeleteSchema,
@@ -56,75 +57,106 @@ function routes(deps: DraftDeps | undefined) {
     if (!deps) throw new HTTPException(404);
     return deps;
   };
-  return new Hono()
-    .get("/", (c) => c.json({ templates: listTemplates(service()) }))
-    .post(
-      "/from-project/:projectId",
-      zValidator("param", templateFromProjectSchema.unwrap().pick({ projectId: true }), onInvalid),
-      zValidator("json", templateFromProjectSchema.unwrap().omit({ projectId: true }), onInvalid),
-      (c) => {
-        const result = createTemplateFromProject(service(), {
-          ...c.req.valid("json"),
-          projectId: c.req.valid("param").projectId,
-        });
+  return (
+    new Hono()
+      .get("/", (c) => c.json({ templates: listTemplates(service()) }))
+      .post(
+        "/from-project/:projectId",
+        zValidator(
+          "param",
+          templateFromProjectSchema.unwrap().pick({ projectId: true }),
+          onInvalid,
+        ),
+        zValidator("json", templateFromProjectSchema.unwrap().omit({ projectId: true }), onInvalid),
+        (c) => {
+          const result = createTemplateFromProject(service(), {
+            ...c.req.valid("json"),
+            projectId: c.req.valid("param").projectId,
+          });
+          return result.ok ? c.json(result.value, 201) : refused(c, result);
+        },
+      )
+      // A finished audiobook chapter's "Make the next chapter": a new Play draft for the book.
+      .post(
+        "/next-chapter/:projectId",
+        zValidator("param", nextChapterSchema.unwrap().pick({ projectId: true }), onInvalid),
+        zValidator("json", nextChapterSchema.unwrap().omit({ projectId: true }), onInvalid),
+        (c) => {
+          const result = makeNextChapter(service(), {
+            ...c.req.valid("json"),
+            projectId: c.req.valid("param").projectId,
+          });
+          if (result.ok) return c.json(result.value, 201);
+          const status =
+            result.reason === "not-found" ? 404 : result.reason === "conflict" ? 409 : 400;
+          return problem(c, {
+            status,
+            title: titleOf(status),
+            detail: result.message,
+            extensions: { reason: result.reason },
+          });
+        },
+      )
+      .post("/", zValidator("json", templateCreateSchema, onInvalid), (c) => {
+        const result = createTemplate(service(), c.req.valid("json"));
         return result.ok ? c.json(result.value, 201) : refused(c, result);
-      },
-    )
-    .post("/", zValidator("json", templateCreateSchema, onInvalid), (c) => {
-      const result = createTemplate(service(), c.req.valid("json"));
-      return result.ok ? c.json(result.value, 201) : refused(c, result);
-    })
-    .get(
-      "/:id",
-      zValidator("param", param, onInvalid),
-      zValidator(
-        "query",
-        z.object({ version: z.coerce.number().int().positive().optional() }),
-        onInvalid,
-      ),
-      (c) => {
-        const result = readTemplate(
-          service(),
-          c.req.valid("param").id,
-          c.req.valid("query").version,
-        );
-        return result.ok ? c.json(result.value) : refused(c, result);
-      },
-    )
-    .put(
-      "/:id",
-      zValidator("param", param, onInvalid),
-      zValidator("json", templateUpdateSchema.unwrap().omit({ id: true }), onInvalid),
-      (c) => {
-        const result = updateTemplate(service(), {
-          ...c.req.valid("json"),
-          id: c.req.valid("param").id,
-        });
-        return result.ok ? c.json(result.value) : refused(c, result);
-      },
-    )
-    .delete(
-      "/:id",
-      zValidator("param", param, onInvalid),
-      zValidator("json", templateDeleteSchema.unwrap().omit({ id: true }), onInvalid),
-      (c) => {
-        const result = deleteTemplate(service(), {
-          ...c.req.valid("json"),
-          id: c.req.valid("param").id,
-        });
-        return result.ok ? c.json(result.value) : refused(c, result);
-      },
-    )
-    .post(
-      "/:id/instantiate",
-      zValidator("param", param, onInvalid),
-      zValidator("json", templateInstantiateSchema.unwrap().omit({ templateId: true }), onInvalid),
-      (c) => {
-        const result = instantiateTemplate(service(), {
-          ...c.req.valid("json"),
-          templateId: c.req.valid("param").id,
-        });
-        return result.ok ? c.json(result.value, 201) : refused(c, result);
-      },
-    );
+      })
+      .get(
+        "/:id",
+        zValidator("param", param, onInvalid),
+        zValidator(
+          "query",
+          z.object({ version: z.coerce.number().int().positive().optional() }),
+          onInvalid,
+        ),
+        (c) => {
+          const result = readTemplate(
+            service(),
+            c.req.valid("param").id,
+            c.req.valid("query").version,
+          );
+          return result.ok ? c.json(result.value) : refused(c, result);
+        },
+      )
+      .put(
+        "/:id",
+        zValidator("param", param, onInvalid),
+        zValidator("json", templateUpdateSchema.unwrap().omit({ id: true }), onInvalid),
+        (c) => {
+          const result = updateTemplate(service(), {
+            ...c.req.valid("json"),
+            id: c.req.valid("param").id,
+          });
+          return result.ok ? c.json(result.value) : refused(c, result);
+        },
+      )
+      .delete(
+        "/:id",
+        zValidator("param", param, onInvalid),
+        zValidator("json", templateDeleteSchema.unwrap().omit({ id: true }), onInvalid),
+        (c) => {
+          const result = deleteTemplate(service(), {
+            ...c.req.valid("json"),
+            id: c.req.valid("param").id,
+          });
+          return result.ok ? c.json(result.value) : refused(c, result);
+        },
+      )
+      .post(
+        "/:id/instantiate",
+        zValidator("param", param, onInvalid),
+        zValidator(
+          "json",
+          templateInstantiateSchema.unwrap().omit({ templateId: true }),
+          onInvalid,
+        ),
+        (c) => {
+          const result = instantiateTemplate(service(), {
+            ...c.req.valid("json"),
+            templateId: c.req.valid("param").id,
+          });
+          return result.ok ? c.json(result.value, 201) : refused(c, result);
+        },
+      )
+  );
 }

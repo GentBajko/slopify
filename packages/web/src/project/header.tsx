@@ -1,9 +1,11 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
+import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, EllipsisIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { Button, IconButton } from "@/components/kit/button";
+import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Status, type Tone } from "@/components/kit/status";
@@ -27,8 +29,17 @@ export function ProjectHeader({
   editing,
   onEdit,
   more,
+  nextChapter,
 }: {
   readonly project: ProjectSummary;
+  // A finished audiobook's "Make the next chapter"; absent hides the button.
+  readonly nextChapter?:
+    | {
+        readonly run: () => void;
+        readonly pending: boolean;
+        readonly error?: string | undefined;
+      }
+    | undefined;
   // Undefined until the library has arrived: a prompt cannot be called deleted just
   // because the list naming it has not loaded yet.
   readonly prompts: readonly Prompt[] | undefined;
@@ -56,6 +67,19 @@ export function ProjectHeader({
               {`Project: ${state.word}`}
             </span>
           </Status>
+          {nextChapter !== undefined && finishedAudiobook(project) ? (
+            <span className="inline-flex items-center gap-1">
+              <Button variant="secondary" disabled={nextChapter.pending} onClick={nextChapter.run}>
+                {nextChapter.pending ? "Making the next chapter…" : "Make the next chapter"}
+              </Button>
+              <InfoTip id="project.next-chapter" />
+              {nextChapter.error === undefined ? null : (
+                <span role="alert" className="max-w-[320px] text-small text-danger">
+                  {nextChapter.error}
+                </span>
+              )}
+            </span>
+          ) : null}
           <Button variant="quiet" aria-pressed={editing} onClick={onEdit}>
             Edit settings
           </Button>
@@ -74,6 +98,14 @@ export function ProjectHeader({
         </>
       }
     />
+  );
+}
+
+// An audiobook whose run finished (with or without problems) can be followed by its next chapter.
+export function finishedAudiobook(project: ProjectSummary): boolean {
+  return (
+    project.config.voices?.format === "audiobook" &&
+    (project.status === "done" || project.status === "partial")
   );
 }
 
@@ -116,7 +148,13 @@ function subtitle(project: ProjectSummary, prompts: readonly Prompt[] | undefine
   const name = project.config.articlePrompt;
   const known = prompts === undefined || prompts.some((prompt) => prompt.name === name);
   const shown = name === undefined || name === "" ? undefined : known ? name : `${name} (deleted)`;
-  return [shown, project.format, `started ${startedAt(project.createdAt)}`]
+  const book = project.config.voices?.book;
+  return [
+    book === undefined ? undefined : bookLabel(book),
+    shown,
+    project.format,
+    `started ${startedAt(project.createdAt)}`,
+  ]
     .filter((part) => part !== undefined)
     .join(" · ");
 }
