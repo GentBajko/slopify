@@ -359,8 +359,9 @@ export function StepContent({
             needs you, and the topics a schedule suggested, waiting for your approval.
           </p>
           <p>
-            You have reached the end. Press the question-mark button in the top bar anytime to walk
-            through these steps again.
+            You have reached the end. Press the question-mark button at the foot of the sidebar
+            anytime to walk through these steps again, or the book beside it for Help → Tutorials,
+            the guides to every screen.
           </p>
         </>
       );

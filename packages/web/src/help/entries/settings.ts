@@ -229,7 +229,7 @@ export const settingsHelp = {
   },
   "settings.updates": {
     title: "Updates",
-    body: "The circular-arrows button at the top of every page checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and this page reconnects.",
+    body: "The circular-arrows button at the foot of the sidebar (at the top on a phone) checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and this page reconnects.",
   },
 
   // Home

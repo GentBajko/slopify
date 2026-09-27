@@ -50,7 +50,7 @@ export function AboutSettings({
         you time, you can support it here.
       </p>
       <p className="m-0 mb-3 flex items-center gap-1 text-small text-ink-2">
-        Updates: the circular-arrows button at the top of every page.
+        Updates: the circular-arrows button at the foot of the sidebar (at the top on a phone).
         <InfoTip id="settings.updates" />
       </p>
       {onWhatsNew === undefined ? null : (
