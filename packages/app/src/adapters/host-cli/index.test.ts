@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { bridgeLimits } from "../../kernel/ports/host-cli.js";
 import type { LlmEvent } from "../../kernel/ports/llm.js";
-import { createHostCliClient } from "./index.js";
+import { providerError } from "../../kernel/ports/model.js";
+import { createHostCliClient, withPlanLimit } from "./index.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -169,3 +170,34 @@ it.skipIf(process.platform === "win32")(
     ).toBe(false);
   },
 );
+
+it("reads a used-up plan back out of a bridged rate-limit fault, so Docker runs wait too", () => {
+  const codex = withPlanLimit(
+    providerError({
+      kind: "rate_limit",
+      message:
+        "Your Codex plan's usage limit is used up (the Codex CLI said: You've hit your usage limit. Try again at Sep 28th, 2026 3:04 PM.).",
+    }),
+    "codex-image",
+  );
+  expect(codex.fault.planLimit).toEqual({
+    account: "codex",
+    resetsAt: new Date(2026, 8, 28, 15, 4).toISOString(),
+  });
+  const claude = withPlanLimit(
+    providerError({
+      kind: "rate_limit",
+      message: "Claude Code said: Claude AI usage limit reached|1788417600",
+    }),
+    "claude-code",
+  );
+  expect(claude.fault.planLimit).toEqual({
+    account: "claude-code",
+    resetsAt: "2026-09-03T06:40:00.000Z",
+  });
+  // An ordinary rate limit stays one.
+  expect(
+    withPlanLimit(providerError({ kind: "rate_limit", message: "Too many requests" }), "codex")
+      .fault.planLimit,
+  ).toBeUndefined();
+});

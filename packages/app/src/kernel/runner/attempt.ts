@@ -132,7 +132,13 @@ export async function attempt<T>(
       stage: ctx.stage,
       detail: `${opts.kind} attempt ${n} of ${attemptLimit} failed (${failure.fault.kind}): ${failure.message}`,
     });
-    if (terminalKinds.includes(failure.fault.kind) || n >= attemptLimit) {
+    // A used-up plan allowance is not retried here: the call waits for the reset outside the
+    // provider queue (providers.ts), so a waiting stage holds no slot other work needs.
+    if (
+      terminalKinds.includes(failure.fault.kind) ||
+      failure.fault.planLimit !== undefined ||
+      n >= attemptLimit
+    ) {
       throw failure;
     }
     // A 429 that names a Retry-After replaces the fixed wait with the provider's.
@@ -168,6 +174,7 @@ function classify(
       kind: error.fault.kind,
       message: redact(error.message),
       ...(error.fault.retryAfterMs === undefined ? {} : { retryAfterMs: error.fault.retryAfterMs }),
+      ...(error.fault.planLimit === undefined ? {} : { planLimit: error.fault.planLimit }),
     });
   }
   if (unreachable(error)) {

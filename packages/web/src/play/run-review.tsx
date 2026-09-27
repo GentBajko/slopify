@@ -164,7 +164,17 @@ export function RunReview({
       high: estimates.some((e) => e.rows[i]?.high === null)
         ? null
         : estimates.reduce((n, e) => n + (e.rows[i]?.high ?? 0), 0),
+      apiLow: estimates.some((e) => e.rows[i]?.onPlan === true && e.rows[i]?.apiLow == null)
+        ? null
+        : estimates.reduce((n, e) => n + (e.rows[i]?.apiLow ?? 0), 0),
+      apiHigh: estimates.some((e) => e.rows[i]?.onPlan === true && e.rows[i]?.apiHigh == null)
+        ? null
+        : estimates.reduce((n, e) => n + (e.rows[i]?.apiHigh ?? 0), 0),
     })) ?? [];
+  const onPlan = estimates.some((e) => e.apiLow !== undefined);
+  const apiLow = estimates.reduce((n, e) => n + (e.apiLow ?? 0), 0);
+  const apiHigh = estimates.reduce((n, e) => n + (e.apiHigh ?? 0), 0);
+  const apiUnknown = estimates.reduce((n, e) => n + (e.apiUnknown ?? 0), 0);
   return (
     <div className="flex flex-col gap-4">
       {" "}
@@ -179,13 +189,26 @@ export function RunReview({
               Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
             </p>
           ) : null}
+          {onPlan ? (
+            <p className="text-body text-ink2">
+              {apiLow === 0 && apiHigh === 0
+                ? "CLI steps: $0 on your plan · no API price is listed for their models."
+                : `CLI steps: $0 on your plan · ~${money(apiLow, apiHigh)} via API${apiUnknown ? ` (plus ${String(apiUnknown)} with no API price)` : ""}.`}
+            </p>
+          ) : null}
           <div className="divide-y divide-line">
             {rows.map((r) => (
               <div key={r.stage} className="py-2">
                 <div className="flex justify-between gap-4 text-body">
                   <span>{r.stage}</span>
                   <span>
-                    {r.low === null || r.high === null ? "Unknown" : money(r.low, r.high)}
+                    {r.onPlan === true
+                      ? r.apiLow === null || r.apiHigh === null
+                        ? "$0 on your plan · API price unknown"
+                        : `$0 on your plan · ~${money(r.apiLow, r.apiHigh)} via API`
+                      : r.low === null || r.high === null
+                        ? "Unknown"
+                        : money(r.low, r.high)}
                   </span>
                 </div>
               </div>

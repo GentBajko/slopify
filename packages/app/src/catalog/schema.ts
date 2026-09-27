@@ -15,6 +15,8 @@ const base = z.object({
     .object({
       inputPerMillionTokens: money.optional(),
       outputPerMillionTokens: money.optional(),
+      // Input read from the provider's prompt cache. Absent, cached input is priced as input.
+      cachedInputPerMillionTokens: money.optional(),
       perMillionCharacters: money.optional(),
       perImage: money.optional(),
       perMinute: money.optional(),

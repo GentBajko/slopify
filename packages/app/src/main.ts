@@ -70,6 +70,7 @@ import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
+import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
@@ -81,6 +82,9 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
+import { currentRevisionId } from "./slices/revisions/repo.js";
+import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
+import { createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
@@ -385,6 +389,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    // A stage that was waiting for a CLI's plan limits when the app stopped carries on waiting.
+    void resumeAfterRestart(
+      db,
+      async (projectId) => {
+        const baseRevisionId = currentRevisionId(runtimeDb, projectId);
+        if (baseRevisionId === undefined) return false;
+        const result = await recoverProject(rebuild, projectId, {
+          baseRevisionId,
+          idempotencyKey: randomUUID(),
+          action: { kind: "resume" },
+        });
+        return result.ok;
+      },
+      log,
+    );
     const draftDeps: DraftStartDeps = {
       db,
       paths,
@@ -651,6 +670,13 @@ export function wireRunner({
     attempts: sqliteAttempts(db, ids),
     clock,
     log,
+    meter: createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    limits: createLimitGate({
+      db,
+      clock,
+      log,
+      changed: (projectId) => hub.emit(projectId, { type: "project.updated", projectId }),
+    }),
     queue: createProviderQueue((provider) =>
       isLocalCliProvider(provider)
         ? localCliConcurrency(provider)

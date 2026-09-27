@@ -40,6 +40,7 @@ import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
+import { runCostRoutes } from "./run-cost.js";
 import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
@@ -132,6 +133,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
+      .route("/projects", runCostRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.

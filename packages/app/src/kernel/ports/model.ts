@@ -50,6 +50,8 @@ export interface ProviderFault {
   readonly kind: ProviderErrorKind;
   // A 429 carrying Retry-After replaces the fixed backoff for that wait.
   readonly retryAfterMs?: number | undefined;
+  // A CLI's plan allowance is used up: the call waits for it to return instead of failing.
+  readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
 }
 
 // An Error, so a stack survives and every existing catch still works, carrying the one
@@ -62,6 +64,7 @@ export interface ProviderErrorInit {
   // The provider's own words, verbatim - this is what the stage shows.
   readonly message: string;
   readonly retryAfterMs?: number | undefined;
+  readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
 }
 
 export function providerError(init: ProviderErrorInit): ProviderError {
@@ -69,6 +72,7 @@ export function providerError(init: ProviderErrorInit): ProviderError {
     fault: {
       kind: init.kind,
       ...(init.retryAfterMs === undefined ? {} : { retryAfterMs: init.retryAfterMs }),
+      ...(init.planLimit === undefined ? {} : { planLimit: init.planLimit }),
     },
   });
 }

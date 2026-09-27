@@ -34,7 +34,7 @@ const draft: RunDraft = {
   edgeSilenceSeconds: 0,
 };
 describe("cost planning", () => {
-  it("counts preparation groups using the shared LLM and preserves unknown CLI rates", () => {
+  it("counts preparation groups using the shared LLM and prices CLI calls on the plan", () => {
     const selected = {
       ...draft,
       narrationPrompt: "Delivery",
@@ -43,7 +43,11 @@ describe("cost planning", () => {
       chunking: { mode: "paragraph" as const },
     };
     const estimate = estimateRun(selected, { narration: "Calm." }, 1500, catalogue);
-    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.low).toBeNull();
+    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")).toMatchObject({
+      low: 0,
+      onPlan: true,
+      apiLow: null,
+    });
     expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
       "2 LLM calls",
     );
@@ -155,7 +159,7 @@ describe("cost planning", () => {
     expect(estimate.low).toBeCloseTo(0.25 + 4 * 0.101);
     expect(estimate.rows.filter((row) => row.stage === "Images")).toHaveLength(1);
   });
-  it("keeps unknown CLI costs separate and exposes generated length uncertainty", () => {
+  it("shows a CLI run as $0 on the plan with its API price beside it", () => {
     const estimate = estimateRun(
       {
         ...draft,
@@ -166,9 +170,14 @@ describe("cost planning", () => {
       2000,
       catalogue,
     );
-    expect(estimate.unknown).toBe(1);
-    expect(estimate.rows.find((r) => r.stage === "Article")?.low).toBeNull();
-    expect(estimate.high).toBeGreaterThan(estimate.low);
+    const article = estimate.rows.find((r) => r.stage === "Article");
+    expect(estimate.unknown).toBe(0);
+    expect(article).toMatchObject({ low: 0, high: 0, onPlan: true });
+    // Priced as google/gemini-3.8-flash through OpenRouter, with the same ±50% range.
+    expect(article?.apiLow).toBeGreaterThan(0);
+    expect(article?.apiHigh).toBeCloseTo((article?.apiLow ?? 0) * 3);
+    expect(estimate.apiLow).toBeGreaterThan(0);
+    expect(estimate.apiUnknown).toBe(0);
   });
   it("does not price a local CLI from a legacy private YAML row", () => {
     const dataDir = mkdtempSync(join(tmpdir(), "slopify-legacy-estimate-"));
@@ -205,8 +214,12 @@ describe("cost planning", () => {
         1500,
         legacy,
       );
-      expect(estimate.rows.find((row) => row.stage === "Article")?.low).toBeNull();
-      expect(estimate.unknown).toBe(1);
+      expect(estimate.rows.find((row) => row.stage === "Article")).toMatchObject({
+        low: 0,
+        onPlan: true,
+        apiLow: null,
+      });
+      expect(estimate.unknown).toBe(0);
     } finally {
       rmSync(dataDir, { recursive: true, force: true });
     }
