@@ -31,6 +31,7 @@ import type {
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
+import type { StudioPairingView, UploadPack } from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { hc } from "hono/client";
 import type { Problem, SaveResult } from "./http.js";
@@ -385,6 +386,47 @@ export async function saveNotificationUrl(api: Api, url: string): Promise<Notifi
 export async function sendTestNotification(api: Api, url: string): Promise<void> {
   await detailed<{ sent: boolean }>(
     await api.client.settings.notifications.test.$post({ json: { url } }),
+  );
+}
+
+// Settings → YouTube Studio: the playlist every upload pack names, and the extension's pairing.
+export interface StudioSettingsBody {
+  readonly playlist: string | null;
+  readonly pairing: StudioPairingView;
+}
+
+export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> {
+  return read<StudioSettingsBody>(await api.client.studio.settings.$get());
+}
+
+export async function saveStudioPlaylist(
+  api: Api,
+  playlist: string,
+): Promise<{ readonly playlist: string | null }> {
+  return detailed(await api.client.studio.settings.playlist.$put({ json: { playlist } }));
+}
+
+export async function newStudioPairing(api: Api): Promise<{ readonly pairing: StudioPairingView }> {
+  return detailed(await api.client.studio.settings.pairing.$post());
+}
+
+export async function readUploadPack(api: Api, projectId: string): Promise<UploadPack> {
+  return detailed<UploadPack>(
+    await api.client.studio.packs[":projectId"].$get({ param: { projectId } }),
+  );
+}
+
+// Makes this pack item the one the Studio extension fills in next.
+export async function chooseUploadPack(
+  api: Api,
+  projectId: string,
+  short: number | undefined,
+): Promise<void> {
+  await detailed(
+    await api.client.studio.packs[":projectId"].choose.$post({
+      param: { projectId },
+      json: short === undefined ? {} : { short },
+    }),
   );
 }
 

@@ -44,6 +44,7 @@ import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
+import { studioRoutes } from "./studio.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
@@ -137,6 +138,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
+      .route("/studio", studioRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );
