@@ -17,6 +17,7 @@ import {
   resumeRun,
   retryStage,
   saveArticle,
+  softenStage,
   updateProviders,
   updateSubtitles,
 } from "./api.js";
@@ -31,6 +32,7 @@ import { prepareRevision } from "./revision-api.js";
 export type Action =
   | Exclude<Destructive, { readonly kind: "discard-article" }>
   | { readonly kind: "retry"; readonly stage: StageKind }
+  | { readonly kind: "soften"; readonly stage: StageKind }
   | { readonly kind: "pause" }
   | { readonly kind: "resume" }
   | { readonly kind: "providers"; readonly choices: ProviderChanges }
@@ -75,9 +77,12 @@ export function useProjectActions(projectId: string): ProjectActions {
   const mutation = useMutation({
     mutationFn: async (input: MutationInput): Promise<ActionResult | RecoveryActionResult> => {
       const action = input.action;
-      if (!["pause", "cancel", "resume", "retry", "rerun"].includes(action.kind))
+      if (!["pause", "cancel", "resume", "retry", "soften", "rerun"].includes(action.kind))
         return perform(api, input.projectId, action);
-      const stage = action.kind === "retry" || action.kind === "rerun" ? action.stage : "";
+      const stage =
+        action.kind === "retry" || action.kind === "soften" || action.kind === "rerun"
+          ? action.stage
+          : "";
       const key = `${input.projectId}:${action.kind}:${stage}`;
       let control = controls.current.get(key);
       if (!control) {
@@ -166,6 +171,7 @@ function stageOf(action: Action): StageKind | undefined {
     case "providers":
       return undefined;
     case "retry":
+    case "soften":
     case "rerun":
       return action.stage;
     case "subtitles":
@@ -197,6 +203,8 @@ function perform(
       return resumeRun(api, projectId, required());
     case "retry":
       return retryStage(api, projectId, action.stage, required());
+    case "soften":
+      return softenStage(api, projectId, action.stage, required());
     case "rerun":
       return rerunStage(api, projectId, action.stage, required());
     case "providers":

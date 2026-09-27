@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StageBodyFor } from "@/project/bodies";
 import { checkpointRevisionKey, checkpointStatus } from "@/project/checkpoint-api";
 import { CheckpointPanel } from "@/project/checkpoint-panel";
+import { OpenProjectTab } from "@/project/fix-it";
 import { ProjectHeader } from "@/project/header";
 import { RundownStrip } from "@/project/navigation";
 import { RevisionControlContext } from "@/project/revision-action-context";
@@ -99,109 +100,113 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   return (
     <RevisionMedia projectId={projectId} revisionId={project.data.revisionId}>
       <RevisionControlContext value={project.data.revisionId !== null}>
-        <div>
-          <div data-tour="project-controls">
-            <ProjectHeader
-              project={summary}
-              prompts={prompts.data?.prompts}
-              actions={actions}
-              inFlight={inFlight}
-              resumable={project.data.resumable}
-              primaryOutput={primaryOutput}
-            >
-              <SaveProjectTemplate
-                projectId={projectId}
-                revisionId={project.data.revisionId}
-                title={summary.title}
-              />
-            </ProjectHeader>
-            {/* One reserved line for what the last action said: a refusal from any stage,
+        <OpenProjectTab value={setTab}>
+          <div>
+            <div data-tour="project-controls">
+              <ProjectHeader
+                project={summary}
+                prompts={prompts.data?.prompts}
+                actions={actions}
+                inFlight={inFlight}
+                resumable={project.data.resumable}
+                primaryOutput={primaryOutput}
+              >
+                <SaveProjectTemplate
+                  projectId={projectId}
+                  revisionId={project.data.revisionId}
+                  title={summary.title}
+                />
+              </ProjectHeader>
+              {/* One reserved line for what the last action said: a refusal from any stage,
                 or the server's guidance after an accepted one. It is always here, so a
                 message arriving never pushes the rundown down. */}
-            <div className="mb-2 flex min-h-8 items-center gap-2">
-              {refusal === undefined ? (
-                <StatusSlot tone="info">{actions.notice}</StatusSlot>
-              ) : (
-                <>
-                  <StatusSlot tone="error">{refusal.message}</StatusSlot>
-                  <Button variant="ghost" onClick={actions.dismissRefusal}>
-                    Dismiss
-                  </Button>
-                </>
-              )}
-            </div>
-            <RundownStrip
-              stages={stages}
-              project={summary}
-              outputs={outputs}
-              selected={selected}
-              resumable={project.data.resumable}
-              onSelect={(stage) => {
-                selectStage(stage);
-                setTab("output");
-              }}
-            />
-          </div>
-          <RevisionWorkspace
-            projectId={projectId}
-            currentRevisionId={project.data.revisionId}
-            tab={tab}
-            onTab={setTab}
-            trailing={<BatchQueueCount />}
-            {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
-            renderEditor={(props) => (
-              <RevisionForm
-                {...props}
-                renderContent={(contentProps) => (
-                  <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+              <div className="mb-2 flex min-h-8 items-center gap-2">
+                {refusal === undefined ? (
+                  <StatusSlot tone="info">{actions.notice}</StatusSlot>
+                ) : (
+                  <>
+                    <StatusSlot tone="error">{refusal.message}</StatusSlot>
+                    <Button variant="ghost" onClick={actions.dismissRefusal}>
+                      Dismiss
+                    </Button>
+                  </>
                 )}
+              </div>
+              <RundownStrip
+                stages={stages}
+                project={summary}
+                outputs={outputs}
+                selected={selected}
+                resumable={project.data.resumable}
+                onSelect={(stage) => {
+                  selectStage(stage);
+                  setTab("output");
+                }}
               />
-            )}
-            output={
-              <div className="min-w-0">
-                {sectionsOf(stages).map((section) => (
-                  <StageRow
-                    key={section.stage.id}
-                    active={section.kind === selected}
-                    section={section}
-                    project={summary}
-                    outputs={outputs}
-                    providers={providers.data?.providers ?? []}
-                    actions={actions}
-                    resumable={project.data.resumable}
-                  >
-                    <StageBodyFor
-                      stage={section.stage}
-                      {...(section.companion === undefined ? {} : { companion: section.companion })}
+            </div>
+            <RevisionWorkspace
+              projectId={projectId}
+              currentRevisionId={project.data.revisionId}
+              tab={tab}
+              onTab={setTab}
+              trailing={<BatchQueueCount />}
+              {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
+              renderEditor={(props) => (
+                <RevisionForm
+                  {...props}
+                  renderContent={(contentProps) => (
+                    <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+                  )}
+                />
+              )}
+              output={
+                <div className="min-w-0">
+                  {sectionsOf(stages).map((section) => (
+                    <StageRow
+                      key={section.stage.id}
+                      active={section.kind === selected}
+                      section={section}
                       project={summary}
                       outputs={outputs}
+                      providers={providers.data?.providers ?? []}
                       actions={actions}
-                      busy={
-                        project.data.revisionId === null
-                          ? busy
-                          : actions.pending ||
-                            section.stage.state === "running" ||
-                            section.companion?.state === "running"
-                      }
-                    />
-                  </StageRow>
-                ))}
-              </div>
-            }
-            {...(project.data.revisionId === null
-              ? {}
-              : {
-                  checkpoints: (
-                    <CheckpointPanel
-                      projectId={projectId}
-                      revisionId={project.data.revisionId}
-                      paused={summary.status === "paused"}
-                      stages={stages}
-                    />
-                  ),
-                })}
-          />
-        </div>
+                      resumable={project.data.resumable}
+                    >
+                      <StageBodyFor
+                        stage={section.stage}
+                        {...(section.companion === undefined
+                          ? {}
+                          : { companion: section.companion })}
+                        project={summary}
+                        outputs={outputs}
+                        actions={actions}
+                        busy={
+                          project.data.revisionId === null
+                            ? busy
+                            : actions.pending ||
+                              section.stage.state === "running" ||
+                              section.companion?.state === "running"
+                        }
+                      />
+                    </StageRow>
+                  ))}
+                </div>
+              }
+              {...(project.data.revisionId === null
+                ? {}
+                : {
+                    checkpoints: (
+                      <CheckpointPanel
+                        projectId={projectId}
+                        revisionId={project.data.revisionId}
+                        paused={summary.status === "paused"}
+                        stages={stages}
+                      />
+                    ),
+                  })}
+            />
+          </div>
+        </OpenProjectTab>
       </RevisionControlContext>
     </RevisionMedia>
   );

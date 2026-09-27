@@ -14,7 +14,7 @@ const middle = (): number => 0.5;
 describe("autoRetryDelay", () => {
   it("doubles the wait each time: about 2, 4, 8 and 16 minutes, then gives up", () => {
     const waits = [0, 1, 2, 3, 4].map((n) => autoRetryDelay({ kind: "rate_limit" }, n, middle));
-    expect(waits).toEqual([2, 4, 8, 16].map((minutes) => minutes * 60_000).concat([undefined]));
+    expect(waits).toEqual([...[2, 4, 8, 16].map((minutes) => minutes * 60_000), undefined]);
     expect(autoRetryLimit).toBe(4);
     // All four waits come to about half an hour.
     expect(waits.reduce((total: number, wait) => total + (wait ?? 0), 0)).toBe(30 * 60_000);

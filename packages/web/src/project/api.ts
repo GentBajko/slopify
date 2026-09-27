@@ -78,6 +78,17 @@ export function retryStage(
   return recoveryRun(api, projectId, `stages/${kind}/retry`, input);
 }
 
+// Soften and retry: the stage's refused image prompts are reworded by the project's AI
+// model as the retry draws them again.
+export function softenStage(
+  api: Api,
+  projectId: string,
+  kind: StageKind,
+  input: RevisionControlInput,
+): Promise<RecoveryActionResult> {
+  return recoveryRun(api, projectId, `stages/${kind}/soften`, input);
+}
+
 export function rerunStage(
   api: Api,
   projectId: string,
