@@ -16,6 +16,7 @@ export const promptKinds = [
   "narration",
   "description",
   "shorts",
+  "review",
 ] as const;
 export type PromptKind = (typeof promptKinds)[number];
 

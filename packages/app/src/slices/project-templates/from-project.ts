@@ -9,6 +9,7 @@ import type { PromptKind } from "../library/model.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import { requestHash } from "../play-drafts/repo.js";
+import { reviewSettingsForm } from "../reviews/model.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
@@ -88,6 +89,8 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
   addPrompt("article", config.articlePrompt, "article");
   addPrompt("narration", config.narrationPrompt, "narration");
   addPrompt("description", config.descriptionPrompt, "description");
+  for (const [stage, picked] of Object.entries(config.reviews?.stages ?? {}))
+    addPrompt("review", picked.prompt, `review.${stage}`);
   const definitions = revision.content.imageOrder.flatMap((key) => {
     const definition = revision.content.imageDefinitions[key];
     return definition === undefined ? [] : [definition];
@@ -190,6 +193,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
             },
           }),
       articlePrompt: config.articlePrompt ?? "",
+      ...(config.thumbnailCount === 3 ? { thumbnailCount: 3 as const } : {}),
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),
       ...(config.descriptionPrompt === undefined
@@ -211,6 +215,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       // A project without edit settings makes a template without them, so a video made from
       // it cuts every N seconds like the project did.
       ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
+      ...(config.reviews === undefined ? {} : { reviews: reviewSettingsForm(config.reviews) }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

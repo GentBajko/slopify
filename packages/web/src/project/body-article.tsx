@@ -2,7 +2,7 @@ import type { Stage } from "@app/slices/admission/model.js";
 import { sourceEntries } from "@app/slices/article/source-lines.js";
 import { splitEndMatter } from "@app/slices/article/split.js";
 import { useQuery } from "@tanstack/react-query";
-import { useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import {
   splitTitle,
   useOutputText,
 } from "./parts.js";
+import { ReadingView } from "./reading-view.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { shownStage } from "./sections.js";
 
 // A stage that has not started, or is not part of the run, has nothing to re-run yet.
@@ -36,6 +38,7 @@ function withoutHeading(section: string): string {
 }
 
 export function ArticleBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
+  const reviews = useReviews(project.id);
   const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
   const research = companion?.kind === "research" ? companion : undefined;
@@ -107,13 +110,13 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
     sources: "sources",
     pronunciation: "pronunciation table",
   };
-  const copy = (part: Part) => {
-    const what = names[part];
+  // One copy for the action row's Copy and the reading view's Copy section and Copy all.
+  const copyMarkdown = useCallback((text: string, what: string) => {
     if (!navigator.clipboard) {
       setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
       return;
     }
-    void navigator.clipboard.writeText(copyText[part]).then(
+    void navigator.clipboard.writeText(text).then(
       () => setStatus({ text: `Copied the ${what} as Markdown.`, tone: "success" }),
       () =>
         setStatus({
@@ -121,10 +124,16 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
           tone: "error",
         }),
     );
-  };
+  }, []);
+  const copy = (part: Part) => copyMarkdown(copyText[part], names[part]);
 
   return (
     <StageBody>
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: "article:body" })}
+        projectId={project.id}
+        busy={busy}
+      />
       <div className="flex flex-wrap items-baseline gap-[14px] text-small text-ink2">
         <span className="text-row font-semibold text-ink">
           <InlineProse markdown={title} />
@@ -195,40 +204,61 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
       ) : null}
 
       <TabPanel idPrefix={idPrefix} id="article" active={open === "article"}>
-        <section
-          aria-label="Article content"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
-          tabIndex={0}
-          className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
-        >
-          {running && hasLivePreview ? (
-            <LiveWriting projectId={project.id} stage="article" className="" />
-          ) : !running && text === "" && !ran(stage) ? (
-            <p className="text-small text-ink2">
-              {research === undefined
-                ? "The article will be written when its inputs are ready."
-                : "The article is written once the research has finished."}
-            </p>
-          ) : (
-            <Prose markdown={parts.body} />
-          )}
-        </section>
+        {running ? (
+          // While it is written the text grows token by token; the reading tools wait for it.
+          <section
+            aria-label="Article content"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
+            tabIndex={0}
+            className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+          >
+            {hasLivePreview ? (
+              <LiveWriting projectId={project.id} stage="article" className="" />
+            ) : (
+              <Prose markdown={parts.body} />
+            )}
+          </section>
+        ) : (
+          <ReadingView
+            markdown={parts.body}
+            label="Article content"
+            what="article"
+            onCopy={copyMarkdown}
+            copyAll={false}
+          >
+            {ran(stage) && markdown !== undefined && stored.data === undefined ? (
+              <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
+            ) : (
+              <p className="text-small text-ink2">
+                {!ran(stage)
+                  ? research === undefined
+                    ? "The article will be written when its inputs are ready."
+                    : "The article is written once the research has finished."
+                  : "No article was saved."}
+              </p>
+            )}
+          </ReadingView>
+        )}
       </TabPanel>
       {research === undefined ? null : (
         <TabPanel idPrefix={idPrefix} id="research" active={open === "research"}>
-          <ResearchNotes projectId={project.id} stage={research} notes={notes} />
+          <ResearchNotes
+            projectId={project.id}
+            stage={research}
+            notes={notes}
+            onCopy={copyMarkdown}
+          />
         </TabPanel>
       )}
       {entries.length === 0 ? null : (
         <TabPanel idPrefix={idPrefix} id="sources" active={open === "sources"}>
-          <ol className="max-h-[min(58vh,640px)] list-decimal space-y-2 overflow-auto pr-3 pl-6 text-body text-ink marker:text-ink3">
-            {entries.map((entry, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: the list is read-only and keeps its order
-              <li key={index} className="break-words">
-                <InlineProse markdown={entry} />
-              </li>
-            ))}
-          </ol>
+          <ReadingView
+            markdown={entries.map((entry, index) => `${String(index + 1)}. ${entry}`).join("\n")}
+            label="Sources"
+            what="sources"
+            onCopy={copyMarkdown}
+            copyAll={false}
+          />
         </TabPanel>
       )}
       {table === "" ? null : (

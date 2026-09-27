@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { useOutputText } from "./parts.js";
+import type { Review } from "./review-api.js";
+import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
 import { useOutputMedia } from "./revision-media.js";
 import { pickAgain, remakeShort } from "./revision-shorts.js";
@@ -41,6 +43,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
   const own = outputsOf(outputs, stage);
   const list = roleOf(own, "shorts");
   const clips = useShortClips(own);
+  const reviews = useReviews(project.id);
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const videos = currentShorts(own, "short_video", clips);
   const settings = project.config.shorts;
@@ -94,6 +97,8 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
             <ShortCard
               key={clip.number}
               clip={clip}
+              projectId={project.id}
+              review={reviewFor(reviews, { itemKey: `shorts:${String(clip.number)}` })}
               video={videos.find((output) => ofClip(output, clip))}
               images={
                 currentShorts(own, "short_image", clips).filter((output) => ofClip(output, clip))
@@ -124,6 +129,8 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
 
 function ShortCard({
   clip,
+  projectId,
+  review,
   video,
   images,
   wanted,
@@ -134,6 +141,9 @@ function ShortCard({
   onRemake,
 }: {
   readonly clip: Clip;
+  readonly projectId: string;
+  // The automatic review's verdict on this short, when it had one.
+  readonly review: Review | undefined;
   readonly video: Output | undefined;
   readonly images: number;
   readonly wanted: number;
@@ -191,6 +201,7 @@ function ShortCard({
       <p className="break-words text-small text-ink2">{clip.description}</p>
       <p className="break-words text-label text-ink3">{link}</p>
       <p className="break-words text-small text-ink2">{clip.hashtags.join(" ")}</p>
+      <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
       {/* The folder is the stage's one Open folder; each short only downloads here. */}
       {video !== undefined && media !== undefined ? (
         <a

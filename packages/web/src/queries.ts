@@ -11,6 +11,7 @@ import {
   readAppSettings,
   readNotice,
   readProject,
+  readRunCost,
   readUsage,
 } from "./api.js";
 
@@ -23,6 +24,8 @@ export const keys = {
   revisionFile: (id: string, revisionId: string, recordId: string) =>
     ["revision-file", id, revisionId, recordId] as const,
   project: (id: string) => ["project", id] as const,
+  // Under the project's key, so every event that refetches the project refetches this too.
+  runCost: (id: string) => ["project", id, "run-cost"] as const,
   // The text `article.delta` appends to. It is patched, never fetched.
   article: (id: string, revisionId: string | null = null) =>
     ["project", id, "article", revisionId] as const,
@@ -42,6 +45,9 @@ export const keys = {
   entries: ["entries"] as const,
   documentThemes: ["document-themes"] as const,
   settings: ["settings"] as const,
+  // The project page's hand edits to the YouTube description, and Settings → Channel links.
+  youtubeEdits: (projectId: string) => ["project", projectId, "youtube-edits"] as const,
+  channelLinks: ["channel-links"] as const,
 };
 
 export function projectsQuery(api: Api) {
@@ -50,6 +56,10 @@ export function projectsQuery(api: Api) {
 
 export function projectQuery(api: Api, id: string) {
   return queryOptions({ queryKey: keys.project(id), queryFn: () => readProject(api, id) });
+}
+
+export function runCostQuery(api: Api, id: string) {
+  return queryOptions({ queryKey: keys.runCost(id), queryFn: () => readRunCost(api, id) });
 }
 
 export function stagingQuery(api: Api) {

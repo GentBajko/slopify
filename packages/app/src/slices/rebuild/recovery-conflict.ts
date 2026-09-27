@@ -8,10 +8,15 @@ import type { RebuildDeps } from "./service.js";
 // would refuse every later rerun of the section. An accepted job nothing will collect is
 // reported apart: waiting or pausing cannot clear it, only Retry or Resume can.
 export type ActiveConflict = "running" | "accepted-job";
+//
+// An automatic redo (`pendingSuperseded`) runs while the rest of the run waits: admitted work
+// that has not started is replaced by the redo's own, so only running work and accepted jobs
+// stand in its way.
 export function activeConflict(
   deps: RebuildDeps,
   projectId: string,
   keys: readonly string[],
+  pendingSuperseded = false,
 ): ActiveConflict | undefined {
   const rows = deps.db
     .prepare(
@@ -25,7 +30,7 @@ export function activeConflict(
         "LEFT JOIN revision_work_reservations r ON r.work_id=w.id AND r.piece_id=p.id " +
         "WHERE w.project_id=?) WHERE live OR accepted",
     )
-    .all(projectPaused(deps.db, projectId) ? 0 : 1, projectId)
+    .all(pendingSuperseded || projectPaused(deps.db, projectId) ? 0 : 1, projectId)
     .filter((row) =>
       keys.some(
         (key) =>

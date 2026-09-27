@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
+import { ThumbnailCountPicker } from "@/play/thumbnail-count";
 import { promptsQuery } from "@/queries";
 import { CaptionEditor } from "./caption-editor.js";
 import { ImageEditor } from "./image-editor.js";
@@ -196,6 +197,20 @@ export function RevisionContentEditors({
           onChange={emit}
           onPending={(active) => mark("provided:reference", active)}
         />
+        {edit.config.sources.thumbnail === "from_prompt" ||
+        edit.config.sources.thumbnail === "prompt_by_llm" ? (
+          // One leaves the setting out, so a project that never had it keeps its config.
+          <ThumbnailCountPicker
+            value={edit.config.thumbnailCount === 3 ? 3 : 1}
+            onPick={(count) => {
+              const { thumbnailCount: _dropped, ...config } = latest.current.edit.config;
+              emit({
+                ...latest.current.edit,
+                config: count === 3 ? { ...config, thumbnailCount: 3 } : config,
+              });
+            }}
+          />
+        ) : null}
         {(["audio", "thumbnail"] as const).map((stage) =>
           edit.config.sources[stage] !== "provide" ? null : (
             <RevisionUpload

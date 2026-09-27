@@ -1,8 +1,9 @@
-import type { EntryCategory, PromptKind } from "@app/slices/library/model.js";
+import type { Entry, EntryCategory, Prompt, PromptKind } from "@app/slices/library/model.js";
 import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
@@ -10,6 +11,8 @@ import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
+import { pickInPlay } from "@/play/pick-in-play";
+import { CalendarRoute } from "@/routes/calendar";
 import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
 import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
@@ -87,6 +90,13 @@ const schedulesRoute = createRoute({
   path: "schedules",
   component: SchedulesRoute,
 });
+
+const calendarRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "calendar",
+  component: CalendarRoute,
+});
+
 function TemplatesPage(): import("react").ReactElement {
   const session = usePlaySession();
   const navigate = useNavigate();
@@ -229,14 +239,40 @@ function ProjectPage() {
 function PromptsPage() {
   const { kind } = promptsRoute.useSearch();
   const navigate = useNavigate();
+  const play = useUseInPlay();
   return (
     <PromptsRoute
       kind={kind}
       onKind={(next) => {
         void navigate({ to: "/prompts", search: { kind: next }, replace: true });
       }}
+      onUseInPlay={play.use}
+      playBlocked={play.blocked}
     />
   );
+}
+
+// Library → Use in Play: picks the prompt or intro/outro in the open Play draft and opens Play
+// on the field that shows it. While a run is being started from the draft, the draft is not
+// the user's to change, the same rule Templates' Use follows.
+function useUseInPlay(): {
+  readonly use: (item: Prompt | Entry) => void;
+  readonly blocked: string | undefined;
+} {
+  const session = usePlaySession();
+  const navigate = useNavigate();
+  const blocked =
+    session.review.starting || session.review.uncertain || session.review.created !== null
+      ? "Play is starting a run from its draft. Wait for it to start, then try again."
+      : undefined;
+  return {
+    blocked,
+    use: (item) => {
+      const picked = pickInPlay(session.document, item);
+      session.edit(picked.document);
+      void navigate({ to: "/play" }).then(() => session.navigate(picked.section, picked.field));
+    },
+  };
 }
 
 function NewPromptPage() {
@@ -280,12 +316,15 @@ function useLeave(): (kind: PromptKind) => void {
 function EntriesPage() {
   const { category } = entriesRoute.useSearch();
   const navigate = useNavigate();
+  const play = useUseInPlay();
   return (
     <EntriesRoute
       category={category}
       onCategory={(next) => {
         void navigate({ to: "/entries", search: { category: next }, replace: true });
       }}
+      onUseInPlay={play.use}
+      playBlocked={play.blocked}
     />
   );
 }
@@ -337,6 +376,21 @@ function useLeaveEntries(): (category: EntryCategory) => void {
   };
 }
 
+// Dev only: the design-system gallery (routes/design.tsx). Vite replaces the flag with
+// `false` in a production build, so the route is never built and its chunk drops out.
+function makeDesignRoute() {
+  return createRoute({
+    getParentRoute: () => rootRoute,
+    path: "design",
+    component: lazyRouteComponent(() => import("@/routes/design"), "DesignRoute"),
+  });
+}
+
+// Typed as present so the tree's types stay exact; nothing links to /design.
+const devRoutes = (import.meta.env.DEV ? { designRoute: makeDesignRoute() } : {}) as {
+  designRoute: ReturnType<typeof makeDesignRoute>;
+};
+
 const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
@@ -346,6 +400,7 @@ const routeTree = rootRoute.addChildren({
     templatesRoute,
     documentThemesRoute,
     schedulesRoute,
+    calendarRoute,
   }),
   libraryIndexRoute,
   projectRoute,
@@ -357,6 +412,7 @@ const routeTree = rootRoute.addChildren({
   documentThemeRoute,
   settingsRoute,
   usageRoute,
+  ...devRoutes,
 });
 
 export function createAppRouter() {

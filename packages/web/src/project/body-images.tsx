@@ -9,6 +9,8 @@ import { ThumbnailPanel } from "./body-thumbnail.js";
 import { ConfirmedButton } from "./controls.js";
 import { groupImages } from "./image-groups.js";
 import { ActionRow, DownloadLink, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import type { Review } from "./review-api.js";
+import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 
 // Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved header with
@@ -21,6 +23,7 @@ export function aspectOf(format: Format): string {
 }
 
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
+  const reviews = useReviews(project.id);
   const groups = groupImages(
     outputsOf(outputs, stage),
     project.config.imagePrompts?.map((prompt) => prompt.name) ?? [],
@@ -70,6 +73,8 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                 <ImageTile
                   key={image.id}
                   image={image}
+                  projectId={project.id}
+                  review={reviewFor(reviews, { outputId: image.id })}
                   format={project.format}
                   actions={actions}
                   busy={busy}
@@ -188,11 +193,16 @@ function ImageGroup({
 
 function ImageTile({
   image,
+  projectId,
+  review,
   format,
   actions,
   busy,
 }: {
   readonly image: Output;
+  readonly projectId: string;
+  // The automatic review's verdict on this image, when it had one.
+  readonly review: Review | undefined;
   readonly format: Format;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
@@ -225,10 +235,14 @@ function ImageTile({
           )}
         />
       )}
+      <ReviewChip review={review} />
       {/* Revealed by hover and by focus alike, and always in the tab order, so nothing
           here is hover-only information. */}
       <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-1 bg-panel/90 p-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none">
         <OutputDownload output={image} />
+        {review === undefined ? null : (
+          <ReviewActions review={review} projectId={projectId} busy={busy} />
+        )}
         <ConfirmedButton
           action={{ kind: "regenerate-image", outputId: image.id }}
           run={() => {

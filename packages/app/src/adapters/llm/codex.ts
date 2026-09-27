@@ -6,8 +6,14 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import type {
+  LimitWindow,
+  PlanLimitHit,
+  PlanLimitReading,
+} from "../../kernel/ports/plan-limits.js";
 import { cliCheck, cliReported } from "../explain.js";
 import { cliLoginError } from "./cli-login-error.js";
+import { codexPlanLimit } from "./codex-limits.js";
 import { nodeCodexModels } from "./codex-models.js";
 import {
   type DocumentWorkspace,
@@ -15,6 +21,7 @@ import {
   documentTool,
   documentWorkspace,
 } from "./document-workspace.js";
+import { type ImageWorkspace, imageWorkspace } from "./image-workspace.js";
 import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
 import {
   cliEvent,
@@ -39,6 +46,10 @@ export interface CodexDeps {
   readonly run: RunCli;
   readonly binary?: string | undefined;
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
+  // The plan windows, read before and after every call (`codex-limits.ts`). Absent, a call
+  // reports none.
+  readonly readLimits?: (() => Promise<readonly LimitWindow[] | null>) | undefined;
+  readonly now?: (() => Date) | undefined;
 }
 
 const writingRole =
@@ -75,10 +86,16 @@ const disabledFeatures = [
 // plus a zero project-doc budget excludes AGENTS.md and project `.codex` context. Read-only is
 // defense in depth if a future release exposes a new filesystem tool. The TOML strings keep their
 // quotes because each `-c` value is parsed as TOML rather than as a shell expression.
+//
+// Pictures (a review's) are attached to the prompt with `--image` (`codex exec --help` 0.155.1:
+// "-i, --image <FILE>... Optional image(s) to attach to the initial prompt"), which needs no
+// tool: `view_image` stays disabled. Each is given as its own flag so a path is never read as
+// the prompt.
 export function codexArgs(
   req: LlmCompletion,
   directory: string,
   documents?: DocumentWorkspace,
+  images?: ImageWorkspace,
 ): string[] {
   return [
     "exec",
@@ -134,6 +151,7 @@ export function codexArgs(
           }).flatMap(([key, value]) => ["-c", `mcp_servers.${documentServerName}.${key}=${value}`]),
         ]
       : []),
+    ...(images?.files.flatMap((one) => ["--image", one.path]) ?? []),
     // A literal '-' requests stdin; report bodies never become OS arguments.
     "--",
     "-",
@@ -146,9 +164,15 @@ const itemCompleted = z.object({
 
 // The field names are the shipped binary's own: `TurnCompletedEvent` carries `usage`, and
 // its counts are `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`,
-// `output_tokens`, `reasoning_output_tokens`. Only the two the port has a home for are read.
+// `output_tokens`, `reasoning_output_tokens`. `input_tokens` already counts the cached ones.
 const turnCompleted = z.object({
-  usage: z.object({ input_tokens: z.number(), output_tokens: z.number() }).nullish(),
+  usage: z
+    .object({
+      input_tokens: z.number(),
+      output_tokens: z.number(),
+      cached_input_tokens: z.number().optional(),
+    })
+    .nullish(),
 });
 
 const turnFailed = z.object({ error: z.object({ message: z.string() }) });
@@ -162,14 +186,27 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     req.signal.throwIfAborted();
     const workspace = codexWorkspace(deps.env ?? process.env);
     let documents: DocumentWorkspace | undefined;
+    let images: ImageWorkspace | undefined;
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
+    // Asked beside the run rather than before it: the read takes about a second and the
+    // turn spends nothing until its first answer, so the reading is still the one before.
+    const before = deps.readLimits?.().catch(() => null);
     try {
       documents = documentWorkspace(req.documents);
-      run = deps.run(binary, codexArgs(req, workspace.directory, documents), req.signal, {
+      images = imageWorkspace(req.images);
+      run = deps.run(binary, codexArgs(req, workspace.directory, documents, images), req.signal, {
         ...workspace.options,
         stdin: cliInput(
-          [documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n"),
+          [
+            documents?.instructions,
+            images === undefined
+              ? undefined
+              : `The attached images, in order:\n${images.files.map((one, index) => `${String(index + 1)}. ${one.name}`).join("\n")}`,
+            promptOf(req.messages),
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         ),
       });
       for await (const line of lines(run.stdout, req.signal)) {
@@ -197,15 +234,21 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           // ceiling: Codex reports no stop reason, so the continuation loop cannot tell a
           // finished answer from one cut at the output limit. A `--output-schema` run
           // would, at the cost of constraining every stage's answer.
-          yield { type: "done", usage: usageOf(usage), finishReason: null };
+          const limits = await readingOf(before, deps.readLimits);
+          yield {
+            type: "done",
+            usage: usageOf(usage),
+            finishReason: null,
+            ...(limits === undefined ? {} : { limits }),
+          };
           return;
         }
         if (event.type === "turn.failed") {
-          const login = cliLoginError(
-            "codex",
-            cliShaped(binary, turnFailed, event.value).error.message,
-          );
+          const failed = cliShaped(binary, turnFailed, event.value).error.message;
+          const login = cliLoginError("codex", failed);
           if (login) throw login;
+          const planLimit = codexPlanLimit(failed, (deps.now ?? (() => new Date()))());
+          if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
             message: cliReported(
@@ -216,8 +259,11 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           });
         }
         if (event.type === "error") {
-          const login = cliLoginError("codex", cliShaped(binary, errorEvent, event.value).message);
+          const failed = cliShaped(binary, errorEvent, event.value).message;
+          const login = cliLoginError("codex", failed);
           if (login) throw login;
+          const planLimit = codexPlanLimit(failed, (deps.now ?? (() => new Date()))());
+          if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
             message: cliReported(
@@ -236,6 +282,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
         if (run !== undefined) ended = await stopCliRun(run);
       } finally {
         documents?.remove();
+        images?.remove();
         workspace.remove();
       }
     }
@@ -246,6 +293,8 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     // The stream ended with neither a completed turn nor a failure.
     const login = cliLoginError("codex", run.stderr());
     if (login) throw login;
+    const planLimit = codexPlanLimit(run.stderr(), (deps.now ?? (() => new Date()))());
+    if (planLimit !== undefined) throw codexLimitError(run.stderr().trim(), planLimit);
     throw providerError({
       kind: "other",
       message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
@@ -255,7 +304,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
   return {
     id: "codex",
     // Prose arrives as whole messages; other JSONL events carry activity separately.
-    capabilities: { streams: true, reportsUsage: true, webSearch: true },
+    capabilities: { streams: true, reportsUsage: true, webSearch: true, images: true },
     models: deps.readModels ?? (() => nodeCodexModels(process.env, binary)),
     complete,
   };
@@ -289,9 +338,42 @@ function codexWorkspace(sourceEnv: Readonly<NodeJS.ProcessEnv>): {
 }
 
 function usageOf(
-  usage: { readonly input_tokens: number; readonly output_tokens: number } | null | undefined,
+  usage:
+    | {
+        readonly input_tokens: number;
+        readonly output_tokens: number;
+        readonly cached_input_tokens?: number | undefined;
+      }
+    | null
+    | undefined,
 ): Usage | null {
   return usage === null || usage === undefined
     ? null
-    : { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens };
+    : {
+        inputTokens: usage.input_tokens,
+        outputTokens: usage.output_tokens,
+        ...(usage.cached_input_tokens ? { cachedInputTokens: usage.cached_input_tokens } : {}),
+      };
+}
+
+// The windows before (already asked) and after the call; undefined when neither arrived.
+export async function readingOf(
+  before: Promise<readonly LimitWindow[] | null> | undefined,
+  read: (() => Promise<readonly LimitWindow[] | null>) | undefined,
+): Promise<PlanLimitReading | undefined> {
+  if (read === undefined) return undefined;
+  const [start, end] = await Promise.all([before, read().catch(() => null)]);
+  if (!start?.length && !end?.length) return undefined;
+  return {
+    ...(start?.length ? { before: start } : {}),
+    ...(end?.length ? { after: end } : {}),
+  };
+}
+
+export function codexLimitError(message: string, planLimit: PlanLimitHit): Error {
+  return providerError({
+    kind: "rate_limit",
+    message: `Your Codex plan's usage limit is used up (the Codex CLI said: ${redact(message)}). Slopify waits for it to reset and then carries on by itself.`,
+    planLimit,
+  });
 }
