@@ -23,7 +23,12 @@ import {
   tutorialSearchQuery,
   tutorialsQuery,
 } from "@/tutorials/api";
-import { headingForAnchor, parseTutorialHref, rewriteTutorialLinks } from "@/tutorials/links";
+import {
+  headingForAnchor,
+  parseTutorialHref,
+  rewriteTutorialLinks,
+  splitTitle,
+} from "@/tutorials/links";
 
 // Help → Tutorials: the wiki's pages, shipped with the app so they read offline and describe
 // the version that is running. The sidebar's groups on the left with a search across every
@@ -55,9 +60,11 @@ export function TutorialsRoute({
     [index.data],
   );
   const title = index.data?.pages.find((one) => one.id === page)?.title ?? page.replace(/-/g, " ");
+  // The page's `# Title` is the page header; the reading view starts under it.
+  const split = useMemo(() => splitTitle(markdown.data ?? ""), [markdown.data]);
   const text = useMemo(
-    () => (markdown.data === undefined ? "" : rewriteTutorialLinks(markdown.data, pages, page)),
-    [markdown.data, pages, page],
+    () => (markdown.data === undefined ? "" : rewriteTutorialLinks(split.body, pages, page)),
+    [markdown.data, split.body, pages, page],
   );
 
   // To the section the address names once the page is drawn, or to the top of a new page.
@@ -65,10 +72,13 @@ export function TutorialsRoute({
     if (text === "") return;
     const root = body.current;
     if (root === null) return;
-    const target = anchor === undefined ? undefined : headingForAnchor(root, anchor);
+    const target =
+      anchor === undefined
+        ? undefined
+        : headingForAnchor(root, anchor, split.title === undefined ? [] : [split.title]);
     if (target !== undefined) target.scrollIntoView?.({ block: "start" });
     else window.scrollTo?.({ top: 0 });
-  }, [text, anchor]);
+  }, [text, anchor, split.title]);
 
   const group = index.data?.groups.find((one) => one.pages.some((item) => item.id === page));
 

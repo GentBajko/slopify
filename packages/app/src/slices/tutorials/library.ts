@@ -130,6 +130,7 @@ export async function loadTutorials(dir: string): Promise<TutorialBook> {
 // Plain words of a Markdown line: links become their text, marks and tables' pipes go.
 function plain(markdown: string): string {
   return markdown
+    .replace(/^\s*\|?\s*:?-{3,}[-|: ]*$/gm, "")
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[`*_>|]/g, " ")
     .replace(/^\s*(?:[-+]|\d+\.)\s+/gm, "")
@@ -163,8 +164,12 @@ function sectionsOf(markdown: string): readonly Section[] {
 function snippetOf(text: string, term: string): string {
   const at = term === "" ? -1 : text.toLowerCase().indexOf(term);
   if (at < 0) return text.length > 180 ? `${text.slice(0, 177).trimEnd()}…` : text;
-  const start = Math.max(0, at - 60);
-  const end = Math.min(text.length, at + term.length + 120);
+  // Whole words at both ends.
+  const from = Math.max(0, at - 60);
+  const start = from === 0 ? 0 : text.indexOf(" ", from) + 1 || from;
+  const to = Math.min(text.length, at + term.length + 120);
+  const end =
+    to === text.length ? to : text.lastIndexOf(" ", to) > at ? text.lastIndexOf(" ", to) : to;
   return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
 }
 

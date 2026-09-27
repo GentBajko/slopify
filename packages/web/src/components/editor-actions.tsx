@@ -53,7 +53,7 @@ export function EditorActions({
   return (
     <div
       data-slot="editor-actions"
-      className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-line bg-ground py-3 max-md:bottom-[68px]"
+      className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-line bg-ground py-3 max-md:bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))]"
     >
       <Button
         variant="destructive"

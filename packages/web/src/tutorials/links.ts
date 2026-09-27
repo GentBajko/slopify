@@ -1,4 +1,4 @@
-import { githubSlug } from "@app/slices/tutorials/anchors.js";
+import { githubSlug, headingText } from "@app/slices/tutorials/anchors.js";
 
 // The wiki links its pages the GitHub way, `[text](Page-Name#section)`. In the app the same
 // link opens Help → Tutorials at that page and section, so a page reads the same in both.
@@ -27,6 +27,16 @@ export function rewriteTutorialLinks(
   );
 }
 
+// The page's own `# Title` line, which the page header already shows, split from the rest.
+export function splitTitle(markdown: string): {
+  readonly title: string | undefined;
+  readonly body: string;
+} {
+  const match = /^\s*#\s+(.+?)\s*#*\s*(?:\n|$)/.exec(markdown);
+  if (match === null) return { title: undefined, body: markdown };
+  return { title: match[1], body: markdown.slice(match[0].length) };
+}
+
 // An in-app tutorial address split back into its page and anchor, or undefined for any other.
 export function parseTutorialHref(
   href: string,
@@ -42,8 +52,18 @@ export function parseTutorialHref(
 
 // The rendered heading GitHub's anchor names: every heading's text is slugged the way GitHub
 // does, a repeat numbered `-1`, `-2`, in the order they are on the page.
-export function headingForAnchor(root: ParentNode, anchor: string): HTMLElement | undefined {
+// `before` are headings of the page not drawn (its title, shown as the page header), counted
+// first as GitHub counts them.
+export function headingForAnchor(
+  root: ParentNode,
+  anchor: string,
+  before: readonly string[] = [],
+): HTMLElement | undefined {
   const seen = new Map<string, number>();
+  for (const text of before) {
+    const base = githubSlug(headingText(text));
+    seen.set(base, (seen.get(base) ?? 0) + 1);
+  }
   for (const heading of root.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")) {
     const base = githubSlug((heading.textContent ?? "").trim());
     const count = seen.get(base) ?? 0;

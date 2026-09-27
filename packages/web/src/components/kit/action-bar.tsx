@@ -62,7 +62,7 @@ export function ActionBar({
     <div
       data-slot="action-bar"
       className={cn(
-        "sticky bottom-0 z-20 -mx-4 mt-6 flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-surface px-4 py-2 pb-[max(8px,env(safe-area-inset-bottom))] max-md:bottom-[68px] md:-mx-10 md:px-10",
+        "sticky bottom-0 z-20 -mx-4 mt-6 flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-surface px-4 py-2 pb-[max(8px,env(safe-area-inset-bottom))] max-md:bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))] md:-mx-10 md:px-10",
         className,
       )}
     >
