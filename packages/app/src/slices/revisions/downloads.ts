@@ -3,6 +3,7 @@ import { extname } from "node:path";
 import { zipSync } from "fflate";
 import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { thumbnailCountOf } from "../admission/model.js";
 import type { DownloadDeps, DownloadResult, ImagesZipResult } from "../storage/downloads.js";
 import { contentTypeOf, downloadName, slugOf } from "../storage/downloads.js";
 import { outputPath } from "../storage/layout.js";
@@ -60,7 +61,13 @@ export function revisionImagesZip(
   const entries: Record<string, [Uint8Array, { level: 0 }]> = {};
   const images = outputsForRevision(deps.db, projectId, revisionId)
     .filter(
-      (row) => row.selected && (row.output.role === "image" || row.output.role === "thumbnail"),
+      (row) =>
+        row.selected &&
+        (row.output.role === "image" ||
+          // Every thumbnail the project makes; a second or third left from when it made three
+          // stays out once it makes one.
+          (row.output.role === "thumbnail" &&
+            (row.output.meta.index ?? 1) <= thumbnailCountOf(revision.config))),
     )
     .map((row) => positionedOutput(revision, row))
     .sort(

@@ -1,0 +1,583 @@
+/* Beyond the design system's bundle.css (kit.css): the states it leaves to the app, the
+   overlays as they mount in a real page, and the shell and page shapes the screen mockups
+   compose the components into. */
+@layer components {
+  /* A disabled control still says why on hover, so it keeps its pointer events. */
+  .sl-btn[disabled],
+  .sl-btn[aria-disabled="true"],
+  .sl-key[disabled] {
+    pointer-events: auto;
+  }
+  .sl-btn,
+  .sl-key {
+    text-decoration: none;
+  }
+  .sl-key:hover {
+    background: var(--color-accent-strong);
+  }
+  .sl-key[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .sl-key svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sl-key:active {
+      transform: none;
+    }
+    .sl-btn,
+    .sl-switch__track,
+    .sl-switch__track::after,
+    .sl-media__actions {
+      transition: none;
+    }
+  }
+  .sl-switch {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--color-ink);
+    font: inherit;
+  }
+  .sl-switch:focus-visible {
+    outline: none;
+  }
+  .sl-switch:focus-visible .sl-switch__track {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .sl-select {
+    cursor: pointer;
+  }
+  .sl-textarea[aria-invalid="true"],
+  .sl-select[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+  .sl-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sl-tab {
+    flex: none;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  /* A tab that is a route: the same look, marked by aria-current instead of aria-selected. */
+  .sl-tab[aria-current="page"] {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .sl-tab[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--color-accent);
+    border-radius: 2px;
+  }
+  .sl-tab:hover {
+    color: var(--color-ink);
+  }
+  .sl-tab:focus-visible {
+    outline-offset: -2px;
+  }
+  .sl-tab[disabled] {
+    cursor: not-allowed;
+  }
+  .sl-row[data-selected="true"] {
+    background: var(--color-accent-tint);
+  }
+  .sl-row__title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .sl-row__title a:hover {
+    text-decoration: underline;
+  }
+  .sl-row__lead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .sl-row__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Overlays mount over the page, not inside a preview box. */
+  .sl-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: var(--color-scrim);
+  }
+  .sl-overlay-content {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    z-index: 71;
+    transform: translateX(-50%);
+    max-height: calc(100vh - 144px);
+    overflow: auto;
+  }
+  .sl-enter {
+    animation: enter 200ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sl-enter {
+      animation: none;
+    }
+  }
+  .sl-palette {
+    display: flex;
+    flex-direction: column;
+  }
+  .sl-palette__input input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    outline: none;
+  }
+  .sl-palette__input input::placeholder {
+    color: var(--color-ink-3);
+  }
+  .sl-palette__input svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-ink-3);
+    flex: none;
+  }
+  .sl-palette__list {
+    overflow-y: auto;
+    max-height: min(420px, calc(100vh - 240px));
+    padding-bottom: 4px;
+  }
+  .sl-palette__item {
+    width: 100%;
+    border: 0;
+    background: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+  }
+  .sl-palette__meta {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--color-ink-3);
+  }
+  .sl-palette__empty {
+    margin: 0;
+    padding: var(--space-5) var(--space-4);
+    color: var(--color-ink-2);
+    font-size: 13px;
+  }
+  .sl-toasts {
+    position: fixed;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+  }
+  .sl-toast {
+    pointer-events: auto;
+  }
+  .sl-toast svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  .sl-toast--failed {
+    border-color: var(--color-danger);
+  }
+  .sl-toast--failed > svg {
+    color: var(--color-danger);
+  }
+  .sl-toast--done > svg {
+    color: var(--color-accent-ink);
+  }
+
+  /* Media: the whole frame opens the lightbox; the actions sit above that button. */
+  .sl-media__open {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+  .sl-media__open:focus-visible {
+    outline-offset: -3px;
+  }
+  .sl-media__generating {
+    text-align: center;
+    padding: var(--space-3);
+  }
+  .sl-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-scrim);
+    /* The page behind would fight the bar's white text; blur keeps the scrim token. */
+    backdrop-filter: blur(12px);
+  }
+  .sl-lightbox__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    color: #ece9e2;
+    font-size: 13px;
+  }
+  .sl-lightbox__stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    border-radius: var(--radius-media);
+    background: var(--color-screen);
+    box-shadow: var(--shadow-dialog);
+    overflow: hidden;
+  }
+  .sl-lightbox__stage img,
+  .sl-lightbox__stage video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .sl-lightbox__caption {
+    margin: 0;
+    color: #ece9e2;
+    font-size: 13px;
+    text-align: center;
+  }
+  .sl-lightbox .sl-btn {
+    background: rgba(8, 8, 10, 0.72);
+    color: #ece9e2;
+    border-color: transparent;
+  }
+  .sl-player video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: var(--color-screen);
+  }
+  .sl-player--portrait {
+    aspect-ratio: 9 / 16;
+  }
+
+  /* Reading view: the table of contents sits beside the text on wide screens. */
+  .sl-reading-layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .sl-reading-layout > .sl-toc {
+    position: sticky;
+    top: var(--space-5);
+  }
+  .sl-reading h2 {
+    scroll-margin-top: var(--space-5);
+  }
+  .sl-reading h3 {
+    font: 600 18px / 26px var(--font-sans);
+    margin: 28px 0 8px;
+  }
+  .sl-reading ul,
+  .sl-reading ol {
+    margin: 0 0 18px;
+    padding-left: 1.4em;
+  }
+  .sl-reading code {
+    font: 400 15px / 24px var(--font-mono);
+    background: var(--color-sunken);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+  .sl-reading__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+  .sl-reading__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  @media (max-width: 900px) {
+    .sl-reading-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-reading-layout > .sl-toc {
+      position: static;
+    }
+  }
+
+  /* The app shell: a 232px rail and a fluid main column, centred beyond content-max. */
+  .sl-app {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    min-height: 100vh;
+    background: var(--color-ground);
+  }
+  .sl-app__rail {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 14px;
+    border-right: 1px solid var(--color-line);
+    background: var(--color-surface);
+    overflow-y: auto;
+  }
+  .sl-app__foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sl-app__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sl-app__content {
+    width: 100%;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    min-width: 0;
+    flex: 1;
+  }
+  .sl-wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+    font: 700 22px / 26px var(--font-condensed);
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .sl-wordmark__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 4px var(--color-accent-tint);
+    flex: none;
+  }
+  .sl-searchbtn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-line-strong);
+    background: var(--color-sunken);
+    color: var(--color-ink-3);
+    font: 400 13px / 19px var(--font-sans);
+    width: 100%;
+    cursor: pointer;
+  }
+  .sl-searchbtn:hover {
+    color: var(--color-ink-2);
+    border-color: var(--color-ink-3);
+  }
+  .sl-searchbtn svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  .sl-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    min-height: 52px;
+    padding: 8px 40px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .sl-topbar__lead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-right: auto;
+    min-width: 0;
+  }
+  .sl-page {
+    padding: 24px 40px 40px;
+    min-width: 0;
+  }
+  .sl-crumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-ink-3);
+  }
+  .sl-crumb svg {
+    width: 14px;
+    height: 14px;
+  }
+  .sl-bottomnav {
+    display: none;
+  }
+
+  /* Page shapes. Workspace: section rail, fluid main, action rail. List and detail. */
+  .sl-workspace {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr) 320px;
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .sl-workspace--no-sections {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .sl-workspace--no-aside {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+  .sl-workspace__sections,
+  .sl-workspace__aside {
+    position: sticky;
+    top: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+  .sl-workspace__main {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+  .sl-listdetail {
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .sl-listdetail__list,
+  .sl-listdetail__detail {
+    min-width: 0;
+  }
+
+  @media (max-width: 1180px) {
+    .sl-workspace {
+      grid-template-columns: 180px minmax(0, 1fr);
+    }
+    .sl-workspace--no-sections {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-workspace__aside {
+      position: static;
+      grid-column: 1 / -1;
+      order: -1;
+    }
+  }
+
+  /* Phones: one column, the rail becomes a bottom bar of five, section rails scroll
+     sideways as tabs. */
+  @media (max-width: 767px) {
+    .sl-app {
+      grid-template-columns: minmax(0, 1fr);
+      padding-bottom: 72px;
+    }
+    .sl-app__rail {
+      display: none;
+    }
+    .sl-topbar {
+      padding: 8px 16px;
+    }
+    .sl-page {
+      padding: 16px;
+    }
+    .sl-bottomnav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-top: 1px solid var(--color-line);
+      background: var(--color-surface);
+      padding: 8px 0 max(12px, env(safe-area-inset-bottom));
+    }
+    .sl-bottomnav a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      line-height: 16px;
+      color: var(--color-ink-3);
+      text-decoration: none;
+    }
+    .sl-bottomnav a[aria-current="page"] {
+      color: var(--color-ink);
+    }
+    .sl-bottomnav svg {
+      width: 20px;
+      height: 20px;
+    }
+    .sl-workspace,
+    .sl-workspace--no-sections,
+    .sl-workspace--no-aside,
+    .sl-listdetail {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-5);
+    }
+    .sl-workspace__sections {
+      position: static;
+      overflow-x: auto;
+    }
+    .sl-workspace__sections .sl-rail {
+      flex-direction: row;
+    }
+    .sl-workspace__sections .sl-rail__item {
+      flex: none;
+    }
+    .sl-workspace__aside {
+      position: static;
+    }
+    .sl-section-head {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .sl-toasts {
+      bottom: 84px;
+    }
+  }
+}

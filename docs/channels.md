@@ -1,10 +1,10 @@
 # Channels
 
 A channel keeps what makes a series look like itself: a **brand kit**, a **cast library**, the
-**series brief**, and the **templates** and **schedules** that make its videos. Open them in
-**Library → Channels**. Every install has one default channel, "My channel"; everything made
-before channels (templates, schedules, projects) belongs to it, and nothing about those
-projects changed when it appeared.
+**series brief**, and the **templates** and **schedules** that make its videos. Open them from
+**Channels** in the left rail. Every install has one default channel, "My channel";
+everything made before channels (templates, schedules, projects) belongs to it, and nothing
+about those projects changed when it appeared.
 
 ## Which channel a run is in
 
@@ -12,7 +12,8 @@ Play has a **Channel** picker under the title. A draft opened from a template st
 template's channel; a new draft starts in the default one. A template saved from Play lands in
 the draft's channel (or the one picked in **Save a setup**), and can be moved on the channel's
 **Templates** tab. A schedule belongs to the channel of the template it runs, so moving the
-template moves its schedules; the series brief a schedule reads is its channel's.
+template moves its schedules; a schedule that finds its own topics
+uses the channel's series brief when it has no brief of its own.
 
 ## Brand kit
 

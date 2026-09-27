@@ -32,7 +32,7 @@ const imageParam = memberParam.extend({ imageId: z.uuid() });
 const pictureParam = z.object({ sha256: z.string().regex(/^[0-9a-f]{64}$/) });
 const templateParam = z.object({ templateId: z.uuid() });
 
-// Library → Channels: the channels, their brand kit, series brief and cast, and which channel
+// Channels: the channels, their brand kit, series brief and cast, and which channel
 // each template belongs to. The bodies are checked by the slice, so a refusal names the field.
 export function channelRoutes(deps: AppDeps) {
   const service: CastImageDeps = {
@@ -132,7 +132,7 @@ async function body(c: Context): Promise<unknown> {
 
 const details: Readonly<Record<Extract<ChannelResult<never>, { ok: false }>["reason"], string>> = {
   "not-found":
-    "This channel, cast member or picture no longer exists; it may have been deleted in another tab. Go back to Library → Channels.",
+    "This channel, cast member or picture no longer exists; it may have been deleted in another tab. Go back to Channels.",
   conflict:
     "This changed in another tab while you were editing. Reload the page to see the latest, then make your change again.",
   "invalid-input":

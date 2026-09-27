@@ -114,7 +114,7 @@ describe("the prompts list", () => {
     );
   });
 
-  it("offers Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
+  it("shows every row action, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
     const user = userEvent.setup();
     let deleted: string | undefined;
     renderRouted(
@@ -128,13 +128,24 @@ describe("the prompts list", () => {
     );
 
     await screen.findByText("Documentary dossier");
-    await user.click(screen.getByRole("button", { name: "More for Documentary dossier" }));
+    const actions = screen.getByRole("group", { name: "Actions for Documentary dossier" });
+    expect([...actions.querySelectorAll("a, button")].map((one) => one.textContent)).toEqual([
+      "Edit",
+      "Duplicate",
+      "Use in Play",
+      "History",
+      "Delete",
+    ]);
+    expect(
+      within(actions).getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
+    ).toBe("/prompts/p1");
+    expect(
+      within(actions)
+        .getByRole("link", { name: "Duplicate Documentary dossier" })
+        .getAttribute("href"),
+    ).toBe("/prompts/new?kind=article&from=p1");
 
-    expect(screen.getByRole("menuitem", { name: "Duplicate" }).getAttribute("href")).toBe(
-      "/prompts/new?kind=article&from=p1",
-    );
-
-    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(within(actions).getByRole("button", { name: "Delete Documentary dossier" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Documentary dossier"?')).not.toBeNull();
@@ -145,6 +156,87 @@ describe("the prompts list", () => {
     await waitFor(() => {
       expect(deleted).toBe("/api/prompts/p1");
     });
+  });
+
+  it("hands the prompt to Play from Use in Play, and says why it can't while a run starts", async () => {
+    const user = userEvent.setup();
+    const used: string[] = [];
+    const { unmount } = renderRouted(
+      <PromptsRoute kind="article" onKind={() => {}} onUseInPlay={(one) => used.push(one.name)} />,
+      deps([dossier]),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Use Documentary dossier in Play" }),
+    );
+    expect(used).toEqual(["Documentary dossier"]);
+    unmount();
+
+    renderRouted(
+      <PromptsRoute
+        kind="article"
+        onKind={() => {}}
+        onUseInPlay={(one) => used.push(one.name)}
+        playBlocked="Play is starting a run from its draft."
+      />,
+      deps([dossier]),
+    );
+    const blocked = await screen.findByRole("button", { name: "Use Documentary dossier in Play" });
+    expect(blocked.hasAttribute("disabled")).toBe(true);
+    expect(blocked.getAttribute("title")).toBe("Play is starting a run from its draft.");
+  });
+
+  it("opens History with a word diff, restores a version and lists what uses the prompt", async () => {
+    const user = userEvent.setup();
+    let restored: string | undefined;
+    const version = (n: number, body: string, restoredFrom: number | null = null) => ({
+      version: n,
+      kind: "article",
+      mode: null,
+      name: "Documentary dossier",
+      body,
+      author: "you",
+      restoredFrom,
+      createdAt: "2026-09-01T10:00:00.000Z",
+    });
+    renderRouted(
+      <Screen />,
+      deps([dossier], {
+        "GET /api/prompts/p1/history": jsonAnswer({
+          versions: [version(2, "Compose a long dossier."), version(1, "Compose a short dossier.")],
+        }),
+        "GET /api/prompts/p1/used-by": jsonAnswer({
+          templates: [{ id: "t1", name: "Weekly essay" }],
+          schedules: [{ id: "s1", name: "Mondays", status: "paused" }],
+          projects: [{ id: "x1", title: "Cats", revisions: 2, totalRevisions: 3, current: true }],
+        }),
+        "POST /api/prompts/p1/history/1/restore": (request) => {
+          restored = new URL(request.url).pathname;
+          return jsonAnswer(dossier)(request);
+        },
+      }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "History of Documentary dossier" }));
+    const drawer = await screen.findByRole("dialog", { name: "History of Documentary dossier" });
+    expect(await within(drawer).findByText("short")).not.toBeNull();
+    expect(within(drawer).getByText("short").tagName).toBe("DEL");
+    expect(within(drawer).getByText("long").tagName).toBe("INS");
+    expect(within(drawer).getByText("1 word added, 1 removed.")).not.toBeNull();
+    expect(
+      await within(drawer).findByRole("heading", {
+        name: "Used by 1 template, 1 schedule, 1 project",
+      }),
+    ).not.toBeNull();
+    expect(within(drawer).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
+      "/projects/x1",
+    );
+    expect(within(drawer).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
+
+    await user.click(within(drawer).getByRole("button", { name: "Restore version 1" }));
+    await waitFor(() => {
+      expect(restored).toBe("/api/prompts/p1/history/1/restore");
+    });
+    expect(await within(drawer).findByText("Restored version 1 as a new version.")).not.toBeNull();
   });
 
   it("says what went wrong when the list cannot be read", async () => {

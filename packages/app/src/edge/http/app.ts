@@ -41,22 +41,25 @@ import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
-import { scheduleRoutes } from "./schedules.js";
+import { runCostRoutes } from "./run-cost.js";
+import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
+import { studioRoutes } from "./studio.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
+import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
   readonly hostCliStatus?:
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
   readonly drafts?: DraftStartDeps;
-  // Library → Channels → Cast's Generate button; absent answers that no provider is set up.
+  // Channels → Cast's Generate button; absent answers that no provider is set up.
   readonly generateCastImage?:
     | import("../../slices/channels/cast-images.js").CastImageGenerator
     | undefined;
@@ -73,6 +76,11 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // The network for Settings → Providers' Test and Check all. Handed in so a test never
+  // reaches a real provider.
+  readonly fetch?: typeof globalThis.fetch;
+  // Asks a CLI on this computer whether it is signed in, for the health check.
+  readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
@@ -123,6 +131,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/channels", channelRoutes(deps))
+      .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))
@@ -130,11 +139,13 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
+      .route("/projects", runCostRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
       .route("/projects", subtitleRoutes(deps))
+      .route("/projects", youtubeEditRoutes(deps))
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
@@ -143,6 +154,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
+      .route("/studio", studioRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );

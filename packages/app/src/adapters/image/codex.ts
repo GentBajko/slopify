@@ -9,10 +9,14 @@ import {
   type ImagePort,
   type ImageRequest,
 } from "../../kernel/ports/image.js";
+import type { Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import type { LimitWindow } from "../../kernel/ports/plan-limits.js";
 import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
+import { codexLimitError, readingOf } from "../llm/codex.js";
+import { codexPlanLimit } from "../llm/codex-limits.js";
 import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
@@ -183,6 +187,15 @@ export function codexImageArgs(req: CodexImageRequest, directory: string): strin
 }
 
 const failure = z.object({ error: z.object({ message: z.string() }) });
+const turnUsage = z.object({
+  usage: z
+    .object({
+      input_tokens: z.number(),
+      output_tokens: z.number(),
+      cached_input_tokens: z.number().optional(),
+    })
+    .nullish(),
+});
 const errorEvent = z.object({ message: z.string() });
 const item = z.object({ item: z.object({ type: z.string(), text: z.string().optional() }) });
 
@@ -193,6 +206,8 @@ export function codexImage(deps: {
   // The Codex CLI's model list, the one its text provider reads. A failed read leaves only
   // the default, which needs no list.
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
+  // The Codex plan windows, as the Codex text provider reads them (`codex-limits.ts`).
+  readonly readLimits?: (() => Promise<readonly LimitWindow[] | null>) | undefined;
 }): ImagePort {
   const binary = deps.binary ?? "codex";
   return {
@@ -221,6 +236,8 @@ export function codexImage(deps: {
       let threadId: string | undefined;
       let run: ReturnType<RunCli> | undefined;
       let reported = -1;
+      let usage: Usage | undefined;
+      const before = deps.readLimits?.().catch(() => null);
       // A line for the stage's live panel each time this thread's image count moves.
       const report = (): void => {
         if (req.onProgress === undefined) return;
@@ -274,11 +291,23 @@ export function codexImage(deps: {
               z.object({ thread_id: z.string() }),
               event.value,
             ).thread_id;
-          } else if (event.type === "turn.completed") completed = true;
-          else if (event.type === "turn.failed") {
+          } else if (event.type === "turn.completed") {
+            completed = true;
+            const counted = turnUsage.safeParse(event.value);
+            if (counted.success && counted.data.usage)
+              usage = {
+                inputTokens: counted.data.usage.input_tokens,
+                outputTokens: counted.data.usage.output_tokens,
+                ...(counted.data.usage.cached_input_tokens
+                  ? { cachedInputTokens: counted.data.usage.cached_input_tokens }
+                  : {}),
+              };
+          } else if (event.type === "turn.failed") {
             const message = cliShaped(binary, failure, event.value).error.message;
             const login = cliLoginError("codex", message);
             if (login) throw login;
+            const planLimit = codexPlanLimit(message, new Date());
+            if (planLimit !== undefined) throw codexLimitError(message, planLimit);
             throw providerError({
               kind: /refus|content.policy|safety/i.test(message) ? "refusal" : "other",
               message: /refus|content.policy|safety/i.test(message)
@@ -289,6 +318,8 @@ export function codexImage(deps: {
             const message = cliShaped(binary, errorEvent, event.value).message;
             const login = cliLoginError("codex", message);
             if (login) throw login;
+            const planLimit = codexPlanLimit(message, new Date());
+            if (planLimit !== undefined) throw codexLimitError(message, planLimit);
             throw providerError({
               kind: /image.generation|image tool|feature.*unavailable/i.test(message)
                 ? "unsupported"
@@ -317,6 +348,9 @@ export function codexImage(deps: {
             message:
               "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
           });
+        const stderrLimit = codexPlanLimit(run.stderr(), new Date());
+        if ((ended.code !== 0 || !completed) && stderrLimit !== undefined)
+          throw codexLimitError(run.stderr().trim(), stderrLimit);
         if (ended.code !== 0 || !completed)
           throw (
             cliLoginError("codex", run.stderr()) ??
@@ -330,7 +364,13 @@ export function codexImage(deps: {
             kind: "unsupported",
             message: `The Codex CLI cannot make images. ${cannotDraw}`,
           });
-        return codexGeneratedImage(env, threadId, startedAt);
+        const image = codexGeneratedImage(env, threadId, startedAt);
+        const limits = await readingOf(before, deps.readLimits);
+        return {
+          ...image,
+          ...(usage === undefined ? {} : { usage }),
+          ...(limits === undefined ? {} : { limits }),
+        };
       } catch (error) {
         req.signal.throwIfAborted();
         throw error;

@@ -63,7 +63,7 @@ const common = {
   "GET /api/providers": jsonAnswer({ providers: [] }),
 };
 
-describe("Library → Channels", () => {
+describe("Channels", () => {
   it("lists each channel with its templates and cast", async () => {
     const summary: ChannelSummary = { ...channel, templates: 2, cast: 1 };
     renderRouted(

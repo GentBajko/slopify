@@ -61,7 +61,7 @@ export function createTemplate(
       createdAt: at,
       updatedAt: at,
     };
-    // The channel is the template's, not part of its setup: moving it (Library → Channels)
+    // The channel is the template's, not part of its setup: moving it (Channels)
     // makes no new version, and a draft made from it asks the template (`draftChannel`).
     deps.db
       .prepare(

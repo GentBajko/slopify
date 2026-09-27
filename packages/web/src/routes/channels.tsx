@@ -6,12 +6,13 @@ import { useApp } from "@/app-context";
 import { channelsKey, channelsQuery, createChannel } from "@/channels/api";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
+import { PageBar } from "@/components/kit/page-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LibraryToolbar } from "./library.js";
 
-// Library → Channels: one row per channel, each opening its page (brand kit, cast, templates,
+// Channels: one row per channel, each opening its page (brand kit, cast, templates,
 // schedules). New channels start empty; the default one holds everything made before channels.
 export function ChannelsRoute(): ReactElement {
   const { api } = useApp();
@@ -32,6 +33,7 @@ export function ChannelsRoute(): ReactElement {
   });
   return (
     <div>
+      <PageBar title="Channels" />
       <LibraryToolbar
         action={
           <Button

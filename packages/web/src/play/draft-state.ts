@@ -62,6 +62,35 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
   fontUpload: null,
 });
 
+// The providers a new draft starts with: what the first launch found (Claude Code for text,
+// Codex for images), written by the server and handed over by the welcome query. Empty until
+// then, and on every install that found nothing.
+export interface FreshProviderDefaults {
+  readonly llm?: { readonly provider: string; readonly model: string } | undefined;
+  readonly images?: { readonly provider: string; readonly model: string } | undefined;
+}
+let providerDefaults: FreshProviderDefaults = {};
+export function setFreshProviderDefaults(defaults: FreshProviderDefaults): void {
+  providerDefaults = defaults;
+}
+// A document nobody has picked a provider in gets the defaults; anything else is left alone.
+export function withProviderDefaults(
+  document: PlayDraftDocument,
+  defaults: FreshProviderDefaults = providerDefaults,
+): PlayDraftDocument {
+  const { form } = document;
+  if (form.llm.provider !== "" || form.images.provider !== "") return document;
+  if (defaults.llm === undefined && defaults.images === undefined) return document;
+  return {
+    ...document,
+    form: {
+      ...form,
+      ...(defaults.llm === undefined ? {} : { llm: { ...defaults.llm } }),
+      ...(defaults.images === undefined ? {} : { images: { ...defaults.images } }),
+    },
+  };
+}
+
 export function normalizePlayForm(form: PlayDraftForm): PlayDraftForm {
   const sources = {
     ...form.sources,

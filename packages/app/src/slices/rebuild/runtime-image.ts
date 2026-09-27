@@ -76,7 +76,7 @@ function castImages(
       const blob = imageBlob(deps.db, sha256);
       if (blob === undefined)
         throw new Error(
-          `A picture of ${member.name} that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Library → Channels → Cast, then start the video again from Play.`,
+          `A picture of ${member.name} that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Play.`,
         );
       return blob;
     }),

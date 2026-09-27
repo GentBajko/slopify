@@ -93,7 +93,45 @@ export async function startPlayDraft(
   const oldFiles = attachmentRows(deps.db, input.draftId).flatMap((a) =>
     a.staged_file_id === null ? [] : [a.staged_file_id],
   );
-  const result: DraftResult<PlayStartResult> = transact(deps.db, () => {
+  let result: DraftResult<PlayStartResult>;
+  try {
+    result = createReviewedRuns(deps, input, captured, checked, catalogue);
+  } catch (error) {
+    if (!(error instanceof StartedRunMismatch)) throw error;
+    // Nothing the review promised was created: the transaction rolled back.
+    releaseStartClaim(deps, input, true);
+    try {
+      deps.log.write("error", "play.start.run-count", { detail: error.message });
+    } catch {
+      /* The refusal below still reaches the person. */
+    }
+    return { ok: false, reason: "stale-review", currentVersion: input.baseVersion, fields: [] };
+  }
+  if (!result.ok) {
+    releaseStartClaim(deps, input, result.reason === "stale-review");
+    return result;
+  }
+  if (!result.value.replayed) {
+    afterCommit(deps, () => deps.recordStarted(result.value.projectIds));
+    for (const id of oldFiles) afterCommit(deps, () => releaseStagedFile(deps, id));
+    afterCommit(deps, () => {
+      if (result.value.queue.length) pumpQueue(deps.db, deps.runner);
+      else for (const id of result.value.projectIds) deps.runner.tick(id);
+    });
+  }
+  return result;
+}
+// Start creates exactly the runs the person reviewed: one project for one run, otherwise a
+// queue entry and project per run. Anything else is thrown so the transaction rolls back.
+class StartedRunMismatch extends Error {}
+function createReviewedRuns(
+  deps: DraftStartDeps,
+  input: PlayStartInput,
+  captured: DraftStartDeps,
+  checked: Awaited<ReturnType<typeof checkDraftReadiness>>,
+  catalogue: Parameters<typeof admitReviewedCheckpoints>[3],
+): DraftResult<PlayStartResult> {
+  return transact(deps.db, () => {
     const receipt = readStartReceipt(deps.db, input.reviewId);
     if (receipt) return replayResult(receipt, input);
     const starting = requireStartingIdentity(deps, input);
@@ -125,23 +163,14 @@ export async function startPlayDraft(
       replayed: false,
       ...(checkpointSet.length ? { checkpointSet } : {}),
     };
+    if (projectIds.length !== runs.length || queue.length !== (runs.length === 1 ? 0 : runs.length))
+      throw new StartedRunMismatch(
+        `Start would create ${projectIds.length} of ${runs.length} reviewed videos (${queue.length} queued).`,
+      );
     insertStartReceipt(deps, input, value);
     markDraftStartedAndReleaseRefs(deps.db, input);
     return { ok: true, value };
   });
-  if (!result.ok) {
-    releaseStartClaim(deps, input, result.reason === "stale-review");
-    return result;
-  }
-  if (!result.value.replayed) {
-    afterCommit(deps, () => deps.recordStarted(result.value.projectIds));
-    for (const id of oldFiles) afterCommit(deps, () => releaseStagedFile(deps, id));
-    afterCommit(deps, () => {
-      if (result.value.queue.length) pumpQueue(deps.db, deps.runner);
-      else for (const id of result.value.projectIds) deps.runner.tick(id);
-    });
-  }
-  return result;
 }
 function afterCommit(deps: DraftStartDeps, run: () => void): void {
   try {

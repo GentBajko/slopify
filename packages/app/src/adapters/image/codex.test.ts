@@ -110,7 +110,12 @@ it("advertises one built-in capability and passes prompt/aspect as data to an is
   const fake = generatedRun();
   const port = codexImage({ run: fake.run, binary: "/configured/codex", env: fake.env });
   expect(await port.models()).toEqual([{ id: "codex-imagegen", name: "Codex default" }]);
-  expect(await port.generate(request())).toEqual({ bytes: png, mime: "image/png" });
+  // The turn's token counts ride along, for the Run cost tab.
+  expect(await port.generate(request())).toEqual({
+    bytes: png,
+    mime: "image/png",
+    usage: { inputTokens: 1, outputTokens: 1 },
+  });
   const call = fake.calls[0];
   expect(call?.binary).toBe("/configured/codex");
   expect(call?.directory).not.toBe(process.cwd());

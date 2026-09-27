@@ -10,7 +10,7 @@ const summarySchema = z.object({
   name: z.string(),
   version: z.number().int().positive(),
   updatedAt: z.string(),
-  // The channel the template belongs to (Library → Channels); absent from an older server.
+  // The channel the template belongs to (Channels); absent from an older server.
   channelId: z.string().optional(),
 });
 const templateSchema = summarySchema.extend({ document: playDraftDocumentSchema });

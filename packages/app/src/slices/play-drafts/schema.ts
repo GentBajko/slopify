@@ -66,6 +66,8 @@ export const playDraftFormSchema = z
       .optional(),
     articlePrompt: text,
     narrationPrompt: text.optional(),
+    // Absent on drafts and templates saved before three thumbnails: one.
+    thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),
@@ -237,6 +239,9 @@ const costEstimateSchema = z
             low: z.number().nullable(),
             high: z.number().nullable(),
             detail: text,
+            onPlan: z.boolean().optional(),
+            apiLow: z.number().nullable().optional(),
+            apiHigh: z.number().nullable().optional(),
           })
           .strict()
           .readonly(),
@@ -245,6 +250,9 @@ const costEstimateSchema = z
     low: z.number(),
     high: z.number(),
     unknown: z.number(),
+    apiLow: z.number().optional(),
+    apiHigh: z.number().optional(),
+    apiUnknown: z.number().optional(),
     expectedWords: z.number(),
     catalogueDate: text.nullable(),
     assumptions: z.array(text).readonly(),

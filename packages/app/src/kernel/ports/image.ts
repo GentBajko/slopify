@@ -31,6 +31,10 @@ export interface CastReference {
 export interface GeneratedImage {
   readonly bytes: Uint8Array;
   readonly mime: "image/png" | "image/jpeg";
+  // What an agent-driven provider (the Codex CLI) reported spending on the image: its tokens
+  // and its plan windows. Absent for providers that report neither.
+  readonly usage?: import("./llm.js").Usage | undefined;
+  readonly limits?: import("./plan-limits.js").PlanLimitReading | undefined;
 }
 
 // A still brought to life: an image-to-video model animates `image` for about `seconds`,

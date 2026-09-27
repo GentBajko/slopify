@@ -1,122 +1,197 @@
 @import "tailwindcss";
+@import "./kit.css";
+@import "./shell.css";
 
-/* The whole palette, in one place. Dark is the default; the light theme overrides the same
-   names so a utility built on `var(--color-*)` never has to know which theme is on.
-   `static` keeps the whole palette in the output, because the overrides below name
-   variables the utility scan alone would not have kept. */
+/* Slopify 3.0 design tokens. The source of truth is the design system (docs/design-system.md);
+   the names here are its names with Tailwind's namespace in front, so `--ground` is
+   `--color-ground` and the utility is `bg-ground`.
+
+   Dark is the default; the light theme overrides the same names so a utility built on
+   `var(--color-*)` never has to know which theme is on. `static` keeps the whole palette in
+   the output, because the overrides below name variables the utility scan alone would not
+   have kept. */
 @theme static {
-  --color-bg: #141416;
-  --color-panel: #1b1b1f;
-  --color-panel2: #202026;
+  /* Grounds: `ground` behind the page, one `surface` for the working area, `raised` only for
+     what floats, `sunken` for wells, `screen` behind media. Never a surface in a surface. */
+  --color-ground: #121214;
+  --color-surface: #19191c;
+  --color-raised: #212125;
+  --color-sunken: #0d0d0f;
+  --color-screen: #08080a;
   --color-line: #2a2a30;
-  --color-line2: #35353d;
-  --color-ink: #e6e3dc;
-  --color-ink2: #9a978f;
-  --color-ink3: #8a887f;
-  --color-accent: #9bcb4f;
-  --color-accent-ink: #17200b;
-  --color-accent-edge: #6d9333;
-  --color-done: #6f9a3a;
-  --color-red: #e86960;
-  --color-red-tint: rgb(232 105 96 / 0.08);
-  --color-amber: #e2a247;
-  --color-lamp-run: #9bcb4f;
-  --color-lamp-halo: rgb(155 203 79 / 0.18);
-  --color-lamp-off: #2c2c33;
-  --color-lamp-ring: #3a3a42;
-  --color-run-text: #9bcb4f;
-  --color-focus: #9bcb4f;
-  /* Elevation is the dialog's alone: a shadow tinted toward the page hue, and the scrim
-     the overlay paints under it. */
-  --color-shadow: rgb(8 8 10 / 0.24);
-  --color-scrim: rgb(20 20 22 / 0.6);
-  /* The unlit face of a player, darker than the page on both themes so a video with black
-     bars does not dissolve into the panel behind it. */
-  --color-screen: #0b0b0d;
+  --color-line-strong: #6c6c76;
+  --color-ink: #ece9e2;
+  --color-ink-2: #a9a69e;
+  --color-ink-3: #8e8c84;
+  /* Slopify lime, spent once per area. */
+  --color-accent: #a6d45c;
+  --color-accent-strong: #86b33c;
+  --color-on-accent: #15200a;
+  --color-accent-tint: rgb(166 212 92 / 0.12);
+  --color-accent-ink: #b6e070;
+  /* Status colours, always with a word or an icon. */
+  --color-waiting: #e8a84c;
+  --color-waiting-tint: rgb(232 168 76 / 0.12);
+  --color-danger: #f08073;
+  --color-danger-tint: rgb(240 128 115 / 0.12);
+  --color-info: #86b7f2;
+  --color-info-tint: rgb(134 183 242 / 0.12);
+  --color-focus: var(--color-accent);
+  --color-scrim: rgb(8 8 10 / 0.64);
 
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --text-label: 12px;
-  --text-label--line-height: 1.2;
-  --text-small: 13px;
-  --text-small--line-height: 1.45;
-  --text-body: 14px;
-  --text-body--line-height: 1.45;
-  --text-row: 16px;
-  --text-row--line-height: 1.35;
-  --text-title: 18px;
-  --text-title--line-height: 1.3;
-  --text-wordmark: 20px;
-  --text-wordmark--line-height: 1.2;
+  /* The type scale. Condensed styles (display, title-1, counter, label) carry their family
+     in the kit classes `.sl-display`, `.sl-title-1`, `.sl-kicker` and `.sl-stat__value`. */
+  --text-display: 44px;
+  --text-display--line-height: 46px;
+  --text-title-1: 30px;
+  --text-title-1--line-height: 34px;
+  --text-title-2: 20px;
+  --text-title-2--line-height: 26px;
+  --text-title-3: 16px;
+  --text-title-3--line-height: 22px;
   --text-counter: 32px;
-  --text-counter--line-height: 1.1;
+  --text-counter--line-height: 34px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-small: 13px;
+  --text-small--line-height: 19px;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-reading: 18px;
+  --text-reading--line-height: 30px;
+  --text-code: 13px;
+  --text-code--line-height: 20px;
 
-  /* Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, and the
-     Play key; nothing else. */
-  --radius-control: 4px;
-  --radius-panel: 6px;
+  --radius-control: 6px;
+  --radius-media: 10px;
+  --radius-pill: 999px;
+
+  /* Elevation is only these. Tailwind inlines a shadow token into its utility, so use
+     `shadow-[var(--shadow-pop)]` (or the kit classes) to keep the light override working. */
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 24px 64px rgb(0 0 0 / 0.6);
+  --shadow-key: 0 4px 0 #86b33c;
 
   --animate-lamp-pulse: lamp-pulse 1.2s ease-in-out infinite;
   --animate-dialog-in: dialog-in 200ms ease-out;
   --animate-tick-in: tick-in 150ms ease-out;
+  --animate-enter: enter 200ms ease-out;
+
+  /* ---- Deprecated 2.x names -------------------------------------------------------------
+     Aliases onto the 3.0 tokens so screens not yet redesigned keep rendering. Do not use
+     them in new code; the screen redesign removes their last uses, then these go. */
+  --color-bg: var(--color-ground); /* deprecated: ground */
+  --color-panel: var(--color-surface); /* deprecated: surface */
+  --color-panel2: var(--color-raised); /* deprecated: raised */
+  --color-line2: var(--color-line-strong); /* deprecated: line-strong */
+  --color-ink2: var(--color-ink-2); /* deprecated: ink-2 */
+  --color-ink3: var(--color-ink-3); /* deprecated: ink-3 */
+  --color-accent-edge: var(--color-accent-strong); /* deprecated: accent-strong */
+  --color-done: var(--color-accent-ink); /* deprecated: accent-ink */
+  --color-red: var(--color-danger); /* deprecated: danger */
+  --color-red-tint: var(--color-danger-tint); /* deprecated: danger-tint */
+  --color-amber: var(--color-waiting); /* deprecated: waiting */
+  --color-lamp-run: var(--color-accent); /* deprecated: accent */
+  --color-lamp-halo: var(--color-accent-tint); /* deprecated: accent-tint */
+  --color-lamp-off: var(--color-line); /* deprecated: line */
+  --color-lamp-ring: var(--color-line-strong); /* deprecated: line-strong */
+  --color-run-text: var(--color-accent-ink); /* deprecated: accent-ink */
+  --color-shadow: rgb(8 8 10 / 0.24); /* deprecated: shadow-pop */
+  --text-row: 16px; /* deprecated: title-3 */
+  --text-row--line-height: 22px;
+  --text-title: 18px; /* deprecated: title-2 or title-3 */
+  --text-title--line-height: 24px;
+  --text-wordmark: 22px; /* deprecated: the shell's wordmark */
+  --text-wordmark--line-height: 26px;
+  --radius-panel: var(--radius-media); /* deprecated: radius-media */
+}
+
+/* Plain layout values: the 8px grid, and the page measures. Tailwind's own spacing scale
+   lines up with the grid (space-1 = 1, space-2 = 2, space-3 = 3, space-4 = 4, space-5 = 6,
+   space-6 = 8, space-7 = 12, space-8 = 16), so utilities stay on it too. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --rail-width: 264px;
+  --measure: 68ch;
+  --content-max: 1680px;
 }
 
 /* `prefers-color-scheme` decides until Settings names a theme: the Appearance control
    writes `data-theme` on the document element (components/theme.tsx) and System removes
-   it again, which is why the media query has to step aside for the dark override only. */
+   it again, which is why the media query has to step aside for the dark override only.
+   Plain CSS cannot share one block between a media query and an attribute selector, so the
+   two light blocks are kept identical by hand; styles/tokens.test.ts checks that they match. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --color-bg: #f4f2ec;
-    --color-panel: #fbfaf7;
-    --color-panel2: #eceae3;
-    --color-line: #dad8d0;
-    --color-line2: #c9c7be;
-    --color-ink: #1c1c1e;
-    --color-ink2: #5c5b56;
-    --color-ink3: #6b6a64;
-    --color-accent-edge: #6e9a33;
-    --color-done: #55673f;
-    --color-red: #b8332c;
-    --color-red-tint: rgb(184 51 44 / 0.08);
-    --color-amber: #8f5e12;
-    --color-lamp-run: #5f8a2b;
-    --color-lamp-halo: rgb(95 138 43 / 0.18);
-    --color-lamp-off: #dedcd4;
-    --color-lamp-ring: #c9c7be;
-    --color-run-text: #3f6b1c;
-    --color-focus: #5f8a2b;
+    --color-ground: #f2f0ea;
+    --color-surface: #fbfaf6;
+    --color-raised: #ffffff;
+    --color-sunken: #e8e6df;
+    --color-screen: #141416;
+    --color-line: #dcd9d0;
+    --color-line-strong: #827f76;
+    --color-ink: #1b1b1d;
+    --color-ink-2: #51504b;
+    --color-ink-3: #62615b;
+    --color-accent: #4d7a1c;
+    --color-accent-strong: #3c6214;
+    --color-on-accent: #ffffff;
+    --color-accent-tint: rgb(77 122 28 / 0.1);
+    --color-accent-ink: #3c6214;
+    --color-waiting: #8a560c;
+    --color-waiting-tint: rgb(138 86 12 / 0.1);
+    --color-danger: #b3322a;
+    --color-danger-tint: rgb(179 50 42 / 0.08);
+    --color-info: #1f5da3;
+    --color-info-tint: rgb(31 93 163 / 0.08);
+    --color-scrim: rgb(40 38 32 / 0.4);
+    --shadow-pop: 0 8px 24px rgb(40 36 24 / 0.14);
+    --shadow-dialog: 0 24px 64px rgb(40 36 24 / 0.22);
+    --shadow-key: 0 4px 0 #3c6214;
     --color-shadow: rgb(60 55 40 / 0.12);
-    --color-scrim: rgb(60 58 50 / 0.45);
-    --color-screen: #1c1c1e;
   }
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #f4f2ec;
-  --color-panel: #fbfaf7;
-  --color-panel2: #eceae3;
-  --color-line: #dad8d0;
-  --color-line2: #c9c7be;
-  --color-ink: #1c1c1e;
-  --color-ink2: #5c5b56;
-  --color-ink3: #6b6a64;
-  --color-accent-edge: #6e9a33;
-  --color-done: #55673f;
-  --color-red: #b8332c;
-  --color-red-tint: rgb(184 51 44 / 0.08);
-  --color-amber: #8f5e12;
-  --color-lamp-run: #5f8a2b;
-  --color-lamp-halo: rgb(95 138 43 / 0.18);
-  --color-lamp-off: #dedcd4;
-  --color-lamp-ring: #c9c7be;
-  --color-run-text: #3f6b1c;
-  --color-focus: #5f8a2b;
+  --color-ground: #f2f0ea;
+  --color-surface: #fbfaf6;
+  --color-raised: #ffffff;
+  --color-sunken: #e8e6df;
+  --color-screen: #141416;
+  --color-line: #dcd9d0;
+  --color-line-strong: #827f76;
+  --color-ink: #1b1b1d;
+  --color-ink-2: #51504b;
+  --color-ink-3: #62615b;
+  --color-accent: #4d7a1c;
+  --color-accent-strong: #3c6214;
+  --color-on-accent: #ffffff;
+  --color-accent-tint: rgb(77 122 28 / 0.1);
+  --color-accent-ink: #3c6214;
+  --color-waiting: #8a560c;
+  --color-waiting-tint: rgb(138 86 12 / 0.1);
+  --color-danger: #b3322a;
+  --color-danger-tint: rgb(179 50 42 / 0.08);
+  --color-info: #1f5da3;
+  --color-info-tint: rgb(31 93 163 / 0.08);
+  --color-scrim: rgb(40 38 32 / 0.4);
+  --shadow-pop: 0 8px 24px rgb(40 36 24 / 0.14);
+  --shadow-dialog: 0 24px 64px rgb(40 36 24 / 0.22);
+  --shadow-key: 0 4px 0 #3c6214;
   --color-shadow: rgb(60 55 40 / 0.12);
-  --color-scrim: rgb(60 58 50 / 0.45);
-  --color-screen: #1c1c1e;
 }
 
 :root[data-theme="dark"] {
@@ -125,7 +200,7 @@
 
 @keyframes lamp-pulse {
   50% {
-    box-shadow: 0 0 0 6px transparent;
+    box-shadow: 0 0 0 7px transparent;
   }
 }
 
@@ -148,13 +223,22 @@
   }
 }
 
-/* Engraved labels: control names, section headers, state words. 11 px is never used. */
+/* Things entering (palette, lightbox, toasts): a fade and a 4 px rise, 200ms. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Engraved labels: control names, section headers, state words. Deprecated: 3.0 calls this
+   the `label` style, and `.sl-kicker` carries it. */
 @utility engraved {
   font-family: var(--font-condensed);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -165,11 +249,18 @@
 
   body {
     margin: 0;
-    background: var(--color-bg);
+    background: var(--color-ground);
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
   }
 
   /* Focus is visible on every interactive element: 2 px in the focus colour, 2 px

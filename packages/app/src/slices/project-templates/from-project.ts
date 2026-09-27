@@ -195,6 +195,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
             },
           }),
       articlePrompt: config.articlePrompt ?? "",
+      ...(config.thumbnailCount === 3 ? { thumbnailCount: 3 as const } : {}),
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),
       ...(config.descriptionPrompt === undefined

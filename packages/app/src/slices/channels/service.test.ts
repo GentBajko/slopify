@@ -4,6 +4,7 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
+import { withChannelBrief } from "../schedules/topics.js";
 import {
   deleteCastImage,
   generateCastImage,
@@ -273,5 +274,26 @@ describe("the cast", () => {
     expect(settleInterruptedCastImages(deps)).toBe(1);
     const read = readChannel(deps, defaultChannelId);
     expect(read.ok && read.value.cast[0]?.images[0]?.state).toBe("failed");
+  });
+});
+
+describe("the series brief", () => {
+  it("is what a schedule without a brief of its own reads, through its template", () => {
+    const deps = fixture();
+    template(deps.db, "t1", null);
+    deps.db
+      .prepare(
+        "INSERT INTO schedules (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,items_json,status,version,creation_hash,created_at,updated_at) VALUES ('s1','S','t1',1,'{}','UTC','skip','skip','[]','paused',1,'h','a','a')",
+      )
+      .run();
+    updateChannel(deps, defaultChannelId, {
+      name: "My channel",
+      brand: {},
+      seriesBrief: "Famous villains first",
+      baseVersion: 1,
+    });
+    const schedule = { id: "s1", brief: null };
+    expect(withChannelBrief(deps, schedule).brief).toBe("Famous villains first");
+    expect(withChannelBrief(deps, { ...schedule, brief: "Own brief" }).brief).toBe("Own brief");
   });
 });

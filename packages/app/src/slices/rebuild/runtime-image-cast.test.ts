@@ -43,6 +43,6 @@ it("says what to do when a picture the project names is not in the database", ()
       cast: [{ name: "Tiamat", description: "", images: ["0".repeat(64)] }],
     }),
   ).toThrow(
-    "A picture of Tiamat that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Library → Channels → Cast, then start the video again from Play.",
+    "A picture of Tiamat that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Play.",
   );
 });

@@ -1,36 +1,43 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { LiveWriting } from "./live-writing.js";
-import { OutputText } from "./parts.js";
+import { useOutputText } from "./parts.js";
+import { ReadingView } from "./reading-view.js";
 
-// The Article section's Research tab: the notes in a 75 ch measure, and the live writing above
+// The Article section's Research tab: the notes in the reading view, and the live writing above
 // them while the research runs. Its actions sit in the Article body's action row with the tab.
 export function ResearchNotes({
   projectId,
   stage,
   notes,
+  onCopy,
 }: {
   readonly projectId: string;
   readonly stage: Stage;
   readonly notes: Output | undefined;
+  readonly onCopy: (text: string, what: string) => void;
 }) {
   const running = stage.state === "running";
+  const text = useOutputText(notes);
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {running ? <LiveWriting projectId={projectId} stage="research" className="" /> : null}
-      {running && notes === undefined ? null : (
-        <section
-          aria-label="Research notes"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
-          tabIndex={0}
-          className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+      {running && notes === undefined ? null : text.error !== null ? (
+        <p className="text-body text-red">{text.error.message}</p>
+      ) : (
+        <ReadingView
+          markdown={text.data ?? ""}
+          label="Research notes"
+          what="research notes"
+          onCopy={onCopy}
+          copyAll={false}
         >
           {notes === undefined ? (
             <p className="text-small text-ink2">{missing(stage)}</p>
           ) : (
-            <OutputText output={notes} />
+            <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
           )}
-        </section>
+        </ReadingView>
       )}
     </div>
   );
