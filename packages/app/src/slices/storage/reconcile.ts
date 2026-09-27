@@ -2,7 +2,7 @@ import { readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
-import { outputPath, stagingPath } from "./layout.js";
+import { backupsFolderName, outputPath, stagingPath } from "./layout.js";
 import { stagedFiles as stagedRows } from "./repo.js";
 import { stagedFileReferenced } from "./staging-refs.js";
 
@@ -47,6 +47,9 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   let orphanFiles = 0;
   for (const entry of readdirSync(paths.projects, { withFileTypes: true })) {
     const path = join(paths.projects, entry.name);
+    // The scheduled backups' default folder: its archives belong to slices/backups, which
+    // prunes them by its own rules.
+    if (entry.name === backupsFolderName && entry.isDirectory()) continue;
     if (!entry.isDirectory()) {
       unlinkSync(path);
       orphanFiles += 1;

@@ -25,6 +25,7 @@ import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { BackupSettings } from "./settings-backups";
 import { UsageBoard } from "./usage";
 
 const storageQueryKey = ["storage-usage"] as const;
@@ -81,6 +82,7 @@ export const settingsSections = [
   { id: "models", label: "Models" },
   { id: "playback", label: "Playback & appearance" },
   { id: "storage", label: "Backup & storage" },
+  { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
 ] as const;
 
@@ -154,6 +156,7 @@ export function SettingsRoute({
           {section === "playback" ? <SectionHead title="Playback & appearance" /> : null}
           {section === "playback" ? <Playback /> : null}
           {section === "storage" ? <StorageTools /> : null}
+          {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (
             <SectionHead
               title="Usage"

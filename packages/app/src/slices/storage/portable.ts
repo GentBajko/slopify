@@ -33,7 +33,7 @@ import { cliPathMaxLength } from "../settings/cli-paths.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
-import { projectDir, stagingPath } from "./layout.js";
+import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
 
@@ -1053,7 +1053,8 @@ export function storageBytes(paths: Paths): {
   readonly projects: number;
   readonly staging: number;
 } {
-  const projects = directoryBytes(paths.projects);
+  // Scheduled backups default to a folder inside the projects root; they are not project files.
+  const projects = directoryBytes(paths.projects) - directoryBytes(defaultBackupsDir(paths));
   const staging = directoryBytes(paths.staging);
   return { data: directoryBytes(paths.dataDir), projects, staging };
 }
