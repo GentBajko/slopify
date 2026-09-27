@@ -17,7 +17,7 @@ import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import {
   dockerActivationCommitted,
   dockerFolderConfiguration,
-} from "./edge/docker-projects/activation.js";
+} from "./edge/docker-install/activation.js";
 import { createHub, observedHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
@@ -184,7 +184,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       dockerState !== "/opt/slopify-install/activation.json")
   )
     throw new Error(
-      "This container was started with Slopify's Docker settings in the wrong place (SLOPIFY_DOCKER_INSTALL_STATE). Start it with the launcher instead: npx @gentbajko/slopify --docker",
+      "This container was started with Slopify's Docker settings in the wrong place (SLOPIFY_DOCKER_INSTALL_STATE must be /opt/slopify-install/activation.json). Start it with Slopify's compose.yaml, or install it with npx @gentbajko/slopify --docker",
     );
   const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
   const pendingActivation =
@@ -330,7 +330,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           : publishedVersion(globalThis.fetch),
       unsupported: () =>
         process.env.SLOPIFY_DISABLE_UPDATES === "1"
-          ? "This container is updated by pulling a new image and recreating it."
+          ? "Slopify in Docker is updated from the terminal: npx @gentbajko/slopify@latest update. It waits for running work, keeps a recovery copy of your data and puts the previous version back if the new one doesn't start."
           : !existsSync(oldEntry) || !existsSync(workerEntry)
             ? "Run Slopify from its installed package to use in-app updates."
             : npm === undefined

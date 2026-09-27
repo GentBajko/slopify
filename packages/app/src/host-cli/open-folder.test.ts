@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { chmod, lstat, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,22 +18,23 @@ async function setup(options: { identity?: { dev: string; ino: string }; mode?: 
   await mkdir(join(root, "slopify"), { recursive: true, mode: 0o700 });
   await mkdir(join(projects, "p1", "history"), { recursive: true });
   const s = await lstat(projects, { bigint: true });
-  const receipt = join(root, "slopify", "receipt.json");
+  const receipt = join(root, "slopify", "install.json");
   await writeFile(
     receipt,
     JSON.stringify({
-      version: 1,
-      installation: randomUUID(),
-      daemon: "daemon",
+      version: 2,
       name: "slopify",
       volume: "slopify-data",
-      volumeIdentity: "volume",
-      projects,
-      directoryIdentity: options.identity ?? { dev: String(s.dev), ino: String(s.ino) },
+      daemon: "daemon",
+      image: "ghcr.io/gentbajko/slopify:3.0.0",
+      appVersion: "3.0.0",
       user: "1000:1000",
-      image: "ghcr.io/gentbajko/slopify:latest",
-      signature: "signature",
-      transaction: randomUUID(),
+      port: 6969,
+      projects,
+      projectsIdentity: options.identity ?? { dev: String(s.dev), ino: String(s.ino) },
+      hostCli: true,
+      token: "a".repeat(64),
+      recovery: null,
     }),
     { mode: 0o600 },
   );
@@ -64,7 +64,7 @@ it.skipIf(process.platform !== "linux")(
     const h = await setup();
     for (const path of [h.home, "/etc", `${h.projects}/../`, `${h.projects}/p1/../../data`])
       await expect(h.open(path)).rejects.toBeInstanceOf(HostFolderRefused);
-    await expect(h.open(`${h.projects}-other`)).rejects.toThrow(/Docker launcher/);
+    await expect(h.open(`${h.projects}-other`)).rejects.toThrow(/Docker install/);
     expect(h.launch).not.toHaveBeenCalled();
   },
 );
