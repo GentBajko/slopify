@@ -1,28 +1,112 @@
-import { CopyIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { tagsLength } from "@app/slices/youtube/answer.js";
+import {
+  composeDescription,
+  type DescriptionField,
+  type DescriptionFields,
+  type ResolvedField,
+  resolveFields,
+  shownFields,
+  splitDescription,
+} from "@app/slices/youtube/edits.js";
+import { descriptionMaxCharacters, tagsMaxCharacters } from "@app/slices/youtube/model.js";
+import {
+  type ChannelLink,
+  fillPlaceholders,
+  linkKey,
+  mergeLinks,
+  placeholderParts,
+  previousVideoLink,
+} from "@app/slices/youtube/placeholders.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CopyIcon, PencilIcon } from "lucide-react";
+import { type ReactElement, type ReactNode, useId, useState } from "react";
+import {
+  type ProjectDescriptionEdits,
+  readChannelLinks,
+  readDescriptionEdits,
+  saveDescriptionEdit,
+  saveProjectLinks,
+} from "@/api";
+import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { DiffColumns } from "@/library/diff-view";
+import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { useOutputText } from "./parts.js";
 
-// The Video stage's YouTube part: the description and the tags as written, each with Copy
-// beside its heading; the files download from the stage's one Download menu. It is a part of the stage body, set off by a rule and a heading
-// rather than a box of its own, and the text is read-only text rather than a field. Everything
-// stays mounted while the step runs or waits, so nothing moves when the text lands; a copy says
-// how it went in the reserved status line.
+const labels: Readonly<Record<DescriptionField, string>> = {
+  summary: "Summary",
+  chapters: "Chapters",
+  hashtags: "Hashtags",
+  tags: "Tags",
+};
+
+// The Video stage's YouTube part: the description (summary, chapters, hashtags) and the tags as
+// written, each editable in place. An edit is kept as the user's own and survives the next
+// regeneration: when the description is written again, a field the user changed keeps their
+// text and offers the new one (`slices/youtube/edits.ts`). `{{Name}}` placeholders fill from
+// Settings → Channel links and this project's own Previous video when shown and copied; one
+// without a link stays as typed and is marked. It is a part of the stage body, set off by a rule
+// and a heading rather than a box of its own; everything stays mounted while the step runs or
+// waits, so nothing moves when the text lands.
 export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const id = useId();
+  const { api } = useApp();
+  const queryClient = useQueryClient();
   const own = outputsOf(outputs, stage);
   const description = roleOf(own, "youtube_description");
   const tags = roleOf(own, "youtube_tags");
   const descriptionText = useOutputText(description).data;
   const tagsText = useOutputText(tags).data;
+  const edits = useQuery({
+    queryKey: keys.youtubeEdits(project.id),
+    queryFn: () => readDescriptionEdits(api, project.id),
+  });
+  const channelLinks = useQuery({
+    queryKey: keys.channelLinks,
+    queryFn: () => readChannelLinks(api),
+  });
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const saved = (next: ProjectDescriptionEdits) =>
+    queryClient.setQueryData(keys.youtubeEdits(project.id), next);
+  const save = useMutation({
+    mutationFn: (change: {
+      readonly field: DescriptionField;
+      readonly edit: { readonly text: string; readonly base: string } | null;
+      readonly done: string;
+    }) => saveDescriptionEdit(api, project.id, change.field, change.edit),
+    onSuccess: (next, change) => {
+      saved(next);
+      setStatus({ text: change.done, tone: "success" });
+    },
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't save the change: ${error.message}`,
+        tone: "error",
+      }),
+  });
   if (project.config.youtubeDescription !== true && description === undefined) return null;
-  const copy = (text: string | undefined, what: string) => {
-    if (text === undefined) return;
+
+  const generated: DescriptionFields | undefined =
+    descriptionText === undefined ? undefined : splitDescription(descriptionText, tagsText ?? "");
+  const resolved = resolveFields(generated, edits.data?.fields ?? {});
+  const shown = shownFields(resolved);
+  const links = mergeLinks(channelLinks.data ?? [], edits.data?.links ?? []);
+  const composed = composeDescription(shown);
+  const filledDescription = fillPlaceholders(composed, links);
+  const filledTags = fillPlaceholders(shown.tags, links);
+  const unknown = [...filledDescription.unknown, ...filledTags.unknown].filter(
+    (name, index, all) => all.findIndex((one) => linkKey(one) === linkKey(name)) === index,
+  );
+  const tagList = splitTags(filledTags.text);
+  const written = generated !== undefined;
+
+  const copy = (text: string, what: string) => {
     if (!navigator.clipboard) {
       setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
       return;
@@ -40,6 +124,40 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     stage.state === "running"
       ? "Written after the subtitle timing."
       : "Not written yet. It is made with the video.";
+  const field = (name: DescriptionField, render?: (text: string) => ReactNode) => (
+    <EditableField
+      key={name}
+      label={labels[name]}
+      value={resolved[name]}
+      links={links}
+      disabled={!written || save.isPending}
+      multiline={name !== "hashtags"}
+      placeholder={waiting}
+      render={render}
+      onSave={(text) =>
+        save.mutate({
+          field: name,
+          edit: { text, base: generated?.[name] ?? "" },
+          done: `Saved your ${labels[name].toLowerCase()}.`,
+        })
+      }
+      onUseGenerated={() =>
+        save.mutate({
+          field: name,
+          edit: null,
+          done: `The ${labels[name].toLowerCase()} follows the generated text again.`,
+        })
+      }
+      onKeepMine={(text, next) =>
+        save.mutate({
+          field: name,
+          edit: { text, base: next },
+          done: `Kept your ${labels[name].toLowerCase()}.`,
+        })
+      }
+    />
+  );
+
   return (
     <section
       aria-labelledby={`${id}-title`}
@@ -49,100 +167,381 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         YouTube
       </h3>
       {/* The description reads best at a paragraph's width; the tags take the room beside
-          it, as chips, and drop below it on a narrow screen. */}
+          it and drop below it on a narrow screen. */}
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,75ch)_minmax(0,1fr)]">
-        <ReadOnlyText
-          id={`${id}-description`}
-          label="Description"
-          placeholder={waiting}
-          empty={descriptionText === undefined}
-          copy={
-            descriptionText === undefined ? undefined : () => copy(descriptionText, "description")
-          }
-        >
-          {descriptionText}
-        </ReadOnlyText>
-        <ReadOnlyText
-          id={`${id}-tags`}
-          label="Tags"
-          placeholder={waiting}
-          empty={tagsText === undefined}
-          copy={tagsText === undefined ? undefined : () => copy(tagsText, "tags")}
-        >
-          {tagsText === undefined ? undefined : <TagChips text={tagsText} />}
-        </ReadOnlyText>
+        <div className="flex min-w-0 flex-col gap-3">
+          <PartHead
+            id={`${id}-description`}
+            label="Description"
+            copy={written ? () => copy(filledDescription.text, "description") : undefined}
+            count={
+              written
+                ? `${String(filledDescription.text.length)} / ${String(descriptionMaxCharacters)} characters`
+                : undefined
+            }
+            over={filledDescription.text.length > descriptionMaxCharacters}
+          />
+          {field("summary")}
+          {field("chapters")}
+          {field("hashtags")}
+        </div>
+        <div className="flex min-w-0 flex-col gap-3">
+          <PartHead
+            id={`${id}-tags`}
+            label="Tags"
+            copy={written ? () => copy(filledTags.text, "tags") : undefined}
+            count={
+              written
+                ? `${String(tagsLength(tagList))} / ${String(tagsMaxCharacters)} characters`
+                : undefined
+            }
+            over={tagsLength(tagList) > tagsMaxCharacters}
+          />
+          {field("tags", (text) => (
+            <TagChips text={text} links={links} />
+          ))}
+        </div>
       </div>
+      {unknown.length === 0 ? null : (
+        <p className="text-small text-amber">
+          {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it in Settings → Channel links${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
+        </p>
+      )}
+      <PreviousVideo
+        projectId={project.id}
+        edits={edits.data}
+        onSaved={(next) => {
+          saved(next);
+          setStatus({ text: "Saved this project's Previous video link.", tone: "success" });
+        }}
+        onError={(message) => setStatus({ text: message, tone: "error" })}
+      />
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
   );
 }
 
-function ReadOnlyText({
+function PartHead({
   id,
   label,
-  placeholder,
-  empty,
   copy,
-  children,
+  count,
+  over,
 }: {
   readonly id: string;
   readonly label: string;
-  readonly placeholder: string;
-  readonly empty: boolean;
   // Undefined until there is text to copy.
   readonly copy: (() => void) | undefined;
-  readonly children: ReactNode;
-}) {
+  readonly count: string | undefined;
+  readonly over: boolean;
+}): ReactElement {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <h4 id={`${id}-label`} className="text-small font-semibold text-ink2">
-          {label}
-        </h4>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={copy === undefined}
-          aria-label={`Copy ${label.toLowerCase()}`}
-          onClick={copy}
-        >
-          <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
-          Copy
-        </Button>
-      </div>
-      <section
-        aria-labelledby={`${id}-label`}
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll a long description.
-        tabIndex={0}
-        className={cn(
-          "max-h-64 overflow-auto whitespace-pre-wrap break-words text-small",
-          empty ? "text-ink3" : "text-ink",
-        )}
+    <div className="flex min-h-8 flex-wrap items-center gap-3">
+      <h4 id={id} className="text-small font-semibold text-ink2">
+        {label}
+      </h4>
+      {count === undefined ? null : (
+        <span className={cn("text-small tabular-nums", over ? "text-red" : "text-ink3")}>
+          {over ? `${count}, over YouTube's limit` : count}
+        </span>
+      )}
+      <span className="flex-1" />
+      <Button
+        type="button"
+        variant="ghost"
+        disabled={copy === undefined}
+        aria-label={`Copy ${label.toLowerCase()}`}
+        onClick={copy}
       >
-        {empty ? placeholder : children}
-      </section>
+        <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
+        Copy
+      </Button>
     </div>
   );
 }
 
-// The tags as the chips they become on YouTube. Copy still copies them exactly as written,
-// commas and all, for YouTube's Tags field.
-function TagChips({ text }: { readonly text: string }) {
-  const tags = text
+// One field shown as text, with Edit to change it in place. The user's text is marked as theirs
+// with a way back to the generated one, and a regenerated text the user has not seen yet waits
+// beside it instead of replacing it.
+function EditableField({
+  label,
+  value,
+  links,
+  disabled,
+  multiline,
+  placeholder,
+  render,
+  onSave,
+  onUseGenerated,
+  onKeepMine,
+}: {
+  readonly label: string;
+  readonly value: ResolvedField;
+  readonly links: readonly ChannelLink[];
+  readonly disabled: boolean;
+  readonly multiline: boolean;
+  readonly placeholder: string;
+  readonly render?: ((text: string) => ReactNode) | undefined;
+  readonly onSave: (text: string) => void;
+  readonly onUseGenerated: () => void;
+  readonly onKeepMine: (text: string, next: string) => void;
+}): ReactElement {
+  const id = useId();
+  const [draft, setDraft] = useState<string | undefined>();
+  const [diff, setDiff] = useState(false);
+  const editing = draft !== undefined;
+  const lower = label.toLowerCase();
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-h-8 flex-wrap items-center gap-2">
+        <h5 id={`${id}-label`} className="engraved text-ink3">
+          {label}
+        </h5>
+        {value.edited ? <span className="text-small text-ink2">Your edit</span> : null}
+        <span className="flex-1" />
+        {value.edited && !editing ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={disabled}
+            aria-label={`Use the generated ${lower}`}
+            onClick={onUseGenerated}
+          >
+            Use generated
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={disabled || editing}
+          aria-label={`Edit ${lower}`}
+          onClick={() => setDraft(value.text)}
+        >
+          <PencilIcon aria-hidden="true" className="size-[14px]" />
+          Edit
+        </Button>
+      </div>
+      {value.pending === undefined ? null : (
+        <div className="flex flex-col gap-2 border-l-2 border-amber pl-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-small text-ink">New generated version available.</p>
+            <Button
+              type="button"
+              disabled={disabled}
+              aria-label={`Use the new generated ${lower}`}
+              onClick={onUseGenerated}
+            >
+              Use it
+            </Button>
+            <Button
+              type="button"
+              disabled={disabled}
+              aria-label={`Keep my ${lower}`}
+              onClick={() => onKeepMine(value.text, value.pending ?? "")}
+            >
+              Keep mine
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-expanded={diff}
+              aria-label={`${diff ? "Hide" : "View"} the ${lower} diff`}
+              onClick={() => setDiff((now) => !now)}
+            >
+              {diff ? "Hide diff" : "View diff"}
+            </Button>
+          </div>
+          {diff ? (
+            <DiffColumns
+              before={value.text}
+              after={value.pending}
+              beforeLabel="Yours"
+              afterLabel="New generated"
+            />
+          ) : null}
+        </div>
+      )}
+      {editing ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-edit`} className="sr-only">
+            {label}
+          </Label>
+          {multiline ? (
+            <Textarea
+              id={`${id}-edit`}
+              rows={label === "Chapters" ? 8 : 5}
+              value={draft}
+              onChange={(event) => setDraft(event.currentTarget.value)}
+            />
+          ) : (
+            <Input
+              id={`${id}-edit`}
+              value={draft}
+              onChange={(event) => setDraft(event.currentTarget.value)}
+            />
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              disabled={disabled}
+              onClick={() => {
+                onSave(draft);
+                setDraft(undefined);
+              }}
+            >
+              Save {lower}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setDraft(undefined)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <section
+          aria-labelledby={`${id}-label`}
+          className={cn(
+            "min-w-0 whitespace-pre-wrap break-words text-small",
+            value.text === "" ? "text-ink3" : "text-ink",
+          )}
+        >
+          {value.text === "" ? (
+            placeholder
+          ) : render === undefined ? (
+            <Filled text={value.text} links={links} />
+          ) : (
+            render(value.text)
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+// The text with its placeholders filled: a filled one shows its link, marked so it reads as
+// filled in; one without a link stays as typed and is highlighted.
+function Filled({
+  text,
+  links,
+}: {
+  readonly text: string;
+  readonly links: readonly ChannelLink[];
+}): ReactElement {
+  let at = 0;
+  return (
+    <>
+      {placeholderParts(text, links).map((part) => {
+        const key = String(at);
+        at += part.kind === "text" ? part.text.length : part.raw.length;
+        if (part.kind === "text") return <span key={key}>{part.text}</span>;
+        return part.url === undefined ? (
+          <mark
+            key={key}
+            title={`No link named ${part.name}`}
+            className="rounded-[2px] bg-amber/25 px-[2px] text-ink"
+          >
+            {part.raw}
+          </mark>
+        ) : (
+          <span
+            key={key}
+            title={part.raw}
+            className="underline decoration-dotted underline-offset-[3px]"
+          >
+            {part.url}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function splitTags(text: string): readonly string[] {
+  return text
     .split(",")
     .map((tag) => tag.trim())
     .filter((tag) => tag !== "");
+}
+
+// The tags as the chips they become on YouTube. Copy still copies them exactly as written,
+// commas and all, for YouTube's Tags field.
+function TagChips({
+  text,
+  links,
+}: {
+  readonly text: string;
+  readonly links: readonly ChannelLink[];
+}): ReactElement {
   return (
     <ul className="flex flex-wrap gap-[6px] whitespace-normal">
-      {tags.map((tag, index) => (
+      {splitTags(text).map((tag, index) => (
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
           key={index}
           className="rounded-full border border-line bg-panel2 px-[9px] py-[2px] text-small text-ink"
         >
-          {tag}
+          <Filled text={tag} links={links} />
         </li>
       ))}
     </ul>
+  );
+}
+
+// This project's own Previous video, which `{{Previous video}}` fills with ahead of the one in
+// Settings → Channel links.
+function PreviousVideo({
+  projectId,
+  edits,
+  onSaved,
+  onError,
+}: {
+  readonly projectId: string;
+  readonly edits: ProjectDescriptionEdits | undefined;
+  readonly onSaved: (next: ProjectDescriptionEdits) => void;
+  readonly onError: (message: string) => void;
+}): ReactElement {
+  const { api } = useApp();
+  const id = useId();
+  const saved =
+    edits?.links.find((link) => linkKey(link.name) === linkKey(previousVideoLink))?.url ?? "";
+  const [value, setValue] = useState<string | undefined>();
+  const shown = value ?? saved;
+  const save = useMutation({
+    mutationFn: () => {
+      const others = (edits?.links ?? []).filter(
+        (link) => linkKey(link.name) !== linkKey(previousVideoLink),
+      );
+      return saveProjectLinks(
+        api,
+        projectId,
+        shown.trim() === "" ? others : [...others, { name: previousVideoLink, url: shown.trim() }],
+      );
+    },
+    onSuccess: (next) => {
+      setValue(undefined);
+      onSaved(next);
+    },
+    onError: (error) => onError(error.message),
+  });
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="flex min-w-[260px] flex-1 flex-col gap-1 sm:max-w-[520px]">
+        <Label htmlFor={id}>Previous video for this project</Label>
+        <Input
+          id={id}
+          type="url"
+          placeholder="https://youtu.be/…"
+          value={shown}
+          onChange={(event) => setValue(event.currentTarget.value)}
+        />
+      </div>
+      <Button
+        type="button"
+        disabled={save.isPending || edits === undefined || shown.trim() === saved}
+        onClick={() => save.mutate()}
+      >
+        Save links
+      </Button>
+    </div>
   );
 }

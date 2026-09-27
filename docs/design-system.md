@@ -78,9 +78,9 @@ Enter runs, Esc closes; focus stays in the palette while it is open.
 
 A 232px rail (wordmark, the palette button, Home, Projects, Calendar, Channels, Library,
 Settings, the channel picker slot and the New video key), a thin top bar, and the page up to
-1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out). Home,
-Calendar and Channels point at the closest existing screens until their routes exist (see the
-TODO in `shell.tsx`). A channels screen renders its picker into the rail with
+1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out). Home and
+Channels point at the closest existing screens until their routes exist (see the TODO in
+`shell.tsx`). A channels screen renders its picker into the rail with
 `<ChannelPickerSlot>`.
 
 ## Rules in short

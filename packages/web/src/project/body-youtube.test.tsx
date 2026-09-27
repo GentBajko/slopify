@@ -2,7 +2,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
-import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
+import type { Answer } from "@/test-app";
+import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { YoutubeBlock } from "./body-youtube.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
@@ -13,11 +14,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const description = "How rope holds.\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots";
+const description =
+  "How rope holds. Support: {{Patreon}}\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots";
 
-function mount(
+function mount({
   outputs = [output("youtube_description", "video"), output("youtube_tags", "video")],
-) {
+  edits = { fields: {}, links: [] } as unknown,
+  links = [{ name: "Patreon", url: "https://patreon.com/rope" }] as unknown,
+  extra = {} as Readonly<Record<string, Answer>>,
+} = {}) {
   const video = stage("video", "done");
   const config = { ...revisionView().revision.config, youtubeDescription: true };
   const project = {
@@ -50,67 +55,124 @@ function mount(
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
       "GET /files/p1/revisions/r1/youtube_description": () => new Response(description),
       "GET /files/p1/revisions/r1/youtube_tags": () => new Response("rope, knots, sailing knots"),
+      [`GET /api/projects/${project.id}/youtube-edits`]: jsonAnswer(edits),
+      "GET /api/settings/channel-links": jsonAnswer({ links }),
+      ...extra,
     }),
   );
+  return project;
 }
 
-it("shows the description and tags read-only, each with Copy beside its heading", async () => {
+it("shows the description in its parts with placeholders filled, and copies it filled", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount();
-  const text = screen.getByLabelText("Description");
-  await waitFor(() => expect(text.textContent).toBe(description));
-  // Read-only text, not a field: nothing here takes typing.
-  expect(screen.queryByRole("textbox")).toBeNull();
-  const tags = screen.getByLabelText("Tags");
+  const summary = await screen.findByRole("region", { name: "Summary" });
   await waitFor(() =>
-    expect(
-      within(tags)
-        .getAllByRole("listitem")
-        .map((tag) => tag.textContent),
-    ).toEqual(["rope", "knots", "sailing knots"]),
+    expect(summary.textContent).toBe("How rope holds. Support: https://patreon.com/rope"),
   );
+  expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
+    "0:00 Opening\n0:20 Knots\n0:40 Close",
+  );
+  expect(screen.getByRole("region", { name: "Hashtags" }).textContent).toBe("#Rope #Knots");
+  expect(
+    within(screen.getByRole("region", { name: "Tags" }))
+      .getAllByRole("listitem")
+      .map((tag) => tag.textContent),
+  ).toEqual(["rope", "knots", "sailing knots"]);
 
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
-  expect(writeText).toHaveBeenLastCalledWith(description);
+  expect(writeText).toHaveBeenLastCalledWith(
+    "How rope holds. Support: https://patreon.com/rope\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots",
+  );
   await waitFor(() =>
     expect(screen.getByRole("status").textContent).toBe("Copied the description."),
   );
   await userEvent.click(screen.getByRole("button", { name: "Copy tags" }));
   expect(writeText).toHaveBeenLastCalledWith("rope, knots, sailing knots");
-  await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Copied the tags."));
 });
 
-it("says in the status line when the clipboard refuses", async () => {
-  vi.stubGlobal("navigator", {
-    ...navigator,
-    clipboard: { writeText: vi.fn(async () => Promise.reject(new Error("denied"))) },
+it("marks a placeholder with no link and keeps it in the copy", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  mount({ links: [] });
+  const summary = await screen.findByRole("region", { name: "Summary" });
+  await waitFor(() => expect(within(summary).getByText("{{Patreon}}").tagName).toBe("MARK"));
+  expect(screen.getByText(/No link is saved for \{\{Patreon\}\}/u)).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
+  expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining("Support: {{Patreon}}"));
+});
+
+it("saves an edit in place with the generated text it was made from", async () => {
+  let sent: unknown;
+  mount({
+    extra: {
+      "PUT /api/projects/p1/youtube-edits/fields/summary": async (request) => {
+        sent = await request.json();
+        return jsonAnswer({
+          fields: { summary: { base: "x", text: "My own summary." } },
+          links: [],
+        })(request);
+      },
+    },
   });
-  mount();
-  const copy = screen.getByRole("button", { name: "Copy tags" });
-  await waitFor(() => expect((copy as HTMLButtonElement).disabled).toBe(false));
-  await userEvent.click(copy);
+  await screen.findByText(/How rope holds/u);
+  await userEvent.click(screen.getByRole("button", { name: "Edit summary" }));
+  const box = screen.getByRole("textbox", { name: "Summary" });
+  await userEvent.clear(box);
+  await userEvent.type(box, "My own summary.");
+  await userEvent.click(screen.getByRole("button", { name: "Save summary" }));
   await waitFor(() =>
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Couldn't copy the tags. Select the text and copy it.",
+    expect(sent).toEqual({
+      text: "My own summary.",
+      base: "How rope holds. Support: {{Patreon}}",
+    }),
+  );
+  expect(await screen.findByText("My own summary.")).not.toBeNull();
+  expect(screen.getByText("Your edit")).not.toBeNull();
+});
+
+it("offers the new generated text beside an edit instead of overwriting it", async () => {
+  let dropped = false;
+  mount({
+    edits: {
+      fields: { chapters: { base: "0:00 Old\n0:30 Older", text: "0:00 Mine\n0:20 Knots" } },
+      links: [],
+    },
+    extra: {
+      "DELETE /api/projects/p1/youtube-edits/fields/chapters": (request) => {
+        dropped = true;
+        return jsonAnswer({ fields: {}, links: [] })(request);
+      },
+    },
+  });
+  expect(await screen.findByText("New generated version available.")).not.toBeNull();
+  expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
+    "0:00 Mine\n0:20 Knots",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "View the chapters diff" }));
+  expect(screen.getByRole("region", { name: "New generated" })).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Use the new generated chapters" }));
+  await waitFor(() => expect(dropped).toBe(true));
+  await waitFor(() =>
+    expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
+      "0:00 Opening\n0:20 Knots\n0:40 Close",
     ),
   );
 });
 
-it("keeps the block in place with Copy disabled until the step has written", () => {
-  mount([]);
+it("keeps the block in place with Copy and Edit disabled until the step has written", () => {
+  mount({ outputs: [] });
   const block = screen.getByRole("region", { name: "YouTube" });
   // A part of the stage body under a rule, not a bordered box inside the stage's own card.
   expect(block.className).not.toContain("rounded");
-  expect(
-    within(block)
-      .getAllByRole("heading")
-      .map((heading) => heading.textContent),
-  ).toEqual(["YouTube", "Description", "Tags"]);
-  expect(screen.getByLabelText("Description").textContent).toBe(
+  expect(screen.getByRole("region", { name: "Summary" }).textContent).toBe(
     "Not written yet. It is made with the video.",
   );
   expect(
     (screen.getByRole("button", { name: "Copy description" }) as HTMLButtonElement).disabled,
   ).toBe(true);
+  expect((screen.getByRole("button", { name: "Edit summary" }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
 });

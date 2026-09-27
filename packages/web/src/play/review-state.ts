@@ -51,12 +51,15 @@ export function createReviewOwner({
   queryClient,
   current,
   flush,
+  resave,
   render,
 }: {
   readonly api: Api;
   readonly queryClient: QueryClient;
   readonly current: () => DraftSessionState;
   readonly flush: () => Promise<boolean>;
+  // Saves the page's document again as a new edit.
+  readonly resave: () => void;
   readonly render: () => void;
 }): ReviewOwner {
   let state: ReviewState = {
@@ -82,9 +85,11 @@ export function createReviewOwner({
     version: current().clock.version,
     editGeneration: current().clock.edited,
   });
+  // A receipt counts only while it starts exactly the videos this page shows.
   const valid = () =>
     sameReviewedGeneration(reviewed, identity()) &&
-    current().clock.edited === current().clock.acknowledged;
+    current().clock.edited === current().clock.acknowledged &&
+    state.receipt?.runs.length === pageVideos(current().document);
   const invalidate = (clearFields = false) => {
     epoch++;
     reviewed = undefined;
@@ -181,6 +186,19 @@ export function createReviewOwner({
           reply.value.draftVersion !== captured.version
         )
           return;
+        const shown = pageVideos(current().document);
+        if (reply.value.runs.length !== shown) {
+          // The saved draft the review read is not what this page shows. Starting it would
+          // create a different number of videos than the button says, so the page is
+          // saved again and must be reviewed afresh.
+          publish({
+            receipt: null,
+            valid: false,
+            error: `The saved draft has ${videos(reply.value.runs.length)}, but this page shows ${shown}. Slopify saved this page again. Press Refresh review, then start.`,
+          });
+          resave();
+          return;
+        }
         reviewed = captured;
         publish({ receipt: reply.value, valid: true });
       } catch (error) {
@@ -245,6 +263,22 @@ export function createReviewOwner({
       }
     },
   };
+}
+
+// Every video Start creates for this page: the setup itself and each keyword variation.
+export function pageVideos(document: PlayDraftDocument): number {
+  return document.variants.length + 1;
+}
+function videos(count: number): string {
+  return count === 1 ? "1 video" : `${count} videos`;
+}
+// What the Start button offers. A valid review only exists while its receipt starts exactly
+// the page's videos, so the button and Start count the same runs.
+export function startLabel(review: ReviewState, document: PlayDraftDocument): string {
+  if (review.starting) return "Starting…";
+  if (review.uncertain) return "Check Start result";
+  const count = review.valid && review.receipt ? review.receipt.runs.length : pageVideos(document);
+  return count > 1 ? `Queue ${count} videos` : "Start run";
 }
 
 export function pendingReviewUpload(

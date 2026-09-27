@@ -45,6 +45,8 @@ export interface PlaySession extends PlayNavigation {
   readonly open: (id: string, isCurrent?: () => boolean) => Promise<boolean>;
   readonly generation: () => number;
   readonly newDraft: () => Promise<void>;
+  // Picks the providers the first launch found, on a fresh draft nobody has edited.
+  readonly adoptDefaults?: (defaults: import("./draft-state").FreshProviderDefaults) => void;
   readonly discard: (target: { readonly id: string; readonly version: number }) => Promise<void>;
   readonly saveAsNew: () => Promise<void>;
 }

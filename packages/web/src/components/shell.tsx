@@ -42,11 +42,11 @@ import { UpdateWidget } from "@/updates/widget";
 // content-max. On phones the rail becomes a bottom bar of five.
 //
 // `match` lists the paths a destination stays lit for.
-// TODO(3.0 screens): Home, Calendar and Channels have no routes yet. Until they land:
+// Calendar and Schedules live under Library's tabs too, but they light Calendar here.
+// TODO(3.0 screens): Home and Channels have no routes yet. Until they land:
 //   Home -> "/" (the projects list), lit on nothing of its own;
-//   Calendar -> "/schedules" (the closest existing screen);
 //   Channels -> "/settings" (channel settings live there today), lit on nothing of its own.
-// Point `to` and `match` at "/home", "/calendar" and "/channels" when those routes exist.
+// Point `to` and `match` at "/home" and "/channels" when those routes exist.
 interface Destination {
   readonly id: string;
   readonly to: string;
@@ -78,10 +78,10 @@ const destinations: readonly Destination[] = [
   },
   {
     id: "calendar",
-    to: "/schedules",
+    to: "/calendar",
     label: "Calendar",
     icon: <CalendarIcon {...iconProps} />,
-    match: ["/schedules", "/calendar"],
+    match: ["/calendar", "/schedules"],
     phone: true,
   },
   {
@@ -176,7 +176,7 @@ function NavigationCommands() {
     id: "nav.calendar",
     title: "Open calendar",
     group: "Go to",
-    run: go("/schedules"),
+    run: go("/calendar"),
     keywords: ["schedules"],
   });
   useCommand({
@@ -220,6 +220,11 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
+      scheduleTopics: () => {
+        void queryClient.invalidateQueries({ queryKey: ["schedules"] });
+        void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+        void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      },
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },

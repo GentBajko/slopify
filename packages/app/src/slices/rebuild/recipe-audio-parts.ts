@@ -44,12 +44,10 @@ export function narrationParts(
   const spans = pronunciationSpans(logicalText, glossary.entries);
   const wholeRequest = segment !== "body" || (context.config.chunking?.mode ?? "whole") === "whole";
   const choice = context.config.audio;
+  // A retired model's character limit is still its limit: the automatic catalogue check marks
+  // models deprecated, and that alone must not re-split narration and outdate a project.
   const model = context.catalogue?.tts.find(
-    (row) =>
-      row.provider === choice?.provider &&
-      row.id === choice.model &&
-      row.enabled &&
-      !row.deprecated,
+    (row) => row.provider === choice?.provider && row.id === choice.model && row.enabled,
   );
   const logicalLimit = Math.max(
     2,
