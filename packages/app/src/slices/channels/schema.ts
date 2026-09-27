@@ -105,6 +105,8 @@ export const castMemberInputSchema = z
       .default(""),
     // Absent keeps the saved voice; null removes it.
     voice: castVoiceSchema.nullable().optional(),
+    // One of the channel's hosts. Absent keeps what is saved.
+    host: z.boolean().optional(),
   })
   .strict();
 export const castMemberCreateSchema = castMemberInputSchema.extend({ id }).strict();

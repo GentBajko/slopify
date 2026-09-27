@@ -1,5 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
+import { bookLabel } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
@@ -76,7 +77,12 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
 // generated no article from a template names only its format.
 export function madeOf(project: ProjectListing): string {
   const prompt = project.config.articlePrompt;
-  return [prompt === undefined || prompt === "" ? undefined : prompt, project.format]
+  const book = project.config.voices?.book;
+  return [
+    book === undefined ? undefined : bookLabel(book),
+    prompt === undefined || prompt === "" ? undefined : prompt,
+    project.format,
+  ]
     .filter((part) => part !== undefined)
     .join(" · ");
 }

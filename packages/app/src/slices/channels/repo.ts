@@ -46,6 +46,7 @@ const memberRow = z.object({
   aliases_json: z.string(),
   description: z.string(),
   voice_json: z.string().nullable().optional(),
+  host: z.number().optional(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -168,6 +169,7 @@ function memberOf(row: z.infer<typeof memberRow>, images: readonly CastImage[]):
     ...(row.voice_json === null || row.voice_json === undefined
       ? {}
       : { voice: voiceJson.parse(JSON.parse(row.voice_json)) }),
+    ...(row.host === 1 ? { host: true } : {}),
     version: row.version,
     images,
     createdAt: row.created_at,

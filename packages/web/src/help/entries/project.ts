@@ -2,6 +2,10 @@ import type { HelpEntry } from "../entry.js";
 
 // The project page, Edit project and the video, caption and upload screens it opens.
 export const projectHelp = {
+  "project.next-chapter": {
+    title: "Make the next chapter",
+    body: "Opens a new draft on Play for this book's next chapter: the same speakers and voices, channel and cast, prompts and settings, with the chapter number one higher. Write or paste the new chapter's text there, then start it. The MP3 and M4B carry the book as their album and the chapter as their track. An audiobook that is not a book yet becomes one, named after it, starting at chapter 2.",
+  },
   // Video edit: cuts and the Look (video/edit-controls.tsx), shared by Play and Edit project.
   "project.video.cuts": {
     title: "Cuts",

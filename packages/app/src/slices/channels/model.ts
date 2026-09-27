@@ -84,6 +84,9 @@ export interface CastMember {
   readonly aliases: readonly string[];
   readonly description: string;
   readonly voice?: CastVoice | undefined;
+  // One of the channel's hosts: a recurring voice a new podcast or interview starts with.
+  // Absent is not a host.
+  readonly host?: boolean | undefined;
   readonly version: number;
   readonly images: readonly CastImage[];
   readonly createdAt: string;

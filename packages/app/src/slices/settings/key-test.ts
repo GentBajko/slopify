@@ -2,9 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
 import type { KeyProbe, KeyProbes } from "../../kernel/ports/key-probe.js";
 import { keyGuides } from "./key-guides.js";
+import { keyWithShared } from "./keys.js";
 import type { ProviderId } from "./model.js";
 import { providerById } from "./model.js";
-import { keyOf } from "./repo.js";
 
 // What the Test button found. `ok` is the only thing the screen needs to colour the line;
 // `message` says what happened and, when it failed, exactly what to do.
@@ -125,7 +125,7 @@ export async function testProviderKey(
   const probe = Object.hasOwn(deps.probes, provider) ? deps.probes[provider] : undefined;
   if (probe === undefined || providerById(provider).auth !== "key")
     throw new Error(`${provider} has no key to test`);
-  const key = keyOf(deps.db, provider);
+  const key = keyWithShared(deps.db, provider);
   if (key === undefined) return keyTestOutcome(provider, { failure: "no-key" }, at());
   let status: number;
   let body = "";

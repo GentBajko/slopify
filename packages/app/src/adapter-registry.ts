@@ -15,8 +15,10 @@ import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
 import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
+import { geminiTts } from "./adapters/tts/gemini.js";
 import { inworldTts } from "./adapters/tts/inworld.js";
 import { openAiTts } from "./adapters/tts/openai.js";
+import { ffmpegPcmToMp3 } from "./adapters/tts/pcm-mp3.js";
 import type { Clock } from "./kernel/clock.js";
 import { type HostCliPorts, hostLlmIds } from "./kernel/ports/host-cli.js";
 import type { ImagePort } from "./kernel/ports/image.js";
@@ -45,6 +47,9 @@ export interface RegistryDeps {
   readonly spawn: RunCli;
   readonly clock: Clock;
   readonly probe: CliProbe;
+  // The app's ffmpeg, which turns Gemini's raw speech into MP3. Absent (a test), a Gemini
+  // narration fails with a plain message instead.
+  readonly ffmpeg?: string | undefined;
 }
 
 export function buildRegistry(deps: RegistryDeps): Registry {
@@ -96,6 +101,18 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
     ["inworld", inworldTts({ fetch: deps.fetch, key: keyOf("inworld"), clock: deps.clock })],
+    // Its own key, or else the one saved for Google images (`sharedKeyOf`).
+    [
+      "google-tts",
+      geminiTts({
+        fetch: deps.fetch,
+        key: keyOf("google-tts"),
+        toMp3:
+          deps.ffmpeg === undefined
+            ? () => Promise.reject(new Error("ffmpeg is not available to encode Gemini speech"))
+            : ffmpegPcmToMp3(deps.ffmpeg),
+      }),
+    ],
   ]);
   // Keyed image providers receive only their own key; Codex uses the shared CLI login.
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has

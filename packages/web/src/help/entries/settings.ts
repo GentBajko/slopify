@@ -59,6 +59,10 @@ export const settingsHelp = {
     title: "Inworld",
     body: "Narrates the script with Inworld voices, billed per character from your Inworld account. Paste the Base64 credentials of a Standard key exactly as shown; Realtime-only keys do not work.",
   },
+  "settings.provider.google-tts": {
+    title: "Google Gemini voices",
+    body: "Narrates with Gemini's 30 prebuilt voices, billed to your Gemini API key per text and audio token. It uses the key saved for Google images unless you save one here. Two speakers' consecutive turns can go in one request (see Speakers on Play).",
+  },
   "settings.provider.fal": {
     title: "fal.ai",
     body: "Draws the images and thumbnails with the image models fal.ai hosts, charged per image from prepaid credit. fal.ai locks the account when the balance runs out, so a run stops at the images step until you add credit.",

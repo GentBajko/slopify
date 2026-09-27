@@ -37,6 +37,17 @@ it("writes FFMETADATA with escaped titles", () => {
   );
 });
 
+it("tags a book's chapter with the book as album and the chapter as track", () => {
+  expect(
+    ffmetadata("The Storm", [{ title: "One", startMs: 0, endMs: 1000 }], {
+      title: " Sea; Tales ",
+      chapter: 3,
+    }),
+  ).toBe(
+    ";FFMETADATA1\ntitle=The Storm\nalbum=Sea\\; Tales\ntrack=3\n\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1000\ntitle=One\n",
+  );
+});
+
 describe("audioFileArgs", () => {
   const audio = [
     { path: null, seconds: 2 },

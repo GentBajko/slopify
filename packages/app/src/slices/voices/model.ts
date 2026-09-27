@@ -59,6 +59,22 @@ export const speakerSchema = z.object({
 });
 export type Speaker = z.infer<typeof speakerSchema>;
 
+// A book: a series of audiobook projects, one per chapter, that share their speakers, voices,
+// cast and settings. "Make the next chapter" on a finished chapter starts the next one in Play.
+// The MP3 and M4B carry it as their album and track. Absent is a project on its own, which is
+// every project made before this.
+export const bookTitleMax = 200;
+export const bookChapterMax = 9999;
+export const bookSchema = z
+  .object({ title: z.string().max(bookTitleMax), chapter: z.number() })
+  .strict()
+  .readonly();
+export type Book = z.infer<typeof bookSchema>;
+
+export function bookLabel(book: Book): string {
+  return `${book.title.trim()} · Chapter ${String(book.chapter)}`;
+}
+
 export const voicesSettingsSchema = z.object({
   format: z.enum(voiceFormats),
   source: z.enum(scriptSources),
@@ -70,19 +86,42 @@ export const voicesSettingsSchema = z.object({
   nativeDialogue: z.boolean(),
   // MP3 and M4B files with chapter markers beside the video.
   audioFiles: z.boolean(),
+  // The book this project is a chapter of. Absent is none.
+  book: bookSchema.optional(),
 });
 export type VoicesSettings = z.infer<typeof voicesSettingsSchema>;
 
-export function defaultVoicesSettings(format: VoiceFormat): VoicesSettings {
+// `hosts` are the channel's hosts as speakers (`castHosts`): a podcast or an interview starts
+// with them in place of the placeholder hosts, and the other formats ignore them.
+export function defaultVoicesSettings(
+  format: VoiceFormat,
+  hosts: readonly Speaker[] = [],
+): VoicesSettings {
   return {
     format,
     source: "script",
-    speakers: starterSpeakers(format),
+    speakers: withHosts(format, starterSpeakers(format), hosts),
     turnGapSeconds: defaultTurnGapSeconds,
     nameTags: format === "podcast" || format === "interview",
     nativeDialogue: true,
     audioFiles: true,
   };
+}
+
+// A podcast keeps a placeholder host only while it has fewer than two; an interview keeps its
+// guest after the hosts.
+function withHosts(
+  format: VoiceFormat,
+  starters: readonly Speaker[],
+  hosts: readonly Speaker[],
+): Speaker[] {
+  if (hosts.length === 0 || (format !== "podcast" && format !== "interview")) return [...starters];
+  const cast = hosts.slice(0, speakersMax - 1).map((host) => ({ ...host, role: "host" as const }));
+  const fill =
+    format === "podcast"
+      ? starters.slice(0, Math.max(0, 2 - cast.length))
+      : starters.filter((one) => one.role !== "host");
+  return [...cast, ...fill.filter((one) => !cast.some((host) => host.id === one.id))];
 }
 
 function starterSpeakers(format: VoiceFormat): Speaker[] {
@@ -121,16 +160,6 @@ export function usesScriptPrompt(draft: {
   readonly voices?: VoicesSettings | undefined;
 }): boolean {
   return usesVoices(draft) && draft.voices?.source === "script";
-}
-
-// Where a run's speakers come from. Today the run carries them itself; the cast library of a
-// channel is the other source, and it answers the same question: which speakers, with which
-// voices, does this run narrate with.
-export interface SpeakerSource {
-  readonly speakers: () => readonly Speaker[];
-}
-export function runSpeakers(settings: VoicesSettings): SpeakerSource {
-  return { speakers: () => settings.speakers };
 }
 
 export interface VoiceProblem {
@@ -206,6 +235,23 @@ export function voicesProblems(settings: VoicesSettings): readonly VoiceProblem[
       problems.push({
         field: `${field}.pace`,
         message: `Pick a pace from the list for ${name || "this speaker"}.`,
+      });
+  }
+  if (settings.book !== undefined) {
+    if (settings.book.title.trim() === "")
+      problems.push({
+        field: "voices.book.title",
+        message:
+          "Enter the book's title under Speakers (Play → Audio), or remove the book to make a project on its own.",
+      });
+    if (
+      !Number.isInteger(settings.book.chapter) ||
+      settings.book.chapter < 1 ||
+      settings.book.chapter > bookChapterMax
+    )
+      problems.push({
+        field: "voices.book.chapter",
+        message: `Enter a chapter number from 1 to ${String(bookChapterMax)} under Speakers (Play → Audio).`,
       });
   }
   if (!(turnGapSteps as readonly number[]).includes(settings.turnGapSeconds))

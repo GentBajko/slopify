@@ -137,6 +137,23 @@ export async function deleteProjectTemplate(
   if (response.ok) return { ok: true, value: null };
   return responseOf(response, z.null());
 }
+// A finished audiobook chapter's next chapter, as a new Play draft (`next-chapter.ts`).
+export async function makeNextChapter(
+  api: Api,
+  projectId: string,
+  draftId: string,
+): Promise<TemplateReply<DraftView>> {
+  return responseOf(
+    await api.fetch(
+      `${root(api)}/next-chapter/${encodeURIComponent(projectId)}`,
+      json("POST", { id: z.uuid().parse(draftId) }),
+    ),
+    z.union([
+      draftViewSchema,
+      z.object({ draft: draftViewSchema }).transform((value) => value.draft),
+    ]),
+  );
+}
 export async function instantiateProjectTemplate(
   api: Api,
   template: Pick<TemplateSummary, "id" | "version">,

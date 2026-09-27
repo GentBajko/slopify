@@ -20,6 +20,11 @@ account or the model list, so nothing is generated or billed. It says whether th
 accepted and, if not, what to do. Only OpenRouter's check also shows missing credit; the others
 report credit problems on the first real generation.
 
+One Gemini API key serves both Google providers: **Google Gemini** voices use the key saved for
+Google images until you save one of their own. Gemini voices are its 30 prebuilt ones (Kore,
+Puck, Charon…); Settings → Voices lists them to pick from instead of asking for an id. Gemini
+answers with raw audio, which Slopify turns into MP3 with its own ffmpeg.
+
 ## Health check
 
 **Check all** under Settings → Providers checks, for every provider: that the command-line tool

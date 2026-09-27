@@ -99,7 +99,7 @@ export function CastTab({
                   onOpen={() => setOpen(pictured.findIndex((entry) => entry.member.id === one.id))}
                   openLabel={`Open ${one.name}'s picture full size`}
                   title={one.name}
-                  meta={`${castKindLabels[one.kind]} · ${String(ready.length)} ${
+                  meta={`${castKindLabels[one.kind]}${one.host === true ? " · Host" : ""} · ${String(ready.length)} ${
                     ready.length === 1 ? "picture" : "pictures"
                   }`}
                   {...(ready.length === 0

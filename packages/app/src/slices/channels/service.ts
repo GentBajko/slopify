@@ -164,7 +164,7 @@ export function createCastMember(
   const parsed = castMemberCreateSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, reason: "invalid-input", message: parsed.error.issues[0]?.message };
-  const { id, kind, name, aliases, description, voice } = parsed.data;
+  const { id, kind, name, aliases, description, voice, host } = parsed.data;
   return transact(deps.db, () => {
     if (channelById(deps.db, channelId) === undefined) return { ok: false, reason: "not-found" };
     const existing = castMemberById(deps.db, id);
@@ -175,7 +175,7 @@ export function createCastMember(
     const at = deps.clock.now().toISOString();
     deps.db
       .prepare(
-        "INSERT INTO cast_members(id,channel_id,kind,name,aliases_json,description,voice_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO cast_members(id,channel_id,kind,name,aliases_json,description,voice_json,host,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
       )
       .run(
         id,
@@ -185,6 +185,7 @@ export function createCastMember(
         JSON.stringify(unique(aliases, name)),
         description,
         voice === undefined || voice === null ? null : JSON.stringify(voice),
+        host === true ? 1 : 0,
         at,
         at,
       );
@@ -202,14 +203,14 @@ export function updateCastMember(
   const parsed = castMemberUpdateSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, reason: "invalid-input", message: parsed.error.issues[0]?.message };
-  const { kind, name, aliases, description, voice, baseVersion } = parsed.data;
+  const { kind, name, aliases, description, voice, host, baseVersion } = parsed.data;
   return transact(deps.db, () => {
     const previous = castMemberById(deps.db, id);
     if (previous === undefined) return { ok: false, reason: "not-found" };
     if (previous.version !== baseVersion) return { ok: false, reason: "conflict" };
     deps.db
       .prepare(
-        "UPDATE cast_members SET kind=?,name=?,aliases_json=?,description=?,voice_json=?,version=version+1,updated_at=? WHERE id=? AND version=?",
+        "UPDATE cast_members SET kind=?,name=?,aliases_json=?,description=?,voice_json=?,host=?,version=version+1,updated_at=? WHERE id=? AND version=?",
       )
       .run(
         kind,
@@ -223,6 +224,7 @@ export function updateCastMember(
           : voice === null
             ? null
             : JSON.stringify(voice),
+        (host ?? previous.host === true) ? 1 : 0,
         deps.clock.now().toISOString(),
         id,
         baseVersion,
