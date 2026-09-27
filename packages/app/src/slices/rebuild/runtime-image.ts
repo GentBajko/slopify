@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import type { GeneratedImage } from "../../kernel/ports/image.js";
+import type { CastReference, GeneratedImage } from "../../kernel/ports/image.js";
 import type { ImageCall } from "../../kernel/runner/providers.js";
+import { imageBlob } from "../channels/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { outputPath } from "../storage/layout.js";
 import type { RecipeInput } from "./recipe-model.js";
@@ -15,6 +16,7 @@ export function imageCall(
   previewLabel?: string,
 ): ImageCall {
   const reference = referenceImage(deps, projectId, input);
+  const cast = castImages(deps, input);
   return {
     provider: input.provider,
     model: input.model,
@@ -22,6 +24,7 @@ export function imageCall(
     aspect: input.aspect,
     ...(input.thinking === undefined ? {} : { thinking: input.thinking }),
     ...(reference === undefined ? {} : { reference }),
+    ...(cast === undefined ? {} : { cast }),
     ...(previewLabel === undefined ? {} : { previewLabel }),
   };
 }
@@ -57,6 +60,27 @@ function referenceImage(
       "The establishing image is not a PNG or JPEG file, so it can't be sent as a reference. Upload a PNG or JPEG in Edit project → Images → Establishing image, then use Retry stage.",
     );
   return { bytes, mime };
+}
+
+// The cast pictures the request names, read by hash from the database. They are never removed
+// while a project may name them, so a missing one came from a backup of another install.
+function castImages(
+  deps: Pick<RevisionDeps, "db">,
+  input: RecipeInput & { readonly kind: "image" },
+): readonly CastReference[] | undefined {
+  if (input.cast === undefined) return undefined;
+  return input.cast.map((member) => ({
+    name: member.name,
+    description: member.description,
+    images: member.images.map((sha256) => {
+      const blob = imageBlob(deps.db, sha256);
+      if (blob === undefined)
+        throw new Error(
+          `A picture of ${member.name} that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Library → Channels → Cast, then start the video again from Play.`,
+        );
+      return blob;
+    }),
+  }));
 }
 
 function imageMime(bytes: Uint8Array): GeneratedImage["mime"] | undefined {

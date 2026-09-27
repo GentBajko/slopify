@@ -20,7 +20,7 @@ import {
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
-import { withReferenceNote } from "./reference.js";
+import { referencePictures, withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for fal.ai: `fetch` and the downloader beside this file, no SDK.
@@ -143,7 +143,10 @@ export function falImage(deps: FalImageDeps): ImagePort {
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
       // An establishing image goes to the model's edit endpoint, which takes input images as
       // `image_urls`; only the models that have one are marked as taking a reference.
-      const edit = req.reference === undefined ? undefined : editEndpoint(req.model);
+      // Cast pictures ride the same list; a model without an edit endpoint gets the cast in
+      // words instead, since only the establishing image is something the user turned on.
+      const pictures = referencePictures(req);
+      const edit = pictures.length === 0 ? undefined : editEndpoint(req.model);
       if (req.reference !== undefined && edit === undefined)
         throw providerError({
           kind: "unsupported",
@@ -155,8 +158,10 @@ export function falImage(deps: FalImageDeps): ImagePort {
         signal: req.signal,
         headers: { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: withReferenceNote(req.prompt, req.reference),
-          ...(req.reference === undefined ? {} : { image_urls: [dataUri(req.reference)] }),
+          prompt: withReferences(req.prompt, req, edit === undefined ? 0 : pictures.length),
+          ...(edit === undefined
+            ? {}
+            : { image_urls: pictures.map((picture) => dataUri(picture.image)) }),
           ...aspectOf(req.model, req.aspect),
           // The stage sends Number as that many independent calls, one piece each.
           num_images: 1,

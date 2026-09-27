@@ -3,6 +3,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { sourceOf } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { detectSlots } from "../admission/substitute.js";
+import { projectChannelId } from "../channels/repo.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
 import { documentThemeOf } from "../document/model.js";
 import type { PromptKind } from "../library/model.js";
@@ -58,7 +59,11 @@ export function createTemplateFromProject(
     const result = createTemplate(deps, {
       id: parsed.data.id,
       name: parsed.data.name,
-      document: documentFromProject(deps, revision),
+      // The project's channel, so the template lands where the video came from.
+      document: {
+        ...documentFromProject(deps, revision),
+        channelId: projectChannelId(deps.db, project.id),
+      },
     });
     if (result.ok)
       deps.db

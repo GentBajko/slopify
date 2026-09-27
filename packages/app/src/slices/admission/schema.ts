@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
+import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { chunkModes } from "../narration/chunk.js";
@@ -20,6 +21,7 @@ import {
   defaultZoomPercent,
 } from "./rules.js";
 
+const hexColour = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const providerChoice = z.object({
   provider: z.string(),
   model: z.string(),
@@ -143,6 +145,19 @@ export const runDraftSchema = z.object({
     .optional(),
   // The ranges are `slices/video/edit-settings.ts`'s, checked by admission, not the schema's.
   videoEdit: videoEditSchema.optional(),
+  channelId: z.string().optional(),
+  cast: castSnapshotSchema.optional(),
+  titleStyle: z
+    .object({
+      fontId: z
+        .string()
+        .max(160)
+        .regex(/^[A-Za-z0-9_-]+$/)
+        .optional(),
+      color: hexColour.optional(),
+    })
+    .optional(),
+  endScreen: z.object({ text: z.string().max(200) }).optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

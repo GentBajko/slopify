@@ -16,6 +16,7 @@ import { cliLoginError } from "../llm/cli-login-error.js";
 import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
+import { type ReferencePicture, referencePictures } from "./reference.js";
 
 // "Codex default" puts no model and no effort on the command line, so the CLI's own defaults
 // draw the image; it is what every project saved before the choice existed runs. Every other
@@ -49,11 +50,14 @@ const alwaysDisabled = [
 ] as const;
 type CodexImageRequest = Pick<ImageRequest, "model" | "prompt" | "aspect" | "thinking"> & {
   readonly reference?: GeneratedImage | undefined;
+  readonly cast?: ImageRequest["cast"];
 };
 
 function reviews(req: CodexImageRequest): boolean {
   return (
-    req.model !== codexImageModel.id || req.thinking !== undefined || req.reference !== undefined
+    req.model !== codexImageModel.id ||
+    req.thinking !== undefined ||
+    referencePictures(req).length > 0
   );
 }
 
@@ -64,15 +68,57 @@ export function codexReferencePath(directory: string, image: GeneratedImage): st
   return join(directory, image.mime === "image/jpeg" ? "reference.jpg" : "reference.png");
 }
 
-export function codexImageInstructions(req: CodexImageRequest, reference?: string): string {
+// Every picture the request carries, each at its own path: the establishing image keeps the
+// name it always had, the cast pictures follow it as reference-2, reference-3 and so on.
+export function codexReferencePaths(
+  directory: string,
+  req: CodexImageRequest,
+): readonly { readonly path: string; readonly picture: ReferencePicture }[] {
+  return referencePictures(req).map((picture, index) => ({
+    picture,
+    path:
+      index === 0
+        ? codexReferencePath(directory, picture.image)
+        : join(
+            directory,
+            `reference-${String(index + 1)}${picture.image.mime === "image/jpeg" ? ".jpg" : ".png"}`,
+          ),
+  }));
+}
+
+function castInstructions(req: CodexImageRequest, directory: string): string {
+  const paths = codexReferencePaths(directory, req);
+  return [
+    `Reference images are saved at these paths. Pass all of them in referenced_image_paths on every image generation call: ${paths.map((row) => row.path).join(", ")}.`,
+    ...paths.map((row) =>
+      row.picture.member === undefined
+        ? `${row.path} is the establishing image: keep its characters, rendering style and colour palette.`
+        : `${row.path} shows ${row.picture.member}${describeMember(req, row.picture.member)}: draw ${row.picture.member} to look exactly like this.`,
+    ),
+    "Use them as references only: do not copy their composition, pose or framing; compose this image from the brief.",
+  ].join(" ");
+}
+
+function describeMember(req: CodexImageRequest, name: string): string {
+  const description = req.cast?.find((member) => member.name === name)?.description.trim() ?? "";
+  return description === "" ? "" : ` (${description})`;
+}
+
+export function codexImageInstructions(
+  req: CodexImageRequest,
+  reference?: string,
+  directory?: string,
+): string {
   return [
     "You are making one finished image for Slopify, a video creation app, with the image generation tool.",
     "Fidelity to the brief comes first. Before calling the tool, write its prompt yourself as a detailed, faithful visual description of the brief: the subject and what it is doing, the setting, composition and framing for the target aspect ratio, lighting, colour palette, style and mood, and any text that must appear, spelled exactly. Take every element from the brief and keep its wording where it is specific. Do not add subjects, text, logos or story the brief does not ask for, and do not pad the prompt with generic quality words.",
-    ...(reference === undefined
-      ? []
-      : [
-          `A reference image is saved at ${reference}. Pass exactly that path in referenced_image_paths on every image generation call. Use it as the reference for style, characters and palette: keep the same characters, rendering style and colour palette, but do not copy its composition, pose or framing; compose this image from the brief.`,
-        ]),
+    ...(req.cast !== undefined && req.cast.length > 0 && directory !== undefined
+      ? [castInstructions(req, directory)]
+      : reference === undefined
+        ? []
+        : [
+            `A reference image is saved at ${reference}. Pass exactly that path in referenced_image_paths on every image generation call. Use it as the reference for style, characters and palette: keep the same characters, rendering style and colour palette, but do not copy its composition, pose or framing; compose this image from the brief.`,
+          ]),
     "Take the time you need. After each image, look at it and compare it with the brief; if anything is missing, wrong or distorted, revise the prompt and generate again. Deliver exactly one final image: the last image you generate is the one Slopify uses, so stop once it matches the brief.",
     "Let the image generation tool save its output in its default location. Slopify will collect it. Use PNG or JPEG. Do not copy, rename, edit or create any other file, and do not put the image or a link in your reply.",
     `Target aspect ratio: ${req.aspect}.`,
@@ -132,7 +178,7 @@ export function codexImageArgs(req: CodexImageRequest, directory: string): strin
       : ["-c", `model_reasoning_effort="${req.thinking === "off" ? "none" : req.thinking}"`]),
     ...(req.model === codexImageModel.id ? [] : ["-m", req.model]),
     "--",
-    codexImageInstructions(req, reference),
+    codexImageInstructions(req, reference, directory),
   ];
 }
 
@@ -192,10 +238,8 @@ export function codexImage(deps: {
         }
       };
       try {
-        if (req.reference !== undefined)
-          writeFileSync(codexReferencePath(directory, req.reference), req.reference.bytes, {
-            mode: 0o600,
-          });
+        for (const { path, picture } of codexReferencePaths(directory, req))
+          writeFileSync(path, picture.image.bytes, { mode: 0o600 });
         report();
         try {
           run = deps.run(binary, codexImageArgs(req, directory), req.signal, {

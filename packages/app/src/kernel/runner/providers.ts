@@ -64,6 +64,8 @@ export interface ImageCall {
   readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
   // The establishing image the picture is drawn with as its visual reference.
   readonly reference?: GeneratedImage | undefined;
+  // The cast members the brief mentions, with their pictures.
+  readonly cast?: readonly import("../ports/image.js").CastReference[] | undefined;
   // What the live panel calls this image while a long job reports its progress.
   readonly previewLabel?: string | undefined;
 }
@@ -286,6 +288,7 @@ export function stageProviders(
               aspect: call.aspect,
               ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
               ...(call.reference === undefined ? {} : { reference: call.reference }),
+              ...(call.cast === undefined ? {} : { cast: call.cast }),
               onProgress,
               signal,
             }),

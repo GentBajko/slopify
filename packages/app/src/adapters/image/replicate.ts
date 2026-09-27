@@ -20,6 +20,7 @@ import {
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
+import { withReferences } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for Replicate: `fetch`, the injected clock and the downloader
@@ -93,7 +94,8 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
         },
         body: JSON.stringify({
           input: {
-            prompt: req.prompt,
+            // These models take no input image, so the cast is described in words.
+            prompt: withReferences(req.prompt, req, 0),
             // Replicate takes the aspect, so the closest size is exact.
             aspect_ratio: req.aspect,
             // The port stores PNG or JPEG and these models default to WebP. Nothing else

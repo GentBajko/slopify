@@ -1,6 +1,7 @@
 import type { RunConfig } from "../admission/model.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
+import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
 import {
   type RecipeContext,
@@ -8,7 +9,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
-import { type ImageReference, imageChoice } from "./recipe-reference.js";
+import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
 import { matchingText, renderedPrompt } from "./recipe-text.js";
 
 export function visualRecipes(
@@ -48,6 +49,7 @@ export function visualRecipes(
               aspect: config.format,
               prompt: prompt ?? "",
               ...(reference === undefined ? {} : { reference: reference.input }),
+              ...castField(castFor(config, prompt)),
             },
         image.source === "provide" || reference === undefined ? [] : [reference.key],
         { unresolved: image.source === "provide" ? image.assetId === null : !prompt?.trim() },
@@ -169,6 +171,8 @@ export function thumbnailRecipes(
             aspect: config.format,
             prompt,
             ...(reference === undefined ? {} : { reference: reference.input }),
+            // The thumbnail stands for the whole video, like the establishing image.
+            ...castField(castFor(config, config.title, prompt)),
           },
       [
         ...(promptRecipe === undefined ? [] : [promptRecipe.key]),

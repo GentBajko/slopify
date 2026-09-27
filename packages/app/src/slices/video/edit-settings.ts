@@ -85,6 +85,8 @@ export const animatePrompt =
 export const cutFloorShare = 0.4;
 // How long a chapter card stays on screen, fades included.
 export const chapterCardSeconds = 2.5;
+// How long the brand kit's end screen card stays on screen at the end of the video.
+export const endScreenSeconds = 5;
 
 export const cutModeLabels: Readonly<Record<CutMode, string>> = {
   interval: "Every N seconds",

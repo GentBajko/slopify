@@ -1,3 +1,4 @@
+import { assColour } from "../subtitles/captions.js";
 import type { Card, EditList } from "./edit-list.js";
 
 // Chapter cards as an ASS script the clips draw with libass, the renderer the captions use,
@@ -14,6 +15,8 @@ export function cardsAss(
   cards: readonly Card[],
   fontName: string,
   offset = 0,
+  // #RRGGBB from the brand kit; absent is white.
+  color?: string,
 ): string {
   const { width, height, fps } = edit;
   // The title is sized from the frame's short side, so a vertical video's card fits too. At
@@ -33,7 +36,7 @@ export function cardsAss(
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
     // White bold text, the soft outline, no offset shadow, centred (alignment 5), letter-spaced.
-    `Style: Card,${fontName.replace(/,/g, " ")},${String(size)},&H00FFFFFF,&H00FFFFFF,&H60000000,&H00000000,-1,0,0,0,100,100,${String(Math.round(size / 12))},0,1,${String(outline)},0,5,${String(Math.round(width * 0.1))},${String(Math.round(width * 0.1))},0,1`,
+    `Style: Card,${fontName.replace(/,/g, " ")},${String(size)},${assColour(color, "&H00FFFFFF")},${assColour(color, "&H00FFFFFF")},&H60000000,&H00000000,-1,0,0,0,100,100,${String(Math.round(size / 12))},0,1,${String(outline)},0,5,${String(Math.round(width * 0.1))},${String(Math.round(width * 0.1))},0,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",

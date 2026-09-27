@@ -108,6 +108,10 @@ export function exportRecipes(
           config.subtitles.fontId,
           config.subtitles.fontSize,
           config.subtitles.position,
+          // Only when the brand kit set them, so captions made before keep their fingerprint.
+          ...(config.subtitles.color === undefined && config.subtitles.outlineColor === undefined
+            ? []
+            : [["colours", config.subtitles.color ?? null, config.subtitles.outlineColor ?? null]]),
         ],
       },
       [cueRecipe.key],

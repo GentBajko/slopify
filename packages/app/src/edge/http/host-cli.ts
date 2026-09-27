@@ -288,7 +288,21 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const signal = AbortSignal.any([job.signal, controller.signal]);
     const timer = setTimeout(() => controller.abort(), agentImageTimeoutMs);
     try {
-      const { reference, thinking, ...rest } = body.data;
+      const { reference, thinking, cast: bridgedCast, ...rest } = body.data;
+      const cast = bridgedCast?.map((member) => ({
+        name: member.name,
+        description: member.description,
+        images: member.images.map((picture) => ({
+          bytes: new Uint8Array(Buffer.from(picture.base64, "base64")),
+          mime: picture.mime,
+        })),
+      }));
+      if (
+        cast?.some((member) =>
+          member.images.some((picture) => sniffImage(picture.bytes) !== picture.mime),
+        )
+      )
+        return invalid(c);
       const image =
         reference === undefined
           ? undefined
@@ -301,6 +315,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         ...rest,
         ...(thinking === undefined ? {} : { thinking }),
         ...(image === undefined ? {} : { reference: image }),
+        ...(cast === undefined ? {} : { cast }),
         signal,
       });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });

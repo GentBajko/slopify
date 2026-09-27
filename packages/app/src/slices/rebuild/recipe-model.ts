@@ -105,6 +105,9 @@ export type RecipeInput =
       readonly reference?:
         | { readonly fingerprint: string; readonly assetId: string | null }
         | undefined;
+      // The channel's cast members the brief mentions, their pictures sent as references too
+      // (`recipe-cast.ts`). Present only when one is mentioned, for the same reason.
+      readonly cast?: readonly import("./recipe-cast.js").CastInput[] | undefined;
     }
   | {
       readonly kind: "provided";

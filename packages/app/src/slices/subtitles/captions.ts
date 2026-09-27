@@ -84,12 +84,15 @@ interface SubtitleStyle {
   readonly fontName: string;
   readonly fontSize: number;
   readonly position?: SubtitleConfig["position"];
+  // #RRGGBB from the brand kit; absent is white text with the near-black outline.
+  readonly color?: string | undefined;
+  readonly outlineColor?: string | undefined;
 }
 export function serializeAss(cues: readonly CaptionCue[], style: SubtitleStyle): string {
   const name = style.fontName.replace(/[\p{Cc},]/gu, " ").trim();
   const placement = subtitlePlacement(style.position ?? "bottom", style.height);
   const position = `{\\an${placement.alignment}\\pos(${style.width / 2},${placement.y})}`;
-  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${style.width}\nPlayResY: ${style.height}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${name},${style.fontSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,0,0,0,0,100,100,0,0,1,2.5,1,2,60,60,60,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${style.width}\nPlayResY: ${style.height}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${name},${style.fontSize},${assColour(style.color, "&H00FFFFFF")},${assColour(style.color, "&H00FFFFFF")},${assColour(style.outlineColor, "&H00101010")},&H80000000,0,0,0,0,100,100,0,0,1,2.5,1,2,60,60,60,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   return (
     header +
     cues
@@ -118,4 +121,13 @@ function stamp(seconds: number, separator: string): string {
 function assStamp(seconds: number): string {
   const cs = Math.max(0, Math.round(seconds * 100));
   return `${Math.floor(cs / 360_000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, "0")}:${String(Math.floor(cs / 100) % 60).padStart(2, "0")}.${String(cs % 100).padStart(2, "0")}`;
+}
+
+// ASS colours are &HAABBGGRR, alpha 00 being opaque.
+export function assColour(hex: string | undefined, fallback: string): string {
+  const match =
+    hex === undefined ? null : /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex);
+  if (match === null) return fallback;
+  const [, r, g, b] = match;
+  return `&H00${(b ?? "").toUpperCase()}${(g ?? "").toUpperCase()}${(r ?? "").toUpperCase()}`;
 }

@@ -346,3 +346,35 @@ it("rejects duplicate session events rather than selecting an unrelated output",
     fault: { kind: "unavailable" },
   });
 });
+
+it("copies every cast picture beside the establishing image and names each path", async () => {
+  const fake = generatedRun((path, _dir) => writeFileSync(path, png));
+  const written: Buffer[] = [];
+  const run: RunCli = (binary, args, signal, options) => {
+    written.push(readFileSync(join(options?.cwd ?? "", "reference.jpg")));
+    written.push(readFileSync(join(options?.cwd ?? "", "reference-2.png")));
+    return fake.run(binary, args, signal, options);
+  };
+  await codexImage({ run, env: fake.env }).generate({
+    ...request(),
+    reference: { bytes: jpeg, mime: "image/jpeg" },
+    cast: [
+      {
+        name: "Tiamat",
+        description: "five-headed dragon",
+        images: [{ bytes: png, mime: "image/png" }],
+      },
+    ],
+  });
+  const call = fake.calls[0];
+  const text = call?.args.at(-1) ?? "";
+  const directory = call?.directory ?? "";
+  expect(written).toEqual([jpeg, png]);
+  expect(text).toContain(
+    `Pass all of them in referenced_image_paths on every image generation call: ${join(directory, "reference.jpg")}, ${join(directory, "reference-2.png")}.`,
+  );
+  expect(text).toContain(
+    `${join(directory, "reference-2.png")} shows Tiamat (five-headed dragon): draw Tiamat to look exactly like this.`,
+  );
+  expect(call?.args).toContain("view_image");
+});

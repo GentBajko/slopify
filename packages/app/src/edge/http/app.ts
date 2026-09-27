@@ -22,6 +22,7 @@ import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { backupRoutes } from "./backups.js";
+import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
@@ -55,6 +56,10 @@ export interface AppDeps {
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
   readonly drafts?: DraftStartDeps;
+  // Library → Channels → Cast's Generate button; absent answers that no provider is set up.
+  readonly generateCastImage?:
+    | import("../../slices/channels/cast-images.js").CastImageGenerator
+    | undefined;
   readonly schedules?: ScheduleDeps;
   readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
@@ -117,6 +122,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
+      .route("/channels", channelRoutes(deps))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))

@@ -1,5 +1,6 @@
 import { type RunConfig, referenceKey } from "../admission/model.js";
 import { usesReference } from "../admission/rules.js";
+import { type CastInput, castFor } from "./recipe-cast.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -55,7 +56,16 @@ export function referenceRecipe(context: RecipeContext): ResolvedWorkRecipe | un
     context,
     referenceKey,
     "images",
-    { kind: "image", version: 1, ...imageChoice(config), aspect: config.format, prompt },
+    {
+      kind: "image",
+      version: 1,
+      ...imageChoice(config),
+      aspect: config.format,
+      prompt,
+      // The establishing image sets the look for the whole video, so it is drawn with every
+      // member the title mentions as well as the ones its own brief does.
+      ...castField(castFor(config, config.title, prompt)),
+    },
     [],
     { unresolved: prompt.trim() === "" },
   );
@@ -76,4 +86,11 @@ export function imageReference(
           assetId: selectedAsset(context, reference.key, reference.fingerprint),
         },
       };
+}
+
+// The request's `cast`, only when some member is mentioned.
+export function castField(cast: readonly CastInput[] | undefined): {
+  readonly cast?: readonly CastInput[];
+} {
+  return cast === undefined ? {} : { cast };
 }

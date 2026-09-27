@@ -116,6 +116,9 @@ export const playDraftFormSchema = z
     // Absent on drafts and templates saved before the edit settings: today's slideshow. Every
     // field is a pick from a list, so it is kept as the settings themselves.
     videoEdit: videoEditSchema.strict().readonly().optional(),
+    // Whether the channel's brand kit fills what this setup leaves at its default
+    // (`slices/channels/runs.ts`). Absent is on.
+    useBrandKit: z.boolean().optional(),
     values,
     provided: z
       .object({
@@ -144,6 +147,8 @@ export const playDraftDocumentSchema = z
       .strict()
       .readonly()
       .optional(),
+    // The channel picked on Play. Absent runs in the template's channel, or the default one.
+    channelId: id.optional(),
     form: playDraftFormSchema,
     section: z.enum(["content", "outputs", "style", "review"]),
     variants: z.array(z.object({ id, title: text, values }).strict().readonly()).readonly(),

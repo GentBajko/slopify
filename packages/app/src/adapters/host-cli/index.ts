@@ -184,6 +184,18 @@ export function createHostCliClient(options: {
                   base64: Buffer.from(req.reference.bytes).toString("base64"),
                 },
               }),
+          ...(req.cast === undefined
+            ? {}
+            : {
+                cast: req.cast.map((member) => ({
+                  name: member.name,
+                  description: member.description,
+                  images: member.images.map((image) => ({
+                    mime: image.mime,
+                    base64: Buffer.from(image.bytes).toString("base64"),
+                  })),
+                })),
+              }),
         });
         if (!parsed.success)
           throw providerError({

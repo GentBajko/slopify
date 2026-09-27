@@ -155,6 +155,23 @@ export interface RunDraft {
   // (`video/edit-settings.ts`). Absent reads as today's slideshow, which is what every project
   // saved before it rendered.
   readonly videoEdit?: import("../video/edit-settings.js").VideoEditSettings | undefined;
+  // The channel the run was started in (`slices/channels`). Absent on everything saved before
+  // channels, which reads as the default channel.
+  readonly channelId?: string | undefined;
+  // The channel's cast as the run was started with it: an image whose brief mentions a member
+  // is drawn with that member's pictures as references (`recipe-cast.ts`). Absent is none.
+  readonly cast?: readonly import("../channels/model.js").CastSnapshot[] | undefined;
+  // The chapter cards' and end screen's font and colour, from the channel's brand kit. Absent
+  // is the caption font in white, as every video before it.
+  readonly titleStyle?: TitleStyle | undefined;
+  // A card over the video's last seconds, from the brand kit. Absent is none.
+  readonly endScreen?: { readonly text: string } | undefined;
+}
+
+export interface TitleStyle {
+  readonly fontId?: string | undefined;
+  // #RRGGBB.
+  readonly color?: string | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

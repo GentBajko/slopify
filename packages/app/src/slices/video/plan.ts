@@ -14,7 +14,7 @@ import {
   type TransitionStyle,
   type VideoSource,
 } from "./edit-list.js";
-import { chapterCardSeconds } from "./edit-settings.js";
+import { chapterCardSeconds, endScreenSeconds } from "./edit-settings.js";
 import { hasLook } from "./look.js";
 import { motionFor } from "./motion.js";
 import { withTransitions } from "./transitions.js";
@@ -104,8 +104,15 @@ export interface PlanEdit {
   readonly transition?: { readonly kind: TransitionStyle; readonly seconds: number } | undefined;
   readonly look?: Look | undefined;
   // A card at each chapter start, in the font given.
+  // The brand kit's end screen joins them over the last seconds, in the same font; `color` is
+  // the cards' text colour.
   readonly cards?:
-    | { readonly chapters: readonly TimedChapter[]; readonly font: CardFont }
+    | {
+        readonly chapters: readonly TimedChapter[];
+        readonly font: CardFont;
+        readonly color?: string | undefined;
+        readonly endScreen?: string | undefined;
+      }
     | undefined;
   // Moving clips shown in place of the image at the same place in `images`: uploaded clips
   // and animated images.
@@ -144,7 +151,11 @@ export function planRender(input: PlanInput): RenderPlan {
   const cards =
     edit?.cards === undefined
       ? []
-      : chapterCards(edit.cards.chapters, narration?.cutPoints ?? [], totalFrames);
+      : withEndScreen(
+          chapterCards(edit.cards.chapters, narration?.cutPoints ?? [], totalFrames),
+          edit.cards.endScreen,
+          totalFrames,
+        );
   return {
     gapSeconds: input.gapSeconds,
     edgeSeconds: input.edgeSeconds,
@@ -163,7 +174,11 @@ export function planRender(input: PlanInput): RenderPlan {
           : withTransitions(planned, transition.kind, Math.round(transition.seconds * fps)),
       ...(edit?.look !== undefined && hasLook(edit.look) ? { look: edit.look } : {}),
       ...(cards.length > 0 && edit?.cards !== undefined
-        ? { cards, cardFont: edit.cards.font }
+        ? {
+            cards,
+            cardFont: edit.cards.font,
+            ...(edit.cards.color === undefined ? {} : { cardColor: edit.cards.color }),
+          }
         : {}),
     },
     totalFrames,
@@ -193,6 +208,28 @@ function chapterCards(
     cards.push({ title, startFrame, frames });
   }
   return cards;
+}
+
+// The end screen over the last seconds (or the whole of a shorter video). A chapter card that
+// would still be showing is cut short where the end screen starts; one starting inside it is
+// left out.
+export function withEndScreen(
+  cards: readonly Card[],
+  text: string | undefined,
+  totalFrames: number,
+): readonly Card[] {
+  const title = text?.trim() ?? "";
+  if (title === "") return cards;
+  const frames = Math.min(totalFrames, Math.round(endScreenSeconds * fps));
+  const startFrame = totalFrames - frames;
+  return [
+    ...cards.flatMap((card) =>
+      card.startFrame >= startFrame
+        ? []
+        : [{ ...card, frames: Math.min(card.frames, startFrame - card.startFrame) }],
+    ),
+    { title, startFrame, frames },
+  ];
 }
 
 export function spoken(kind: AudioKind): kind is SpokenKind {

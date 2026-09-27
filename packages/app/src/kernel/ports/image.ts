@@ -14,8 +14,18 @@ export interface ImageRequest {
   // The project's establishing image: drawn with it as a visual reference for characters,
   // style and palette. Only a model that takes an input image is ever sent one.
   readonly reference?: GeneratedImage | undefined;
+  // Cast members the brief mentions, each with its pictures, sent as references after the
+  // establishing image. A provider that takes one input image sends only the first and names
+  // the rest in the prompt (`adapters/image/reference.ts`).
+  readonly cast?: readonly CastReference[] | undefined;
   // A line saying how far a long image job has got, for the stage's live panel.
   readonly onProgress?: ((text: string) => void) | undefined;
+}
+
+export interface CastReference {
+  readonly name: string;
+  readonly description: string;
+  readonly images: readonly GeneratedImage[];
 }
 
 export interface GeneratedImage {

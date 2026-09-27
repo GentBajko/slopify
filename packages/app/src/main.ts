@@ -52,11 +52,13 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
+import { standaloneImage } from "./kernel/runner/standalone.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectById, projectPaused } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
+import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
 import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
 import {
   checkpointDecisionForWork,
@@ -205,6 +207,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
     const settledSchedules = settleTerminalScheduleRuns(db, clock.now().toISOString());
+    settleInterruptedCastImages({ db });
     // The updater can restore the database after a failed candidate boot, but it cannot
     // restore files deleted by reconciliation. Leave the filesystem untouched until the
     // candidate's committed activation pointer has been verified.
@@ -457,6 +460,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
+      generateCastImage: (call) => standaloneImage({ registry, clock, log }, call, "channel-cast"),
     });
     const server = await listen(app, config, log);
     const queueTimer = setInterval(() => {
