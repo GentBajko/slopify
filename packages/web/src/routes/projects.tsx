@@ -3,14 +3,14 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
 import { BatchQueue } from "@/components/batch-queue";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, IconButton } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { InfoTip } from "@/components/kit/info-tip";
@@ -95,6 +95,8 @@ export function ProjectsRoute(): ReactElement {
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
   const [search, setSearch] = useState("");
+  const searchBox = useRef<HTMLInputElement>(null);
+  const searchKeys = useSearchShortcut(searchBox, "projects");
 
   const remove = useMutation({
     mutationFn: (id: string) => removeProject(api, id),
@@ -200,7 +202,9 @@ export function ProjectsRoute(): ReactElement {
                 />
                 <input
                   type="search"
+                  ref={searchBox}
                   aria-label="Search projects"
+                  aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
                   placeholder="Search projects"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}

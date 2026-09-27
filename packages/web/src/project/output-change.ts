@@ -31,6 +31,8 @@ export function useOutputChange(
   readonly confirm: () => void;
   readonly dismiss: () => void;
   readonly unavailable: boolean;
+  // Whether the project's revision has loaded, so `act` takes the path it will keep taking.
+  readonly ready: boolean;
 } {
   const [asking, setAsking] = useState<OutputChange | undefined>();
   const revisioned = use(RevisionControlContext);
@@ -77,5 +79,6 @@ export function useOutputChange(
     dismiss: () => setAsking(undefined),
     unavailable:
       output === undefined || busy || actions.pending || (viaEdit && requestEdit === undefined),
+    ready: !revisioned || view !== undefined,
   };
 }

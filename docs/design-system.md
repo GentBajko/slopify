@@ -82,8 +82,38 @@ useCommand({
 });
 ```
 
-Matching is fuzzy (letters in order, word starts and runs score higher). Arrow keys move,
-Enter runs, Esc closes; focus stays in the palette while it is open.
+Matching is fuzzy (letters in order, word starts and runs score higher). Several words match
+across the title, the context and the keywords in any order, so "tiamat regenerate image 3"
+finds "Regenerate image 3" in the project Tiamat. A `numbered` command takes the number typed
+with it ("Regenerate image 3", handed to `run(3)`); a `searchOnly` command waits until
+something is typed. Arrow keys move, Enter runs, Esc closes; focus stays in the palette
+while it is open.
+
+From anywhere (`components/global-commands.tsx`, searched only): "Open ‹project›", "Regenerate
+image N in ‹project›" (opens the project on Images and asks to regenerate that image, as the
+button does), New schedule and Add to calendar. A command that finishes on another screen
+navigates there and leaves an intent that screen takes once loaded (`lib/intents.ts`).
+
+### Keyboard shortcuts
+
+A command's `shortcut` is its label and its binding: the palette's provider runs it when the
+keys are pressed, so the two cannot drift. Keys live in `lib/shortcuts.ts`; the button that
+does the same thing carries `aria-keyshortcuts` (`ariaKeyShortcuts(shortcut)`). Keys without
+Ctrl wait while a field, a textarea or an editable area has focus; Ctrl ones (Cmd on a Mac)
+work from a field too. Nothing fires while the palette or a modal dialog is open. `?` or "Show
+keyboard shortcuts" lists every key that works on the current screen.
+
+| Keys | Does |
+| --- | --- |
+| Ctrl+K | Search or run a command |
+| ? | Show keyboard shortcuts |
+| C | New video |
+| G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings |
+| / | Search the list (Projects, Prompts, Intros and outros) |
+| Shift+N | The project's next action (Soften and retry still asks at its button) |
+| Shift+D | Copy the YouTube description |
+| Ctrl+Enter | Play: review the whole setup |
+| Ctrl+S | Save in a Library editor (prompt, intro or outro, PDF theme) |
 
 ### Shell
 

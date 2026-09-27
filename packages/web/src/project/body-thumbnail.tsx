@@ -130,6 +130,7 @@ function ThumbnailVariant({
     id: `project.thumbnail.${String(variant)}`,
     title: count === 1 ? "Regenerate the thumbnail" : `Regenerate thumbnail ${String(variant)}`,
     group: "This project",
+    context: project.title,
     keywords: ["thumbnail", "redraw", "remake"],
     run: () => change.act("regenerate-image"),
   });
