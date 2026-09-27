@@ -415,6 +415,17 @@
     }
   }
 
+  /* A page with a bar pinned to the bottom (an editor's Cancel and Save, an action bar) keeps
+     what is scrolled to or focused above it, so the bar never hides a heading like Fonts. */
+  html:has([data-slot="editor-actions"], [data-slot="action-bar"]) {
+    scroll-padding-bottom: 88px;
+  }
+  @media (max-width: 767px) {
+    html:has([data-slot="editor-actions"], [data-slot="action-bar"]) {
+      scroll-padding-bottom: 164px;
+    }
+  }
+
   /* The app shell: a 232px rail and a fluid main column, centred beyond content-max. The
      rail's surface and hairline are also painted on the shell itself, the full height of the
      page, so however far a long page scrolls (and wherever a webview gives up on sticky) the

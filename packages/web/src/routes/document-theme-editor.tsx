@@ -174,7 +174,18 @@ export function DocumentThemeEditorRoute({
               open={index < 2 || group.fields.some((field) => problemFor(problems, field.path))}
               className="group border-t border-line"
             >
-              <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-title-3 font-semibold">
+              {/* biome-ignore lint/a11y/noStaticElementInteractions: a summary is the native toggle (keyboard included); this only follows its click. */}
+              <summary
+                className="flex cursor-pointer list-none items-center gap-2 py-3 text-title-3 font-semibold"
+                // A group opened near the bottom scrolls up out from under the Save bar.
+                onClick={(event) => {
+                  const group = event.currentTarget.parentElement;
+                  requestAnimationFrame(() => {
+                    if (group instanceof HTMLDetailsElement && group.open)
+                      group.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+                  });
+                }}
+              >
                 <ChevronRightIcon
                   aria-hidden="true"
                   className="size-[14px] text-ink-2 transition-transform group-open:rotate-90 motion-reduce:transition-none"
