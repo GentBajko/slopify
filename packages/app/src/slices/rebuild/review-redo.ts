@@ -89,7 +89,24 @@ export function createReviewRedos(): {
   };
 }
 
+// The verdicts whose redo is being started right now. Overrule may call off a redo only while
+// it waits, not once Slopify has begun making the item again.
+const starting = new Set<string>();
+
+export function redoStarting(verdictId: string): boolean {
+  return starting.has(verdictId);
+}
+
 export async function startRedo(deps: RebuildDeps, verdict: ReviewRecord): Promise<void> {
+  starting.add(verdict.id);
+  try {
+    await makeAgain(deps, verdict);
+  } finally {
+    starting.delete(verdict.id);
+  }
+}
+
+async function makeAgain(deps: RebuildDeps, verdict: ReviewRecord): Promise<void> {
   const base = currentRevisionId(deps.db, verdict.projectId);
   if (base === undefined) {
     setRedoState(deps.db, verdict.id, "failed", "The project no longer exists.");

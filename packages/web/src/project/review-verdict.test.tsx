@@ -29,13 +29,13 @@ const flagged: Review = {
   verdicts: 3,
 };
 
-function Subject() {
+function Subject({ busy = false }: { readonly busy?: boolean }) {
   const reviews = useReviews("p1");
   return (
     <ReviewVerdict
       review={reviewFor(reviews, { itemKey: "thumbnail:image" })}
       projectId="p1"
-      busy={false}
+      busy={busy}
     />
   );
 }
@@ -87,4 +87,38 @@ it("shows nothing for an item without a current verdict", async () => {
   );
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(container.textContent).toBe("");
+});
+
+it("calls off a redo still waiting to start with Overrule, even while the project runs", async () => {
+  const posted: string[] = [];
+  let reviews: readonly Review[] = [{ ...flagged, outcome: "redo", redoState: "pending" }];
+  renderApp(
+    <Subject busy />,
+    testDeps({
+      "GET /api/projects/p1/reviews": (request) => jsonAnswer({ reviews })(request),
+      "POST /api/projects/p1/reviews/v1/overrule": (request) => {
+        posted.push("overrule");
+        reviews = [{ ...flagged, action: "overruled", actionAt: "now" }];
+        return jsonAnswer({ review: reviews[0] })(request);
+      },
+    }),
+  );
+  expect(await screen.findByText("Waiting to be made again")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Redo" }).hasAttribute("disabled")).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "Overrule" }));
+  expect(await screen.findByText("Accepted by you")).toBeTruthy();
+  expect(posted).toEqual(["overrule"]);
+});
+
+it("keeps Overrule off once the redo has started", async () => {
+  renderApp(
+    <Subject />,
+    testDeps({
+      "GET /api/projects/p1/reviews": jsonAnswer({
+        reviews: [{ ...flagged, outcome: "redo", redoState: "started" }],
+      }),
+    }),
+  );
+  expect(await screen.findByText("Being made again")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Overrule" }).hasAttribute("disabled")).toBe(true);
 });
