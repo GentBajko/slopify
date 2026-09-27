@@ -18,6 +18,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { keywordOrigins } from "@/play/admission";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
@@ -112,6 +113,14 @@ export function ScheduleForm({
     },
   });
   const form = template.data?.document.form;
+  const origins =
+    form === undefined
+      ? undefined
+      : keywordOrigins({
+          form,
+          prompts: template.data?.document.librarySnapshot?.prompts ?? [],
+          entries: template.data?.document.librarySnapshot?.entries ?? [],
+        });
   // The stored values, plus any keyword the project title names: a template saved without a
   // value for its title's keyword still offers it here.
   const keywords = form === undefined ? [] : templateKeywords(form);
@@ -131,6 +140,7 @@ export function ScheduleForm({
     everyRun,
     form,
     kept: editing?.items ?? [],
+    ...(origins === undefined ? {} : { origins }),
   };
   const topics = queueResult(queue, context);
 
