@@ -28,6 +28,8 @@ try {
     process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : globalBin,
     "global",
     process.platform === "win32" ? ["/d", "/s", "/c", "call", globalBin] : [],
+    {},
+    true,
   );
   await smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
   const skippedPrefix = join(root, "skipped-scripts");
@@ -75,7 +77,7 @@ try {
   await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
 }
 
-async function smoke(command, label, prefix = [], extraEnv = {}) {
+async function smoke(command, label, prefix = [], extraEnv = {}, checkUpdate = false) {
   const port = await freePort();
   const dataDir = join(root, `${label}-data`);
   const healthTimeoutMs = 210_000;
@@ -90,6 +92,8 @@ async function smoke(command, label, prefix = [], extraEnv = {}) {
         FFMPEG_BIN: "",
         SLOPIFY_SKIP_MANAGED_UPDATE: "1",
         SLOPIFY_NO_MODEL_PREFETCH: "1",
+        // The registry is not asked: the running version counts as the newest.
+        SLOPIFY_DISABLE_UPDATES: "1",
         ...extraEnv,
       },
       stdio: "ignore",
@@ -98,6 +102,12 @@ async function smoke(command, label, prefix = [], extraEnv = {}) {
   );
   try {
     await waitForHealth(port, child, healthTimeoutMs);
+    // `slopify update` drives the running app's own updater, the same path as the Update button.
+    if (checkUpdate) {
+      const output = await capture(command, [...prefix, "update", "--port", String(port)]);
+      if (!/already the newest version/.test(output))
+        throw new Error(`slopify update did not reach the running app: ${output}`);
+    }
   } finally {
     await stop(child);
   }
@@ -151,6 +161,30 @@ function run(command, args, options = {}) {
         reject(new Error(`${command} ${args.join(" ")} exited with ${code}.`));
       else resolve();
     });
+  });
+}
+
+function capture(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: repo,
+      env: { ...process.env, SLOPIFY_DOCKER_NAME: "slopify-install-smoke-none" },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      output += chunk;
+    });
+    child.once("error", reject);
+    child.once("close", (code) =>
+      code === 0
+        ? resolve(output)
+        : reject(new Error(`${command} update exited with ${code}: ${output}`)),
+    );
   });
 }
 

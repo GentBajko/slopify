@@ -1,18 +1,18 @@
 import { spawn } from "node:child_process";
 import { lstat, readdir } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { readState, receiptSchema } from "../edge/docker-projects/state.js";
+import { installSchema, readState } from "../edge/docker-install/state.js";
 import { HostFolderRefused } from "../kernel/ports/host-cli.js";
 import { hasCode } from "./paths.js";
 
 export interface HostFolderDeps {
-  /** The Docker launcher's state folder, `<XDG_DATA_HOME>/slopify/docker`. */
+  /** The Docker install's state folder, `<XDG_DATA_HOME>/slopify/docker`. */
   readonly root: string;
   readonly uid: number;
   readonly launch: (directory: string) => Promise<void>;
 }
 
-const again = "run the Docker launcher again (npx @gentbajko/slopify@latest --docker)";
+const again = "run the Docker install again (npx @gentbajko/slopify@latest --docker)";
 
 /** Starts the desktop's opener and returns once it is running; the file manager is not awaited. */
 export function launchXdgOpen(directory: string): Promise<void> {
@@ -38,7 +38,7 @@ export function launchXdgOpen(directory: string): Promise<void> {
   });
 }
 
-/** Only folders inside a launcher receipt's project folder, reached through real folders you own, are opened. */
+/** Only folders inside an installation's recorded project folder, reached through real folders you own, are opened. */
 export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => Promise<void> {
   async function receipts() {
     const found = [];
@@ -53,12 +53,12 @@ export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       try {
-        const receipt = await readState(
-          join(deps.root, entry.name, "receipt.json"),
-          receiptSchema,
+        const install = await readState(
+          join(deps.root, entry.name, "install.json"),
+          installSchema,
           deps.uid,
         );
-        if (receipt) found.push(receipt);
+        if (install) found.push(install);
       } catch {
         // An unreadable or damaged receipt grants nothing; the others still count.
       }
@@ -75,7 +75,7 @@ export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => 
       String(root.ino) !== identity.ino
     )
       throw new HostFolderRefused(
-        `The Slopify host helper did not open this folder because the project folder ${projects} was moved or replaced since the Docker launcher set it up. Put the original folder back, or ${again}.`,
+        `The Slopify host helper did not open this folder because the project folder ${projects} was moved or replaced since the Docker install set it up. Put the original folder back, or ${again}.`,
       );
     let current = projects;
     for (const part of r === "" ? [] : r.split(sep)) {
@@ -97,7 +97,7 @@ export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => 
       const r = relative(receipt.projects, path);
       if (r === ".." || r.startsWith(`..${sep}`) || isAbsolute(r)) continue;
       try {
-        await verify(receipt.projects, receipt.directoryIdentity, r);
+        await verify(receipt.projects, receipt.projectsIdentity, r);
       } catch (error) {
         if (!(error instanceof HostFolderRefused)) throw error;
         refusal = error;
@@ -110,7 +110,7 @@ export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => 
     throw (
       refusal ??
       new HostFolderRefused(
-        `The Slopify host helper did not open ${path} because it isn't inside a project folder set up by the Docker launcher. Copy the path into your file manager, or if you moved your project folder, ${again}.`,
+        `The Slopify host helper did not open ${path} because it isn't inside a project folder set up by the Docker install. Copy the path into your file manager, or if you moved your project folder, ${again}.`,
       )
     );
   };

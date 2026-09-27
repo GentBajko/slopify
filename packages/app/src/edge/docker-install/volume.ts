@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmod, lchown, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, lchown, lstat, mkdir, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMissing, syncDirectory, treeDigest } from "./tree.js";
@@ -69,10 +69,6 @@ export async function volumeOperation(args: readonly string[]): Promise<unknown>
     await mkdir("/data/home", { recursive: true, mode: 0o700 });
     await lchown("/data/home", uid, gid);
     return { ok: true };
-  }
-  if (operation === "probe") {
-    await writeFile("/probe/container", "slopify ownership probe", { flag: "wx", mode: 0o600 });
-    return { uid: process.getuid?.(), gid: process.getgid?.() };
   }
   throw new Error("Unknown fixed Docker volume operation.");
 }

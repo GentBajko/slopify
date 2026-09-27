@@ -6,7 +6,7 @@ import { type HostSetupRunner, installHostPackage } from "../host-cli/install.js
 import { ensureBridgeToken, hasCode, prepareHostPaths } from "../host-cli/paths.js";
 import { ensureHostService, privateRead, privateWrite } from "../host-cli/service.js";
 import { hostCommandName, resolveHostCommand } from "../host-cli/status.js";
-import { hostCliProtocol, hostLlmIds } from "../kernel/ports/host-cli.js";
+import { hostLlmIds } from "../kernel/ports/host-cli.js";
 
 export function assertManagedDockerHost(
   platform: string,
@@ -15,7 +15,7 @@ export function assertManagedDockerHost(
 ): asserts uid is number {
   if (platform !== "linux")
     throw new Error(
-      "The --docker launcher only works on Linux. On this system, run Slopify without Docker (npx @gentbajko/slopify), or start the Slopify Docker image yourself with docker run.",
+      "The --docker install only works on Linux. On this system, run Slopify without Docker (npx @gentbajko/slopify), or run the compose.yaml from the Slopify repository yourself (docker compose up -d).",
     );
   if (uid === undefined || gid === undefined || uid === 0)
     throw new Error(
@@ -26,7 +26,6 @@ export function assertManagedDockerHost(
 export interface DockerHostOptions {
   readonly root: string;
   readonly version: string;
-  readonly image: string;
   readonly disabled: boolean;
   readonly accepted: boolean;
   readonly interactive: boolean;
@@ -35,10 +34,17 @@ export interface DockerHostOptions {
   readonly env: Readonly<NodeJS.ProcessEnv>;
   readonly signal: AbortSignal;
 }
-export async function prepareDockerHostCli(
-  options: DockerHostOptions,
-): Promise<{ directory?: string }> {
-  if (options.disabled) return {};
+export type DockerHostCli =
+  | { readonly enabled: false }
+  | { readonly enabled: true; readonly ensure: () => Promise<string> };
+
+/**
+ * Decides whether the Docker installation uses this machine's AI CLIs, asking once for consent,
+ * before anything changes. `ensure` then installs or updates the bridge: a private helper, run as
+ * the systemd user service slopify-cli-bridge.service, at the same version as the image.
+ */
+export async function planDockerHostCli(options: DockerHostOptions): Promise<DockerHostCli> {
+  if (options.disabled) return { enabled: false };
   let installed = false;
   for (const id of hostLlmIds) {
     try {
@@ -51,7 +57,7 @@ export async function prepareDockerHostCli(
         );
     }
   }
-  if (!installed) return {};
+  if (!installed) return { enabled: false };
   if (process.platform !== "linux")
     throw new Error(
       "Using this machine's AI CLIs from Docker needs Linux with systemd. Start with --host-cli=off to use API keys only.",
@@ -87,31 +93,6 @@ export async function prepareDockerHostCli(
         "You declined, so Slopify did not set up your host AI CLIs and nothing was changed. Run the launcher again and answer y to allow it, or add --host-cli=off to start with API keys only.",
       );
   }
-  const inspect = () =>
-    options.runner.exec(
-      "docker",
-      [
-        "image",
-        "inspect",
-        "--format",
-        '{{index .Config.Labels "io.slopify.host-cli-protocol"}}',
-        options.image,
-      ],
-      options.signal,
-    );
-  let image = await inspect();
-  if (image.code !== 0 || image.stdout.trim() !== String(hostCliProtocol)) {
-    const pulled = await options.runner.exec("docker", ["pull", options.image], options.signal);
-    if (pulled.code !== 0)
-      throw new Error(
-        `Could not download the Slopify Docker image ${options.image}. Check your internet connection and that Docker is running (docker info), then try again. Nothing was changed.`,
-      );
-    image = await inspect();
-    if (image.code !== 0 || image.stdout.trim() !== String(hostCliProtocol))
-      throw new Error(
-        `The Docker image ${options.image} is too old to use the AI CLIs on this machine. Use the latest image (unset SLOPIFY_DOCKER_IMAGE, or point it to a current release) and try again, or start with --host-cli=off.`,
-      );
-  }
   const supported = await options.runner.exec(
     "systemctl",
     ["--user", "list-units", "--no-legend", "--no-pager", "slopify-cli-bridge.service"],
@@ -121,6 +102,14 @@ export async function prepareDockerHostCli(
     throw new Error(
       "Using this machine's AI CLIs from Docker needs systemd user services (systemctl --user), which aren't available here. Start with --host-cli=off to use API keys only, or run Slopify without Docker: npx @gentbajko/slopify.",
     );
+  return { enabled: true, ensure: () => ensureDockerHostCli(options, uid, receiptPath) };
+}
+
+async function ensureDockerHostCli(
+  options: DockerHostOptions,
+  uid: number,
+  receiptPath: string,
+): Promise<string> {
   const paths = await prepareHostPaths(options.root);
   const lock = join(paths.root, "setup.lock");
   const deadline = Date.now() + 30_000;
@@ -156,7 +145,7 @@ export async function prepareDockerHostCli(
       env: options.env,
     });
     await privateWrite(receiptPath, JSON.stringify({ version: 1, automaticStartup: true }));
-    return { directory: paths.share };
+    return paths.share;
   } finally {
     await rmdir(lock);
   }
