@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -142,7 +142,9 @@ try {
   const originals = await readdir(join(seed, "projects"));
   const digestsOf = async (root) =>
     Object.fromEntries(
-      await Promise.all(originals.map(async (entry) => [entry, await treeDigest(join(root, entry))])),
+      await Promise.all(
+        originals.map(async (entry) => [entry, await treeDigest(join(root, entry))]),
+      ),
     );
   const ownBefore = await digestsOf(join(seed, "projects"));
 
