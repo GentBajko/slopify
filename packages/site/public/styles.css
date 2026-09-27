@@ -1076,11 +1076,6 @@ main h3 {
   text-decoration: underline;
 }
 
-/* The donation link's empty slot, until main.js has a real address to put there. */
-[data-donate][hidden] {
-  display: none;
-}
-
 /* How I run a channel with it ---------------------------------------------- */
 
 /* The system's reading view: 18/30 at a 68ch measure, headings in the condensed face. */
