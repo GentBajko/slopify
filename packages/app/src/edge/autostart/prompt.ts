@@ -59,7 +59,15 @@ export async function settleAutostart(options: {
   try {
     let wanted = options.flag;
     if (wanted === undefined) {
-      if (!options.interactive || !(await options.autostart.unanswered())) return;
+      if (!(await options.autostart.unanswered())) return;
+      // Started without a terminal (a service, a script, a desktop shortcut): nobody can answer
+      // here, so the question stays open for the first-run screen and Settings → General.
+      if (!options.interactive) {
+        options.report(
+          "To start Slopify when you log in, turn it on in the app: the first-run screen offers it, or Settings → General → Start Slopify when I log in.",
+        );
+        return;
+      }
       wanted = await options.ask(autostartQuestion);
       if (wanted === undefined) return;
     }

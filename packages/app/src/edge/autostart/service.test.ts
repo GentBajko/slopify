@@ -237,6 +237,27 @@ describe("the terminal's question", () => {
     expect(native.on).toBe(false);
   });
 
+  it("without a terminal, leaves the question open for the first-run screen and Settings", async () => {
+    const { db } = database();
+    const native = fakeNative();
+    const autostart = createAutostartService(db, { kind: "native", native });
+    const lines: string[] = [];
+    await settleAutostart({
+      autostart,
+      flag: undefined,
+      interactive: false,
+      ask: () => Promise.reject(new Error("asked")),
+      report: (line) => lines.push(line),
+      warn: (line) => lines.push(`warn: ${line}`),
+    });
+    expect(native.on).toBe(false);
+    expect(lines).toEqual([
+      expect.stringMatching(/Settings → General → Start Slopify when I log in/u),
+    ]);
+    expect(await autostart.unanswered()).toBe(true);
+    expect((await autostart.view()).offer).toBe(true);
+  });
+
   it("prints a refusal instead of failing the start", async () => {
     const { db } = database();
     const autostart = createAutostartService(db, {
