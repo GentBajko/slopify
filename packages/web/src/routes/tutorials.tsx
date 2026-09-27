@@ -227,7 +227,7 @@ function TutorialsNav({
           <TutorialLink id={index.home.id} title={index.home.title} current={page} />
           {index.groups.map((group) => (
             <div key={group.title} className="flex flex-col gap-0.5">
-              <div className="sl-kicker px-[10px] pb-1">{group.title}</div>
+              <div className="sl-kicker px-2.5 pb-1">{group.title}</div>
               {group.pages.map((one) => (
                 <TutorialLink key={one.id} id={one.id} title={one.title} current={page} />
               ))}
@@ -284,7 +284,7 @@ function SearchResults({
     );
   return (
     <div className="flex flex-col gap-1">
-      <p role="status" className="m-0 px-[10px] text-small text-ink-3">
+      <p role="status" className="m-0 px-2.5 text-small text-ink-3">
         {hits.length === 1 ? "1 section" : `${String(hits.length)} sections`}
       </p>
       <ul aria-label="Search results" className="m-0 flex list-none flex-col gap-1 p-0">
