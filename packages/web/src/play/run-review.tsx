@@ -14,7 +14,7 @@ export function CheckpointReview({
   const label = (stage: string) =>
     checkpointOptions.find((option) => option.stage === stage)?.label ?? stage;
   if (!selected?.length)
-    return <p className="text-body text-ink2">No review checkpoints selected.</p>;
+    return <p className="text-body text-ink-2">No review checkpoints selected.</p>;
   return (
     <div className="space-y-3 text-body">
       {reviewed?.length ? (
@@ -23,7 +23,7 @@ export function CheckpointReview({
             <p className="font-medium">
               Run {gate.runIndex + 1} · Before {label(gate.stage)}
             </p>
-            <p className="text-small text-ink2">
+            <p className="text-small text-ink-2">
               {gate.dependents.length
                 ? `Also holds: ${gate.dependents.map(label).join(", ")}.`
                 : "No dependent steps."}
@@ -36,7 +36,7 @@ export function CheckpointReview({
           to confirm dependent steps.
         </p>
       )}
-      <p className="text-small text-ink2">
+      <p className="text-small text-ink-2">
         Approval required on the project page. Starting this run does not approve these checkpoints.
       </p>
     </div>

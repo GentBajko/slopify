@@ -7,7 +7,7 @@ import { uploadCastImage } from "../channels/cast-images.js";
 import { defaultChannelId } from "../channels/model.js";
 import { castOfChannel } from "../channels/repo.js";
 import { createCastMember, updateCastMember } from "../channels/service.js";
-import { castSpeakers, withCastVoices } from "./cast.js";
+import { castHosts, castSpeakerId, speakerFromCast, withCastVoices } from "./cast.js";
 import { defaultVoicesSettings, type Speaker } from "./model.js";
 import { panelPortraits } from "./portraits.js";
 
@@ -55,13 +55,30 @@ describe("cast voices", () => {
     expect(refused).toMatchObject({ ok: false, message: "Pick a pace from the list." });
   });
 
-  it("offers the members with a voice as speakers and refreshes cast speakers when a run starts", () => {
+  it("offers the channel's hosts with a voice as speakers and refreshes cast speakers when a run starts", () => {
     const d = deps();
     const host = randomUUID();
-    createCastMember(d, defaultChannelId, { id: host, kind: "character", name: "Ada", voice });
-    createCastMember(d, defaultChannelId, { id: randomUUID(), kind: "place", name: "Harbor" });
+    createCastMember(d, defaultChannelId, {
+      id: host,
+      kind: "character",
+      name: "Ada",
+      voice,
+      host: true,
+    });
+    createCastMember(d, defaultChannelId, {
+      id: randomUUID(),
+      kind: "character",
+      name: "Bo",
+      voice,
+    });
+    createCastMember(d, defaultChannelId, {
+      id: randomUUID(),
+      kind: "place",
+      name: "Harbor",
+      host: true,
+    });
     const members = castOfChannel(d.db, defaultChannelId);
-    const offered = castSpeakers(members).speakers();
+    const offered = castHosts(members);
     expect(offered.map((one) => [one.name, one.castId, one.voice.voice])).toEqual([
       ["Ada", host, "host-voice"],
     ]);
@@ -100,8 +117,9 @@ describe("cast voices", () => {
     const d = deps();
     const host = randomUUID();
     createCastMember(d, defaultChannelId, { id: host, kind: "character", name: "Ada", voice });
-    const [ada] = castSpeakers(castOfChannel(d.db, defaultChannelId)).speakers();
-    if (ada === undefined) throw new Error("Ada has a voice");
+    const [member] = castOfChannel(d.db, defaultChannelId);
+    if (member === undefined) throw new Error("Ada was made");
+    const ada = speakerFromCast(member, "host");
     // No picture: the speaker is exactly what it was before portraits.
     expect(ada).not.toHaveProperty("portrait");
     const settings = {
@@ -128,5 +146,64 @@ describe("cast voices", () => {
       speakers: [{ ...(refreshed.speakers[0] as Speaker), portrait: "b".repeat(64) }],
     };
     expect(panelPortraits(d.db, missing)).toEqual([undefined]);
+  });
+
+  it("keeps a member's host mark through an edit that does not send it, and clears it on false", () => {
+    const d = deps();
+    const id = randomUUID();
+    const made = createCastMember(d, defaultChannelId, {
+      id,
+      kind: "character",
+      name: "Ada",
+      host: true,
+    });
+    expect(made.ok && made.value.host).toBe(true);
+    const renamed = updateCastMember(d, id, { kind: "character", name: "Ada V", baseVersion: 1 });
+    expect(renamed.ok && renamed.value.host).toBe(true);
+    const cleared = updateCastMember(d, id, {
+      kind: "character",
+      name: "Ada V",
+      host: false,
+      baseVersion: 2,
+    });
+    expect(cleared.ok && cleared.value).not.toHaveProperty("host");
+  });
+
+  it("gives two members whose ids start alike different speaker ids", () => {
+    const one = "0b8f6f0e-0000-4000-8000-000000000001";
+    const two = "0b8f6f0e-0000-4000-8000-000000000002";
+    expect(castSpeakerId(one)).toBe(`cast-${one}`);
+    expect(castSpeakerId(one)).not.toBe(castSpeakerId(two));
+    expect(castSpeakerId("ABC")).toBe("cast-abc");
+    // An id the speaker schema cannot hold is hashed, still distinct and still valid.
+    const odd = castSpeakerId("Ünïcode id");
+    expect(odd).toMatch(/^cast-h[a-z0-9]+$/);
+    expect(odd).not.toBe(castSpeakerId("Ünïcode id 2"));
+  });
+
+  it("starts a new podcast or interview with the channel's hosts", () => {
+    const d = deps();
+    const host = randomUUID();
+    createCastMember(d, defaultChannelId, {
+      id: host,
+      kind: "character",
+      name: "Ada",
+      voice,
+      host: true,
+    });
+    const hosts = castHosts(castOfChannel(d.db, defaultChannelId));
+    const podcast = defaultVoicesSettings("podcast", hosts);
+    expect(podcast.speakers.map((one) => [one.name, one.role, one.castId])).toEqual([
+      ["Ada", "host", host],
+      ["Alex", "host", undefined],
+    ]);
+    const interview = defaultVoicesSettings("interview", hosts);
+    expect(interview.speakers.map((one) => [one.name, one.role])).toEqual([
+      ["Ada", "host"],
+      ["Guest", "guest"],
+    ]);
+    // Other formats, and a channel without hosts, start as they always did.
+    expect(defaultVoicesSettings("audiobook", hosts)).toEqual(defaultVoicesSettings("audiobook"));
+    expect(defaultVoicesSettings("podcast", [])).toEqual(defaultVoicesSettings("podcast"));
   });
 });

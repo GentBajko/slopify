@@ -1,15 +1,25 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, statSync } from "node:fs";
+import { join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { projectById } from "../../slices/admission/repo.js";
+import { channelById } from "../../slices/channels/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
-import { studioPlaylistMax } from "../../slices/studio/model.js";
+import { type FillQueueItem, studioPlaylistMax } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
+import {
+  enqueueFill,
+  type FillEntry,
+  readFillQueue,
+  removeFill,
+} from "../../slices/studio/queue.js";
 import {
   bearerToken,
   isExtensionOrigin,
   pairStudioExtension,
+  readChannelPlaylists,
   readStudioPlaylist,
   resetStudioPairing,
   saveRealFootage,
@@ -35,20 +45,35 @@ const fileParam = z.object({
     .regex(/^[a-z0-9-]+$/),
 });
 const chooseBody = z.object({ short: z.number().int().min(1).max(99).optional() });
-const playlistBody = z.object({ playlist: z.string().max(studioPlaylistMax * 2) });
+const queueItemBody = z.object({
+  projectId: id,
+  short: z.number().int().min(1).max(99).nullable().optional(),
+});
+const playlistBody = z.object({
+  playlist: z.string().max(studioPlaylistMax * 2),
+  // A channel's own playlist; absent is the default every other channel uses.
+  channelId: id.optional(),
+});
 const realFootageBody = z.object({ realFootage: z.boolean() });
-
-// How long a "Fill in YouTube Studio" choice stays the one the extension fills in.
-const choiceMs = 6 * 60 * 60 * 1000;
+// The extension builds the app ships (`scripts/copy-extension.mjs`), by browser.
+const extensionFiles: Readonly<Record<string, string>> = {
+  "chrome.zip": "slopify-studio-chrome.zip",
+  "firefox.zip": "slopify-studio-firefox.zip",
+};
+const extensionParam = z.object({ file: z.enum(["chrome.zip", "firefox.zip"]) });
 
 // The Studio routes. The ones under `/ext` are the only routes of the app a page from another
 // origin may read, and only the paired browser extension: every request carries the pairing
 // token, and the CORS headers name the paired extension's origin, never a web page's and never
 // `*`. The rest are the Slopify page's own, refused from any other origin.
 export function studioRoutes(deps: AppDeps) {
-  // What the person chose to fill in last; kept in memory, so a restart asks them to choose
-  // again rather than filling in an old choice.
-  let chosen: { projectId: string; short: number | undefined; at: number } | undefined;
+  // What waits to be filled, with each project's title; entries whose project is gone are left
+  // out (the extension drops them when it reaches them).
+  const queueView = (entries: readonly FillEntry[]): readonly FillQueueItem[] =>
+    entries.flatMap((entry) => {
+      const project = projectById(deps.db, entry.projectId);
+      return project === undefined ? [] : [{ ...entry, projectTitle: project.title }];
+    });
 
   const samePage = (c: Context): Response | undefined => {
     const origin = c.req.header("origin");
@@ -87,12 +112,23 @@ export function studioRoutes(deps: AppDeps) {
         // The token is read only by the Slopify page, never by another origin's.
         const denied = samePage(c);
         if (denied !== undefined) return denied;
-        return c.json({ playlist: readStudioPlaylist(deps.db), pairing: studioPairing(deps.db) });
+        return c.json({
+          playlist: readStudioPlaylist(deps.db),
+          channelPlaylists: readChannelPlaylists(deps.db),
+          pairing: studioPairing(deps.db),
+        });
       })
       .put("/settings/playlist", zValidator("json", playlistBody, onInvalid), (c) => {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
-        const raw = c.req.valid("json").playlist;
+        const { playlist: raw, channelId } = c.req.valid("json");
+        if (channelId !== undefined && channelById(deps.db, channelId) === undefined)
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail:
+              "The playlist wasn't saved: that channel no longer exists. Reload Settings → YouTube Studio and pick the channel again.",
+          });
         const invalid = studioPlaylistProblem(raw);
         if (invalid !== undefined)
           return problem(c, {
@@ -101,7 +137,10 @@ export function studioRoutes(deps: AppDeps) {
             detail: invalid,
             extensions: { fields: [{ field: "playlist", message: invalid }] },
           });
-        return c.json({ playlist: saveStudioPlaylist(deps.db, raw) });
+        return c.json({
+          playlist: saveStudioPlaylist(deps.db, raw, channelId),
+          channelId: channelId ?? null,
+        });
       })
       .post("/settings/pairing", (c) => {
         const denied = samePage(c);
@@ -145,10 +184,44 @@ export function studioRoutes(deps: AppDeps) {
               title: titleOf(404),
               detail: `This project has no short ${String(short)}. Reload the project page and press Prepare upload again.`,
             });
-          chosen = { projectId, short, at: deps.clock.now().getTime() };
-          return c.json({ chosen: { projectId, short: short ?? null } });
+          const queue = enqueueFill(deps.db, projectId, short ?? null, deps.clock.now());
+          return c.json({ chosen: { projectId, short: short ?? null }, queue: queueView(queue) });
         },
       )
+      // What waits for the extension, oldest first: each new upload dialog takes the first.
+      .get("/queue", (c) => {
+        const denied = samePage(c);
+        if (denied !== undefined) return denied;
+        return c.json({ queue: queueView(readFillQueue(deps.db, deps.clock.now())) });
+      })
+      .post("/queue/remove", zValidator("json", queueItemBody, onInvalid), (c) => {
+        const denied = samePage(c);
+        if (denied !== undefined) return denied;
+        const { projectId, short } = c.req.valid("json");
+        return c.json({
+          queue: queueView(removeFill(deps.db, projectId, short ?? null, deps.clock.now())),
+        });
+      })
+      // The extension's own zips, for Settings' and Prepare upload's Download.
+      .get("/extension/:file", zValidator("param", extensionParam, onInvalid), (c) => {
+        const { file } = c.req.valid("param");
+        const name = extensionFiles[file] ?? "";
+        const path = deps.extensionDist === undefined ? undefined : join(deps.extensionDist, name);
+        const stat = path === undefined ? undefined : statSync(path, { throwIfNoEntry: false });
+        if (path === undefined || stat === undefined || !stat.isFile())
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail:
+              "The Slopify Studio extension isn't included in this copy of Slopify, so there is nothing to download. Update or reinstall Slopify; when running from the repository, run `npm run build` at its root, which builds the extension too.",
+          });
+        return c.body(Readable.toWeb(createReadStream(path)), 200, {
+          "content-type": "application/zip",
+          "content-length": String(stat.size),
+          "content-disposition": `attachment; filename="${name}"`,
+          "x-content-type-options": "nosniff",
+        });
+      })
       // The extension's routes.
       .options("/ext/pair", (c) => {
         allowOrigin(c, true);
@@ -189,27 +262,44 @@ export function studioRoutes(deps: AppDeps) {
           )
         )
           return refused(c);
-        const fresh =
-          chosen !== undefined && deps.clock.now().getTime() - chosen.at <= choiceMs
-            ? chosen
-            : undefined;
-        if (fresh === undefined)
-          return problem(c, {
-            status: 404,
-            title: titleOf(404),
-            detail:
-              "Nothing is chosen to fill in. In Slopify, open the project, press Prepare upload, then Fill in YouTube Studio.",
-          });
-        const result = uploadPack(deps, fresh.projectId);
-        const item = result.ok ? packItem(result.pack, fresh.short) : undefined;
-        if (!result.ok || item === undefined)
-          return problem(c, {
-            status: 404,
-            title: titleOf(404),
-            detail:
-              "The project chosen to fill in is gone. In Slopify, open the project again and press Fill in YouTube Studio.",
-          });
-        return c.json({ pack: result.pack, item });
+        // The first waiting item that can still be filled; one whose project or short is gone
+        // leaves the queue.
+        const now = deps.clock.now();
+        let gone = 0;
+        for (const entry of readFillQueue(deps.db, now)) {
+          const result = uploadPack(deps, entry.projectId);
+          const item = result.ok ? packItem(result.pack, entry.short ?? undefined) : undefined;
+          if (result.ok && item !== undefined) {
+            const waiting = readFillQueue(deps.db, now).length;
+            return c.json({ pack: result.pack, item, waiting });
+          }
+          removeFill(deps.db, entry.projectId, entry.short, now);
+          gone += 1;
+        }
+        return problem(c, {
+          status: 404,
+          title: titleOf(404),
+          detail:
+            gone > 0
+              ? "The project chosen to fill in is gone. In Slopify, open the project again, press Prepare upload, then Fill in YouTube Studio."
+              : "Nothing is waiting to be filled in. In Slopify, open the project, press Prepare upload, then Fill in YouTube Studio.",
+        });
+      })
+      // The extension filled an item: it leaves the queue, so the next upload dialog takes the
+      // next one.
+      .post("/ext/filled", zValidator("json", queueItemBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (
+          !studioRequestAllowed(
+            deps.db,
+            bearerToken(c.req.header("authorization")),
+            c.req.header("origin"),
+          )
+        )
+          return refused(c);
+        const { projectId, short } = c.req.valid("json");
+        const left = removeFill(deps.db, projectId, short ?? null, deps.clock.now());
+        return c.json({ waiting: left.length });
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
         allowOrigin(c, false);

@@ -23,6 +23,7 @@ export const providerTips = {
   cartesia: "settings.provider.cartesia",
   inworld: "settings.provider.inworld",
   "system-voice": "settings.provider.system-voice",
+  "google-tts": "settings.provider.google-tts",
   fal: "settings.provider.fal",
   replicate: "settings.provider.replicate",
   "openai-image": "settings.provider.openai-image",

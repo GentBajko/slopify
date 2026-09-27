@@ -5,7 +5,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Log } from "../../kernel/log.js";
 import { createLimitGate, recheckMs, resetMarginMs, resumeAfterRestart } from "./limits.js";
-import { limitWaitsOf } from "./panel.js";
+import { limitWaitsByProject, limitWaitsOf, listingWait } from "./panel.js";
 
 const quiet: Log = { write: () => {} };
 const open: DatabaseSync[] = [];
@@ -50,6 +50,17 @@ describe("the plan-limit gate", () => {
         stage: "images",
         resetsAt: "2026-09-27T14:00:00.000Z",
         retryAt: new Date(Date.parse("2026-09-27T14:00:00.000Z") + resetMarginMs).toISOString(),
+      },
+    ]);
+    // The lists read every project's waits at once; p2 waits on nothing.
+    const listed = limitWaitsByProject(db);
+    expect([...listed.keys()]).toEqual(["p1"]);
+    expect(listed.get("p1")?.map(listingWait)).toEqual([
+      {
+        name: "Codex",
+        stage: "images",
+        resetsAt: "2026-09-27T14:00:00.000Z",
+        retryAt: "2026-09-27T14:02:00.000Z",
       },
     ]);
     // Another CLI is not held up.

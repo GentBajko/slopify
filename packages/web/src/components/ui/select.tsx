@@ -19,15 +19,15 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex h-8 w-full items-center justify-between gap-2 rounded-control border border-line2",
-        "bg-panel2 px-[10px] text-left text-small text-ink data-[placeholder]:text-ink3",
+        "flex h-8 w-full items-center justify-between gap-2 rounded-control border border-line-strong",
+        "bg-raised px-3 text-left text-small text-ink data-[placeholder]:text-ink-3",
         className,
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon aria-hidden="true" className="size-[14px] shrink-0 text-ink2" />
+        <ChevronDownIcon aria-hidden="true" className="size-[14px] shrink-0 text-ink-2" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -46,8 +46,8 @@ function SelectContent({
         position={position}
         sideOffset={4}
         className={cn(
-          "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-panel",
-          "border border-line bg-panel p-1 shadow-[0_8px_24px_var(--color-shadow)]",
+          "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-media",
+          "border border-line bg-surface p-1 shadow-[var(--shadow-pop)]",
           className,
         )}
         {...props}
@@ -67,16 +67,16 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex cursor-default items-center rounded-control py-[5px] pr-8 pl-[10px]",
+        "relative flex cursor-default items-center rounded-control py-1 pr-8 pl-3",
         "text-small text-ink outline-hidden select-none",
-        "focus:bg-panel2 data-highlighted:bg-panel2",
+        "focus:bg-raised data-highlighted:bg-raised",
         className,
       )}
       {...props}
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator className="absolute right-[10px] flex items-center">
-        <CheckIcon aria-hidden="true" className="size-[14px] text-done" />
+        <CheckIcon aria-hidden="true" className="size-[14px] text-accent-ink" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );

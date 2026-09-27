@@ -3,7 +3,7 @@ import { calendarMaxDays } from "@app/slices/schedules/schema.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { type ReactElement, useRef, useState } from "react";
+import { Fragment, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -19,6 +19,8 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { RetiredModelRow } from "@/components/retired-models";
+import { intents, useIntent } from "@/lib/intents";
 import {
   calendarQuery,
   deleteSchedule,
@@ -29,6 +31,7 @@ import {
 } from "@/schedules/api";
 import { ScheduleForm } from "@/schedules/form";
 import { TopicGenerationPanel } from "@/schedules/held-topics";
+import { InlineTopics } from "@/schedules/inline-topics";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
 
@@ -131,6 +134,19 @@ export function SchedulesRoute(): ReactElement {
     keywords: ["calendar", "recurring"],
     run: startNew,
   });
+  // "New schedule" run from another screen lands here (`components/global-commands.tsx`).
+  useIntent(
+    intents.newSchedule,
+    () => {
+      if (noTemplates)
+        notify(
+          "A schedule runs a project template, and there is none yet. Open a project, choose Save as template, then run New schedule again.",
+          "error",
+        );
+      else startNew();
+    },
+    templates.data !== undefined,
+  );
   const status = error
     ? ({ tone: "error", text: error } as const)
     : schedules.error
@@ -224,17 +240,19 @@ export function SchedulesRoute(): ReactElement {
             {liveSchedules.length > 0 ? (
               <List label="Saved schedules" className="[&_.sl-row__actions]:flex-wrap">
                 {liveSchedules.map((schedule) => (
-                  <ScheduleRow
-                    key={schedule.id}
-                    schedule={schedule}
-                    nextTitle={nextTitles.get(schedule.id)}
-                    selected={!formOpen && selected?.id === schedule.id}
-                    pending={rowPending}
-                    onSelect={() => setPicked(schedule.id)}
-                    onEdit={() => edit(schedule)}
-                    onAction={act}
-                    onConfirm={(kind) => setConfirm({ kind, schedule })}
-                  />
+                  <Fragment key={schedule.id}>
+                    <ScheduleRow
+                      schedule={schedule}
+                      nextTitle={nextTitles.get(schedule.id)}
+                      selected={!formOpen && selected?.id === schedule.id}
+                      pending={rowPending}
+                      onSelect={() => setPicked(schedule.id)}
+                      onEdit={() => edit(schedule)}
+                      onAction={act}
+                      onConfirm={(kind) => setConfirm({ kind, schedule })}
+                    />
+                    <RetiredModelRow kind="schedule" id={schedule.id} name={schedule.name} />
+                  </Fragment>
                 ))}
               </List>
             ) : null}
@@ -567,6 +585,7 @@ function ScheduleDetail({
           </div>
         ))}
       </dl>
+      {editable ? <InlineTopics schedule={schedule} /> : null}
       <TopicGenerationPanel schedule={schedule} />
       <Rule className="my-6" />
       <SectionHead as="h3" title="Run history" />

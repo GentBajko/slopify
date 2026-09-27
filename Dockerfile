@@ -6,6 +6,7 @@ COPY packages/app/package.json packages/app/package.json
 COPY packages/web/package.json packages/web/package.json
 COPY packages/collector/package.json packages/collector/package.json
 COPY packages/site/package.json packages/site/package.json
+COPY packages/extension/package.json packages/extension/package.json
 RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build

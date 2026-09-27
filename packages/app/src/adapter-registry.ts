@@ -16,8 +16,10 @@ import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
 import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
+import { geminiTts } from "./adapters/tts/gemini.js";
 import { inworldTts } from "./adapters/tts/inworld.js";
 import { openAiTts } from "./adapters/tts/openai.js";
+import { ffmpegPcmToMp3 } from "./adapters/tts/pcm-mp3.js";
 import { systemTts, systemVoiceId } from "./adapters/tts/system.js";
 import type { Clock } from "./kernel/clock.js";
 import { type HostCliPorts, hostLlmIds } from "./kernel/ports/host-cli.js";
@@ -48,8 +50,8 @@ export interface RegistryDeps {
   readonly spawn: RunCli;
   readonly clock: Clock;
   readonly probe: CliProbe;
-  // The system voice converts its recordings with the app's ffmpeg; without one (a test
-  // registry) it says so when asked to speak.
+  // The app's ffmpeg: the system voice converts its recordings with it and Gemini's raw
+  // speech becomes MP3 through it. Absent (a test), both say so plainly when asked to speak.
   readonly ffmpeg?: string | undefined;
   // Where the system voice looks for a speech program; this process unless a test says.
   readonly host?: SpeechHost | undefined;
@@ -113,6 +115,18 @@ export function buildRegistry(deps: RegistryDeps): Registry {
         ffmpeg: deps.ffmpeg,
         tempRoot: tmpdir(),
         env: (deps.host ?? process).env,
+      }),
+    ],
+    // Its own key, or else the one saved for Google images (`sharedKeyOf`).
+    [
+      "google-tts",
+      geminiTts({
+        fetch: deps.fetch,
+        key: keyOf("google-tts"),
+        toMp3:
+          deps.ffmpeg === undefined
+            ? () => Promise.reject(new Error("ffmpeg is not available to encode Gemini speech"))
+            : ffmpegPcmToMp3(deps.ffmpeg),
       }),
     ],
   ]);

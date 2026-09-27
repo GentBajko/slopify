@@ -27,7 +27,7 @@ export function ResearchRail({ form, problem, update }: RailProps) {
       <SourceSwitch kind="research" form={form} update={update} />
       <div className={railControls}>
         {form.sources.research === "generate" ? (
-          <span className="engraved text-ink3">Runs through the LLM, one agent per chapter</span>
+          <span className="engraved text-ink-3">Runs through the LLM, one agent per chapter</span>
         ) : null}
       </div>
       {form.sources.research === "provide" ? (
@@ -218,7 +218,7 @@ export function VideoRail({
     <StageRail kind="video" name="Export" dim={form.sources.video === "off"} titled={titled}>
       <SourceSwitch kind="video" form={form} update={update} />
       <span className={railControls}>
-        <span className="engraved text-ink3">{explanation}</span>
+        <span className="engraved text-ink-3">{explanation}</span>
       </span>
       {form.sources.video === "generate" || form.sources.audio !== "off" ? (
         <div className={railControls}>
@@ -306,7 +306,7 @@ export function VideoRail({
         </div>
       ) : null}
       {form.sources.images === "off" ? (
-        <p className={`${railBeneath} text-small text-ink2`}>
+        <p className={`${railBeneath} text-small text-ink-2`}>
           Video is Off because Images is Off. Generate or provide images to enable video.
         </p>
       ) : null}
@@ -369,7 +369,7 @@ export function VideoExtras({
                 }
                 onRemove={(key) => onRemoveFile("shortsMusic", key)}
               />
-              <p className="mt-1 text-label text-ink3">
+              <p className="mt-1 text-label text-ink-3">
                 Plays at the volume above under every short and dips while the narrator speaks.
               </p>
             </div>
@@ -440,7 +440,7 @@ export function DocumentRail({ form, update }: RailProps) {
                   update({ document });
                 }}
               />
-              <Link to="/document-themes" className="text-small text-run-text underline">
+              <Link to="/document-themes" className="text-small text-accent-ink underline">
                 Edit themes
               </Link>
             </span>

@@ -83,6 +83,19 @@ export function tagsLine(tags: readonly string[]): string {
   return tags.join(", ");
 }
 
+// One item waiting for the extension, as Prepare upload lists it (`queue.ts`).
+export interface FillQueueItem {
+  readonly projectId: string;
+  readonly projectTitle: string;
+  // null is the long video.
+  readonly short: number | null;
+  readonly at: string;
+}
+
+// The browsers the extension is built for, as its download names them.
+export const studioExtensionBrowsers = ["chrome", "firefox"] as const;
+export type StudioExtensionBrowser = (typeof studioExtensionBrowsers)[number];
+
 // What the pairing looks like to Settings: the token to paste into the extension, and the
 // extension that used it, once one has.
 export interface StudioPairingView {

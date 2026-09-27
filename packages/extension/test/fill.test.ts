@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { click, fillStudio, RefusedClick, setEditableText } from "../src/fill.js";
-import type { PackItem } from "../src/pack.js";
+import { click, type FieldResult, fillStudio, RefusedClick, setEditableText } from "../src/fill.js";
+import { type PackItem, packText } from "../src/pack.js";
+import * as selectors from "../src/selectors.js";
 
 const fixture = readFileSync(join(import.meta.dirname, "fixtures", "studio-upload.html"), "utf8");
 
@@ -19,6 +20,13 @@ const item: PackItem = {
 };
 const png = (name: string) => new File(["png"], name, { type: "image/png" });
 const noWait = { sleep: () => Promise.resolve(), timeoutMs: 300 };
+
+// Fills and expects every field the item needs to be there; answers each field's result.
+async function fillFields(...args: Parameters<typeof fillStudio>): Promise<readonly FieldResult[]> {
+  const report = await fillStudio(...args);
+  if (!report.filled) throw new Error(`Nothing filled; missing ${report.missing.join(", ")}`);
+  return report.results;
+}
 
 // The fixture is static markup; this plays the part of Studio's scripts for what the filler
 // clicks: Show more reveals AI use and Tags and flips its label, the playlist list opens and
@@ -89,12 +97,21 @@ const selected = (name: string) =>
   document.querySelector(`[name="${name}"]`)?.classList.contains("iron-selected") ?? false;
 const chips = () =>
   [...document.querySelectorAll("#chip-list ytcp-chip")].map((chip) => chip.textContent);
+// Nothing the filler writes has been written: the title Studio put in (when the box is there),
+// an empty description, no thumbnail, no ticked playlist, no chosen radio, no tag chips.
+const untouched = () =>
+  ["", "my-video-file"].includes(text("#title-textarea #textbox")) &&
+  text("#description-textarea #textbox") === "" &&
+  (document.querySelector<HTMLInputElement>("#file-loader")?.files?.length ?? 0) === 0 &&
+  document.querySelector('ytcp-checkbox-lit[aria-checked="true"]') === null &&
+  document.querySelector("tp-yt-paper-radio-button.iron-selected") === null &&
+  chips().length === 0;
 
 describe("filling Studio's upload dialog", () => {
   beforeEach(() => loadStudio());
 
   it("fills every field in Studio's order and never presses Next or Publish", async () => {
-    const results = await fillStudio(document, item, [png("thumb.png")], noWait);
+    const results = await fillFields(document, item, [png("thumb.png")], noWait);
     expect(results.map((result) => [result.field, result.ok])).toEqual([
       ["title", true],
       ["description", true],
@@ -125,7 +142,7 @@ describe("filling Studio's upload dialog", () => {
   });
 
   it("keeps the description's line breaks as real line breaks", async () => {
-    await fillStudio(document, item, [], noWait);
+    await fillFields(document, item, [], noWait);
     const box = document.querySelector("#description-textarea #textbox");
     expect(box?.innerHTML).toBe(
       "A fox learns to fly.<br><br>0:00 Intro<br>0:40 The Cliff<br><br>#fox",
@@ -161,14 +178,14 @@ describe("filling Studio's upload dialog", () => {
       doc.querySelector("#advanced")?.removeAttribute("hidden");
       doc.querySelector("#toggle-button")?.setAttribute("aria-label", "Hide advanced settings");
     });
-    const results = await fillStudio(document, item, [], noWait);
+    const results = await fillFields(document, item, [], noWait);
     expect(results.find((result) => result.field === "altered")?.ok).toBe(true);
     expect(document.querySelector("#advanced")?.hasAttribute("hidden")).toBe(false);
   });
 
   it("ends each tag with a comma when Studio makes chips on commas only", async () => {
     loadStudio(undefined, [","]);
-    const results = await fillStudio(document, item, [], noWait);
+    const results = await fillFields(document, item, [], noWait);
     expect(results.find((result) => result.field === "tags")?.ok).toBe(true);
     expect(chips()).toEqual(["fox", "cliff diving"]);
   });
@@ -179,13 +196,13 @@ describe("filling Studio's upload dialog", () => {
       chip.textContent = "fox";
       doc.querySelector("#chip-list")?.append(chip);
     });
-    await fillStudio(document, item, [], noWait);
+    await fillFields(document, item, [], noWait);
     expect(chips()).toEqual(["fox", "cliff diving"]);
   });
 
   it("copies the tags Studio wouldn't turn into chips", async () => {
     loadStudio(undefined, []);
-    const results = await fillStudio(document, item, [], noWait);
+    const results = await fillFields(document, item, [], noWait);
     expect(results.find((result) => result.field === "tags")).toMatchObject({
       ok: false,
       copy: "fox, cliff diving",
@@ -193,7 +210,7 @@ describe("filling Studio's upload dialog", () => {
   });
 
   it('answers "No" to AI use when the pack says so, and never presses Publish', async () => {
-    const results = await fillStudio(
+    const results = await fillFields(
       document,
       { ...item, alteredContent: { altered: false, why: "No because none of it applies." } },
       [],
@@ -214,7 +231,7 @@ describe("filling Studio's upload dialog", () => {
     loadStudio((doc) =>
       doc.querySelector('[name="VIDEO_HAS_ALTERED_CONTENT_YES"]')?.removeAttribute("name"),
     );
-    const results = await fillStudio(document, item, [], noWait);
+    const results = await fillFields(document, item, [], noWait);
     expect(results.find((result) => result.field === "altered")?.ok).toBe(true);
     expect(
       document
@@ -223,27 +240,24 @@ describe("filling Studio's upload dialog", () => {
     ).toBe(true);
   });
 
-  it("says what to choose by hand when the AI use question isn't there", async () => {
+  it("fills nothing when the AI use question isn't there, and says so", async () => {
     loadStudio((doc) => doc.querySelector("#altered-content")?.remove());
-    const results = await fillStudio(document, item, [], noWait);
-    const altered = results.find((result) => result.field === "altered");
-    expect(altered?.ok).toBe(false);
-    expect(altered?.message).toContain('choose "Yes" under AI use by hand');
-    // Show more was pressed once and stays open, so Tags still fill.
-    expect(results.find((result) => result.field === "tags")?.ok).toBe(true);
+    const report = await fillStudio(document, item, [], noWait);
+    expect(report).toEqual({ filled: false, missing: ['the "Yes" answer to AI use'] });
+    expect(untouched()).toBe(true);
     expect(pressed).toEqual([]);
   });
 
   it("leaves AI use alone for a pack from an older Slopify", async () => {
     const { alteredContent: _dropped, ...older } = item;
-    const results = await fillStudio(document, older, [], noWait);
+    const results = await fillFields(document, older, [], noWait);
     expect(results.some((result) => result.field === "altered")).toBe(false);
     expect(selected("VIDEO_HAS_ALTERED_CONTENT_YES")).toBe(false);
     expect(selected("VIDEO_HAS_ALTERED_CONTENT_NO")).toBe(false);
   });
 
   it("puts three thumbnails into A/B Testing when Studio offers it", async () => {
-    const results = await fillStudio(
+    const results = await fillFields(
       document,
       item,
       [png("one.png"), png("two.png"), png("three.png")],
@@ -266,7 +280,7 @@ describe("filling Studio's upload dialog", () => {
       doc.querySelector("#ab-test-button")?.remove();
       doc.querySelector("#preview-button")?.remove();
     });
-    const results = await fillStudio(
+    const results = await fillFields(
       document,
       item,
       [png("one.png"), png("two.png"), png("three.png")],
@@ -282,7 +296,7 @@ describe("filling Studio's upload dialog", () => {
 
   it("sets the first thumbnail when A/B Testing opens something it can't fill", async () => {
     loadStudio((doc) => doc.querySelector("ytcp-ab-test-dialog")?.replaceChildren());
-    const results = await fillStudio(document, item, [png("one.png"), png("two.png")], noWait);
+    const results = await fillFields(document, item, [png("one.png"), png("two.png")], noWait);
     expect(document.querySelector<HTMLInputElement>("#file-loader")?.files?.[0]?.name).toBe(
       "one.png",
     );
@@ -291,22 +305,54 @@ describe("filling Studio's upload dialog", () => {
     );
   });
 
-  it("fails loudly per field, copying the text, and still fills the rest", async () => {
+  it("fills nothing when a field behind Show more is missing, and names it", async () => {
     loadStudio((doc) => doc.querySelector("#tags-container")?.remove());
-    const results = await fillStudio(document, item, [], noWait);
-    const tags = results.find((result) => result.field === "tags");
-    expect(tags).toEqual({
+    const report = await fillStudio(document, item, [png("thumb.png")], noWait);
+    expect(report).toEqual({ filled: false, missing: ["the Tags field"] });
+    expect(untouched()).toBe(true);
+    expect(pressed).toEqual([]);
+  });
+
+  it("fills nothing when a field in the basics is missing, and names every missing one", async () => {
+    loadStudio((doc) => {
+      doc.querySelector("#title-textarea")?.remove();
+      doc.querySelector("ytcp-video-metadata-playlists")?.remove();
+      doc.querySelector("#altered-content")?.remove();
+    });
+    const report = await fillStudio(document, item, [png("thumb.png")], noWait);
+    expect(report).toEqual({
+      filled: false,
+      missing: ["the Title field", "the Playlists field", 'the "Yes" answer to AI use'],
+    });
+    expect(untouched()).toBe(true);
+    expect(pressed).toEqual([]);
+  });
+
+  it("only needs the fields the item uses", async () => {
+    loadStudio((doc) => {
+      doc.querySelector("ytcp-video-metadata-playlists")?.remove();
+      doc.querySelector("ytcp-thumbnail-uploader")?.remove();
+    });
+    // No playlist and no thumbnail: neither field is needed.
+    const results = await fillFields(document, { ...item, playlist: null }, [], noWait);
+    expect(results.every((result) => result.ok)).toBe(true);
+  });
+
+  it("still fails a field on its own when Studio won't take what was typed", async () => {
+    loadStudio(undefined, []);
+    const results = await fillFields(document, item, [], noWait);
+    expect(results.find((result) => result.field === "tags")).toEqual({
       field: "tags",
       ok: false,
-      message: "Couldn't find the Tags field — the text is copied, paste it by hand.",
+      message:
+        "Couldn't add 2 of the tags — Studio didn't turn them into tags. The text is copied, paste it into Tags by hand.",
       copy: "fox, cliff diving",
     });
     expect(results.find((result) => result.field === "title")?.ok).toBe(true);
-    expect(results.find((result) => result.field === "audience")?.ok).toBe(true);
   });
 
   it("names a playlist Studio doesn't have, and closes the list", async () => {
-    const results = await fillStudio(document, { ...item, playlist: "Owls" }, [], noWait);
+    const results = await fillFields(document, { ...item, playlist: "Owls" }, [], noWait);
     expect(results.find((result) => result.field === "playlist")).toMatchObject({
       ok: false,
       copy: "Owls",
@@ -317,7 +363,7 @@ describe("filling Studio's upload dialog", () => {
 
   it("finds the title by its aria-label when the id it had is gone", async () => {
     loadStudio((doc) => doc.querySelector("#title-textarea")?.removeAttribute("id"));
-    const results = await fillStudio(document, item, [], noWait);
+    const results = await fillFields(document, item, [], noWait);
     expect(results.find((result) => result.field === "title")?.ok).toBe(true);
     expect(text('[aria-label^="Add a title"]')).toBe("The Fox of Cliffside");
   });
@@ -329,6 +375,79 @@ describe("filling Studio's upload dialog", () => {
       expect(() => click(button)).toThrow(RefusedClick);
     }
     expect(pressed).toEqual([]);
+  });
+});
+
+// The fixture is hand-built, so this pins what it claims: the upload dialog's structure as
+// `selectors.ts` describes it. Each Details field is found inside the dialog by its first
+// selector (the one checked on the live Details editor), the dialog by every one of its
+// selectors, and the footer's Next, Back and Publish sit inside it. The playlist list and the
+// A/B Testing dialog are overlays outside it, and their selectors are guesses.
+describe("the fixture's upload dialog", () => {
+  beforeEach(() => loadStudio());
+  const first = (field: selectors.FieldSelectors) => field.selectors[0] ?? "";
+
+  it("is found by each of the dialog's selectors, as one element", () => {
+    const found = selectors.uploadDialog.selectors.map((selector) =>
+      document.querySelector(selector)?.closest("ytcp-uploads-dialog"),
+    );
+    expect(found.every((one) => one !== null && one !== undefined && one === found[0])).toBe(true);
+  });
+
+  it("holds every Details field at its first selector, inside the dialog", () => {
+    const dialog = selectors.findField(document, selectors.uploadDialog);
+    if (dialog === null) throw new Error("fixture lacks the upload dialog");
+    const fields = [
+      selectors.title,
+      selectors.description,
+      selectors.thumbnailInput,
+      selectors.abTestButton,
+      selectors.playlistTrigger,
+      selectors.notForKids,
+      selectors.showMore,
+      selectors.alteredYes,
+      selectors.alteredNo,
+      selectors.tags,
+    ];
+    expect(
+      fields.filter((field) => dialog.querySelector(first(field)) === null).map((f) => f.label),
+    ).toEqual([]);
+    // The fields behind Show more start hidden.
+    for (const field of [selectors.alteredYes, selectors.tags])
+      expect(dialog.querySelector(first(field))?.closest("[hidden]")).not.toBeNull();
+    for (const id of selectors.forbidden.filter((one) => document.querySelector(one) !== null))
+      expect(dialog.querySelector(id)).not.toBeNull();
+    expect(
+      ["#next-button", "#back-button", "#done-button"].map((id) => dialog.querySelector(id)),
+    ).not.toContain(null);
+  });
+
+  it("keeps the playlist list and the A/B Testing dialog outside the upload dialog", () => {
+    const dialog = selectors.findField(document, selectors.uploadDialog);
+    for (const field of [selectors.playlistDialog, selectors.abTestInputs]) {
+      const found = selectors.findField(document, field);
+      expect(found).not.toBeNull();
+      expect(dialog?.contains(found)).toBe(false);
+    }
+    const list = selectors.findField(document, selectors.playlistDialog);
+    if (list === null) throw new Error("fixture lacks the playlist list");
+    expect(selectors.findAll(list, selectors.playlistItems)).toHaveLength(2);
+    expect(selectors.findField(list, selectors.playlistDone)).not.toBeNull();
+  });
+});
+
+describe("the whole pack as text", () => {
+  it("holds every part, for pasting by hand", () => {
+    expect(packText(item)).toBe(
+      [
+        "Title:\nThe Fox of Cliffside",
+        "Description:\nA fox learns to fly.\n\n0:00 Intro\n0:40 The Cliff\n\n#fox",
+        "Tags:\nfox, cliff diving",
+        "Playlist: Fox tales",
+        "Audience: No, it's not made for kids",
+        "AI use (under Show more): Yes. Yes because its images are photorealistic.\n",
+      ].join("\n\n"),
+    );
   });
 });
 

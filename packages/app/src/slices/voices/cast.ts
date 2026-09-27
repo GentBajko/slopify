@@ -1,27 +1,46 @@
 import type { CastMember } from "../channels/model.js";
-import type { Speaker, SpeakerRole, SpeakerSource, VoicesSettings } from "./model.js";
+import type { Speaker, SpeakerRole, VoicesSettings } from "./model.js";
 
 // The cast library as a source of speakers: every member of the channel with a voice can be
 // cast in a run. A speaker picked from the cast keeps the member's id, and every run started
 // later takes the member's voice as it is then, so a character or a host sounds the same in
 // every episode; editing the cast later changes no project already made.
 
-export function castSpeakers(members: readonly CastMember[]): SpeakerSource {
-  return {
-    speakers: () =>
-      members.flatMap((member) =>
-        member.voice === undefined ? [] : [speakerFromCast(member, "character")],
-      ),
-  };
+// The channel's hosts as speakers: every member marked as a host who has a voice, in the cast's
+// order. A new podcast or interview starts with them (`defaultVoicesSettings`), so the channel's
+// recurring voices are there without adding them each time.
+export function castHosts(members: readonly CastMember[]): readonly Speaker[] {
+  return members.flatMap((member) =>
+    member.host === true && member.voice !== undefined ? [speakerFromCast(member, "host")] : [],
+  );
+}
+
+// A speaker id no other member can share: the member's whole id (a UUID) rather than its first
+// eight characters, which two members may have in common. An id the speaker schema cannot hold
+// (never one the app made) falls back to a hash of it. A speaker already saved keeps its id.
+export function castSpeakerId(memberId: string): string {
+  const lower = memberId.toLowerCase();
+  return /^[a-z0-9-]{1,55}$/.test(lower) ? `cast-${lower}` : `cast-h${hashOf(memberId)}`;
+}
+
+// cyrb53: 53 bits, the same in the browser and on the server.
+function hashOf(text: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
 export function speakerFromCast(member: CastMember, role: SpeakerRole): Speaker {
   const voice = member.voice;
   return {
-    id: `cast-${member.id
-      .slice(0, 8)
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "")}`,
+    id: castSpeakerId(member.id),
     name: member.name.slice(0, 40),
     role,
     voice:

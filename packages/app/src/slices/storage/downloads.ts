@@ -3,6 +3,7 @@ import { extname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { zipSync } from "fflate";
 import type { Paths } from "../../kernel/paths.js";
+import { effectiveDescription } from "../youtube/edits-repo.js";
 import { assetOf } from "./asset-name.js";
 import { outputPath } from "./layout.js";
 import type { Output } from "./model.js";
@@ -18,6 +19,8 @@ export interface Download {
   readonly filename: string;
   readonly bytes: number;
   readonly contentType: string;
+  // Served instead of the file when set: the YouTube description and tags as shown.
+  readonly text?: Uint8Array<ArrayBuffer>;
 }
 
 export type DownloadResult =
@@ -86,15 +89,51 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
   if (stats === undefined) {
     return { ok: false, reason: "missing-file" };
   }
+  const shown =
+    output.role === "youtube_description" || output.role === "youtube_tags"
+      ? shownYoutubeText(deps, projectId, output.role)
+      : undefined;
   return {
     ok: true,
     download: {
       path,
       filename: downloadName(slugOf(title), output),
-      bytes: stats,
+      bytes: shown?.byteLength ?? stats,
       contentType: contentTypeOf(path),
+      ...(shown === undefined ? {} : { text: shown }),
     },
   };
+}
+
+// The description and tags download as the project page shows and copies them, and as Prepare
+// upload hands them on: the user's hand edits over the written text, chapters fitted, and the
+// channel's and project's links filled in (`youtube/edits-repo.ts`). The file on disk stays
+// the generated text, so regeneration can tell the user's edits from its own.
+function shownYoutubeText(
+  deps: DownloadDeps,
+  projectId: string,
+  role: "youtube_description" | "youtube_tags",
+): Uint8Array<ArrayBuffer> | undefined {
+  const outputs = outputsOf(deps.db, projectId);
+  const read = (wanted: string): string | undefined => {
+    const output = outputs.find((candidate) => candidate.role === wanted);
+    if (output === undefined) return undefined;
+    const path = outputPath(deps.paths, projectId, output.path);
+    return sizeOf(path) === undefined ? undefined : readFileSync(path, "utf8").trim();
+  };
+  const description = read("youtube_description");
+  if (description === undefined) return undefined;
+  const video = outputs.find((output) => output.role === "video");
+  const shown = effectiveDescription(deps.db, projectId, {
+    description,
+    tags: read("youtube_tags") ?? "",
+    durationSeconds:
+      video?.durationMs === null || video?.durationMs === undefined
+        ? undefined
+        : video.durationMs / 1000,
+  });
+  const text = role === "youtube_description" ? shown.description : shown.tags;
+  return new TextEncoder().encode(`${text}\n`);
 }
 
 // "download all" images as `<title-slug>-images.zip`, thumbnail included.

@@ -8,11 +8,11 @@ import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { PageBar } from "@/components/kit/page-bar";
+import { PageHeader } from "@/components/kit/layout";
+import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Lamp } from "@/components/kit/status";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
-import { Rail, RailGroup } from "@/components/rail";
 import { Input } from "@/components/ui/input";
 import {
   dismissFirstRun,
@@ -156,7 +156,7 @@ export function WelcomeRoute(): ReactElement {
 
   return (
     <div>
-      <PageBar
+      <PageHeader
         title="Welcome to Slopify"
         meta="Make a video from a topic, with the tools already on this computer."
         actions={
@@ -165,7 +165,11 @@ export function WelcomeRoute(): ReactElement {
           </Button>
         }
       />
-      {view.error ? <p className="mb-3 text-body text-danger">{view.error.message}</p> : null}
+      {view.error ? (
+        <Callout tone="danger" title="Could not read what this computer has" className="mb-6">
+          {view.error.message}
+        </Callout>
+      ) : null}
 
       <Tabs
         items={steps.map((one) => ({ id: one.id, label: one.label }))}
@@ -178,23 +182,26 @@ export function WelcomeRoute(): ReactElement {
 
       <TabPanel idPrefix="welcome" id="found" active={step === "found"}>
         <SectionHead title="Found on this computer" info="welcome.found" />
-        <RailGroup className="mb-4">
+        <List label="Tools found on this computer" className="mb-4">
           {(data?.clis ?? []).map((cli) => (
-            <Rail key={cli.id}>
-              <span className="min-w-0 flex-1 font-semibold">{cli.name}</span>
-              <span className="text-small text-ink2">
-                {cli.ready
-                  ? `Ready${cli.version === null ? "" : ` · ${cli.version}`}${cli.draws ? " · writes and draws" : " · writes"}`
-                  : cli.installed
-                    ? (cli.issue ?? "Installed, not usable yet")
-                    : "Not found"}
-              </span>
-            </Rail>
+            <ListRow
+              key={cli.id}
+              title={cli.name}
+              actions={
+                <span className="text-small text-ink-2">
+                  {cli.ready
+                    ? `Ready${cli.version === null ? "" : ` · ${cli.version}`}${cli.draws ? " · writes and draws" : " · writes"}`
+                    : cli.installed
+                      ? (cli.issue ?? "Installed, not usable yet")
+                      : "Not found"}
+                </span>
+              }
+            />
           ))}
-          {data === undefined ? <Rail>Looking for installed tools…</Rail> : null}
-        </RailGroup>
+          {data === undefined ? <ListRow title="Looking for installed tools…" /> : null}
+        </List>
         {data !== undefined && ready.length > 0 ? (
-          <p className="mb-6 text-small text-ink2">
+          <p className="mb-6 text-small text-ink-2">
             {`You can make a video now: no API keys are needed for ${keyless([
               "the text",
               ...(ready.some((cli) => cli.draws) ? ["the images"] : []),
@@ -222,9 +229,9 @@ export function WelcomeRoute(): ReactElement {
 
         <SectionHead title="Narration voice" info="welcome.voice" />
         {data === undefined ? (
-          <RailGroup className="mb-6">
-            <Rail>Looking for a voice…</Rail>
-          </RailGroup>
+          <List label="Narration voice" className="mb-6">
+            <ListRow title="Looking for a voice…" />
+          </List>
         ) : (
           <VoiceChoice
             voice={voice}
@@ -236,7 +243,7 @@ export function WelcomeRoute(): ReactElement {
 
       <TabPanel idPrefix="welcome" id="style" active={step === "style"}>
         <SectionHead title="Pick a style" info="welcome.pack" />
-        <RailGroup className="mb-3">
+        <List label="Styles" className="mb-3 [&_.sl-row__meta]:whitespace-normal">
           {[
             {
               id: "",
@@ -247,35 +254,41 @@ export function WelcomeRoute(): ReactElement {
             },
             ...(data?.packs ?? []).map((one) => ({ ...one, library: true })),
           ].map((one) => (
-            <Rail key={one.id === "" ? "general" : one.id} className="flex-wrap">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="font-semibold">{one.name}</span>
-                <span className="text-small text-ink2">{one.summary}</span>
-              </span>
-              {one.library ? (
-                <Button
-                  variant="quiet"
-                  disabled={one.installed || install.isPending}
-                  aria-label={
-                    one.installed ? `${one.name} is in your library` : `Add ${one.name} to library`
-                  }
-                  onClick={() => install.mutate(one.id)}
-                >
-                  {one.installed ? "In your library" : "Add to library"}
-                </Button>
-              ) : null}
-              <Button
-                variant={pack === one.id ? "primary" : "secondary"}
-                aria-pressed={pack === one.id}
-                aria-label={`Use ${one.name}`}
-                onClick={() => setPack(one.id)}
-              >
-                {pack === one.id ? "Picked" : "Use this style"}
-              </Button>
-            </Rail>
+            <ListRow
+              key={one.id === "" ? "general" : one.id}
+              title={one.name}
+              meta={one.summary}
+              selected={pack === one.id}
+              actions={
+                <>
+                  {one.library ? (
+                    <Button
+                      variant="quiet"
+                      disabled={one.installed || install.isPending}
+                      aria-label={
+                        one.installed
+                          ? `${one.name} is in your library`
+                          : `Add ${one.name} to library`
+                      }
+                      onClick={() => install.mutate(one.id)}
+                    >
+                      {one.installed ? "In your library" : "Add to library"}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant={pack === one.id ? "primary" : "secondary"}
+                    aria-pressed={pack === one.id}
+                    aria-label={`Use ${one.name}`}
+                    onClick={() => setPack(one.id)}
+                  >
+                    {pack === one.id ? "Picked" : "Use this style"}
+                  </Button>
+                </>
+              }
+            />
           ))}
-        </RailGroup>
-        <p className="mb-6 flex items-center gap-1 text-small text-ink2" {...helpScope}>
+        </List>
+        <p className="mb-6 flex items-center gap-1 text-small text-ink-2" {...helpScope}>
           Add to library keeps a pack's prompts and Play template for later videos.
           <InfoTip id="welcome.packs" className="-my-1" />
         </p>
@@ -285,7 +298,7 @@ export function WelcomeRoute(): ReactElement {
         {made === undefined ? (
           <>
             <SectionHead title="Make a 60-second short" info="welcome.short" />
-            <p className="mb-3 text-small text-ink2">
+            <p className="mb-3 text-small text-ink-2">
               {`Style: ${packName}. `}
               {voice.text}
             </p>
@@ -301,7 +314,7 @@ export function WelcomeRoute(): ReactElement {
             <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
               <div className="flex min-w-[240px] flex-1 flex-col gap-1" {...helpScope}>
                 <span className="flex items-center gap-1">
-                  <label htmlFor="welcome-topic" className="text-label text-ink2">
+                  <label htmlFor="welcome-topic" className="text-label text-ink-2">
                     Topic
                   </label>
                   <InfoTip id="welcome.topic" className="-my-1" />
@@ -343,32 +356,33 @@ export function WelcomeRoute(): ReactElement {
         )}
 
         <SectionHead title="While you wait: the samples" info="welcome.samples" />
-        <RailGroup className="mb-6">
+        <List label="Samples" className="mb-6 [&_.sl-row__meta]:whitespace-normal">
           {samples.map((one) => {
             const projectId = data?.samples[one.id] ?? null;
             return (
-              <Rail key={one.id}>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-semibold">{one.name}</span>
-                  <span className="text-small text-ink2">{one.summary}</span>
-                </span>
-                {projectId === null ? (
-                  <Button asChild variant="quiet">
-                    <Link to="/settings" search={{ section: "storage" }}>
-                      Restore samples in Settings
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button asChild>
-                    <Link to="/projects/$projectId" params={{ projectId }}>
-                      {one.action}
-                    </Link>
-                  </Button>
-                )}
-              </Rail>
+              <ListRow
+                key={one.id}
+                title={one.name}
+                meta={one.summary}
+                actions={
+                  projectId === null ? (
+                    <Button asChild variant="quiet">
+                      <Link to="/settings" search={{ section: "storage" }}>
+                        Restore samples in Settings
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild>
+                      <Link to="/projects/$projectId" params={{ projectId }}>
+                        {one.action}
+                      </Link>
+                    </Button>
+                  )
+                }
+              />
             );
           })}
-        </RailGroup>
+        </List>
 
         <AutostartOffer />
       </TabPanel>
@@ -401,17 +415,19 @@ function VoiceChoice({
 }): ReactElement {
   if (voice.ready)
     return (
-      <RailGroup className="mb-6">
-        <Rail className="flex-wrap">
-          <Lamp tone="done" />
-          <span className="min-w-0 flex-1 text-small">{voice.text}</span>
-          <Button asChild variant="quiet">
-            <Link to="/settings" search={{ section: "providers" }}>
-              Add a voice key
-            </Link>
-          </Button>
-        </Rail>
-      </RailGroup>
+      <List label="Narration voice" className="mb-6 [&_.sl-row__title]:whitespace-normal">
+        <ListRow
+          lead={<Lamp tone="done" />}
+          title={voice.text}
+          actions={
+            <Button asChild variant="quiet">
+              <Link to="/settings" search={{ section: "providers" }}>
+                Add a voice key
+              </Link>
+            </Button>
+          }
+        />
+      </List>
     );
   return (
     <Callout

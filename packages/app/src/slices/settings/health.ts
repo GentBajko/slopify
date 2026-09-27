@@ -83,9 +83,15 @@ function overall(
 }
 
 // "Check all" on Settings → Providers: each command-line tool found and signed in, each saved
-// key accepted by its provider, and each chosen model still offered.
-export async function checkProviderHealth(deps: HealthDeps): Promise<HealthReport> {
-  const statuses = await providerStatuses(deps);
+// key accepted by its provider, and each chosen model still offered. `only` checks one
+// provider: a sign-in fix-it's Check again asks about that CLI and nothing else.
+export async function checkProviderHealth(
+  deps: HealthDeps,
+  only?: ProviderId,
+): Promise<HealthReport> {
+  const statuses = (await providerStatuses(deps)).filter(
+    (status) => only === undefined || status.id === only,
+  );
   const inUse = uses(deps.db);
   const catalogue = deps.catalogue?.();
   const retired = catalogue === undefined ? [] : retiredModelUsage(deps.db, catalogue);

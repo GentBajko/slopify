@@ -188,7 +188,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   models: () => screen.findByText("/data/catalogue.json"),
   playback: () => screen.findByLabelText("Silence between segments"),
   notifications: () => screen.findByDisplayValue("https://ntfy.sh/slopify-runs"),
-  "channel-links": () => screen.findByDisplayValue("https://patreon.com/slopify"),
+  "channel-links": () => screen.findByRole("link", { name: "Open the default channel's links" }),
   studio: () => screen.findByDisplayValue("Lore"),
   storage: () => screen.findByText("Vecna"),
   backups: () => screen.findByLabelText("Keep last"),

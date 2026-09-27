@@ -1,16 +1,24 @@
 <!doctype html>
 <!--
-  A copy of YouTube Studio's upload dialog, Details step, after a video file is in, holding
-  only what the filler touches. Its structure, ids, names and aria-labels follow the live
-  Studio page as read on 2026-09-27 (a video's Details editor, which uses the same components):
-  web components are plain custom elements here, the title and description are contenteditable
-  div#textbox, radios are tp-yt-paper-radio-button with name attributes (the chosen one gets
-  class iron-selected and the checked attribute), Show more (#toggle-button) reveals the AI use
-  question (#altered-content) and Tags (a ytcp-chip-bar with input#text-input).
-  NOT inspected on the live page, so still guesses: the playlist list the dropdown opens
-  (ytcp-playlist-dialog) and the dialog A/B Testing opens (ytcp-ab-test-dialog).
-  All content is invented. It is the contract src/selectors.ts is tested against; see
-  docs/studio-extension.md.
+  Hand-built, not saved from Studio. It stands in for YouTube Studio's upload dialog, Details
+  step, after a video file is in, and holds only what the filler touches. All content is
+  invented.
+
+  Where each part comes from:
+  - The Details fields were read on 2026-09-27 from the Details editor of an EXISTING video
+    (read only), not from the upload dialog: the title and description (contenteditable
+    div#textbox), the thumbnail input, the playlist trigger, the audience and AI use radios
+    (tp-yt-paper-radio-button by name; the chosen one gets class iron-selected and the checked
+    attribute), Show more (#toggle-button), which reveals AI use (#altered-content) and Tags
+    (a ytcp-chip-bar with input#text-input), and the A/B Testing button. Web components are
+    plain custom elements here.
+  - The upload dialog around them (ytcp-uploads-dialog > tp-yt-paper-dialog#dialog) and its
+    footer (#back-button, #next-button, #done-button) follow src/selectors.ts; the live upload
+    dialog was not inspected, so that it wraps the same fields is an assumption.
+  - Guesses, never inspected: the playlist list the dropdown opens (ytcp-playlist-dialog) and
+    the dialog A/B Testing opens (ytcp-ab-test-dialog).
+  It is the contract src/selectors.ts is tested against (test/fill.test.ts checks the
+  structure); see docs/studio-extension.md.
 -->
 <html lang="en">
   <head>
@@ -19,7 +27,7 @@
   </head>
   <body>
     <ytcp-uploads-dialog>
-      <tp-yt-paper-dialog id="dialog" opened>
+      <tp-yt-paper-dialog id="dialog" class="ytcp-uploads-dialog" opened>
         <h1 id="dialog-title">my-video-file</h1>
         <ytcp-video-metadata-editor>
           <div id="basics">

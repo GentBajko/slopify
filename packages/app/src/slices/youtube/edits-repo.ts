@@ -1,8 +1,11 @@
 // Where the hand edits and the channel links are kept: the edits per project in
-// `youtube_description_edits`, the Settings list of links as one `settings` row.
+// `youtube_description_edits`, each channel's links in its brand kit, and the older Settings list
+// of links (read as the default channel's until its Brand tab saves its own) as one `settings` row.
 
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { defaultChannelId } from "../channels/model.js";
+import { channelById, projectChannelId } from "../channels/repo.js";
 import { readSetting, writeSetting } from "../settings/repo.js";
 import { chapterNotice, fitChapters } from "./chapters.js";
 import type { DescriptionEdits } from "./edits.js";
@@ -81,11 +84,22 @@ export function writeChannelLinks(db: DatabaseSync, links: readonly ChannelLink[
   );
 }
 
+// A channel's links: the ones its Brand tab saved. The default channel, until its Brand tab
+// saves a list of its own (even an empty one), reads the older Settings list, so links saved
+// before channels had their own keep filling. A channel that is gone has none.
+export function readChannelLinksFor(db: DatabaseSync, channelId: string): readonly ChannelLink[] {
+  const channel = channelById(db, channelId);
+  if (channel === undefined) return [];
+  if (channel.brand.links !== undefined) return channel.brand.links;
+  return channel.id === defaultChannelId ? readChannelLinks(db) : [];
+}
+
 // The description and tags as the project page shows and copies them: the user's edits over
 // the generated text, the chapters fitted to YouTube's rules (`chapters.ts`; the last one's
 // length only checked when the video's length is given), placeholders filled from the
-// project's and Settings' links (one with no link stays as typed). For anything that hands the
-// description on, such as Prepare upload. `chapterNotice` says what the fitting changed.
+// project's and its channel's links (one with no link stays as typed). For anything that hands
+// the description on, such as Prepare upload and the downloads. `chapterNotice` says what the
+// fitting changed.
 export function effectiveDescription(
   db: DatabaseSync,
   projectId: string,
@@ -101,7 +115,7 @@ export function effectiveDescription(
   );
   const fitted = fitChapters(shown.chapters, generated.durationSeconds);
   const notice = chapterNotice(fitted.adjustments);
-  const links = mergeLinks(readChannelLinks(db), edits.links);
+  const links = mergeLinks(readChannelLinksFor(db, projectChannelId(db, projectId)), edits.links);
   return {
     description: fillPlaceholders(composeDescription({ ...shown, chapters: fitted.text }), links)
       .text,

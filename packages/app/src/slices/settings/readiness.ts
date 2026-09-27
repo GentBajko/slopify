@@ -5,7 +5,7 @@ import { cliPathStatus } from "./cli-paths.js";
 import type { CliProbe, CliProbeResult } from "./cli-status.js";
 import { cliProbeTimeoutMs, readinessFromProbe } from "./cli-status.js";
 import type { ProviderId, ProviderStatus, Readiness } from "./model.js";
-import { isLocalCliProvider, providers } from "./model.js";
+import { isLocalCliProvider, providers, sharedKeyOf } from "./model.js";
 import { keyedProviders } from "./repo.js";
 
 export interface ReadinessDeps {
@@ -70,5 +70,6 @@ export async function providerStatuses(deps: ReadinessDeps): Promise<readonly Pr
 }
 
 function keyedReadiness(keyed: ReadonlySet<ProviderId>, id: ProviderId): Readiness {
-  return { kind: "keyed", hasKey: keyed.has(id) };
+  const shared = sharedKeyOf[id];
+  return { kind: "keyed", hasKey: keyed.has(id) || (shared !== undefined && keyed.has(shared)) };
 }

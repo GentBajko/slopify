@@ -192,12 +192,14 @@ function KeyDetail({
   const testId = useId();
   const guide = keyGuides[provider.id];
 
-  // The provider is asked with the stored key; nothing typed here is sent.
+  // A key pasted and not saved yet is tried as it stands, so it can be checked before Save; with
+  // the field empty the stored key is. Either way the key only goes to its own provider.
+  const pasted = draft.trim();
   const test = async (): Promise<void> => {
     setTesting(true);
     setTested(undefined);
     try {
-      setTested(await testKey(api, provider.id));
+      setTested(await testKey(api, provider.id, pasted === "" ? undefined : pasted));
     } catch (cause) {
       setFailure(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -336,8 +338,8 @@ function KeyDetail({
       <div className="sl-btn-row">
         <Button
           aria-label={`Test ${provider.displayName} key`}
-          disabled={!hasKey || testing}
-          disabledReason="Save a key first."
+          disabled={(!hasKey && pasted === "") || testing}
+          disabledReason="Paste a key first."
           onClick={() => {
             void test();
           }}

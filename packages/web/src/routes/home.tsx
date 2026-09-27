@@ -137,7 +137,7 @@ export function HomeRoute(): ReactElement {
       />
       <div className="mb-5 flex items-end gap-1 md:hidden" {...helpScope}>
         <ChannelPicker className="min-w-0 flex-1" />
-        <InfoTip id="home.channel" className="mb-[5px]" />
+        <InfoTip id="home.channel" className="mb-1" />
       </div>
       {projects.error === null ? null : (
         <p role="alert" className="m-0 mb-5 text-danger">

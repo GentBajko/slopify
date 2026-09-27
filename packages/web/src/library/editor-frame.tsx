@@ -2,10 +2,10 @@ import { ChevronRightIcon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 import { Callout } from "@/components/kit/callout";
 
-// The Library editors' frame (prompt, intro/outro, document theme): one surface for the form,
-// whose sticky Save bar is `EditorActions`, and a plain column beside it on a wide screen.
-// The 18 px padding is the one `EditorActions` bleeds out of to reach the surface's edges.
-export const editorSurface = "rounded-media border border-line bg-surface p-[18px]";
+// The Library editors' frame (prompt, intro/outro, document theme): the form straight on the
+// page, its sections separated by space rather than a box, `EditorActions` as its sticky Save
+// bar, and a plain column beside it on a wide screen.
+export const editorSurface = "pt-1";
 export const editorAside = "flex min-w-0 flex-col gap-3 pt-1 lg:sticky lg:top-16";
 
 // "Library › Prompts" above an editor's title: the way back to the tab it was opened from.

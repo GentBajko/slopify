@@ -22,6 +22,7 @@ import {
   schedulesKey,
 } from "./api";
 import { formatScheduleDate } from "./time";
+import { TopicFailure } from "./topic-failure";
 
 // A schedule's topic generation: what went wrong last, a button to ask now, and the topics
 // held for approval with a visible action on every row.
@@ -92,11 +93,15 @@ export function TopicGenerationPanel({
           Generate topics now
         </Button>
       </SectionHead>
-      {topics.error !== null ? (
-        <Callout tone="danger" title="The last topic generation failed." className="mt-3">
-          {topics.error}
-        </Callout>
-      ) : null}
+      <TopicFailure
+        schedule={schedule}
+        title="The last topic generation failed."
+        className="mt-3"
+        retry={{
+          run: () => action.mutate(() => generateTopicsNow(api, schedule.id)),
+          busy: busy || topics.generatingSince !== null,
+        }}
+      />
       {error !== null ? (
         <Callout tone="danger" title="That didn't work." className="mt-3">
           {error}

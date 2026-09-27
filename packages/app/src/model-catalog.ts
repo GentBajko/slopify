@@ -4,6 +4,7 @@ import { openAiImageModels } from "./adapters/image/openai.js";
 import { replicateModels } from "./adapters/image/replicate.js";
 import { cartesiaModels } from "./adapters/tts/cartesia.js";
 import { elevenLabsModels } from "./adapters/tts/elevenlabs.js";
+import { geminiTtsModels } from "./adapters/tts/gemini.js";
 import { inworldModels } from "./adapters/tts/inworld.js";
 import { openAiTtsModels } from "./adapters/tts/openai.js";
 import type { ModelInfo, ProviderFamily } from "./kernel/ports/model.js";
@@ -19,6 +20,7 @@ export function modelSources(registry: Registry): {
     "openai-tts": openAiTtsModels,
     cartesia: cartesiaModels,
     inworld: inworldModels,
+    "google-tts": geminiTtsModels,
     fal: falModels,
     replicate: replicateModels,
     "openai-image": openAiImageModels,

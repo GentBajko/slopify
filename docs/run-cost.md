@@ -14,7 +14,10 @@ does not price, or a call whose provider reported no usage, is counted as unknow
 free. Per-minute voices are left unpriced rather than guessed from characters.
 
 The project page's **Run cost** tab shows the total, then the cost, API equivalent, usage and
-time per stage and per model. Data: `GET /api/projects/:id/run-cost`.
+time per stage and per model. Data: `GET /api/projects/:id/run-cost`. Once the run ends (done,
+done with problems, failed or canceled), the top of the project page sums it up in one line,
+such as "This run cost $3.37 · ~$9.10 via API · 12 min 4 s end to end", with **See cost by
+stage** to open the Cost section.
 
 ## CLI runs
 
@@ -45,8 +48,9 @@ runs read the same as local ones (see "The host CLI bridge" in `docker.md`).
 When a CLI says its plan allowance is used up (Claude Code's `usage limit reached|<time>`,
 Codex's "You've hit your usage limit … try again at …", Gemini's daily quota), the call does
 not fail. The reset time is stored per CLI, and every call to that CLI, from any project, waits
-until two minutes after it; the project page's status line says "Waiting for Codex limits
-(resets at 14:00)". Without a stated time it checks again every 30 minutes. Other providers are
+until two minutes after it; the project page, Home's Running now, the Projects row and the
+calendar say "Waiting for Codex limits (resets at 14:00)" (the project listing and the calendar
+carry the waits as `limitWaits`). Without a stated time it checks again every 30 minutes. Other providers are
 not held up, and a waiting call holds no slot in the provider queue.
 
 The wait survives a restart: a stage that was waiting when Slopify stopped is resumed at the

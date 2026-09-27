@@ -47,9 +47,12 @@ export const keys = {
   documentThemes: ["document-themes"] as const,
   narrationAliases: ["narration-aliases"] as const,
   settings: ["settings"] as const,
-  // The project page's hand edits to the YouTube description, and Settings → Channel links.
+  // The project page's hand edits to the YouTube description, and the channel links: the
+  // older Settings list alone, or a project's channel's (under the same prefix, so saving a
+  // channel refreshes both).
   youtubeEdits: (projectId: string) => ["project", projectId, "youtube-edits"] as const,
   channelLinks: ["channel-links"] as const,
+  projectChannelLinks: (projectId: string) => ["channel-links", "project", projectId] as const,
 };
 
 export function projectsQuery(api: Api) {

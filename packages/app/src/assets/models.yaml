@@ -14,6 +14,8 @@ providers:
     maxConcurrent: 3
   inworld:
     maxConcurrent: 5
+  google-tts:
+    maxConcurrent: 3
   fal:
     maxConcurrent: 3
   replicate:
@@ -435,3 +437,39 @@ tts:
     tts:
       maxCharacters: 4096
       streaming: true
+  - provider: google-tts
+    id: gemini-2.5-flash-preview-tts
+    name: Gemini 2.5 Flash TTS (preview)
+    source: https://ai.google.dev/gemini-api/docs/speech-generation
+    keywords:
+      - tts
+    pricing:
+      note: Billed per text token in and audio token out on your Gemini API key; estimate
+        unavailable.
+    tts:
+      maxCharacters: 4000
+      streaming: false
+  - provider: google-tts
+    id: gemini-2.5-pro-preview-tts
+    name: Gemini 2.5 Pro TTS (preview)
+    source: https://ai.google.dev/gemini-api/docs/speech-generation
+    keywords:
+      - tts
+    pricing:
+      note: Billed per text token in and audio token out on your Gemini API key; estimate
+        unavailable.
+    tts:
+      maxCharacters: 4000
+      streaming: false
+  - provider: google-tts
+    id: gemini-3.1-flash-tts-preview
+    name: Gemini 3.1 Flash TTS (preview)
+    source: https://ai.google.dev/gemini-api/docs/speech-generation
+    keywords:
+      - tts
+    pricing:
+      note: Billed per text token in and audio token out on your Gemini API key; estimate
+        unavailable.
+    tts:
+      maxCharacters: 4000
+      streaming: false
