@@ -45,7 +45,7 @@ import {
   useRevisionController,
 } from "@/project/revision-workspace";
 import { CostSoFar, RunSteps, runSteps, StageAnnouncements } from "@/project/run-aside";
-import { RunCostPanel } from "@/project/run-cost";
+import { RunCostPanel, RunCostSummary } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { SectionEmpty, StageSection } from "@/project/stage-section";
 import { finalOutput } from "@/project/summary";
@@ -512,6 +512,13 @@ function ProjectWorkspace({
               />
             </div>
             <StageAnnouncements stages={stages} />
+            {selected === "cost" ? null : (
+              <RunCostSummary
+                cost={runCost.data}
+                status={summary.status}
+                onOpen={() => openSection("cost")}
+              />
+            )}
             <Workspace
               sections={
                 <Rail label="Project sections">

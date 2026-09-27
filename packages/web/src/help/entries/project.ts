@@ -189,7 +189,7 @@ export const projectHelp = {
   },
   "project.youtube.previous-video": {
     title: "Previous video for this project",
-    body: "The link that {{Previous video}} fills in this project's description, ahead of the one in Settings, Channel links. Paste the video this one follows on from. It changes only what is shown and copied, with no text call. Save links keeps it.",
+    body: "The link that {{Previous video}} fills in this project's description, ahead of the one on its channel's Brand tab. Paste the video this one follows on from. It changes only what is shown and copied, with no text call. Save links keeps it.",
   },
   "project.live.writing": {
     title: "Live writing",

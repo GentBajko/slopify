@@ -18,6 +18,7 @@ import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { RetiredModelRow } from "@/components/retired-models";
 import { InlineName } from "@/library/inline-name";
 import { ListSkeleton, libraryListDetail } from "@/library/list-states";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
@@ -347,6 +348,7 @@ export function TemplatesRoute({
                       </div>
                     }
                   />
+                  <RetiredModelRow kind="template" id={template.id} name={template.name} />
                 </Fragment>
               ))}
             </List>

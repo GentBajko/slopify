@@ -1,3 +1,4 @@
+import type { ProjectState } from "@app/kernel/pipeline.js";
 import type {
   LimitWait,
   ModelCost,
@@ -9,6 +10,7 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
@@ -37,6 +39,40 @@ export function RunCostPanel({ projectId }: { readonly projectId: string }): Rea
     );
   return <Panel cost={cost.data} />;
 }
+
+// The run's cost in one line on the project page once the run has ended (done, done with
+// problems, failed or canceled), at every width, with the way to the full Cost section.
+// Nothing while it runs, waits, or spent nothing.
+export function RunCostSummary({
+  cost,
+  status,
+  onOpen,
+}: {
+  readonly cost: RunCost | undefined;
+  readonly status: ProjectState;
+  readonly onOpen: () => void;
+}): ReactElement | null {
+  if (cost === undefined || !ended.has(status) || (cost.calls === 0 && cost.byStage.length === 0))
+    return null;
+  const parts = [
+    `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${money(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
+    ...(cost.apiEquivalent === null ? [] : [`~${money(cost.apiEquivalent)} via API`]),
+    `${duration(cost.totals.wallMs)} end to end`,
+  ];
+  return (
+    <section
+      aria-label="Run cost"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line pb-3 text-small text-ink-2"
+    >
+      <span>{parts.join(" · ")}</span>
+      <Button variant="quiet" size="small" onClick={onOpen}>
+        See cost by stage
+      </Button>
+    </section>
+  );
+}
+
+const ended: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
 
 const stageColumns: readonly Column<StageCost>[] = [
   { id: "stage", header: "Stage", cell: (row) => <strong>{stageNames[row.stage]}</strong> },

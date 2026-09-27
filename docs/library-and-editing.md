@@ -99,16 +99,27 @@ once the video is made.
 
 ## Channel links and placeholders
 
-**Settings → Channel links** holds named links (Patreon, Discord, …). Write `{{Patreon}}` in a
-description, or ask for it in a Description prompt, and it is replaced by that link when the
-description is shown or copied; matching ignores case and extra spaces. A placeholder with no
-link stays as typed, is highlighted, and the page says which link to add. Each project can set
-its own **Previous video** under YouTube; it wins over a Settings link of the same name.
+Each channel keeps named links (Patreon, Discord, …) under **Channel links** on its **Brand**
+tab; **Save channel** keeps them. Write `{{Patreon}}` in a description, or ask for it in a
+Description prompt, and it is replaced by the link of the project's channel when the
+description is shown, copied, downloaded or put in the upload pack; matching ignores case and
+extra spaces. A placeholder with no link stays as typed, is highlighted, and the page links to
+the channel's Brand tab. Each project can set its own **Previous video** under YouTube; it wins
+over a channel link of the same name.
+
+Links saved in **Settings → Channel links** before channels had their own still fill the
+default channel's projects until its Brand tab is saved; that Settings page now points to it.
+
+The **youtube-description** and **youtube-tags** downloads are the text as the page shows it:
+your edits, fitted chapters and filled links. The file in the project folder stays the written
+text.
 
 ## Reading view
 
 The article, its research notes and sources, and the narration text (Audio section) are shown
-as a reading view: a ~70-character measure, a contents list from the headings, **Search** with
+as a reading view: a ~70-character measure, a contents list from the headings (the two highest
+levels of `#`, `##` and `###`, the second indented under the first; a single `#` title that
+opens the text stays above the list), **Search** with
 every hit marked (Enter / Shift+Enter or the arrows step through them), **Copy section** beside
 each heading and Copy all as Markdown.
 

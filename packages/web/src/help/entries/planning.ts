@@ -262,6 +262,6 @@ export const planningHelp = {
   // YouTube
   "planning.links.named": {
     title: "Named links",
-    body: "Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it becomes the link of that name when the description is shown or copied, such as {{Patreon}} or {{Discord}}. A project's own {{Previous video}} wins over the one here. A name with no link stays as typed.",
+    body: "Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it becomes the link of that name when the description is shown, copied or downloaded, such as {{Patreon}} or {{Discord}}. Each channel keeps its own list on its Brand tab, so a project fills from its channel's links; its own {{Previous video}} wins over the channel's. A name with no link stays as typed. Save channel keeps the list.",
   },
 } as const satisfies Readonly<Record<string, HelpEntry>>;

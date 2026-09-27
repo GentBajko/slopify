@@ -112,6 +112,40 @@ describe("GET /files/:projectId/:asset", () => {
     expect(await gone.json()).toMatchObject({ detail: /no longer on disk/ });
   });
 
+  it("serves the YouTube description and tags as the page shows them: edits in, links filled", async () => {
+    const { app, place } = harness();
+    const youtube = { stageKind: "video" as const };
+    place(
+      { id: "o1", role: "youtube_description", path: "youtube-description.txt", ...youtube },
+      "Written summary. {{Patreon}}\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope\n",
+    );
+    place({ id: "o2", role: "youtube_tags", path: "youtube-tags.txt", ...youtube }, "rope, knots");
+    const json = (body: unknown) => ({
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+    });
+    await app.request("/api/settings/channel-links", {
+      method: "PUT",
+      ...json({ links: [{ name: "Patreon", url: "https://patreon.com/me" }] }),
+    });
+    await app.request("/api/projects/p1/youtube-edits/fields/tags", {
+      method: "PUT",
+      ...json({ text: "rope, sailing", base: "rope, knots" }),
+    });
+
+    const description = await app.request("/files/p1/youtube-description");
+    expect(description.status).toBe(200);
+    expect(description.headers.get("content-disposition")).toBe(
+      'attachment; filename="rope-youtube-description.txt"',
+    );
+    const text = await description.text();
+    expect(text).toBe(
+      "Written summary. https://patreon.com/me\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope\n",
+    );
+    expect(description.headers.get("content-length")).toBe(String(Buffer.byteLength(text)));
+    expect(await (await app.request("/files/p1/youtube-tags")).text()).toBe("rope, sailing\n");
+  });
+
   it("refuses an asset name that is not one", async () => {
     const { app } = harness();
 

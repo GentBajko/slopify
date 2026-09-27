@@ -229,16 +229,27 @@ export function providerRoutes(deps: AppDeps) {
           return c.json(keyStatus(keys, id));
         },
       )
-      // The Test button: the cheapest read the provider offers, answered in plain words.
+      // The Test button: the cheapest read the provider offers, answered in plain words. With
+      // a `key` in the body, that pasted key is tried instead of the saved one and is neither
+      // stored nor logged; with no body, the saved key is.
       .post("/:id/key/test", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
         if (providerById(id).auth === "cli") return refusal(c, id, "cli-provider");
         if (deps.fetch === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        const raw: unknown = await c.req.json().catch(() => undefined);
+        const candidate = raw === undefined ? undefined : keyBody.safeParse(raw);
+        if (candidate !== undefined && !candidate.success)
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
+          });
         return c.json(
           await testProviderKey(
             { db: deps.db, clock: deps.clock, fetch: deps.fetch, probes: keyProbes },
             id,
+            candidate?.data.key,
           ),
         );
       })

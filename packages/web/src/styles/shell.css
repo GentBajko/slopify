@@ -289,7 +289,8 @@
     position: sticky;
     top: var(--space-5);
   }
-  .sl-reading h2 {
+  .sl-reading h2,
+  .sl-reading h3 {
     scroll-margin-top: var(--space-5);
   }
   .sl-reading h3 {

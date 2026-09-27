@@ -1141,6 +1141,10 @@
     padding: 5px 10px;
     border-radius: var(--radius-control);
   }
+  .sl-toc a.sl-toc__nested {
+    padding-left: 22px;
+    font-size: 12px;
+  }
   .sl-toc a[aria-current="true"] {
     color: var(--color-ink);
     background: var(--color-accent-tint);

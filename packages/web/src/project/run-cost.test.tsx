@@ -1,10 +1,18 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunReview } from "@/play/run-review";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
-import { limitWaitMessage, planLine, planUse, RunCostPanel, usage } from "./run-cost";
+import {
+  limitWaitMessage,
+  planLine,
+  planUse,
+  RunCostPanel,
+  RunCostSummary,
+  usage,
+} from "./run-cost";
 
 afterEach(cleanup);
 
@@ -143,6 +151,39 @@ describe("the Run cost tab", () => {
     const byModel = screen.getByRole("table", { name: "Run cost by model" });
     expect(within(byModel).getByText("codex · gpt-5")).toBeTruthy();
     expect(within(byModel).getByText("$0 on plan")).toBeTruthy();
+  });
+
+  it("sums the finished run up in one line on the project page, linking to the tab", async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(<RunCostSummary cost={cost} status="done" onOpen={onOpen} />);
+    const line = screen.getByRole("region", { name: "Run cost" });
+    expect(line.textContent).toContain(
+      "This run cost $3.37 · ~$1.50 via API · 9 min 0 s end to end",
+    );
+    await user.click(within(line).getByRole("button", { name: "See cost by stage" }));
+    expect(onOpen).toHaveBeenCalledOnce();
+    cleanup();
+    render(<RunCostSummary cost={cost} status="failed" onOpen={onOpen} />);
+    expect(screen.getByRole("region", { name: "Run cost" }).textContent).toContain(
+      "Spent so far $3.37",
+    );
+  });
+
+  it("stays away while the run goes on or before anything was spent", () => {
+    for (const status of ["running", "paused", "pending"] as const) {
+      render(<RunCostSummary cost={cost} status={status} onOpen={() => undefined} />);
+      expect(screen.queryByRole("region", { name: "Run cost" })).toBeNull();
+      cleanup();
+    }
+    render(
+      <RunCostSummary
+        cost={{ ...cost, calls: 0, byStage: [] }}
+        status="done"
+        onOpen={() => undefined}
+      />,
+    );
+    expect(screen.queryByRole("region", { name: "Run cost" })).toBeNull();
   });
 });
 
