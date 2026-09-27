@@ -1,5 +1,5 @@
 import type { PlaySection } from "./sections";
-import { type PlayFormState, shortsOn } from "./state";
+import { ambientUploadOn, type PlayFormState, shortsOn } from "./state";
 export function focusPlayField(root: HTMLElement, field: string): boolean {
   const target = [...root.querySelectorAll<HTMLElement>("[data-play-field]")].find(
     (element) => element.dataset.playField === field,
@@ -44,6 +44,14 @@ export function playFieldTarget(
               form.provided.reference.file === undefined)
           ? "provided.reference"
           : `provided.${slot ?? "audio"}`;
+    const bed = form.provided.ambientBed;
+    if (
+      slot === undefined &&
+      ambientUploadOn(form) &&
+      bed !== undefined &&
+      (bed.error !== undefined || bed.file === undefined)
+    )
+      target = "ambientBed.file";
   }
   const image = /^imagePrompts\.(\d+)\.(.+)$/.exec(field);
   if (image) {
@@ -87,6 +95,7 @@ export function playFieldTarget(
             "chunking",
             "images",
             "imagePrompts",
+            "imageScale",
             "provided.images",
             "thumbnailPrompt",
             "provided.thumbnail",
@@ -103,6 +112,7 @@ export function playFieldTarget(
             "descriptionPrompt",
             "shorts",
             "videoEdit",
+            "ambientBed",
           ])
         ? "outputs"
         : "review";

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { pieceKinds, pieceStates } from "../../kernel/runner/piece-repo.js";
 import { runConfigSchema } from "../admission/schema.js";
+import { scaledImagesMax } from "../images/scale.js";
 import { outputSchema } from "../storage/schema.js";
 
 const id = z
@@ -36,7 +37,8 @@ export const revisionContentSchema = z
         reference: id.optional(),
       })
       .strict(),
-    imageOrder: z.array(id).max(60),
+    // The most any project may hold; `rebuild/recipe-validation.ts` holds each to its own cap.
+    imageOrder: z.array(id).max(scaledImagesMax),
     imageDefinitions: z.record(
       id,
       z
@@ -96,6 +98,7 @@ export const revisionContentSchema = z
           .strict(),
       )
       .optional(),
+    ambientBed: id.optional(),
   })
   .strict();
 export const revisionEditSchema = z

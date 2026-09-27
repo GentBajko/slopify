@@ -200,7 +200,12 @@ export function ImagesRail({
   onRemoveFile,
   onReattachFile,
   rawNumbers,
-}: RailProps & { readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"] }) {
+  more,
+}: RailProps & {
+  readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"];
+  // Controls shown under the prompts while images are generated: more images for long videos.
+  readonly more?: ReactNode;
+}) {
   return (
     <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
       <SourceSwitch kind="images" form={form} update={update} />
@@ -231,6 +236,7 @@ export function ImagesRail({
               onRemoveFile={onRemoveFile}
               {...(onReattachFile ? { onReattachFile } : {})}
             />
+            {more}
           </>
         ) : null}
       </div>

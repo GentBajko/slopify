@@ -19,6 +19,7 @@ import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
 import type { RecordEvent } from "../telemetry/model.js";
+import { imageCountsOf } from "./scale.js";
 
 // Every ticked image prompt is sent Number times as independent parallel calls, each one a
 // resumable piece so a failure re-runs only what is missing, and each image appears on the page
@@ -117,6 +118,8 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
     return existing;
   }
   const planned: StagePiece[] = [];
+  // Each prompt's Number, or more when the run scales its images (`scale.ts`).
+  const counts = imageCountsOf(config);
   for (const [at, picked] of config.imagePrompts.entries()) {
     // `slices/library/slots.ts` names the rendered body after the draft field that picked
     // it, so the run carries the substituted text under this key.
@@ -126,7 +129,7 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
         `Slopify hit an internal error (the image prompt ${picked.name} was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
       );
     }
-    for (let send = 1; send <= picked.number; send += 1) {
+    for (let send = 1; send <= (counts[at] ?? picked.number); send += 1) {
       planned.push({
         id: deps.ids.next(),
         stageId: context.stage.id,

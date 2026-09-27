@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
+import { ImageScaleControl } from "./image-scale";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -74,6 +75,7 @@ export function OutputsSection(
       />
       <ImagesRail
         {...props}
+        more={<ImageScaleControl document={document} problem={problem} onEdit={session.edit} />}
         rawNumbers={{
           values: document.form.imagePrompts,
           onChange: (name, number) =>

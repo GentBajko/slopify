@@ -12,6 +12,17 @@ import {
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
+import {
+  defaultExpectedWords,
+  everyMinutesMax,
+  everyMinutesMin,
+  expectedWordsMax,
+  type ImageScale,
+  imagesPerHourMax,
+  imagesPerHourMin,
+  perHourFromMinutes,
+  wordCount,
+} from "../images/scale.js";
 import type { Entry } from "../library/model.js";
 import { reviewSettingsFromForm } from "../reviews/model.js";
 import { stageMakesItems } from "../reviews/rules.js";
@@ -22,6 +33,7 @@ import {
   shortsSettingsProblems,
 } from "../shorts/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
+import { ambientBedOfForm, ambientBedProblems } from "../video/ambient-bed.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
 
 // Said where the control is, since the music sits in a closed disclosure on the Export rail.
@@ -33,6 +45,14 @@ const musicMessages = {
 } as const;
 function pickMusic(id: string | undefined): { readonly shortsMusic?: string } {
   return id === undefined ? {} : { shortsMusic: id };
+}
+const bedWhere = "under Outputs → Export → Ambient sound";
+const bedMessages = {
+  uploading: `The ambient sound's audio file is still uploading, so the run can't start yet. Wait for it to finish ${bedWhere}.`,
+  missing: `The ambient sound's audio file is missing (it was never chosen, was not uploaded again after the draft was copied, or the upload failed). Choose the file ${bedWhere}, or pick Rain, Fireplace or Wind instead.`,
+} as const;
+function pickBed(id: string | undefined): { readonly ambientBed?: string } {
+  return id === undefined ? {} : { ambientBed: id };
 }
 
 export function toAdmissionDraft(input: {
@@ -161,6 +181,19 @@ export function toAdmissionDraft(input: {
   if (reviewed?.retriesProblem !== undefined)
     fields.push({ field: "reviews.retries", message: reviewed.retriesProblem });
   const reviews = reviewed?.settings;
+  // The ambient bed lies under the long video's narration, so a bed left set with either Off
+  // asks for nothing. Refused in the rule's words, so Play and the run say the same sentence.
+  const bed =
+    sources.video === "generate" && sources.audio !== "off"
+      ? ambientBedOfForm(form.ambientBed)
+      : undefined;
+  const bedProblems = bed === undefined ? [] : ambientBedProblems(bed);
+  for (const problem of bedProblems)
+    fields.push({
+      field: `ambientBed.${problem.field}`,
+      message: `${problem.message} Change it ${bedWhere}.`,
+    });
+  const bedRefused = bedProblems.length;
   const draft: RunDraft = {
     ...(reviews === undefined ? {} : { reviews }),
     ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
@@ -225,6 +258,9 @@ export function toAdmissionDraft(input: {
             number: number(prompt.number, `imagePrompts.${index}.number`, numberPerPromptMax),
           }))
         : [],
+    ...(sources.images === "generate" && form.imageScale !== undefined
+      ? { imageScale: imageScaleOf(input.document, fields) }
+      : {}),
     thumbnailPrompt: ["from_prompt", "prompt_by_llm"].includes(sources.thumbnail)
       ? form.thumbnailPrompt
       : undefined,
@@ -257,6 +293,10 @@ export function toAdmissionDraft(input: {
       // the draft for when Shorts is turned back on, and never reaches the run.
       ...(shortsOn && form.provided.shortsMusic
         ? pickMusic(file(form.provided.shortsMusic, "audio", "shorts.music", musicMessages))
+        : {}),
+      // Only while the bed plays the user's own file; kept on the draft otherwise.
+      ...(bed?.source === "upload"
+        ? pickBed(file(form.provided.ambientBed ?? null, "audio", "ambientBed.file", bedMessages))
         : {}),
     },
     chunking: {
@@ -296,6 +336,9 @@ export function toAdmissionDraft(input: {
     ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
     // Spoken by the speakers only while narration is generated.
     ...(form.voices !== undefined && sources.audio === "generate" ? { voices: form.voices } : {}),
+    // Under the long video's narration only; a number already refused above leaves it out
+    // rather than saved as NaN.
+    ...(bed !== undefined && bedRefused === 0 ? { ambientBed: bed } : {}),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",
@@ -315,4 +358,41 @@ export function toAdmissionDraft(input: {
   return fields.length || !parsed.success
     ? { ok: false, fields }
     : { ok: true, draft: parsed.data };
+}
+
+// More images for long videos, from what Play's control holds: the rate as images per hour,
+// and the narration length it is planned for, which is the provided article's own words or
+// else Review's expected words (`images/scale.ts`).
+function imageScaleOf(document: PlayDraftDocument, fields: FieldError[]): ImageScale {
+  const { form } = document;
+  const typed = form.imageScale?.value.trim() ?? "";
+  const value = typed === "" ? Number.NaN : Number(typed);
+  const minutes = form.imageScale?.every !== "hour";
+  const inRange = minutes
+    ? value >= everyMinutesMin && value <= everyMinutesMax
+    : value >= imagesPerHourMin && value <= imagesPerHourMax;
+  if (!inRange)
+    fields.push({
+      field: "imageScale.value",
+      message: minutes
+        ? `Enter a number of minutes between ${String(everyMinutesMin)} and ${String(everyMinutesMax)} under Images → More images for long videos.`
+        : `Enter a number of images per hour between ${String(imagesPerHourMin)} and ${String(imagesPerHourMax)} under Images → More images for long videos.`,
+    });
+  const perHour = !inRange
+    ? imagesPerHourMin
+    : minutes
+      ? perHourFromMinutes(value)
+      : Math.round(value * 10000) / 10000;
+  if (form.sources.article === "provide")
+    return { perHour, words: Math.max(1, wordCount(form.provided.article)) };
+  // Review checks the expected words on its own (`review-inputs.ts`); a draft whose figure is
+  // not a whole number yet plans for Play's starting one.
+  const expected = Number(document.expectedWords.trim());
+  return {
+    perHour,
+    words:
+      Number.isInteger(expected) && expected >= 1 && expected <= expectedWordsMax
+        ? expected
+        : defaultExpectedWords,
+  };
 }

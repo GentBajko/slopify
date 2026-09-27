@@ -6,6 +6,7 @@ import { detectSlots } from "../admission/substitute.js";
 import { projectChannelId } from "../channels/repo.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
 import { documentThemeOf } from "../document/model.js";
+import { imageScaleForm } from "../images/scale.js";
 import type { PromptKind } from "../library/model.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
@@ -14,6 +15,7 @@ import { reviewSettingsForm } from "../reviews/model.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { shortsExtrasForm } from "../shorts/model.js";
+import { ambientBedFormOf } from "../video/ambient-bed.js";
 import { usesScriptPrompt } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { createTemplate, readTemplate } from "./service.js";
@@ -102,7 +104,11 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     return definition === undefined ? [] : [definition];
   });
   const imagePrompts =
-    config.sources.images === "generate" && definitions.length > 0
+    // A project that scales its images with the narration's length keeps its ticked prompts
+    // and the setting, rather than one prompt per image of the count it planned.
+    config.sources.images === "generate" &&
+    definitions.length > 0 &&
+    config.imageScale === undefined
       ? definitions.map((definition, index) => {
           const key = definition.templateKey ?? "";
           const original = revision.content.promptTemplates[key];
@@ -168,6 +174,9 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     ...(config.shorts?.enabled === true && revision.content.shortsMusic !== undefined
       ? { shortsMusic: attachment("Music from project") }
       : {}),
+    ...(config.ambientBed?.source === "upload" && revision.content.ambientBed !== undefined
+      ? { ambientBed: attachment("Ambient sound from project") }
+      : {}),
   };
   return {
     schemaVersion: 1,
@@ -223,7 +232,11 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
       ...(config.reviews === undefined ? {} : { reviews: reviewSettingsForm(config.reviews) }),
       ...(config.voices === undefined ? {} : { voices: config.voices }),
+      ...(config.ambientBed === undefined
+        ? {}
+        : { ambientBed: ambientBedFormOf(config.ambientBed) }),
       imagePrompts,
+      ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",
       outro: config.outro?.name ?? "",
@@ -250,7 +263,8 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     },
     section: "content",
     variants: [],
-    expectedWords: "1500",
+    // The length a project that scales its images planned for, so the template plans the same.
+    expectedWords: String(config.imageScale?.words ?? 1500),
     previewText: "Every story begins with a word.",
     fontUpload: null,
   };

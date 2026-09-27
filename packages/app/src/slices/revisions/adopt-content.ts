@@ -2,6 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import type { Project } from "../admission/model.js";
+import { imageCountsOf } from "../images/scale.js";
 import { legacyImageOutput } from "../rebuild/recipe-legacy.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
@@ -87,9 +88,11 @@ export function baselineContent(
     images.length === 0 &&
     imagePieces.length === 0
   ) {
-    for (const [index, prompt] of project.config.imagePrompts.entries()) {
+    // Each prompt's Number, or more when the run scales its images with the narration's
+    // length (`images/scale.ts`). Planned here once, so a retry or a rebuild keeps the count.
+    for (const [index, count] of imageCountsOf(project.config).entries()) {
       const key = `imagePrompts.${index}`;
-      for (let send = 0; send < prompt.number; send += 1) {
+      for (let send = 0; send < count; send += 1) {
         const id = deps.ids.next();
         imageDefinitions[id] = {
           source: "generate",

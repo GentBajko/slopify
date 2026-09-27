@@ -11,6 +11,7 @@ import {
   youtubeDescriptionFields,
 } from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
+import { imagesPerVideoMax } from "../images/scale.js";
 import { reviewFields } from "../reviews/rules.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAnimation } from "../video/edit-settings.js";
@@ -55,8 +56,13 @@ export function validateRecipeInputs(
     (!config.images?.provider.trim() || !config.images.model.trim())
   )
     fields.push({ field: "images", message: "Pick an image provider and model." });
-  if (content.imageOrder.length > 60)
-    fields.push({ field: "content.imageOrder", message: "Keep at most 60 images." });
+  // 60, or more for a project that scales its images with the narration (`images/scale.ts`).
+  const imagesMax = imagesPerVideoMax(config);
+  if (content.imageOrder.length > imagesMax)
+    fields.push({
+      field: "content.imageOrder",
+      message: `Keep at most ${String(imagesMax)} images.`,
+    });
   const chunking = config.chunking;
   const size =
     chunking?.mode === "words"

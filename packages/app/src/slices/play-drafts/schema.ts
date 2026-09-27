@@ -15,6 +15,7 @@ import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
+import { ambientBedSources } from "../video/ambient-bed.js";
 import { voicesSettingsSchema } from "../voices/model.js";
 
 const id = z.uuid();
@@ -117,6 +118,13 @@ export const playDraftFormSchema = z
       .readonly()
       .optional(),
     imagePrompts: z.array(z.object({ name: text, number: text }).strict().readonly()).readonly(),
+    // More images for long videos, as typed: "every [value] minutes" or "[value] per hour".
+    // Absent is off, which is what every draft and template saved before it was.
+    imageScale: z
+      .object({ every: z.enum(["minutes", "hour"]), value: text })
+      .strict()
+      .readonly()
+      .optional(),
     thumbnailPrompt: text,
     intro: text,
     outro: text,
@@ -149,6 +157,18 @@ export const playDraftFormSchema = z
     // Absent on drafts and templates saved before multiple voices: the Narration format. Every
     // number is a pick from a list, so it is kept as the settings themselves.
     voices: voicesSettingsSchema.strict().readonly().optional(),
+    // The ambient bed under the long video (`video/ambient-bed.ts`), numbers as typed. Absent
+    // takes the channel's brand kit's, if any; "none" asks for no bed whatever the channel has.
+    ambientBed: z
+      .object({
+        source: z.enum(["none", ...ambientBedSources]),
+        level: text,
+        fadeIn: text,
+        tail: text,
+      })
+      .strict()
+      .readonly()
+      .optional(),
     values,
     provided: z
       .object({
@@ -162,6 +182,9 @@ export const playDraftFormSchema = z
         // The Shorts step's background music, uploaded as an audio attachment. Absent on
         // drafts and templates saved before Play offered it: no music.
         shortsMusic: file.nullable().optional(),
+        // The ambient bed's own file, an audio attachment; used only while its source is
+        // "upload". Absent on drafts and templates saved before it.
+        ambientBed: file.nullable().optional(),
       })
       .strict()
       .readonly(),
