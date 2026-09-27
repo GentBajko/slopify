@@ -207,7 +207,7 @@ function Music({
       {pending || set ? (
         <p className="flex flex-wrap items-center gap-2 text-small text-ink-2">
           {pending
-            ? "New background music chosen. It is mixed under every short when you save and Resume."
+            ? "New background music chosen. It is mixed under every short after you save and press Remake."
             : "Background music plays quietly under every short and dips while the narrator speaks."}
           <Button type="button" variant="quiet" disabled={disabled} onClick={remove}>
             Remove the music
@@ -307,8 +307,8 @@ function PickedClips({
         </span>
         {again ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-            The moments will be picked again when you save and Resume; clips on the same sentences
-            keep their images.
+            The moments will be picked again after you save and press Remake; clips on the same
+            sentences keep their images.
             <Button
               type="button"
               variant="quiet"
@@ -333,8 +333,8 @@ function PickedClips({
       </div>
       {repicking && !again ? (
         <p className="text-small text-ink-2">
-          These settings pick the moments again when you save and Resume, so the clips below can be
-          adjusted once the new ones are picked.
+          These settings pick the moments again after you save and press Remake, so the clips below
+          can be adjusted once the new ones are picked.
         </p>
       ) : null}
       <ol className="space-y-3">
@@ -500,7 +500,7 @@ function ClipRow({
         ) : null}
         {remade ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-            Short {number} will be made again, with new images, when you save and Resume.
+            Short {number} will be made again, with new images, after you save and press Remake.
             <Button type="button" variant="quiet" onClick={() => onRemake(false)}>
               Keep this short
             </Button>

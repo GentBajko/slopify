@@ -14,11 +14,15 @@ import {
 import { nextAttempt, reviewOutcome } from "../reviews/outcome.js";
 import { latestVerdict, saveVerdict } from "../reviews/repo.js";
 import { parseVerdict, type ReviewMaterial, reviewMessages } from "../reviews/verdict.js";
-import type { RevisionOutputView, RevisionView } from "../revisions/model.js";
+import type { RevisionOutputView } from "../revisions/model.js";
 import { pickedShortsOf } from "../shorts/clips.js";
 import { outputPath } from "../storage/layout.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
-import { exportSnapshot } from "./runtime-export-inputs.js";
+import {
+  type ExportSnapshot,
+  exportSnapshot,
+  revisionTranscript,
+} from "./runtime-export-inputs.js";
 import { savedCatalogue } from "./runtime-plan.js";
 import { publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
@@ -68,8 +72,8 @@ export async function executeReviewRecipe(
       "Slopify hit an internal error (a review step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const [stage, itemKey, , provider, model, thinking, prompt, mode, retries] = values.data;
-  const { view, plan } = exportSnapshot(deps, context, piece);
-  const material = reviewMaterial(deps, context, view, plan.recipes, stage, itemKey, prompt);
+  const snapshot = exportSnapshot(deps, context, piece);
+  const material = reviewMaterial(deps, context, snapshot, stage, itemKey, prompt);
   const previous = latestVerdict(deps.db, context.work.projectId, itemKey);
   const attempt = nextAttempt(previous, material.itemFingerprint);
   const row = deps.db
@@ -132,6 +136,28 @@ export async function executeReviewRecipe(
   return "done";
 }
 
+// What the voice was asked to say, segment by segment, as the word timing matched it: the intro
+// and outro, and the prepared or hand-edited spoken text rather than the article as written.
+// Falls back to the article when those texts can't be read.
+function spokenText(deps: ExportExecutionDeps, snapshot: ExportSnapshot): string {
+  const present = (["intro", "body", "outro"] as const).filter((kind) =>
+    snapshot.view.outputs.some(
+      (one) =>
+        one.selected &&
+        one.available &&
+        one.state === "ready" &&
+        one.output.role === `audio_${kind}`,
+    ),
+  );
+  try {
+    const text = present.map((kind) => revisionTranscript(deps, snapshot, kind)).join("\n\n");
+    if (text.trim() !== "") return text;
+  } catch {
+    // The article below is still a fair reference.
+  }
+  return plainText(snapshot.view.articleMarkdown ?? "");
+}
+
 interface Material {
   readonly request: ReviewMaterial;
   readonly images: readonly { readonly path: string; readonly name: string }[];
@@ -141,12 +167,13 @@ interface Material {
 function reviewMaterial(
   deps: ExportExecutionDeps,
   context: StageContext,
-  view: RevisionView,
-  recipes: ReturnType<typeof exportSnapshot>["plan"]["recipes"],
+  snapshot: ExportSnapshot,
   stage: ReviewStage,
   itemKey: string,
   prompt: string,
 ): Material {
+  const { view } = snapshot;
+  const recipes = snapshot.plan.recipes;
   const config = view.revision.config;
   const output = (workKey: string, role?: string): RevisionOutputView | undefined =>
     view.outputs.find(
@@ -245,7 +272,7 @@ function reviewMaterial(
         request: request([
           {
             label: "Text the narration was read from",
-            text: clip(plainText(view.articleMarkdown ?? "")),
+            text: clip(spokenText(deps, snapshot)),
           },
           { label: "What the timing heard", text: clip(words.map((word) => word.text).join(" ")) },
           {

@@ -160,7 +160,7 @@ it("shows a chunk queued for regeneration and can take it back", async () => {
     screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
   );
   expect(
-    screen.getByText("Narration chunk 1 will be regenerated when you save and Resume."),
+    screen.getByText("Narration chunk 1 will be regenerated after you save and press Remake."),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Keep narration chunk 1" }));
   expect(

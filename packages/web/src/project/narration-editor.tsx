@@ -197,7 +197,7 @@ export function NarrationEditor({
             />
             {edit.regenerate?.includes(chunk.key) ? (
               <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-                Narration chunk {index + 1} will be regenerated when you save and Resume.
+                Narration chunk {index + 1} will be regenerated after you save and press Remake.
                 <Button
                   type="button"
                   variant="quiet"

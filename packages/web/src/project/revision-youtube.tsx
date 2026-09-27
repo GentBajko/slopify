@@ -77,7 +77,7 @@ export function RevisionYoutube({
       {written && edit.config.youtubeDescription === true ? (
         again ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
-            The YouTube description will be written again when you save and Resume.
+            The YouTube description will be written again after you save and press Remake.
             <Button
               type="button"
               variant="quiet"
