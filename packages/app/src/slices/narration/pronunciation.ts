@@ -19,6 +19,11 @@ interface MarkdownNode {
 const ipaAtom =
   "[ˈˌ]?[abdefghijklmnoprstuvwxzæðŋθɑɒɔəɚɛɜɝɡɪɹʃʊʌʒʔɫɾ][\\u0303\\u031a\\u0325\\u0329\\u032a\\u032c\\u032f\\u035c\\u0361ʰʲʷ]*[ːˑ]?";
 const ipaSymbols = new RegExp(`^(?:${ipaAtom})+(?:\\.(?:${ipaAtom})+)*$`, "u");
+// Another language's glossary needs that language's sounds: the full IPA consonant and vowel
+// charts (ç, ʁ, ø, y, ɲ, ʎ, x, β, …) and its diacritics, still never ARPAbet or tags.
+const worldAtom =
+  "[ˈˌ]?[a-zæçðøħŋœɐɑɒɓɔɕɖɗɘəɚɛɜɝɞɟɠɡɢɣɤɥɦɧɨɪɫɬɭɮɯɰɱɲɳɴɵɶɸɹɺɻɽɾʀʁʂʃʄʈʉʊʋʌʍʎʏʐʑʒʔʕʙʛʜʝʟʡʢβθχ][\\u0300-\\u036fʰʱʲʷʼˠˤ˞]*[ːˑ]?";
+const worldSymbols = new RegExp(`^(?:${worldAtom})+(?:\\.(?:${worldAtom})+)*$`, "u");
 
 function textOf(node: MarkdownNode): string {
   if (node.type === "break") return "\n";
@@ -62,7 +67,15 @@ function termIdentity(term: string): string {
     return match.test(folded) ? folded : match.test(lower) ? lower : character;
   }).join("");
 }
-export function parsePronunciationGlossary(markdown: string): GlossaryResult {
+// `language` is the project's (`kernel/ports/languages.ts`): absent or English accepts the
+// standard-English IPA Inworld asks for, as it always did; any other accepts full IPA.
+export function parsePronunciationGlossary(
+  markdown: string,
+  language?: string | undefined,
+): GlossaryResult {
+  const english = language === undefined || language === "en";
+  const symbols = english ? ipaSymbols : worldSymbols;
+  const kind = english ? "standard-English IPA" : "IPA";
   const rows = rowsOf(remark().use(remarkGfm).parse(markdown));
   const entries = new Map<string, GlossaryEntry>();
   for (const [index, row] of rows.entries()) {
@@ -79,13 +92,12 @@ export function parsePronunciationGlossary(markdown: string): GlossaryResult {
     )
       return refused(index + 1, "use Term: /IPA/ or a Term | IPA table");
     const notation = /^(\/[^/]+\/(?:\s+\/[^/]+\/)*)(?:\s+[^/]+)?$/u.exec(pronunciation);
-    if (notation?.[1] === undefined)
-      return refused(index + 1, "use slash-delimited standard-English IPA");
+    if (notation?.[1] === undefined) return refused(index + 1, `use slash-delimited ${kind}`);
     const ipa = Array.from(notation[1].matchAll(/\/([^/]+)\//gu)).flatMap((match) =>
       (match[1] ?? "").trim().split(/\s+/u),
     );
-    if (ipa.length === 0 || ipa.some((word) => !ipaSymbols.test(word)))
-      return refused(index + 1, "use standard-English IPA, not ARPAbet or delivery tags");
+    if (ipa.length === 0 || ipa.some((word) => !symbols.test(word)))
+      return refused(index + 1, `use ${kind}, not ARPAbet or delivery tags`);
     if (term.split(" ").length !== ipa.length)
       return refused(index + 1, "supply one IPA word for each written word");
     const key = termIdentity(term);

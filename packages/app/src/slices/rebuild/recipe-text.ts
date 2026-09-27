@@ -282,7 +282,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     ? { ok: true, entries: [] }
     : endMatter === null
       ? null
-      : withShared(parsePronunciationGlossary(endMatter.glossary), config);
+      : withShared(parsePronunciationGlossary(endMatter.glossary, config.language), config);
   const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];

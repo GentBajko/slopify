@@ -178,3 +178,25 @@ describe("article pronunciation glossary", () => {
     ]);
   });
 });
+
+describe("glossaries in other languages", () => {
+  const german = "Pronunciation glossary\n\nMünchen: /ˈmʏnçn̩/\n\nBach: /bax/";
+  it("keeps English to standard-English IPA", () => {
+    expect(parsePronunciationGlossary(german)).toMatchObject({ ok: false });
+    expect(parsePronunciationGlossary(german, "en")).toMatchObject({ ok: false });
+  });
+  it("accepts the language's own sounds when the project is not in English", () => {
+    expect(parsePronunciationGlossary(german, "de")).toEqual({
+      ok: true,
+      entries: [
+        { term: "München", ipa: ["ˈmʏnçn̩"] },
+        { term: "Bach", ipa: ["bax"] },
+      ],
+    });
+    expect(parsePronunciationGlossary("Ñandú: /ɲanˈdu/", "es")).toMatchObject({ ok: true });
+  });
+  it("still refuses ARPAbet and tags, naming IPA", () => {
+    const result = parsePronunciationGlossary("Bach: /B AA1 K/", "de");
+    expect(result.ok ? "" : result.reason).toContain("use IPA, not ARPAbet");
+  });
+});
