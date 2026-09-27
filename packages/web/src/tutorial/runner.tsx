@@ -198,7 +198,7 @@ export function TutorialRunner({
     >
       <StepContent step={step.id} output={output} />
       {providers.error || voices.error ? (
-        <p className="text-red">{providers.error?.message ?? voices.error?.message}</p>
+        <p className="text-danger">{providers.error?.message ?? voices.error?.message}</p>
       ) : null}
     </Spotlight>
   );

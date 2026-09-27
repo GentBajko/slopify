@@ -199,7 +199,7 @@ export function RebuildReview({
                 <label className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    className="mt-[3px]"
+                    className="mt-1"
                     disabled={pending}
                     checked={confirmed.includes(key)}
                     onChange={(event) =>
@@ -220,7 +220,7 @@ export function RebuildReview({
                 <label className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    className="mt-[3px]"
+                    className="mt-1"
                     disabled={pending}
                     checked={unknown}
                     onChange={(event) => setUnknown(event.target.checked)}

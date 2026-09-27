@@ -63,7 +63,7 @@ export function SubtitlePreview({
   };
   return (
     <figure className="min-w-0 self-start">
-      <div className="mb-2 flex items-center justify-between gap-2 text-label text-ink2">
+      <div className="mb-2 flex items-center justify-between gap-2 text-label text-ink-2">
         <span>Style preview</span>
         <span>{format}</span>
       </div>
@@ -93,7 +93,7 @@ export function SubtitlePreview({
           </span>
         ) : null}
       </div>
-      <figcaption className="mt-2 text-label text-ink3">
+      <figcaption className="mt-2 text-label text-ink-3">
         {frame.width} × {frame.height} · Preview at reduced scale.
         {failed ? " Font preview unavailable; showing a fallback." : ""}
       </figcaption>

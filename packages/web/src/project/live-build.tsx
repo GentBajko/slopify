@@ -3,10 +3,10 @@ import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { List, ListRow } from "@/components/kit/list-row";
 import { type Aspect, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { StageLamp } from "@/components/lamp";
-import { Rail, RailGroup } from "@/components/rail";
 import { peaksKey, readPeaks } from "@/onboarding/api";
 import { frameAspect } from "./body-images.js";
 import { LiveWriting } from "./live-writing.js";
@@ -41,16 +41,17 @@ export function LiveBuild({
     <div className="grid min-w-0 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
       <div className="min-w-0">
         <SectionHead title="Steps" />
-        <RailGroup>
+        <List label="Steps">
           {stages
             .filter((stage) => stage.state !== "skipped")
             .map((stage) => (
-              <Rail key={stage.id} className="justify-between">
-                <span className="font-semibold">{stageNames[stage.kind]}</span>
-                <StageLamp label={stageNames[stage.kind]} state={stage.state} />
-              </Rail>
+              <ListRow
+                key={stage.id}
+                title={stageNames[stage.kind]}
+                actions={<StageLamp label={stageNames[stage.kind]} state={stage.state} />}
+              />
             ))}
-        </RailGroup>
+        </List>
       </div>
       <div className="min-w-0">
         <SectionHead title="Article" />

@@ -29,16 +29,16 @@ export function ContentSection(
             <details className="min-w-0 flex-1">
               <summary
                 data-play-field="articlePrompt.preview"
-                className="cursor-pointer py-2 text-small text-run-text"
+                className="cursor-pointer py-2 text-small text-accent-ink"
               >
                 View prompt
               </summary>
-              <pre className="whitespace-pre-wrap break-words py-3 font-sans text-body text-ink2">
+              <pre className="whitespace-pre-wrap break-words py-3 font-sans text-body text-ink-2">
                 {prompt.body}
               </pre>
             </details>
           ) : (
-            <p className="text-small text-ink2">
+            <p className="text-small text-ink-2">
               {props.prompts.some((item) => item.kind === articleKind(form))
                 ? `Choose a saved ${articleKind(form)} prompt.`
                 : `No ${articleKind(form)} prompts saved. Create a prompt to begin.`}
@@ -49,7 +49,7 @@ export function ContentSection(
           </Button>
         </div>
       ) : (
-        <p className="py-3 text-small text-ink3">
+        <p className="py-3 text-small text-ink-3">
           {form.provided.article.trim() ? form.provided.article.trim().split(/\s+/).length : 0}{" "}
           words · {form.provided.article.length} characters
         </p>
@@ -91,7 +91,7 @@ export function ContentSection(
         </section>
       ) : null}
       {form.sources.article === "provide" ? (
-        <p className="py-4 text-small text-ink3">
+        <p className="py-4 text-small text-ink-3">
           Research is Off because the article is provided.
         </p>
       ) : (

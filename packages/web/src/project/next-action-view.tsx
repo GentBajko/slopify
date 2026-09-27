@@ -6,9 +6,11 @@ import { type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button, buttonClass } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
+import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { NextAction as NextActionCard } from "@/components/kit/next-action";
 import { sentence } from "@/http";
+import { shortcuts } from "@/lib/shortcuts";
 import { copySample } from "@/onboarding/api";
 import { keys } from "@/queries";
 import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
@@ -222,6 +224,9 @@ function ActionButton({
         className={className}
         disabled={state.pending}
         disabledReason="Working on the last press"
+        aria-keyshortcuts={
+          variant === "primary" ? ariaKeyShortcuts(shortcuts.nextAction) : undefined
+        }
         onClick={() => (intent.kind === "soften" ? setSoftening(true) : state.run(intent))}
       >
         {label}

@@ -11,6 +11,8 @@ import { Workspace } from "@/components/kit/layout";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { Lamp, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { intents, useIntent } from "@/lib/intents";
+import { shortcuts } from "@/lib/shortcuts";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
@@ -174,8 +176,31 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     group: "This project",
     context: title,
     keywords: ["next", "continue", "resume", "approve", "retry"],
-    run: () => (intent === undefined ? undefined : next.run(intent.intent)),
+    shortcut: shortcuts.nextAction,
+    run: () => {
+      if (intent === undefined)
+        notify("This project has no next action right now: nothing waits on you.", "info");
+      // Softening is charged and asks first, which only its button does.
+      else if (intent.intent.kind === "soften")
+        notify("Soften and retry asks first: press it in the Next action panel on the right.");
+      else next.run(intent.intent);
+    },
   });
+  // "Regenerate image 3 in Tiamat" run from another screen opens the Images section; the
+  // images body then asks to regenerate the image (`project/regenerate-by-number.tsx`).
+  useIntent(
+    intents.showImages(projectId),
+    () => {
+      const stage = project.data?.stages.find((one) => one.kind === "images");
+      if (stage === undefined || stage.state === "skipped")
+        notify(
+          `${title} makes no slideshow images, so there is no image to regenerate. To add them, open Settings in this project and choose how its images are made.`,
+          "error",
+        );
+      else setChosen("images");
+    },
+    project.data !== undefined,
+  );
   useCommand({
     id: "project.pause",
     title: summary?.status === "paused" ? "Continue the run" : "Pause the run",

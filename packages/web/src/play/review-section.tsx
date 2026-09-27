@@ -35,7 +35,7 @@ export function ReviewSection({
         estimate and the Play key stay in the right rail.
       </p>
       {errors.length ? (
-        <ul aria-label="Setup errors" className="text-small text-red">
+        <ul aria-label="Setup errors" className="text-small text-danger">
           {errors.map((error) => (
             <li key={`${error.field}-${error.message}`}>
               <Button variant="ghost" onClick={() => onReveal(error.field)}>
@@ -65,14 +65,14 @@ export function ReviewSection({
                 ) : null}
                 {Object.entries(run.rendered).map(([name, text]) => (
                   <div key={name} className="mt-3">
-                    <h5 className="text-small text-ink2">{name}</h5>
+                    <h5 className="text-small text-ink-2">{name}</h5>
                     <p className="whitespace-pre-wrap break-words text-body">{text}</p>
                   </div>
                 ))}
               </div>
             ))
           ) : (
-            <p className="mt-3 text-small text-ink2">
+            <p className="mt-3 text-small text-ink-2">
               Refresh review to read the exact resolved inputs.
             </p>
           )}

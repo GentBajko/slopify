@@ -3,7 +3,6 @@ import type { Output } from "@app/slices/storage/model.js";
 import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Rule } from "@/components/kit/layout";
 import {
@@ -22,6 +21,7 @@ import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
 import { useOutdated, useOutputChange } from "./output-change.js";
 import { DownloadLink } from "./parts.js";
+import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
@@ -50,6 +50,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
     )
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
   const shown = [...all, ...cards];
+  const regenerate = useRegenerateByNumber(project, all, cards, actions, busy);
   const files = useOutputMediaList(shown);
   const [open, setOpen] = useState<number | null>(null);
   // The pictures the lightbox pages through, and the output behind each, for its actions.
@@ -103,6 +104,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
     .join(" · ");
   return (
     <>
+      {regenerate}
       {reference}
       {reference === null || (thumbnail === null && stage.state === "skipped") ? null : (
         <Rule className="m-0" />
@@ -491,14 +493,6 @@ function ImageTile({
   const name = card ? `on-screen card${number}` : `image${number}`;
   const change = useOutputChange(image, actions, busy);
   const outdated = useOutdated(image);
-  // Every image is a palette command too: "Regenerate image 4".
-  useCommand({
-    id: `project.image.${image.id}`,
-    title: `Regenerate ${name}`,
-    group: "This project",
-    keywords: ["image", "redraw", "remake", image.meta.promptName ?? ""],
-    run: () => change.act("regenerate-image"),
-  });
   const flagged = review !== undefined && !review.passed && review.action === null;
   const copy =
     change.asking === undefined

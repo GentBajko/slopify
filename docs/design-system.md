@@ -28,12 +28,20 @@ writing `data-theme` on the document element (`components/theme.tsx`). The light
 written twice in `index.css` (media query and attribute); `styles/tokens.test.ts` keeps the two
 copies identical.
 
-**Deprecated 2.x names** (`bg`, `panel`, `panel2`, `line2`, `ink2`, `ink3`, `red`, `amber`,
-`lamp-*`, `run-text`, `done`, `accent-edge`, `text-row`, `text-title`, `rounded-panel`, the
-`engraved` utility) are aliases onto the 3.0 tokens so screens that have not been redesigned
-keep rendering. Don't use them in new code; the screen redesign removes their last uses and
-then the aliases. `accent-ink` changed meaning: in 3.0 it is accent-coloured text; text on an
+The 2.x names (`bg`, `panel`, `panel2`, `line2`, `ink2`, `ink3`, `red`, `amber`, `lamp-*`,
+`run-text`, `done`, `accent-edge`, `text-row`, `text-title`, `rounded-panel`, `--color-shadow`)
+are gone; `styles/tokens.test.ts` fails if one is defined again. Only the `engraved` utility is
+left, deprecated in favour of `.sl-kicker`. `accent-ink` is accent-coloured text; text on an
 accent fill is `on-accent`.
+
+**slopify.stream uses the same tokens.** `packages/site/public/styles.css` names them without
+Tailwind's namespace (`--ground`, `--ink-2`, `--radius-media`, `--space-4`), and
+`packages/site/tokens.test.js` fails when a value there differs from `index.css`, dark or
+light. Change a token in `index.css` first, then copy it to the site.
+
+**One grid.** Spacing is the scale: `--space-1` to `--space-8`, or Tailwind's numbered steps
+(`p-3`, `gap-2`, `mb-1`). An arbitrary pixel spacing (`p-[18px]`, `gap-[6px]`) outside
+`components/kit` fails `styles/grid.test.ts`.
 
 The 2.x `components/ui/button.tsx` and `ui/dialog.tsx` now render the kit's classes (outline
 and accent become secondary, ghost becomes quiet, danger becomes destructive, play becomes the
@@ -75,8 +83,38 @@ useCommand({
 });
 ```
 
-Matching is fuzzy (letters in order, word starts and runs score higher). Arrow keys move,
-Enter runs, Esc closes; focus stays in the palette while it is open.
+Matching is fuzzy (letters in order, word starts and runs score higher). Several words match
+across the title, the context and the keywords in any order, so "tiamat regenerate image 3"
+finds "Regenerate image 3" in the project Tiamat. A `numbered` command takes the number typed
+with it ("Regenerate image 3", handed to `run(3)`); a `searchOnly` command waits until
+something is typed. Arrow keys move, Enter runs, Esc closes; focus stays in the palette
+while it is open.
+
+From anywhere (`components/global-commands.tsx`, searched only): "Open ‹project›", "Regenerate
+image N in ‹project›" (opens the project on Images and asks to regenerate that image, as the
+button does), New schedule and Add to calendar. A command that finishes on another screen
+navigates there and leaves an intent that screen takes once loaded (`lib/intents.ts`).
+
+### Keyboard shortcuts
+
+A command's `shortcut` is its label and its binding: the palette's provider runs it when the
+keys are pressed, so the two cannot drift. Keys live in `lib/shortcuts.ts`; the button that
+does the same thing carries `aria-keyshortcuts` (`ariaKeyShortcuts(shortcut)`). Keys without
+Ctrl wait while a field, a textarea or an editable area has focus; Ctrl ones (Cmd on a Mac)
+work from a field too. Nothing fires while the palette or a modal dialog is open. `?` or "Show
+keyboard shortcuts" lists every key that works on the current screen.
+
+| Keys | Does |
+| --- | --- |
+| Ctrl+K | Search or run a command |
+| ? | Show keyboard shortcuts |
+| C | New video |
+| G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings |
+| / | Search the list (Projects, Prompts, Intros and outros) |
+| Shift+N | The project's next action (Soften and retry still asks at its button) |
+| Shift+D | Copy the YouTube description |
+| Ctrl+Enter | Play: review the whole setup |
+| Ctrl+S | Save in a Library editor (prompt, intro or outro, PDF theme) |
 
 ### Shell
 

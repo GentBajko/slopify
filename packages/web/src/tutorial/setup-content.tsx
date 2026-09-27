@@ -25,7 +25,7 @@ export function SetupContent({
             instead. “Installed” means Slopify found the CLI; sign in through that CLI before
             generating. If it is missing, enter its executable path and save to check again.
           </p>
-          <p className="text-ink3">
+          <p className="text-ink-3">
             These are the real Settings controls. The tutorial never reads your key. Skip any step
             you have already handled.
           </p>
