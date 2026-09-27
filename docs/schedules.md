@@ -35,6 +35,23 @@ rules when a schedule is saved: a keyword the template doesn't use, or a topic's
 left as they are until edited. The parser and the checks live in
 `packages/app/src/slices/schedules/topic-list.ts`, shared by the server and the form.
 
+### Changing the queue in place
+
+The picked schedule's detail on **Calendar → Schedules** lists its queued topics under **Queued
+topics**: type a topic in **New topic** and press Enter to add it at the end, edit a topic in its
+field and press Enter (or click away) to rename it, and use the arrows and the cross to move or
+remove it. Each change is saved at once and its notice carries **Undo**. Only the queue changes
+(`PUT /api/schedules/:id/topics`, `replaceTopics` in `slices/schedules/topics.ts`): the next run,
+the cadence and every other setting stay as they are, and a topic's own keyword values travel
+with it. A new or renamed topic is checked against the template like a saved form; one already
+queued is not checked again. A schedule that changed meanwhile (a run just took a topic) refuses
+the change and the list shows the latest. **Edit** keeps the full form for the table and YAML ways
+and for a topic's own keyword values.
+
+The every-run keywords in the form are the same keyword list Play, Edit project and templates
+draw, each with the line saying what it feeds ("Feeds Project title · Article"), read from the
+template's saved prompts.
+
 ## Topics that find themselves
 
 Under **Edit → Topic generation** a schedule can ask an LLM for its next topics:

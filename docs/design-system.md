@@ -103,7 +103,8 @@ outdated outputs, then the views that replace the main column (Settings, Checkpo
 "1 held", History). The right rail has the next action, the run's steps with their times and
 one detail line each, and the cost so far with each CLI plan's share. Below 1180px the rails
 sit above the column; on phones the section rail scrolls sideways as tabs and only the next
-action stays above it.
+action stays above it. The page opens where the next action points, else on the stage the run
+is at; a finished video whose YouTube description is written opens on YouTube.
 
 Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox; the video plays
 in the Player; shorts are 9:16 players in their own grid; review verdicts are badges on the
@@ -168,6 +169,24 @@ calls, money, time, disk), in the Voice below. One thing has one id, reused wher
   screens with fixture data, open every section, and fail on any labelled control whose
   nearest `data-help-scope` has no info button. Self-explanatory controls (search boxes, row
   checkboxes) go in an explicit allowlist with a reason.
+
+### Fewer clicks
+
+Every common task is counted in clicks from the screen it starts on to done, and
+`packages/web/src/click-budget.test.tsx` fails when one goes over its budget. A click is a press
+on a button, link, row or field (focusing a field to type is one; typing and Enter are not);
+picking from a select is two. Change a value where it is shown when that is safe and undoable
+(the change saves at once and its notice carries Undo); keep menus for the rare actions.
+
+| Task | Before | Now | Budget |
+| --- | --- | --- | --- |
+| Queue a video (Play: template, topic, Start) | 6 in 2.5 (Library → Templates → Apply to Play, the topic, Review and start, Start run) | 4 | 4 |
+| Regenerate an image (project → Images → Regenerate → confirm) | 3 in 2.5 | 3 | 3 |
+| Copy the description (project → Copy description) | 2 in 3.0 before this (YouTube, then Copy) | 1: a finished video with its description opens on YouTube | 1 |
+| Edit a prompt (Library → Edit → change the text → Save) | 3 in 2.5 | 3 | 3 |
+| Change a schedule's topics | 3 (Edit, the topics field, Save changes; measured in the test) | 1 (New topic, type, Enter) | 1 |
+
+The regenerate confirmation stays: it spends money on a paid model and cannot be undone.
 
 ## Rules in short
 
