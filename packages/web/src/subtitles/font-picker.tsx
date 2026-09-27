@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useRef } from "react";
 import { useApp } from "@/app-context";
+import { Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { type FontSummary, fontsKey, listFonts, uploadFont } from "./api";
@@ -81,13 +82,13 @@ function FontPickerFields({
             <Label htmlFor={id}>Subtitle font</Label>
             <InfoTip id="project.subtitles.font" className="-my-1" />
           </div>
-          <select
+          <Select
             id={id}
             data-play-field="subtitles.fontId"
             value={value}
             disabled={uploading}
             onChange={(event) => onPick(event.target.value)}
-            className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+            className="text-small"
           >
             {!listed.some((font) => font.id === "default") ? (
               <option value="default">Default font · bundled</option>
@@ -98,7 +99,7 @@ function FontPickerFields({
                 {font.name} · {font.source}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="min-w-0 basis-full">
           <Label htmlFor={uploadId} className="mb-1">
@@ -110,7 +111,7 @@ function FontPickerFields({
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
             disabled={uploading}
-            className="w-full text-small text-ink2 file:mr-2 file:rounded-control file:border file:border-line2 file:bg-panel2 file:px-2 file:py-1 file:text-ink"
+            className="w-full text-small text-ink-2 file:mr-2 file:rounded-control file:border file:border-line-strong file:bg-sunken file:px-2 file:py-1 file:text-ink"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
@@ -120,12 +121,12 @@ function FontPickerFields({
         </div>
       </div>
       {uploading ? (
-        <p role="status" className="text-small text-ink2">
+        <p role="status" className="text-small text-ink-2">
           Uploading font…
         </p>
       ) : null}
       {upload.error ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {upload.error}
         </p>
       ) : null}
@@ -133,7 +134,7 @@ function FontPickerFields({
         <p role="alert">Saved font is unavailable. Choose another font or upload it again.</p>
       ) : null}
       {fonts.error ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           The font list couldn't be loaded. {fonts.error.message}
         </p>
       ) : null}

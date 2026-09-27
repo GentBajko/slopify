@@ -26,7 +26,7 @@ export function Example({ text }: { readonly text: string }) {
   const [failed, setFailed] = useState(false);
   return (
     <div className="space-y-2">
-      <p className="select-text rounded-control border border-line2 bg-panel2 p-3 text-small leading-relaxed">
+      <p className="select-text rounded-control border border-line-strong bg-raised p-3 text-small leading-relaxed">
         {text}
       </p>
       <Button

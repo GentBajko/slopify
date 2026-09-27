@@ -38,7 +38,7 @@ export function ConfirmDialog({
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{consequence}</DialogDescription>
-        <div className="flex justify-end gap-[10px]">
+        <div className="flex justify-end gap-3">
           <Button type="button" autoFocus onClick={onCancel}>
             {dismiss}
           </Button>

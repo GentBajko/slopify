@@ -31,11 +31,12 @@ import {
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand } from "@/components/kit/command-palette";
 import { Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
+import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -111,6 +112,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     group: "This project",
     context: project.title,
     keywords: ["youtube", "description", "chapters", "clipboard"],
+    shortcut: shortcuts.copyDescription,
     run: () =>
       copyLatest.current.description === undefined
         ? notify("The description has not been written yet.", "info")
@@ -229,6 +231,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             id={`${id}-description`}
             label="Description"
             copy={written ? () => copy(filledDescription.text, "description") : undefined}
+            keyshortcuts={ariaKeyShortcuts(shortcuts.copyDescription)}
             count={
               written
                 ? `${String(filledDescription.text.length)} / ${String(descriptionMaxCharacters)} characters`
@@ -289,9 +292,12 @@ function PartHead({
   copy,
   count,
   over,
+  keyshortcuts,
 }: {
   readonly id: string;
   readonly label: string;
+  // The Copy button's key, as `aria-keyshortcuts`.
+  readonly keyshortcuts?: string | undefined;
   // Undefined until there is text to copy.
   readonly copy: (() => void) | undefined;
   readonly count: string | undefined;
@@ -313,6 +319,7 @@ function PartHead({
         variant="quiet"
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
+        aria-keyshortcuts={keyshortcuts}
         onClick={copy}
       >
         <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
@@ -504,7 +511,7 @@ function Filled({
           <mark
             key={key}
             title={`No link named ${part.name}`}
-            className="rounded-[2px] bg-waiting/25 px-[2px] text-ink"
+            className="rounded-[2px] bg-waiting/25 px-0.5 text-ink"
           >
             {part.raw}
           </mark>
@@ -539,12 +546,12 @@ function TagChips({
   readonly links: readonly ChannelLink[];
 }): ReactElement {
   return (
-    <ul className="flex flex-wrap gap-[6px] whitespace-normal">
+    <ul className="flex flex-wrap gap-2 whitespace-normal">
       {splitTags(text).map((tag, index) => (
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
           key={index}
-          className="rounded-full border border-line bg-raised px-[9px] py-[2px] text-small text-ink"
+          className="rounded-full border border-line bg-raised px-2 py-0.5 text-small text-ink"
         >
           <Filled text={tag} links={links} />
         </li>

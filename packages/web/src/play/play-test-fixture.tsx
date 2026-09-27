@@ -10,6 +10,7 @@ import { act, type RenderResult, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
+import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import { PlayForm } from "@/routes/play";
 import { type Answer, jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
@@ -348,10 +349,13 @@ export async function mountPlay(
     if (captured === undefined) throw new Error("Play is not mounted");
     return captured;
   };
+  // Inside the palette's provider, as in the app: it binds Play's Ctrl+Enter.
   renderRouted(
-    <PlayDraftProvider>
-      <Capture />
-    </PlayDraftProvider>,
+    <CommandPaletteProvider>
+      <PlayDraftProvider>
+        <Capture />
+      </PlayDraftProvider>
+    </CommandPaletteProvider>,
     {
       ...deps,
       api: {

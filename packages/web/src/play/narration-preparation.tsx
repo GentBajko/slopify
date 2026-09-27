@@ -52,7 +52,7 @@ export function NarrationPreparation({
         ))}
       </Picker>
       {issue ? (
-        <p id={`${id}-error`} className="text-small text-red">
+        <p id={`${id}-error`} className="text-small text-danger">
           {issue}
         </p>
       ) : null}

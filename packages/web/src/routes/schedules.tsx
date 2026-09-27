@@ -19,6 +19,7 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { intents, useIntent } from "@/lib/intents";
 import {
   calendarQuery,
   deleteSchedule,
@@ -131,6 +132,19 @@ export function SchedulesRoute(): ReactElement {
     keywords: ["calendar", "recurring"],
     run: startNew,
   });
+  // "New schedule" run from another screen lands here (`components/global-commands.tsx`).
+  useIntent(
+    intents.newSchedule,
+    () => {
+      if (noTemplates)
+        notify(
+          "A schedule runs a project template, and there is none yet. Open a project, choose Save as template, then run New schedule again.",
+          "error",
+        );
+      else startNew();
+    },
+    templates.data !== undefined,
+  );
   const status = error
     ? ({ tone: "error", text: error } as const)
     : schedules.error

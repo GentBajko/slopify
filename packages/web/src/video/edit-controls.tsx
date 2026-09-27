@@ -106,7 +106,7 @@ export function useVideoEditControls({
         ))}
       </Picker>
       {noWordTiming === undefined ? null : (
-        <p id={`${id}-cuts-note`} className="m-0 basis-full text-small text-ink3">
+        <p id={`${id}-cuts-note`} className="m-0 basis-full text-small text-ink-3">
           {noWordTiming}
         </p>
       )}
@@ -114,14 +114,14 @@ export function useVideoEditControls({
   );
 
   const look = (
-    <details className="group min-w-0 rounded-control border border-line2">
+    <details className="group min-w-0 rounded-control border border-line-strong">
       <summary className="flex min-h-10 cursor-pointer items-center gap-3 px-3 text-small max-[1099px]:min-h-11">
         <span className="font-semibold">Look</span>
-        <span className="min-w-0 truncate text-ink3">
+        <span className="min-w-0 truncate text-ink-3">
           {summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
         </span>
       </summary>
-      <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 border-line2 border-t p-3 min-[700px]:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 border-line-strong border-t p-3 min-[700px]:grid-cols-2">
         <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
           <Picker
             id={`${id}-transition`}
@@ -257,9 +257,9 @@ export function useVideoEditControls({
           </Picker>
         </Row>
         {problems.length > 0 ? (
-          <p className="col-span-full text-small text-red">{problems[0]}</p>
+          <p className="col-span-full text-small text-danger">{problems[0]}</p>
         ) : edit.animate !== "off" && models.isSuccess && offered.length === 0 ? (
-          <p className="col-span-full text-label text-ink3">
+          <p className="col-span-full text-label text-ink-3">
             This image provider has no image-to-video models. Choose fal.ai or Replicate for images
             to animate them.
           </p>

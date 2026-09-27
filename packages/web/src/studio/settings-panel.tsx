@@ -157,7 +157,7 @@ function Pairing() {
         <InfoTip id="settings.studio.pairing" className="-my-1" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <code className="sl-code min-w-0 flex-1 basis-[220px] truncate py-[6px] select-all">
+        <code className="sl-code min-w-0 flex-1 basis-[220px] truncate py-2 select-all">
           {pairing?.token ?? "…"}
         </code>
         <Button variant="quiet" disabled={pairing === undefined} onClick={copy}>
