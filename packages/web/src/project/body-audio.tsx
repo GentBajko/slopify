@@ -4,18 +4,20 @@ import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import { Fact, Facts } from "@/components/kit/facts";
 import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { LiveAudio } from "./live-audio.js";
-import { NarrationDownloads } from "./narration-downloads.js";
+import { hasNarrationText, narrationFiles } from "./narration-downloads.js";
 import { NarrationText } from "./narration-text.js";
-import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import { EngravedLabel, MetaLine, StageBody, StageFiles } from "./parts.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration } from "./summary.js";
 
-// Each completed segment keeps its player and download. Historical voice metadata
+// Each completed segment keeps its player; every file (recordings, clean narration, TTS
+// scripts) is in the stage's one Download menu beside its one Open folder. Historical voice metadata
 // describes these files; the separate project controls choose providers for future work.
 const players: readonly {
   readonly role: OutputRole;
@@ -61,15 +63,29 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
         ))
       )}
 
+      <StageFiles files={narrationFiles(mine, landed)} />
       {reports.length === 0 ? null : (
-        <p className="m-0 text-small text-ink-2">
+        <MetaLine>
           {reports
             .map(({ name, report }) =>
               reports.length === 1 ? reportText(report) : `${name}: ${reportText(report)}`,
             )
             .join(" ")}
-        </p>
+        </MetaLine>
       )}
+
+      <Facts label="How it was recorded">
+        {voice === undefined ? null : <Fact label="Voice">{voice}</Fact>}
+        <Fact label="Chunking">{capitalise(chunkingOf(project.config.chunking))}</Fact>
+        {hasNarrationText(mine) ? (
+          <Fact label="Text files">
+            <span className="text-small text-ink-2">
+              Clean narration is the spoken text used for captions. The TTS script adds delivery
+              cues, with a blank line between requests. Uploaded audio has no TTS request.
+            </span>
+          </Fact>
+        ) : null}
+      </Facts>
 
       <ReviewVerdict
         review={reviewFor(reviews, { itemKey: "narration" })}
@@ -77,16 +93,6 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
         busy={busy}
       />
       <NarrationText outputs={mine} />
-      <NarrationDownloads outputs={mine} />
-      <ActionRow>
-        {voice === undefined ? null : (
-          <>
-            <EngravedLabel>Voice</EngravedLabel>
-            <span className="text-small text-ink">{voice}</span>
-          </>
-        )}
-        <span className="text-small text-ink-2">{`Chunking: ${chunkingOf(project.config.chunking)}`}</span>
-      </ActionRow>
     </StageBody>
   );
 }
@@ -106,12 +112,15 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
         src={media?.url}
         className="h-10 w-full max-w-[640px]"
       />
-      <span className="col-span-2 flex items-center gap-3 sm:col-span-1">
-        {length === undefined ? null : <span className="text-ink-2 tabular-nums">{length}</span>}
-        <OutputDownload output={output} />
-      </span>
+      {length === undefined ? null : (
+        <span className="col-start-2 text-ink-2 tabular-nums sm:col-start-auto">{length}</span>
+      )}
     </div>
   );
+}
+
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 // The chunking modes, in the words Play offered the choice in.

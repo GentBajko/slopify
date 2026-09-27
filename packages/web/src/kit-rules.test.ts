@@ -105,6 +105,32 @@ describe("the kit's action rules", () => {
     ).toEqual([]);
   });
 
+  // A stage with several files shows one Download (a menu) and ONE Open folder, never a
+  // folder button per file. StageFiles, DownloadLink and OutputFolder each draw one.
+  it("gives each stage body at most one Open folder", () => {
+    const bodies = screens.filter(({ file }) => /^project\/body-[\w-]+\.tsx$/.test(file));
+    expect(bodies.length).toBeGreaterThan(5);
+    expect(
+      bodies.flatMap(({ file, text }) => {
+        const folders = ["OpenFolder", "OutputFolder", "StageFiles", "DownloadLink"].flatMap(
+          (name) => openingTags(text, name),
+        );
+        return folders.length > 1 ? [`${file}: ${String(folders.length)} folder actions`] : [];
+      }),
+    ).toEqual([]);
+  });
+
+  // A download is a real button: primary when it is the section's main action, else
+  // secondary. A quiet file link reads as grey text in a sentence, which is what a run of
+  // them became.
+  it("never makes a file link quiet", () => {
+    expect(
+      offenders((text) =>
+        openingTags(text, "FileLink").filter((tag) => /\svariant="quiet"/.test(tag)),
+      ),
+    ).toEqual([]);
+  });
+
   it("reads whole tags, arrows and nested braces included", () => {
     expect(openingTags('<a href="x" onClick={() => go({ a: 1 })}>go</a>', "a")).toEqual([
       '<a href="x" onClick={() => go({ a: 1 })}>',

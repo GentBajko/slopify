@@ -43,12 +43,17 @@
     background: var(--color-raised);
     border-color: var(--color-ink-3);
   }
+  /* Quiet and icon buttons are still buttons at rest: a soft fill gives them a button's shape,
+     so a quiet action never reads as grey text in a sentence. The shell's rail, top bar and
+     bottom bar keep their bare icons (they sit on the rail's own surface), and the player,
+     media and lightbox bars paint their own. */
   .sl-btn--quiet {
     color: var(--color-ink-2);
     font-weight: 500;
+    background: var(--btn-soft);
   }
   .sl-btn--quiet:hover {
-    background: var(--color-raised);
+    background: var(--btn-soft-hover);
     color: var(--color-ink);
   }
   .sl-btn--destructive {
@@ -62,10 +67,19 @@
     width: 36px;
     padding: 0;
     color: var(--color-ink-2);
+    background: var(--btn-soft);
   }
   .sl-btn--icon:hover {
-    background: var(--color-raised);
+    background: var(--btn-soft-hover);
     color: var(--color-ink);
+  }
+  .sl-btn {
+    --btn-soft: color-mix(in oklab, var(--color-ink) 8%, transparent);
+    --btn-soft-hover: color-mix(in oklab, var(--color-ink) 15%, transparent);
+  }
+  :where(.sl-app__rail, .sl-rail, .sl-topbar, .sl-bottomnav) .sl-btn {
+    --btn-soft: transparent;
+    --btn-soft-hover: var(--color-raised);
   }
   .sl-btn--small {
     height: 30px;

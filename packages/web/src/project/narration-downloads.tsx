@@ -1,39 +1,46 @@
 import type { Output } from "@app/slices/storage/model.js";
-import type { ReactElement } from "react";
-import { EngravedLabel, OutputDownload } from "./parts";
+import type { StageFile } from "./parts";
 
-export function NarrationDownloads({
-  outputs,
-}: {
-  readonly outputs: readonly Output[];
-}): ReactElement | null {
-  const files = outputs.filter(
-    (output) => output.role === "narration_txt" || output.role === "tts_script",
-  );
-  if (files.length === 0) return null;
-  return (
-    <section aria-label="Narration text downloads" className="space-y-3">
-      {(["intro", "body", "outro"] as const).map((segment) => {
-        const mine = files.filter((output) => output.meta.segment === segment);
-        if (mine.length === 0) return null;
-        const name = segment === "body" ? "Body" : segment === "intro" ? "Intro" : "Outro";
-        return (
-          <div key={segment} className="flex flex-wrap items-center gap-3 text-small">
-            <EngravedLabel>{name}</EngravedLabel>
-            {mine.map((output) => (
-              <OutputDownload
-                key={output.id}
-                output={output}
-                label={`${name} ${output.role === "narration_txt" ? "Clean Narration" : "TTS Script"}`}
-              />
-            ))}
-          </div>
-        );
-      })}
-      <p className="text-small text-ink-3">
-        Clean Narration is the spoken text used for captions. TTS Script includes delivery cues;
-        blank lines separate requests. Uploaded audio has no TTS request.
-      </p>
-    </section>
-  );
+const segments = [
+  { segment: "intro", name: "Intro" },
+  { segment: "body", name: "Body" },
+  { segment: "outro", name: "Outro" },
+] as const;
+
+// "(.mp3)" from the saved file's name, so the menu says what each file is.
+export function extensionOf(output: Output): string {
+  const match = /\.([a-z0-9]+)$/i.exec(output.path);
+  return match === null ? "" : ` (.${(match[1] ?? "").toLowerCase()})`;
+}
+
+// Every narration file in one Download menu, grouped by segment: the recording, then the
+// clean narration (the spoken text the captions use), then the TTS script (with its delivery
+// cues). One list and one Open folder for the stage, never a folder button per file.
+export function narrationFiles(
+  outputs: readonly Output[],
+  audio: readonly { readonly segment: string; readonly output: Output }[] = [],
+): readonly StageFile[] {
+  return segments.flatMap(({ segment, name }) => {
+    const text = (role: "narration_txt" | "tts_script") =>
+      outputs.find((output) => output.role === role && output.meta.segment === segment);
+    const recorded = audio.find((one) => one.segment === segment)?.output;
+    const clean = text("narration_txt");
+    const script = text("tts_script");
+    return [
+      ...(recorded === undefined
+        ? []
+        : [{ output: recorded, label: `${name} narration${extensionOf(recorded)}` }]),
+      ...(clean === undefined
+        ? []
+        : [{ output: clean, label: `${name} clean narration${extensionOf(clean)}` }]),
+      ...(script === undefined
+        ? []
+        : [{ output: script, label: `${name} TTS script${extensionOf(script)}` }]),
+    ];
+  });
+}
+
+// What the text files are, said once beside the Voice and Chunking facts.
+export function hasNarrationText(outputs: readonly Output[]): boolean {
+  return outputs.some((output) => output.role === "narration_txt" || output.role === "tts_script");
 }

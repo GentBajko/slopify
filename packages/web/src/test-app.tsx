@@ -7,7 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import type { RenderResult } from "@testing-library/react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { createApi } from "./api.js";
@@ -222,8 +222,19 @@ export async function openProjectEditor(): Promise<void> {
 
 // One file from a stage's Download menu (project/parts.tsx), opening the menu when it is shut.
 export async function downloadItem(name: string): Promise<HTMLElement> {
-  const open = screen.queryByRole("menuitem", { name });
-  if (open !== null) return open;
-  await userEvent.click(await screen.findByRole("button", { name: "Download" }));
+  // A stage with several files lists them behind its Download button; a stage with one file
+  // downloads it straight away, the file named in the link's tooltip.
+  const found = await waitFor(() => {
+    const shown =
+      screen.queryByRole("menuitem", { name }) ??
+      screen
+        .queryAllByRole("link", { name: /^Download/ })
+        .find((link) => link.getAttribute("title") === name) ??
+      screen.queryByRole("button", { name: "Download" });
+    if (shown === null || shown === undefined) throw new Error(`No download of ${name} is shown.`);
+    return shown;
+  });
+  if (found.tagName === "A") return found;
+  await userEvent.click(found);
   return await screen.findByRole("menuitem", { name });
 }

@@ -131,12 +131,23 @@ it("shows each short as a small vertical player with its title, length, Copy and
   expect(player.closest(".sl-player--portrait")).not.toBeNull();
   expect(within(one).getByText("01:01")).not.toBeNull();
   expect(within(one).getByText("#Rope #Knots #Friction")).not.toBeNull();
-  expect(within(one).getByRole("link", { name: "Download" }).getAttribute("href")).toBe(
+  expect(within(one).getByRole("link", { name: "Download short 1" }).getAttribute("href")).toBe(
     `${testOrigin}/files/p1/revisions/r1/o-short-1`,
+  );
+  // With no full-video link saved, the card marks it as needed rather than showing the raw
+  // placeholder Copy leaves for pasting over.
+  expect(within(one).getByText("Link needed")).not.toBeNull();
+  expect(within(one).queryByText(/PASTE THE FULL VIDEO LINK/)).toBeNull();
+  // The section's own Download is the main action; the card's is a secondary button.
+  expect(within(block).getByRole("link", { name: "Download the short" }).className).toContain(
+    "sl-btn--primary",
+  );
+  expect(within(one).getByRole("link", { name: "Download short 1" }).className).toContain(
+    "sl-btn--secondary",
   );
   // Not rendered yet, and the stage is not running: it says so where the player will be.
   expect(within(two).getByText("Not made yet. It is made with the video.")).not.toBeNull();
-  expect(within(two).queryByRole("link", { name: "Download" })).toBeNull();
+  expect(within(two).queryByRole("link", { name: /^Download/ })).toBeNull();
 
   await userEvent.click(
     within(two).getByRole("button", {
@@ -187,9 +198,9 @@ it("ends the copied description with the project's link to the full video", asyn
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount([pick, first], "done", undefined, { fullVideoLink: "https://youtu.be/rope" });
   const cards = await screen.findAllByRole("listitem");
-  expect(
-    within(cards[0] as HTMLElement).getByText("Watch the full video: https://youtu.be/rope"),
-  ).not.toBeNull();
+  expect(within(cards[0] as HTMLElement).getByText("Watch the full video:")).not.toBeNull();
+  expect(within(cards[0] as HTMLElement).getByText("https://youtu.be/rope")).not.toBeNull();
+  expect(within(cards[0] as HTMLElement).queryByText("Link needed")).toBeNull();
   await userEvent.click(
     screen.getByRole("button", { name: "Copy short 1's title, description and hashtags" }),
   );

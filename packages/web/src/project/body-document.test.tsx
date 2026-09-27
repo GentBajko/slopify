@@ -66,5 +66,6 @@ it("downloads the retained PDF and opens the same record inline in a new tab", a
   expect(open.getAttribute("target")).toBe("_blank");
   expect(open.getAttribute("rel")).toContain("noopener");
   expect(screen.getByRole("button", { name: "Open folder" })).not.toBeNull();
-  expect(screen.getByText("Plain theme")).not.toBeNull();
+  expect(screen.getByText("Theme")).not.toBeNull();
+  expect(screen.getByText("Plain")).not.toBeNull();
 });

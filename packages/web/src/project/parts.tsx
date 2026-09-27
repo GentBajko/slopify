@@ -8,7 +8,7 @@ import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { FileLink } from "@/components/kit/link";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { readText } from "@/http";
@@ -18,7 +18,7 @@ import { OpenFolder } from "./open-folder.js";
 import { useAssetMedia, useOutputMedia } from "./revision-media.js";
 
 // The furniture every stage body is made of: the column a body stacks in, the prose measure,
-// a download link, and the "Show instructions" toggle each stage carries. It sits apart from
+// a stage's download and folder actions, and the "Show instructions" toggle each stage carries. It sits apart from
 // the bodies so none of them has to redraw it.
 
 // A body's column: sections of the page, not a box of its own.
@@ -30,10 +30,6 @@ export function StageBody({
   readonly className?: string;
 }) {
   return <div className={cn("flex min-w-0 flex-col gap-5", className)}>{children}</div>;
-}
-
-export function ActionRow({ children }: { readonly children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-3 text-small">{children}</div>;
 }
 
 export function EngravedLabel({ children }: { readonly children: ReactNode }) {
@@ -169,85 +165,104 @@ export function RefusalLine({
   );
 }
 
-// The server names the file it sends; the anchor only has to ask for it.
+// The server names the file it sends; the anchor only has to ask for it. A download of a
+// whole stage (Images' zip) with its one Open folder beside it: the section's main action
+// unless it has a more important one, so primary by default.
 export function DownloadLink({
   projectId,
   asset,
   label = "Download",
+  variant = "primary",
 }: {
   readonly projectId: string;
   readonly asset: string;
   readonly label?: string;
+  readonly variant?: "primary" | "secondary";
 }) {
   const media = useAssetMedia(projectId, asset);
   if (media === undefined) return null;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
-      <FileLink href={media.url} download variant="quiet" size="small">
+    <>
+      <FileLink href={media.url} download variant={variant}>
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label}
       </FileLink>
-      <OpenFolder projectId={projectId} asset={asset} folder={media.folder} size="small" />
-    </span>
+      <OpenFolder projectId={projectId} asset={asset} folder={media.folder} />
+    </>
   );
 }
 
-export function OutputDownload({
-  output,
-  label,
-}: {
-  readonly output: Output;
-  readonly label?: string;
-}) {
-  const media = useOutputMedia(output);
-  if (media === undefined) return null;
-  return (
-    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
-      <FileLink href={media.url} download variant="quiet" size="small">
-        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-        {label ?? "Download"}
-      </FileLink>
-      <OpenFolder
-        projectId={output.projectId}
-        asset={assetOf(output)}
-        folder={media.folder}
-        size="small"
-      />
-    </span>
-  );
+export interface StageFile {
+  readonly output: Output | undefined;
+  // What the file is, as the menu lists it: "Body narration (.mp3)".
+  readonly label: string;
+}
+
+function present(files: readonly StageFile[]): readonly Output[] {
+  return files.flatMap((file) => (file.output === undefined ? [] : [file.output]));
 }
 
 // A stage's files behind one Download button, so a section with five files shows one
-// control rather than a row of links each with its own Open folder beside it.
+// control rather than a row of links each with its own Open folder beside it. One file is
+// a plain download, no menu in between.
 export function DownloadMenu({
   files,
   label = "Download",
+  variant = "primary",
 }: {
-  readonly files: readonly { readonly output: Output | undefined; readonly label: string }[];
+  readonly files: readonly StageFile[];
   readonly label?: string;
+  // Primary: the stage's main action. Secondary when the section has a more important one.
+  readonly variant?: "primary" | "secondary";
 }) {
-  const present = files.filter(
+  const shown = files.filter(
     (file): file is { readonly output: Output; readonly label: string } =>
       file.output !== undefined,
   );
-  if (present.length === 0) return null;
+  const [only] = shown;
+  if (only === undefined) return null;
+  if (shown.length === 1)
+    return (
+      <SingleDownload output={only.output} label={label} file={only.label} variant={variant} />
+    );
   return (
     // Not modal: an open menu leaves the rest of the page readable and clickable.
     <Menu modal={false}>
       <MenuTrigger asChild>
-        {/* The stage's main action, so it wears the accent. */}
-        <Button variant="primary">
+        <Button variant={variant}>
           <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
           {label}
           <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
         </Button>
       </MenuTrigger>
       <MenuContent>
-        {present.map((file) => (
+        {shown.map((file) => (
           <DownloadItem key={file.output.id} output={file.output} label={file.label} />
         ))}
       </MenuContent>
     </Menu>
+  );
+}
+
+function SingleDownload({
+  output,
+  label,
+  file,
+  variant,
+}: {
+  readonly output: Output;
+  readonly label: string;
+  // What the file is, as its tooltip: "Video (.mp4)".
+  readonly file: string;
+  readonly variant: "primary" | "secondary";
+}) {
+  const media = useOutputMedia(output);
+  if (media === undefined) return null;
+  return (
+    <FileLink href={media.url} download variant={variant} title={file}>
+      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+      {label}
+    </FileLink>
   );
 }
 
@@ -257,6 +272,7 @@ function DownloadItem({ output, label }: { readonly output: Output; readonly lab
   return (
     <MenuItem asChild>
       <a href={media.url} download>
+        <DownloadIcon aria-hidden="true" strokeWidth={1.75} className="size-4 text-ink-2" />
         {label}
       </a>
     </MenuItem>
@@ -268,6 +284,37 @@ export function OutputFolder({ output }: { readonly output: Output | undefined }
   const media = useOutputMedia(output);
   if (output === undefined || media === undefined) return null;
   return <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />;
+}
+
+// A stage's file actions, in their own row apart from any text: one Download (a menu when
+// there are several files), the stage's ONE Open folder, then whatever else the stage does
+// (Copy article, Show instructions) in the order primary, secondary, quiet.
+export function StageFiles({
+  files,
+  label = "Download",
+  variant = "primary",
+  children,
+}: {
+  readonly files: readonly StageFile[];
+  readonly label?: string;
+  readonly variant?: "primary" | "secondary";
+  readonly children?: ReactNode;
+}) {
+  const saved = present(files);
+  if (saved.length === 0 && children === undefined) return null;
+  return (
+    <ButtonRow>
+      <DownloadMenu files={files} label={label} variant={variant} />
+      <OutputFolder output={saved[0]} />
+      {children}
+    </ButtonRow>
+  );
+}
+
+// The quiet line under a row of actions: lengths, formats, what a file measured. Its own
+// line in ink-2, never beside the buttons.
+export function MetaLine({ children }: { readonly children: ReactNode }) {
+  return <p className="m-0 text-small text-ink-2 tabular-nums">{children}</p>;
 }
 
 // One of the project's own files, read as text. Loading and failure are said here so the
@@ -326,7 +373,12 @@ export function Instructions({ output }: { readonly output: Output | undefined }
       >
         {shown ? "Hide instructions" : "Show instructions"}
       </Button>
-      {shown ? <OutputText output={output} as="plain" /> : null}
+      {/* Its own line under the row of actions the toggle sits in. */}
+      {shown ? (
+        <div className="w-full basis-full">
+          <OutputText output={output} as="plain" />
+        </div>
+      ) : null}
     </>
   );
 }

@@ -12,6 +12,7 @@ import { outputsOf } from "./body.js";
 import { DownloadButton, frameAspect, OutputLightboxActions } from "./body-images.js";
 import { confirmationFor } from "./confirmations.js";
 import { useOutputChange } from "./output-change.js";
+import { DownloadMenu, OutputFolder } from "./parts.js";
 import type { Review } from "./review-api.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
@@ -79,6 +80,15 @@ export function ThumbnailPanel({
             : `${String(count)} variants for YouTube's Test & compare`
         }
       >
+        {/* Secondary: the Images section's main action is its Download all, below. */}
+        <DownloadMenu
+          variant="secondary"
+          files={made.map((output) => ({
+            output,
+            label: count === 1 ? "Thumbnail" : `Thumbnail ${String(output.meta.index ?? 1)}`,
+          }))}
+        />
+        <OutputFolder output={made[0]} />
         <SectionMore stages={[stage]} project={project} actions={actions} />
       </SectionHead>
       {/* One thumbnail is a single picture, not a gallery; Test & compare's three are. */}

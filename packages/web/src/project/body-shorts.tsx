@@ -1,17 +1,18 @@
-import { fullVideoLine, shortImageCount, shortUploadText } from "@app/slices/shorts/model.js";
+import { shortImageCount, shortUploadText } from "@app/slices/shorts/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { CopyIcon, DownloadIcon } from "lucide-react";
+import { CopyIcon, DownloadIcon, LinkIcon, RefreshCwIcon } from "lucide-react";
 import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Button, ButtonRow } from "@/components/kit/button";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
+import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { useOutputText } from "./parts.js";
+import { StageFiles, useOutputText } from "./parts.js";
 import type { Review } from "./review-api.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
@@ -72,19 +73,28 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
   };
   return (
     <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`${id}-title`} className="sl-kicker m-0">
-          {clips.length === 0 ? "Shorts" : `${String(clips.length)} shorts · 9:16`}
-        </h3>
+      <h3 id={`${id}-title`} className="sl-kicker m-0">
+        {clips.length === 0
+          ? "Shorts"
+          : `${String(clips.length)} short${clips.length === 1 ? "" : "s"} · 9:16`}
+      </h3>
+      {/* Every short behind one Download, the stage's one Open folder, then picking again. */}
+      <StageFiles
+        files={clips.map((clip) => ({
+          output: videos.find((output) => ofClip(output, clip)),
+          label: `Short ${String(clip.number)}: ${clip.title} (.mp4)`,
+        }))}
+        label={videos.length === 1 ? "Download the short" : "Download"}
+      >
         {editable && clips.length > 0 ? (
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1" {...helpScope}>
             <Button onClick={() => requestEdit({ section: "shorts", change: pickAgain })}>
               Pick different moments
             </Button>
             <InfoTip id="project.shorts.pick-again" />
           </span>
         ) : null}
-      </div>
+      </StageFiles>
       {clips.length === 0 ? (
         <p className="m-0 text-small text-ink-2">
           {stage.state === "running"
@@ -103,7 +113,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
               stills={currentShorts(own, "short_image", clips)
                 .filter((output) => ofClip(output, clip))
                 .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
-              link={fullVideoLine(settings?.fullVideoLink)}
+              link={settings?.fullVideoLink}
               wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
               state={stage.state}
               failed={failedHere(stage.failureReason, clip.number)}
@@ -149,7 +159,7 @@ function ShortCard({
   readonly wanted: number;
   readonly state: BodyProps["stage"]["state"];
   readonly failed: boolean;
-  readonly link: string;
+  readonly link: string | undefined;
   readonly onCopy: () => void;
   readonly onRemake?: (() => void) | undefined;
 }) {
@@ -185,12 +195,31 @@ function ShortCard({
       ) : (
         <MediaFrame alt={`Short ${String(clip.number)}`} aspect="portrait" generating={progress} />
       )}
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <h4 id={`${id}-title`} className="min-w-0 break-words text-small font-semibold text-ink">
-          {clip.title}
-        </h4>
+      <h4 id={`${id}-title`} className="m-0 min-w-0 break-words text-small font-semibold text-ink">
+        {clip.title}
+      </h4>
+      <p className="m-0 text-label text-ink-2 tabular-nums">
+        {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
+      </p>
+      <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
+      <FullVideoLine link={link} />
+      <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
+      <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
+      {/* Its own row under the text. The section's Download is the lime one, so these are
+          secondary; the folder is the stage's one Open folder, above. */}
+      <ButtonRow className="mt-1">
+        {video !== undefined && media !== undefined ? (
+          <FileLink
+            href={media.url}
+            download
+            size="small"
+            aria-label={`Download short ${String(clip.number)}`}
+          >
+            <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+            Download
+          </FileLink>
+        ) : null}
         <Button
-          variant="quiet"
           size="small"
           aria-label={`Copy short ${String(clip.number)}'s title, description and hashtags`}
           onClick={onCopy}
@@ -198,33 +227,40 @@ function ShortCard({
           <CopyIcon aria-hidden="true" strokeWidth={1.75} />
           Copy
         </Button>
-      </div>
-      <p className="m-0 text-label text-ink-3">
-        {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
-      </p>
-      <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
-      <p className="m-0 break-words text-label text-ink-3">{link}</p>
-      <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
-      <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
-      {/* The folder is the stage's one Open folder; each short only downloads here. */}
-      {video !== undefined && media !== undefined ? (
-        <FileLink href={media.url} download variant="quiet" size="small" className="self-start">
-          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-          Download
-        </FileLink>
-      ) : null}
-      {onRemake === undefined ? null : (
-        <Button
-          variant="quiet"
-          size="small"
-          className="self-start"
-          aria-label={`Make short ${String(clip.number)} again`}
-          onClick={onRemake}
-        >
-          Make this short again
-        </Button>
-      )}
+        {onRemake === undefined ? null : (
+          <Button
+            size="small"
+            aria-label={`Make short ${String(clip.number)} again`}
+            onClick={onRemake}
+          >
+            <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+            Make again
+          </Button>
+        )}
+      </ButtonRow>
     </li>
+  );
+}
+
+// The line every short's description ends with. Until the full video's link is saved it says
+// so with a marker, not the raw placeholder Copy puts on the clipboard for pasting over.
+function FullVideoLine({ link }: { readonly link: string | undefined }) {
+  const trimmed = link?.trim() ?? "";
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-small text-ink-2">
+      <span>Watch the full video:</span>
+      {trimmed === "" ? (
+        <Badge
+          tone="waiting"
+          title="No link to the full video is saved. Copy leaves a placeholder to paste it over; to fill it in for every short, add the link under Edit settings → Shorts."
+        >
+          <LinkIcon aria-hidden="true" strokeWidth={1.75} className="size-3" />
+          Link needed
+        </Badge>
+      ) : (
+        <span className="min-w-0 break-all text-ink">{trimmed}</span>
+      )}
+    </p>
   );
 }
 

@@ -67,7 +67,8 @@ Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, `dismissible
 · `kit/empty-state` · `kit/reading-view` (contents from `##` headings, search that marks every
 hit and steps through them, copy one section or all as Markdown; the one reading view, used by
 the project page too, where `regionLabel` puts the text in a scrolling region) · `kit/layout`
-(PageHeader, Workspace, ListDetail, Rule) · `kit/board` (Board and BoardColumn: `main-side`
+(PageHeader, Workspace, ListDetail, Rule) · `kit/facts` (Facts and Fact: label left in ink-2,
+value right, a definition list for "Voice · Chunking" or a theme's details) · `kit/board` (Board and BoardColumn: `main-side`
 for Home, `aside` for the calendar beside its suggestions, `even`; stacked below 1024px).
 
 ### Links and buttons
@@ -94,13 +95,22 @@ A button does something; a link goes somewhere. The kit holds the line:
   with a Rename pencil) picks the row through `RowSelect`. A row or card made by hand gets
   `hitArea` on itself and `hitTarget` on its one link or button; a MediaFrame with `onOpen` is
   its figure, caption included.
+- **A stage's files are one Download and one Open folder.** `StageFiles` (project/parts.tsx)
+  draws them in their own ButtonRow: a primary Download (a menu when there are several files,
+  a plain download for one; secondary when the section has a more important action), the
+  stage's ONE secondary Open folder, then its other actions. Metadata goes on its own line
+  under it (`MetaLine`), facts in `Facts`. Never an Open folder per file, never a quiet file
+  link.
+- **Quiet still looks like a button.** Quiet and icon buttons carry a soft fill at rest, so
+  they never read as grey text; only the shell's rail, top bar and bottom bar keep bare icons.
 - **Library rows** carry the same visible actions in the same order on every tab
   (`library/row-actions.tsx`): Edit, Duplicate, Use in Play, History, Delete.
 
 `src/kit-rules.test.ts` fails on an import of `ui/button` or `ui/dialog` outside the kit, a hand-written
 `sl-btn`/`sl-key` class or `buttonClass()` outside the kit, an `<a>` with `onClick`, a raw
 `<button>` outside the kit (the shell's search field aside), a button hand-made into a ListRow's
-title, and a click handler on a row or card element.
+title, a click handler on a row or card element, a stage body with more than one Open folder, and a
+`FileLink` made quiet.
 
 ### Command palette
 

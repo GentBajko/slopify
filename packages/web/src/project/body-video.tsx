@@ -16,7 +16,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { currentShorts, useShortClips } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
-import { DownloadMenu, OutputFolder, StageBody, useOutputText } from "./parts.js";
+import { MetaLine, StageBody, StageFiles, useOutputText } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
@@ -126,24 +126,23 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <DownloadMenu
-          files={[
-            { output: video, label: audioExport ? "Audio (.wav)" : "Video (.mp4)" },
-            { output: srt, label: "Subtitles (.srt)" },
-            { output: vtt, label: "Subtitles (.vtt)" },
-            { output: description, label: "YouTube description (.txt)" },
-            { output: tags, label: "YouTube tags (.txt)" },
-            { output: mp3, label: "Audio with chapters (.mp3)" },
-            { output: m4b, label: "Audiobook with chapters (.m4b)" },
-            ...shorts.map((output) => ({
-              output,
-              label: `Short ${String(output.meta.short ?? "")} (.mp4)`,
-            })),
-          ]}
-        />
-        <OutputFolder output={video} />
-        <span className="text-small text-ink-2">
+      <StageFiles
+        files={[
+          { output: video, label: audioExport ? "Audio (.wav)" : "Video (.mp4)" },
+          { output: srt, label: "Subtitles (.srt)" },
+          { output: vtt, label: "Subtitles (.vtt)" },
+          { output: description, label: "YouTube description (.txt)" },
+          { output: tags, label: "YouTube tags (.txt)" },
+          { output: mp3, label: "Audio with chapters (.mp3)" },
+          { output: m4b, label: "Audiobook with chapters (.m4b)" },
+          ...shorts.map((output) => ({
+            output,
+            label: `Short ${String(output.meta.short ?? "")} (.mp4)`,
+          })),
+        ]}
+      />
+      {video === undefined ? null : (
+        <MetaLine>
           {[
             duration(video?.durationMs ?? undefined),
             audioExport ? "WAV · stereo · 48 kHz" : project.format,
@@ -152,8 +151,8 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           ]
             .filter((part) => part !== undefined)
             .join(" · ")}
-        </span>
-      </div>
+        </MetaLine>
+      )}
 
       {/* What the render could not do as asked: an image shown still because its clip could
           not be made. */}

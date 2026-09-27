@@ -401,7 +401,11 @@ describe("the stage bodies", () => {
     ]);
     expect(screen.getByLabelText("Body narration")).not.toBeNull();
     expect(await within(workspace).findByText("Narrator M")).not.toBeNull();
-    expect(screen.getByText("Chunking: every 500 words")).not.toBeNull();
+    // Voice and Chunking are facts, label beside value, not words in a sentence.
+    const facts = workspace.querySelector<HTMLElement>('dl[aria-label="How it was recorded"]');
+    if (facts === null) throw new Error("The narration's facts are not a definition list.");
+    expect(within(facts).getByText("Chunking")).not.toBeNull();
+    expect(within(facts).getByText("Every 500 words")).not.toBeNull();
   });
 
   it("draws the image grid from the run's own prompt groups, opening each full size", async () => {
@@ -439,15 +443,16 @@ describe("the stage bodies", () => {
     expect(download.hasAttribute("download")).toBe(true);
   });
 
-  it("renders the article and links its end matter beside the title", async () => {
+  it("renders the article and offers its end matter in its Download menu", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     await selectProjectStage("Article");
     expect(await screen.findByText("Most villains want something.")).not.toBeNull();
     expect(screen.getByText("The Pharaoh")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Sources" }).getAttribute("href")).toBe(
+    // The end matter is in the article's one Download menu.
+    expect((await downloadItem("Sources (.bin)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/sources`,
     );
-    expect(screen.getByRole("link", { name: "Glossary" }).getAttribute("href")).toBe(
+    expect((await downloadItem("Pronunciation glossary (.bin)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/glossary`,
     );
   });

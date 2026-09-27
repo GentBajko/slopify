@@ -220,13 +220,15 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   );
 
   return (
-    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
+    <section aria-labelledby={`${id}-title`} className="@container flex min-w-0 flex-col gap-4">
       <h3 id={`${id}-title`} className="sr-only">
         YouTube
       </h3>
       {/* The description reads best at a paragraph's width; the tags take the room beside
-          it and drop below it on a narrow screen. */}
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,75ch)_minmax(0,1fr)]">
+          it when the column is wide enough, and drop below it otherwise. The column, not the
+          window, decides: beside the project's two rails a wide window is still a narrow
+          column. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-6 @4xl:grid-cols-[minmax(0,75ch)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <PartHead
             id={`${id}-description`}
@@ -239,6 +241,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 : undefined
             }
             over={filledDescription.text.length > descriptionMaxCharacters}
+            main
           />
           {field("summary")}
           {field("chapters", () =>
@@ -306,6 +309,7 @@ function PartHead({
   count,
   over,
   keyshortcuts,
+  main = false,
 }: {
   readonly id: string;
   readonly label: string;
@@ -315,10 +319,12 @@ function PartHead({
   readonly copy: (() => void) | undefined;
   readonly count: string | undefined;
   readonly over: boolean;
+  // Copy description is the section's main action (the one-click task); Copy tags is not.
+  readonly main?: boolean;
 }): ReactElement {
   return (
-    <div className="flex min-h-8 flex-wrap items-center gap-3">
-      <h4 id={id} className="text-small font-semibold text-ink-2">
+    <div className="flex min-h-8 flex-wrap items-center gap-3 border-b border-line pb-2">
+      <h4 id={id} className="m-0 text-title-3 font-semibold text-ink">
         {label}
       </h4>
       {count === undefined ? null : (
@@ -329,13 +335,13 @@ function PartHead({
       <span className="flex-1" />
       <Button
         type="button"
-        variant="quiet"
+        variant={main ? "primary" : "secondary"}
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
         aria-keyshortcuts={keyshortcuts}
         onClick={copy}
       >
-        <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
+        <CopyIcon aria-hidden="true" strokeWidth={1.75} />
         Copy
       </Button>
     </div>
@@ -389,6 +395,7 @@ function EditableField({
           <Button
             type="button"
             variant="quiet"
+            size="small"
             disabled={disabled}
             aria-label={`Use the generated ${lower}`}
             onClick={onUseGenerated}
@@ -399,11 +406,12 @@ function EditableField({
         <Button
           type="button"
           variant="quiet"
+          size="small"
           disabled={disabled || editing}
           aria-label={`Edit ${lower}`}
           onClick={() => setDraft(value.text)}
         >
-          <PencilIcon aria-hidden="true" className="size-[14px]" />
+          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
           Edit
         </Button>
       </div>
@@ -478,7 +486,7 @@ function EditableField({
             >
               Save {lower}
             </Button>
-            <Button type="button" variant="quiet" onClick={() => setDraft(undefined)}>
+            <Button type="button" variant="secondary" onClick={() => setDraft(undefined)}>
               Cancel
             </Button>
           </div>

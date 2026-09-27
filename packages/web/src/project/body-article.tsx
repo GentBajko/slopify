@@ -4,6 +4,7 @@ import { splitEndMatter } from "@app/slices/article/split.js";
 import { parsePronunciationGlossary } from "@app/slices/narration/pronunciation.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
+import { CopyIcon } from "lucide-react";
 import { useCallback, useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
@@ -17,13 +18,13 @@ import { outputsOf, roleOf } from "./body.js";
 import { ResearchNotes } from "./body-research.js";
 import { useProjectRevision } from "./live-revision.js";
 import { LiveWriting, type WritingPreview, writingKey } from "./live-writing.js";
+import { extensionOf } from "./narration-downloads.js";
 import {
-  ActionRow,
   InlineProse,
   Instructions,
-  OutputDownload,
   Prose,
   StageBody,
+  StageFiles,
   splitTitle,
   useOutputText,
 } from "./parts.js";
@@ -156,38 +157,44 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
         projectId={project.id}
         busy={busy}
       />
-      <div className="flex flex-wrap items-baseline gap-3 text-small text-ink-2">
-        <span className="text-title-3 font-semibold text-ink">
-          <InlineProse markdown={title} />
-        </span>
-        {sources === undefined ? null : <OutputDownload output={sources} label="Sources" />}
-        {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
-      </div>
+      <h3 className="m-0 text-title-3 font-semibold text-ink">
+        <InlineProse markdown={title} />
+      </h3>
 
-      {/* The row acts on the open tab: the research's instructions and notes while Research
-          is open, the article's otherwise. Writing either again is in the section's More. */}
-      <ActionRow>
-        {open === "research" && research !== undefined ? (
-          <>
-            <Instructions output={roleOf(researched, "instructions")} />
-            {notes === undefined ? null : <OutputDownload output={notes} />}
-          </>
-        ) : (
-          <>
-            <Instructions output={roleOf(mine, "instructions")} />
-            {markdown === undefined ? null : <OutputDownload output={markdown} />}
-          </>
-        )}
+      {/* The stage's files behind one Download, its one Open folder, then Copy for the open
+          tab and the instructions behind it. Writing either again is in the section's More. */}
+      <StageFiles
+        files={[
+          ...(markdown === undefined
+            ? []
+            : [{ output: markdown, label: `Article${extensionOf(markdown)}` }]),
+          ...(sources === undefined
+            ? []
+            : [{ output: sources, label: `Sources${extensionOf(sources)}` }]),
+          ...(glossary === undefined
+            ? []
+            : [{ output: glossary, label: `Pronunciation glossary${extensionOf(glossary)}` }]),
+          ...(notes === undefined
+            ? []
+            : [{ output: notes, label: `Research notes${extensionOf(notes)}` }]),
+        ]}
+      >
         {(
           open === "research"
             ? research?.state === "running" || notesText.data === undefined
             : running || text === ""
         ) ? null : (
-          <Button variant="quiet" size="small" onClick={() => copy(open)}>
+          <Button variant="secondary" onClick={() => copy(open)}>
+            <CopyIcon aria-hidden="true" strokeWidth={1.75} />
             Copy {names[open]}
           </Button>
         )}
-      </ActionRow>
+        {open === "research" && research !== undefined ? (
+          <Instructions output={roleOf(researched, "instructions")} />
+        ) : (
+          <Instructions output={roleOf(mine, "instructions")} />
+        )}
+      </StageFiles>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
 
       {stored.error === null ? null : (
