@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
+import { bedChains, bedInputs } from "./ambient-mix.js";
 import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
 import { gradeFilter, lookChain, lookEncoding, placed } from "./look.js";
 import { decimal, zoomRange } from "./plan.js";
@@ -298,7 +299,7 @@ export function concatList(order: readonly string[]): string {
 }
 
 export function joinArgs(
-  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look">>,
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
   output: string,
   list: string,
   burnSubtitles = false,
@@ -329,9 +330,27 @@ export function joinArgs(
       `[${input}:a]aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}[a${at}]`,
     );
   });
+  // The ambient bed lies under the joined narration, ducked by it (`ambient-mix.ts`); without
+  // one the arguments are the ones every video was joined with.
+  const bed = audioAt.length > 0 ? edit.bed : undefined;
   if (audioAt.length > 0) {
     chains.push(
-      `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1[a]`,
+      `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1${bed === undefined ? "[a]" : "[narration]"}`,
+    );
+  }
+  if (bed !== undefined) {
+    const total = edit.audio.reduce((sum, segment) => sum + segment.seconds, 0);
+    const first = 1 + audioAt.length;
+    inputs.push(...bedInputs(bed, total, sampleRate));
+    chains.push(
+      ...bedChains(
+        bed,
+        first,
+        total,
+        `aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}`,
+        "[narration]",
+        "[a]",
+      ),
     );
   }
 

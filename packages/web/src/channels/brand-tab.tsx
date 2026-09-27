@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { documentThemesQuery, entriesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
+import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
 import { type BrandKit, type Channel, channelKey, channelsKey, saveChannel } from "./api";
 
-type Draft = Required<{ readonly [K in keyof BrandKit]-?: string }>;
+// The ambient sound is not text; `ambient-bed-kit.tsx` keeps it.
+type Draft = Required<{ readonly [K in Exclude<keyof BrandKit, "ambientBed">]-?: string }>;
 const fields: readonly (keyof Draft)[] = [
   "captionFontId",
   "captionColor",
@@ -40,14 +42,21 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
   const [name, setName] = useState(channel.name);
   const [brief, setBrief] = useState(channel.seriesBrief);
   const [kit, setKit] = useState<Draft>(draftOf(channel.brand));
+  const [bed, setBed] = useState(channelBedForm(channel.brand));
+  const bedSave = channelBedOf(bed);
   const save = useMutation({
     mutationFn: () =>
       saveChannel(api, channel.id, {
         name,
         seriesBrief: brief,
-        brand: Object.fromEntries(
-          fields.flatMap((field) => (kit[field].trim() === "" ? [] : [[field, kit[field].trim()]])),
-        ),
+        brand: {
+          ...Object.fromEntries(
+            fields.flatMap((field) =>
+              kit[field].trim() === "" ? [] : [[field, kit[field].trim()]],
+            ),
+          ),
+          ...bedSave.brand,
+        },
         baseVersion: channel.version,
       }),
     onSuccess: async (saved) => {
@@ -168,6 +177,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             onPick={set("documentTheme")}
           />
         </section>
+        <ChannelAmbientBed value={bed} onChange={setBed} />
       </div>
       <ActionBar
         status={
@@ -176,7 +186,11 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           </StatusSlot>
         }
       >
-        <Button type="submit" variant="primary" disabled={save.isPending || name.trim() === ""}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={save.isPending || name.trim() === "" || bedSave.blocked}
+        >
           Save channel
         </Button>
       </ActionBar>

@@ -49,6 +49,7 @@ export function useDraftUploads({
       provided.audio,
       provided.thumbnail,
       provided.shortsMusic,
+      provided.ambientBed,
       provided.reference,
       ...provided.images,
     ].find((one) => one?.attachmentId === sent.attachmentId);

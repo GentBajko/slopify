@@ -32,8 +32,9 @@ export function adoptBaseline(
   deps: RevisionDeps,
   projectId: string,
   templates?: Readonly<Record<string, string>>,
-  // The Shorts step's background music a new run was started with, already a project asset.
-  supplied: { readonly shortsMusic?: string } = {},
+  // The Shorts step's background music and the ambient bed's own file a new run was started
+  // with, already project assets.
+  supplied: { readonly shortsMusic?: string; readonly ambientBed?: string } = {},
 ): BaselineResult {
   return transact(deps.db, (): BaselineResult => {
     const project = projectById(deps.db, projectId);
@@ -51,6 +52,7 @@ export function adoptBaseline(
     const content = {
       ...baselineContent(deps, project, outputs, pieces, assets, templates),
       ...(supplied.shortsMusic === undefined ? {} : { shortsMusic: supplied.shortsMusic }),
+      ...(supplied.ambientBed === undefined ? {} : { ambientBed: supplied.ambientBed }),
     };
     const fingerprints = baselineFingerprints(project, outputs, pieces, content, stages);
     const revision: ProjectRevision = {

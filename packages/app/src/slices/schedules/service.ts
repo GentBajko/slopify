@@ -217,10 +217,11 @@ function checkTemplate(
   const mediaSources = ["audio", "images", "thumbnail"] as const;
   const { form } = template.document;
   // A supplied file is attached again on Play, which a scheduled run cannot do; the shorts'
-  // background music is one too.
+  // background music is one too, and so is the ambient bed's own file.
   if (
     mediaSources.some((kind) => sources[kind] === "provide") ||
     (form.shorts?.enabled === true && form.provided.shortsMusic) ||
+    form.ambientBed?.source === "upload" ||
     (sources.images === "generate" && form.reference?.source === "provide")
   )
     return { ok: false, reason: "unsupported-media" };

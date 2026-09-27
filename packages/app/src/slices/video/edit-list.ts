@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type BuiltInBed, builtInBeds } from "./ambient-bed.js";
 import {
   type Atmosphere,
   atmospheres,
@@ -110,6 +111,20 @@ export interface CardFont {
   readonly name: string;
 }
 
+// The ambient sound under the whole video (`ambient-bed.ts`): made from noise, or the user's
+// file looped. It fades in from the start and fades out from `fadeOutAt`, where the narration
+// ends, over `fadeOutSeconds`; the join ducks it under the voice (`ffmpeg.ts`).
+export interface AmbientBed {
+  readonly source:
+    | { readonly kind: "noise"; readonly preset: BuiltInBed }
+    // Absolute while rendering; project-relative in render.json.
+    | { readonly kind: "file"; readonly path: string };
+  readonly levelDb: number;
+  readonly fadeInSeconds: number;
+  readonly fadeOutAt: number;
+  readonly fadeOutSeconds: number;
+}
+
 export interface EditList {
   readonly version: typeof editListVersion;
   readonly width: number;
@@ -125,6 +140,8 @@ export interface EditList {
   readonly cardFont?: CardFont | undefined;
   // The cards' text colour, #RRGGBB; absent is white.
   readonly cardColor?: string | undefined;
+  // Absent is the narration alone, as every video before it.
+  readonly bed?: AmbientBed | undefined;
 }
 
 // The same list with every file path passed through `map`: render.json records paths
@@ -143,6 +160,9 @@ export function withPaths(edit: EditList, map: (path: string) => string): EditLi
     ...(edit.cardFont === undefined
       ? {}
       : { cardFont: { ...edit.cardFont, path: map(edit.cardFont.path) } }),
+    ...(edit.bed?.source.kind === "file"
+      ? { bed: { ...edit.bed, source: { kind: "file", path: map(edit.bed.source.path) } } }
+      : {}),
   };
 }
 
@@ -211,6 +231,19 @@ const editListSchema = z
     cardColor: z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
+    bed: z
+      .object({
+        source: z.discriminatedUnion("kind", [
+          z.object({ kind: z.literal("noise"), preset: z.enum(builtInBeds) }).strict(),
+          z.object({ kind: z.literal("file"), path: z.string().min(1) }).strict(),
+        ]),
+        levelDb: z.number(),
+        fadeInSeconds: z.number().nonnegative(),
+        fadeOutAt: z.number().nonnegative(),
+        fadeOutSeconds: z.number().nonnegative(),
+      })
+      .strict()
       .optional(),
   })
   .strict();

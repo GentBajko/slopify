@@ -15,6 +15,7 @@ import { freshShorts, Shorts } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
+import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
 import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
@@ -264,6 +265,18 @@ export function VideoRail({
         </div>
       ) : null}
       {form.sources.video === "generate" ? <div className={railBeneath}>{edit.look}</div> : null}
+      {form.sources.video === "generate" && form.sources.audio !== "off" ? (
+        <div className={railBeneath}>
+          <PlayAmbientBed
+            form={form}
+            problem={problem}
+            update={update}
+            onPickFiles={onPickFiles}
+            onRemoveFile={onRemoveFile}
+            onReattachFile={onReattachFile}
+          />
+        </div>
+      ) : null}
       <div className={railBeneath}>
         <YoutubeDescription
           enabled={form.youtubeDescription === true}

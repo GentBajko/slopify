@@ -79,6 +79,7 @@ export function remapForkEdits(
     [before.audio, after.audio],
     [before.thumbnail, after.thumbnail],
     [before.shortsMusic, after.shortsMusic],
+    [before.ambientBed, after.ambientBed],
     ...before.images.map((ref, index) => [ref, after.images[index]]),
   ])
     if (from && to) mapping.set(from.attachmentId, to.attachmentId);
@@ -95,6 +96,9 @@ export function remapForkEdits(
         ...(newer.form.provided.shortsMusic === undefined
           ? {}
           : { shortsMusic: remap(newer.form.provided.shortsMusic) }),
+        ...(newer.form.provided.ambientBed === undefined
+          ? {}
+          : { ambientBed: remap(newer.form.provided.ambientBed) }),
         images: newer.form.provided.images.map((ref) => ({
           ...ref,
           attachmentId: mapping.get(ref.attachmentId) ?? ref.attachmentId,
@@ -108,9 +112,13 @@ export function retainUploadSettlements(saved: DraftView, current: DraftSessionS
   if (saved.draft.id !== current.id) return saved;
   const provided = current.document.form.provided;
   const owned = new Set(
-    [provided.audio, provided.thumbnail, provided.shortsMusic, ...provided.images].flatMap((ref) =>
-      ref ? [ref.attachmentId] : [],
-    ),
+    [
+      provided.audio,
+      provided.thumbnail,
+      provided.shortsMusic,
+      provided.ambientBed,
+      ...provided.images,
+    ].flatMap((ref) => (ref ? [ref.attachmentId] : [])),
   );
   return {
     ...saved,

@@ -11,6 +11,7 @@ import { withPaths } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
+import { exportBed } from "./runtime-export-bed.js";
 import { exportEdit } from "./runtime-export-edit.js";
 import {
   type ExportSnapshot,
@@ -86,6 +87,7 @@ export async function executeExportRecipe(
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
     const edited = wav ? undefined : await exportEdit(deps, context, view, images);
+    const bed = wav ? undefined : await exportBed(deps, context, view);
     const plan = wav
       ? undefined
       : planRender({
@@ -101,6 +103,7 @@ export async function executeExportRecipe(
           images,
           output: pending.absolutePath,
           edit: edited?.edit,
+          bed,
         });
     const totalSeconds = plan?.totalSeconds ?? audio.reduce((sum, row) => sum + row.seconds, 0);
     const projectDirectory = projectDir(deps.paths, context.work.projectId);

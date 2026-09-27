@@ -4,6 +4,7 @@ import { listDocumentThemes } from "../document/library.js";
 import { documentThemes } from "../document/model.js";
 import type { Entry } from "../library/model.js";
 import type { PlayDraftDocument, PlayDraftForm } from "../play-drafts/schema.js";
+import { ambientBedFormOf } from "../video/ambient-bed.js";
 import type { BrandKit, CastSnapshot, Channel } from "./model.js";
 import { castOfChannel, channelById, resolveChannelId, templateChannelId } from "./repo.js";
 
@@ -22,7 +23,7 @@ export function draftChannel(db: DatabaseSync, document: PlayDraftDocument): Cha
 }
 
 // The brand kit fills what the draft leaves at its default: the "default" caption font, no
-// intro or outro, no document theme chosen. A template that sets its own keeps it, and one
+// intro or outro, no document theme chosen, no ambient sound chosen. A template that sets its own keeps it, and one
 // with "Use the channel's brand kit" off takes nothing from it. An intro, outro or theme the
 // kit names that no longer exists is skipped, not refused: the draft never named it.
 export function brandedForm(
@@ -49,6 +50,11 @@ export function brandedForm(
     ...(intro === undefined ? {} : { intro }),
     ...(outro === undefined ? {} : { outro }),
     ...(document === undefined ? {} : { document }),
+    // A setup that never touched its ambient sound takes the channel's; one set to None keeps
+    // none.
+    ...(form.ambientBed === undefined && brand.ambientBed !== undefined
+      ? { ambientBed: ambientBedFormOf(brand.ambientBed) }
+      : {}),
   };
 }
 

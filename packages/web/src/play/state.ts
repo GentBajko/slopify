@@ -25,6 +25,7 @@ import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
 import { type ShortsSettings, shortsExtrasOf } from "@app/slices/shorts/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
+import { ambientBedOfForm } from "@app/slices/video/ambient-bed.js";
 import type { VideoEditSettings } from "@app/slices/video/edit-settings.js";
 import type { UploadKind } from "@/api";
 import { subtitlesFor } from "@/subtitles/config";
@@ -42,10 +43,11 @@ export interface Upload {
 }
 
 // Where a picked file goes on the draft: a stage's own file, the shorts' background music
-// (uploaded as an audio attachment) or the establishing image (a reference attachment).
-export type UploadSlot = UploadKind | "shortsMusic" | "reference";
+// (uploaded as an audio attachment), the ambient bed's own file (audio too) or the
+// establishing image (a reference attachment).
+export type UploadSlot = UploadKind | "shortsMusic" | "ambientBed" | "reference";
 export function attachmentKindOf(slot: UploadSlot): UploadKind | "reference" {
-  return slot === "shortsMusic" ? "audio" : slot;
+  return slot === "shortsMusic" || slot === "ambientBed" ? "audio" : slot;
 }
 
 export interface ProvidedState {
@@ -58,6 +60,8 @@ export interface ProvidedState {
   readonly reference?: Upload | undefined;
   // The Shorts step's background music, an audio attachment. Absent until one is picked.
   readonly shortsMusic?: Upload | undefined;
+  // The ambient bed's own file, an audio attachment. Absent until one is picked.
+  readonly ambientBed?: Upload | undefined;
 }
 
 export interface LegacyPlayFormState {
@@ -98,6 +102,8 @@ export interface LegacyPlayFormState {
   readonly videoEdit?: VideoEditSettings | undefined;
   // Multiple voices, as the draft holds them; absent is the Narration format.
   readonly voices?: PlayDraftForm["voices"];
+  // The ambient bed as the draft holds it, numbers as typed; absent takes the channel's.
+  readonly ambientBed?: PlayDraftForm["ambientBed"];
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -114,6 +120,19 @@ export function shortsOn(form: {
   readonly shorts?: { readonly enabled: boolean } | undefined;
 }): boolean {
   return form.shorts?.enabled === true && form.sources.audio !== "off";
+}
+
+// Whether the run plays the ambient bed from the user's own file: the long video renders with
+// narration and the bed's source is My own file.
+export function ambientUploadOn(form: {
+  readonly sources: { readonly audio: StageSource; readonly video: StageSource };
+  readonly ambientBed?: PlayDraftForm["ambientBed"];
+}): boolean {
+  return (
+    form.ambientBed?.source === "upload" &&
+    form.sources.video === "generate" &&
+    form.sources.audio !== "off"
+  );
 }
 
 // The typed numbers as the rule reads them: NaN while one is not a number, so the shared rule
@@ -200,6 +219,7 @@ export function stagedOf(provided: ProvidedState): readonly StagedFile[] {
     provided.audio,
     provided.thumbnail,
     provided.shortsMusic,
+    provided.ambientBed,
     provided.reference,
     ...provided.images,
   ].flatMap((upload) => (upload?.file === undefined ? [] : [upload.file]));
@@ -282,6 +302,9 @@ export function draftOf(input: DraftInput): RunDraft {
       ...(shortsOn(form)
         ? pick(form.provided.shortsMusic?.file, (file) => ({ shortsMusic: file.id }))
         : {}),
+      ...(form.ambientBed?.source === "upload"
+        ? pick(form.provided.ambientBed?.file, (file) => ({ ambientBed: file.id }))
+        : {}),
     },
     chunking: form.chunking,
     subtitles: subtitlesFor(form.subtitles, form.sources),
@@ -295,6 +318,13 @@ export function draftOf(input: DraftInput): RunDraft {
       ? { voices: form.voices }
       : {}),
     ...(form.sources.document === "generate" ? { document: form.document } : {}),
+    // As `slices/play-drafts/convert.ts` sends it: under the long video's narration only.
+    ...pick(
+      form.sources.video === "generate" && form.sources.audio !== "off"
+        ? ambientBedOfForm(form.ambientBed)
+        : undefined,
+      (ambientBed) => ({ ambientBed }),
+    ),
   };
 }
 

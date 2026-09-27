@@ -197,6 +197,21 @@ export function validateAssetReferences(
       message:
         "This music file does not belong to this project. Reload the page and choose the music again.",
     });
+  // The ambient bed's own file is only ever the one the project was started with.
+  const bed = content.ambientBed;
+  if (
+    bed !== undefined &&
+    deps.db
+      .prepare(
+        "SELECT 1 FROM project_revisions WHERE project_id=? AND json_extract(content,'$.ambientBed')=? LIMIT 1",
+      )
+      .get(projectId, bed) === undefined
+  )
+    fields.push({
+      field: "content.ambientBed",
+      message:
+        "This ambient sound file does not belong to this project. Reload the page and save again.",
+    });
   return fields;
 }
 export async function measureAudio(

@@ -1,9 +1,11 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
+import { imageScaleProblem } from "../images/scale.js";
 import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
+import { ambientBedProblems, usesAmbientBed } from "../video/ambient-bed.js";
 import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
 import { usesVoices, voicesProblems } from "../voices/model.js";
 import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
@@ -168,6 +170,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...youtubeDescriptionFields(draft));
   fields.push(...shortsFields(draft));
   fields.push(...videoEditFields(draft));
+  fields.push(...ambientBedFields(draft, input.staged));
   fields.push(...referenceFields(draft));
   fields.push(...reviewFields(draft));
   if (usesReference(draft) && draft.reference?.source === "provide")
@@ -270,6 +273,9 @@ function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
       message: `A video can have at most ${imagesPerRunMax} images; these prompts ask for ${total}. Lower the numbers.`,
     });
   }
+  const scaleProblem =
+    draft.imageScale === undefined ? undefined : imageScaleProblem(draft.imageScale);
+  if (scaleProblem !== undefined) fields.push({ field: "imageScale", message: scaleProblem });
 }
 
 function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: FieldError[]): void {
@@ -518,6 +524,35 @@ export function videoEditFields(
     field: `videoEdit.${problem.field}`,
     message: problem.message,
   }));
+}
+
+// The ambient bed, checked only while the long video renders with narration; its own file only
+// while the source is "upload". Named by where the control sits: Play's Export rail.
+export function ambientBedFields(
+  draft: Pick<RunDraft, "sources" | "ambientBed" | "provided">,
+  staged: readonly StagedFile[],
+): readonly FieldError[] {
+  const bed = draft.ambientBed;
+  if (bed === undefined || !usesAmbientBed(draft)) return [];
+  const where = "under Outputs → Export → Ambient sound";
+  const fields: FieldError[] = ambientBedProblems(bed).map((problem) => ({
+    field: `ambientBed.${problem.field}`,
+    message: `${problem.message} Change it ${where}.`,
+  }));
+  if (bed.source !== "upload") return fields;
+  const id = draft.provided.ambientBed;
+  const file = id === undefined ? undefined : staged.find((candidate) => candidate.id === id);
+  if (file === undefined || file.stageKind !== "audio")
+    fields.push({
+      field: "ambientBed.file",
+      message: `The ambient sound's audio file is missing, so it can't be added to the project. Choose the file ${where}, or pick Rain, Fireplace or Wind instead.`,
+    });
+  else if (file.state !== "staged")
+    fields.push({
+      field: "ambientBed.file",
+      message: `The ambient sound's audio file is still uploading, so the run can't start yet. Wait for it to finish ${where}.`,
+    });
+  return fields;
 }
 
 function chosen(choice: ProviderChoice | undefined): boolean {

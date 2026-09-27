@@ -1,6 +1,8 @@
+import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
+import { usesAmbientBed } from "../video/ambient-bed.js";
 import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
 import {
@@ -58,6 +60,7 @@ export function visualRecipes(
   }
   if (config.sources.video !== "off") {
     const edited = edit?.([...recipes]) ?? { recipes: [], values: [], dependsOn: [] };
+    const bed = ambientBedValues(config, content);
     const audioKeys =
       config.sources.audio === "off"
         ? []
@@ -98,6 +101,9 @@ export function visualRecipes(
             // Only what the edit settings change; nothing at all for today's slideshow, so
             // its fingerprint is the one it always had.
             ...(edited.values.length === 0 ? [] : [["video-edit", ...edited.values]]),
+            // Only while the video has an ambient bed, so every video without one keeps the
+            // fingerprint it always had.
+            ...(bed === undefined ? [] : [bed]),
           ],
         },
         [
@@ -106,7 +112,11 @@ export function visualRecipes(
           ...(config.subtitles?.mode === "burn-in" ? ["subtitles:files"] : []),
           ...edited.dependsOn,
         ],
-        { unresolved: imageKeys.length === 0 },
+        {
+          unresolved:
+            imageKeys.length === 0 ||
+            (config.ambientBed?.source === "upload" && content.ambientBed === undefined),
+        },
       ),
     );
     // After the export, so the images' recipes above stay the only ones its first values list.
@@ -114,6 +124,24 @@ export function visualRecipes(
   }
   return recipes;
 }
+// What the ambient bed adds to the render's fingerprint: its settings and, for the user's own
+// file, the project asset it plays. Undefined without a bed.
+export function ambientBedValues(
+  config: RunConfig,
+  content: Pick<RevisionContent, "ambientBed">,
+): FingerprintValue | undefined {
+  const bed = config.ambientBed;
+  if (bed === undefined || !usesAmbientBed(config)) return undefined;
+  return [
+    "ambient-bed-v1",
+    bed.source,
+    bed.levelDb,
+    bed.fadeInSeconds,
+    bed.tailSeconds,
+    bed.source === "upload" ? (content.ambientBed ?? null) : null,
+  ];
+}
+
 export function thumbnailRecipes(
   context: RecipeContext,
   textRecipes: readonly ResolvedWorkRecipe[],

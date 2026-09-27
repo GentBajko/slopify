@@ -84,6 +84,9 @@ export function freshTemplateDraft(
         ...(provided.shortsMusic === undefined
           ? {}
           : { shortsMusic: provided.shortsMusic === null ? null : fresh(provided.shortsMusic) }),
+        ...(provided.ambientBed === undefined
+          ? {}
+          : { ambientBed: provided.ambientBed === null ? null : fresh(provided.ambientBed) }),
       },
     },
   };

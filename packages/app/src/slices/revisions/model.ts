@@ -59,6 +59,9 @@ export interface RevisionContent {
   readonly shortsRanges?:
     | Readonly<Record<string, import("../shorts/clips.js").ShortRange>>
     | undefined;
+  // The ambient bed's own file (`config.ambientBed.source` "upload"): the project asset copied
+  // from Play's upload when the run started. Absent is none.
+  readonly ambientBed?: string | undefined;
 }
 export interface RevisionUpload {
   readonly stagedFileId: string;

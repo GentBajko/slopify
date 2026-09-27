@@ -12,7 +12,7 @@ import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
 import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
-import { draftOf, shortsOn, stagedOf } from "@/play/state";
+import { ambientUploadOn, draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 import { articleKind } from "./article-kind";
 
@@ -161,6 +161,7 @@ const readingOrder: readonly string[] = [
   "videoEdit.animate",
   "videoEdit.animateEvery",
   "videoEdit.animateModel",
+  "ambientBed",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {
@@ -199,6 +200,9 @@ function uploadBlocker(form: PlayFormState): Blocker | undefined {
   }
   if (shortsOn(form) && provided.shortsMusic !== undefined) {
     picked.push(provided.shortsMusic);
+  }
+  if (ambientUploadOn(form) && provided.ambientBed !== undefined) {
+    picked.push(provided.ambientBed);
   }
   if (picked.some((upload) => upload.error !== undefined)) {
     return { field: "provided", hint: "Remove the upload that failed to play" };

@@ -119,6 +119,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
         ? {}
         : { reference: upload(form.provided.reference) }),
       shortsMusic: upload(form.provided.shortsMusic),
+      ambientBed: upload(form.provided.ambientBed),
       images: form.provided.images.flatMap((ref) => {
         const one = upload(ref);
         return one ? [one] : [];
@@ -138,7 +139,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     // A draft saved before the Document stage keeps both fields absent until one is changed.
     const { document: documentSource, ...otherSources } = next.sources;
     const { document: documentSettings, ...rest } = next;
-    const { shortsMusic } = next.provided;
+    const { shortsMusic, ambientBed } = next.provided;
     const keepSource = before.form.sources.document !== undefined || documentSource !== "off";
     const keepSettings =
       before.form.document !== undefined ||
@@ -201,6 +202,10 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
           // picked, so opening it changes nothing.
           ...(shortsMusic !== undefined || before.form.provided.shortsMusic !== undefined
             ? { shortsMusic: ref(shortsMusic) }
+            : {}),
+          // The same for the ambient bed's own file.
+          ...(ambientBed !== undefined || before.form.provided.ambientBed !== undefined
+            ? { ambientBed: ref(ambientBed) }
             : {}),
         },
       },
