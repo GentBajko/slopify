@@ -4,16 +4,18 @@ import { CopyIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { newStudioPairing, readStudioSettings, saveStudioPlaylist } from "@/api";
 import { useApp } from "@/app-context";
+import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
+import { Field, Input, Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { ExtensionInstall } from "./extension-install";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
-// Settings → YouTube Studio: the playlist every upload pack names, and the pairing token the
-// Slopify Studio browser extension needs before it may read a pack.
+// Settings → YouTube Studio: the playlist each channel's upload packs name, the pairing token
+// the Slopify Studio browser extension needs before it may read a pack, and how to install it.
 export function StudioSettings() {
   return (
     <div>
@@ -21,10 +23,17 @@ export function StudioSettings() {
       <div className="flex flex-col gap-8">
         <Playlist />
         <Pairing />
+        <section aria-label="Install the Studio extension">
+          <SectionHead as="h3" title="Install the Studio extension" className="mb-3" />
+          <ExtensionInstall />
+        </section>
       </div>
     </div>
   );
 }
+
+// "" is the default, which every channel without its own playlist uses.
+const everyChannel = "";
 
 function Playlist() {
   const { api } = useApp();
@@ -32,14 +41,21 @@ function Playlist() {
   const notify = useToast();
   const errorId = useId();
   const saved = useQuery({ queryKey: studioSettingsKey, queryFn: () => readStudioSettings(api) });
+  const channels = useQuery(channelsQuery(api));
+  const channelId = useId();
+  const [channel, setChannel] = useState(everyChannel);
   const [typed, setTyped] = useState<string | undefined>(undefined);
-  const value = typed ?? saved.data?.playlist ?? "";
+  const fallback = saved.data?.playlist ?? null;
+  const stored =
+    channel === everyChannel ? fallback : (saved.data?.channelPlaylists[channel] ?? null);
+  const value = typed ?? stored ?? "";
   const tooLong =
     value.trim().length > studioPlaylistMax
       ? `The playlist name is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it.`
       : undefined;
   const save = useMutation({
-    mutationFn: (playlist: string) => saveStudioPlaylist(api, playlist),
+    mutationFn: (playlist: string) =>
+      saveStudioPlaylist(api, playlist, channel === everyChannel ? undefined : channel),
     onSuccess: () => {
       setTyped(undefined);
       void queryClient.invalidateQueries({ queryKey: studioSettingsKey });
@@ -47,16 +63,42 @@ function Playlist() {
     },
   });
   const error = tooLong ?? save.error?.message;
+  const options = [
+    { value: everyChannel, label: "Every channel (default)" },
+    ...(channels.data ?? []).map((one) => ({ value: one.id, label: one.name })),
+  ];
   return (
     <Field
       label="Playlist"
       tip="settings.studio.playlist"
-      help="The playlist every upload pack names."
+      help={
+        channel === everyChannel
+          ? "The playlist upload packs name, for every channel without its own."
+          : fallback === null
+            ? "This channel's own playlist. Empty: no playlist."
+            : `This channel's own playlist. Empty: the default, "${fallback}".`
+      }
     >
       <div className="flex flex-wrap items-center gap-2">
+        <Select
+          id={channelId}
+          aria-label="Channel"
+          value={channel}
+          options={options}
+          onChange={(event) => {
+            save.reset();
+            setTyped(undefined);
+            setChannel(event.currentTarget.value);
+          }}
+          className="max-w-[220px]"
+        />
         <Input
           autoComplete="off"
-          placeholder="The playlist's name in Studio"
+          placeholder={
+            channel !== everyChannel && fallback !== null
+              ? `Default: ${fallback}`
+              : "The playlist's name in Studio"
+          }
           className="min-w-0 flex-1 basis-[220px]"
           value={value}
           disabled={saved.data === undefined}

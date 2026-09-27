@@ -225,7 +225,11 @@ export const projectHelp = {
   },
   "project.upload.fill-studio": {
     title: "Fill in YouTube Studio",
-    body: "Opens Studio's upload page and hands this item's details to the optional Slopify Studio browser extension (Settings, YouTube Studio). Drop the video file in and the extension fills in the rest. You check it and press Publish yourself; Slopify never uploads or publishes.",
+    body: "Opens Studio's upload page and adds this item to what waits for the Slopify Studio extension, which must be installed and paired (Settings, YouTube Studio). Each upload dialog you start is filled with the first waiting item. If Studio's dialog lacks a field, nothing is filled and the whole pack is copied instead. You check it and press Publish; Slopify never uploads or publishes.",
+  },
+  "project.upload.queue": {
+    title: "Waiting for Studio",
+    body: "The videos and shorts Fill in YouTube Studio added, oldest first, from every project. Each new upload dialog in Studio is filled with the first, which then leaves the list. It survives restarting Slopify; an item waits up to 24 hours, and a new pairing token clears the list. Remove takes an item out without filling it.",
   },
   "project.mark-uploaded": {
     title: "Mark uploaded",

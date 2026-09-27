@@ -7,7 +7,7 @@ import { z } from "zod";
 import { projectById } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
-import { studioPlaylistMax } from "../../slices/studio/model.js";
+import { type FillQueueItem, studioPlaylistMax } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import {
   enqueueFill,
@@ -61,14 +61,6 @@ const extensionFiles: Readonly<Record<string, string>> = {
   "firefox.zip": "slopify-studio-firefox.zip",
 };
 const extensionParam = z.object({ file: z.enum(["chrome.zip", "firefox.zip"]) });
-
-// One waiting item as Prepare upload lists it.
-export interface FillQueueItem {
-  readonly projectId: string;
-  readonly projectTitle: string;
-  readonly short: number | null;
-  readonly at: string;
-}
 
 // The Studio routes. The ones under `/ext` are the only routes of the app a page from another
 // origin may read, and only the paired browser extension: every request carries the pairing

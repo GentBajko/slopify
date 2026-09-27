@@ -133,11 +133,15 @@ export const settingsHelp = {
   // YouTube Studio
   "settings.studio.extension": {
     title: "Upload pack and extension",
-    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install steps are in docs/studio-extension.md in the Slopify repository.",
+    body: "Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for, with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog from that pack; you still press Publish. Install it from Install the Studio extension below: Download, three steps, then pair it with the token.",
   },
   "settings.studio.playlist": {
     title: "Playlist",
-    body: "The YouTube playlist every upload pack names, so the extension ticks it in Studio's dialog. Type it exactly as it is called in Studio, up to 150 characters. Leave it empty for no playlist. Default: empty.",
+    body: "The YouTube playlist an upload pack names, so the extension ticks it in Studio's dialog. Pick Every channel for the default, or a channel to give it its own; a channel without its own uses the default. Type it exactly as it is called in Studio, up to 150 characters. Empty means no playlist (for a channel: the default). Default: empty.",
+  },
+  "settings.studio.install": {
+    title: "Install the Studio extension",
+    body: "The extension comes with Slopify: Download saves it for the browser picked, nothing is fetched from a store. Chrome, Edge and Brave load the unzipped folder with Load unpacked (Developer mode); Firefox 128 or newer loads the zip as a temporary add-on, which it forgets on restart. Then pair it with the token above. A new Slopify may bring a new extension: download and load it again after updating.",
   },
   "settings.studio.pairing": {
     title: "Extension pairing token",

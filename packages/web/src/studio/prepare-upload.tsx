@@ -1,4 +1,5 @@
 import {
+  type FillQueueItem,
   type PackItem,
   type StudioStep,
   studioSteps,
@@ -8,7 +9,14 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { chooseUploadPack, readUploadPack, saveRealFootage } from "@/api";
+import {
+  chooseUploadPack,
+  readStudioQueue,
+  readStudioSettings,
+  readUploadPack,
+  removeFromStudioQueue,
+  saveRealFootage,
+} from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button, buttonClass } from "@/components/kit/button";
@@ -20,12 +28,16 @@ import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
+import { ExtensionInstall } from "./extension-install";
+import { studioSettingsKey } from "./settings-panel";
+
+export const studioQueueKey = ["studio", "queue"] as const;
 
 // Prepare upload: everything YouTube Studio asks for, in the order it asks, for the video and
 // each short: one row per step with a done tick and a small quiet action (Copy, Open folder,
-// Download), the thumbnails under the list. Fill in YouTube Studio hands the chosen
-// item to the Slopify Studio extension and opens Studio's upload page; without the extension
-// the list is the whole flow. Slopify never uploads or publishes.
+// Download), the thumbnails under the list. Fill in YouTube Studio adds the chosen item to what
+// waits for the paired Slopify Studio extension and opens Studio's upload page; unpaired, the
+// drawer shows how to install it and the list is the whole flow. Slopify never publishes.
 export function PrepareUpload({
   projectId,
   ready,
@@ -80,15 +92,40 @@ export function PrepareUploadDrawer({
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const items = pack.data?.items ?? [];
   const item = items.find((one) => itemKey(one) === chosen) ?? items[0];
+  // Whether an extension is paired: without one, Fill in YouTube Studio would hand the item to
+  // nothing, so the drawer shows how to install it and the steps are the whole flow.
+  const settings = useQuery({
+    queryKey: studioSettingsKey,
+    queryFn: () => readStudioSettings(api),
+  });
+  const paired = settings.data === undefined ? undefined : settings.data.pairing.origin !== null;
+  const queue = useQuery({ queryKey: studioQueueKey, queryFn: () => readStudioQueue(api) });
   const fill = useMutation({
     mutationFn: (target: PackItem) => chooseUploadPack(api, projectId, target.short),
-    onSuccess: () => {
+    onSuccess: (waiting) => {
+      client.setQueryData(studioQueueKey, waiting);
       setStatus({
-        text: "Studio is opening. Drop the video file into its upload dialog; the Slopify Studio extension then fills in the rest. Check everything and publish yourself.",
+        text:
+          waiting.length > 1
+            ? `Added; ${String(waiting.length)} uploads are waiting. Studio is opening: each upload you start there is filled with the next one, in the order under Waiting for Studio. Check everything and publish yourself.`
+            : "Studio is opening. Drop the video file into its upload dialog; the Slopify Studio extension fills in the details. Check everything and publish yourself.",
         tone: "success",
       });
     },
-    onError: (error) => setStatus({ text: error.message, tone: "error" }),
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't hand this to the extension: ${error.message}`,
+        tone: "error",
+      }),
+  });
+  const remove = useMutation({
+    mutationFn: (entry: FillQueueItem) => removeFromStudioQueue(api, entry.projectId, entry.short),
+    onSuccess: (waiting) => client.setQueryData(studioQueueKey, waiting),
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't remove it from Waiting for Studio: ${error.message} Press Remove again.`,
+        tone: "error",
+      }),
   });
   const footage = useMutation({
     mutationFn: (real: boolean) => saveRealFootage(api, projectId, real),
@@ -124,10 +161,26 @@ export function PrepareUploadDrawer({
       footer={
         <>
           <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+          {paired === false ? (
+            <a
+              href={studioUploadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClass({ variant: "quiet" })}
+            >
+              Open YouTube Studio
+            </a>
+          ) : null}
           <Button
             variant="primary"
-            disabled={item === undefined || fill.isPending}
-            disabledReason="Wait for the upload pack to load"
+            disabled={item === undefined || fill.isPending || paired !== true}
+            disabledReason={
+              paired === false
+                ? "Install and pair the Slopify Studio extension first (steps above)"
+                : settings.error !== null
+                  ? `Couldn't check whether the extension is paired: ${settings.error.message} Close Prepare upload and open it again.`
+                  : "Wait for the upload pack to load"
+            }
             onClick={() => {
               if (item === undefined) return;
               // Opened now, inside the click, so the browser doesn't block the new tab.
@@ -148,6 +201,17 @@ export function PrepareUploadDrawer({
       )}
       {pack.data === undefined ? null : (
         <div className="flex flex-col gap-5">
+          {paired === false ? (
+            <Callout tone="waiting" title="The Slopify Studio extension isn't paired.">
+              <div className="flex flex-col gap-3">
+                <p className="m-0">
+                  Without it, the steps below are the upload pack: copy each into Studio's upload
+                  dialog. To have Studio filled in for you, install the extension:
+                </p>
+                <ExtensionInstall />
+              </div>
+            </Callout>
+          ) : null}
           {items.length > 1 ? (
             <Segmented
               label="What to upload"
@@ -190,9 +254,45 @@ export function PrepareUploadDrawer({
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
           )}
+          {(queue.data ?? []).length === 0 ? null : (
+            <section aria-label="Waiting for Studio">
+              <div className="mb-2 flex items-center gap-1">
+                <div className="sl-kicker">Waiting for Studio</div>
+                <InfoTip id="project.upload.queue" className="-my-1" />
+              </div>
+              <List label="Waiting to be filled">
+                {(queue.data ?? []).map((entry, index) => {
+                  const what = entry.short === null ? "Video" : `Short ${String(entry.short)}`;
+                  return (
+                    <ListRow
+                      key={`${entry.projectId}-${String(entry.short)}`}
+                      title={`${entry.projectTitle} · ${what}`}
+                      meta={
+                        index === 0
+                          ? "Next: filled in the next upload dialog you open in Studio."
+                          : `Filled after ${String(index)} more upload${index === 1 ? "" : "s"}.`
+                      }
+                      actions={
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          disabled={remove.isPending}
+                          aria-label={`Remove ${entry.projectTitle} ${what.toLowerCase()} from Waiting for Studio`}
+                          onClick={() => remove.mutate(entry)}
+                        >
+                          Remove
+                        </Button>
+                      }
+                    />
+                  );
+                })}
+              </List>
+            </section>
+          )}
           <Callout title="Slopify never publishes.">
-            Fill in YouTube Studio hands this to the Slopify Studio extension (Settings → YouTube
-            Studio) after you drop the video in. You check it and press Publish.
+            {paired === false
+              ? "Copy each step into Studio's upload dialog (Open YouTube Studio), check it and press Publish yourself."
+              : "Fill in YouTube Studio hands this to the Slopify Studio extension after you drop the video in. You check it and press Publish."}
           </Callout>
         </div>
       )}
