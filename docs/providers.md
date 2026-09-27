@@ -18,7 +18,10 @@ permissions a restricted key must have. All links go to the provider's own pages
 **Test** (beside Save) makes the cheapest harmless call the key allows, such as reading the
 account or the model list, so nothing is generated or billed. It says whether the key was
 accepted and, if not, what to do. Only OpenRouter's check also shows missing credit; the others
-report credit problems on the first real generation.
+report credit problems on the first real generation. A key pasted into the field is tested as
+it stands, before **Save**; it is sent only to its provider and is not stored or logged. With
+the field empty, Test checks the saved key. The tutorial's key steps link to the same key pages
+as these guides.
 
 ## Health check
 

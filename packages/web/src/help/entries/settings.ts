@@ -21,7 +21,7 @@ export const settingsHelp = {
   },
   "settings.providers.test-key": {
     title: "Test",
-    body: "Asks the provider whether the saved key works, with the cheapest harmless call it allows, such as listing its models. Nothing is generated or billed. The answer says what is wrong when it fails: a rejected key, missing permission, no credit, or the provider being down.",
+    body: "Asks the provider whether the key works, with the cheapest harmless call it allows. A key pasted in the field is tested before you save it; with the field empty, the saved key is. Nothing is generated, billed or stored. When it fails, the answer says why: a rejected key, missing permission, no credit, or the provider being down.",
   },
   "settings.provider.openrouter": {
     title: "OpenRouter",

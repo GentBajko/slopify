@@ -473,6 +473,40 @@ describe("key setup, health and model upkeep routes", () => {
     expect(guides.guides.openrouter?.keyPage.url).toBe("https://openrouter.ai/settings/keys");
   });
 
+  it("tests a pasted key that is not saved, and keeps it out of the store and the answer", async () => {
+    const sent: string[] = [];
+    const { app } = harness(notFound, {
+      fetch: (async (_input: string | URL | Request, init?: RequestInit) => {
+        sent.push(String((init?.headers as Record<string, string>).Authorization));
+        return new Response("{}", { status: 200 });
+      }) as typeof globalThis.fetch,
+    });
+    const response = await app.request("/api/providers/openrouter/key/test", {
+      method: "POST",
+      body: JSON.stringify({ key: standIn }),
+      headers: { "content-type": "application/json" },
+    });
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({ result: "valid", ok: true });
+    expect(body).not.toContain(standIn);
+    expect(sent).toEqual([`Bearer ${standIn}`]);
+    const providers = (await (await app.request("/api/providers")).json()) as {
+      providers: { id: string; readiness: { hasKey?: boolean } }[];
+    };
+    expect(providers.providers.find((one) => one.id === "openrouter")?.readiness.hasKey).toBe(
+      false,
+    );
+
+    const blank = await app.request("/api/providers/openrouter/key/test", {
+      method: "POST",
+      body: JSON.stringify({ key: "" }),
+      headers: { "content-type": "application/json" },
+    });
+    expect(blank.status).toBe(400);
+    expect(await blank.text()).toMatch(/Settings → Providers → OpenRouter/u);
+  });
+
   it("reports first-run detection and lists no retired models on a fresh install", async () => {
     const dataDir = mkdtempSync(join(tmpdir(), "slopify-providers-cat-"));
     const { app } = harness(installed, {

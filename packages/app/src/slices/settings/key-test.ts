@@ -116,17 +116,33 @@ export interface KeyTestDeps {
   readonly probes: KeyProbes;
 }
 // The Test button. The key is read for this one request, sent only to its own provider, and
-// never appears in the answer, a log line or an error.
+// never appears in the answer, a log line or an error. `pasted` is a key typed into the field
+// and not saved yet: it is tried instead of the saved one and is not stored.
 export async function testProviderKey(
   deps: KeyTestDeps,
   provider: ProviderId,
+  pasted?: string,
 ): Promise<KeyTestOutcome> {
   const at = () => deps.clock.now().toISOString();
   const probe = Object.hasOwn(deps.probes, provider) ? deps.probes[provider] : undefined;
   if (probe === undefined || providerById(provider).auth !== "key")
     throw new Error(`${provider} has no key to test`);
-  const key = keyOf(deps.db, provider);
+  const candidate = pasted?.trim();
+  const key = candidate === undefined || candidate === "" ? keyOf(deps.db, provider) : candidate;
   if (key === undefined) return keyTestOutcome(provider, { failure: "no-key" }, at());
+  const outcome = await probeKey(deps, provider, probe, key, at);
+  return candidate === undefined || candidate === "" || !outcome.ok
+    ? outcome
+    : { ...outcome, message: `${outcome.message} It is not saved yet: choose Save to keep it.` };
+}
+
+async function probeKey(
+  deps: KeyTestDeps,
+  provider: ProviderId,
+  probe: KeyProbe,
+  key: string,
+  at: () => string,
+): Promise<KeyTestOutcome> {
   let status: number;
   let body = "";
   try {

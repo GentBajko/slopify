@@ -71,6 +71,26 @@ describe("the key Test button", () => {
     expect(JSON.stringify(outcome)).not.toContain("r8_secret");
   });
 
+  it("tests a pasted key without saving it, ahead of the saved one", async () => {
+    const { deps, calls } = harness(() => new Response("{}", { status: 200 }));
+    saveProviderKey(deps, "replicate", "r8_saved");
+    const outcome = await testProviderKey(deps, "replicate", "  r8_pasted \n");
+    expect(outcome.ok).toBe(true);
+    expect(outcome.message).toMatch(/not saved yet: choose Save to keep it/u);
+    expect(calls[0]?.headers).toEqual({ Authorization: "Bearer r8_pasted" });
+    expect(JSON.stringify(outcome)).not.toContain("r8_pasted");
+    // Still the saved key: a test never stores what it tried.
+    expect(
+      deps.db.prepare("SELECT key FROM provider_keys WHERE provider='replicate'").get(),
+    ).toEqual({
+      key: "r8_saved",
+    });
+    const fresh = harness(() => new Response("{}", { status: 200 }));
+    await testProviderKey(fresh.deps, "fal", "fal_pasted");
+    expect(fresh.calls).toHaveLength(1);
+    expect((await testProviderKey(fresh.deps, "fal")).result).toBe("no-key");
+  });
+
   it("says there is no key without calling anyone", async () => {
     const { deps, calls } = harness(() => new Response("{}"));
     expect((await testProviderKey(deps, "fal")).result).toBe("no-key");
