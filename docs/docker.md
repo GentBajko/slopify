@@ -140,6 +140,13 @@ running `up -d` again; that path has no automatic snapshot or rollback.
 Keep the localhost binding: anyone who reaches Slopify's port can control the app
 and its providers.
 
+## Starting at login
+
+The container restarts with Docker, so Slopify starts whenever Docker does. The installer asks
+"Start Slopify when you log in? (Y/n)" once (`--autostart` / `--no-autostart` skip it), reads
+whether Docker itself starts by itself (`systemctl is-enabled`, never changed) and records it for
+Settings → General. See [start-at-login.md](start-at-login.md#docker).
+
 ## Limits
 
 Linux only for the installer. Docker Desktop, remote Docker daemons and rootful

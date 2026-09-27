@@ -9,6 +9,7 @@ import {
   saveAppSettings,
 } from "@/api";
 import { useApp } from "@/app-context";
+import { AutostartSettings } from "@/autostart/autostart-settings";
 import { CatalogueSettings } from "@/components/catalogue";
 import { Button, buttonClass } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
@@ -89,6 +90,11 @@ export function gapProblem(value: string): string | undefined {
 
 // Each section's title is the page title, and its one line of meta sits under it.
 export const settingsSections = [
+  {
+    id: "general",
+    label: "General",
+    meta: "How Slopify starts on this computer.",
+  },
   {
     id: "providers",
     label: "Providers",
@@ -267,6 +273,7 @@ export function SettingsRoute({
               <ProviderHealthCheck run={health} />
             </>
           ) : null}
+          {section === "general" ? <AutostartSettings /> : null}
           {section === "voices" ? <Voices /> : null}
           {section === "models" ? <CatalogueSettings /> : null}
           {section === "playback" ? <Playback /> : null}

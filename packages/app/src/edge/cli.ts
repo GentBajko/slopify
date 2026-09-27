@@ -4,6 +4,7 @@ import { type Config, configFrom } from "../kernel/config/index.js";
 import { readVersion } from "../kernel/version.js";
 import { boot } from "../main.js";
 import { forwardManagedUpdate } from "../updater/forward.js";
+import { askTerminal, autostartFlag, settleAutostart } from "./autostart/prompt.js";
 import { openBrowser } from "./open-browser.js";
 import { installSignalShutdown } from "./signal-shutdown.js";
 
@@ -18,11 +19,14 @@ const { values, positionals } = parseArgs({
     docker: { type: "boolean" },
     "host-cli": { type: "string" },
     "accept-host-cli": { type: "boolean" },
+    autostart: { type: "boolean" },
+    "no-autostart": { type: "boolean" },
   },
 });
 
 let config: Config | undefined;
 try {
+  const autostart = autostartFlag(values);
   const [action, ...extra] = positionals;
   if (extra.length > 0 || (action !== undefined && action !== "install" && action !== "update"))
     throw new Error(
@@ -63,6 +67,7 @@ try {
       ...(values["accept-host-cli"] === undefined
         ? {}
         : { acceptHostCli: values["accept-host-cli"] }),
+      ...(autostart === undefined ? {} : { autostart }),
     });
     process.exit(0);
   }
@@ -83,7 +88,8 @@ try {
     process.argv.slice(2),
   );
   if (forwarded !== undefined) process.exit(forwarded);
-  const { paths, url, stop } = await boot(config, {
+  const booted = await boot(config, {
+    refreshAutostart: true,
     prefetchSubtitleModel: ["", "0", "false"].includes(
       (process.env.SLOPIFY_NO_MODEL_PREFETCH ?? "").trim().toLowerCase(),
     ),
@@ -93,6 +99,7 @@ try {
       (process.env.SLOPIFY_NO_MODEL_REFRESH ?? "").trim().toLowerCase(),
     ),
   });
+  const { paths, url, stop } = booted;
   console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);
   console.log(`Database: ${paths.db}`);
@@ -111,6 +118,15 @@ try {
     on: (signal, listener) => process.on(signal, listener),
     stop,
     exit: (code) => process.exit(code),
+  });
+  // After the server is up, so the question never holds Slopify back.
+  await settleAutostart({
+    autostart: booted.autostart,
+    flag: autostart,
+    interactive: process.stdin.isTTY === true && process.stdout.isTTY === true,
+    ask: askTerminal,
+    report: (line) => console.log(line),
+    warn: (line) => console.warn(line),
   });
 } catch (error) {
   console.error(explainStartupError(error, config));

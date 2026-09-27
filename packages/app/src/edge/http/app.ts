@@ -23,6 +23,7 @@ import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
+import { autostartRoutes } from "./autostart.js";
 import { backupRoutes } from "./backups.js";
 import { channelMemoryRoutes } from "./channel-memory.js";
 import { channelRoutes } from "./channels.js";
@@ -65,6 +66,8 @@ import { whatsNewRoutes } from "./whats-new.js";
 import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
+  // Settings → General's "Start Slopify when I log in"; absent answers that it can't be set.
+  readonly autostart?: import("../autostart/service.js").AutostartService | undefined;
   readonly hostCliStatus?:
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
@@ -187,6 +190,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/auditions", auditionRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
+      .route("/settings/autostart", autostartRoutes(deps.autostart))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
       .route("/style-preview", stylePreviewRoutes(deps))

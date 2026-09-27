@@ -5,6 +5,9 @@ import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { nodeHostSetupRunner } from "../../host-cli/install.js";
 import { readVersion } from "../../kernel/version.js";
+import { recordLoginStart } from "../autostart/docker-record.js";
+import { nodeAutostartExec } from "../autostart/native.js";
+import { askTerminal } from "../autostart/prompt.js";
 import { assertManagedDockerHost, planDockerHostCli } from "../docker.js";
 import { applyDocker } from "./apply.js";
 import { dockerEngine } from "./engine.js";
@@ -16,6 +19,8 @@ export interface DockerCommand {
   readonly projectsDir?: string;
   readonly hostCli?: string;
   readonly acceptHostCli?: boolean;
+  // --autostart / --no-autostart; undefined asks on an interactive terminal.
+  readonly autostart?: boolean;
 }
 
 /** `slopify --docker`, `slopify install --docker` and `slopify update --docker`. */
@@ -113,6 +118,21 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
       console.log(`Recovery copy of your data: Docker volume ${result.recovery}`);
     for (const line of result.removed) console.log(`Removed ${line}.`);
     for (const problem of result.problems) console.warn(problem);
+    await recordLoginStart({
+      directory: join(dockerRoot(env, home), name.data),
+      name: name.data,
+      uid,
+      flag: command.autostart,
+      interactive: process.stdin.isTTY === true,
+      ask: askTerminal,
+      exec: nodeAutostartExec,
+      now: () => new Date(),
+      report: (line) => console.log(line),
+    }).catch((error: unknown) => {
+      console.warn(
+        `Slopify couldn't check whether Docker starts when you log in (${error instanceof Error ? error.message : String(error)}). Settings → General will say it doesn't know; run the command again to check again.`,
+      );
+    });
   } finally {
     process.off("SIGINT", abort);
     process.off("SIGTERM", abort);

@@ -10,6 +10,9 @@ short", "Explore the sample" and the starter packs. Skip (`POST /api/onboarding/
 it for good; so does the first real project (anything but the sample), even if that project is
 deleted later.
 
+It also offers "Start Slopify when I log in" once, until it is answered there, in Settings →
+General or in the terminal; see [start-at-login.md](start-at-login.md).
+
 ## Make a 60-second short
 
 `POST /api/onboarding/short {topic, packId?, requestId}` picks the providers itself: the first

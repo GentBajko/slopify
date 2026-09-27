@@ -14,6 +14,8 @@ import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
+import { createAutostart } from "./edge/autostart/index.js";
+import type { AutostartService } from "./edge/autostart/service.js";
 import {
   dockerActivationCommitted,
   dockerFolderConfiguration,
@@ -135,9 +137,14 @@ export interface Boot {
   readonly paths: Paths;
   readonly url: string;
   readonly stop: () => Promise<void>;
+  // Settings → General's "Start Slopify when I log in", for the terminal's question.
+  readonly autostart: AutostartService;
 }
 
 export interface BootOptions {
+  // Keep an existing "Start Slopify when I log in" entry pointing at this Node and version.
+  // The CLI turns it on; tests never touch the login entries of the machine they run on.
+  readonly refreshAutostart?: boolean;
   // Ready the subtitle model in the background as soon as the app is up. The CLI turns it
   // on; tests boot without it so they never reach the network.
   readonly prefetchSubtitleModel?: boolean;
@@ -552,7 +559,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           log.write("warn", "sample.seed", { detail: causedBy(error) });
         },
       );
+    const autostart = await createAutostart({
+      db,
+      dataDir: paths.dataDir,
+      logs: paths.logs,
+      port: config.port,
+      host: config.host,
+      version,
+      env: process.env,
+    });
+    if (options.refreshAutostart === true)
+      void autostart.refresh().catch((error: unknown) => {
+        log.write("warn", "autostart.refresh", { detail: causedBy(error) });
+      });
     const app = createApp({
+      autostart,
       rebuild,
       drafts: draftDeps,
       schedules: scheduleDeps,
@@ -751,7 +772,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       stopActivation = watchActivation(updater, candidateToken, shutdown, (message) =>
         log.write("warn", "update", { detail: message }),
       );
-    return { paths, url: urlOf(config.host, listeningPort), stop: shutdown };
+    return { paths, url: urlOf(config.host, listeningPort), stop: shutdown, autostart };
   } catch (error) {
     db?.close();
     lock.release();

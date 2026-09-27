@@ -117,6 +117,7 @@ describe("the settings screen", () => {
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual([
+      "General",
       "Providers",
       "Voices",
       "Models",
