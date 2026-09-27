@@ -20,6 +20,7 @@ import type { SampleScene } from "./content.js";
 import { demoAnswer } from "./demo-script.js";
 import { type DemoRequest, demoRequests, demoVoiceModel } from "./demo-turns.js";
 import { type Demo, demoPrompt, demoSceneOf } from "./demos.js";
+import { underCeiling } from "./shrink.js";
 
 // A demo project's run (`build-sample.mjs --demo <id>`): its draft, and the registry that
 // stands in for the providers. With an assets folder (how the bundled archives are made) the
@@ -294,15 +295,16 @@ function painted(folder: string, scratch: string, scene: string, aspect: string)
 }
 
 // The small mono encodes below lift the peaks well over the pipeline's own (measured: about
-// 1 dB for 64 kbps MP3, 1.5 dB for 48 kbps AAC), so the listening files' sound is held this much
-// lower before them, to ship under the -3 dBTP audiobook shops ask.
-const smallFilePeak = { mp3: -4.5, m4b: -5 } as const;
+// 1.9 dB for 64 kbps MP3, up to 3 dB for 48 kbps AAC), so the listening files' sound is held this
+// much lower before them, to ship under the -3 dBTP audiobook shops ask.
+const smallFilePeak = { mp3: -5, m4b: -6 } as const;
 
 // The pipeline writes its narration files at 128 kbps stereo-ready MP3 and 96 kbps AAC; the
-// bundled demo carries them as 64 kbps mono MP3 and 48 kbps AAC (speech needs no more), with
-// their chapters, so the archive stays a few megabytes. Same length and words; the byte counts
-// are updated to match, as for the videos. With Level the volume on, the listening files are
-// mastered again, mono, before the smaller encode.
+// bundled samples carry them as 64 kbps mono MP3 and 48 kbps AAC with their chapters, and the
+// narration's own pieces and joins as 48 kbps mono MP3 (speech needs no more), so the archives
+// stay a few megabytes. Same length and words; the byte counts are updated to match, as for the
+// videos. With Level the volume on, the listening files are mastered again, mono, before the
+// smaller encode.
 export async function shrinkAudio(
   db: DatabaseSync,
   projects: string,
@@ -336,43 +338,58 @@ export async function shrinkAudio(
       log: { write: () => undefined },
       signal: new AbortController().signal,
     };
-    if (master !== undefined && listening)
-      await masterFile(
-        run,
-        path,
-        mastered,
-        { ...master, truePeak: smallFilePeak[m4b ? "m4b" : "mp3"] },
-        {
-          sampleRate: 44100,
-          channels: 1,
-        },
-      );
     const source = master !== undefined && listening ? mastered : path;
-    execFileSync(
-      ffmpeg,
-      [
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-y",
-        "-i",
-        source,
-        ...(source === path ? [] : ["-i", path]),
-        "-map",
-        "0:a",
-        "-map_metadata",
-        source === path ? "0" : "1",
-        "-map_chapters",
-        source === path ? "0" : "1",
-        "-ac",
-        "1",
-        ...(m4b
-          ? ["-c:a", "aac", "-b:a", "48k", "-movflags", "+faststart", "-f", "mp4"]
-          : ["-c:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-f", "mp3"]),
-        smaller,
-      ],
-      { stdio: ["ignore", "ignore", "inherit"] },
-    );
+    const encode = (): void => {
+      execFileSync(
+        ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-i",
+          source,
+          ...(source === path ? [] : ["-i", path]),
+          "-map",
+          "0:a",
+          "-map_metadata",
+          source === path ? "0" : "1",
+          "-map_chapters",
+          source === path ? "0" : "1",
+          "-ac",
+          "1",
+          ...(m4b
+            ? ["-c:a", "aac", "-b:a", "48k", "-movflags", "+faststart", "-f", "mp4"]
+            : [
+                "-c:a",
+                "libmp3lame",
+                "-b:a",
+                listening ? "64k" : "48k",
+                "-id3v2_version",
+                "3",
+                "-f",
+                "mp3",
+              ]),
+          smaller,
+        ],
+        { stdio: ["ignore", "ignore", "inherit"] },
+      );
+    };
+    if (master !== undefined && listening)
+      await underCeiling(run, smallFilePeak[m4b ? "m4b" : "mp3"], master, smaller, async (peak) => {
+        await masterFile(
+          run,
+          path,
+          mastered,
+          { ...master, truePeak: peak },
+          {
+            sampleRate: 44100,
+            channels: 1,
+          },
+        );
+        encode();
+      });
+    else encode();
     execFileSync("mv", [smaller, path]);
     rmSync(mastered, { force: true });
     const bytes = statSync(path).size;

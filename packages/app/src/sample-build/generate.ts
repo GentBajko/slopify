@@ -54,13 +54,15 @@ import { type DemoSetup, demoSetup, shrinkAudio } from "./demo-build.js";
 import { type DemoRequest, requestFile } from "./demo-turns.js";
 import { type Demo, demoOf } from "./demos.js";
 import { scriptedAnswer } from "./script.js";
+import { underCeiling } from "./shrink.js";
 
 // Builds the bundled sample project with Slopify's own pipeline: the article is supplied and
 // the "text model" is a local script registered under the honest provider name sample-writer.
 //
 // With `--assets <folder>` (how the bundled archive is made) the narration and pictures are
 // made ahead of time and read from the folder:
-//   narration.mp3                                  the article's plain text, spoken
+//   turn-<hash>.mp3 and turns.json                the narration's requests, spoken by
+//                                                  Tristan on Inworld TTS-2 (voices.ts --library)
 //   harbor.jpg scrolls.jpg embers.jpg disc.jpg     the four scenes, 16:9
 //   harbor-vertical.jpg … disc-vertical.jpg        the same scenes, 9:16, for the shorts
 //   thumbnail.jpg                                  16:9
@@ -83,7 +85,7 @@ import { scriptedAnswer } from "./script.js";
 
 // The bundled copies' smaller encodes lift the peaks more than the pipeline's own, so their
 // sound is held this much lower before them (measured: 64 kbps AAC adds 2 to 3 dB).
-const smallAacPeak = -4.5;
+const smallAacPeak = -5;
 
 const wordsPerMinute = 165;
 const leadSeconds = 0.4;
@@ -189,10 +191,11 @@ async function build(
     paths.projects,
     project.id,
     ffmpeg,
-    demo === undefined ? 30 : 39,
+    demo === undefined ? 30 : 41,
     masterGoal(setup.draft, "video"),
   );
-  if (demo !== undefined)
+  // A spoken narration's pieces and joins are squeezed too (the Library's as well as a demo's).
+  if (demo !== undefined || (assets !== undefined && !short))
     await shrinkAudio(
       db,
       paths.projects,
@@ -625,47 +628,53 @@ async function shrinkVideos(
       log: { write: () => undefined },
       signal: new AbortController().signal,
     };
-    if (master !== undefined)
-      await masterFile(
-        run,
-        path,
-        sound,
-        { ...master, truePeak: smallAacPeak },
-        {
-          sampleRate: 44100,
-          channels: 2,
-        },
+    const encode = (): void => {
+      execFileSync(
+        ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-i",
+          path,
+          ...(master === undefined ? [] : ["-i", sound, "-map", "0:v:0", "-map", "1:a:0"]),
+          "-vf",
+          vertical ? "scale=720:1280" : "scale=1280:720",
+          "-c:v",
+          "libx264",
+          "-preset",
+          crf > 30 ? "veryslow" : "slow",
+          "-crf",
+          String(crf),
+          "-pix_fmt",
+          "yuv420p",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "64k",
+          "-movflags",
+          "+faststart",
+          smaller,
+        ],
+        { stdio: ["ignore", "ignore", "inherit"] },
       );
-    execFileSync(
-      ffmpeg,
-      [
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-y",
-        "-i",
-        path,
-        ...(master === undefined ? [] : ["-i", sound, "-map", "0:v:0", "-map", "1:a:0"]),
-        "-vf",
-        vertical ? "scale=720:1280" : "scale=1280:720",
-        "-c:v",
-        "libx264",
-        "-preset",
-        crf > 30 ? "veryslow" : "slow",
-        "-crf",
-        String(crf),
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "64k",
-        "-movflags",
-        "+faststart",
-        smaller,
-      ],
-      { stdio: ["ignore", "ignore", "inherit"] },
-    );
+    };
+    if (master === undefined) encode();
+    else
+      await underCeiling(run, smallAacPeak, master, smaller, async (peak) => {
+        await masterFile(
+          run,
+          path,
+          sound,
+          { ...master, truePeak: peak },
+          {
+            sampleRate: 44100,
+            channels: 2,
+          },
+        );
+        encode();
+      });
     execFileSync("mv", [smaller, path]);
     rmSync(sound, { force: true });
     const bytes = statSync(path).size;

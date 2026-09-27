@@ -52,12 +52,12 @@ copy gets " (2)". What each pack installed is remembered in the `onboarding.pack
 Three backup archives in `packages/app/src/assets/sample/`, each holding one finished project
 (all marked **Sample** in Projects):
 
-- `sample-project.tar` (about 22 MB), "The Library of Alexandria": a 2½-minute 1280×720
+- `sample-project.tar` (about 23.5 MB), "The Library of Alexandria": a 3-minute 1280×720
   narrated video with burned-in captions, chapter cards and the warm Look, two shorts, the
   article, the PDF, a YouTube description with chapters, four images and a thumbnail.
-- `sample-audiobook.tar` (about 9.97 MB), "The Wind in the Willows: The River Bank": an
+- `sample-audiobook.tar` (about 9.9 MB), "The Wind in the Willows: The River Bank": an
   audiobook (see [The demos](#the-demos)).
-- `sample-podcast.tar` (about 8.8 MB), "The Antikythera Mechanism": a two-host podcast.
+- `sample-podcast.tar` (about 8.9 MB), "The Antikythera Mechanism": a two-host podcast.
 
 Boot imports each once (`BootOptions.seedSample`, on in the CLI; `seedSamples` in
 `slices/onboarding/sample.ts`), and each is remembered on its own (`onboarding.sample`,
@@ -73,23 +73,35 @@ so the copy has nothing to rebuild.
 The archive is built by Slopify's own pipeline. The bundled one uses a folder of pre-made
 narration and pictures:
 
-    node packages/app/scripts/build-sample.mjs --assets <folder>   # needs ffmpeg and ImageMagick
+    cd packages/app
+    SAMPLE_RECORD=<folder>/turns.json node scripts/build-sample.mjs --assets <folder> /tmp/x.tar
+    node --import ./scripts/ts-resolve.mjs src/sample-build/voices.ts --library <folder>
+    node scripts/build-sample.mjs --assets <folder>   # needs ffmpeg and ImageMagick
 
-The folder holds `narration.mp3`, the four scenes as `harbor.jpg`, `scrolls.jpg`,
-`embers.jpg` and `disc.jpg`, the same four tall as `<scene>-vertical.jpg` for the shorts, and
-`thumbnail.jpg` (the list is also at the top of `src/sample-build/generate.ts`). The narration
-is the article's plain text, headings included, spoken once by Inworld's stock voice "Tristan"
-on Realtime TTS-2 (2,335 characters, about $0.06 at the catalogue's $25 per million). The nine
-pictures were painted by the Codex CLI with the app's own Codex image adapter:
+The folder holds the four scenes as `harbor.jpg`, `scrolls.jpg`, `embers.jpg` and `disc.jpg`,
+the same four tall as `<scene>-vertical.jpg` for the shorts, `thumbnail.jpg`, and the spoken
+narration (the list is also at the top of `src/sample-build/generate.ts`). The narration is a
+new run's: Inworld's stock voice "Tristan" on Realtime TTS-2, one request per paragraph
+(headings included), each prepared with delivery cues from the sample's Narration Preparation
+prompt ("a warm, unhurried history documentary"; the cues, such as `[narrate calmly, gently
+setting a myth straight]` and a `[breathe]`, are the scripted writer's answers in
+`src/sample-build/content.ts`), then levelled, paced (0.45 s between sentences) and mastered
+like every new run ([loudness.md](loudness.md), [pauses.md](pauses.md)). The first build, with
+`SAMPLE_RECORD`, lists the nine requests the pipeline sends (answering each with a quiet tone,
+so that build fails at the captions and is thrown away); `voices.ts --library` speaks them
+(2,879 characters, tags included, about $0.07 at the catalogue's $25 per million) and the
+second build answers each request with its file. The nine pictures were painted by the Codex
+CLI with the app's own Codex image adapter:
 
     node --import ./scripts/ts-resolve.mjs src/sample-build/paint.ts <folder>   # from packages/app
 
 The words are timed against the narration by the real English aligner, which downloads its
-model on first use. The article is the maintainer's own text; the description, the shorts'
-picks and their image prompts are scripted answers worked out from the real transcript
-(`src/sample-build/script.ts`), under the provider names `sample-writer` and `sample-artist`
-(model `codex-painted`). Everything after that (captions, render, shorts, PDF) is the real
-code.
+model on first use. The article is the maintainer's own text; the delivery cues, the
+description, the shorts' picks and their image prompts are scripted answers worked out from
+what the pipeline sends (`src/sample-build/script.ts`), under the provider names
+`sample-writer` and `sample-artist` (model `codex-painted`). Everything after that (captions,
+render, shorts, PDF) is the real code. The archive re-encodes the video at CRF 30 and the
+narration's pieces and joins as 48 kbps mono MP3.
 
 Without `--assets` the build needs no provider at all (CI): the pictures are procedural
 ImageMagick art (`src/sample-build/art.ts`, model `procedural`), the narration is a quiet
@@ -120,10 +132,11 @@ caption colours and name tags. Four paintings, one short.
 The voices are Inworld stock voices on Realtime TTS-2; each demo's turns carry delivery cues
 (for example `[call out cheerfully across the water]`, `[say slowly, in amazed disbelief]`,
 `[laugh]`, `[breathe]`) from the demo's Narration Preparation prompt, answered by the scripted
-writer from `src/sample-build/demos.ts`. Speaking them took 35 requests and 3,810 characters,
-tags included (about $0.095 at the catalogue's $25 per million; four audiobook turns were cut
-afterwards, so the bundled audiobook uses 20 of its 24). The twelve pictures (eight scenes, two
-tall ones for the shorts and two portraits) were painted by the Codex CLI.
+writer from `src/sample-build/demos.ts`. Both demos are levelled and mastered like every new
+run, with the least pause between sentences inside a turn at 0.6 s for the audiobook and
+0.35 s for the podcast. Speaking them took 31 requests and 3,377 characters, tags included
+(about $0.08 at the catalogue's $25 per million). The twelve pictures (eight scenes, two tall
+ones for the shorts and two portraits) were painted by the Codex CLI.
 
     cd packages/app
     node --import ./scripts/ts-resolve.mjs src/sample-build/paint.ts --demo audiobook <folder>
@@ -137,8 +150,23 @@ the container's `/tmp`, opens the database read-only, hands the key to the insta
 Inworld adapter and writes only MP3s, which are copied out before the folder in `/tmp` is
 removed. A file is named by its voice and words, so editing the script speaks only the changed
 turns. The build answers each TTS request with the file made for exactly that text and voice,
-and fails if one is missing. The archive re-encodes the video at CRF 38 and the narration files
-as 48 kbps mono MP3 and 32 kbps AAC to stay under 10 MB.
+and fails if one is missing. The archive re-encodes the video at CRF 41, the MP3 and M4B as
+64 kbps mono MP3 and 48 kbps mono AAC, and the narration's pieces and joins as 48 kbps mono
+MP3, to stay under 10 MB.
+
+These smaller encodes lift the peaks more than the pipeline's own (64 kbps AAC by 2 to 4 dB), so
+with Level the volume on the sound is mastered again before them with the peaks held lower, and
+an encode that still lands over its ceiling is made again with the sound held lower by the
+overshoot (`src/sample-build/shrink.ts`). What the bundled files measure (September 2026 build):
+
+| Sample | Narration pieces, spread before → after levelling | Video | Short(s) | MP3 / M4B |
+| --- | --- | --- | --- | --- |
+| Library of Alexandria | 9 paragraphs, 4.0 → 0.1 LU | −14.2 LUFS, −2.0 dBTP | −14.1 / −14.5 LUFS, −2.9 dBTP | none |
+| Audiobook | 20 turns, 14.9 → 0.7 LU | −14.4 LUFS, −2.6 dBTP | −14.4 LUFS, −2.8 dBTP | −18.6 / −18.4 LUFS, −3.4 dBTP |
+| Podcast | 11 turns, 9.5 → 0.2 LU | −14.2 LUFS, −2.1 dBTP | −14.2 LUFS, −3.2 dBTP | −18.6 / −18.3 LUFS, −3.1 / −3.4 dBTP |
+
+Before levelling, the shipped videos measured −28.9 LUFS (Library), −24.4 LUFS (audiobook, turn
+spread 16.5 LU) and −24.4 LUFS (podcast, 8.3 LU), and both demos' M4B peaked above 0 dBTP.
 
 Without `--assets` a demo builds with no provider (CI): quiet tones for the turns (provider
 `sample-voice`), procedural pictures and paced words, and no delivery cues.

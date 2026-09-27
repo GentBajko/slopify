@@ -61,11 +61,11 @@ describe("GET /api/projects/:id/narration/peaks", () => {
       const response = await app.request(`/api/projects/${projectId}/narration/peaks`);
       expect(await response.json()).toMatchObject({
         complete: true,
-        pieces: [{ key: "audio:provided", seconds: 2, peaks: [0.1, 0.5, 0.2] }],
+        pieces: [{ key: "audio:body:concat", seconds: 2, peaks: [0.1, 0.5, 0.2] }],
       });
     }
     expect(decoded).toHaveLength(1);
-    expect(decoded[0]).toMatch(/audio-body\.mp3$/);
+    expect(decoded[0]).toMatch(/narration\.mp3$/);
     expect((await app.request("/api/projects/nothing/narration/peaks")).status).toBe(404);
   });
 });
