@@ -104,6 +104,32 @@ describe("nodeRunCli", () => {
     expect(alive(pid)).toBe(false);
   });
 
+  it("forces a child that ignores the polite stop on abort, while its reader still waits", async () => {
+    const path = script(
+      "stubborn.mjs",
+      "process.on('SIGTERM', () => {});\nprocess.stdout.write('ready\\n');\nsetInterval(() => {}, 1000);\n",
+    );
+    const controller = new AbortController();
+    const run = nodeRunCli(process.execPath, [path], controller.signal);
+    const reader = lines(run.stdout)[Symbol.asyncIterator]();
+    expect((await reader.next()).value).toBe("ready");
+    const waiting = reader.next();
+
+    controller.abort(new Error("cancelled"));
+
+    // Nothing calls stopCliRun: the reader is parked on stdout, as an adapter's is. The
+    // forced stop closes the pipe under it, which ends the read one way or the other.
+    expect(
+      await waiting.then(
+        () => "released",
+        () => "released",
+      ),
+    ).toBe("released");
+    expect(await run.ended).toEqual({ code: null, error: null });
+    for (let tries = 0; tries < 50 && alive(run.pid); tries += 1) await delay(20);
+    expect(alive(run.pid)).toBe(false);
+  });
+
   it("kills the child when the caller stops reading", async () => {
     const path = script("chatty.mjs", "setInterval(() => process.stdout.write('tick\\n'), 10);\n");
     const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]));
