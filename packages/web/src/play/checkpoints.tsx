@@ -42,7 +42,7 @@ export function CheckpointControls({
       tabIndex={-1}
       aria-invalid={problem("checkpoints") !== undefined}
       disabled={review.starting || review.uncertain}
-      className="min-w-0 rounded-panel border border-line px-3 pt-1 pb-2"
+      className="min-w-0 rounded-media border border-line px-3 pt-1 pb-2"
       {...helpScope}
     >
       <legend className="flex items-center gap-1 px-1 font-semibold">
@@ -86,7 +86,7 @@ export function CheckpointControls({
               </label>
               <p
                 id={`${id}-detail`}
-                className={error || (checked && !enabled) ? "pl-7 text-small text-red" : "sr-only"}
+                className={error || (checked && !enabled) ? "pl-7 text-small text-danger" : "sr-only"}
               >
                 {error ??
                   (enabled
@@ -102,7 +102,7 @@ export function CheckpointControls({
         })}
       </div>
       {problem("checkpoints") ? (
-        <p className="text-small text-red">{problem("checkpoints")}</p>
+        <p className="text-small text-danger">{problem("checkpoints")}</p>
       ) : null}
     </fieldset>
   );

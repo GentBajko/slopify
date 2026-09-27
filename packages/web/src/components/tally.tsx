@@ -9,7 +9,7 @@ export interface Tally {
 
 export function TallyBoard({ counters }: { readonly counters: readonly Tally[] }) {
   return (
-    <dl className="m-0 grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-panel md:grid-cols-5">
+    <dl className="m-0 grid grid-cols-2 overflow-hidden rounded-media border border-line bg-surface md:grid-cols-5">
       {counters.map((counter) => (
         // The label is written first so a screen reader hears the name before the number,
         // and the column is reversed so the eye meets the number first. The -1 px pull
@@ -18,7 +18,7 @@ export function TallyBoard({ counters }: { readonly counters: readonly Tally[] }
           key={counter.label}
           className="-ml-px flex flex-col-reverse gap-2 border-l border-line p-[18px]"
         >
-          <dt className="engraved text-ink3">{counter.label}</dt>
+          <dt className="engraved text-ink-3">{counter.label}</dt>
           <dd className="m-0 text-counter font-bold tabular-nums tracking-[-0.01em]">
             {counter.value}
           </dd>
@@ -31,11 +31,11 @@ export function TallyBoard({ counters }: { readonly counters: readonly Tally[] }
 // The same board with nothing in it yet: the shape arrives before the numbers do.
 export function TallySkeleton({ cells }: { readonly cells: number }) {
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-panel md:grid-cols-5">
+    <div className="grid grid-cols-2 overflow-hidden rounded-media border border-line bg-surface md:grid-cols-5">
       {Array.from({ length: cells }, (_, index) => index).map((index) => (
         <div key={index} className="-ml-px flex flex-col gap-2 border-l border-line p-[18px]">
-          <span className="h-8 w-20 rounded-control bg-panel2" />
-          <span className="h-3 w-24 rounded-control bg-panel2" />
+          <span className="h-8 w-20 rounded-control bg-raised" />
+          <span className="h-3 w-24 rounded-control bg-raised" />
         </div>
       ))}
     </div>

@@ -28,12 +28,20 @@ writing `data-theme` on the document element (`components/theme.tsx`). The light
 written twice in `index.css` (media query and attribute); `styles/tokens.test.ts` keeps the two
 copies identical.
 
-**Deprecated 2.x names** (`bg`, `panel`, `panel2`, `line2`, `ink2`, `ink3`, `red`, `amber`,
-`lamp-*`, `run-text`, `done`, `accent-edge`, `text-row`, `text-title`, `rounded-panel`, the
-`engraved` utility) are aliases onto the 3.0 tokens so screens that have not been redesigned
-keep rendering. Don't use them in new code; the screen redesign removes their last uses and
-then the aliases. `accent-ink` changed meaning: in 3.0 it is accent-coloured text; text on an
+The 2.x names (`bg`, `panel`, `panel2`, `line2`, `ink2`, `ink3`, `red`, `amber`, `lamp-*`,
+`run-text`, `done`, `accent-edge`, `text-row`, `text-title`, `rounded-panel`, `--color-shadow`)
+are gone; `styles/tokens.test.ts` fails if one is defined again. Only the `engraved` utility is
+left, deprecated in favour of `.sl-kicker`. `accent-ink` is accent-coloured text; text on an
 accent fill is `on-accent`.
+
+**slopify.stream uses the same tokens.** `packages/site/public/styles.css` names them without
+Tailwind's namespace (`--ground`, `--ink-2`, `--radius-media`, `--space-4`), and
+`packages/site/tokens.test.js` fails when a value there differs from `index.css`, dark or
+light. Change a token in `index.css` first, then copy it to the site.
+
+**One grid.** Spacing is the scale: `--space-1` to `--space-8`, or Tailwind's numbered steps
+(`p-3`, `gap-2`, `mb-1`). An arbitrary pixel spacing (`p-[18px]`, `gap-[6px]`) outside
+`components/kit` fails `styles/grid.test.ts`.
 
 The 2.x `components/ui/button.tsx` and `ui/dialog.tsx` now render the kit's classes (outline
 and accent become secondary, ghost becomes quiet, danger becomes destructive, play becomes the

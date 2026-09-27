@@ -98,7 +98,7 @@ export function ReviewSettings({
       data-play-field="reviews"
       tabIndex={-1}
       disabled={disabled}
-      className="min-w-0 rounded-panel border border-line px-3 pt-1 pb-3"
+      className="min-w-0 rounded-media border border-line px-3 pt-1 pb-3"
       {...helpScope}
     >
       <legend className="flex items-center gap-1 px-1 font-semibold">
@@ -140,17 +140,17 @@ export function ReviewSettings({
             onChange={(event) => onChange({ ...value, retries: event.target.value })}
           />
           {problem("reviews.retries") ? (
-            <span className="block text-red">{problem("reviews.retries")}</span>
+            <span className="block text-danger">{problem("reviews.retries")}</span>
           ) : null}
         </div>
       </div>
       {blind ? (
-        <p className="mt-2 text-small text-red">
+        <p className="mt-2 text-small text-danger">
           Picture reviews need Claude Code or Codex as the reviewer: Slopify can't show pictures to
           this one.
         </p>
       ) : (
-        <p className="mt-2 text-label text-ink3">
+        <p className="mt-2 text-label text-ink-3">
           Pictures (images, thumbnail, shorts) need Claude Code or Codex as the reviewer.
         </p>
       )}
@@ -205,9 +205,9 @@ export function ReviewSettings({
                     ))}
                   </Picker>
                   {problem(`reviews.stages.${stage}.prompt`) ? (
-                    <p className="text-red">{problem(`reviews.stages.${stage}.prompt`)}</p>
+                    <p className="text-danger">{problem(`reviews.stages.${stage}.prompt`)}</p>
                   ) : !available && mode !== "off" ? (
-                    <p className="text-ink3">This stage makes nothing to review in this run.</p>
+                    <p className="text-ink-3">This stage makes nothing to review in this run.</p>
                   ) : null}
                 </td>
               </tr>

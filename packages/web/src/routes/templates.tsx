@@ -365,7 +365,7 @@ export function TemplatesRoute({
           </Link>{" "}
           to prepare one.
         </p>
-        <p className="mb-4 text-small text-ink2">
+        <p className="mb-4 text-small text-ink-2">
           A template keeps the settings, not one video&apos;s topic.
         </p>
         <form

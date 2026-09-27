@@ -87,7 +87,7 @@ function FontPickerFields({
             value={value}
             disabled={uploading}
             onChange={(event) => onPick(event.target.value)}
-            className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+            className="h-8 w-full rounded-control border border-line-strong bg-raised px-[10px] text-small text-ink"
           >
             {!listed.some((font) => font.id === "default") ? (
               <option value="default">Default font · bundled</option>
@@ -110,7 +110,7 @@ function FontPickerFields({
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
             disabled={uploading}
-            className="w-full text-small text-ink2 file:mr-2 file:rounded-control file:border file:border-line2 file:bg-panel2 file:px-2 file:py-1 file:text-ink"
+            className="w-full text-small text-ink-2 file:mr-2 file:rounded-control file:border file:border-line-strong file:bg-raised file:px-2 file:py-1 file:text-ink"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
@@ -120,12 +120,12 @@ function FontPickerFields({
         </div>
       </div>
       {uploading ? (
-        <p role="status" className="text-small text-ink2">
+        <p role="status" className="text-small text-ink-2">
           Uploading font…
         </p>
       ) : null}
       {upload.error ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {upload.error}
         </p>
       ) : null}
@@ -133,7 +133,7 @@ function FontPickerFields({
         <p role="alert">Saved font is unavailable. Choose another font or upload it again.</p>
       ) : null}
       {fonts.error ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           The font list couldn't be loaded. {fonts.error.message}
         </p>
       ) : null}

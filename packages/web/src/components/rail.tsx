@@ -15,7 +15,7 @@ export function RailGroup({
   return (
     <div
       data-tour={tour}
-      className={cn("overflow-hidden rounded-panel border border-line bg-panel", className)}
+      className={cn("overflow-hidden rounded-media border border-line bg-surface", className)}
     >
       {children}
     </div>
@@ -57,7 +57,7 @@ export function RailMeter({
     <span
       aria-hidden="true"
       data-slot="rail-meter"
-      className="absolute inset-x-0 bottom-0 h-[2px] bg-lamp-run transition-[width] duration-[250ms] ease-out motion-reduce:transition-none"
+      className="absolute inset-x-0 bottom-0 h-[2px] bg-accent transition-[width] duration-[250ms] ease-out motion-reduce:transition-none"
       style={{ width: `${String(Math.round(share * 100))}%` }}
     />
   );

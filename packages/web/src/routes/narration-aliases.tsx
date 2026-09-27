@@ -94,7 +94,7 @@ export function NarrationAliasesRoute(): ReactElement {
           </Button>
         }
       >
-        <p className="m-0 flex items-center gap-1 text-small text-ink2">
+        <p className="m-0 flex items-center gap-1 text-small text-ink-2">
           Words the narrator says differently, like Dr. as Doctor.
           <InfoTip id="library.aliases" />
         </p>
@@ -102,7 +102,7 @@ export function NarrationAliasesRoute(): ReactElement {
 
       {listing.error === null ? null : (
         <RailGroup>
-          <p className="px-4 py-[14px] text-body text-red">
+          <p className="px-4 py-[14px] text-body text-danger">
             Couldn't load the aliases: {listing.error.message} Reload the page to try again.
           </p>
         </RailGroup>
@@ -110,7 +110,7 @@ export function NarrationAliasesRoute(): ReactElement {
 
       {rows === undefined ? null : shown.length === 0 ? (
         <RailGroup>
-          <p className="px-4 py-[14px] text-body text-ink2">
+          <p className="px-4 py-[14px] text-body text-ink-2">
             No aliases yet. Use Add alias to say a word differently from how it is written.
           </p>
         </RailGroup>
@@ -118,7 +118,7 @@ export function NarrationAliasesRoute(): ReactElement {
         <RailGroup>
           {/* One info button per column, once above the rows rather than on every row. */}
           <div {...helpScope}>
-            <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-2 text-small text-ink2">
+            <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-2 text-small text-ink-2">
               <span className="flex items-center gap-1">
                 Written
                 <InfoTip id="library.aliases.written" />
@@ -145,7 +145,7 @@ export function NarrationAliasesRoute(): ReactElement {
                     key={row.key}
                     className="grid grid-cols-1 gap-x-[14px] gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-end"
                   >
-                    <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-written`}>
+                    <label className="grid gap-1 text-label text-ink-2" htmlFor={`${id}-written`}>
                       Written
                       <Input
                         id={`${id}-written`}
@@ -157,7 +157,7 @@ export function NarrationAliasesRoute(): ReactElement {
                         onChange={(event) => update(row.key, { written: event.target.value })}
                       />
                     </label>
-                    <label className="grid gap-1 text-label text-ink2" htmlFor={`${id}-spoken`}>
+                    <label className="grid gap-1 text-label text-ink-2" htmlFor={`${id}-spoken`}>
                       Say it as
                       <Input
                         id={`${id}-spoken`}
@@ -197,7 +197,7 @@ export function NarrationAliasesRoute(): ReactElement {
                       Remove
                     </Button>
                     {error === undefined ? null : (
-                      <p id={`${id}-error`} className="m-0 text-small text-red md:col-span-5">
+                      <p id={`${id}-error`} className="m-0 text-small text-danger md:col-span-5">
                         {error}
                       </p>
                     )}

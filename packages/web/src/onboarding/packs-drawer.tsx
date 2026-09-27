@@ -48,7 +48,7 @@ export function PacksDrawer({
         </StatusSlot>
       }
     >
-      <p className="mb-4 flex items-center gap-1 text-small text-ink2">
+      <p className="mb-4 flex items-center gap-1 text-small text-ink-2">
         Prompts, a suggested voice and a template for one kind of channel.
         <InfoTip id="welcome.packs" />
       </p>
@@ -57,7 +57,7 @@ export function PacksDrawer({
           <Rail key={pack.id}>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="font-semibold">{pack.name}</span>
-              <span className="text-small text-ink2">{pack.summary}</span>
+              <span className="text-small text-ink-2">{pack.summary}</span>
             </span>
             <Button
               disabled={pack.installed || install.isPending}

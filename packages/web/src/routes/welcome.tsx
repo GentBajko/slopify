@@ -117,14 +117,14 @@ export function WelcomeRoute(): ReactElement {
           </Button>
         }
       />
-      {view.error ? <p className="mb-3 text-body text-red">{view.error.message}</p> : null}
+      {view.error ? <p className="mb-3 text-body text-danger">{view.error.message}</p> : null}
 
       <SectionHead title="Found on this computer" info="welcome.found" />
       <RailGroup className="mb-6">
         {(data?.clis ?? []).map((cli) => (
           <Rail key={cli.id}>
             <span className="min-w-0 flex-1 font-semibold">{cli.name}</span>
-            <span className="text-small text-ink2">
+            <span className="text-small text-ink-2">
               {cli.ready
                 ? `Ready${cli.version === null ? "" : ` · ${cli.version}`}${cli.draws ? " · writes and draws" : " · writes"}`
                 : cli.installed
@@ -136,7 +136,7 @@ export function WelcomeRoute(): ReactElement {
         {data === undefined ? <Rail>Looking for installed tools…</Rail> : null}
       </RailGroup>
       {data !== undefined && ready.length > 0 ? (
-        <p className="-mt-4 mb-6 text-small text-ink2">
+        <p className="-mt-4 mb-6 text-small text-ink-2">
           You can make a video now: no API keys are needed for the text
           {ready.some((cli) => cli.draws) ? " or the images" : ""}.
         </p>
@@ -146,7 +146,7 @@ export function WelcomeRoute(): ReactElement {
       <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
         <div className="flex min-w-[240px] flex-1 flex-col gap-1" {...helpScope}>
           <span className="flex items-center gap-1">
-            <label htmlFor="welcome-topic" className="text-label text-ink2">
+            <label htmlFor="welcome-topic" className="text-label text-ink-2">
               Topic
             </label>
             <InfoTip id="welcome.topic" className="-my-1" />
@@ -161,7 +161,7 @@ export function WelcomeRoute(): ReactElement {
         </div>
         <div className="flex flex-col gap-1" {...helpScope}>
           <span className="flex items-center gap-1">
-            <label htmlFor="welcome-pack" className="text-label text-ink2">
+            <label htmlFor="welcome-pack" className="text-label text-ink-2">
               Style
             </label>
             <InfoTip id="welcome.pack" className="-my-1" />
@@ -193,7 +193,7 @@ export function WelcomeRoute(): ReactElement {
             <Rail key={one.id}>
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="font-semibold">{one.name}</span>
-                <span className="text-small text-ink2">{one.summary}</span>
+                <span className="text-small text-ink-2">{one.summary}</span>
               </span>
               {projectId === null ? (
                 <Button asChild variant="ghost">
@@ -221,7 +221,7 @@ export function WelcomeRoute(): ReactElement {
           <Rail key={one.id}>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="font-semibold">{one.name}</span>
-              <span className="text-small text-ink2">{one.summary}</span>
+              <span className="text-small text-ink-2">{one.summary}</span>
             </span>
             <Button
               disabled={one.installed || install.isPending}

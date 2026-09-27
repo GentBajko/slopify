@@ -38,7 +38,7 @@ export function SampleSettings(): ReactElement {
           const projectId = samples?.[id] ?? null;
           return (
             <Rail key={id}>
-              <span className="min-w-0 flex-1 text-small text-ink2">
+              <span className="min-w-0 flex-1 text-small text-ink-2">
                 {names[id]}: {projectId === null ? "not in your projects" : "in your projects"}
               </span>
               {projectId === null ? null : (
@@ -52,7 +52,7 @@ export function SampleSettings(): ReactElement {
           );
         })}
         <Rail>
-          <span className="min-w-0 flex-1 text-small text-ink2">
+          <span className="min-w-0 flex-1 text-small text-ink-2">
             Puts all three back as they shipped.
           </span>
           <Button disabled={restore.isPending} onClick={() => restore.mutate()}>

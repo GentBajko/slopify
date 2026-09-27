@@ -64,7 +64,7 @@ export function PronunciationGlossary({
         </div>
       )}
       {!supported ? (
-        <p id={`${id}-support`} className="text-label text-ink3">
+        <p id={`${id}-support`} className="text-label text-ink-3">
           Unavailable for this provider or model. Your saved preference is retained.
         </p>
       ) : null}
