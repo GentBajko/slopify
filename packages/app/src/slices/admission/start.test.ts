@@ -8,6 +8,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { saveNarrationAliases } from "../narration/aliases-library.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { stageUpload } from "../storage/staging.js";
 import type { RunDraft } from "./model.js";
@@ -409,5 +410,39 @@ describe("startRun with the shorts' background music", () => {
     ).toThrow(/background music could not be attached/);
     expect(storage.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
     expect(storage.db.prepare("SELECT count(*) AS n FROM project_assets").get()).toEqual({ n: 0 });
+  });
+});
+
+describe("narration aliases", () => {
+  it("copies Library → Aliases into a generated-audio project that uses them", async () => {
+    const storage = deps();
+    const saved = saveNarrationAliases(storage, [
+      { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false },
+    ]);
+    expect(saved.ok).toBe(true);
+    const image = await upload(storage, "images", "one");
+    const generated = (useNarrationAliases: boolean | undefined) =>
+      draft({
+        sources: { ...draft().sources, audio: "generate" },
+        audio: {
+          provider: "voice",
+          model: "tts",
+          voice: "v1",
+          ...(useNarrationAliases === undefined ? {} : { useNarrationAliases }),
+        },
+        provided: { article: "Dr. Grey.", images: [image] },
+      });
+    expect(startRun(storage, generated(true), {}, true).project.config.narrationAliases).toEqual([
+      { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false },
+    ]);
+    // Off, or a draft from before aliases: no copy, so nothing about its narration changes.
+    for (const use of [false, undefined])
+      expect("narrationAliases" in startRun(storage, generated(use), {}, true).project.config).toBe(
+        false,
+      );
+    // A later Library edit leaves a started project's copy alone.
+    saveNarrationAliases(storage, []);
+    const first = storage.db.prepare("SELECT config FROM projects ORDER BY rowid LIMIT 1").get();
+    expect(JSON.parse(String(first?.config)).narrationAliases).toHaveLength(1);
   });
 });

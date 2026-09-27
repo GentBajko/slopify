@@ -1,5 +1,6 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
@@ -502,6 +503,16 @@ export function videoEditFields(
 
 function chosen(choice: ProviderChoice | undefined): boolean {
   return choice !== undefined && choice.provider.trim() !== "" && choice.model.trim() !== "";
+}
+
+// The aliases a run narrates with: its copied Library → Aliases while Use narration aliases is
+// on for generated audio, otherwise none. Any voice provider: an alias is plain text.
+export function narrationAliasesOf(
+  draft: Pick<RunDraft, "sources" | "audio" | "narrationAliases">,
+): readonly NarrationAlias[] {
+  return draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
+    ? (draft.narrationAliases ?? [])
+    : [];
 }
 
 export function usesPronunciationGlossary(draft: Pick<RunDraft, "sources" | "audio">): boolean {

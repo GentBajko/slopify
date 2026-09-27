@@ -178,6 +178,11 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
   add(
+    "Narration aliases",
+    before.audio?.useNarrationAliases === true ? aliasLines(before.narrationAliases) : "Off",
+    after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
+  );
+  add(
     "YouTube description",
     before.youtubeDescription === true ? "On" : "Off",
     after.youtubeDescription === true ? "On" : "Off",
@@ -312,4 +317,15 @@ function referenceLabel(config: Pick<RunConfig, "reference">): string {
   const reference = config.reference;
   if (reference === undefined) return "Off";
   return reference.source === "provide" ? "Uploaded image" : `Prompt: ${reference.prompt ?? ""}`;
+}
+
+// One line per alias, as the Library shows it, so a changed alias reads as a changed line.
+function aliasLines(aliases: RunConfig["narrationAliases"]): string {
+  if (aliases === undefined || aliases.length === 0) return "On, no aliases copied";
+  return aliases
+    .map(
+      (alias) =>
+        `${alias.written} → ${alias.spoken}${alias.wholeWord ? "" : " (inside words too)"}${alias.caseSensitive ? " (match case)" : ""}`,
+    )
+    .join("\n");
 }

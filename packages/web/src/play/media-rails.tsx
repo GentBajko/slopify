@@ -6,6 +6,7 @@ import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
@@ -122,6 +123,12 @@ export function AudioRail({
                     onChange: (shareGlossary) =>
                       update({ audio: { ...form.audio, shareGlossary } }),
                   }}
+                />
+                <NarrationAliasesToggle
+                  value={form.audio.useNarrationAliases}
+                  onChange={(useNarrationAliases) =>
+                    update({ audio: { ...form.audio, useNarrationAliases } })
+                  }
                 />
               </div>
             </details>

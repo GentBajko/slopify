@@ -5,6 +5,7 @@ import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.j
 import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { narrationAliasesOf } from "../admission/rules.js";
 import { resolveFont } from "../fonts/index.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { validateCues } from "../revisions/rules.js";
@@ -99,6 +100,7 @@ async function timing(
         alignSubtitles({
           audioPath: path,
           text: revisionTranscript(deps, snapshot, kind),
+          aliases: narrationAliasesOf(snapshot.view.revision.config),
           cacheDir: subtitleModelDir(deps.paths.dataDir),
           ffmpeg: deps.ffmpeg,
           signal: context.signal,

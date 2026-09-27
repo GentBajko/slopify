@@ -9,6 +9,7 @@ import {
   listStaged,
   listVoices,
   readAppSettings,
+  readNarrationAliases,
   readNotice,
   readProject,
   readRunCost,
@@ -44,6 +45,7 @@ export const keys = {
   prompts: ["prompts"] as const,
   entries: ["entries"] as const,
   documentThemes: ["document-themes"] as const,
+  narrationAliases: ["narration-aliases"] as const,
   settings: ["settings"] as const,
   // The project page's hand edits to the YouTube description, and Settings → Channel links.
   youtubeEdits: (projectId: string) => ["project", projectId, "youtube-edits"] as const,
@@ -92,6 +94,13 @@ export function entriesQuery(api: Api) {
 
 export function documentThemesQuery(api: Api) {
   return queryOptions({ queryKey: keys.documentThemes, queryFn: () => listDocumentThemes(api) });
+}
+
+export function narrationAliasesQuery(api: Api) {
+  return queryOptions({
+    queryKey: keys.narrationAliases,
+    queryFn: () => readNarrationAliases(api),
+  });
 }
 
 export function settingsQuery(api: Api) {

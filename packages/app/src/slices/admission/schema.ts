@@ -3,6 +3,7 @@ import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
+import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
@@ -72,8 +73,10 @@ export const runDraftSchema = z.object({
       voice: z.string(),
       usePronunciationGlossary: z.boolean().optional(),
       shareGlossary: z.boolean().optional(),
+      useNarrationAliases: z.boolean().optional(),
     })
     .optional(),
+  narrationAliases: narrationAliasesSchema.optional(),
   sharedGlossary: z
     .array(
       z.object({
