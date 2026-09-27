@@ -8,7 +8,7 @@ import type { PlayDraftForm } from "../play-drafts/schema.js";
 import { documentOf } from "../play-drafts/service.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
-import { isLocalCliProvider } from "../settings/model.js";
+import { isUncataloguedProvider } from "../settings/model.js";
 import type { ModelChoice, RetiredUsage, UsageKind, UsageSlot } from "./model.js";
 import { usageSlots } from "./model.js";
 
@@ -51,7 +51,11 @@ export function retiredStatus(
   slot: UsageSlot,
   choice: ModelChoice,
 ): "retired" | "unlisted" | null {
-  if (choice.provider === "" || choice.model.trim() === "" || isLocalCliProvider(choice.provider))
+  if (
+    choice.provider === "" ||
+    choice.model.trim() === "" ||
+    isUncataloguedProvider(choice.provider)
+  )
     return null;
   const row = catalogue[familyOf(slot)].find(
     (model) =>

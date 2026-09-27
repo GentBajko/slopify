@@ -55,8 +55,8 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
           else update.refresh();
         }}
         className={cn(
-          "relative flex size-8 shrink-0 items-center justify-center rounded-control bg-transparent text-ink2 hover:bg-panel2 hover:text-ink",
-          error && "text-amber",
+          "relative flex size-8 shrink-0 items-center justify-center rounded-control bg-transparent text-ink-2 hover:bg-raised hover:text-ink",
+          error && "text-waiting",
         )}
       >
         <RefreshCw
@@ -67,7 +67,7 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
         {info?.available && !active && !waiting ? (
           <span
             aria-hidden="true"
-            className="absolute top-1 right-1 size-2 rounded-full bg-lamp-run"
+            className="absolute top-1 right-1 size-2 rounded-full bg-accent"
           />
         ) : null}
       </button>

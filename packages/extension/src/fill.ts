@@ -23,10 +23,13 @@ import {
   title,
 } from "./selectors.js";
 
-// Fills the Details step of Studio's upload dialog from one pack item, field by field, in the
-// order Studio shows them. Each field either fills and is checked, or fails on its own with a
-// sentence saying what to do by hand; one field failing never stops the others, and nothing
-// here presses Next, Save or Publish. The person reviews and publishes.
+// Fills the Details step of Studio's upload dialog from one pack item, in the order Studio
+// shows the fields. First it checks that every field the item needs is on the page (pressing
+// Show more, if needed, to see AI use and Tags): if any is missing, Studio has changed and it
+// fills nothing at all, so the person never gets a half-filled dialog, and says which fields
+// it couldn't find. Then each field fills and is checked, or fails on its own with a sentence
+// saying what to do by hand (Studio didn't take the text, a playlist Studio doesn't have).
+// Nothing here presses Next, Save or Publish. The person reviews and publishes.
 
 export type FieldName =
   | "title"
@@ -56,6 +59,12 @@ export interface FillOptions {
 
 export class RefusedClick extends Error {}
 
+// Either the fields were filled (each with its own result), or a field the item needs wasn't
+// on the page and nothing was written; `missing` names those fields ("the Tags field").
+export type FillReport =
+  | { readonly filled: true; readonly results: readonly FieldResult[] }
+  | { readonly filled: false; readonly missing: readonly string[] };
+
 type WaitFor = (field: FieldSelectors, within?: ParentNode) => Promise<Element | null>;
 
 export async function fillStudio(
@@ -63,7 +72,7 @@ export async function fillStudio(
   item: PackItem,
   thumbnails: readonly File[],
   options: FillOptions = {},
-): Promise<readonly FieldResult[]> {
+): Promise<FillReport> {
   const sleep = options.sleep ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
   const timeoutMs = options.timeoutMs ?? 4000;
   const waitFor: WaitFor = async (field, within = root) => {
@@ -74,6 +83,39 @@ export async function fillStudio(
       await sleep(100);
     }
   };
+  // Show more is a toggle: it is pressed at most once, only while its label still offers to
+  // show the advanced settings and the field it reveals isn't showing, so a second field never
+  // closes what the first opened.
+  let expanded = false;
+  const revealed = async (field: FieldSelectors): Promise<Element | null> => {
+    const found = findField(root, field);
+    if (found !== null && visible(found)) return found;
+    if (!expanded) {
+      expanded = true;
+      const more = findField(root, showMore);
+      if (more !== null && collapsed(more)) click(more);
+    }
+    return waitFor(field);
+  };
+
+  // Every field this item needs, before anything is written.
+  const needed: FieldSelectors[] = [title, description];
+  if (thumbnails.length > 0) needed.push(thumbnailInput);
+  if (item.playlist !== null) needed.push(playlistTrigger);
+  needed.push(notForKids);
+  const missing = needed
+    .filter((field) => findField(root, field) === null)
+    .map((field) => field.label);
+  const advanced: FieldSelectors[] = [];
+  if (item.alteredContent !== undefined)
+    advanced.push(item.alteredContent.altered ? alteredYes : alteredNo);
+  if (item.tags.length > 0) advanced.push(tags);
+  for (const field of advanced) {
+    const found = await revealed(field).catch(() => null);
+    if (found === null) missing.push(field.label);
+  }
+  if (missing.length > 0) return { filled: false, missing };
+
   const results: FieldResult[] = [];
   const attempt = async (run: () => Promise<FieldResult>, fallback: FieldResult) => {
     try {
@@ -134,20 +176,6 @@ export async function fillStudio(
         "Couldn't find the audience question — choose \"No, it's not made for kids\" under Audience by hand.",
     },
   );
-  // Show more is a toggle: it is pressed at most once, only while its label still offers to
-  // show the advanced settings and the field it reveals isn't showing, so a second field never
-  // closes what the first opened.
-  let expanded = false;
-  const revealed = async (field: FieldSelectors): Promise<Element | null> => {
-    const found = findField(root, field);
-    if (found !== null && visible(found)) return found;
-    if (!expanded) {
-      expanded = true;
-      const more = findField(root, showMore);
-      if (more !== null && collapsed(more)) click(more);
-    }
-    return waitFor(field);
-  };
   const altered = item.alteredContent;
   if (altered !== undefined) {
     const answer = altered.altered ? "Yes" : "No";
@@ -181,7 +209,7 @@ export async function fillStudio(
       missingText("tags", "the Tags field", line),
     );
   }
-  return results;
+  return { filled: true, results };
 }
 
 function missingText(field: FieldName, label: string, text: string): FieldResult {

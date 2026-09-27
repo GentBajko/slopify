@@ -31,10 +31,19 @@ describe("the token sheet", () => {
     }
   });
 
-  it("points every deprecated 2.x colour at a 3.0 token or a fixed value", () => {
+  it("no longer defines the 2.x names", () => {
     const theme = block("@theme static {");
-    for (const name of ["--color-bg", "--color-panel", "--color-panel2", "--color-ink2"]) {
-      expect(theme.get(name)).toMatch(/^var\(--color-/);
+    for (const name of [
+      "--color-bg",
+      "--color-panel",
+      "--color-panel2",
+      "--color-ink2",
+      "--color-red",
+      "--color-shadow",
+      "--radius-panel",
+      "--text-title",
+    ]) {
+      expect(theme.has(name), name).toBe(false);
     }
   });
 });

@@ -20,6 +20,8 @@ export const providerIds = [
   "openai-tts",
   "cartesia",
   "inworld",
+  "system-voice",
+  "google-tts",
   "fal",
   "replicate",
   "openai-image",
@@ -56,7 +58,21 @@ export interface CliProvider extends ProviderBase {
   readonly versionArgs: readonly string[];
 }
 
-export type Provider = KeyedProvider | CliProvider;
+// The computer's own speech (`kernel/system-speech.ts`): no key, no login, no charge, and no row
+// in the model list. Ready when a speech program answers.
+export interface LocalProvider extends ProviderBase {
+  readonly auth: "local";
+}
+
+export type Provider = KeyedProvider | CliProvider | LocalProvider;
+
+export const systemVoiceProvider = "system-voice";
+
+// A provider Slopify's model list (models.yaml) does not carry: an agent CLI lists its own
+// models, and the system voice's "models" are the speech programs found on this computer.
+export function isUncataloguedProvider(id: string): boolean {
+  return isLocalCliProvider(id) || id === systemVoiceProvider;
+}
 
 export const providers: readonly Provider[] = [
   { id: "openrouter", family: "llm", displayName: "OpenRouter", auth: "key" },
@@ -88,6 +104,8 @@ export const providers: readonly Provider[] = [
   { id: "openai-tts", family: "tts", displayName: "OpenAI", auth: "key" },
   { id: "cartesia", family: "tts", displayName: "Cartesia", auth: "key" },
   { id: "inworld", family: "tts", displayName: "Inworld", auth: "key" },
+  { id: "system-voice", family: "tts", displayName: "System voice", auth: "local" },
+  { id: "google-tts", family: "tts", displayName: "Google Gemini", auth: "key" },
   { id: "fal", family: "image", displayName: "fal.ai", auth: "key" },
   { id: "replicate", family: "image", displayName: "Replicate", auth: "key" },
   { id: "openai-image", family: "image", displayName: "OpenAI", auth: "key" },
@@ -100,6 +118,47 @@ export const providers: readonly Provider[] = [
     binary: "codex",
     versionArgs: ["--version"],
   },
+];
+
+// One Gemini API key pays for Google's speech and its images, so Gemini TTS uses the key saved
+// for Google images until one of its own is saved.
+export const sharedKeyOf: Readonly<Partial<Record<ProviderId, ProviderId>>> = {
+  "google-tts": "google-image",
+};
+
+// The 30 prebuilt voices Gemini TTS speaks with (https://ai.google.dev/gemini-api/docs/speech-generation#voices),
+// each with the style Google gives it. Settings → Voices offers them for Google Gemini.
+export const geminiVoices: readonly { readonly name: string; readonly style: string }[] = [
+  { name: "Zephyr", style: "Bright" },
+  { name: "Puck", style: "Upbeat" },
+  { name: "Charon", style: "Informative" },
+  { name: "Kore", style: "Firm" },
+  { name: "Fenrir", style: "Excitable" },
+  { name: "Leda", style: "Youthful" },
+  { name: "Orus", style: "Firm" },
+  { name: "Aoede", style: "Breezy" },
+  { name: "Callirrhoe", style: "Easy-going" },
+  { name: "Autonoe", style: "Bright" },
+  { name: "Enceladus", style: "Breathy" },
+  { name: "Iapetus", style: "Clear" },
+  { name: "Umbriel", style: "Easy-going" },
+  { name: "Algieba", style: "Smooth" },
+  { name: "Despina", style: "Smooth" },
+  { name: "Erinome", style: "Clear" },
+  { name: "Algenib", style: "Gravelly" },
+  { name: "Rasalgethi", style: "Informative" },
+  { name: "Laomedeia", style: "Upbeat" },
+  { name: "Achernar", style: "Soft" },
+  { name: "Alnilam", style: "Firm" },
+  { name: "Schedar", style: "Even" },
+  { name: "Gacrux", style: "Mature" },
+  { name: "Pulcherrima", style: "Forward" },
+  { name: "Achird", style: "Friendly" },
+  { name: "Zubenelgenubi", style: "Casual" },
+  { name: "Vindemiatrix", style: "Gentle" },
+  { name: "Sadachbia", style: "Lively" },
+  { name: "Sadaltager", style: "Knowledgeable" },
+  { name: "Sulafat", style: "Warm" },
 ];
 
 export function providerById(id: ProviderId): Provider {

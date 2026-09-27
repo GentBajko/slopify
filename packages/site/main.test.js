@@ -4,14 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   counterText,
   dash,
-  donationHref,
-  donationPlaceholder,
-  donationUrl,
   nextReleasePublished,
   paint,
   readAggregates,
   tallyFoot,
-  wireDonation,
   wireInstallTabs,
   wireNextRelease,
   wireShowcase,
@@ -300,68 +296,6 @@ describe("wireInstallTabs", () => {
     expect(root.panels.map((panel) => panel.hidden)).toEqual([false, true, true]);
     expect(root.tabs[0].focused).toBe(true);
     expect(root.tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1]);
-  });
-});
-
-describe("donationHref", () => {
-  it("links nowhere while the address is the placeholder", () => {
-    expect(donationHref(donationPlaceholder)).toBeNull();
-    expect(donationHref("https://example.com/donate/")).toBeNull();
-  });
-
-  it.each([
-    ["an empty value", ""],
-    ["plain http", "http://ko-fi.com/someone"],
-    ["something that is not a URL", "donate here"],
-    ["a script URL", "javascript:alert(1)"],
-    ["nothing at all", undefined],
-  ])("links nowhere for %s", (_label, url) => {
-    expect(donationHref(url)).toBeNull();
-  });
-
-  it("links to a real https page", () => {
-    expect(donationHref("https://ko-fi.com/someone")).toBe("https://ko-fi.com/someone");
-  });
-});
-
-function donateRoot() {
-  const slots = [
-    {
-      dataset: { donate: "support-key" },
-      replaceWith(node) {
-        this.replacedBy = node;
-      },
-    },
-  ];
-  return {
-    slots,
-    querySelectorAll: () => slots,
-    createElement: (tag) => ({ tag }),
-  };
-}
-
-describe("wireDonation", () => {
-  it("leaves the empty slots alone while it is the placeholder", () => {
-    const root = donateRoot();
-    wireDonation(root, donationPlaceholder);
-    expect(root.slots[0].replacedBy).toBeUndefined();
-  });
-
-  it("puts a link in every slot once the address is real", () => {
-    const root = donateRoot();
-    wireDonation(root, "https://ko-fi.com/someone");
-    expect(root.slots[0].replacedBy).toEqual({
-      tag: "a",
-      href: "https://ko-fi.com/someone",
-      textContent: "Donate",
-      className: "support-key",
-    });
-  });
-
-  // Flip this test when the real address lands: it guards against shipping a live
-  // example.com link by accident.
-  it("ships with the placeholder until the maintainer supplies the page", () => {
-    expect(donationUrl).toBe(donationPlaceholder);
   });
 });
 

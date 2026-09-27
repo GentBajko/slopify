@@ -6,7 +6,7 @@ import {
   usesShorts,
   usesYoutubeDescription,
 } from "../slices/admission/rules.js";
-import { isLocalCliProvider } from "../slices/settings/model.js";
+import { isLocalCliProvider, isUncataloguedProvider } from "../slices/settings/model.js";
 import { usesAnimation } from "../slices/video/edit-settings.js";
 import { referenceRefusal, takesReferenceImage, videoModelsOf } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
@@ -41,7 +41,7 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     },
   ] as const;
   for (const { field, family, choice, needed } of checks) {
-    if (!needed || !choice || isLocalCliProvider(choice.provider)) continue;
+    if (!needed || !choice || isUncataloguedProvider(choice.provider)) continue;
     const model = catalogue.models(choice.provider, family).find((m) => m.id === choice.model);
     if (!model)
       fields.push({

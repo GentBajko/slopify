@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import type { DatabaseSync } from "node:sqlite";
 import { codexImage } from "./adapters/image/codex.js";
 import { falImage } from "./adapters/image/fal.js";
@@ -15,14 +16,18 @@ import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
 import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
+import { geminiTts } from "./adapters/tts/gemini.js";
 import { inworldTts } from "./adapters/tts/inworld.js";
 import { openAiTts } from "./adapters/tts/openai.js";
+import { ffmpegPcmToMp3 } from "./adapters/tts/pcm-mp3.js";
+import { systemTts, systemVoiceId } from "./adapters/tts/system.js";
 import type { Clock } from "./kernel/clock.js";
 import { type HostCliPorts, hostLlmIds } from "./kernel/ports/host-cli.js";
 import type { ImagePort } from "./kernel/ports/image.js";
 import type { LlmPort } from "./kernel/ports/llm.js";
 import type { ProviderFamily } from "./kernel/ports/model.js";
 import type { ProviderListing, Registry } from "./kernel/ports/registry.js";
+import { detectSpeechCached, type SpeechHost } from "./kernel/ports/system-speech.js";
 import type { TtsPort } from "./kernel/ports/tts.js";
 import { cliBinary } from "./slices/settings/cli-paths.js";
 import type { CliProbe } from "./slices/settings/cli-status.js";
@@ -45,6 +50,11 @@ export interface RegistryDeps {
   readonly spawn: RunCli;
   readonly clock: Clock;
   readonly probe: CliProbe;
+  // The app's ffmpeg: the system voice converts its recordings with it and Gemini's raw
+  // speech becomes MP3 through it. Absent (a test), both say so plainly when asked to speak.
+  readonly ffmpeg?: string | undefined;
+  // Where the system voice looks for a speech program; this process unless a test says.
+  readonly host?: SpeechHost | undefined;
 }
 
 export function buildRegistry(deps: RegistryDeps): Registry {
@@ -96,6 +106,29 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
     ["inworld", inworldTts({ fetch: deps.fetch, key: keyOf("inworld"), clock: deps.clock })],
+    // No key: the speech program this computer has, run like a CLI.
+    [
+      systemVoiceId,
+      systemTts({
+        detect: () => detectSpeechCached(deps.probe, deps.host ?? process),
+        run: deps.spawn,
+        ffmpeg: deps.ffmpeg,
+        tempRoot: tmpdir(),
+        env: (deps.host ?? process).env,
+      }),
+    ],
+    // Its own key, or else the one saved for Google images (`sharedKeyOf`).
+    [
+      "google-tts",
+      geminiTts({
+        fetch: deps.fetch,
+        key: keyOf("google-tts"),
+        toMp3:
+          deps.ffmpeg === undefined
+            ? () => Promise.reject(new Error("ffmpeg is not available to encode Gemini speech"))
+            : ffmpegPcmToMp3(deps.ffmpeg),
+      }),
+    ],
   ]);
   // Keyed image providers receive only their own key; Codex uses the shared CLI login.
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has
@@ -136,6 +169,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
           db: deps.db,
           probe: deps.probe,
           hostCliStatus: deps.hostCli?.status,
+          host: deps.host,
         })
       ).map((status) => ({
         family: status.family,

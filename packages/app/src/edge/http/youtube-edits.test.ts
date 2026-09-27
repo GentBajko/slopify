@@ -9,7 +9,8 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
-import { effectiveDescription } from "../../slices/youtube/edits-repo.js";
+import { defaultChannelId } from "../../slices/channels/model.js";
+import { effectiveDescription, readChannelLinksFor } from "../../slices/youtube/edits-repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -158,6 +159,83 @@ describe("effectiveDescription", () => {
       description: "Generated summary. https://patreon.com/me\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
       tags: "rope, {{Discord}}",
     });
+  });
+
+  it("fills from the project's channel's links; the default channel falls back to Settings' list", async () => {
+    const { app, db } = harness();
+    const generated = { description: "Support: {{Patreon}}", tags: "{{Discord}}" };
+    await send(app, "PUT", "/api/settings/channel-links", {
+      links: [{ name: "Patreon", url: "https://patreon.com/old" }],
+    });
+    // The default channel reads the older Settings list until its Brand tab saves its own.
+    expect(await (await send(app, "GET", "/api/projects/p1/channel-links")).json()).toEqual({
+      channelId: defaultChannelId,
+      links: [{ name: "Patreon", url: "https://patreon.com/old" }],
+    });
+    expect(effectiveDescription(db, "p1", generated).description).toBe(
+      "Support: https://patreon.com/old",
+    );
+
+    const created = await send(app, "POST", "/api/channels", {
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "Night stories",
+    });
+    const channel = (await created.json()) as { id: string; version: number };
+    const saved = await send(app, "PUT", `/api/channels/${channel.id}`, {
+      name: "Night stories",
+      seriesBrief: "",
+      brand: {
+        links: [
+          { name: " Patreon ", url: "https://patreon.com/night" },
+          { name: "Discord", url: "https://discord.test/night" },
+        ],
+      },
+      baseVersion: channel.version,
+    });
+    expect(saved.status).toBe(200);
+    db.prepare("INSERT INTO project_channels(project_id,channel_id) VALUES ('p1',?)").run(
+      channel.id,
+    );
+    expect(effectiveDescription(db, "p1", generated)).toEqual({
+      description: "Support: https://patreon.com/night",
+      tags: "https://discord.test/night",
+    });
+    expect(await (await send(app, "GET", "/api/projects/p1/channel-links")).json()).toEqual({
+      channelId: channel.id,
+      links: [
+        { name: "Patreon", url: "https://patreon.com/night" },
+        { name: "Discord", url: "https://discord.test/night" },
+      ],
+    });
+
+    // Saved empty, the default channel no longer reads Settings' list.
+    const main = (await (await send(app, "GET", `/api/channels/${defaultChannelId}`)).json()) as {
+      channel: { version: number };
+    };
+    await send(app, "PUT", `/api/channels/${defaultChannelId}`, {
+      name: "My channel",
+      seriesBrief: "",
+      brand: { links: [] },
+      baseVersion: main.channel.version,
+    });
+    expect(readChannelLinksFor(db, defaultChannelId)).toEqual([]);
+  });
+
+  it("refuses a channel's links that can't fill a placeholder, saying where to fix them", async () => {
+    const { app } = harness();
+    const main = (await (await send(app, "GET", `/api/channels/${defaultChannelId}`)).json()) as {
+      channel: { version: number };
+    };
+    const refused = await send(app, "PUT", `/api/channels/${defaultChannelId}`, {
+      name: "My channel",
+      seriesBrief: "",
+      brand: { links: [{ name: "Discord", url: "discord.gg/abc" }] },
+      baseVersion: main.channel.version,
+    });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { detail: string }).detail).toMatch(
+      /not a web address.*Save channel on the channel's Brand tab/u,
+    );
   });
 
   it("fits hand-edited chapters to YouTube's rules and says what changed", async () => {

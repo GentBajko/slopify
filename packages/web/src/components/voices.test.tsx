@@ -239,4 +239,59 @@ describe("the voice list", () => {
       expect(deleted).toBe(1);
     });
   });
+
+  it("offers the computer's own voices for the system voice, and names the one picked", async () => {
+    const user = userEvent.setup();
+    let posted: unknown;
+    renderApp(
+      <Voices />,
+      testDeps({
+        "GET /api/providers": jsonAnswer({
+          providers: [
+            ...tts,
+            {
+              id: "system-voice",
+              family: "tts",
+              displayName: "System voice",
+              readiness: { kind: "local", available: true, engine: "eSpeak NG" },
+            },
+          ],
+        }),
+        "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+        "GET /api/providers/system-voice/voices": jsonAnswer({
+          engines: [
+            {
+              id: "espeak-ng",
+              name: "eSpeak NG",
+              voices: [{ id: "en-us", name: "English (America)", language: "en-us" }],
+              defaultVoice: "en-us",
+            },
+          ],
+          issue: null,
+        }),
+        "POST /api/settings/voices": async (request) => {
+          posted = await request.json();
+          return jsonAnswer(narrator, 201)(request);
+        },
+      }),
+    );
+    await screen.findByRole("option", { name: "System voice" });
+    await user.selectOptions(screen.getByLabelText("Provider"), "system-voice");
+    await user.selectOptions(
+      await screen.findByRole("combobox", { name: "Voice ID" }),
+      await screen.findByRole("option", { name: "English (America) (en-us)" }),
+    );
+    expect((screen.getByLabelText("Voice name") as HTMLInputElement).value).toBe(
+      "English (America)",
+    );
+    await user.click(screen.getByRole("button", { name: "Add voice" }));
+    await waitFor(() => {
+      expect(posted).toEqual({
+        provider: "system-voice",
+        name: "English (America)",
+        voiceId: "en-us",
+        languages: ["en"],
+      });
+    });
+  });
 });

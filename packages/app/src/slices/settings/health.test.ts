@@ -86,6 +86,30 @@ describe("the providers health check", () => {
       h.close();
     }
   });
+
+  it("checks one provider only for a sign-in fix-it's Check again, without testing keys", async () => {
+    const h = draftFixture();
+    try {
+      saveProviderKey(h.deps, "openrouter", "k");
+      let fetched = 0;
+      const d: HealthDeps = {
+        ...deps(h, installed),
+        fetch: (async () => {
+          fetched += 1;
+          return new Response("{}");
+        }) as typeof globalThis.fetch,
+      };
+      const report = await checkProviderHealth(d, "codex");
+      expect(report.providers.map((row) => row.id)).toEqual(["codex"]);
+      expect(report.providers[0]?.checks[1]).toMatchObject({
+        label: "Signed in",
+        state: "problem",
+      });
+      expect(fetched).toBe(0);
+    } finally {
+      h.close();
+    }
+  });
 });
 
 describe("first run", () => {

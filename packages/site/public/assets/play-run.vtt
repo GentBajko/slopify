@@ -3,11 +3,23 @@ WEBVTT
 00:00:00.000 --> 00:00:02.501
 The finished project: the video with captions, ready to download.
 
-00:00:02.501 --> 00:00:06.221
+00:00:02.501 --> 00:00:06.223
 The YouTube description with chapter timestamps, and the tags, each with a Copy button.
 
-00:00:06.221 --> 00:00:10.440
+00:00:06.223 --> 00:00:10.439
 Shorts: vertical clips picked from the video, each with its own title and hashtags.
 
-00:00:10.440 --> 00:00:18.678
+00:00:10.439 --> 00:00:20.481
 Play: type the topic, pick the saved prompts, check what the run will make.
+
+00:00:20.481 --> 00:00:25.637
+Several voices: an audiobook, podcast, radio drama or interview, with a voice per speaker.
+
+00:00:25.637 --> 00:00:29.857
+Run cost: what the run cost per stage and model, CLI calls included.
+
+00:00:29.857 --> 00:00:34.402
+Prepare upload: the files and every text, in the order YouTube Studio asks for them.
+
+00:00:34.402 --> 00:00:37.404
+The calendar: the coming weeks of uploads, each run with its queued topic.

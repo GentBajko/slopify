@@ -59,7 +59,7 @@ export function VoiceLanguageNote({
         </span>
       ) : null}
       {warning === undefined ? null : (
-        <p role="status" className="m-0 text-small text-ink2">
+        <p role="status" className="m-0 text-small text-ink-2">
           {warning}
         </p>
       )}

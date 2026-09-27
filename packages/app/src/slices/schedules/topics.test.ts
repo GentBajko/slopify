@@ -31,6 +31,7 @@ import {
   moveTopic,
   parseTopics,
   rejectHeldTopic,
+  replaceTopics,
   transferTopic,
 } from "./topics.js";
 
@@ -497,6 +498,44 @@ it("counts an answer of only duplicates as a failure", async () => {
     expect(await generateTopics(s.deps, s.id)).toMatchObject({ ok: false, reason: "failed" });
     expect(s.read().topics.error).toContain("already made, queued or turned down");
     expect(s.read().items).toHaveLength(1);
+  } finally {
+    s.h.close();
+  }
+});
+
+it("saves an edited queue in place, keeping the next run, and refuses a stale or unfit one", () => {
+  const s = setup({
+    generation: { mode: "off", keepAtLeast: 10, llm: null },
+    items: ["A", "B"],
+    answers: async () => "[]",
+  });
+  try {
+    const base = s.read();
+    const saved = replaceTopics(s.deps, s.id, {
+      baseVersion: base.version,
+      items: [
+        { title: "B", values: {} },
+        { title: "  Vecna ", values: {} },
+      ],
+    });
+    expect(saved.ok && saved.value.items.map((item) => item.title)).toEqual(["B", "Vecna"]);
+    expect(saved.ok && saved.value.version).toBe(base.version + 1);
+    // Only the queue changes: the next run and every other setting stay as they were.
+    expect(saved.ok && saved.value.nextRunAt).toBe(base.nextRunAt);
+    expect(saved.ok && saved.value.name).toBe(base.name);
+    expect(replaceTopics(s.deps, s.id, { baseVersion: base.version, items: [] })).toEqual({
+      ok: false,
+      reason: "conflict",
+    });
+    const refused = replaceTopics(s.deps, s.id, {
+      baseVersion: base.version + 1,
+      items: [{ title: "Tiamat", values: { Mood: "grim" } }],
+    });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.reason).toBe("invalid-topics");
+    expect(refused.message).toContain("“Mood” is not a keyword of this template");
+    expect(s.read().items.map((item) => item.title)).toEqual(["B", "Vecna"]);
   } finally {
     s.h.close();
   }

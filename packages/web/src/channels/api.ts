@@ -86,6 +86,8 @@ export interface CastMemberInput {
   readonly description: string;
   // Absent keeps the saved voice; null removes it.
   readonly voice?: CastVoice | null;
+  // One of the channel's hosts; absent keeps what is saved.
+  readonly host?: boolean;
 }
 
 export async function createCastMember(

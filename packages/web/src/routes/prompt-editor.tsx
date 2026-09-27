@@ -173,8 +173,8 @@ export function PromptEditorRoute({
         data-tour="prompt-editor"
         className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
       >
-        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
-          <div className="flex flex-wrap items-end gap-[14px]">
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-4`}>
+          <div className="flex flex-wrap items-end gap-4">
             <div data-tour="prompt-name" className="min-w-[min(100%,240px)] flex-1">
               <Field
                 label="Name"
@@ -207,7 +207,7 @@ export function PromptEditorRoute({
           <div data-tour="prompt-body" {...helpScope}>
             {/* The starter sits on the label's own row, so switching Kind never moves the
                 body up or down. */}
-            <div className="mb-[5px] flex min-h-8 items-end justify-between gap-3">
+            <div className="mb-1 flex min-h-8 items-end justify-between gap-3">
               <span className="flex items-center gap-1">
                 <label htmlFor={bodyId} className="sl-field__label">
                   Body

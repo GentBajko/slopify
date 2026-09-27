@@ -15,6 +15,7 @@ import {
   queueMax,
   type ScheduleSummary,
   topicMoveSchema,
+  topicQueueSchema,
   topicTitleSchema,
   topicTransferSchema,
 } from "./schema.js";
@@ -561,6 +562,34 @@ export function moveTopic(
     if (topic === undefined) return { ok: false, reason: "invalid-input" };
     items.splice(Math.min(parsed.data.to, items.length), 0, topic);
     writeItems(deps, scheduleId, schedule.version, items);
+    return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
+  });
+}
+
+// Saves the queue as sent, without touching the schedule's other settings or its next run.
+// Topics already queued are not checked again; a new or renamed one must suit the template.
+export function replaceTopics(
+  deps: ScheduleDeps,
+  scheduleId: string,
+  input: unknown,
+): ScheduleResult<ScheduleSummary> {
+  const parsed = topicQueueSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "invalid-input" };
+  return transact(deps.db, () => {
+    const open = openSchedule(deps, scheduleId);
+    if (!open.ok) return open;
+    const schedule = open.value;
+    if (schedule.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
+    const template = deps.template(schedule.templateId, schedule.templateVersion);
+    if (!template) return { ok: false, reason: "missing-template" };
+    const problems = topicRowProblems(parsed.data.items, {
+      keywords: templateKeywords(template.document.form),
+      topicKeyword: schedule.topicKeyword,
+      kept: schedule.items,
+    });
+    if (problems.length > 0)
+      return { ok: false, reason: "invalid-topics", message: problems.slice(0, 5).join(" ") };
+    writeItems(deps, scheduleId, schedule.version, parsed.data.items);
     return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
   });
 }

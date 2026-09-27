@@ -499,12 +499,72 @@
   .sl-grid--shorts {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
+  .sl-grid--compact {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-3);
+  }
+  /* Player: the screen is dark in both themes, so the bar's colours are fixed, not themed. */
   .sl-player {
+    --player-ink: #ece9e2;
+    --player-lime: #a6d45c;
     position: relative;
     border-radius: var(--radius-media);
     overflow: hidden;
     background: var(--color-screen);
     aspect-ratio: 16 / 9;
+    container-type: inline-size;
+    color: var(--player-ink);
+  }
+  .sl-player video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: var(--color-screen);
+  }
+  .sl-player--portrait {
+    aspect-ratio: 9 / 16;
+  }
+  .sl-player--full {
+    border-radius: 0;
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+  }
+  .sl-player--bare {
+    cursor: none;
+  }
+  /* In the lightbox the player fills the stage. */
+  .sl-player.sl-lightbox__player {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+  .sl-player .sl-player__big.sl-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 64px;
+    height: 64px;
+    margin: -32px 0 0 -32px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--player-lime);
+    color: #101010;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+  .sl-player .sl-player__big.sl-btn:hover {
+    background: #b6e070;
+    color: #101010;
+  }
+  .sl-player__big svg {
+    width: 26px;
+    height: 26px;
+    margin-left: 3px;
+    fill: currentColor;
   }
   .sl-player__bar {
     position: absolute;
@@ -512,27 +572,191 @@
     right: 0;
     bottom: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-3);
-    padding: 10px 14px;
+    column-gap: var(--space-2);
+    row-gap: 2px;
+    padding: 28px 10px 8px;
     background: linear-gradient(transparent, rgba(8, 8, 10, 0.85));
-    color: #ece9e2;
+    color: var(--player-ink);
     font-size: 13px;
+    transition: opacity 160ms;
+  }
+  .sl-player--bare .sl-player__bar {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sl-player .sl-player__bar .sl-btn {
+    color: var(--player-ink);
+    background: transparent;
+    border-color: transparent;
+  }
+  .sl-player .sl-player__bar .sl-btn:hover,
+  .sl-player .sl-player__bar .sl-btn[aria-expanded="true"] {
+    background: rgb(236 233 226 / 0.14);
+    color: #fff;
+  }
+  .sl-player .sl-player__bar .sl-btn[aria-pressed="true"] {
+    color: var(--player-lime);
+  }
+  .sl-player__time {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding: 0 var(--space-1);
   }
   .sl-player__track {
+    position: relative;
+    flex: 1 1 120px;
+    min-width: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    touch-action: none;
+    border-radius: 4px;
+  }
+  .sl-player__track[aria-disabled="true"] {
+    cursor: default;
+  }
+  .sl-player__rail {
+    position: relative;
     flex: 1;
     height: 4px;
     border-radius: 2px;
-    background: rgba(236, 233, 226, 0.25);
-    position: relative;
+    background: rgb(236 233 226 / 0.25);
+    overflow: hidden;
+    transition: height 120ms;
   }
-  .sl-player__track span {
+  .sl-player__track:hover .sl-player__rail,
+  .sl-player__track:focus-visible .sl-player__rail {
+    height: 6px;
+  }
+  .sl-player__buffered,
+  .sl-player__played {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    border-radius: 2px;
-    background: var(--color-accent);
+  }
+  .sl-player__buffered {
+    background: rgb(236 233 226 / 0.35);
+  }
+  .sl-player__played {
+    background: var(--player-lime);
+  }
+  .sl-player__mark {
+    position: absolute;
+    top: 50%;
+    width: 3px;
+    height: 8px;
+    margin: -4px 0 0 -1px;
+    background: rgba(8, 8, 10, 0.85);
+    pointer-events: none;
+  }
+  .sl-player__knob {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%;
+    background: var(--player-lime);
+    opacity: 0;
+    transition: opacity 120ms;
+    pointer-events: none;
+  }
+  .sl-player__track:hover .sl-player__knob,
+  .sl-player__track:focus-visible .sl-player__knob {
+    opacity: 1;
+  }
+  .sl-player__tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 220px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(8, 8, 10, 0.9);
+    color: var(--player-ink);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .sl-player__tip-title {
+    max-width: 204px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+  }
+  .sl-player__volume {
+    display: flex;
+    align-items: center;
+    width: 72px;
+    height: 20px;
+    cursor: pointer;
+    touch-action: none;
+    border-radius: 4px;
+  }
+  .sl-player__speed {
+    position: relative;
+  }
+  .sl-player__rate.sl-btn {
+    min-width: 44px;
+    font-variant-numeric: tabular-nums;
+  }
+  .sl-player__menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 6px);
+    display: flex;
+    flex-direction: column;
+    min-width: 96px;
+    padding: 4px;
+    border-radius: var(--radius-control);
+    background: rgba(8, 8, 10, 0.94);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+    z-index: 2;
+  }
+  .sl-player__menu .sl-btn {
+    justify-content: flex-start;
+  }
+  .sl-player .sl-player__menu .sl-btn[aria-checked="true"] {
+    color: var(--player-lime);
+    font-weight: 600;
+  }
+  /* A narrow player puts the track on its own row above the buttons, and drops what it has
+     no room for; the keys still do all of it. */
+  @container (max-width: 520px) {
+    .sl-player__track {
+      order: -1;
+      flex-basis: 100%;
+    }
+    .sl-player__time {
+      margin-right: auto;
+    }
+    .sl-player__volume {
+      display: none;
+    }
+  }
+  @container (max-width: 300px) {
+    .sl-player__time,
+    .sl-player__speed {
+      display: none;
+    }
+    .sl-player__bar {
+      justify-content: space-between;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sl-player__bar,
+    .sl-player__rail,
+    .sl-player__knob {
+      transition: none;
+    }
   }
 
   /* Rails */
@@ -916,6 +1140,10 @@
     text-decoration: none;
     padding: 5px 10px;
     border-radius: var(--radius-control);
+  }
+  .sl-toc a.sl-toc__nested {
+    padding-left: 22px;
+    font-size: 12px;
   }
   .sl-toc a[aria-current="true"] {
     color: var(--color-ink);

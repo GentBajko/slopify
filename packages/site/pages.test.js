@@ -12,10 +12,11 @@ describe("the pages", () => {
   it.each([
     ["index.html", home],
     ["channel.html", channel],
-  ])("%s never links the donation placeholder", (_name, page) => {
+  ])("%s links the real support pages and no placeholder", (_name, page) => {
     expect(page).not.toContain("example.com");
-    expect(page).not.toMatch(/<a[^>]*data-donate/);
-    expect(page).toMatch(/<span data-donate[^>]*hidden><\/span>/);
+    expect(page).not.toContain("data-donate");
+    expect(page).toContain('href="https://www.patreon.com/cw/GentBajko"');
+    expect(page).toContain('href="https://buymeacoffee.com/gentbajko"');
   });
 
   it("keeps the 3.0 features out of the published list", () => {
@@ -32,11 +33,11 @@ describe("the pages", () => {
     }
   });
 
-  it("keeps the README's donation line commented out until the address is known", () => {
+  it("gives the README the same support links and no placeholder", () => {
     const readme = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
-    const visible = readme.replace(/<!--[\s\S]*?-->/g, "");
     expect(readme).toContain("## Support");
-    expect(visible).not.toContain("example.com");
+    expect(readme).toContain("https://www.patreon.com/cw/GentBajko");
+    expect(readme).not.toContain("example.com");
   });
 
   it("links the channel page from the home page", () => {

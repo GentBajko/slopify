@@ -83,9 +83,15 @@ function overall(
 }
 
 // "Check all" on Settings → Providers: each command-line tool found and signed in, each saved
-// key accepted by its provider, and each chosen model still offered.
-export async function checkProviderHealth(deps: HealthDeps): Promise<HealthReport> {
-  const statuses = await providerStatuses(deps);
+// key accepted by its provider, and each chosen model still offered. `only` checks one
+// provider: a sign-in fix-it's Check again asks about that CLI and nothing else.
+export async function checkProviderHealth(
+  deps: HealthDeps,
+  only?: ProviderId,
+): Promise<HealthReport> {
+  const statuses = (await providerStatuses(deps)).filter(
+    (status) => only === undefined || status.id === only,
+  );
   const inUse = uses(deps.db);
   const catalogue = deps.catalogue?.();
   const retired = catalogue === undefined ? [] : retiredModelUsage(deps.db, catalogue);
@@ -93,10 +99,33 @@ export async function checkProviderHealth(deps: HealthDeps): Promise<HealthRepor
     statuses.map((status) =>
       status.readiness.kind === "cli"
         ? cliHealth(deps, status, inUse.get(status.id) ?? [])
-        : keyedHealth(deps, status, inUse.get(status.id) ?? [], retired),
+        : status.readiness.kind === "local"
+          ? Promise.resolve(localHealth(status, inUse.get(status.id) ?? []))
+          : keyedHealth(deps, status, inUse.get(status.id) ?? [], retired),
     ),
   );
   return { checkedAt: deps.clock.now().toISOString(), providers };
+}
+
+// The system voice: a speech program was found, or not. Nothing to sign in to or pay for.
+function localHealth(
+  status: ProviderStatus,
+  used: readonly { model: string; where: string }[],
+): ProviderHealth {
+  const { readiness } = status;
+  const base = { id: status.id, displayName: status.displayName, family: status.family };
+  if (readiness.kind !== "local") throw new Error("Expected the system voice.");
+  const found = readiness.available;
+  const checks: HealthCheck[] = [
+    {
+      label: "Speech program found",
+      state: found ? "ok" : used.length > 0 ? "problem" : "skipped",
+      detail: found
+        ? `Speaks with ${readiness.engine ?? "this computer's speech program"}.`
+        : `${readiness.issue ?? "No speech program was found on this computer."}${used.length > 0 ? ` It is chosen for ${describe(used)}.` : ""}`,
+    },
+  ];
+  return { ...base, state: overall(checks, used.length > 0, found), checks };
 }
 
 async function cliHealth(

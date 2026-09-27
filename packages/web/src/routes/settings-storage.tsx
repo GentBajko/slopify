@@ -87,7 +87,10 @@ export function ProjectStorageList({
       <ConfirmDialog
         open={asking !== undefined}
         title={`Keep only the outputs of "${asking?.title ?? ""}"?`}
-        consequence={`This removes ${String(asking?.removableFiles ?? 0)} working file(s) and frees ${formatBytes(asking?.removableBytes ?? 0)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`}
+        consequence={keepOutputsConsequence(
+          asking?.removableFiles ?? 0,
+          asking?.removableBytes ?? 0,
+        )}
         confirmLabel="Keep outputs only"
         pending={trim.isPending}
         onConfirm={() => {
@@ -99,6 +102,12 @@ export function ProjectStorageList({
       />
     </>
   );
+}
+
+// What Keep outputs only removes and what it costs later, asked before it runs here and on
+// the project page.
+export function keepOutputsConsequence(files: number, bytes: number): string {
+  return `This removes ${String(files)} working file(s) and frees ${formatBytes(bytes)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
 }
 
 export function formatBytes(bytes: number): string {

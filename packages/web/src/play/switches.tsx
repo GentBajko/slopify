@@ -42,7 +42,7 @@ export function InlineSwitch<T extends string>({
 
   return (
     <span
-      className={cn("inline-flex items-center gap-[10px]", className)}
+      className={cn("inline-flex items-center gap-3", className)}
       {...(tip === undefined ? {} : helpScope)}
     >
       <Label id={labelId} className={hideLabel ? "sr-only" : "shrink-0"}>

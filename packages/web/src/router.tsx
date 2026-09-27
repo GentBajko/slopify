@@ -324,7 +324,21 @@ function SettingsPage() {
 
 function ProjectPage() {
   const { projectId } = projectRoute.useParams();
-  return <ProjectRoute key={projectId} projectId={projectId} />;
+  const session = usePlaySession();
+  const navigate = useNavigate();
+  return (
+    <ProjectRoute
+      key={projectId}
+      projectId={projectId}
+      openDraft={async (draftId) => {
+        // The draft open in Play is saved first, as Templates' Apply does.
+        if (!(await session.flush())) return false;
+        if (!(await session.open(draftId))) return false;
+        await navigate({ to: "/play" });
+        return true;
+      }}
+    />
+  );
 }
 
 function PromptsPage() {

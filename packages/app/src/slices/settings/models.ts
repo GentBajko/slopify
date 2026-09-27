@@ -18,7 +18,12 @@ interface CatalogDeps {
 // These marketplaces host models with different input schemas. Discovery alone cannot
 // make an arbitrary endpoint compatible with our image request.
 export function allowsCustomModel(provider: string): boolean {
-  return provider !== "fal" && provider !== "replicate" && provider !== "codex-image";
+  return (
+    provider !== "fal" &&
+    provider !== "replicate" &&
+    provider !== "codex-image" &&
+    provider !== "system-voice"
+  );
 }
 
 const ttlMs = 5 * 60_000;
@@ -114,6 +119,8 @@ function catalogNotice(provider: string): { readonly notice?: string } {
     "claude-code":
       "Models come from Claude Code. Missing a new model? Update Claude Code, rerun the Docker launcher if applicable, then refresh this list. You can also enter an exact model ID.",
     inworld: "These are Inworld’s documented TTS models. You can also enter a compatible model ID.",
+    "system-voice":
+      "These are the speech programs found on this computer, best first. Install another (for example espeak-ng) and refresh to see it.",
     cartesia:
       "Cartesia has no model-list API. These are bundled compatible choices; you can enter a newer model ID.",
     fal: "These models have input formats supported by Slopify's fal adapter.",

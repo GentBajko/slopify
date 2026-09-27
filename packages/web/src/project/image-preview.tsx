@@ -1,5 +1,7 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useApp } from "@/app-context";
+import { MediaFrame } from "@/components/kit/media";
+import { Player } from "@/components/kit/player";
 import { revisionFileUrl } from "./revision-api.js";
 
 export function ImagePreview({
@@ -55,18 +57,14 @@ export function ImagePreview({
   return (
     <>
       {!available || view === undefined ? null : clip ? (
-        <video
-          className="max-h-32 rounded-control object-contain"
-          aria-label={`Video clip ${index + 1}`}
-          muted
-          loop
-          controls
-          preload="metadata"
+        <Player
+          className="max-w-[240px]"
+          label={`Video clip ${index + 1}`}
           src={revisionFileUrl(api, view.revision.projectId, view.revision.id, retained.recordId)}
         />
       ) : (
-        <img
-          className="max-h-32 rounded-control object-contain"
+        <MediaFrame
+          className="max-w-[240px]"
           alt={`Retained scene ${index + 1}`}
           src={revisionFileUrl(api, view.revision.projectId, view.revision.id, retained.recordId)}
         />

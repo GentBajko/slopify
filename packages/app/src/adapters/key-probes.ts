@@ -6,15 +6,17 @@ import { cartesiaVersion } from "./tts/cartesia.js";
 // invalid_api_key, Inworld with 403 "does not exist". Observed on 2026-09-27; their
 // documentation says 401.
 const bearer = (key: string) => ({ Authorization: `Bearer ${key}` });
+const google = {
+  url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+  headers: (key: string) => ({ "x-goog-api-key": key }),
+  badKey: (status: number, body: string) => status === 400 && body.includes("API_KEY_INVALID"),
+};
 export const keyProbes: KeyProbes = {
   openrouter: { url: "https://openrouter.ai/api/v1/key", headers: bearer },
   "openai-tts": { url: "https://api.openai.com/v1/models", headers: bearer },
   "openai-image": { url: "https://api.openai.com/v1/models", headers: bearer },
-  "google-image": {
-    url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
-    headers: (key) => ({ "x-goog-api-key": key }),
-    badKey: (status, body) => status === 400 && body.includes("API_KEY_INVALID"),
-  },
+  "google-image": google,
+  "google-tts": google,
   // fal.ai's model list answers without a key; its price lookup requires one.
   fal: {
     url: "https://api.fal.ai/v1/models/pricing?endpoint_id=fal-ai/flux/dev",

@@ -1,21 +1,23 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
+import { bookLabel } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
-import { BatchQueue } from "@/components/batch-queue";
+import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, IconButton } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
-import { Meter } from "@/components/kit/stats";
+import { SectionHead } from "@/components/kit/section-head";
+import { Meter, Stat, Stats } from "@/components/kit/stats";
 import { Badge, Status, type Tone } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
@@ -24,11 +26,14 @@ import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { limitWaitLine } from "@/project/limit-wait";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
 // Every run ever started, newest first, for the channel picked in the rail. Each row says what
 // the run was made of, when it started and where it stands, with its actions visible on it.
+// Beside the list on a desktop: the counts per state, and where the video queue is (the
+// calendar, which shows it once for every screen).
 
 type Filter = "all" | "running" | "waiting" | "ready" | "failed";
 
@@ -66,14 +71,22 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
     done: { tone: "done", word: "Done" },
     canceled: { tone: "off", word: "Canceled" },
   };
-  return isWaiting(project) ? { tone: "waiting", word: "Waiting for you" } : words[project.status];
+  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
+  // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
+  const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
+  return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
 }
 
 // "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
 // generated no article from a template names only its format.
 export function madeOf(project: ProjectListing): string {
   const prompt = project.config.articlePrompt;
-  return [prompt === undefined || prompt === "" ? undefined : prompt, project.format]
+  const book = project.config.voices?.book;
+  return [
+    book === undefined ? undefined : bookLabel(book),
+    prompt === undefined || prompt === "" ? undefined : prompt,
+    project.format,
+  ]
     .filter((part) => part !== undefined)
     .join(" · ");
 }
@@ -92,6 +105,8 @@ export function ProjectsRoute(): ReactElement {
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
   const [search, setSearch] = useState("");
+  const searchBox = useRef<HTMLInputElement>(null);
+  const searchKeys = useSearchShortcut(searchBox, "projects");
 
   const remove = useMutation({
     mutationFn: (id: string) => removeProject(api, id),
@@ -162,7 +177,6 @@ export function ProjectsRoute(): ReactElement {
         }
       />
 
-      <BatchQueue />
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}
 
       {projects.error === null ? null : (
@@ -187,52 +201,85 @@ export function ProjectsRoute(): ReactElement {
           Set up a run on Play: pick a template, type a topic and start.
         </EmptyState>
       ) : (
-        <>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <div className="relative w-full max-w-[320px]">
-              <SearchIcon
-                aria-hidden="true"
-                strokeWidth={1.75}
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
-              />
-              <input
-                type="search"
-                aria-label="Search projects"
-                placeholder="Search projects"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="sl-input pl-9"
+        <Board split="aside">
+          <BoardColumn label="Project list">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full max-w-[320px]">
+                <SearchIcon
+                  aria-hidden="true"
+                  strokeWidth={1.75}
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
+                />
+                <input
+                  type="search"
+                  ref={searchBox}
+                  aria-label="Search projects"
+                  aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
+                  placeholder="Search projects"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="sl-input pl-9"
+                />
+              </div>
+              <Segmented
+                label="Show"
+                value={filter}
+                options={filters}
+                onChange={setFilter}
+                className="max-w-full overflow-x-auto"
               />
             </div>
-            <Segmented
-              label="Show"
-              value={filter}
-              options={filters}
-              onChange={setFilter}
-              className="max-w-full overflow-x-auto"
-            />
-          </div>
-          {shown.length === 0 ? (
-            <p className="m-0 text-ink-2">
-              {inChannel.length === 0
-                ? `No projects in ${current.channel?.name ?? "this channel"} yet. Pick All channels in the rail to see the others.`
-                : "No project matches. Clear the search or pick All."}
-            </p>
-          ) : (
-            <List label="Projects">
-              {shown.map((project) => (
-                <ProjectRow
-                  key={project.id}
-                  project={project}
-                  sample={samples.has(project.id)}
-                  onDelete={() => setDeleting(project)}
-                  onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
-                  busy={uploaded.isPending}
-                />
-              ))}
-            </List>
-          )}
-        </>
+            {shown.length === 0 ? (
+              <p className="m-0 text-ink-2">
+                {inChannel.length === 0
+                  ? `No projects in ${current.channel?.name ?? "this channel"} yet. Pick All channels in the rail to see the others.`
+                  : "No project matches. Clear the search or pick All."}
+              </p>
+            ) : (
+              <List label="Projects">
+                {shown.map((project) => (
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    sample={samples.has(project.id)}
+                    onDelete={() => setDeleting(project)}
+                    onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
+                    busy={uploaded.isPending}
+                  />
+                ))}
+              </List>
+            )}
+          </BoardColumn>
+          <BoardColumn as="aside" label="Projects at a glance">
+            <section>
+              <SectionHead title="At a glance" />
+              <Stats>
+                {filters
+                  .filter((one) => one.value !== "all")
+                  .map((one) => (
+                    <Stat
+                      key={one.value}
+                      label={one.label}
+                      value={String(
+                        inChannel.filter((project) => matches(project, one.value)).length,
+                      )}
+                    />
+                  ))}
+              </Stats>
+            </section>
+            <section aria-label="Video queue" className="flex flex-col gap-2">
+              <SectionHead title="Video queue" info="play.queue" />
+              <p className="m-0 text-small text-ink-2">
+                Videos started together, in the order they run, are on the calendar.
+              </p>
+              <div>
+                <Button asChild variant="secondary" size="small">
+                  <Link to="/calendar">Open calendar</Link>
+                </Button>
+              </div>
+            </section>
+          </BoardColumn>
+        </Board>
       )}
 
       {remove.error === null ? null : (

@@ -8,6 +8,7 @@ import {
   planAccountOf,
   planAccounts,
 } from "../../kernel/ports/plan-limits.js";
+import type { ListingLimitWait } from "../admission/model.js";
 
 // The data behind a project's Run cost tab: what the run actually cost, per stage and per
 // model, what its CLI calls would have cost through the API, the usage behind both, and how
@@ -312,18 +313,43 @@ function planUses(db: DatabaseSync, projectId: string, rows: readonly UsageRow[]
 }
 
 export function limitWaitsOf(db: DatabaseSync, projectId: string): LimitWait[] {
+  return limitWaitRows(db, projectId).map((row) => row.wait);
+}
+
+// Every project's waits at once, for the lists that show "Waiting for Codex limits" on a row
+// (Projects, Home's Running now, the calendar) without asking once per project.
+export function limitWaitsByProject(db: DatabaseSync): ReadonlyMap<string, readonly LimitWait[]> {
+  const found = new Map<string, LimitWait[]>();
+  for (const row of limitWaitRows(db)) {
+    const list = found.get(row.projectId) ?? [];
+    list.push(row.wait);
+    found.set(row.projectId, list);
+  }
+  return found;
+}
+
+// A wait as a list row carries it: the plan's name and times, not its account key.
+export function listingWait(wait: LimitWait): ListingLimitWait {
+  return { name: wait.name, stage: wait.stage, resetsAt: wait.resetsAt, retryAt: wait.retryAt };
+}
+
+function limitWaitRows(
+  db: DatabaseSync,
+  projectId?: string,
+): { readonly projectId: string; readonly wait: LimitWait }[] {
   // Only a stage still running is waiting: a row left by a cancel or pause is not shown.
   return db
     .prepare(
-      `SELECT w.account, w.stage, l.resets_at, l.retry_at FROM plan_limit_waiters w
+      `SELECT w.project_id, w.account, w.stage, l.resets_at, l.retry_at FROM plan_limit_waiters w
        JOIN plan_limit_waits l ON l.account = w.account
        JOIN stages s ON s.project_id = w.project_id AND s.kind = w.stage AND s.state = 'running'
-       WHERE w.project_id = ? ORDER BY w.since`,
+       ${projectId === undefined ? "" : "WHERE w.project_id = ?"} ORDER BY w.since`,
     )
-    .all(projectId)
+    .all(...(projectId === undefined ? [] : [projectId]))
     .map((raw) => {
       const row = z
         .object({
+          project_id: z.string(),
           account: z.enum(planAccounts),
           stage: z.enum(stageKinds),
           resets_at: z.string().nullable(),
@@ -331,11 +357,14 @@ export function limitWaitsOf(db: DatabaseSync, projectId: string): LimitWait[] {
         })
         .parse(raw);
       return {
-        account: row.account,
-        name: planAccountNames[row.account],
-        stage: row.stage,
-        resetsAt: row.resets_at,
-        retryAt: row.retry_at,
+        projectId: row.project_id,
+        wait: {
+          account: row.account,
+          name: planAccountNames[row.account],
+          stage: row.stage,
+          resetsAt: row.resets_at,
+          retryAt: row.retry_at,
+        },
       };
     });
 }

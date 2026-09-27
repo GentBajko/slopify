@@ -24,12 +24,20 @@ export type Readiness =
       readonly version?: string;
       readonly issue?: string;
       readonly issueKind?: "missing" | "version" | "login" | "bridge";
+    }
+  // Something the computer already has and nothing to sign in to: the system voice. `engine`
+  // names the speech program found; `issue` says why none can be used, and the fix.
+  | {
+      readonly kind: "local";
+      readonly available: boolean;
+      readonly engine?: string;
+      readonly issue?: string;
     };
 
 export function readinessIsUsable(readiness: Readiness): boolean {
-  return readiness.kind === "keyed"
-    ? readiness.hasKey
-    : readiness.installed && readiness.issue === undefined;
+  if (readiness.kind === "keyed") return readiness.hasKey;
+  if (readiness.kind === "local") return readiness.available;
+  return readiness.installed && readiness.issue === undefined;
 }
 
 export const providerErrorKinds = [

@@ -37,7 +37,9 @@ it("restores Style on reload then reveals Outputs before measuring Back", async 
   await at("play-subtitles");
   await user.click(guide().getByRole("button", { name: /^Skip/ }));
   await at("play-start");
-  await user.click(guide().getByRole("button", { name: "Finish without generating" }));
+  await user.click(guide().getByRole("button", { name: "Skip generating" }));
+  await at("home");
+  await user.click(guide().getByRole("button", { name: "Exit guide" }));
   await waitFor(() =>
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull(),
   );

@@ -1,16 +1,20 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { HostCliPorts } from "../../kernel/ports/host-cli.js";
+import { detectSpeechCached, type SpeechHost } from "../../kernel/ports/system-speech.js";
 import { cliPathStatus } from "./cli-paths.js";
 import type { CliProbe, CliProbeResult } from "./cli-status.js";
 import { cliProbeTimeoutMs, readinessFromProbe } from "./cli-status.js";
 import type { ProviderId, ProviderStatus, Readiness } from "./model.js";
-import { isLocalCliProvider, providers } from "./model.js";
+import { isLocalCliProvider, providers, sharedKeyOf } from "./model.js";
 import { keyedProviders } from "./repo.js";
 
 export interface ReadinessDeps {
   readonly db: DatabaseSync;
   readonly probe: CliProbe;
   readonly hostCliStatus?: HostCliPorts["status"] | undefined;
+  // Where the system voice is looked for; this process's platform and environment unless a
+  // test says otherwise.
+  readonly host?: SpeechHost | undefined;
 }
 
 // Every supported provider is listed, keyed or not, found or not, so Play can grey one out with
@@ -22,6 +26,17 @@ export async function providerStatuses(deps: ReadinessDeps): Promise<readonly Pr
   return await Promise.all(
     providers.map(async (provider): Promise<ProviderStatus> => {
       const base = { id: provider.id, family: provider.family, displayName: provider.displayName };
+      if (provider.auth === "local") {
+        const found = await detectSpeechCached(deps.probe, deps.host ?? process);
+        const engine = found.engines[0];
+        return {
+          ...base,
+          readiness:
+            engine === undefined
+              ? { kind: "local", available: false, ...(found.issue ? { issue: found.issue } : {}) }
+              : { kind: "local", available: true, engine: engine.name },
+        };
+      }
       if (provider.auth !== "cli")
         return { ...base, readiness: keyedReadiness(keyed, provider.id) };
       if (deps.hostCliStatus && isLocalCliProvider(provider.id)) {
@@ -55,5 +70,6 @@ export async function providerStatuses(deps: ReadinessDeps): Promise<readonly Pr
 }
 
 function keyedReadiness(keyed: ReadonlySet<ProviderId>, id: ProviderId): Readiness {
-  return { kind: "keyed", hasKey: keyed.has(id) };
+  const shared = sharedKeyOf[id];
+  return { kind: "keyed", hasKey: keyed.has(id) || (shared !== undefined && keyed.has(shared)) };
 }

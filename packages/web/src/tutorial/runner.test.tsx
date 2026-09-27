@@ -3,7 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openSection } from "@/play/play-test-fixture";
 import { downloadItem, jsonAnswer, testVersion } from "@/test-app";
-import { at, fill, guide, mount, next, nextHeld, skipTo, start } from "./test-fixture";
+import {
+  at,
+  fill,
+  finishAppTour,
+  guide,
+  mount,
+  next,
+  nextHeld,
+  skipTo,
+  start,
+} from "./test-fixture";
 
 beforeEach(() => {
   // Layout is covered in spotlight tests. Give real page targets a visible box so
@@ -212,6 +222,19 @@ describe("the tutorial in the real app", () => {
       "true",
     );
     expect(screen.queryByRole("region", { name: "Article" })).toBeNull();
+    // Then the rest of a channel's screens: the run's cost, the upload, Home, Channels, Calendar.
+    await next(user, "run-cost");
+    expect(document.querySelector('[data-tutorial="hole"]')).not.toBeNull();
+    expect(within(rail).getByRole("button", { name: "Cost" }).getAttribute("data-tour")).toBe(
+      "project-rail-cost",
+    );
+    await next(user, "studio-prep");
+    await next(user, "home");
+    expect(router.state.location.pathname).toBe("/");
+    await next(user, "channels");
+    expect(router.state.location.pathname).toBe("/channels");
+    await next(user, "calendar");
+    expect(router.state.location.pathname).toBe("/calendar");
     await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
     expect(
@@ -227,9 +250,17 @@ describe("the tutorial in the real app", () => {
     const { requests, router } = await mount({ ready: false });
     await start(user);
     await skipTo(user, "play-start");
-    await user.click(guide().getByRole("button", { name: "Finish without generating" }));
-    expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
-    expect(router.state.location.pathname).toBe("/play");
+    // With no project to follow, the guide goes on to the screens a channel runs on.
+    await user.click(guide().getByRole("button", { name: "Skip generating" }));
+    await at("home");
+    expect(router.state.location.pathname).toBe("/");
+    // Back skips the project steps, which have no project to show.
+    await user.click(guide().getByRole("button", { name: "Back" }));
+    await at("play-start");
+    await user.click(guide().getByRole("button", { name: "Skip generating" }));
+    await at("home");
+    await finishAppTour(user);
+    expect(router.state.location.pathname).toBe("/calendar");
     expect(requests.some((request) => /\/start$/.test(request))).toBe(false);
   });
 
@@ -300,7 +331,11 @@ describe("the tutorial in the real app", () => {
         await user.click(download);
         expect(clicked).toHaveBeenCalledTimes(1);
       }
-      await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
+      await next(user, "run-cost");
+      // Without a video there is no Prepare upload to point at; the project header stands in.
+      await next(user, "studio-prep");
+      await next(user, "home");
+      await finishAppTour(user);
       expect(
         requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
       ).toHaveLength(1);

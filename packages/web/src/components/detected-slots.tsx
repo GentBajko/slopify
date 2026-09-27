@@ -29,9 +29,9 @@ export function DetectedSlots({
       </div>
 
       {slots.length > 0 ? (
-        <div className="flex flex-wrap gap-[6px]">
+        <div className="flex flex-wrap gap-2">
           {slots.map((slot) => (
-            <SlotChip key={slot} name={slot} className="px-2 py-[3px]" />
+            <SlotChip key={slot} name={slot} className="px-2 py-1" />
           ))}
         </div>
       ) : body.trim() === "" ? (
@@ -41,7 +41,7 @@ export function DetectedSlots({
       )}
 
       {lint.length === 0 ? null : (
-        <div id={lintId} className="flex flex-col gap-[6px] border-t border-line pt-3">
+        <div id={lintId} className="flex flex-col gap-2 border-t border-line pt-3">
           <span className="sl-kicker text-danger">
             {lint.length === 1 ? "1 slot error" : `${String(lint.length)} slot errors`}
           </span>

@@ -151,6 +151,18 @@ describe("multi-voice narration recipes", () => {
     expect(files?.dependsOn).toContain("subtitles:timing");
   });
 
+  it("remakes only the MP3 and M4B for a book's chapter, and nothing for a project on its own", () => {
+    const before = fingerprints(voiced);
+    const booked = fingerprints({
+      ...voiced,
+      voices: { ...voices, book: { title: "Sea Tales", chapter: 2 } },
+    });
+    for (const key of Object.keys(before))
+      if (key === "voices:files") expect(booked[key]).not.toBe(before[key]);
+      else expect(booked[key]).toBe(before[key]);
+    expect(fingerprints({ ...voiced, voices: { ...voices } })).toEqual(before);
+  });
+
   it("adds the speaker panel's portraits to the caption file only when a speaker has one", () => {
     const values = (c: RunConfig) => {
       const files = plan(c).find((one) => one.key === "subtitles:files");

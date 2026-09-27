@@ -48,9 +48,17 @@ Options:
 
 Every step is in one list, `packages/site/scripts/walkthrough/steps.mjs`: its caption, how long
 it holds, and what it does. Steps find things by role, label and visible text, so a redesign
-that keeps the words keeps the recording working. A step marked `optional` (Run cost, Prepare
-upload, the calendar) is left out of the cut while its screen does not exist yet, and joins the
-video on the first run after it ships.
+that keeps the words keeps the recording working. A step marked `optional` is left out of the
+cut when its screen is missing; `--publish` then refuses to copy the files, because the
+published `play-run.vtt` must have one cue per step, in order. `packages/site/walkthrough.test.js`
+checks that, so changing a step's caption, or adding or dropping a step, fails the tests until
+the video is recorded again.
+
+What the steps past the demo project need is added through the app's API before recording
+(`scripts/walkthrough/seed-app.mjs`): the bundled samples (restored if the first launch did not
+bring them), a template saved from the Library of Alexandria sample, and a weekly schedule with
+six queued topics whose first run is hours away and whose topic generation is off. The demo
+project also gets priced calls (`provider_usage` rows) so Run cost has numbers to show.
 
 Never add a step that starts a run, tests a key or signs in to a CLI: the recording must cost
 nothing.

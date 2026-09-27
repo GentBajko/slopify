@@ -69,7 +69,7 @@ export function TutorialProvider({ children }: { readonly children: ReactNode })
       {error ? (
         <div
           role="alert"
-          className="fixed bottom-4 left-4 z-[100] rounded-panel border border-line bg-panel p-4 text-ink"
+          className="fixed bottom-4 left-4 z-[100] rounded-media border border-line bg-surface p-4 text-ink"
         >
           <p>{error}</p>
           <Button type="button" onClick={retry}>

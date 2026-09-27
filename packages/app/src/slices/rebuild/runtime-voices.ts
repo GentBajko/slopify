@@ -82,7 +82,11 @@ export async function executeVoicesRecipe(
   const prepared: PreparedOutput[] = [];
   try {
     const metadata = join(directory, "chapters.txt");
-    writeFileSync(metadata, ffmetadata(view.revision.config.title, chapters), { mode: 0o600 });
+    writeFileSync(
+      metadata,
+      ffmetadata(view.revision.config.title, chapters, view.revision.config.voices?.book),
+      { mode: 0o600 },
+    );
     // Level the volume: the sound is mixed once and mastered to the audio files' target, and both
     // files are encoded from that (`loudness/model.ts`).
     const goal = masterGoal(view.revision.config, "audioFiles");

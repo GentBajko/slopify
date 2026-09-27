@@ -299,4 +299,31 @@ describe("the API key rails", () => {
     await user.click(within(dialog).getByRole("button", { name: "Remove key" }));
     expect(await screen.findByText("No key is stored for OpenRouter.")).not.toBeNull();
   });
+
+  it("shows the system voice as built in, with no key field, and why it can't speak", async () => {
+    renderApp(
+      <ProviderKeys />,
+      testDeps({
+        "GET /api/providers": listing([
+          keyed("openrouter", "llm", "OpenRouter", true),
+          {
+            id: "system-voice",
+            family: "tts",
+            displayName: "System voice",
+            readiness: {
+              kind: "local",
+              available: false,
+              issue: "No speech program was found on this computer. Install espeak-ng.",
+            },
+          },
+        ]),
+      }),
+    );
+    const speech = await screen.findByRole("list", { name: "Speech providers" });
+    expect(within(speech).getByText("Built in, no key")).not.toBeNull();
+    expect(within(speech).getByText("Not found")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "System voice" })).not.toBeNull();
+    expect(screen.getByText(/Install espeak-ng/)).not.toBeNull();
+    expect(screen.queryByLabelText("System voice API key")).toBeNull();
+  });
 });

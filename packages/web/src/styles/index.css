@@ -50,7 +50,7 @@
 
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* The type scale. Condensed styles (display, title-1, counter, label) carry their family
      in the kit classes `.sl-display`, `.sl-title-1`, `.sl-kicker` and `.sl-stat__value`. */
@@ -89,34 +89,6 @@
   --animate-dialog-in: dialog-in 200ms ease-out;
   --animate-tick-in: tick-in 150ms ease-out;
   --animate-enter: enter 200ms ease-out;
-
-  /* ---- Deprecated 2.x names -------------------------------------------------------------
-     Aliases onto the 3.0 tokens so screens not yet redesigned keep rendering. Do not use
-     them in new code; the screen redesign removes their last uses, then these go. */
-  --color-bg: var(--color-ground); /* deprecated: ground */
-  --color-panel: var(--color-surface); /* deprecated: surface */
-  --color-panel2: var(--color-raised); /* deprecated: raised */
-  --color-line2: var(--color-line-strong); /* deprecated: line-strong */
-  --color-ink2: var(--color-ink-2); /* deprecated: ink-2 */
-  --color-ink3: var(--color-ink-3); /* deprecated: ink-3 */
-  --color-accent-edge: var(--color-accent-strong); /* deprecated: accent-strong */
-  --color-done: var(--color-accent-ink); /* deprecated: accent-ink */
-  --color-red: var(--color-danger); /* deprecated: danger */
-  --color-red-tint: var(--color-danger-tint); /* deprecated: danger-tint */
-  --color-amber: var(--color-waiting); /* deprecated: waiting */
-  --color-lamp-run: var(--color-accent); /* deprecated: accent */
-  --color-lamp-halo: var(--color-accent-tint); /* deprecated: accent-tint */
-  --color-lamp-off: var(--color-line); /* deprecated: line */
-  --color-lamp-ring: var(--color-line-strong); /* deprecated: line-strong */
-  --color-run-text: var(--color-accent-ink); /* deprecated: accent-ink */
-  --color-shadow: rgb(8 8 10 / 0.24); /* deprecated: shadow-pop */
-  --text-row: 16px; /* deprecated: title-3 */
-  --text-row--line-height: 22px;
-  --text-title: 18px; /* deprecated: title-2 or title-3 */
-  --text-title--line-height: 24px;
-  --text-wordmark: 22px; /* deprecated: the shell's wordmark */
-  --text-wordmark--line-height: 26px;
-  --radius-panel: var(--radius-media); /* deprecated: radius-media */
 }
 
 /* Plain layout values: the 8px grid, and the page measures. Tailwind's own spacing scale
@@ -169,7 +141,6 @@
     --shadow-pop: 0 8px 24px rgb(40 36 24 / 0.14);
     --shadow-dialog: 0 24px 64px rgb(40 36 24 / 0.22);
     --shadow-key: 0 4px 0 #3c6214;
-    --color-shadow: rgb(60 55 40 / 0.12);
   }
 }
 
@@ -200,7 +171,6 @@
   --shadow-pop: 0 8px 24px rgb(40 36 24 / 0.14);
   --shadow-dialog: 0 24px 64px rgb(40 36 24 / 0.22);
   --shadow-key: 0 4px 0 #3c6214;
-  --color-shadow: rgb(60 55 40 / 0.12);
 }
 
 :root[data-theme="dark"] {
