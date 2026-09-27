@@ -54,7 +54,8 @@
   src: url("/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
 }
 
-/* The Slopify design system's tokens (3.0), the same names and values the app uses, so the
+/* The Slopify design system's tokens (3.0), the same names and values the app uses (tokens.test.js
+   fails when one drifts from packages/web/src/styles/index.css), so the
    site and the app read as one product: graphite grounds, one lime accent spent once per
    area, Barlow for reading and Barlow Condensed for titles, numbers and kickers. Dark is the
    default; light follows the visitor's system. */

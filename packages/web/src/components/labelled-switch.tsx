@@ -29,7 +29,7 @@ export function LabelledSwitch<T extends string>({
 
   return (
     <div {...helpScope}>
-      <div className="mb-[5px] flex items-center gap-1">
+      <div className="mb-1 flex items-center gap-1">
         <Label id={labelId}>{label}</Label>
         {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
       </div>

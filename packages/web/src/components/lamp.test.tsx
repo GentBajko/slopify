@@ -39,7 +39,7 @@ describe("the lamp", () => {
   it("leaves pending, provided and skipped unlit", () => {
     for (const state of ["pending", "provided", "skipped"] as const) {
       const { container } = render(<Lamp state={state} />);
-      expect(container.querySelector("[data-lamp]")?.className).toContain("bg-lamp-off");
+      expect(container.querySelector("[data-lamp]")?.className).toContain("bg-line");
     }
   });
 });

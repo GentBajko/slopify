@@ -23,7 +23,7 @@
     "!dist/**/*.d.ts"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-assets.mjs && node scripts/copy-web.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-assets.mjs && node scripts/copy-web.mjs && node scripts/copy-extension.mjs",
     "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "typecheck": "tsc --noEmit",
     "smoke:docker-install": "node scripts/docker-install-smoke.mjs"

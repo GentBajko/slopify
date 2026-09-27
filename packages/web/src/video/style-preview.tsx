@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { pictureUrl } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
@@ -46,15 +47,20 @@ export function StylePreview({
   settings,
   label = "Style preview",
   drawnOn,
+  poster,
 }: {
   readonly settings: StylePreviewSettings;
   readonly label?: string;
   // What the picture in settings.image is, in words ("the establishing image").
   readonly drawnOn?: string | undefined;
+  // The picture the preview is drawn on, as the player's poster until it plays. A cast
+  // picture is found by itself; an output's file is the caller's to give.
+  readonly poster?: string | undefined;
 }): ReactElement {
   const { api } = useApp();
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
   const { format, subtitles, videoEdit, previewText, image } = settings;
+  const still = poster ?? (image?.kind === "picture" ? pictureUrl(api, image.sha256) : undefined);
   // The picture as text too: a new but equal object must not render again.
   const picture = image === undefined ? "" : JSON.stringify(image);
   // The request as text, so an equal object from a new render does not render again.
@@ -166,6 +172,7 @@ export function StylePreview({
         <Player
           src={shown}
           label={label}
+          {...(still === undefined ? {} : { poster: still })}
           portrait={format === "9:16"}
           className={format === "9:16" ? "max-w-[270px]" : "max-w-[480px]"}
         />

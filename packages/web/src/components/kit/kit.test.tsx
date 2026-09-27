@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Field, Input, Select, Textarea } from "./field.js";
-import { Lightbox, type LightboxItem, MediaFrame } from "./media.js";
+import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
 import { ReadingView, splitSections } from "./reading-view.js";
 import { Segmented, Switch } from "./switch.js";
 import { Tabs } from "./tabs.js";
@@ -225,6 +225,25 @@ describe("media", () => {
     expect(within(box).getByRole("img", { name: "Bahamut" })).not.toBeNull();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("is one grid in every size: a region by default, a list of tiles, compact for a panel", () => {
+    render(
+      <>
+        <MediaGrid label="Images">
+          <MediaFrame src="/a.png" alt="A" />
+        </MediaGrid>
+        <MediaGrid list shorts density="compact" label="Shorts">
+          <li>
+            <MediaFrame src="/b.png" alt="B" aspect="portrait" />
+          </li>
+        </MediaGrid>
+      </>,
+    );
+    expect(screen.getByRole("region", { name: "Images" }).className).toBe("sl-grid");
+    const shorts = screen.getByRole("list", { name: "Shorts" });
+    expect(shorts.className).toContain("sl-grid sl-grid--shorts sl-grid--compact");
+    expect(within(shorts).getAllByRole("listitem")).toHaveLength(1);
   });
 });
 

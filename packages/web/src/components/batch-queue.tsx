@@ -22,8 +22,8 @@ export function BatchQueue() {
   const projects = useQuery(projectsQuery(api));
   if (!queue.data?.queue.length) return null;
   return (
-    <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
-      <div className="flex min-h-10 items-center gap-2 border-b border-line px-4">
+    <section aria-label="Video queue" className="mb-5 border-y border-line [&_ol]:px-0">
+      <div className="flex min-h-10 items-center gap-2 border-b border-line">
         <h2 className="sl-kicker m-0">Video queue · {queue.data.queue.length} remaining</h2>
         <InfoTip id="play.queue" />
       </div>

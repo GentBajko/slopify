@@ -6,16 +6,16 @@ import { StateWord } from "./state-word.js";
 // row the two sit at opposite ends, so the row composes `Lamp` and `StateWord` itself;
 // `StageLamp` is the pair for everywhere else.
 const lit: Readonly<Record<StageState | ProjectState, string>> = {
-  pending: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
+  pending: "bg-line shadow-[inset_0_0_0_1px_var(--color-line-strong)]",
   running:
-    "bg-lamp-run shadow-[0_0_0_3px_var(--color-lamp-halo)] animate-lamp-pulse motion-reduce:animate-none",
-  done: "bg-done",
-  failed: "bg-red",
-  partial: "bg-amber",
-  canceled: "bg-amber",
-  paused: "bg-amber",
-  provided: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
-  skipped: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
+    "bg-accent shadow-[0_0_0_3px_var(--color-accent-tint)] animate-lamp-pulse motion-reduce:animate-none",
+  done: "bg-accent-ink",
+  failed: "bg-danger",
+  partial: "bg-waiting",
+  canceled: "bg-waiting",
+  paused: "bg-waiting",
+  provided: "bg-line shadow-[inset_0_0_0_1px_var(--color-line-strong)]",
+  skipped: "bg-line shadow-[inset_0_0_0_1px_var(--color-line-strong)]",
 };
 
 export function Lamp({

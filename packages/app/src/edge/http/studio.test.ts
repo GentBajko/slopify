@@ -45,7 +45,7 @@ const config: RunConfig = {
   },
 };
 
-function harness(project: RunConfig = config) {
+function harness(project: RunConfig = config, extensionDist?: string) {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-studio-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -83,27 +83,43 @@ function harness(project: RunConfig = config) {
       createdAt: clock.now().toISOString(),
     });
   };
-  const app = createApp({
-    db,
-    paths,
-    hub: createHub({ ids, log }),
-    runner: {
-      tick: (): void => {},
-      settled: async (): Promise<void> => {},
-      abortProject: async (): Promise<void> => {},
-      abortAll: async (): Promise<void> => {},
-    },
-    clock,
-    ids,
-    log,
-    version: "1.2.3",
-    webDist: join(paths.dataDir, "missing"),
-    flushSoon: (): void => {},
-    probe: () => Promise.resolve({ ran: false, stdout: "" }),
-  });
+  const makeApp = () =>
+    createApp({
+      db,
+      paths,
+      hub: createHub({ ids, log }),
+      runner: {
+        tick: (): void => {},
+        settled: async (): Promise<void> => {},
+        abortProject: async (): Promise<void> => {},
+        abortAll: async (): Promise<void> => {},
+      },
+      clock,
+      ids,
+      log,
+      version: "1.2.3",
+      webDist: join(paths.dataDir, "missing"),
+      extensionDist,
+      flushSoon: (): void => {},
+      probe: () => Promise.resolve({ ran: false, stdout: "" }),
+    });
+  let app = makeApp();
   const call = (path: string, init: RequestInit = {}) =>
     app.request(`http://127.0.0.1:4545/api/studio${path}`, init);
-  return { app, call, output, db };
+  // A restart: a new app on the same database, as after quitting Slopify.
+  const restart = (): void => {
+    app = makeApp();
+  };
+  return {
+    get app() {
+      return app;
+    },
+    call,
+    output,
+    db,
+    paths,
+    restart,
+  };
 }
 
 function finished(output: ReturnType<typeof harness>["output"]): void {
@@ -326,21 +342,21 @@ describe("the upload pack", () => {
   });
 });
 
-describe("pairing and CORS", () => {
-  async function paired(h: ReturnType<typeof harness>): Promise<string> {
-    const settings = (await (await h.call("/settings")).json()) as {
-      pairing: { token: string; origin: string | null };
-    };
-    expect(settings.pairing.origin).toBeNull();
-    const response = await h.call("/ext/pair", {
-      method: "POST",
-      headers: { authorization: `Bearer ${settings.pairing.token}`, origin: extension },
-    });
-    expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBe(extension);
-    return settings.pairing.token;
-  }
+async function paired(h: ReturnType<typeof harness>): Promise<string> {
+  const settings = (await (await h.call("/settings")).json()) as {
+    pairing: { token: string; origin: string | null };
+  };
+  expect(settings.pairing.origin).toBeNull();
+  const response = await h.call("/ext/pair", {
+    method: "POST",
+    headers: { authorization: `Bearer ${settings.pairing.token}`, origin: extension },
+  });
+  expect(response.status).toBe(200);
+  expect(response.headers.get("access-control-allow-origin")).toBe(extension);
+  return settings.pairing.token;
+}
 
+describe("pairing and CORS", () => {
   it("pairs the extension with the token and then answers only its origin", async () => {
     const h = harness();
     finished(h.output);
@@ -371,8 +387,17 @@ describe("pairing and CORS", () => {
       headers: { authorization: `Bearer ${token}`, origin: extension },
     });
     expect(video.status).toBe(404);
-    // A short is chosen by its number.
+    // A short is chosen by its number, and waits behind the video until it is filled.
     await h.call("/packs/p1/choose", json({ short: 1 }));
+    await h.call("/ext/filled", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        origin: extension,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ projectId: "p1" }),
+    });
     expect(
       await (
         await h.call("/ext/pack", {
@@ -459,5 +484,159 @@ describe("pairing and CORS", () => {
     expect(choose.status).toBe(403);
     const same = await h.call("/settings", { headers: { origin: "http://127.0.0.1:4545" } });
     expect(same.status).toBe(200);
+  });
+});
+
+describe("the fill queue", () => {
+  const asExtension = (token: string): RequestInit => ({
+    headers: { authorization: `Bearer ${token}`, origin: extension },
+  });
+  const filled = (token: string, body: unknown): RequestInit => ({
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      origin: extension,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  it("fills each chosen item once, in order, and keeps what waits across a restart", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    await h.call("/packs/p1/choose", json({ short: 1 }));
+    await h.call("/packs/p1/choose", json({}));
+    // Choosing an item already waiting keeps its place.
+    const again = await h.call("/packs/p1/choose", json({ short: 1 }));
+    expect(((await again.json()) as { queue: unknown[] }).queue).toHaveLength(2);
+    expect(await (await h.call("/queue")).json()).toEqual({
+      queue: [
+        {
+          projectId: "p1",
+          projectTitle: "The Fox of Cliffside",
+          short: 1,
+          at: clock.now().toISOString(),
+        },
+        {
+          projectId: "p1",
+          projectTitle: "The Fox of Cliffside",
+          short: null,
+          at: clock.now().toISOString(),
+        },
+      ],
+    });
+
+    // Slopify restarts: nothing chosen is lost.
+    h.restart();
+    const first = await h.call("/ext/pack", asExtension(token));
+    expect(await first.json()).toMatchObject({ item: { kind: "short", short: 1 }, waiting: 2 });
+    // The same item again until the extension says it filled it ("Fill again").
+    expect(await (await h.call("/ext/pack", asExtension(token))).json()).toMatchObject({
+      item: { short: 1 },
+    });
+    const done = await h.call("/ext/filled", filled(token, { projectId: "p1", short: 1 }));
+    expect(done.status).toBe(200);
+    expect(done.headers.get("access-control-allow-origin")).toBe(extension);
+    expect(await done.json()).toEqual({ waiting: 1 });
+    expect(await (await h.call("/ext/pack", asExtension(token))).json()).toMatchObject({
+      item: { kind: "video" },
+      waiting: 1,
+    });
+    await h.call("/ext/filled", filled(token, { projectId: "p1", short: null }));
+    expect((await h.call("/ext/pack", asExtension(token))).status).toBe(404);
+  });
+
+  it("lets the page remove an item, refuses the extension's report without the token, and forgets the queue on a new token", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    await h.call("/packs/p1/choose", json({}));
+    await h.call("/packs/p1/choose", json({ short: 1 }));
+    const removed = await h.call("/queue/remove", json({ projectId: "p1", short: null }));
+    expect(await removed.json()).toMatchObject({ queue: [{ short: 1 }] });
+    const stranger = await h.call("/ext/filled", {
+      ...filled("not-the-token-at-all-000000", { projectId: "p1", short: 1 }),
+    });
+    expect(stranger.status).toBe(401);
+    expect(((await (await h.call("/queue")).json()) as { queue: unknown[] }).queue).toHaveLength(1);
+    // Another page can't read or change the queue.
+    expect((await h.call("/queue", { headers: { origin: "https://evil.example" } })).status).toBe(
+      403,
+    );
+    await h.call("/settings/pairing", json({}));
+    expect(await (await h.call("/queue")).json()).toEqual({ queue: [] });
+    expect(token).not.toBe("");
+  });
+
+  it("drops a waiting item whose project is gone", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    await h.call("/packs/p1/choose", json({}));
+    // Deleted: in the trash.
+    h.db
+      .prepare("INSERT INTO project_trash(project_id,deleted_at) VALUES('p1','2026-09-27')")
+      .run();
+    const answer = await h.call("/ext/pack", asExtension(token));
+    expect(answer.status).toBe(404);
+    expect(((await answer.json()) as { detail: string }).detail).toContain("is gone");
+  });
+});
+
+describe("a playlist per channel", () => {
+  const put = (body: unknown): RequestInit => ({ ...json(body), method: "PUT" });
+  const defaultChannel = "00000000-0000-4000-8000-000000000001";
+
+  it("names the channel's own playlist, else the default", async () => {
+    const h = harness();
+    finished(h.output);
+    const playlist = async () =>
+      ((await (await h.call("/packs/p1")).json()) as UploadPack).items[0]?.playlist;
+    expect(await playlist()).toBeNull();
+    await h.call("/settings/playlist", put({ playlist: "Everything" }));
+    expect(await playlist()).toBe("Everything");
+    const own = await h.call(
+      "/settings/playlist",
+      put({ playlist: " Fox tales ", channelId: defaultChannel }),
+    );
+    expect(await own.json()).toEqual({ playlist: "Fox tales", channelId: defaultChannel });
+    expect(await playlist()).toBe("Fox tales");
+    expect(await (await h.call("/settings")).json()).toMatchObject({
+      playlist: "Everything",
+      channelPlaylists: { [defaultChannel]: "Fox tales" },
+    });
+    // Emptied, the channel uses the default again.
+    await h.call("/settings/playlist", put({ playlist: "", channelId: defaultChannel }));
+    expect(await playlist()).toBe("Everything");
+    const unknown = await h.call(
+      "/settings/playlist",
+      put({ playlist: "Owls", channelId: "11111111-1111-4111-8111-111111111111" }),
+    );
+    expect(unknown.status).toBe(404);
+    expect(((await unknown.json()) as { detail: string }).detail).toContain(
+      "Settings → YouTube Studio",
+    );
+  });
+});
+
+describe("the extension download", () => {
+  it("serves the built zips and says plainly when this copy has none", async () => {
+    const dist = mkdtempSync(join(tmpdir(), "slopify-extension-"));
+    writeFileSync(join(dist, "slopify-studio-chrome.zip"), "PK-chrome");
+    const h = harness(config, dist);
+    const chrome = await h.call("/extension/chrome.zip");
+    expect(chrome.status).toBe(200);
+    expect(chrome.headers.get("content-type")).toBe("application/zip");
+    expect(chrome.headers.get("content-disposition")).toBe(
+      'attachment; filename="slopify-studio-chrome.zip"',
+    );
+    expect(await chrome.text()).toBe("PK-chrome");
+    // The Firefox zip isn't in this fixture's build.
+    const firefox = await h.call("/extension/firefox.zip");
+    expect(firefox.status).toBe(404);
+    expect(((await firefox.json()) as { detail: string }).detail).toContain("npm run build");
+    expect((await h.call("/extension/..%2Fdb.zip")).status).toBe(400);
+    expect((await harness().call("/extension/chrome.zip")).status).toBe(404);
   });
 });
