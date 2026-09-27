@@ -103,6 +103,8 @@ export const runDraftSchema = z.object({
     images: z.array(z.string()).optional(),
     thumbnail: z.string().optional(),
     reference: z.string().optional(),
+    // The staged file of the shorts' background music; used only while Shorts is on.
+    shortsMusic: z.string().optional(),
   }),
   // Optional until Play carries the control; unknown keys are stripped by this schema, so
   // a mode not listed here would never reach the audio stage.

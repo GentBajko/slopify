@@ -1,4 +1,4 @@
-import type { GlobalEvent, ProjectEvent } from "@app/edge/events/hub.js";
+import type { GlobalEvent, ProjectEvent, ProjectStateEvent } from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
@@ -35,6 +35,8 @@ export interface GlobalSink {
   readonly tally: (count: number) => void;
   readonly stagingChanged: () => void;
   readonly refetch: (projectId?: string) => void;
+  // Every project's state change, for run notifications (`notifications/watcher.ts`).
+  readonly projectState?: (event: ProjectStateEvent) => void;
 }
 
 const projectEventNames = [
@@ -88,6 +90,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       return;
     }
     if (event.type === "project.updated" || event.type === "project.state") {
+      if (event.type === "project.state") sink.projectState?.(event);
       sink.refetch(event.projectId);
       return;
     }

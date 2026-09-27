@@ -1,5 +1,4 @@
 import type {
-  DraftAttachment,
   DraftView,
   PlayDraftDocument,
   PlayStartResult,
@@ -7,6 +6,7 @@ import type {
 import { createContext, type ReactElement, type ReactNode, useContext } from "react";
 import type { ControlledFontUpload } from "@/subtitles/font-picker";
 import type { PlaySection } from "./sections";
+import type { UploadSlot } from "./state";
 import { useDraftSession } from "./use-draft-session";
 
 export type DraftSaveStatus = "unsaved" | "saving" | "saved" | "error" | "conflict";
@@ -39,11 +39,7 @@ export interface PlaySession extends PlayNavigation {
   readonly edited: number;
   readonly acknowledged: number;
   readonly reveal: RevealRequest | null;
-  readonly attach: (
-    kind: DraftAttachment["kind"],
-    files: readonly File[],
-    replaceId?: string,
-  ) => Promise<void>;
+  readonly attach: (slot: UploadSlot, files: readonly File[], replaceId?: string) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
   readonly flush: () => Promise<boolean>;
   readonly open: (id: string, isCurrent?: () => boolean) => Promise<boolean>;

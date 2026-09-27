@@ -333,3 +333,81 @@ describe("startRun", () => {
     expect(existsSync(join(storage.paths.staging, audio))).toBe(true);
   });
 });
+
+describe("startRun with the shorts' background music", () => {
+  const shorts = { enabled: true, count: 2, minSeconds: 45, maxSeconds: 90 } as const;
+  const headContent = (storage: StorageDeps, projectId: string): Record<string, unknown> => {
+    const row = storage.db
+      .prepare(
+        "SELECT r.content AS content FROM project_revisions r JOIN project_heads h ON h.revision_id=r.id WHERE h.project_id=?",
+      )
+      .get(projectId);
+    return JSON.parse(String(row?.content)) as Record<string, unknown>;
+  };
+  const musicAssets = (storage: StorageDeps, projectId: string) =>
+    storage.db
+      .prepare("SELECT id, path FROM project_assets WHERE project_id=? AND path LIKE 'assets/%'")
+      .all(projectId) as { id: string; path: string }[];
+
+  it("copies the music into the project as the first revision's shortsMusic, never as an output", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+    const music = await upload(storage, "audio", "music bytes");
+
+    const { project } = startRun(
+      storage,
+      draft({ shorts, provided: { article: "x", audio, images: [image], shortsMusic: music } }),
+      {},
+    );
+
+    const assets = musicAssets(storage, project.id);
+    expect(assets).toHaveLength(1);
+    const asset = assets[0];
+    expect(headContent(storage, project.id).shortsMusic).toBe(asset?.id);
+    expect(readFileSync(join(storage.paths.projects, project.id, asset?.path ?? ""), "utf8")).toBe(
+      "music bytes",
+    );
+    // The stages' own outputs are as before: the music is no stage's file.
+    expect(
+      storage.db
+        .prepare("SELECT role FROM outputs WHERE project_id=? ORDER BY rowid")
+        .all(project.id)
+        .map((row) => row.role),
+    ).toEqual(["article_txt", "audio_body", "image"]);
+    expect(existsSync(join(storage.paths.staging, music))).toBe(false);
+  });
+
+  it("leaves the music out while Shorts is off", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+    const music = await upload(storage, "audio", "music bytes");
+
+    const { project } = startRun(
+      storage,
+      draft({ provided: { article: "x", audio, images: [image], shortsMusic: music } }),
+      {},
+    );
+
+    expect(musicAssets(storage, project.id)).toEqual([]);
+    // Nothing used it, so the staged original is left where it was.
+    expect(existsSync(join(storage.paths.staging, music))).toBe(true);
+  });
+
+  it("writes nothing when the music has gone missing", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+
+    expect(() =>
+      startRun(
+        storage,
+        draft({ shorts, provided: { article: "x", audio, images: [image], shortsMusic: "gone" } }),
+        {},
+      ),
+    ).toThrow(/background music could not be attached/);
+    expect(storage.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
+    expect(storage.db.prepare("SELECT count(*) AS n FROM project_assets").get()).toEqual({ n: 0 });
+  });
+});

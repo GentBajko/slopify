@@ -124,6 +124,40 @@ describe("durable video batches", () => {
     }
     expect(stagedFiles(h.db)).toHaveLength(0);
   });
+  it("copies the shorts' shared background music to every project before consuming staging", async () => {
+    const h = harness();
+    const staged = await stageUpload(h, {
+      stageKind: "audio",
+      originalFilename: "bed.mp3",
+      content: (async function* () {
+        yield new TextEncoder().encode("music");
+      })(),
+    });
+    if (!staged.ok) throw new Error("Upload failed");
+    const batch = runs.map((run) => ({
+      ...run,
+      draft: {
+        ...run.draft,
+        sources: { ...run.draft.sources, audio: "generate" as const },
+        shorts: { enabled: true, count: 2, minSeconds: 45, maxSeconds: 90 },
+        provided: { shortsMusic: staged.file.id },
+      },
+    }));
+    const queue = enqueueBatch(h, "music", batch);
+    const paths = queue.map((item) => {
+      const head = h.db
+        .prepare(
+          "SELECT a.path AS path FROM project_heads h JOIN project_revisions r ON r.id=h.revision_id JOIN project_assets a ON a.id=json_extract(r.content,'$.shortsMusic') WHERE h.project_id=?",
+        )
+        .get(item.projectId);
+      expect(readFileSync(join(h.paths.projects, item.projectId, String(head?.path)), "utf8")).toBe(
+        "music",
+      );
+      return `${item.projectId}/${String(head?.path)}`;
+    });
+    expect(new Set(paths).size).toBe(3);
+    expect(stagedFiles(h.db)).toHaveLength(0);
+  });
   it("rolls back all projects and keeps uploads when a later attachment fails", async () => {
     const h = harness();
     const staged = await stageUpload(h, {

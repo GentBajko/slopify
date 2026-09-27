@@ -139,6 +139,7 @@ export function resolveReviewInputs(
       run.draft.provided.thumbnail,
       run.draft.provided.reference,
       ...(run.draft.provided.images ?? []),
+      run.draft.provided.shortsMusic,
     ]),
   );
   const attachmentIdentity = fresh.value.attachments.flatMap((file) =>

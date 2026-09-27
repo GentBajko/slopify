@@ -307,6 +307,30 @@ function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: F
       checkFile(staged, id, "images", `provided.images.${index}`, "Pick an image.", fields);
     }
   }
+  checkShortsMusic(draft, staged, fields);
+}
+
+// The shorts' background music is optional, so only a file that was picked is checked, and
+// only while Shorts is on. Named by where the control sits: Play's Export rail.
+function checkShortsMusic(
+  draft: RunDraft,
+  staged: readonly StagedFile[],
+  fields: FieldError[],
+): void {
+  const id = draft.provided.shortsMusic;
+  if (draft.shorts?.enabled !== true || id === undefined) return;
+  const where = "under Outputs → Export → More shorts options → Background music";
+  const file = staged.find((candidate) => candidate.id === id);
+  if (file === undefined || file.stageKind !== "audio")
+    fields.push({
+      field: "shorts.music",
+      message: `The shorts' background music file is no longer available, so it can't be added to the project. Choose the file again ${where}, or remove it.`,
+    });
+  else if (file.state !== "staged")
+    fields.push({
+      field: "shorts.music",
+      message: `The shorts' background music is still uploading, so the run can't start yet. Wait for it to finish, or remove it ${where}.`,
+    });
 }
 
 // A run never starts with provided content that is missing or still copying.

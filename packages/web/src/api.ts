@@ -8,6 +8,7 @@ import type {
   Stage,
 } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
 import type {
@@ -232,6 +233,19 @@ export async function readBackupExportSummary(api: Api): Promise<BackupExportSum
   return read<BackupExportSummary>(await api.fetch(`${api.origin}/api/storage/export/summary`));
 }
 
+export async function readBackups(api: Api): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.$get());
+}
+
+export async function saveBackups(api: Api, config: BackupConfigInput): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.$put({ json: { ...config } }));
+}
+
+// Starts writing a backup and answers at once; Settings → Backups polls readBackups for the result.
+export async function runBackupNow(api: Api): Promise<BackupView> {
+  return read<BackupView>(await api.client.backups.run.$post());
+}
+
 export async function listProjects(api: Api): Promise<ProjectListBody> {
   return read<ProjectListBody>(await api.client.projects.$get());
 }
@@ -344,6 +358,34 @@ export async function readAppSettings(api: Api): Promise<AppSettings> {
 
 export async function saveAppSettings(api: Api, settings: AppSettings): Promise<AppSettings> {
   return read<AppSettings>(await api.client.settings.$put({ json: { ...settings } }));
+}
+
+export interface NotificationUrlBody {
+  readonly url: string | null;
+}
+
+export async function readNotificationUrl(api: Api): Promise<NotificationUrlBody> {
+  return read<NotificationUrlBody>(await api.client.settings.notifications.$get());
+}
+
+// A refusal's `detail` already names the field, the reason and the control, so it is the
+// whole sentence; the fields list would only repeat it.
+async function detailed<T>(response: Response): Promise<T> {
+  if (response.ok) return (await response.json()) as T;
+  const problem = await problemOf(response);
+  throw problem?.detail === undefined ? errorOf(response, problem) : new Error(problem.detail);
+}
+
+export async function saveNotificationUrl(api: Api, url: string): Promise<NotificationUrlBody> {
+  return detailed<NotificationUrlBody>(
+    await api.client.settings.notifications.$put({ json: { url } }),
+  );
+}
+
+export async function sendTestNotification(api: Api, url: string): Promise<void> {
+  await detailed<{ sent: boolean }>(
+    await api.client.settings.notifications.test.$post({ json: { url } }),
+  );
 }
 
 export async function listVoices(api: Api): Promise<VoiceListBody> {

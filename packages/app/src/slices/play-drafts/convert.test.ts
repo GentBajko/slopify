@@ -474,3 +474,52 @@ it("carries the title, link, music volume and speed of the shorts, or leaves the
     h.close();
   }
 });
+
+it("carries the shorts' background music only while Shorts is on, and names its control when it is gone", () => {
+  const h = draftFixture();
+  try {
+    const shorts = {
+      enabled: true,
+      count: "2",
+      minSeconds: "45",
+      maxSeconds: "90",
+      prompt: "",
+      imagePrompt: "",
+    };
+    const music = { attachmentId: randomUUID(), name: "bed.mp3" };
+    const attachment = (state: DraftAttachment["state"]): DraftAttachment => ({
+      id: music.attachmentId,
+      kind: "audio",
+      name: "bed.mp3",
+      state,
+      stagedFileId: state === "ready" ? "staged-music" : null,
+      bytes: state === "ready" ? 10 : 0,
+      error: null,
+    });
+    const form = {
+      ...h.document.form,
+      shorts,
+      provided: { ...h.document.form.provided, shortsMusic: music },
+    };
+    const ready = convert({ ...h.document, form }, [attachment("ready")]);
+    expect(ready.ok && ready.draft.provided.shortsMusic).toBe("staged-music");
+    const off = convert(
+      { ...h.document, form: { ...form, shorts: { ...shorts, enabled: false } } },
+      [attachment("ready")],
+    );
+    expect(off.ok && off.draft.provided.shortsMusic).toBe(undefined);
+    const gone = convert({ ...h.document, form }, [attachment("reattach")]);
+    expect(!gone.ok && gone.fields).toEqual([
+      {
+        field: "shorts.music",
+        message: expect.stringContaining(
+          "Choose the file again under Outputs → Export → More shorts options → Background music",
+        ),
+      },
+    ]);
+    const uploading = convert({ ...h.document, form }, [attachment("pending")]);
+    expect(!uploading.ok && uploading.fields[0]?.message).toMatch(/still uploading/);
+  } finally {
+    h.close();
+  }
+});

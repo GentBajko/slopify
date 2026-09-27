@@ -134,6 +134,7 @@ describe("migrate", () => {
       { version: 17, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 18, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 19, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
@@ -144,7 +145,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 20 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 21 });
   });
 
   it("refuses a database newer than the app knows", () => {

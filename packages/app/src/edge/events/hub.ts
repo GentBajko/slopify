@@ -162,6 +162,18 @@ export function createHub(deps: HubDeps): Hub {
   };
 }
 
+// Every project event also goes to `observe` (the run notifier), after the open pages have
+// it, whether or not a page is open to receive it.
+export function observedHub(hub: Hub, observe: (event: ProjectEvent) => void): Hub {
+  return {
+    ...hub,
+    emit: (projectId, event) => {
+      hub.emit(projectId, event);
+      observe(event);
+    },
+  };
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

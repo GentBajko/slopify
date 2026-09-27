@@ -68,6 +68,10 @@ export function freshTemplateDraft(
         ...(provided.reference === undefined
           ? {}
           : { reference: provided.reference === null ? null : fresh(provided.reference) }),
+        // Like the images: the name is kept and the file is attached again on Play.
+        ...(provided.shortsMusic === undefined
+          ? {}
+          : { shortsMusic: provided.shortsMusic === null ? null : fresh(provided.shortsMusic) }),
       },
     },
   };

@@ -68,6 +68,8 @@ export function attachmentRefs(document: PlayDraftDocument): readonly Attachment
     ...(p.reference === undefined || p.reference === null
       ? []
       : [{ ...p.reference, kind: "reference" as const }]),
+    // The shorts' music is staged like narration audio, so it is an audio attachment.
+    ...(p.shortsMusic == null ? [] : [{ ...p.shortsMusic, kind: "audio" as const }]),
   ];
 }
 export function requestHash(value: unknown): string {

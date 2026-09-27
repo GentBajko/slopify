@@ -78,6 +78,9 @@ export interface ProvidedFiles {
   readonly thumbnail?: string | undefined;
   // The establishing image, when `reference.source` is "provide".
   readonly reference?: string | undefined;
+  // The Shorts step's background music, staged like narration audio. Copied into the project
+  // as the revision's `shortsMusic` when the run starts; ignored while Shorts is off.
+  readonly shortsMusic?: string | undefined;
 }
 
 // The Images stage's establishing image: made first (from a library image prompt) or uploaded,

@@ -1,0 +1,8 @@
+# Scheduled backups
+
+- New Settings → Backups: back up automatically once a day at a chosen local time (03:00 by default), keep the last 1–30 backups (5 by default), in a folder of your choice. Off by default for every install, because an archive holds every video and can be many gigabytes. The screen shows the last backup's time, size and result, the next run, and Back up now.
+- Backups are the Export everything archive, written by the same code (`planBackup`/`streamBackup`). The default folder is `Backups` inside the projects folder, the one folder a Docker install shares with the host (`~/Slopify/Projects/Backups`); storage cleanup leaves it alone and it no longer counts as project files.
+- A once-a-minute timer runs at most one backup per day; a time missed while Slopify was off is caught up about two minutes after the next start unless a backup succeeded in the last 20 hours; failures retry hourly. Only one backup runs at a time.
+- Backups never compete with a render: like Export everything they refuse to copy a project being made, so an automatic backup waits ("Waiting for … to finish"), looks again every ten minutes, and starts once those projects finish or are paused. It holds the updater's mutation gate, and a stop removes its unfinished file.
+- The archive is written under a hidden `.partial` name, synced, then renamed, so a partial file is never counted. Pruning deletes only this feature's own `slopify-backup-YYYY-MM-DDTHHMMSSZ.tar` files, oldest first; nothing else in the folder is touched. Free space is checked first; every failure says what failed, why and which setting to change.
+- Configuration and status live in the settings table (`backups.config`, `backups.status`); no migration. Docs: `docs/backups.md`.

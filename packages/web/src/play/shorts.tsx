@@ -46,13 +46,15 @@ const moreFields = ["titleOnScreen", "speed", "musicVolume", "fullVideoLink"] as
 // Every control stays mounted: without narration the switch is disabled rather than removed,
 // and so is the rest while the switch is off. The title, speed, music and link sit in a
 // "More shorts options" disclosure whose summary names what differs from the defaults, so the
-// row stays one line; `music` is Edit project's music file, which belongs to a project.
+// row stays one line; `music` is the music file's control: Play's draft attachment, or Edit
+// project's upload.
 export function Shorts({
   value,
   prompts,
   narrated,
   problem,
   music,
+  musicName,
   onChange,
 }: {
   readonly value: ShortsForm;
@@ -60,6 +62,8 @@ export function Shorts({
   readonly narrated: boolean;
   readonly problem?: ((field: string) => string | undefined) | undefined;
   readonly music?: ReactNode;
+  // The attached music file's name, which the closed disclosure's summary names.
+  readonly musicName?: string | undefined;
   readonly onChange: (next: ShortsForm) => void;
 }): ReactElement {
   const id = useId();
@@ -70,6 +74,8 @@ export function Shorts({
   const moreIssue = moreFields
     .map((field) => problem?.(`shorts.${field}`))
     .find((message) => message !== undefined);
+  // The music control says its own problem; the disclosure only opens for it.
+  const musicIssue = problem?.("shorts.music");
   const [open, setOpen] = useState(false);
   const number = (
     field: "count" | "minSeconds" | "maxSeconds",
@@ -97,6 +103,7 @@ export function Shorts({
   const summary = [
     value.titleOnScreen === true ? "Title on screen" : "No title on screen",
     speed === speeds[0] ? undefined : `${speed ?? ""}×`,
+    musicName === undefined ? undefined : `Music: ${musicName}`,
     volume.trim() === "" || volume === String(defaultMusicVolume)
       ? undefined
       : `Music at ${volume}%`,
@@ -168,7 +175,7 @@ export function Shorts({
       ) : null}
       <details
         className="basis-full rounded-control border border-line px-3"
-        open={open || moreIssue !== undefined}
+        open={open || moreIssue !== undefined || musicIssue !== undefined}
         onToggle={(event) => setOpen(event.currentTarget.open)}
       >
         <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
@@ -251,12 +258,7 @@ export function Shorts({
             Each short's description ends with a line to the full video; without a link it says{" "}
             {fullVideoPlaceholder} for you to fill in.
           </p>
-          {music ?? (
-            <p className="basis-full text-label text-ink3">
-              Background music is added per project, in Edit project → Shorts, once the run has
-              started. It plays at this volume under the narration and dips while it speaks.
-            </p>
-          )}
+          {music}
           {moreIssue ? (
             <p role="alert" className="basis-full text-small text-red">
               {moreIssue}

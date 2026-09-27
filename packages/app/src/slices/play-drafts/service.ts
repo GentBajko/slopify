@@ -250,6 +250,9 @@ export function forkDraft(
           ...(p.reference === undefined
             ? {}
             : { reference: p.reference === null ? null : rewrite(p.reference) }),
+          ...(p.shortsMusic === undefined
+            ? {}
+            : { shortsMusic: p.shortsMusic === null ? null : rewrite(p.shortsMusic) }),
         },
       },
     };

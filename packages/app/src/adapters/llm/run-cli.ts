@@ -137,10 +137,21 @@ export function nodeRunCli(
       child.stderr?.destroy();
     }
   };
-  const abort = (): void => terminate();
+  // An abort asks politely, then forces after the same grace stopCliRun gives. A reader
+  // waiting on stdout only reaches stopCliRun once stdout closes, so a CLI that traps
+  // SIGTERM and keeps its pipe open would otherwise outlive the run that was cancelled.
+  let forced: ReturnType<typeof setTimeout> | undefined;
+  const abort = (): void => {
+    terminate();
+    forced ??= setTimeout(() => terminate(true), cliTerminationGraceMs);
+    forced.unref();
+  };
   if (signal.aborted) abort();
   else signal.addEventListener("abort", abort, { once: true });
-  void ended.then(() => signal.removeEventListener("abort", abort));
+  void ended.then(() => {
+    signal.removeEventListener("abort", abort);
+    if (forced !== undefined) clearTimeout(forced);
+  });
 
   return {
     ...(inputWritten === undefined ? {} : { inputWritten }),

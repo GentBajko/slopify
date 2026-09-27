@@ -80,6 +80,7 @@ It opens at `http://127.0.0.1:6969`. Update by running the same command with `@l
 - **Shorts** cut from the narration: vertical clips with new images, word-by-word captions, titles and hashtags
 - **Templates, batches and schedules** that work through a list of topics
 - **Checkpoints, pause and resume, history** so nothing runs or changes without you
+- **[Notifications](docs/notifications.md)** in the browser or on your phone (ntfy) when a run finishes, fails or waits for you
 
 ## Docker
 

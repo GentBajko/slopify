@@ -6,6 +6,9 @@ import { defaultDocumentTheme } from "../document/model.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
+import { insertAsset } from "../revisions/repo.js";
+import { discardPreparedAssets, type PreparedAsset } from "../storage/assets.js";
+import { prepareStagedFile } from "../storage/prepare.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { attachStagedFile, storeText } from "../storage/staging.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
@@ -93,18 +96,34 @@ export function startRun(
   // the project folder rather than moved, so a rollback leaves the staging files exactly
   // as the form left them and the same Play can simply be pressed again.
   const moved: string[] = [];
-  transact(deps.db, () => {
-    insertProject(deps.db, project);
-    for (const stage of stages) {
-      insertStage(deps.db, stage);
-    }
-    attachProvided(deps, id, draft, moved, retainStaged);
-    if (deps.catalogue !== undefined) {
-      const baseline = adoptBaseline(deps, id, templates);
-      if (!baseline.ok) throw new Error("The new project has no revision.");
-      admitInitialRevision(deps, baseline.view, deps.catalogue.read());
-    }
-  });
+  let music: PreparedAsset | undefined;
+  try {
+    transact(deps.db, () => {
+      insertProject(deps.db, project);
+      for (const stage of stages) {
+        insertStage(deps.db, stage);
+      }
+      attachProvided(deps, id, draft, moved, retainStaged);
+      music = attachShortsMusic(deps, id, draft, moved);
+      // The music is named by the first revision, as Edit project → Shorts names it, so the
+      // project gets its revision now even where it would otherwise wait for its first view.
+      if (deps.catalogue !== undefined || music !== undefined) {
+        const baseline = adoptBaseline(
+          deps,
+          id,
+          templates,
+          music === undefined ? {} : { shortsMusic: music.id },
+        );
+        if (!baseline.ok) throw new Error("The new project has no revision.");
+        if (deps.catalogue !== undefined)
+          admitInitialRevision(deps, baseline.view, deps.catalogue.read());
+      }
+    });
+  } catch (error) {
+    // The copy was written outside the transaction; nothing names it once it rolled back.
+    if (music !== undefined) discardPreparedAssets(deps, [music]);
+    throw error;
+  }
   for (const source of retainStaged ? [] : moved) {
     releaseStagedFile(deps, source);
   }
@@ -149,6 +168,25 @@ function attachProvided(
       attach(deps, projectId, "images", stagedFileId, "image", collected, retainStaged, index + 1);
     }
   }
+}
+
+// The Shorts step's background music, copied into the project as an asset of its own (never
+// an output), exactly as Edit project → Shorts keeps an uploaded one. Only while Shorts is on.
+function attachShortsMusic(
+  deps: StorageDeps,
+  projectId: string,
+  draft: RunDraft,
+  collected: string[],
+): PreparedAsset | undefined {
+  const stagedFileId = draft.provided.shortsMusic;
+  if (draft.shorts?.enabled !== true || stagedFileId === undefined) return undefined;
+  const result = prepareStagedFile(deps, { projectId, stagedFileId, role: "audio_body" });
+  if (!result.ok)
+    // admit() already refused a missing or still-copying file, as for the stages' own files.
+    throw new Error(`the shorts' background music could not be attached: ${result.reason}`);
+  insertAsset(deps.db, result.asset);
+  collected.push(stagedFileId);
+  return result.asset;
 }
 
 function attach(

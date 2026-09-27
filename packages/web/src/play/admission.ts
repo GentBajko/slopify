@@ -152,6 +152,7 @@ const readingOrder: readonly string[] = [
   "shorts.imagePrompt",
   "shorts.speed",
   "shorts.musicVolume",
+  "shorts.music",
   "shorts.fullVideoLink",
   "videoEdit.transitionSeconds",
   "videoEdit.chapterCards",
@@ -193,6 +194,9 @@ function uploadBlocker(form: PlayFormState): Blocker | undefined {
     provided.reference !== undefined
   ) {
     picked.push(provided.reference);
+  }
+  if (shortsOn(form) && provided.shortsMusic !== undefined) {
+    picked.push(provided.shortsMusic);
   }
   if (picked.some((upload) => upload.error !== undefined)) {
     return { field: "provided", hint: "Remove the upload that failed to play" };
@@ -258,6 +262,8 @@ function hintOf(form: PlayFormState, error: FieldError): string {
       return "Choose the shorts' speed to play";
     case "shorts.musicVolume":
       return "Set the shorts' music volume to play";
+    case "shorts.music":
+      return "Attach the shorts' background music again, or remove it, to play";
     case "shorts.fullVideoLink":
       return "Fix the full video link to play";
     case "provided.research":

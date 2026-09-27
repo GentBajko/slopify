@@ -11,6 +11,7 @@ import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
 import { cn } from "@/lib/utils";
+import { useRunNotifications } from "@/notifications/use-run-notifications";
 import { PlayDraftProvider } from "@/play/draft-context";
 import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
@@ -71,6 +72,7 @@ function ShellContent() {
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
   const pathname = useLocation({ select: (location) => location.pathname });
+  const runs = useRunNotifications();
 
   useEffect(() => {
     const refreshProjects = coalesce(() => {
@@ -78,6 +80,7 @@ function ShellContent() {
     }, 200);
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
+      projectState: runs.observe,
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },
@@ -92,7 +95,7 @@ function ShellContent() {
       unsubscribe();
       refreshProjects.stop();
     };
-  }, [api, openEvents, queryClient]);
+  }, [api, openEvents, queryClient, runs]);
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -12,6 +12,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
+import type { BackupService } from "../../slices/backups/service.js";
 import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
 import type { RebuildDeps } from "../../slices/rebuild/service.js";
 import type { ScheduleDeps } from "../../slices/schedules/model.js";
@@ -20,6 +21,7 @@ import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
+import { backupRoutes } from "./backups.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
@@ -54,6 +56,7 @@ export interface AppDeps {
     | undefined;
   readonly drafts?: DraftStartDeps;
   readonly schedules?: ScheduleDeps;
+  readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
@@ -68,6 +71,8 @@ export interface AppDeps {
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
+  // Settings → Notifications' test button. Handed in so a test never reaches the network.
+  readonly sendNotification?: import("../../slices/notifications/send.js").SendNotification;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly hub: Hub;
@@ -107,6 +112,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       )
       .route("/staging", stagingRoutes(deps))
       .route("/storage", storageRoutes(deps))
+      .route("/backups", backupRoutes(deps.backups))
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))

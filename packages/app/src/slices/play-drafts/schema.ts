@@ -126,6 +126,9 @@ export const playDraftFormSchema = z
         images: z.array(file).readonly(),
         // The uploaded establishing image; absent on drafts saved before it.
         reference: file.nullable().optional(),
+        // The Shorts step's background music, uploaded as an audio attachment. Absent on
+        // drafts and templates saved before Play offered it: no music.
+        shortsMusic: file.nullable().optional(),
       })
       .strict()
       .readonly(),

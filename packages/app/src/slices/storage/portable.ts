@@ -28,12 +28,13 @@ import { readFontMetadata } from "../fonts/sfnt.js";
 import { lintEntry, lintPrompt } from "../library/lint.js";
 import { entryCategories, entryModes, promptKinds } from "../library/model.js";
 import { listEntries, listPrompts } from "../library/repo.js";
+import { notificationUrlKey } from "../notifications/settings.js";
 import { projectTemplateSchema } from "../project-templates/schema.js";
 import { cliPathMaxLength } from "../settings/cli-paths.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
-import { projectDir, stagingPath } from "./layout.js";
+import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
 
@@ -412,7 +413,8 @@ const storedAppearance = z.enum(appearances);
 function portableSettings(settings: Readonly<Record<string, string>>): Record<string, string> {
   const portable: Record<string, string> = {};
   for (const [key, value] of Object.entries(settings)) {
-    if (key === "tutorial.session") continue;
+    // The Notification URL stays on this machine: an ntfy topic in it is as good as a password.
+    if (key === "tutorial.session" || key === notificationUrlKey) continue;
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
@@ -1053,7 +1055,8 @@ export function storageBytes(paths: Paths): {
   readonly projects: number;
   readonly staging: number;
 } {
-  const projects = directoryBytes(paths.projects);
+  // Scheduled backups default to a folder inside the projects root; they are not project files.
+  const projects = directoryBytes(paths.projects) - directoryBytes(defaultBackupsDir(paths));
   const staging = directoryBytes(paths.staging);
   return { data: directoryBytes(paths.dataDir), projects, staging };
 }
