@@ -80,7 +80,8 @@ export function topicInTitle(topic: string, title: string): boolean {
 export interface KnownTitles {
   // Topics queued, held, rejected or used by the schedule: compared both ways.
   readonly topics: readonly string[];
-  // Every project's title: compared with `topicInTitle`.
+  // Every project's title and the channel's existing videos' titles: compared with
+  // `topicInTitle`.
   readonly projects: readonly string[];
 }
 

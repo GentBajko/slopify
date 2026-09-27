@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
 import type { ScheduleTopicsEvent } from "../../kernel/events.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { defaultChannelId } from "../channels/model.js";
+import { importChannelVideos } from "../channels/videos.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
@@ -389,6 +391,28 @@ it("reorders a queue and moves a topic to another schedule", () => {
     if (!transferred.ok) return;
     expect(transferred.value.source.items.map((item) => item.title)).toEqual(["C", "B"]);
     expect(transferred.value.target.items.map((item) => item.title)).toEqual(["A", "Z"]);
+  } finally {
+    s.h.close();
+  }
+});
+
+it("skips the titles of the channel's existing videos, and lists them in the prompt", async () => {
+  const s = setup({
+    generation: queue(3),
+    answers: async () => JSON.stringify(["Vecna", "Strahd von Zarovich", "Acererak"]),
+  });
+  try {
+    // The template names no channel, so the schedule is the default channel's.
+    const imported = importChannelVideos(
+      { db: s.h.deps.db, clock: s.deps.clock, uuid: randomUUID },
+      defaultChannelId,
+      { format: "lines", text: "Who is Vecna? The Lich God Explained\n" },
+    );
+    expect(imported).toEqual({ ok: true, value: { added: 1, skipped: 0 } });
+    expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 2, mode: "queue" });
+    expect(s.read().items.map((item) => item.title)).toEqual(["Strahd von Zarovich", "Acererak"]);
+    const prompt = s.calls[0]?.messages.map((message) => message.content).join("\n") ?? "";
+    expect(prompt).toContain("- Who is Vecna? The Lich God Explained");
   } finally {
     s.h.close();
   }

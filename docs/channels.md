@@ -25,6 +25,9 @@ Every field is optional, and each only fills what the template leaves at its def
   screen text, shown centred over the video's last 5 seconds.
 - **Intro, outro** (Library → Intros & Outros) when the template has none, and the **document
   theme** when it has not chosen one.
+- **Ambient sound:** rain, a fireplace or wind under the long video's narration, with its
+  level, fade-in and tail, when the template leaves its own on *The channel's*
+  ([Ambient sound](ambient-sound.md)).
 
 Untick **Use the channel's brand kit** on Play to keep a template exactly as saved. Nothing in
 the kit reaches a project that already started: the project keeps what it was started with.
@@ -51,3 +54,38 @@ with the member's pictures as references (after the establishing image, when it 
 The pictures live in Slopify's database. A backup of projects does not carry channels yet: a
 project restored on another install whose cast picture is missing says so when an image is
 made again.
+
+## Episode memory
+
+The channel's **Episodes** tab. While **Episode memory** is on, every project of the channel
+that finishes leaves a summary of at most 150 words: what the episode covered, the facts it
+stated, who appeared and what happened to them. It is written by the project's own text model
+(or its reviews' model when it has none) in one small call, recorded on the project's **Run
+cost**. Finishing the same article again asks nothing; a failed call is only logged and never
+touches the project.
+
+A new episode whose article (or multi-voice script) is written by Slopify gets the summaries of
+up to five **related** earlier episodes appended to its prompt under "Earlier episodes":
+
+- An episode is related when it features a cast member the new title or keywords mention
+  (strongest), or shares words of its title. Words most of the channel's titles share (a
+  template's "D&D Lore:") and one- or two-letter words don't count; an episode with the very
+  same title is a remake, not an earlier episode, and is left out.
+- The summaries are copied into the project when it starts, so later edits or new memories
+  never make a finished video outdated, and a project started without them is exactly what it
+  was.
+
+**Open** a summary to read or edit it; an edited summary is yours and a later finish never
+replaces it. **Delete** removes it from later prompts. New channels start with the setting on;
+the channels that existed before 3.0 start with it off.
+
+## Existing videos
+
+The channel's **Existing videos** tab lists titles the channel published before (or outside)
+Slopify, so topic suggestions and their duplicate checks skip them as they skip the videos
+made here. Paste titles one per line, or **Import a YouTube Studio CSV**: in Studio open
+**Analytics → Content → Advanced mode** and export the table as comma-separated values. The
+title column is found by its header ("Video title", else "Title", else "Content"), or failing
+that the first column of words; quoted titles with commas or line breaks, a byte-order mark,
+and Studio's "Total" row are handled. A title already listed (in any case) is skipped, and the
+import says how many were added and skipped. **Remove** one title, or **Remove all**.

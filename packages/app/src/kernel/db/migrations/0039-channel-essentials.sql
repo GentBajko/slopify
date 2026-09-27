@@ -57,3 +57,8 @@ CREATE TABLE channel_videos (
   created_at TEXT NOT NULL
 );
 CREATE UNIQUE INDEX channel_videos_title ON channel_videos(channel_id, lower(title));
+
+-- Episode memory (appended): what a generated summary was made from, a SHA-256 of the prompt
+-- version, title and article text, so finishing the same article again asks no LLM. A summary
+-- the user edited is never replaced by a later finish.
+ALTER TABLE episode_memories ADD COLUMN recipe TEXT;

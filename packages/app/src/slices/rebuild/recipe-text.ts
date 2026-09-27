@@ -8,6 +8,7 @@ import { articleMessages, continuationMessages } from "../article/continuation.j
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
+import { withEarlierEpisodes } from "../episodes/related.js";
 import { type GlossaryResult, parsePronunciationGlossary } from "../narration/pronunciation.js";
 import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
@@ -171,11 +172,14 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   const writesScript = voices?.source === "script";
   const articleNotes = documents.length ? documentIndex(documents) : (notes ?? undefined);
   // A script run writes speaker turns in place of the article, from the same prompt and notes.
+  // The related earlier episodes go under the prompt only when the run carries them, so a
+  // project made without them keeps its fingerprint.
+  const writtenPrompt = withEarlierEpisodes(brief.articlePrompt, config.earlierEpisodes);
   const messages =
     voices !== undefined && writesScript
-      ? scriptMessages(voices.format, voices.speakers, brief.articlePrompt, articleNotes)
+      ? scriptMessages(voices.format, voices.speakers, writtenPrompt, articleNotes)
       : articleMessages({
-          articlePrompt: brief.articlePrompt,
+          articlePrompt: writtenPrompt,
           ...(articleNotes === undefined ? {} : { notes: articleNotes }),
         });
   const scriptCheck =
