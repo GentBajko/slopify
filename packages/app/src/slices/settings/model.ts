@@ -134,6 +134,10 @@ export interface Voice {
   // The languages it speaks, as primary codes ("es"); absent is unknown, which Play offers for
   // every language (`slices/voices/languages.ts`).
   readonly languages?: readonly string[] | undefined;
+  // Ticked in Settings → Voices for a voice cloned from, or made to sound like, a real person.
+  // Narration in such a voice is YouTube's first AI use case (`slices/studio/disclosure.ts`).
+  // Absent is off.
+  readonly imitatesRealPerson?: true | undefined;
 }
 
 // The theme override the Appearance control writes.

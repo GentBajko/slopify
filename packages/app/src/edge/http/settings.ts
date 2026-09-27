@@ -16,6 +16,7 @@ import type { AddVoiceReason, VoicesDeps } from "../../slices/settings/voices.js
 import {
   addVoice,
   removeVoice,
+  setVoiceImitatesRealPerson,
   setVoiceLanguages,
   voiceIdMax,
   voiceNameMax,
@@ -41,6 +42,7 @@ const voiceBody = z.object({
   languages: z.array(z.string().max(20)).max(60).optional(),
 });
 const voiceLanguagesBody = z.object({ languages: z.array(z.string().max(20)).max(60) });
+const voiceRealPersonBody = z.object({ imitatesRealPerson: z.boolean() });
 // Length and scheme are the slice's rules, so their sentences reach the field; this bound only
 // keeps a pasted novel off the parser.
 const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
@@ -189,6 +191,27 @@ export function settingsRoutes(deps: AppDeps) {
                 title: titleOf(400),
                 detail: "The languages weren't saved. Fix the highlighted field and try again.",
                 extensions: { fields: [fieldOf("unknown-language")] },
+              });
+        },
+      )
+      // "Imitates a real person": the voice's narration answers Yes to YouTube's AI use.
+      .put(
+        "/voices/:id/real-person",
+        zValidator("param", idParam, onInvalid),
+        zValidator("json", voiceRealPersonBody, onInvalid),
+        (c) => {
+          const result = setVoiceImitatesRealPerson(
+            voiceDeps,
+            c.req.valid("param").id,
+            c.req.valid("json").imitatesRealPerson,
+          );
+          return result.ok
+            ? c.body(null, 204)
+            : problem(c, {
+                status: 404,
+                title: titleOf(404),
+                detail:
+                  "This voice no longer exists; it may have been deleted. Reload Settings → Voices to see your voices.",
               });
         },
       )

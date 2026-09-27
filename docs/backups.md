@@ -13,7 +13,9 @@ Episode memory and AI disclosure settings) with their cast, cast pictures and en
 images, episode memories, each channel's existing videos, a project's channel, automatic
 review verdicts, run cost (provider usage and plan readings, and what topic generation,
 episode summaries and cast pictures cost), channel links and the provider
-defaults a new Play form starts with, and the trash (a trashed project, prompt, intro/outro,
+defaults a new Play form starts with, the AI use marks (voices marked as imitating a real
+person, Image prompts marked photorealistic, projects whose clips are real footage), each
+channel's last "Keep only titles containing…" filter, and the trash (a trashed project, prompt, intro/outro,
 template or schedule comes back still in the trash, with its original date). Pictures kept in
 the database travel as files named by their SHA-256 (`files/images/…`) and are checked against
 that hash on import.

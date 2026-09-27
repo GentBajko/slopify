@@ -12,6 +12,7 @@ import {
   pairStudioExtension,
   readStudioPlaylist,
   resetStudioPairing,
+  saveRealFootage,
   saveStudioPlaylist,
   studioPairing,
   studioPlaylistProblem,
@@ -35,6 +36,7 @@ const fileParam = z.object({
 });
 const chooseBody = z.object({ short: z.number().int().min(1).max(99).optional() });
 const playlistBody = z.object({ playlist: z.string().max(studioPlaylistMax * 2) });
+const realFootageBody = z.object({ realFootage: z.boolean() });
 
 // How long a "Fill in YouTube Studio" choice stays the one the extension fills in.
 const choiceMs = 6 * 60 * 60 * 1000;
@@ -111,6 +113,21 @@ export function studioRoutes(deps: AppDeps) {
         if (!result.ok) return unknownProject(c);
         return c.json(result.pack);
       })
+      // Prepare upload's AI use tick: the project's uploaded clips are real footage.
+      .put(
+        "/packs/:projectId/real-footage",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", realFootageBody, onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          if (!uploadPack(deps, projectId).ok) return unknownProject(c);
+          saveRealFootage(deps.db, projectId, c.req.valid("json").realFootage);
+          const result = uploadPack(deps, projectId);
+          return result.ok ? c.json(result.pack) : unknownProject(c);
+        },
+      )
       .post(
         "/packs/:projectId/choose",
         zValidator("param", projectParam, onInvalid),

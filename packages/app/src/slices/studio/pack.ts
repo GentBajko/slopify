@@ -5,13 +5,18 @@ import type { Paths } from "../../kernel/paths.js";
 import { thumbnailCountOf } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { channelById, projectChannelId } from "../channels/repo.js";
+import { namesPhotorealisticPrompt } from "../library/photorealistic.js";
+import { isClipPath } from "../rebuild/runtime-export-edit.js";
+import { listVoices } from "../settings/repo.js";
+import { realPersonVoiceIds } from "../settings/voices.js";
 import { fullVideoLine } from "../shorts/model.js";
 import { assetOf } from "../storage/asset-name.js";
 import { contentTypeOf, downloadName, slugOf } from "../storage/downloads.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
-import { usesAnimation } from "../video/edit-settings.js";
+import { videoEditOf } from "../video/edit-settings.js";
+import { usesVoices } from "../voices/model.js";
 import { effectiveDescription } from "../youtube/edits-repo.js";
 import { aiDisclosureOf } from "./disclosure.js";
 import {
@@ -21,7 +26,7 @@ import {
   studioTitleMax,
   type UploadPack,
 } from "./model.js";
-import { readStudioPlaylist } from "./settings.js";
+import { readRealFootage, readStudioPlaylist } from "./settings.js";
 
 export interface PackDeps {
   readonly db: DatabaseSync;
@@ -70,14 +75,29 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       : readFileSync(outputPath(deps.paths, projectId, output.path), "utf8").trim();
   const playlist = readStudioPlaylist(deps.db);
   const missing: string[] = [];
-  // The channel's setting, then the project's own sources, for every item.
+  // The channel's setting, then what the project narrates and shows (`disclosure.ts`).
+  const setting =
+    channelById(deps.db, projectChannelId(deps.db, projectId))?.aiDisclosure ?? "auto";
+  const realPersonVoices = realPersonVoicesOf(deps, config);
+  const uploadedClips =
+    config.sources.images === "provide"
+      ? outputs.filter((output) => output.role === "image" && isClipPath(output.path)).length
+      : 0;
+  const realFootage = uploadedClips > 0 && readRealFootage(deps.db, projectId);
+  const atmosphere = videoEditOf(config).atmosphere;
   const disclosure = (kind: "video" | "short") =>
     aiDisclosureOf({
-      setting: channelById(deps.db, projectChannelId(deps.db, projectId))?.aiDisclosure ?? "auto",
+      setting,
       kind,
-      audio: config.sources.audio,
-      images: config.sources.images,
-      animated: usesAnimation(config),
+      realPersonVoices,
+      // A short's pictures are always drawn anew, never the uploaded clips.
+      realFootage: kind === "video" && realFootage,
+      footageOverlay: atmosphere === "none" ? undefined : atmosphere,
+      photorealistic:
+        kind === "short"
+          ? namesPhotorealisticPrompt(deps.db, config.shorts?.imagePrompt)
+          : config.sources.images === "generate" &&
+            config.imagePrompts.some((prompt) => namesPhotorealisticPrompt(deps.db, prompt.name)),
     });
 
   const video = outputs.find((output) => output.role === "video");
@@ -183,8 +203,37 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   }
   return {
     ok: true,
-    pack: { projectId, projectTitle: project.title, items, missing },
+    pack: {
+      projectId,
+      projectTitle: project.title,
+      items,
+      missing,
+      ...(uploadedClips > 0 ? { footage: { clips: uploadedClips, real: realFootage } } : {}),
+    },
   };
+}
+
+// The saved voices marked "Imitates a real person" that narrate the project: its one narration
+// voice, or every speaker's of a multi-voice run. None when the narration isn't an AI voice.
+function realPersonVoicesOf(
+  deps: PackDeps,
+  config: NonNullable<ReturnType<typeof projectById>>["config"],
+): readonly string[] {
+  if (config.sources.audio !== "generate") return [];
+  const narrating = usesVoices(config)
+    ? (config.voices?.speakers ?? []).map((speaker) => speaker.voice)
+    : config.audio === undefined
+      ? []
+      : [config.audio];
+  const flagged = realPersonVoiceIds(deps.db);
+  const names = listVoices(deps.db)
+    .filter(
+      (voice) =>
+        flagged.has(voice.id) &&
+        narrating.some((one) => one.provider === voice.provider && one.voice === voice.voiceId),
+    )
+    .map((voice) => voice.name);
+  return [...new Set(names)];
 }
 
 // The item the person chose: the long video, or short `short`.

@@ -183,44 +183,116 @@ describe("the upload pack", () => {
     expect(short?.description).toBe(
       "Watch the moment it leaps.\nWatch the full video: [PASTE THE FULL VIDEO LINK HERE]\n\n#fox #shorts",
     );
-    // An AI voice and AI images: Yes for the video and the short.
-    expect(video?.alteredContent.altered).toBe(true);
-    expect(video?.alteredContent.why).toContain("an AI voice narrates it");
-    expect(short?.alteredContent.altered).toBe(true);
+    // An AI voice and AI images, none of them marked: none of YouTube's three cases.
+    expect(video?.alteredContent.altered).toBe(false);
+    expect(video?.alteredContent.why).toContain("none of YouTube's three AI use cases applies");
+    expect(short?.alteredContent.altered).toBe(false);
     expect(video?.chapterNotice).toBeUndefined();
   });
 
-  it("answers the AI disclosure from the project's sources and the channel's setting", async () => {
-    const own: RunConfig = {
+  it("answers AI use from the marked voice, prompt and footage, and the channel's setting", async () => {
+    const { app, call, output } = harness({
+      ...config,
+      audio: { provider: "elevenlabs", model: "eleven_multilingual_v2", voice: "clone-7" },
+      imagePrompts: [{ name: "Studio photo", number: 1 }],
+    });
+    finished(output);
+    const api = (path: string, method: string, body?: unknown) =>
+      app.request(`http://127.0.0.1:4545/api${path}`, {
+        method,
+        headers: { "content-type": "application/json" },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    const read = async () => (await (await call("/packs/p1")).json()) as UploadPack;
+    expect((await read()).items.map((item) => item.alteredContent.altered)).toEqual([false, false]);
+
+    // Case 1: the narrating voice is marked as imitating a real person.
+    const added = await api("/settings/voices", "POST", {
+      provider: "elevenlabs",
+      name: "Anna clone",
+      voiceId: "clone-7",
+      languages: ["en"],
+    });
+    expect(added.status).toBe(201);
+    const voice = (await added.json()) as { id: string };
+    expect(
+      (await api(`/settings/voices/${voice.id}/real-person`, "PUT", { imitatesRealPerson: true }))
+        .status,
+    ).toBe(204);
+    const voices = (await (await api("/settings/voices", "GET")).json()) as {
+      voices: { imitatesRealPerson?: boolean }[];
+    };
+    expect(voices.voices[0]?.imitatesRealPerson).toBe(true);
+    let [video, short] = (await read()).items;
+    expect(video?.alteredContent.altered).toBe(true);
+    expect(video?.alteredContent.why).toContain('the voice "Anna clone"');
+    expect(short?.alteredContent.altered).toBe(true);
+    await api(`/settings/voices/${voice.id}/real-person`, "PUT", { imitatesRealPerson: false });
+    expect((await read()).items[0]?.alteredContent.altered).toBe(false);
+
+    // Case 3: the project's Image prompt is marked photorealistic; the short has its own.
+    const prompt = (await (
+      await api("/prompts", "POST", { kind: "image", name: "Studio photo", body: "A photo." })
+    ).json()) as { id: string };
+    expect(
+      (await api(`/prompts/${prompt.id}/photorealistic`, "PUT", { photorealistic: true })).status,
+    ).toBe(204);
+    const listed = (await (await api("/prompts", "GET")).json()) as {
+      prompts: { photorealistic?: boolean }[];
+    };
+    expect(listed.prompts[0]?.photorealistic).toBe(true);
+    [video, short] = (await read()).items;
+    expect(video?.alteredContent.why).toContain("case 3");
+    expect(short?.alteredContent.altered).toBe(false);
+    await api(`/prompts/${prompt.id}/photorealistic`, "PUT", { photorealistic: false });
+
+    // Always Yes and Always No win over the rule.
+    const set = (value: string) =>
+      api("/channels/00000000-0000-4000-8000-000000000001/ai-disclosure", "PUT", {
+        aiDisclosure: value,
+      });
+    expect((await set("yes")).status).toBe(200);
+    expect((await read()).items.map((item) => item.alteredContent.altered)).toEqual([true, true]);
+    expect((await set("no")).status).toBe(200);
+    expect((await read()).items[1]?.alteredContent.why).toContain("Always No");
+  });
+
+  it("answers Yes for uploaded clips marked real footage under the Look's overlay", async () => {
+    const { call, output } = harness({
       ...config,
       sources: { ...config.sources, audio: "provide", images: "provide" },
-    };
-    const { app, call, output } = harness(own);
-    finished(output);
-    const read = async () => ((await (await call("/packs/p1")).json()) as UploadPack).items;
-    const [video, short] = await read();
-    expect(video?.alteredContent).toEqual({
-      altered: false,
-      why: "No because the narration and the images are your own, with no AI voice or AI images in the video.",
+      videoEdit: {
+        cuts: "narration",
+        transition: "cut",
+        transitionSeconds: 0.6,
+        vignette: "off",
+        grain: "off",
+        grade: "warm",
+        atmosphere: "fog",
+        chapterCards: false,
+        animate: "off",
+        animateEvery: 3,
+        animateModel: "",
+      },
     });
-    // A short's images are always drawn anew by the image model.
-    expect(short?.alteredContent.altered).toBe(true);
-    expect(short?.alteredContent.why).toContain("AI image model");
-
-    const set = (value: string) =>
-      app.request(
-        "http://127.0.0.1:4545/api/channels/00000000-0000-4000-8000-000000000001/ai-disclosure",
-        {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ aiDisclosure: value }),
-        },
-      );
-    expect((await set("no")).status).toBe(200);
-    expect((await read()).map((item) => item.alteredContent.altered)).toEqual([false, false]);
-    expect((await read())[1]?.alteredContent.why).toContain("Always No");
-    expect((await set("yes")).status).toBe(200);
-    expect((await read()).map((item) => item.alteredContent.altered)).toEqual([true, true]);
+    finished(output);
+    output("image", "images/street.mp4", "clip", {}, "images");
+    output("image", "images/still.png", "png", {}, "images");
+    const read = async () => (await (await call("/packs/p1")).json()) as UploadPack;
+    const before = await read();
+    expect(before.footage).toEqual({ clips: 1, real: false });
+    expect(before.items[0]?.alteredContent.altered).toBe(false);
+    const marked = await call("/packs/p1/real-footage", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ realFootage: true }),
+    });
+    expect(marked.status).toBe(200);
+    const after = (await marked.json()) as UploadPack;
+    expect(after.footage).toEqual({ clips: 1, real: true });
+    expect(after.items[0]?.alteredContent.why).toContain("the Look's fog overlay");
+    // A short shows new pictures, never the clips.
+    expect(after.items[1]?.alteredContent.altered).toBe(false);
   });
 
   it("fits the description's chapters to YouTube's rules and says so", async () => {

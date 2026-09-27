@@ -16,7 +16,7 @@ const options = aiDisclosureSettings.map((value) => ({
   label: aiDisclosureLabels[value],
 }));
 
-// The channel's answer to YouTube Studio's "Altered or synthetic content" question, which
+// The channel's answer to YouTube Studio's "AI use" question, which
 // Prepare upload and the Studio extension give for every video and short. It saves as soon as
 // it is picked, apart from the Brand form and its Save button.
 export function AiDisclosureSettingField({ channel }: { readonly channel: Channel }): ReactElement {
@@ -45,7 +45,7 @@ export function AiDisclosureSettingField({ channel }: { readonly channel: Channe
     >
       <Field
         label="YouTube AI disclosure"
-        help="Studio's “Altered or synthetic content” answer for this channel's videos and Shorts. Automatic says Yes when an AI voice or AI images are used."
+        help="Studio's “AI use” answer for this channel's videos and Shorts. Automatic says Yes only for one of YouTube's three cases: a voice marked as imitating a real person (Settings → Voices), real footage altered, or AI pictures from an Image prompt marked photorealistic (Library → Prompts)."
       >
         <Select
           value={save.isPending ? save.variables : channel.aiDisclosure}

@@ -1,34 +1,30 @@
-// YouTube's "Altered or synthetic content" question, answered for every video and short of a
-// project. Browser-safe: the upload pack carries the answer, the channel page names the setting.
+// YouTube's "AI use" question (it was "Altered or synthetic content"), answered for every
+// video and short of a project. Browser-safe: the upload pack carries the answer, the channel
+// page names the setting.
 //
-// The rule, as YouTube states it (read 2026-09-27):
-// - https://support.google.com/youtube/answer/14328491 ("Disclosing use of altered or synthetic
-//   content"): creators must disclose when they use AI "to meaningfully alter or generate
-//   photorealistic content": a real person appearing to say or do what they didn't, altered
-//   footage of real events or places, or realistic scenes that never happened. Clearly
-//   unrealistic content (fantasy, animation), minor edits (colour, filters, upscaling, audio
-//   repair) and production help (AI for the outline, script, thumbnail, title, infographic or
-//   captions) need no disclosure; nor does cloning one's own voice for voice-overs. In Studio
-//   it is a Yes/No question on the upload's details (that page now calls it "AI use" under
-//   Attributes; the 2024 announcement called it "Altered content").
-// - https://blog.youtube/news-and-events/disclosing-ai-generated-content/ (2024-03-18) lists
-//   "synthetically generating a person's voice to narrate a video" among the uses that need it.
+// The question as Studio asks it (read on the live Details page, 2026-09-27), behind Show more:
+//   AI use — "Was AI used to generate or edit your content in any of the following ways?"
+//   1. "Makes a real person appear to say or do something they didn't say or do"
+//   2. "Alters footage of a real event or place"
+//   3. "Generates a realistic-looking scene that didn't actually occur"
+//   Radios "Yes, AI was used" / "No, AI wasn't used"; "Selecting 'yes' adds a label to your
+//   content."
+// YouTube's help page (https://support.google.com/youtube/answer/14328491) says the same:
+// clearly unrealistic content (fantasy, animation), minor edits (colour, filters) and
+// production help (AI for the script, thumbnail, title or captions) need no label.
 //
-// What Slopify applies, erring on the side of Yes, since YouTube says disclosing limits neither
-// a video's audience nor its eligibility to earn money:
-// - Yes when an AI voice narrates (the Audio stage generates it by text-to-speech, one voice or
-//   several), since a synthetic voice narrating is the blog's own example;
-// - Yes when the images are AI-generated (the Images stage generates them, or images are
-//   animated by an image-to-video model), since an image model can draw realistic scenes and
-//   Slopify can't tell a photorealistic style from a cartoon one;
-// - Yes for every short, whose images are always drawn anew by the image model;
-// - No only when the narration is the user's own recording (or there is none) and the images
-//   are the user's own (or there are none): nothing on screen or on the soundtrack is synthetic.
-//   The article being written by a text model is script help, which needs no disclosure, and so
-//   is an AI-made thumbnail.
-// A channel whose videos are clearly unrealistic (cartoon images, and a voice that isn't posing
-// as a real person) can set Always No; one that wants the label regardless can set Always Yes
-// (Channels → the channel → Brand → YouTube AI disclosure).
+// So the automatic answer is Yes only when one of the three cases applies, and No otherwise:
+// 1. a saved voice marked "Imitates a real person" (Settings → Voices) narrates it: an AI
+//    voice cloned from, or made to sound like, a real person, so that person seems to say it;
+// 2. uploaded clips the person marked as real footage (the project's Prepare upload) get the
+//    Look's atmosphere overlay (embers, dust or fog), which adds to a real scene what wasn't
+//    there. A colour grade, vignette or grain alone is one of YouTube's minor edits;
+// 3. an AI image model draws its pictures from an Image prompt marked "Draws photorealistic
+//    pictures" (Library → Prompts). Stylised, painterly or illustrated images are not
+//    realistic-looking, and animating them doesn't make them so.
+// An AI narrator that doesn't pose as a real person, AI-written text and an AI thumbnail are
+// none of the three. Every mark is off until the person sets it. A channel can still set
+// Always Yes or Always No (Channels → the channel → Brand → YouTube AI disclosure).
 
 export const aiDisclosureSettings = ["auto", "yes", "no"] as const;
 export type AiDisclosureSetting = (typeof aiDisclosureSettings)[number];
@@ -39,23 +35,34 @@ export const aiDisclosureLabels: Readonly<Record<AiDisclosureSetting, string>> =
   no: "Always No",
 };
 
+// Studio's three cases, as it words them.
+export const aiUseCases = [
+  "Makes a real person appear to say or do something they didn't say or do",
+  "Alters footage of a real event or place",
+  "Generates a realistic-looking scene that didn't actually occur",
+] as const;
+
 export interface AiDisclosure {
   // Studio's answer: true is "Yes".
   readonly altered: boolean;
-  // Why, in one plain sentence.
+  // Why, in plain words.
   readonly why: string;
 }
 
-// What the answer is worked out from: the project's sources as its config holds them.
+// What the answer is worked out from, already resolved from the project, the saved voices,
+// the Library and the Prepare upload marks (`pack.ts`).
 export interface DisclosureInput {
   readonly setting: AiDisclosureSetting;
   readonly kind: "video" | "short";
-  // The Audio stage's source: "generate" is an AI voice.
-  readonly audio: string;
-  // The Images stage's source: "generate" is an image model.
-  readonly images: string;
-  // Images animated by an image-to-video model (Edit project → Video → Animate images).
-  readonly animated: boolean;
+  // Case 1: the names of the AI voices narrating it that are marked "Imitates a real person".
+  readonly realPersonVoices: readonly string[];
+  // Case 2: whether it shows uploaded clips marked as real footage, and the Look's atmosphere
+  // laid over them ("fog"), if any.
+  readonly realFootage: boolean;
+  readonly footageOverlay?: string | undefined;
+  // Case 3: whether an AI image model draws its pictures from an Image prompt marked
+  // photorealistic.
+  readonly photorealistic: boolean;
 }
 
 const where = "Channels → the channel → Brand → YouTube AI disclosure";
@@ -65,20 +72,37 @@ export function aiDisclosureOf(input: DisclosureInput): AiDisclosure {
     return { altered: true, why: `This channel is set to Always Yes (${where}).` };
   if (input.setting === "no")
     return { altered: false, why: `This channel is set to Always No (${where}).` };
-  const made: string[] = [];
-  if (input.audio === "generate") made.push("an AI voice narrates it");
-  if (input.kind === "short" || input.images === "generate")
-    made.push("its images are drawn by an AI image model");
-  if (input.kind === "video" && input.animated) made.push("some images are animated by AI");
-  if (made.length > 0)
+  const reasons: string[] = [];
+  if (input.realPersonVoices.length > 0)
+    reasons.push(
+      `the narration uses ${quotedList(input.realPersonVoices)}, marked in Settings → Voices as imitating a real person (YouTube's case 1: "${aiUseCases[0]}")`,
+    );
+  if (input.realFootage && input.footageOverlay !== undefined)
+    reasons.push(
+      `the Look's ${input.footageOverlay} overlay is laid over uploaded clips marked as real footage (YouTube's case 2: "${aiUseCases[1]}")`,
+    );
+  if (input.photorealistic)
+    reasons.push(
+      `an AI image model draws its pictures from an Image prompt marked photorealistic in Library → Prompts (YouTube's case 3: "${aiUseCases[2]}")`,
+    );
+  if (reasons.length > 0)
     return {
       altered: true,
-      why: `Yes because ${list(made)}, and YouTube asks for this when AI makes a voice or a scene that could pass as real.`,
+      why: `Yes because ${list(reasons)}. Selecting Yes adds YouTube's AI label.`,
     };
+  const footage =
+    input.realFootage && input.kind === "video"
+      ? " The uploaded real footage only gets colour, vignette or grain, which YouTube counts as minor edits."
+      : "";
   return {
     altered: false,
-    why: "No because the narration and the images are your own, with no AI voice or AI images in the video.",
+    why: `No because none of YouTube's three AI use cases applies: no narrating voice is marked as imitating a real person (Settings → Voices), no real footage is altered, and no AI pictures come from an Image prompt marked photorealistic (Library → Prompts). Stylised AI pictures and an AI narrator that doesn't pose as a real person don't need the label.${footage}`,
   };
+}
+
+function quotedList(names: readonly string[]): string {
+  const quoted = names.map((name) => `"${name}"`);
+  return `the voice${names.length === 1 ? "" : "s"} ${list(quoted)}`;
 }
 
 function list(parts: readonly string[]): string {

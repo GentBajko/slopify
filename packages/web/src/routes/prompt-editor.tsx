@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import type { FieldError } from "@/api";
-import { removePrompt, savePrompt } from "@/api";
+import { removePrompt, savePrompt, setPromptPhotorealistic } from "@/api";
 import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
@@ -14,6 +14,7 @@ import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { PageHeader } from "@/components/kit/layout";
+import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
@@ -98,6 +99,15 @@ export function PromptEditorRoute({
       setEdited(undefined);
       await queryClient.invalidateQueries({ queryKey: promptsQuery(api).queryKey });
       onLeave(draft.kind);
+    },
+  });
+
+  // Applies at once, apart from Save: whether Prepare upload counts this Image prompt's
+  // pictures as realistic-looking (YouTube's third AI use case).
+  const photorealistic = useMutation({
+    mutationFn: ({ id, on }: { id: string; on: boolean }) => setPromptPhotorealistic(api, id, on),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: promptsQuery(api).queryKey });
     },
   });
 
@@ -222,6 +232,38 @@ export function PromptEditorRoute({
               }}
             />
           </div>
+
+          {draft.kind === "image" ? (
+            <div className="flex flex-col gap-1">
+              {promptId !== undefined && found?.kind === "image" ? (
+                <Switch
+                  checked={
+                    photorealistic.isPending
+                      ? photorealistic.variables.on
+                      : found.photorealistic === true
+                  }
+                  disabled={photorealistic.isPending}
+                  onChange={(on) => photorealistic.mutate({ id: promptId, on })}
+                  label="Draws photorealistic pictures"
+                />
+              ) : (
+                <span className="text-small text-ink-2">
+                  Save this Image prompt first, then choose whether it draws photorealistic
+                  pictures.
+                </span>
+              )}
+              <span className="text-small text-ink-2">
+                Turn on for a style that looks like real photos or film. Prepare upload then answers
+                Yes to YouTube&apos;s AI use (a realistic-looking scene that didn&apos;t happen).
+                Painterly, illustrated or other stylised pictures stay off.
+              </span>
+              {photorealistic.error === null ? null : (
+                <span role="alert" className="text-small text-danger">
+                  {`Couldn't change Draws photorealistic pictures: ${photorealistic.error.message} Press the switch again.`}
+                </span>
+              )}
+            </div>
+          ) : null}
 
           <div data-tour="prompt-save">
             <EditorActions

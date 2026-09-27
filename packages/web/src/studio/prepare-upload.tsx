@@ -5,10 +5,10 @@ import {
   studioUploadUrl,
   tagsLine,
 } from "@app/slices/studio/model.js";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { chooseUploadPack, readUploadPack } from "@/api";
+import { chooseUploadPack, readUploadPack, saveRealFootage } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button, buttonClass } from "@/components/kit/button";
@@ -17,7 +17,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { List, ListRow } from "@/components/kit/list-row";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { Segmented } from "@/components/kit/switch";
+import { Segmented, Switch } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
 
 // Prepare upload: everything YouTube Studio asks for, in the order it asks, for the video and
@@ -56,7 +56,7 @@ const stepLabels: Readonly<Record<StudioStep, string>> = {
   thumbnails: "Thumbnail",
   playlist: "Playlist",
   audience: "Audience",
-  altered: "Altered or synthetic content",
+  altered: "AI use (under Show more)",
   tags: "Tags (under Show more)",
 };
 
@@ -72,10 +72,9 @@ function UploadDrawer({
   readonly onClose: () => void;
 }) {
   const { api } = useApp();
-  const pack = useQuery({
-    queryKey: ["studio", "pack", projectId],
-    queryFn: () => readUploadPack(api, projectId),
-  });
+  const client = useQueryClient();
+  const packKey = ["studio", "pack", projectId];
+  const pack = useQuery({ queryKey: packKey, queryFn: () => readUploadPack(api, projectId) });
   const [chosen, setChosen] = useState("video");
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const items = pack.data?.items ?? [];
@@ -89,6 +88,18 @@ function UploadDrawer({
       });
     },
     onError: (error) => setStatus({ text: error.message, tone: "error" }),
+  });
+  const footage = useMutation({
+    mutationFn: (real: boolean) => saveRealFootage(api, projectId, real),
+    onSuccess: (saved) => {
+      client.setQueryData(packKey, saved);
+      setStatus({ text: "Saved. The AI use answer is updated.", tone: "success" });
+    },
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't save whether the clips are real footage: ${error.message} Press the switch again.`,
+        tone: "error",
+      }),
   });
   const copy = (text: string, what: string) => {
     if (!navigator.clipboard) {
@@ -161,6 +172,16 @@ function UploadDrawer({
               key={itemKey(item)}
               projectId={projectId}
               item={item}
+              footageSwitch={
+                item.kind === "video" && pack.data.footage !== undefined ? (
+                  <Switch
+                    checked={footage.isPending ? footage.variables : pack.data.footage.real}
+                    disabled={footage.isPending}
+                    onChange={(next) => footage.mutate(next)}
+                    label={`The ${pack.data.footage.clips === 1 ? "uploaded clip is" : `${String(pack.data.footage.clips)} uploaded clips are`} real footage (filmed, not made by AI)`}
+                  />
+                ) : undefined
+              }
               copy={copy}
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
@@ -202,11 +223,14 @@ function Download({ href, filename }: { readonly href: string; readonly filename
 function Steps({
   projectId,
   item,
+  footageSwitch,
   copy,
   doneKey,
 }: {
   readonly projectId: string;
   readonly item: PackItem;
+  // The AI use step's "real footage" switch, for a video with uploaded clips.
+  readonly footageSwitch?: ReactNode;
   readonly copy: (text: string, what: string) => void;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
@@ -263,7 +287,7 @@ function Steps({
           : {
               value:
                 item.thumbnails.length > 1
-                  ? `The first under Thumbnail; all ${String(item.thumbnails.length)} under Test & compare.`
+                  ? `The first under Thumbnail; all ${String(item.thumbnails.length)} in A/B Testing (beside the title).`
                   : (item.thumbnails[0]?.filename ?? ""),
               actions: (
                 <OpenFolder
@@ -280,6 +304,7 @@ function Steps({
             <span className="flex flex-col gap-1">
               <span className="font-semibold">{item.alteredContent.altered ? "Yes" : "No"}</span>
               <span className="text-ink-2">{item.alteredContent.why}</span>
+              {footageSwitch}
             </span>
           ),
         };
@@ -346,7 +371,7 @@ function Steps({
         <section aria-label="Thumbnails">
           <SectionHead
             as="h3"
-            kicker="Thumbnails · Test & compare"
+            kicker="Thumbnails · A/B Testing"
             title={`${String(item.thumbnails.length)} ${item.thumbnails.length === 1 ? "thumbnail" : "thumbnails"}`}
             className="mb-3"
           />

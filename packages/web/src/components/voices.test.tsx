@@ -60,6 +60,32 @@ describe("the voice list", () => {
     ).toBeNull();
   });
 
+  it("marks a voice as imitating a real person with its own switch", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    let voices: readonly Voice[] = [narrator];
+    renderApp(
+      <Voices />,
+      deps([], {
+        "GET /api/settings/voices": (request) => jsonAnswer({ voices })(request),
+        "PUT /api/settings/voices/v1/real-person": async (request) => {
+          sent.push(await request.json());
+          voices = [{ ...narrator, imitatesRealPerson: true }];
+          return emptyAnswer()(request);
+        },
+      }),
+    );
+    const toggle = await screen.findByRole("switch", {
+      name: "Narrator M imitates a real person",
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+    expect(sent).toEqual([{ imitatesRealPerson: true }]);
+  });
+
   it("names the problem when the list cannot be read", async () => {
     renderApp(
       <Voices />,

@@ -3,7 +3,14 @@ import { isUniqueConstraint } from "../../kernel/db/index.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { ProviderId, Voice } from "./model.js";
 import { providerById } from "./model.js";
-import { deleteVoice, insertVoice, listVoices, updateVoiceLanguages } from "./repo.js";
+import {
+  deleteVoice,
+  insertVoice,
+  listVoices,
+  readSetting,
+  updateVoiceLanguages,
+  writeSetting,
+} from "./repo.js";
 
 export interface VoicesDeps {
   readonly db: DatabaseSync;
@@ -105,9 +112,52 @@ export function setVoiceLanguages(
 }
 
 export function removeVoice(deps: VoicesDeps, id: string): RemoveVoiceResult {
-  return deleteVoice(deps.db, id) ? { ok: true } : { ok: false };
+  if (!deleteVoice(deps.db, id)) return { ok: false };
+  writeRealPersonVoices(
+    deps.db,
+    [...realPersonVoiceIds(deps.db)].filter((one) => one !== id),
+  );
+  return { ok: true };
 }
 
 export function voices(deps: VoicesDeps): readonly Voice[] {
-  return listVoices(deps.db);
+  const flagged = realPersonVoiceIds(deps.db);
+  return listVoices(deps.db).map((voice) =>
+    flagged.has(voice.id) ? { ...voice, imitatesRealPerson: true } : voice,
+  );
+}
+
+// Which saved voices imitate a real person: one row of the key/value `settings` table holding
+// their ids, so the flag needs no column of its own and travels with a backup.
+export const realPersonVoicesKey = "voices.realPerson";
+
+export function realPersonVoiceIds(db: DatabaseSync): ReadonlySet<string> {
+  const stored = readSetting(db, realPersonVoicesKey);
+  if (stored === undefined) return new Set();
+  try {
+    const value: unknown = JSON.parse(stored);
+    return new Set(
+      Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function writeRealPersonVoices(db: DatabaseSync, ids: readonly string[]): void {
+  if (ids.length === 0) db.prepare("DELETE FROM settings WHERE key = ?").run(realPersonVoicesKey);
+  else writeSetting(db, realPersonVoicesKey, JSON.stringify([...new Set(ids)].sort()));
+}
+
+// Settings → Voices' "Imitates a real person" tick.
+export function setVoiceImitatesRealPerson(
+  deps: VoicesDeps,
+  id: string,
+  on: boolean,
+): { readonly ok: true } | { readonly ok: false; readonly reason: "missing" } {
+  if (!listVoices(deps.db).some((voice) => voice.id === id))
+    return { ok: false, reason: "missing" };
+  const others = [...realPersonVoiceIds(deps.db)].filter((one) => one !== id);
+  writeRealPersonVoices(deps.db, on ? [...others, id] : others);
+  return { ok: true };
 }
