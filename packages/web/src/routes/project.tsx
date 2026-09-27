@@ -346,10 +346,14 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   // The page opens where the next action points (the failed step, the held review, the
   // outdated images), or else on the stage the run is at.
   const situation = next.next?.situation;
+  // A finished video with its description written opens on YouTube, where the upload is
+  // prepared: Copy description is one press away.
   const suggested =
     next.next?.section !== undefined && situation !== "done" && situation !== "running"
       ? next.next.section
-      : sectionForStage(suggestedStage(stages));
+      : situation === "done" && outputs.some((output) => output.role === "youtube_description")
+        ? "youtube"
+        : sectionForStage(suggestedStage(stages));
   const selected: SectionId =
     chosen !== undefined && all.some((item) => item.id === chosen)
       ? chosen
