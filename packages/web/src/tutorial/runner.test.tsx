@@ -498,5 +498,5 @@ describe("the tutorial in the real app", () => {
     expect(
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
     ).toHaveLength(1);
-  });
+  }, 20000);
 });

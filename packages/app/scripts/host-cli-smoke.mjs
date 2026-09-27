@@ -170,6 +170,7 @@ try {
   const inspected = JSON.parse(await run("docker", ["inspect", name]))[0];
   assert.deepEqual(inspected.Mounts.map((mount) => mount.Destination).sort(), [
     "/data",
+    "/data/backups",
     "/data/projects",
     "/opt/slopify-host",
     "/opt/slopify-install",

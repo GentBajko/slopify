@@ -244,6 +244,14 @@ interview/debate.
 - **Audio files.** MP3 and M4B with chapter markers, beside the YouTube video. Books are a series
   of chapter projects sharing cast and voices. Nothing is published automatically.
 
+## 9a. Narration that reads like speech
+
+- Tables, charts, figures, code and lists in the article are kept as structure until the
+  narration step; tables and figures are described in a short spoken passage by the text model
+  (cached per block) instead of being read cell by cell; footnote markers and URLs are dropped
+  or spoken naturally. The article, PDF and description keep the real table; captions follow
+  what is spoken. On by default for new runs; the Narration Preparation prompt can add style.
+
 ## 9b. Other languages
 
 A project can be made in another language end to end.
