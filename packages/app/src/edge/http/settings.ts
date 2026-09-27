@@ -1,6 +1,14 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import {
+  notificationUrlMax,
+  notificationUrlProblem,
+  testNotice,
+  webhookBody,
+} from "../../slices/notifications/rules.js";
+import { createNotificationSender, sendFailureText } from "../../slices/notifications/send.js";
+import { readNotificationUrl, saveNotificationUrl } from "../../slices/notifications/settings.js";
 import { appearances, providerIds } from "../../slices/settings/model.js";
 import type { PlaybackDeps } from "../../slices/settings/playback.js";
 import { readSettings, saveSettings } from "../../slices/settings/playback.js";
@@ -23,6 +31,9 @@ const voiceBody = z.object({
   name: z.string(),
   voiceId: z.string(),
 });
+// Length and scheme are the slice's rules, so their sentences reach the field; this bound only
+// keeps a pasted novel off the parser.
+const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
 const playbackBody = z.object({
   silenceGapSeconds: z.number(),
   appearance: z.enum(appearances),
@@ -33,6 +44,7 @@ const playbackBody = z.object({
 export function settingsRoutes(deps: AppDeps) {
   const playback: PlaybackDeps = { db: deps.db, log: deps.log };
   const voiceDeps: VoicesDeps = { db: deps.db, ids: deps.ids };
+  const send = deps.sendNotification ?? createNotificationSender(globalThis.fetch);
 
   return new Hono()
     .get("/", (c) => c.json(readSettings(playback)))
@@ -47,6 +59,44 @@ export function settingsRoutes(deps: AppDeps) {
         });
       }
       return c.json(result.settings);
+    })
+    .get("/notifications", (c) => c.json({ url: readNotificationUrl(deps.db) }))
+    .put("/notifications", zValidator("json", notificationBody, onInvalid), (c) => {
+      const result = saveNotificationUrl(deps.db, c.req.valid("json").url);
+      if (!result.ok) {
+        return problem(c, {
+          status: 400,
+          title: titleOf(400),
+          detail: `The Notification URL wasn't saved: ${result.message} Fix it in Settings → Notifications → Notification URL, then press Save.`,
+          extensions: { fields: [{ field: "url", message: result.message }] },
+        });
+      }
+      return c.json({ url: result.url });
+    })
+    .post("/notifications/test", zValidator("json", notificationBody, onInvalid), async (c) => {
+      const url = c.req.valid("json").url.trim();
+      const invalid =
+        url === ""
+          ? "Enter a Notification URL first, for example https://ntfy.sh/your-topic."
+          : notificationUrlProblem(url);
+      if (invalid !== undefined) {
+        return problem(c, {
+          status: 400,
+          title: titleOf(400),
+          detail: `The test notification wasn't sent: ${invalid}`,
+          extensions: { fields: [{ field: "url", message: invalid }] },
+        });
+      }
+      const result = await send(url, webhookBody(testNotice));
+      if (!result.ok) {
+        deps.log.write("warn", "notification.test", { detail: sendFailureText(result) });
+        return problem(c, {
+          status: 502,
+          title: titleOf(502),
+          detail: `The test notification wasn't delivered: ${sendFailureText(result)}. Check the address in Settings → Notifications → Notification URL (for ntfy, https://ntfy.sh/your-topic), then press Send test notification again.`,
+        });
+      }
+      return c.json({ sent: true });
     })
     .get("/voices", (c) => c.json({ voices: voices(voiceDeps) }))
     .post("/voices", zValidator("json", voiceBody, onInvalid), (c) => {

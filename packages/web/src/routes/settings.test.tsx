@@ -80,6 +80,7 @@ describe("the settings screen", () => {
       "Voices",
       "Models",
       "Playback & appearance",
+      "Notifications",
       "Backup & storage",
       "Usage",
     ]);

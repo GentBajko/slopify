@@ -18,7 +18,7 @@ import {
   dockerActivationCommitted,
   dockerFolderConfiguration,
 } from "./edge/docker-projects/activation.js";
-import { createHub } from "./edge/events/hub.js";
+import { createHub, observedHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
@@ -54,7 +54,7 @@ import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import { projectPaused } from "./slices/admission/repo.js";
+import { projectById, projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
 import {
@@ -63,6 +63,9 @@ import {
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
 import { resolveFont } from "./slices/fonts/index.js";
+import { createRunNotifier } from "./slices/notifications/notifier.js";
+import { createNotificationSender } from "./slices/notifications/send.js";
+import { readNotificationUrl } from "./slices/notifications/settings.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
@@ -213,11 +216,26 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           : `interrupted stages ${interrupted}, settled schedules ${settledSchedules}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
     });
     const eventDb = db;
-    const hub = createHub({
-      ids,
+    const sendNotification = createNotificationSender(globalThis.fetch);
+    const notifier = createRunNotifier({
+      url: () => readNotificationUrl(eventDb),
+      subject: (projectId) => {
+        const project = projectById(eventDb, projectId);
+        return project === undefined
+          ? undefined
+          : { title: project.title, makesVideo: project.config.sources.video !== "off" };
+      },
+      send: sendNotification,
       log,
-      acceptEvent: (event) => currentProjectEvent(eventDb, event),
     });
+    const hub = observedHub(
+      createHub({
+        ids,
+        log,
+        acceptEvent: (event) => currentProjectEvent(eventDb, event),
+      }),
+      notifier.observe,
+    );
     const version = readVersion();
     const telemetry: TelemetryDeps = { db, ids, clock, log, appVersion: version };
     const flusher = createFlusher(
@@ -412,6 +430,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       runner,
       updater,
       mutations,
+      sendNotification,
       audioPreviews,
       ...modelSources(registry),
       catalogue,
@@ -464,6 +483,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     let stopActivation = (): void => {};
     shutdown = (): Promise<void> => {
       stopping ??= (async () => {
+        notifier.close();
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
         const mutationDrain = mutations.stop();

@@ -192,6 +192,7 @@ describe("export", () => {
       deliveredAt: null,
     });
     writeSetting(source.db, "tutorial.session", JSON.stringify({ step: 1 }));
+    writeSetting(source.db, "notificationUrl", JSON.stringify("https://ntfy.sh/secret-topic-0001"));
 
     const archive = await exported(source);
     const text = Buffer.from(archive).toString("latin1");
@@ -201,6 +202,7 @@ describe("export", () => {
       "install-event",
       "provider_keys",
       "tutorial.session",
+      "secret-topic-0001",
     ])
       expect(text).not.toContain(secret);
     expect((await members(archive)).map((member) => member.name)).toEqual([

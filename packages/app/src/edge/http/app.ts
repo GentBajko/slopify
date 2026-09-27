@@ -68,6 +68,8 @@ export interface AppDeps {
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
+  // Settings → Notifications' test button. Handed in so a test never reaches the network.
+  readonly sendNotification?: import("../../slices/notifications/send.js").SendNotification;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly hub: Hub;
