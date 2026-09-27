@@ -2,6 +2,7 @@ import { z } from "zod";
 import { messageRoles, thinkingModes } from "../../kernel/ports/llm.js";
 import { llmDocumentsSchema } from "../../kernel/ports/llm-documents.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
+import { describedKinds } from "../narration/blocks.js";
 import { deferredOperations, localOperations, type RecipeInput } from "./recipe-model.js";
 
 const value: z.ZodType<FingerprintValue> = z.lazy(() =>
@@ -51,6 +52,14 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         .object({
           speakers: z.array(z.object({ id: z.string(), name: z.string() }).strict()),
           attribute: z.boolean(),
+        })
+        .strict()
+        .optional(),
+      describe: z
+        .object({
+          kind: z.enum(describedKinds),
+          index: z.number().int().positive(),
+          image: z.string().optional(),
         })
         .strict()
         .optional(),

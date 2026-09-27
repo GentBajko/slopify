@@ -47,6 +47,13 @@ export interface VoiceChoice extends ProviderChoice {
   // Say Library → Aliases' words the way they are listed ("Dr." as "Doctor"). Absent reads as
   // off, so a project saved before aliases existed narrates exactly as it did.
   readonly useNarrationAliases?: boolean | undefined;
+  // Describe tables, figures, equations and code in the narration: the text model writes a
+  // short spoken passage for each (`narration/blocks.ts`). Stored only when on; absent reads
+  // as off, so a project saved before it narrates the flattened article exactly as it did.
+  readonly describeFigures?: boolean | undefined;
+  // With describing on, leave code blocks out of the narration rather than summarising them.
+  // Stored only when on.
+  readonly skipCode?: boolean | undefined;
 }
 
 // One shared pronunciation, copied into a project from another project's glossary.

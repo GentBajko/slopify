@@ -33,6 +33,7 @@ export function packTemplate(
         voice: voiceId,
         usePronunciationGlossary: true,
         shareGlossary: true,
+        describeFigures: true,
       },
       images: { provider: "", model: "" },
       articlePrompt: name("article"),

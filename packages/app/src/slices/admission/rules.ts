@@ -577,6 +577,17 @@ export function narrationAliasesOf(
     : [];
 }
 
+// Describe tables and figures in the narration: generated narration, the setting on, and a
+// text model to write the descriptions. Without a text model the narration flattens the
+// article as it always did, so the default being on never asks for one.
+export function usesDescribedNarration(
+  draft: Pick<RunDraft, "sources" | "audio" | "llm">,
+): boolean {
+  return (
+    draft.sources.audio === "generate" && draft.audio?.describeFigures === true && chosen(draft.llm)
+  );
+}
+
 export function usesPronunciationGlossary(draft: Pick<RunDraft, "sources" | "audio">): boolean {
   return (
     draft.sources.audio === "generate" &&

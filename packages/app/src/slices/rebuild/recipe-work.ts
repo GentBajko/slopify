@@ -407,6 +407,13 @@ export function priceRecipe(
       detail:
         "Narration Preparation: one LLM call per future logical chunk or entry; source length is not yet known.",
     };
+  if (input.kind === "deferred" && input.operation === "narration-description")
+    return {
+      kind: "unknown",
+      stage: work.key,
+      detail:
+        "Narration descriptions: one LLM call per table, figure, equation or code block in the article; how many is known once the article is written.",
+    };
   if (input.kind === "llm")
     return {
       kind: "llm",
@@ -416,7 +423,8 @@ export function priceRecipe(
       inputCharacters:
         input.messages.reduce((sum, message) => sum + message.content.length, 0) +
         (input.documents ?? []).reduce((sum, document) => sum + document.content.length, 0),
-      outputCharacters: work.key === "article:body" ? 9000 : 2400,
+      outputCharacters:
+        work.key === "article:body" ? 9000 : input.describe !== undefined ? 600 : 2400,
       detail:
         "Actual saved request input; output length is estimated. Retries and tools are excluded.",
     };
@@ -501,7 +509,9 @@ function cliRequest(
   if (choice.family === "image")
     return { kind: "image", stage: work.key, provider: choice.provider, model: choice.model };
   if (choice.family !== "llm") return undefined;
-  const preparation = value.input.operation === "narration-preparation";
+  const preparation =
+    value.input.operation === "narration-preparation" ||
+    value.input.operation === "narration-description";
   return {
     kind: "llm",
     stage: work.key,
@@ -511,7 +521,9 @@ function cliRequest(
     outputCharacters: work.key === "article:body" ? 9000 : 2400,
     ...(preparation ? { apiUnknown: true as const } : {}),
     detail: preparation
-      ? "Runs on your CLI plan, so it adds no charge. Narration Preparation makes one call per logical chunk or entry; how many is known when the step runs, so no API figure is given."
+      ? value.input.operation === "narration-description"
+        ? "Runs on your CLI plan, so it adds no charge. Narration descriptions make one call per table, figure, equation or code block; how many is known once the article is written, so no API figure is given."
+        : "Runs on your CLI plan, so it adds no charge. Narration Preparation makes one call per logical chunk or entry; how many is known when the step runs, so no API figure is given."
       : "Runs on your CLI plan, so it adds no charge. The request is built when the step runs, so its API figure uses an estimated length.",
   };
 }

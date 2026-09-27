@@ -1,15 +1,20 @@
+import { existsSync } from "node:fs";
+import { basename } from "node:path";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
+import type { LlmImage, Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { spokenPassage } from "../narration/describe.js";
 import { observeNarration } from "../narration/live.js";
 import { validatePreparation } from "../narration/preparation.js";
 import { prepareRequests } from "../narration/steering.js";
 import { chaptersFrom } from "../research/planner.js";
 import { sourcedAnswer } from "../research/synthesis.js";
+import { imageReviewers } from "../reviews/model.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
@@ -46,6 +51,8 @@ export async function executeProviderRecipe(
   const input = piece.input;
   const wrapped = providers.forPiece(piece.id);
   if (input.kind === "llm") {
+    // A described figure's own picture, when the project has it and the model can look.
+    const picture = describedPicture(deps, context, input);
     const answer =
       piece.key === "article:body"
         ? await executeArticleRequests(deps, context, providers, piece)
@@ -54,7 +61,8 @@ export async function executeProviderRecipe(
             model: input.model,
             ...(input.thinking === null ? {} : { thinking: input.thinking }),
             thinkingConfig: input.thinkingConfig,
-            messages: input.messages,
+            messages: picture === undefined ? input.messages : withPicture(input.messages),
+            ...(picture === undefined ? {} : { images: [picture] }),
             documents: input.documents,
             webSearch: input.webSearch,
             previewLabel: piece.key,
@@ -251,6 +259,10 @@ async function softenIfAsked(
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
   if (answer.text.trim() === "")
     return "The AI model sent back an empty answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
+  if (piece.input.kind === "llm" && piece.input.describe !== undefined)
+    return spokenPassage(answer.text) === ""
+      ? "The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project, or turn off Describe tables and figures there."
+      : undefined;
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -286,6 +298,11 @@ async function publishText(
       cues: checked.cues,
       logicalFingerprint: piece.logicalFingerprint ?? piece.fingerprint,
     });
+    return;
+  }
+  if (piece.input.kind === "llm" && piece.input.describe !== undefined) {
+    // The passage the narration says, as it says it; nothing to download.
+    await publishResult(deps, context, piece, [], { text: spokenPassage(answer.text) });
     return;
   }
   if (piece.key === "article:body") {
@@ -413,4 +430,48 @@ function checkPreparation(
   );
   const prepared = prepareRequests(source, checked.cues, model?.tts.maxCharacters ?? 4000);
   return prepared.ok ? undefined : prepared.reason;
+}
+
+// The picture a described figure names, as a file the model can open: an image uploaded to
+// the project whose file name is the one the article uses, sent only to a text provider that
+// looks at pictures (`reviews/model.ts`). Otherwise the figure is described from its caption
+// and alt text alone.
+function describedPicture(
+  deps: RevisionDeps,
+  context: StageContext,
+  input: Extract<WorkPiece["input"], { kind: "llm" }>,
+): LlmImage | undefined {
+  const named = input.describe?.image;
+  if (named === undefined || !imageReviewers.includes(input.provider)) return undefined;
+  const name = basename(named.split(/[?#]/)[0] ?? "");
+  if (name === "") return undefined;
+  const view = executionView(deps, context.work.projectId, context.work.revisionId);
+  const provided = new Set(
+    Object.values(view?.revision.content.imageDefinitions ?? {}).flatMap((image) =>
+      image.source === "provide" && image.assetId !== null ? [image.assetId] : [],
+    ),
+  );
+  for (const assetId of provided) {
+    const row = deps.db
+      .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
+      .get(assetId, context.work.projectId);
+    const path = typeof row?.path === "string" ? row.path : undefined;
+    if (path !== undefined && basename(path).toLowerCase() === name.toLowerCase()) {
+      const file = outputPath(deps.paths, context.work.projectId, path);
+      if (existsSync(file)) return { path: file, name };
+    }
+  }
+  return undefined;
+}
+
+function withPicture(messages: readonly Message[]): readonly Message[] {
+  const last = messages.findLastIndex((message) => message.role === "user");
+  return messages.map((message, index) =>
+    index === last
+      ? {
+          ...message,
+          content: `${message.content}\n\nThe picture itself is attached: look at it before you answer.`,
+        }
+      : message,
+  );
 }

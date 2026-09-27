@@ -143,6 +143,14 @@ export const playHelp = {
     title: "Pronunciations from other projects",
     body: "Adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary. Default: on.",
   },
+  "play.describe-figures": {
+    title: "Describe tables and figures",
+    body: "Instead of skipping tables, pictures, equations and code or reading them cell by cell, the text model writes a short spoken passage for each (a table's pattern, what a figure or equation means, what code does) and the narration says it in its place. One extra text-model call per block, in the estimate, kept for reuse. The article and PDF keep the real table; captions show what is said. Needs a text model. Default: on.",
+  },
+  "play.skip-code": {
+    title: "Leave code out",
+    body: "Drops code blocks from the narration instead of summarising each in a sentence or two. Tables, figures and equations are still described. Default: off.",
+  },
   "play.narration-aliases": {
     title: "Narration aliases",
     body: "Says the words listed in Library → Aliases the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",

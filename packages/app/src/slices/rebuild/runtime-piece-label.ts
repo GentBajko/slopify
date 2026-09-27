@@ -31,6 +31,9 @@ export function pieceLabel(
   }
   if (key === "voices:files") return "MP3 and M4B files";
   if (key === "script:attribute") return "Speaker split";
+  if (key === "narration:describe:future") return "Narration descriptions";
+  const described = /^narration:describe:(\d+)$/.exec(key);
+  if (described !== null) return `Narration description ${described[1] ?? ""}`;
   const turn = /^audio:body:turn:(\d+):\d+$/.exec(key);
   if (turn !== null) return `Turn ${turn[1] ?? ""}`;
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";

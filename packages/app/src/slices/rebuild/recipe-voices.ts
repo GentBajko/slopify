@@ -16,6 +16,7 @@ import { prepareRequests } from "../narration/steering.js";
 import { groupTurns } from "../voices/grouping.js";
 import { type Speaker, speakerPace, type VoicesSettings } from "../voices/model.js";
 import { parseScript, type Script } from "../voices/script.js";
+import { describedText, describeFuture, describing } from "./recipe-describe.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -41,7 +42,8 @@ import type { ScriptText } from "./recipe-text.js";
 // words stay its transcript, so the captions and the word timing never see a tag.
 
 export interface VoiceBody {
-  // The turns' preparation steps, which the parts that use them wait on.
+  // The turns' preparation steps, which the parts that use them wait on, and with "Describe
+  // tables and figures" on, the description steps of the blocks inside turns.
   readonly preparations: readonly ResolvedWorkRecipe[];
   readonly parts: readonly ResolvedWorkRecipe[];
   readonly body: ResolvedWorkRecipe;
@@ -59,7 +61,9 @@ export function voiceBodyRecipes(
   const preparations: ResolvedWorkRecipe[] = [];
   const layout: [number, number][] = [];
   let transcript: FingerprintValue = script.fingerprint ?? script.text ?? null;
-  const parsed = script.text === null ? undefined : parseScript(script.text, voices.speakers);
+  const describe = describing(context);
+  const parsed =
+    script.text === null ? undefined : parseScript(script.text, voices.speakers, describe);
   const prepare = voices.speakers.some((speaker) => preparesTurns(context.config, speaker));
   // The narration still to be worked out: the whole script's while it is being written, or
   // every turn's while a turn's delivery cues are (as a single voice waits for all of its own).
@@ -76,11 +80,46 @@ export function voiceBodyRecipes(
           script.fingerprint ?? script.text ?? null,
           speakerValues(voices),
           ...(prepare ? [preparationTemplate(context)] : []),
+          ...(described.length === 0
+            ? []
+            : [["described-v1", described.map((row) => row.fingerprint)]]),
         ],
       },
-      [...new Set([...script.dependsOn, ...preparations.map((row) => row.key)])],
+      [
+        ...new Set([
+          ...script.dependsOn,
+          ...described.map((row) => row.key),
+          ...preparations.map((row) => row.key),
+        ]),
+      ],
     );
   let pending = false;
+  // A table, figure, equation or code block inside a turn is described within that turn: the
+  // turn says the description where the block was, in the same voice.
+  const described: ResolvedWorkRecipe[] = [];
+  let turns = parsed?.ok === true ? parsed.script.turns : [];
+  if (describe && script.text === null) {
+    const from = script.dependsOn[0];
+    if (from !== undefined)
+      described.push(
+        describeFuture(context, { key: from, fingerprint: script.fingerprint ?? from }),
+      );
+  } else if (describe && parsed?.ok === true) {
+    let offset = 0;
+    turns = turns.map((turn) => {
+      if (turn.markdown === undefined) return turn;
+      const said = describedText(context, turn.markdown, script.dependsOn, offset);
+      if (said.recipes.length === 0) return turn;
+      offset += said.recipes.length;
+      described.push(...said.recipes);
+      if (said.spoken === null) {
+        pending = true;
+        return turn;
+      }
+      return { ...turn, text: said.spoken.trim().replace(/\s*\n\s*/g, " ") };
+    });
+  }
+  preparations.push(...described);
   if (script.text === null) {
     // Turns not yet known are prepared behind one future step, as a single voice's text is.
     const from = script.dependsOn[0];
@@ -98,14 +137,13 @@ export function voiceBodyRecipes(
         `The script can't be narrated: ${parsed.reason} Fix it in Edit project → Article, then Try again.`,
       ),
     );
+  } else if (pending) {
+    parts.push(future());
   } else if (parsed !== undefined) {
-    transcript = [
-      "voices-transcript-v1",
-      parsed.script.turns.map((turn) => [turn.speaker, turn.text]),
-    ];
+    transcript = ["voices-transcript-v1", turns.map((turn) => [turn.speaker, turn.text])];
     const aliases = narrationAliasesOf(context.config);
     for (const group of groupTurns(
-      parsed.script.turns,
+      turns,
       voices.speakers,
       voices.nativeDialogue,
       (text) => applyAliases(text, aliases).length,

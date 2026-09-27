@@ -215,6 +215,10 @@ export const projectHelp = {
     title: "Update from other projects",
     body: "Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. The project keeps its own copy, so nothing changes until you press this. After you save, only the narration chunks whose words those terms change are spoken again, paid per character.",
   },
+  "project.edit.describe-figures": {
+    title: "Describe tables and figures",
+    body: "The text model writes a short spoken passage for each table, figure, equation and code block, said in its place. Turning it on costs one text-model call per block, and after you save, the narration chunks that contain a block are spoken again, paid per character (the whole narration when Chunking is the whole article). Other chunks keep their audio; captions and timing are redone to match.",
+  },
   "project.edit.update-aliases": {
     title: "Update from Library",
     body: "Copies Library, Aliases into this project again, picking up aliases added or changed since the last copy. The project keeps its own copy, so a Library edit reaches it only when you press this. After you save, only the narration chunks the changed aliases touch are spoken again, paid per character.",

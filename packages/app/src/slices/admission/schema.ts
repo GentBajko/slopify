@@ -86,6 +86,8 @@ export const runDraftSchema = z.object({
       usePronunciationGlossary: z.boolean().optional(),
       shareGlossary: z.boolean().optional(),
       useNarrationAliases: z.boolean().optional(),
+      describeFigures: z.boolean().optional(),
+      skipCode: z.boolean().optional(),
     })
     .optional(),
   narrationAliases: narrationAliasesSchema.optional(),

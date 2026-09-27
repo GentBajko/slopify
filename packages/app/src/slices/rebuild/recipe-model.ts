@@ -51,6 +51,7 @@ export const localOperations = [
 ] as const;
 export const deferredOperations = [
   "narration-preparation",
+  "narration-description",
   "research-synthesis",
   "article",
   "entry:intro:text",
@@ -90,6 +91,9 @@ export type RecipeInput =
       // A multi-voice script answer, checked against the speakers before it is accepted; with
       // `attribute`, the source text in the last message must keep its words.
       readonly script?: ScriptCheck | undefined;
+      // A table, figure, equation or code block described for the narration
+      // (`narration:describe:<n>`): the answer is the spoken passage.
+      readonly describe?: import("../narration/describe.js").DescribeSource | undefined;
     }
   | {
       readonly kind: "tts";

@@ -211,11 +211,13 @@ export function toAdmissionDraft(input: {
     llm: form.llm,
     audio:
       sources.audio === "generate" || form.audio.usePronunciationGlossary !== undefined
-        ? // With the glossary on, sharing it is on unless the draft turned it off, as Play
-          // shows it for a draft saved before the switch existed.
-          form.audio.usePronunciationGlossary === true && form.audio.shareGlossary === undefined
-          ? { ...form.audio, shareGlossary: true }
-          : form.audio
+        ? onlyWhenOn(
+            // With the glossary on, sharing it is on unless the draft turned it off, as Play
+            // shows it for a draft saved before the switch existed.
+            form.audio.usePronunciationGlossary === true && form.audio.shareGlossary === undefined
+              ? { ...form.audio, shareGlossary: true }
+              : form.audio,
+          )
         : undefined,
     images: form.images,
     // The establishing image belongs to generated images; Off, or images not generated,
@@ -402,4 +404,20 @@ function imageScaleOf(document: PlayDraftDocument, fields: FieldError[]): ImageS
         ? expected
         : defaultExpectedWords,
   };
+}
+
+// "Describe tables and figures" and "Skip code" are stored only when on, so a run started
+// with them off saves the config every run made before them did.
+function onlyWhenOn<
+  T extends {
+    readonly describeFigures?: boolean | undefined;
+    readonly skipCode?: boolean | undefined;
+  },
+>(audio: T): T {
+  const { describeFigures, skipCode, ...rest } = audio;
+  return {
+    ...rest,
+    ...(describeFigures === true ? { describeFigures } : {}),
+    ...(describeFigures === true && skipCode === true ? { skipCode } : {}),
+  } as T;
 }

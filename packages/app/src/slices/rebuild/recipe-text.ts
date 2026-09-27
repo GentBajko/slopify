@@ -19,6 +19,7 @@ import { thumbnailMessages } from "../thumbnail/by-llm.js";
 import { attributionMessages } from "../voices/attribution.js";
 import { usesVoices } from "../voices/model.js";
 import { scriptMessages } from "../voices/script.js";
+import { describedText, describeFuture, describing } from "./recipe-describe.js";
 import {
   type RecipeContext,
   type RecipeInput,
@@ -70,7 +71,11 @@ export function selectedText(
       row.key === key &&
       selectedReference(row) &&
       row.stageKind ===
-        (key.startsWith("entry:") || key.startsWith("script:") ? "article" : "thumbnail") &&
+        (key.startsWith("entry:") || key.startsWith("script:")
+          ? "article"
+          : key.startsWith("narration:describe:")
+            ? "audio"
+            : "thumbnail") &&
       row.piece.state === "done",
   );
   if (piece?.piece.payload === null || piece === undefined) return null;
@@ -88,6 +93,12 @@ type TextRecipe = { readonly recipe: ResolvedWorkRecipe; readonly text: string |
 export interface TextRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
   readonly articleText: string | null;
+  // The body as the single narration voice says it: the flattened article, or with
+  // "Describe tables and figures" on, the article with each described block's passage in its
+  // place (null until they have all answered). A multi-voice run describes within its turns.
+  readonly narrationText: string | null;
+  // The description steps the body narration waits on (`recipe-describe.ts`).
+  readonly descriptions: readonly ResolvedWorkRecipe[];
   readonly glossary: GlossaryResult | null;
   readonly article: ResolvedWorkRecipe;
   readonly entries: Readonly<Partial<Record<"intro" | "outro", TextRecipe>>>;
@@ -279,6 +290,18 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       };
     }
   }
+  let narrationText = articleText;
+  const descriptions: ResolvedWorkRecipe[] = [];
+  if (describing(context) && voices === undefined) {
+    if (endMatter === null) {
+      descriptions.push(describeFuture(context, article));
+      narrationText = null;
+    } else {
+      const described = describedText(context, endMatter.body, [article.key]);
+      descriptions.push(...described.recipes);
+      narrationText = described.spoken;
+    }
+  }
   const glossary = glossaryOf(context, endMatter);
   const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
@@ -348,6 +371,8 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   return {
     recipes,
     articleText,
+    narrationText,
+    descriptions,
     glossary,
     article,
     entries,

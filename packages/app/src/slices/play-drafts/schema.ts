@@ -55,6 +55,8 @@ export const playDraftFormSchema = z
         usePronunciationGlossary: z.boolean().optional(),
         shareGlossary: z.boolean().optional(),
         useNarrationAliases: z.boolean().optional(),
+        describeFigures: z.boolean().optional(),
+        skipCode: z.boolean().optional(),
       })
       .readonly(),
     images: provider.readonly(),

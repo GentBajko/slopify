@@ -18,6 +18,9 @@ export interface ScriptTurn {
   readonly text: string;
   // The section the turn is in, -1 before the first heading.
   readonly section: number;
+  // The turn's lines as written, for a turn that carries a table, a picture, an equation or
+  // code for the narration to describe (`narration/blocks.ts`). Its `text` is the words.
+  readonly markdown?: string | undefined;
 }
 export interface ScriptSection {
   readonly title: string;
@@ -37,7 +40,12 @@ const turnLine = /^\*{0,2}([^:*\n]{1,60}?)\*{0,2}\s*:\s*\*{0,2}\s*(.*)$/;
 
 export type NamedSpeaker = Pick<Speaker, "id" | "name">;
 
-export function parseScript(markdown: string, speakers: readonly NamedSpeaker[]): ScriptResult {
+// With `keepMarkdown`, every turn also carries its lines as written (`markdown`).
+export function parseScript(
+  markdown: string,
+  speakers: readonly NamedSpeaker[],
+  keepMarkdown = false,
+): ScriptResult {
   const byName = new Map(speakers.map((speaker) => [speaker.name.trim().toLowerCase(), speaker]));
   const names = speakers.map((speaker) => speaker.name.trim()).join(", ");
   const turns: { speaker: string; lines: string[]; section: number }[] = [];
@@ -85,7 +93,13 @@ export function parseScript(markdown: string, speakers: readonly NamedSpeaker[])
   for (const turn of turns) {
     const text = clean(turn.lines.join(" "));
     if (text === "") continue;
-    spoken.push({ index: spoken.length + 1, speaker: turn.speaker, text, section: turn.section });
+    spoken.push({
+      index: spoken.length + 1,
+      speaker: turn.speaker,
+      text,
+      section: turn.section,
+      ...(keepMarkdown ? { markdown: turn.lines.join("\n") } : {}),
+    });
   }
   if (spoken.length === 0)
     return {
