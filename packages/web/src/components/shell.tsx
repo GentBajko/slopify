@@ -10,7 +10,7 @@ import {
   SettingsIcon,
   UsersIcon,
 } from "lucide-react";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useEffect, useState, useSyncExternalStore } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { useInstallKind } from "@/autostart/use-install-kind";
@@ -26,6 +26,7 @@ import {
 } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Lamp } from "@/components/kit/status";
+import { Logo } from "@/components/logo";
 import { FirstRunNotice } from "@/components/notice";
 import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
@@ -267,7 +268,8 @@ function ChannelCommands() {
 }
 
 function ShellContent() {
-  const { api, openEvents } = useApp();
+  const { api, openEvents, version } = useApp();
+  const loadedVersion = useSyncExternalStore(version.subscribe, version.loadedAt, version.loadedAt);
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
   const pathname = useLocation({ select: (location) => location.pathname });
@@ -312,8 +314,11 @@ function ShellContent() {
       <ChannelCommands />
       <aside className="sl-app__rail" aria-label="App">
         <Link to="/" className="sl-wordmark">
-          <span className="sl-wordmark__dot" aria-hidden="true" />
+          <Logo className="sl-wordmark__logo" />
           Slopify
+          {loadedVersion === undefined ? null : (
+            <span className="sl-wordmark__version">{`v${loadedVersion}`}</span>
+          )}
         </Link>
         <button type="button" className="sl-searchbtn" onClick={() => palette.setOpen(true)}>
           <SearchIcon {...iconProps} />
@@ -355,7 +360,7 @@ function ShellContent() {
         <header className="sl-topbar">
           <div className="sl-topbar__lead">
             <Link to="/" className="sl-wordmark px-0 md:hidden">
-              <span className="sl-wordmark__dot" aria-hidden="true" />
+              <Logo className="sl-wordmark__logo" />
               <span className="max-[380px]:sr-only">Slopify</span>
             </Link>
             <button

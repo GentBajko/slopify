@@ -22,7 +22,16 @@ describe("the version watch", () => {
     watch.observe("1.2.0");
     watch.observe("1.2.0");
     expect(watch.staleAt()).toBeUndefined();
-    expect(listener).not.toHaveBeenCalled();
+    // Once, for the loaded version becoming known; the repeat is silent.
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the version this tab loaded from, for the sidebar", () => {
+    const watch = createVersionWatch();
+    expect(watch.loadedAt()).toBeUndefined();
+    watch.observe("3.0.1");
+    watch.observe("3.0.2");
+    expect(watch.loadedAt()).toBe("3.0.1");
   });
 
   it("reports the new version once and notifies subscribers", () => {
@@ -33,14 +42,15 @@ describe("the version watch", () => {
     watch.observe("1.3.0");
     watch.observe("1.3.0");
     expect(watch.staleAt()).toBe("1.3.0");
-    expect(listener).toHaveBeenCalledTimes(1);
+    // Once for the loaded version, once for the new one.
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
   it("stops notifying an unsubscribed listener", () => {
     const watch = createVersionWatch();
     const listener = vi.fn();
-    const unsubscribe = watch.subscribe(listener);
     watch.observe("1.2.0");
+    const unsubscribe = watch.subscribe(listener);
     unsubscribe();
     watch.observe("1.3.0");
     expect(listener).not.toHaveBeenCalled();

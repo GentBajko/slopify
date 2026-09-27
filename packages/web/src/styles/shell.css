@@ -429,13 +429,17 @@
     color: var(--color-ink);
     text-decoration: none;
   }
-  .sl-wordmark__dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 0 0 4px var(--color-accent-tint);
+  .sl-wordmark__logo {
+    width: 24px;
+    height: 24px;
     flex: none;
+    color: var(--color-accent);
+  }
+  /* Same type as the rail's links, so it reads as a label rather than part of the name. */
+  .sl-wordmark__version {
+    font: 500 15px / 22px var(--font-sans);
+    letter-spacing: normal;
+    color: var(--color-ink-2);
   }
   .sl-searchbtn {
     display: flex;

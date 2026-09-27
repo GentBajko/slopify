@@ -10,6 +10,8 @@ export interface VersionWatch {
   // The version now being served, once it differs from the one this tab loaded from.
   // A string, not an object, so `useSyncExternalStore` sees a stable snapshot.
   readonly staleAt: () => string | undefined;
+  // The version that served this bundle, once the first response has named it.
+  readonly loadedAt: () => string | undefined;
   readonly subscribe: (listener: () => void) => () => void;
 }
 
@@ -22,6 +24,9 @@ export function createVersionWatch(): VersionWatch {
     observe: (version: string): void => {
       if (loaded === undefined) {
         loaded = version;
+        for (const listener of listeners) {
+          listener();
+        }
         return;
       }
       if (version === loaded || version === serving) {
@@ -33,6 +38,7 @@ export function createVersionWatch(): VersionWatch {
       }
     },
     staleAt: (): string | undefined => serving,
+    loadedAt: (): string | undefined => loaded,
     subscribe: (listener: () => void): (() => void) => {
       listeners.add(listener);
       return (): void => {
