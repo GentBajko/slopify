@@ -122,5 +122,6 @@ export const playTargetSection = {
   "play-images": "outputs",
   "play-video": "outputs",
   "play-subtitles": "style",
-  "play-start": "review",
+  // The Play key sits in the right rail beside every section, so the guide stays on the form.
+  "play-start": "content",
 } as const;

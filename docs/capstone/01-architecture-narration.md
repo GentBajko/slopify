@@ -71,7 +71,7 @@ New Play drafts default **Use Pronunciation Glossary On**, with Narration Prepar
 
 `textRecipes` selects provided, edited or generated Markdown, separates end matter, and exposes clean body text independently from `GlossaryResult`. Enabled processing parses the supplied glossary; disabled processing supplies an empty entry list; unresolved article text leaves the glossary pending. `packages/app/src/slices/rebuild/recipe-text.ts:143`, `packages/app/src/slices/rebuild/recipe-text.ts:206`
 
-`parsePronunciationGlossary` accepts `Term: /IPA/` rows and Markdown tables. It validates the implemented English IPA alphabet, requires one IPA word per written word, deduplicates equivalent mappings, and refuses malformed or conflicting entries. It does not infer pronunciations. Matching is literal, case-insensitive, longest-term-first and boundary-aware; matched words become slash-delimited IPA spans. `packages/app/src/slices/narration/pronunciation.ts:19`, `packages/app/src/slices/narration/pronunciation.ts:65`, `packages/app/src/slices/narration/pronunciation.ts:110`
+`parsePronunciationGlossary` accepts `Term: /IPA/` rows and Markdown tables. It validates the implemented English IPA alphabet, requires one IPA word per written word, deduplicates equivalent mappings, and skips malformed or conflicting rows (reported as `skipped` row numbers and reasons, never their text) while the rest still applies; a table IPA cell without slashes reads as one slash-delimited pronunciation. It does not infer pronunciations. Matching is literal, case-insensitive, longest-term-first and boundary-aware; matched words become slash-delimited IPA spans. `packages/app/src/slices/narration/pronunciation.ts:19`, `packages/app/src/slices/narration/pronunciation.ts:65`, `packages/app/src/slices/narration/pronunciation.ts:110`
 
 The article plain-serialization escape issue remains unfixed: `plainText` still returns the string produced by remark/GFM/strip-markdown through `processSync`, retaining Markdown serialization. `packages/app/src/slices/article/plain.ts:11`
 
@@ -85,7 +85,7 @@ These server-origin merged bindings remain sticky across glossary changes or dis
 
 ### Generation boundaries
 
-`narrationParts` handles asset overrides before glossary validation. Text overrides become normalized clean logical text. Invalid active glossaries refuse generated work; supplied group audio bypasses preparation and pronunciation. `packages/app/src/slices/rebuild/recipe-audio-parts.ts:22`
+`narrationParts` handles asset overrides before glossary validation. Text overrides become normalized clean logical text. Rows the parser skipped never refuse generated work (the plan carries a `glossaryNotice` for the rebuild review); supplied group audio bypasses preparation and pronunciation. `packages/app/src/slices/rebuild/recipe-audio-parts.ts:22`
 
 Preparation operates on clean sentences. Validated cues and IPA spans meet only in `prepareRequests`, which preserves separate request `text` and clean `spokenText`. IPA tokens are indivisible; request limits include tags and IPA using JavaScript string length. Ordinary fallback splitting uses code points. `packages/app/src/slices/rebuild/recipe-preparation.ts:59`, `packages/app/src/slices/narration/steering.ts:17`, `packages/app/src/slices/narration/steering.ts:80`
 

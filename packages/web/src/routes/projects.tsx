@@ -1,8 +1,8 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { EllipsisIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { BatchQueue } from "@/components/batch-queue";
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { startedAt } from "@/lib/utils";
+import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
@@ -31,6 +32,9 @@ const timeCell =
 const wordCell = "col-start-3 row-start-1 justify-end md:col-start-4";
 const menuCell = "relative z-10 col-start-4 row-start-1 size-8 p-0 md:col-start-5";
 
+// Set once the first-run screen was opened in this tab, so going back to Projects stays there.
+let welcomed = false;
+
 // Every run ever started, newest first. The row is one grid so the columns line up down the
 // sheet; the title's link is stretched across it with an overlay, which keeps the overflow
 // button a sibling rather than a control nested inside a link.
@@ -39,6 +43,16 @@ export function ProjectsRoute() {
   const queryClient = useQueryClient();
   const projects = useQuery(projectsQuery(api));
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
+  const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
+  const sample = firstRun.data?.sampleProjectId ?? null;
+  const navigate = useNavigate();
+  // A fresh install opens on the first-run screen, once per visit to this list.
+  useEffect(() => {
+    if (firstRun.data?.show === true && !welcomed) {
+      welcomed = true;
+      void navigate({ to: "/welcome" });
+    }
+  }, [firstRun.data?.show, navigate]);
 
   const remove = useMutation({
     mutationFn: (id: string) => removeProject(api, id),
@@ -88,6 +102,7 @@ export function ProjectsRoute() {
             <ProjectRow
               key={project.id}
               project={project}
+              sample={project.id === sample}
               onDelete={() => {
                 setDeleting(project);
               }}
@@ -124,9 +139,11 @@ export function ProjectsRoute() {
 
 function ProjectRow({
   project,
+  sample,
   onDelete,
 }: {
   readonly project: ProjectListing;
+  readonly sample: boolean;
   readonly onDelete: () => void;
 }) {
   return (
@@ -142,6 +159,11 @@ function ProjectRow({
         >
           {project.title}
         </Link>
+        {sample ? (
+          <span className="rounded-control border border-line2 px-[6px] text-label text-ink2">
+            Sample
+          </span>
+        ) : null}
         <span className="truncate text-small text-ink2">{madeOf(project)}</span>
       </span>
       <span className={timeCell}>{startedAt(project.createdAt)}</span>

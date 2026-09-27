@@ -58,7 +58,7 @@ The timing's operation id is the model's (`wav2vec2-xlsr56-2d48b01-v1`,
 its text, and nothing else.
 
 MMS (`MahmoudAshraf/mms-300m-1130-forced-aligner`, `facebook/mms-*`) was ruled out: its licence
-is CC-BY-NC-4.0, and Slopify's output goes to monetisable channels.
+is CC-BY-NC-4.0, and Slopify (Apache-2.0) makes videos for monetisable channels.
 
 ### Validation (2026-09-27)
 

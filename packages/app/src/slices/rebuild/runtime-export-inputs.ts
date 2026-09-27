@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
-import { usesNarrationPreparation, usesPronunciationGlossary } from "../admission/rules.js";
+import {
+  narrationAliasesOf,
+  usesNarrationPreparation,
+  usesPronunciationGlossary,
+} from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -98,7 +102,9 @@ export function revisionTranscript(
   if (
     usesNarrationPreparation(view.revision.config) ||
     usesPronunciationGlossary(view.revision.config) ||
-    (kind === "body" && usesVoices(view.revision.config))
+    (kind === "body" && usesVoices(view.revision.config)) ||
+    // Aliased requests say something other than the text; the transcript is the text.
+    narrationAliasesOf(view.revision.config).length > 0
   )
     return joinedNarration(narrationTextParts(view, plan, kind));
   const concat = plan.recipes.find(

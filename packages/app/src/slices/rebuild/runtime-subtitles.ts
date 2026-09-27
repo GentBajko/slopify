@@ -7,6 +7,7 @@ import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
+import { narrationAliasesOf } from "../admission/rules.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
@@ -113,6 +114,7 @@ async function timing(
         alignSubtitles({
           audioPath: path,
           text: revisionTranscript(deps, snapshot, kind),
+          aliases: narrationAliasesOf(snapshot.view.revision.config),
           cacheDir: subtitleModelDir(deps.paths.dataDir, language),
           ...(language === "en" ? {} : { language }),
           ffmpeg: deps.ffmpeg,

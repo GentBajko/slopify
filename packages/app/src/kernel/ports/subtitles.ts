@@ -1,3 +1,5 @@
+import type { NarrationAlias } from "./narration-aliases.js";
+
 export interface SubtitleOmission {
   readonly start: number;
   readonly text: string;
@@ -11,6 +13,9 @@ export interface TimedWord {
 export interface AlignmentRequest {
   readonly audioPath: string;
   readonly text: string;
+  // Narration aliases the audio was read with: `text` holds the written words, the audio
+  // says them as aliased. Absent or empty when the narration used none.
+  readonly aliases?: readonly NarrationAlias[] | undefined;
   readonly cacheDir: string;
   readonly ffmpeg: string;
   readonly signal: AbortSignal;

@@ -1,4 +1,5 @@
-import { type SpeechWord, speechWords } from "./text.js";
+import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
+import { respoken, type SpeechWord, speechWords } from "./text.js";
 import { letters as englishLetters, vocabulary as englishVocabulary } from "./vocabulary.js";
 
 // The thresholds a window must pass before its timing is kept. They were tuned on one model;
@@ -32,7 +33,13 @@ export interface AlignmentSpec {
   // Folds the model's logits into `labels` columns (for example the multilingual model's
   // 9,913 labels into one language's alphabet). Absent: used as they are.
   readonly compact?: ((logits: Float32Array, frames: number) => Float32Array) | undefined;
-  readonly words: (text: string, observed?: string) => readonly SpeechWord[];
+  readonly words: (
+    text: string,
+    observed?: string,
+    aliases?: readonly NarrationAlias[],
+  ) => readonly SpeechWord[];
+  // The form of a word the recording seems to say (`text.ts#respoken`).
+  readonly respoken: (word: SpeechWord, observed: string) => SpeechWord;
   // Only the letters of a text, for counting and anchors.
   readonly lettersOnly: (text: string) => string;
   // Letters plus whatever else the transcript keeps (the English apostrophe), for comparing
@@ -61,6 +68,7 @@ export const englishSpec: AlignmentSpec = {
   letters: englishLetters,
   modelLabels: 32,
   words: speechWords,
+  respoken,
   lettersOnly: (text) => text.replace(/[^A-Z]/g, ""),
   comparable: (text) => text.toUpperCase().replace(/[^A-Z']/g, ""),
   gates: englishGates,

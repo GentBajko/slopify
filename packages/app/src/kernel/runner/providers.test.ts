@@ -632,6 +632,43 @@ describe("live previews through the attempt wrapper", () => {
     ).toEqual(["", "Only visible writing"]);
     expect(callbacks.map((event) => event.type)).toEqual(["delta", "done"]);
   });
+  it("shows typed-ahead text live and swaps it for the committed message", async () => {
+    const h = harness();
+    const llm: LlmPort = {
+      ...fakeLlm(),
+      complete: async function* () {
+        yield { type: "delta", text: "One. " };
+        yield { type: "partial", text: "Tw" };
+        yield { type: "partial", text: "o." };
+        yield { type: "delta", text: "Two." };
+        yield { type: "done", usage: null, finishReason: "stop" };
+      },
+    };
+    const events: ProjectEvent[] = [];
+    const callbacks: LlmEvent[] = [];
+    const providers = stageProviders(
+      { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+      { ...context("article", h.controller.signal), emit: (event) => events.push(event) },
+    );
+    const answer = await h.clock.settle(
+      providers.llm({ provider: "fake-llm", model: "m", messages: [] }, (event) =>
+        callbacks.push(event),
+      ),
+    );
+    expect(answer).toMatchObject({ ok: true, value: { text: "One. Two." } });
+    expect(
+      events.flatMap((event) =>
+        event.type === "llm.preview" ? [[event.text, event.reset === true]] : [],
+      ),
+    ).toEqual([
+      ["", true],
+      ["One. ", false],
+      ["Tw", false],
+      ["o.", false],
+      ["One. Two.", true],
+    ]);
+    expect(callbacks.map((event) => event.type)).toEqual(["delta", "delta", "done"]);
+  });
 });
 
 it("interrupts a live TTS preview immediately on pause and keeps cancellation out of retries", async () => {

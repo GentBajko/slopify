@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AliasMatch } from "../../kernel/ports/narration-aliases.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import {
   type NarrationSegment,
@@ -24,7 +25,7 @@ export interface PreparedGroup {
 export function preparationTemplate(context: RecipeContext): FingerprintValue {
   const input = llmInput(
     context,
-    preparationMessages(renderedPrompt(context, "narration"), "", context.config.language),
+    preparationMessages(renderedPrompt(context, "narration"), "", [], context.config.language),
   );
   return [
     "inworld-tts-2",
@@ -67,6 +68,7 @@ export function preparationForGroup(
   dependsOn: readonly string[],
   maxCharacters: number,
   spans: ReturnType<typeof pronunciationSpans> = [],
+  aliases: readonly AliasMatch[] = [],
 ): PreparedGroup {
   const preparation = recipe(
     context,
@@ -75,7 +77,12 @@ export function preparationForGroup(
     {
       ...llmInput(
         context,
-        preparationMessages(renderedPrompt(context, "narration"), source, context.config.language),
+        preparationMessages(
+          renderedPrompt(context, "narration"),
+          source,
+          aliases,
+          context.config.language,
+        ),
       ),
       preparation: { format: "inworld-tts-2", version: 1, source, logicalKey, segment },
     },

@@ -2,7 +2,7 @@ import { subtitleConfigSchema } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { entries, mountPlay } from "@/play/play-test-fixture";
+import { entries, mountPlay, openSection } from "@/play/play-test-fixture";
 import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 
 const tutorial = vi.hoisted(() => ({
@@ -41,9 +41,7 @@ function fieldsAnswer(fields: readonly { field: string; message: string }[]): An
 }
 
 async function section(name: string): Promise<void> {
-  await userEvent.click(
-    within(screen.getByRole("navigation", { name: "Run setup" })).getByRole("button", { name }),
-  );
+  await openSection(name);
 }
 async function openCosts(): Promise<void> {
   await section("Review");
@@ -99,7 +97,7 @@ async function fillGeneratedRun(): Promise<void> {
   await pick("LLM", "claude-code");
   await pick("Text model", "sonnet");
   await section("Content");
-  await userEvent.type(screen.getByLabelText("Project title"), "Rope Tricks");
+  await userEvent.type(screen.getByLabelText("Title"), "Rope Tricks");
   await section("Content");
   await userEvent.type(screen.getByLabelText("topic"), "rope");
   await section("Content");
@@ -196,7 +194,7 @@ describe("the Play key and its hint", () => {
     // Naming the run leaves the article prompt the first missing item, and now that the
     // user is configuring the run it is marked where it stands.
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Project title"), "Rope Tricks");
+    await userEvent.type(screen.getByLabelText("Title"), "Rope Tricks");
 
     expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
   });
@@ -238,7 +236,7 @@ describe("Ctrl+Enter", () => {
     const created = await mount();
 
     await section("Content");
-    await userEvent.click(screen.getByLabelText("Project title"));
+    await userEvent.click(screen.getByLabelText("Title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
 
     expect(created).not.toHaveBeenCalled();
@@ -253,7 +251,7 @@ describe("Ctrl+Enter", () => {
     });
 
     await section("Content");
-    await userEvent.click(screen.getByLabelText("Project title"));
+    await userEvent.click(screen.getByLabelText("Title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
     await waitFor(() =>
       expect(
@@ -388,7 +386,7 @@ describe("optional stages", () => {
     await section("Outputs");
     await userEvent.click(segment("images", "Off"));
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Project title"), "Uploaded audio");
+    await userEvent.type(screen.getByLabelText("Title"), "Uploaded audio");
     expect(held()).toBe(false);
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
@@ -429,7 +427,7 @@ describe("optional stages", () => {
     expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
     expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(true);
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Project title"), "Article only");
+    await userEvent.type(screen.getByLabelText("Title"), "Article only");
     expect(held()).toBe(false);
     expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
       playAudioReady: true,
@@ -478,7 +476,7 @@ describe("optional stages", () => {
     await section("Content");
     await userEvent.type(screen.getByLabelText("topic"), "Albania");
     await section("Content");
-    await userEvent.type(screen.getByLabelText("Project title"), "Thumbnail run");
+    await userEvent.type(screen.getByLabelText("Title"), "Thumbnail run");
     expect(held()).toBe(false);
     await section("Outputs");
     await userEvent.click(segment("images", "Provide"));
@@ -560,6 +558,8 @@ describe("the keyword block", () => {
     await fillGeneratedRun();
     await section("Content");
     await userEvent.clear(screen.getByLabelText("style"));
+    // Leaving the field marks it; the rows stay open, so nothing else takes focus first.
+    await userEvent.tab();
 
     expect(screen.getByText("Fill style to play")).not.toBeNull();
     expect(screen.getByLabelText("style").getAttribute("aria-invalid")).toBe("true");
@@ -593,7 +593,7 @@ describe("a run the server refuses", () => {
     expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByLabelText("topic").getAttribute("aria-invalid")).toBe("true");
     expect(created).not.toHaveBeenCalled();
-    expect((screen.getByLabelText("Project title") as HTMLInputElement).value).toBe("Rope Tricks");
+    expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Rope Tricks");
   });
 
   it("clears the server's marks as soon as the form changes", async () => {
@@ -760,7 +760,9 @@ describe("explicit review error navigation", () => {
     await fillGeneratedRun();
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Review audio chunking." }));
+    await userEvent.click(
+      await within(reviewDrawer()).findByRole("button", { name: "Review audio chunking." }),
+    );
     await waitFor(() =>
       expect(document.activeElement?.getAttribute("data-play-field")).toBe("chunking.mode"),
     );
@@ -776,23 +778,24 @@ describe("explicit review error navigation", () => {
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await userEvent.click(
-      await screen.findByRole("button", { name: "A new rule requires attention." }),
+      await within(reviewDrawer()).findByRole("button", { name: "A new rule requires attention." }),
     );
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Review" })),
     );
-    expect(screen.getByRole("button", { name: "A new rule requires attention." })).not.toBeNull();
+    expect(
+      within(reviewDrawer()).getByRole("button", { name: "A new rule requires attention." }),
+    ).not.toBeNull();
   });
-  it("opens keyword variations and focuses the stable batch row field", async () => {
+  it("opens the other video's keywords and focuses its refused field", async () => {
     await mount({
       "POST /api/projects/batch": fieldsAnswer([
         { field: "items.1.values.topic", message: "Complete the second video's topic." },
       ]),
     });
     await fillGeneratedRun();
-    await section("Review");
-    await userEvent.click(screen.getByText(/Queue keyword variations/));
-    await userEvent.click(screen.getByRole("button", { name: "Add keyword variation" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add topic" }));
+    await userEvent.type(screen.getByLabelText("Title of another video"), "Knot Tricks{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
     await waitFor(() =>
       expect(
@@ -801,13 +804,13 @@ describe("explicit review error navigation", () => {
       ).toBe(false),
     );
     await userEvent.click(await screen.findByRole("button", { name: "Queue 2 videos" }));
-    await userEvent.click(screen.getByText(/Queue keyword variations/));
+    // The reason under the key names the refusal and goes to the field.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Complete the second video's topic." }),
+      await within(screen.getByRole("region", { name: "Start" })).findByRole("button", {
+        name: "Complete the second video's topic.",
+      }),
     );
-    await waitFor(() =>
-      expect(document.activeElement).toBe(within(reviewDrawer()).getByLabelText("topic")),
-    );
-    expect(screen.getByText(/Queue keyword variations/).closest("details")?.open).toBe(true);
+    const panel = await screen.findByRole("dialog", { name: "Video 2: Knot Tricks" });
+    await waitFor(() => expect(document.activeElement).toBe(within(panel).getByLabelText("topic")));
   });
 });

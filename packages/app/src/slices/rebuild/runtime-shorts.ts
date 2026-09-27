@@ -433,7 +433,7 @@ async function backgroundMusic(
   return { path, volume: musicVolumeOf(shorts) };
 }
 
-function timingWords(
+export function timingWords(
   deps: ExportExecutionDeps,
   context: StageContext,
   view: RevisionView,

@@ -10,6 +10,27 @@ ticked with one image, a thumbnail prompt switches the thumbnail to From prompt,
 Description or Shorts prompt turns that step on. The rest of the draft stays as it was. While
 Play is starting a run from its draft the button is off.
 
+## Narration aliases
+
+**Library → Aliases** lists words the narrator should say differently from how they are
+written: `Dr.` as `Doctor`, `Ms.` as `Miss`, or any word or phrase and how to read it. Each
+alias has **Whole word** (on: only where it stands as a word, not inside a longer one) and
+**Match case** (off: `DR.` and `dr.` match too). Where two could apply, the longer written
+form wins. **Save aliases** saves the whole list; a row it can't save is marked with the
+reason.
+
+Play's Audio Advanced and Edit project have **Use narration aliases** (on for new drafts; off,
+and nothing copied, for projects from before aliases existed). A project copies the Library's
+aliases when it starts; editing the Library never changes a started project until you press
+**Update from Library** in Edit project. Aliases work with every generated voice.
+
+Only what is spoken changes: the text sent to the voice and the sentences Narration
+Preparation reads. The article, the narration text, the transcript and the captions keep the
+written words, so a caption reads "Dr. Grey" while the audio says "Doctor Grey"; caption
+timing matches each written word to its aliased speech. Where an alias and the Pronunciation
+Glossary name the same word, the alias wins. A project's narration is rebuilt only where an
+alias it uses appears in the text.
+
 ## Prompt history
 
 Every save of a prompt or intro/outro keeps a version (author "you", with its time); a save
@@ -51,3 +72,18 @@ The article, its research notes and sources, and the narration text (Audio secti
 as a reading view: a ~70-character measure, a contents list from the headings, **Search** with
 every hit marked (Enter / Shift+Enter or the arrows step through them), **Copy section** beside
 each heading and Copy all as Markdown.
+
+## Style preview
+
+Edit project → **Subtitles** shows a **Style preview**: six seconds of video rendered by the
+same renderer as the finished video, at a small size, with the project's format, caption font,
+size and position, the Look, the transition and a chapter card (when chapter cards are on). It
+renders when the section opens and again a moment after a setting changes; **Render again**
+renders it from scratch. Captions show in the preview only when they are burned in, because a
+caption file is drawn by the player in its own style. The pictures are three stills and the
+sound is silence, all made by ffmpeg on your computer, so a preview never calls a provider and
+costs nothing.
+
+Previews are saved in `<data-dir>/cache/style-preview/`, named by a hash of the settings, so a
+style you have seen before plays at once; the 200 most recent are kept, and deleting the folder
+is safe.

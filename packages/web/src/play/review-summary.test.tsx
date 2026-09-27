@@ -43,15 +43,17 @@ it("summarizes active generated choices with raw counts and exact edit destinati
   const readiness = screen.getByRole("region", { name: "Run readiness summary" });
   expect(within(readiness).getAllByText("Ready")).toHaveLength(3);
   const outputs = screen.getByRole("region", { name: "Outputs summary" });
+  // The Narration and Images rows open on Play load their model lists, so the summary names the
+  // models once they have arrived, and their ids until then.
+  for (const text of [/^(eleven_multilingual_v2|Multilingual v2)$/, /^(fal-ai\/flux-2|FLUX\.2)$/])
+    expect(within(outputs).getByText(text)).not.toBeNull();
   for (const text of [
     "ElevenLabs",
-    "eleven_multilingual_v2",
     "Narrator M",
     "Every 03000 characters",
     "Cold open",
     "Sting",
     "fal.ai",
-    "fal-ai/flux-2",
     "Oils · 02 images",
     "Maps · 3 images",
     "Title card",
@@ -241,8 +243,9 @@ it("uses loaded names while preserving the existing review catalogue refresh", a
   await act(async () => {
     await harness.session().navigate("review");
   });
-  expect(screen.getByText("Multilingual v2")).not.toBeNull();
-  expect(screen.getByText("FLUX.2")).not.toBeNull();
+  const outputs = within(screen.getByRole("region", { name: "Outputs summary" }));
+  expect(outputs.getByText("Multilingual v2")).not.toBeNull();
+  expect(outputs.getByText("FLUX.2")).not.toBeNull();
   expect(
     within(screen.getByRole("region", { name: "Style summary" })).getByText("Default"),
   ).not.toBeNull();

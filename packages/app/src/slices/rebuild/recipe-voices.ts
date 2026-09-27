@@ -1,5 +1,7 @@
 import { splitText } from "../../kernel/ports/text.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
+import { narrationAliasesOf } from "../admission/rules.js";
+import { aliasSpans, withAliasSpans } from "../narration/aliases.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import {
   type GlossaryEntry,
@@ -188,7 +190,11 @@ function groupParts(
         row.enabled &&
         !row.deprecated,
     )?.tts.maxCharacters ?? Math.max(2, logicalText.length * 4);
-  const spans = pronunciationSpans(logicalText, entries.entries);
+  // Narration aliases apply to every voice, the speaker's pronunciations to IPA voices only.
+  const spans = withAliasSpans(
+    pronunciationSpans(logicalText, entries.entries),
+    aliasSpans(logicalText, narrationAliasesOf(context.config)),
+  );
   let requests: readonly { readonly text: string; readonly spokenText?: string }[];
   if (spans.length > 0) {
     const prepared = prepareRequests(logicalText, [], maxCharacters, spans);

@@ -133,6 +133,15 @@ const assistantEvent = z.object({
   }),
 });
 
+// `--include-partial-messages` streams the model's own events; a text block grows by
+// `content_block_delta` events carrying a `text_delta`. Anything else is only a heartbeat.
+const partialText = z.object({
+  event: z.object({
+    type: z.literal("content_block_delta"),
+    delta: z.object({ type: z.literal("text_delta"), text: z.string() }),
+  }),
+});
+
 // The result event as 2.1.258 writes it. `subtype` stays "success" even for a failed run -
 // a bad model name answers `{"subtype":"success","is_error":true,"api_error_status":404}` -
 // so `is_error` is what decides, with `subtype` checked as well for a run that never
@@ -209,9 +218,16 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         }
         const event = cliEvent(binary, line);
         // Partial text/thinking and tool events are a heartbeat. Full assistant
-        // messages remain the sole prose source so text is never appended twice.
+        // messages remain the sole prose source so text is never appended twice; partial
+        // prose is only shown on the live panel.
         yield { type: "activity" };
         req.signal.throwIfAborted();
+        if (event.type === "stream_event" && !documents) {
+          const typed = partialText.safeParse(event.value);
+          if (typed.success && typed.data.event.delta.text !== "")
+            yield { type: "partial", text: typed.data.event.delta.text };
+          continue;
+        }
         if (event.type === "assistant" && images) {
           for (const block of cliShaped(binary, assistantEvent, event.value).message.content) {
             const file =

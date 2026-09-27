@@ -1,135 +1,89 @@
-import { subtitleFrame, subtitlePlacement } from "@app/slices/subtitles/layout.js";
-import { subtitlePositions } from "@app/slices/subtitles/model.js";
-import { act, cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it } from "vitest";
+import { jsonAnswer } from "@/test-app";
 import { mountSupplied } from "./draft-upload-test-fixture";
+import { mountPlay, openRow, openSection } from "./play-test-fixture";
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
   window.localStorage?.clear();
 });
 
-it.each(
-  (["16:9", "9:16"] as const).flatMap((format) =>
-    subtitlePositions.map((position) => ({ format, position })),
-  ),
-)("uses shared placement for $format $position in one preview", async ({ format, position }) => {
-  const { requests } = await mountSupplied();
-  await userEvent.click(screen.getByRole("button", { name: "Style" }));
-  await userEvent.selectOptions(
-    screen.getByLabelText("Subtitles", { selector: "select" }),
-    "files",
+// What the rail's style preview asked the server to render.
+function previewBodies(requests: readonly Request[]): Promise<readonly Record<string, unknown>[]> {
+  return Promise.all(
+    requests
+      .filter((request) => request.method === "POST" && request.url.endsWith("/api/style-preview"))
+      .map(async (request) => (await request.clone().json()) as Record<string, unknown>),
   );
-  await userEvent.click(screen.getByRole("radio", { name: position }));
-  const formatControl = screen.getByRole("radio", { name: format });
-  await userEvent.click(formatControl);
-  expect(document.activeElement).toBe(formatControl);
-  const preview = screen.getByRole("img", { name: "Subtitle style preview" });
-  const frame = subtitleFrame(format);
-  const placement = subtitlePlacement(position, frame.height);
-  const sample = screen.getByLabelText("Caption sample");
-  expect(preview.dataset.position).toBe(position);
-  expect(preview.style.aspectRatio).toBe(`${frame.width} / ${frame.height}`);
-  expect(sample.style.top).toBe(`${(placement.y / frame.height) * 100}%`);
-  expect(sample.style.transform).toBe(`translate(-50%, ${placement.translateY}%)`);
-  expect(screen.getAllByRole("img", { name: "Subtitle style preview" })).toHaveLength(1);
-  expect(
-    requests.filter(
-      (r) => r.method === "POST" && /alignment|subtitles|providers|projects/.test(r.url),
-    ),
-  ).toHaveLength(0);
+}
+
+it.each([
+  { format: "9:16", position: "top" },
+  { format: "16:9", position: "center" },
+] as const)(
+  "renders the style preview with the $format frame and $position captions",
+  async ({ format, position }) => {
+    const { requests } = await mountPlay();
+    await openRow("Video and style");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Subtitles", { selector: "select" }),
+      "burn-in",
+    );
+    await userEvent.click(screen.getByRole("radio", { name: position }));
+    await userEvent.click(screen.getByRole("radio", { name: format }));
+    const rail = screen.getByRole("complementary", { name: "Review and start" });
+    expect(within(rail).getByRole("heading", { name: "Style preview" })).not.toBeNull();
+    await waitFor(
+      async () => {
+        const last = (await previewBodies(requests)).at(-1);
+        expect(last?.format).toBe(format);
+        expect(last?.subtitles).toMatchObject({ mode: "burn-in", position });
+      },
+      { timeout: 3000 },
+    );
+    // Nothing paid is asked for: the preview renders locally from silence and sample stills.
+    expect(requests.some((r) => /alignment|providers\/.+\/speak|projects$/.test(r.url))).toBe(
+      false,
+    );
+  },
+);
+
+it("renders again on request, forcing a fresh render of the same settings", async () => {
+  const { requests } = await mountPlay({
+    "POST /api/style-preview": jsonAnswer({
+      hash: "e".repeat(64),
+      url: `/api/style-preview/${"e".repeat(64)}.mp4?v=2`,
+      cached: false,
+      seconds: 6,
+    }),
+  });
+  const rail = screen.getByRole("complementary", { name: "Review and start" });
+  await waitFor(async () => expect((await previewBodies(requests)).length).toBeGreaterThan(0), {
+    timeout: 3000,
+  });
+  await userEvent.click(await within(rail).findByRole("button", { name: "Render again" }));
+  await waitFor(async () => expect((await previewBodies(requests)).at(-1)?.force).toBe(true));
 });
 
-it("keeps the sample and raw invalid size across sections and viewport moves", async () => {
-  let change: (() => void) | undefined;
-  const media = {
-    matches: true,
-    addEventListener: vi.fn((_event: string, listener: () => void) => {
-      change = listener;
-    }),
-    removeEventListener: vi.fn(),
-  };
-  vi.stubGlobal("matchMedia", () => media);
-  const { requests } = await mountSupplied();
-  await userEvent.click(screen.getByRole("button", { name: "Style" }));
+it("keeps the sample and a raw invalid size, and says what to fix", async () => {
+  await mountPlay();
+  await openRow("Video and style");
   await userEvent.selectOptions(
     screen.getByLabelText("Subtitles", { selector: "select" }),
-    "files",
+    "burn-in",
   );
   await userEvent.clear(screen.getByLabelText("Preview text"));
   await userEvent.type(screen.getByLabelText("Preview text"), "Only a sample");
   await userEvent.clear(screen.getByLabelText("Subtitle font size"));
   expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("");
-  await act(async () => {
-    media.matches = false;
-    change?.();
-  });
-  expect(screen.getAllByRole("img", { name: "Subtitle style preview" })).toHaveLength(1);
-  expect(screen.getByLabelText("Caption sample").textContent).toBe("Only a sample");
-  await userEvent.click(screen.getByRole("button", { name: "Review" }));
+  await openSection("Review");
   expect(screen.getByRole("list", { name: "Setup errors" }).textContent).toMatch(/font size/i);
-  await userEvent.click(screen.getByRole("button", { name: "Style" }));
   expect((screen.getByLabelText("Preview text") as HTMLInputElement).value).toBe("Only a sample");
-  expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("");
-  expect(requests.some((r) => r.url.includes("alignment"))).toBe(false);
-  cleanup();
-  expect(media.removeEventListener).toHaveBeenCalled();
 });
 
-it.each(["pending", "copying", "reattach", "ready"] as const)(
-  "uses only a ready owned image endpoint (%s)",
-  async (state) => {
-    const { draftView, mountPlay } = await import("./play-test-fixture");
-    const { jsonAnswer } = await import("@/test-app");
-    const id = "00000000-0000-4000-8000-000000000001";
-    const imageId = "00000000-0000-4000-8000-000000000003";
-    const view = draftView(id, "Image draft");
-    const form = view.draft.document.form;
-    await mountPlay({
-      "GET /api/drafts": jsonAnswer({
-        drafts: [{ id, title: "Image draft", version: 1, updatedAt: "2026-09-13", readable: true }],
-      }),
-      [`GET /api/drafts/${id}`]: jsonAnswer({
-        ...view,
-        draft: {
-          ...view.draft,
-          document: {
-            ...view.draft.document,
-            form: {
-              ...form,
-              sources: { ...form.sources, images: "provide" },
-              provided: {
-                ...form.provided,
-                images: [{ attachmentId: imageId, name: "scene.png" }],
-              },
-            },
-          },
-        },
-        attachments: [
-          {
-            id: imageId,
-            kind: "images",
-            name: "scene.png",
-            state,
-            stagedFileId: state === "ready" ? "00000000-0000-4000-8000-000000000099" : null,
-            bytes: 10,
-            error: null,
-          },
-        ],
-      }),
-    });
-    await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Image draft" }));
-    await userEvent.click(screen.getByRole("button", { name: "Style" }));
-    const frame = screen.getByRole("img", { name: "Subtitle style preview" });
-    expect(frame.querySelector("img")?.getAttribute("src") ?? null).toBe(
-      state === "ready" ? `http://slopify.test/api/drafts/${id}/attachments/${imageId}/file` : null,
-    );
-    expect(screen.queryByLabelText("Caption sample")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
-    // The frame preview belongs to Style alone.
-    expect(screen.queryByRole("img", { name: "Subtitle style preview" })).toBeNull();
-  },
-);
+it("draws no style preview while the run makes no video", async () => {
+  await mountSupplied();
+  expect(screen.queryByRole("heading", { name: "Style preview" })).toBeNull();
+});

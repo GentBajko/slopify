@@ -1,7 +1,8 @@
 import { languageInfo } from "../../kernel/ports/languages.js";
+import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import { type AlignmentGates, type AlignmentSpec, englishSpec } from "./spec.js";
 import { type Speller, spellers, spokenNumber } from "./spell.js";
-import type { SpeechWord } from "./text.js";
+import { respoken, type SpeechWord, speechWords } from "./text.js";
 
 // voidful/wav2vec2-xlsr-multilingual-56 (Apache-2.0) as converted to ONNX by NewComer00,
 // pinned to one revision. The q4 file: 4-bit weights, about a quarter of the fp32 size.
@@ -163,7 +164,9 @@ export function multilingualSpec(language: string): AlignmentSpec {
     letters: ["", " ", ...letters],
     modelLabels,
     compact: (logits, frames) => compactLogits(logits, frames, columns),
-    words: (text, observed) => multilingualWords(text, language, observed),
+    words: (text, observed, aliases) => multilingualWords(text, language, observed, aliases),
+    respoken: (word, observed) =>
+      respoken(word, observed, (raw) => wordForms(raw, language, alphabet, speller)),
     lettersOnly: (text) => text.toLowerCase().replace(keep, ""),
     comparable: (text) => text.toLowerCase().replace(keep, ""),
     gates: multilingualGates,
@@ -199,31 +202,23 @@ export function compactLogits(
 
 // Display words keep their spelling; only the acoustic match uses the normalised, lower-case
 // form in the language's alphabet.
+// Narration aliases apply as in English (`text.ts#speechWords`).
 export function multilingualWords(
   text: string,
   language: string,
   observed = "",
+  aliases: readonly NarrationAlias[] = [],
 ): readonly SpeechWord[] {
   const speller = spellers[language];
   const alphabet = alphabets[language];
   if (speller === undefined || alphabet === undefined) return [];
-  const words: { text: string; spoken: string }[] = [];
-  for (const textWord of text.trim().split(/\s+/)) {
-    const forms = wordForms(textWord, language, alphabet, speller);
-    const spoken =
-      forms.find((form) => form !== "" && ` ${observed} `.includes(` ${form} `)) ?? forms[0] ?? "";
-    if (spoken === "") {
-      const previous = words.at(-1);
-      if (previous !== undefined) previous.text += ` ${textWord}`;
-      continue;
-    }
-    words.push({ text: textWord, spoken });
-  }
-  if (words.length === 0)
-    throw new Error(
-      `Local subtitles need a ${languageInfo(language).name} transcript with spoken words. Check the article text, then Retry stage.`,
-    );
-  return words;
+  return speechWords(
+    text,
+    observed,
+    aliases,
+    (raw) => wordForms(raw, language, alphabet, speller),
+    `Local subtitles need a ${languageInfo(language).name} transcript with spoken words. Check the article text, then Retry stage.`,
+  );
 }
 
 function wordForms(

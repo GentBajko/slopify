@@ -181,7 +181,7 @@ export function estimateRun(
         for (const source of known)
           text(
             "Narration Preparation",
-            preparationMessages(rendered.narration ?? "", source, draft.language).reduce(
+            preparationMessages(rendered.narration ?? "", source, [], draft.language).reduce(
               (n, message) => n + message.content.length,
               0,
             ),

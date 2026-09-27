@@ -1,4 +1,5 @@
 import type { Format, ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
+import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import type { DocumentSettings } from "../document/model.js";
 import type { Chunking } from "../narration/chunk.js";
 import type { SubtitleConfig } from "../subtitles/model.js";
@@ -43,6 +44,9 @@ export interface VoiceChoice extends ProviderChoice {
   // Also use the pronunciations of the user's other projects. Absent reads as off, so a
   // project saved before this existed narrates exactly as it did.
   readonly shareGlossary?: boolean | undefined;
+  // Say Library → Aliases' words the way they are listed ("Dr." as "Doctor"). Absent reads as
+  // off, so a project saved before aliases existed narrates exactly as it did.
+  readonly useNarrationAliases?: boolean | undefined;
 }
 
 // One shared pronunciation, copied into a project from another project's glossary.
@@ -126,11 +130,21 @@ export interface ReferenceSettings {
   readonly thumbnail?: boolean | undefined;
 }
 
+// What a run makes: the long video (absent, which is what every project saved before the
+// mode existed was) or one vertical short of about a minute, made by the same stages with
+// the Shorts renderer's word-by-word captions (`admission/short-mode.ts`).
+export const runModes = ["video", "short"] as const;
+export type RunMode = (typeof runModes)[number];
+
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
+  readonly mode?: RunMode | undefined;
   // The other projects' pronunciations as copied when this one started or was last refreshed
   // in Edit project; used only while `audio.shareGlossary` is on.
   readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;
+  // Library → Aliases as copied when this project started or was last refreshed in Edit
+  // project; used only while `audio.useNarrationAliases` is on. Absent when none were copied.
+  readonly narrationAliases?: readonly NarrationAlias[] | undefined;
   readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;

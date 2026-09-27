@@ -302,3 +302,43 @@ it("deletes the selected version and refreshes the list", async () => {
   await screen.findByText("No templates yet. Use Save a setup to keep a Play draft for reuse.");
   expect(remove).toHaveBeenCalledOnce();
 });
+
+it("shows a template's keywords with what each feeds, the topic saved empty", async () => {
+  const user = userEvent.setup();
+  const document = {
+    ...freshDraftDocument,
+    librarySnapshot: {
+      prompts: [
+        {
+          id: "p1",
+          kind: "article" as const,
+          name: "Dossier",
+          body: "Write about {{Topic}} in {{minWords}} words.",
+          slots: ["Topic", "minWords"],
+          updatedAt: "2026-09-13T00:00:00Z",
+        },
+      ],
+      entries: [],
+    },
+    form: {
+      ...freshDraftDocument.form,
+      title: "Lore: {{Topic}}",
+      articlePrompt: "Dossier",
+      values: { Topic: "", minWords: "1500" },
+    },
+  };
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({ ...template, document }),
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `Keywords of ${template.name}` }));
+  const list = await screen.findByRole("list", { name: "Keywords" });
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows[0]?.textContent).toContain("{{Topic}}");
+  expect(rows[0]?.textContent).toContain("Feeds Project title · Article · left empty in templates");
+  expect(rows[1]?.textContent).toContain("1500");
+  expect(rows[1]?.textContent).toContain("Feeds Article");
+});

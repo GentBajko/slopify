@@ -35,7 +35,7 @@ it("shows shared text generation for a provided article and preserves preparatio
     };
     return (
       <>
-        <ContentSection {...props} entries={[]} fields={[]} onLibrary={() => {}} />
+        <ContentSection {...props} entries={[]} onLibrary={() => {}} />
         <AudioRail {...props} />
       </>
     );

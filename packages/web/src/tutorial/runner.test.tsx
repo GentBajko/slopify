@@ -1,6 +1,7 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { openSection } from "@/play/play-test-fixture";
 import { downloadItem, jsonAnswer, testVersion } from "@/test-app";
 import { at, fill, guide, mount, next, nextHeld, skipTo, start } from "./test-fixture";
 
@@ -155,7 +156,7 @@ describe("the tutorial in the real app", () => {
     const { router, requests } = await mount();
     await start(user);
     await skipTo(user, "play-options");
-    await fill(user, "Project title", "My first video");
+    await fill(user, "Title", "My first video");
     await user.selectOptions(screen.getByLabelText("LLM"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
     await next(user, "play-article");
@@ -184,9 +185,7 @@ describe("the tutorial in the real app", () => {
     await next(user, "play-subtitles");
     await next(user, "play-start");
     expect(requests).not.toContain("POST /api/projects");
-    expect(
-      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
-    ).toBe("false");
+    // The review in the rail refreshes once typing pauses, then the key lights.
     await waitFor(() =>
       expect(
         (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
@@ -217,7 +216,7 @@ describe("the tutorial in the real app", () => {
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
     ).toHaveLength(1);
     await act(() => router.navigate({ to: "/play" }));
-    expect(((await screen.findByLabelText("Project title")) as HTMLInputElement).value).toBe("");
+    expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe("");
     expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("");
   }, 10000);
 
@@ -245,7 +244,7 @@ describe("the tutorial in the real app", () => {
         );
       await start(user);
       await skipTo(user, "play-options");
-      await fill(user, "Project title", "Optional stages");
+      await fill(user, "Title", "Optional stages");
       await user.click(guide().getByRole("button", { name: /^Skip/ }));
       await at("play-article");
       await source("article", "Provide");
@@ -379,10 +378,10 @@ describe("the tutorial in the real app", () => {
         return uploaded;
       },
     });
-    await fill(user, "Project title", "Draft with narration");
-    await user.click(screen.getByRole("button", { name: "Content" }));
+    await fill(user, "Title", "Draft with narration");
+    await openSection("Content");
     await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
+    await openSection("Outputs");
     await user.click(
       within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
         name: "Provide",
@@ -409,13 +408,15 @@ describe("the tutorial in the real app", () => {
     });
     await user.click(guide().getByRole("button", { name: "Exit guide" }));
     await act(() => router.navigate({ to: "/play" }));
-    await user.click(await screen.findByRole("button", { name: "Content" }));
-    expect(((await screen.findByLabelText("Project title")) as HTMLInputElement).value).toBe(
+    await openSection("Content");
+    expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe(
       "Draft with narration",
     );
     expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("My article");
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
-    expect(screen.getByText("narration.wav")).not.toBeNull();
+    await openSection("Outputs");
+    expect(
+      within(screen.getByRole("region", { name: "Narration" })).getByText("narration.wav"),
+    ).not.toBeNull();
     expect(screen.getByText("Staged")).not.toBeNull();
     expect(screen.queryByText("Copying")).toBeNull();
   });
@@ -434,18 +435,18 @@ describe("the tutorial in the real app", () => {
         return uploaded;
       },
     });
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
+    await openSection("Outputs");
     const audioSource = () => within(screen.getByRole("radiogroup", { name: "audio source" }));
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
+    await openSection("Outputs");
     await user.click(audioSource().getByRole("radio", { name: "Provide" }));
     await user.upload(
       screen.getByLabelText("Narration file"),
       new File(["audio"], "old-narration.wav", { type: "audio/wav" }),
     );
     await user.click(audioSource().getByRole("radio", { name: "Generate" }));
-    await user.click(screen.getByRole("button", { name: "Content" }));
+    await openSection("Content");
     await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
+    await openSection("Outputs");
     await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
     await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
     await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
@@ -457,12 +458,12 @@ describe("the tutorial in the real app", () => {
       "fal-ai/flux-2",
     );
     await user.click(screen.getByRole("checkbox", { name: "My images" }));
-    await user.click(screen.getByRole("button", { name: "Content" }));
-    await fill(user, "Project title", "Generated narration instead");
+    await openSection("Content");
+    await fill(user, "Title", "Generated narration instead");
     await user.selectOptions(screen.getByLabelText("LLM"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
     await fill(user, "topic", "Mountains");
-    await user.click(screen.getByRole("button", { name: "Review" }));
+    await openSection("Review");
     await waitFor(() =>
       expect(
         (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
@@ -486,9 +487,9 @@ describe("the tutorial in the real app", () => {
         })(new Request("http://slopify.test")),
       );
     });
-    await user.click(await screen.findByRole("button", { name: "Content" }));
-    expect(((await screen.findByLabelText("Project title")) as HTMLInputElement).value).toBe("");
-    await user.click(screen.getByRole("button", { name: "Outputs" }));
+    await openSection("Content");
+    expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe("");
+    await openSection("Outputs");
     await user.click(audioSource().getByRole("radio", { name: "Provide" }));
     expect(screen.queryByText("old-narration.wav")).toBeNull();
     expect(screen.queryByText("Staged")).toBeNull();

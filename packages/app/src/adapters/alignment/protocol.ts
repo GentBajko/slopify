@@ -6,6 +6,17 @@ export const workerInput = z.object({
   text: z.string(),
   // The project language; absent is English and its model.
   language: z.string().optional(),
+  // Narration aliases the audio was read with; see speechWords.
+  aliases: z
+    .array(
+      z.object({
+        written: z.string(),
+        spoken: z.string(),
+        wholeWord: z.boolean(),
+        caseSensitive: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 export type WorkerInput = z.infer<typeof workerInput>;
 export const omissionSchema = z.object({

@@ -64,6 +64,7 @@ export const libraryTables = [
   "entries",
   "voices",
   "document_themes",
+  "narration_aliases",
   "project_templates",
   "project_template_revisions",
   "schedules",

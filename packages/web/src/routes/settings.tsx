@@ -24,6 +24,7 @@ import { Voices } from "@/components/voices";
 import { Welcome } from "@/components/welcome";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
+import { SampleSettings } from "@/onboarding/sample-settings";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
@@ -172,6 +173,7 @@ export function SettingsRoute({
           {section === "channel-links" ? <ChannelLinksSettings /> : null}
           {section === "studio" ? <StudioSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
+          {section === "storage" ? <SampleSettings /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (
             <SectionHead

@@ -53,6 +53,7 @@ export const playDraftFormSchema = z
         voice: text,
         usePronunciationGlossary: z.boolean().optional(),
         shareGlossary: z.boolean().optional(),
+        useNarrationAliases: z.boolean().optional(),
       })
       .readonly(),
     images: provider.readonly(),
@@ -144,6 +145,9 @@ export const playDraftFormSchema = z
     edgeSilenceSeconds: text.default(String(defaultEdgeSilenceSeconds)),
     zoomPercent: text.default(String(defaultZoomPercent)),
     motionStyle: z.enum(motionStyles).default(defaultMotionStyle),
+    // The silence between narration segments for this run, raw text like the numbers above.
+    // Absent or empty: the gap Settings has.
+    silenceGapSeconds: text.optional(),
     // Absent on drafts and templates saved before the edit settings: today's slideshow. Every
     // field is a pick from a list, so it is kept as the settings themselves.
     videoEdit: videoEditSchema.strict().readonly().optional(),

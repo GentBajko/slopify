@@ -1,4 +1,5 @@
 import type { AppType } from "@app/edge/http/app.js";
+import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import type {
   Project,
   ProjectListing,
@@ -755,6 +756,19 @@ export async function readSharedPronunciations(
   except: string,
 ): Promise<{ readonly entries: readonly SharedPronunciation[]; readonly projects: number }> {
   return read(await api.client.pronunciations.shared.$get({ query: { except } }));
+}
+
+// Library → Aliases: the whole ordered list, read and saved at once.
+export async function readNarrationAliases(
+  api: Api,
+): Promise<{ readonly aliases: readonly NarrationAlias[] }> {
+  return read(await api.client.pronunciations.aliases.$get());
+}
+export async function saveNarrationAliases(
+  api: Api,
+  aliases: readonly NarrationAlias[],
+): Promise<SaveResult<{ readonly aliases: readonly NarrationAlias[] }>> {
+  return saved(await api.client.pronunciations.aliases.$put({ json: { aliases: [...aliases] } }));
 }
 
 export async function removeEntry(api: Api, id: string): Promise<void> {

@@ -25,6 +25,7 @@ import { entriesQuery, promptsQuery, providersQuery, voicesQuery } from "@/queri
 import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
 import { useVideoEditControls } from "@/video/edit-controls";
+import { StylePreview } from "@/video/style-preview";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -580,6 +581,21 @@ export function RevisionForm(
               problem={problem}
             />
           </div>
+          {/* Mounted only while the section is open: each change renders a few seconds of video. */}
+          {current !== "subtitles" || config.sources.video === "off" ? null : (
+            <StylePreview
+              settings={{
+                format: config.format,
+                subtitles: {
+                  mode: (config.subtitles ?? defaultSubtitles).mode,
+                  fontId: (config.subtitles ?? defaultSubtitles).fontId,
+                  fontSize: (config.subtitles ?? defaultSubtitles).fontSize,
+                  position: (config.subtitles ?? defaultSubtitles).position ?? "bottom",
+                },
+                videoEdit: config.videoEdit,
+              }}
+            />
+          )}
         </section>
         {props.renderContent?.({
           view,

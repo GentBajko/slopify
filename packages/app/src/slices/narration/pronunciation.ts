@@ -5,8 +5,21 @@ export interface GlossaryEntry {
   readonly term: string;
   readonly ipa: readonly string[];
 }
+// A glossary row that can't be used: its 1-based entry number and why, never its contents
+// (the glossary is model-written text and must not be echoed into messages).
+export interface SkippedGlossaryRow {
+  readonly row: number;
+  readonly reason: string;
+}
 export type GlossaryResult =
-  | { readonly ok: true; readonly entries: readonly GlossaryEntry[] }
+  | {
+      readonly ok: true;
+      readonly entries: readonly GlossaryEntry[];
+      // Rows left out, each with its reason. One bad row no longer stops the narration: the
+      // rest of the glossary still applies and the skipped term is read as ordinary text.
+      // Absent when every row was used, so a glossary that always parsed reads as before.
+      readonly skipped?: readonly SkippedGlossaryRow[];
+    }
   | { readonly ok: false; readonly reason: string };
 
 interface MarkdownNode {
@@ -38,24 +51,17 @@ function rowsOf(node: MarkdownNode): readonly string[] {
     const rows = node.children ?? [];
     return rows.slice(1).map((row) => {
       const cells = row.children ?? [];
-      return cells.length >= 2 ? cells.slice(0, 2).map(textOf).join(": ") : textOf(row);
+      if (cells.length < 2) return textOf(row);
+      const [term, ipa] = cells.slice(0, 2).map((cell) => textOf(cell).trim());
+      // A table's IPA column is often written without the slashes ("| Tiamat | ˈtiːəmɑːt |");
+      // the column already says what the cell is, so a bare cell reads as one /…/ pronunciation.
+      return `${term}: ${ipa !== undefined && ipa !== "" && !ipa.includes("/") ? `/${ipa}/` : ipa}`;
     });
   }
   if (node.type === "paragraph") return textOf(node).split(/\r?\n/u);
   if (node.type === "root" || node.type === "list" || node.type === "listItem")
     return (node.children ?? []).flatMap(rowsOf);
   return ["(unsupported glossary block)"];
-}
-function refused(row: number, reason: string): GlossaryResult {
-  return {
-    ok: false,
-    reason:
-      "Pronunciation Glossary entry " +
-      row +
-      ": " +
-      reason +
-      ". Edit the glossary or turn off Use Pronunciation Glossary.",
-  };
 }
 function termIdentity(term: string): string {
   return Array.from(term, (character) => {
@@ -78,7 +84,11 @@ export function parsePronunciationGlossary(
   const kind = english ? "standard-English IPA" : "IPA";
   const rows = rowsOf(remark().use(remarkGfm).parse(markdown));
   const entries = new Map<string, GlossaryEntry>();
+  const skipped: SkippedGlossaryRow[] = [];
   for (const [index, row] of rows.entries()) {
+    const skip = (reason: string): void => {
+      skipped.push({ row: index + 1, reason });
+    };
     const trimmed = row.trim();
     if (trimmed === "" || /^pronunciation glossary:?\s*$/iu.test(trimmed)) continue;
     const pair = /^([^:]+):\s*(.+)$/u.exec(trimmed);
@@ -89,24 +99,52 @@ export function parsePronunciationGlossary(
       pronunciation === undefined ||
       !/[\p{L}\p{N}]/u.test(term) ||
       /[/[\]<>\p{Cc}]/u.test(term)
-    )
-      return refused(index + 1, "use Term: /IPA/ or a Term | IPA table");
+    ) {
+      skip("use Term: /IPA/ or a Term | IPA table");
+      continue;
+    }
     const notation = /^(\/[^/]+\/(?:\s+\/[^/]+\/)*)(?:\s+[^/]+)?$/u.exec(pronunciation);
-    if (notation?.[1] === undefined) return refused(index + 1, `use slash-delimited ${kind}`);
+    if (notation?.[1] === undefined) {
+      skip(`use slash-delimited ${kind}`);
+      continue;
+    }
     const ipa = Array.from(notation[1].matchAll(/\/([^/]+)\//gu)).flatMap((match) =>
       (match[1] ?? "").trim().split(/\s+/u),
     );
-    if (ipa.length === 0 || ipa.some((word) => !symbols.test(word)))
-      return refused(index + 1, `use ${kind}, not ARPAbet or delivery tags`);
-    if (term.split(" ").length !== ipa.length)
-      return refused(index + 1, "supply one IPA word for each written word");
+    if (ipa.length === 0 || ipa.some((word) => !symbols.test(word))) {
+      skip(
+        english
+          ? "use standard-English IPA only, not ARPAbet, delivery tags or non-English sounds; give a foreign name an English approximation"
+          : "use IPA, not ARPAbet or delivery tags",
+      );
+      continue;
+    }
+    if (term.split(" ").length !== ipa.length) {
+      skip("supply one IPA word for each written word");
+      continue;
+    }
     const key = termIdentity(term);
     const previous = entries.get(key);
-    if (previous !== undefined && previous.ipa.join(" ") !== ipa.join(" "))
-      return refused(index + 1, "conflicting pronunciations were supplied for the same term");
+    if (previous !== undefined && previous.ipa.join(" ") !== ipa.join(" ")) {
+      skip("an earlier entry already gives this term a different pronunciation");
+      continue;
+    }
     if (previous === undefined) entries.set(key, { term, ipa });
   }
-  return { ok: true, entries: [...entries.values()] };
+  return skipped.length === 0
+    ? { ok: true, entries: [...entries.values()] }
+    : { ok: true, entries: [...entries.values()], skipped };
+}
+
+// What a person reads about the skipped rows: where they are and why, never their text.
+export function skippedGlossaryNotice(skipped: readonly SkippedGlossaryRow[]): string | null {
+  if (skipped.length === 0) return null;
+  const rows = skipped.map((one) => `entry ${one.row}: ${one.reason}`).join("; ");
+  return (
+    `Pronunciation Glossary: ${skipped.length === 1 ? "1 entry is" : `${skipped.length} entries are`} ` +
+    `skipped and read as ordinary text (${rows}). The rest of the glossary is used. ` +
+    "To use them, fix those entries in the Pronunciation Glossary at the end of the article in Edit project → Article."
+  );
 }
 
 export interface PronunciationSpan {

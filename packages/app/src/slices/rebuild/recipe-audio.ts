@@ -5,7 +5,12 @@ import { concatArgs } from "../narration/concat.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { pronunciationChunks } from "../narration/pronunciation-chunks.js";
 import type { ScriptSection } from "../voices/script.js";
-import { narrationParts, pronunciationFutureValues, voiceValues } from "./recipe-audio-parts.js";
+import {
+  aliasFutureValues,
+  narrationParts,
+  pronunciationFutureValues,
+  voiceValues,
+} from "./recipe-audio-parts.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -87,6 +92,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       });
       futurePronunciation.push(
         ...pronunciationFutureValues(context, text.glossary, text.article, logicalKey, logicalText),
+        ...aliasFutureValues(context, logicalKey, logicalText),
       );
       const group = narrationParts(
         context,
@@ -111,6 +117,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           "audio:body:future",
           null,
         ),
+        ...aliasFutureValues(context, "audio:body:future", null),
       );
       if (prepare) recipes.push(preparationFuture(context, "body", text.article));
     }
@@ -211,6 +218,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
                 logicalKey,
                 entry.text,
               ),
+              ...aliasFutureValues(context, logicalKey, entry.text),
             ],
           },
           [...dependencies, ...preparationKeys(recipes, category)],

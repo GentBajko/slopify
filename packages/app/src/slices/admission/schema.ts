@@ -4,6 +4,7 @@ import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
+import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
@@ -16,7 +17,14 @@ import {
   transitionKinds,
 } from "../video/edit-settings.js";
 import { voicesSettingsSchema } from "../voices/model.js";
-import { entryModes, formats, motionStyles, referenceSources, stageSources } from "./model.js";
+import {
+  entryModes,
+  formats,
+  motionStyles,
+  referenceSources,
+  runModes,
+  stageSources,
+} from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
@@ -48,6 +56,8 @@ export const videoEditSchema = z.object({
 // The shape Play posts and the shape `projects.config` holds, in one place: the second
 // is the first plus the rendered prompt texts.
 export const runDraftSchema = z.object({
+  // Absent is the long video.
+  mode: z.enum(runModes).optional(),
   checkpoints: z
     .array(checkpointStageSchema)
     .max(3)
@@ -74,8 +84,10 @@ export const runDraftSchema = z.object({
       voice: z.string(),
       usePronunciationGlossary: z.boolean().optional(),
       shareGlossary: z.boolean().optional(),
+      useNarrationAliases: z.boolean().optional(),
     })
     .optional(),
+  narrationAliases: narrationAliasesSchema.optional(),
   sharedGlossary: z
     .array(
       z.object({

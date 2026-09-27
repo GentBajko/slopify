@@ -13,7 +13,7 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
   request.signal.throwIfAborted();
   if (languageInfo(request.language).timing === "sentences") return timeSentences(request);
   const english = request.language === undefined || request.language === "en";
-  alignmentSpecFor(request.language).words(request.text);
+  alignmentSpecFor(request.language).words(request.text, "", request.aliases ?? []);
   await mkdir(request.cacheDir, { recursive: true, mode: 0o700 });
   const release = await claimWorker(request.cacheDir, request.signal);
   try {
@@ -38,6 +38,7 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
           pcmPath,
           text: request.text,
           ...(english ? {} : { language: request.language }),
+          ...(request.aliases?.length ? { aliases: [...request.aliases] } : {}),
         },
         request.signal,
         (current, total) => request.onProgress?.(25 + Math.round((current / total) * 75), 100),

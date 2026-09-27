@@ -46,7 +46,7 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
     const totalSamples = (await stat(input.pcmPath)).size / 4;
     if (!Number.isInteger(totalSamples) || totalSamples < sampleRate / 10)
       throw new Error("The narration is too short to align subtitles.");
-    const source = spec.words(input.text);
+    const source = spec.words(input.text, "", input.aliases ?? []);
     const output: TimedWord[] = [];
     let cursor = 0;
     let omitted = 0;
@@ -227,8 +227,7 @@ function candidates(
   for (let index = cursor; index < source.length; index += 1) {
     const word = source[index];
     if (word === undefined) break;
-    const normalized = spec.words(word.text, observed)[0];
-    if (normalized === undefined) continue;
+    const normalized = spec.respoken(word, observed);
     if (length + normalized.spoken.length + 1 > 900) break;
     selected.push(normalized);
     length += normalized.spoken.length + 1;

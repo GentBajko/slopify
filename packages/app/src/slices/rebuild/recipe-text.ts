@@ -154,10 +154,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     });
     recipes.push(research);
   }
-  const articleMarkdown =
-    config.sources.article === "provide" || content.articleEdited === true
-      ? (content.articleMarkdown ?? config.provided.article ?? "")
-      : resolved.articleMarkdown;
+  const articleMarkdown = articleMarkdownOf(context);
   const notes =
     config.sources.research === "off"
       ? null
@@ -278,11 +275,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       };
     }
   }
-  const glossary: GlossaryResult | null = !usesPronunciationGlossary(config)
-    ? { ok: true, entries: [] }
-    : endMatter === null
-      ? null
-      : withShared(parsePronunciationGlossary(endMatter.glossary, config.language), config);
+  const glossary = glossaryOf(context, endMatter);
   const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
@@ -387,9 +380,32 @@ export function matchingText(
   return selectedText(context, value.key, field);
 }
 
+function articleMarkdownOf(context: RecipeContext): string | null {
+  const { config, content, resolved } = context;
+  return config.sources.article === "provide" || content.articleEdited === true
+    ? (content.articleMarkdown ?? config.provided.article ?? "")
+    : resolved.articleMarkdown;
+}
+function glossaryOf(
+  context: RecipeContext,
+  endMatter: { readonly glossary: string } | null,
+): GlossaryResult | null {
+  if (!usesPronunciationGlossary(context.config)) return { ok: true, entries: [] };
+  if (endMatter === null) return null;
+  return withShared(
+    parsePronunciationGlossary(endMatter.glossary, context.config.language),
+    context.config,
+  );
+}
+// The narration glossary this revision uses, or null while its article is still unwritten.
+export function narrationGlossary(context: RecipeContext): GlossaryResult | null {
+  const markdown = articleMarkdownOf(context);
+  return glossaryOf(context, markdown === null ? null : splitEndMatter(markdown));
+}
+
 // The project's own glossary, then the other projects' pronunciations it copied, when it
-// shares them. An own glossary that doesn't parse still refuses, as before.
+// shares them. Rows the own glossary had to skip are still reported.
 function withShared(own: GlossaryResult, config: RecipeContext["config"]): GlossaryResult {
   if (!own.ok || config.audio?.shareGlossary !== true) return own;
-  return { ok: true, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
+  return { ...own, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
 }

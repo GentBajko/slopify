@@ -13,6 +13,7 @@ import { RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
+import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
@@ -22,6 +23,7 @@ import {
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
+import { TemplateKeywords } from "@/templates/keywords";
 import { LibraryToolbar } from "./library.js";
 
 export function TemplatesRoute({
@@ -62,7 +64,10 @@ export function TemplatesRoute({
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
+  // The template whose keywords are shown under its row.
+  const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   const applications = useRef(new Map<string, string>());
@@ -180,12 +185,24 @@ export function TemplatesRoute({
             : undefined;
   return (
     <div>
+      <PacksDrawer
+        open={adding}
+        onClose={() => setAdding(false)}
+        onInstalled={() =>
+          void client.invalidateQueries({ queryKey: templatesQuery(api).queryKey })
+        }
+      />
       <LibraryToolbar
         action={
-          <Button type="button" onClick={() => setSaving(true)} aria-expanded={saving}>
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
-            Save a setup
-          </Button>
+          <>
+            <Button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+              Add pack
+            </Button>
+            <Button type="button" onClick={() => setSaving(true)} aria-expanded={saving}>
+              <PlusIcon aria-hidden="true" className="size-[14px]" />
+              Save a setup
+            </Button>
+          </>
         }
       >
         <Picker
@@ -263,6 +280,17 @@ export function TemplatesRoute({
                 <Button
                   type="button"
                   variant="ghost"
+                  aria-expanded={keywordsOf === template.id}
+                  aria-label={`Keywords of ${template.name}`}
+                  onClick={() =>
+                    setKeywordsOf((current) => (current === template.id ? null : template.id))
+                  }
+                >
+                  Keywords
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
                   aria-label={`Delete ${template.name}`}
                   disabled={pending}
                   onClick={() => {
@@ -273,6 +301,11 @@ export function TemplatesRoute({
                   Delete
                 </Button>
               </div>
+              {keywordsOf === template.id ? (
+                <div className="basis-full pb-2">
+                  <TemplateKeywords template={template} />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -304,6 +337,10 @@ export function TemplatesRoute({
             open Play
           </Link>{" "}
           to prepare one.
+        </p>
+        <p className="mb-4 text-small text-ink2">
+          A template keeps the settings, not one video&apos;s topic: keywords the project title
+          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
         </p>
         <form
           id="save-template-form"

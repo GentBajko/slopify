@@ -117,7 +117,7 @@ That binary is a separate program, run as a child process with an argument array
 is licensed under the **GPL-3.0-or-later**. Slopify does not link against it, does not
 embed it, and does not distribute it inside this package; its licence text and the
 location of its corresponding source ship beside it in `ffmpeg-static`. Slopify's own
-code is MIT and stays MIT. Anyone redistributing the downloaded binary takes on the
+code is Apache-2.0 and stays Apache-2.0. Anyone redistributing the downloaded binary takes on the
 GPL's obligations for it, including offering that corresponding source.
 
 Point `SLOPIFY_FFMPEG` at your own build to use that instead.
@@ -149,7 +149,7 @@ in [SUPPORTERS.md](https://github.com/GentBajko/slopify/blob/main/SUPPORTERS.md)
 
 ## Licence
 
-MIT. The ffmpeg binary fetched at install time is a separate GPL-3.0-or-later program,
+Apache-2.0 (see LICENSE and NOTICE; keep the NOTICE when redistributing). The ffmpeg binary fetched at install time is a separate GPL-3.0-or-later program,
 as described above.
 
 Source, issues and the full guide: <https://github.com/GentBajko/slopify>

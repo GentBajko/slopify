@@ -1,6 +1,7 @@
 import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import { reviewsNarration } from "../reviews/rules.js";
 import { timingOperation } from "../subtitles/model.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
@@ -40,14 +41,15 @@ export function exportRecipes(
       ),
     );
   const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
-  // The YouTube description's chapters, the shorts' clips and captions, and the video's cuts,
-  // chapter cards and chapter openers use the same word timing, so it runs for them even with
-  // captions off; only the caption files below wait for captions.
+  // The YouTube description's chapters, the shorts' clips and captions, a short's own
+  // captions, and the video's cuts, chapter cards and chapter openers use the same word timing,
+  // so it runs for them even with captions off; only the caption files below wait for captions.
   const voices = usesVoices(config) ? config.voices : undefined;
   if (
     !captions &&
     !usesYoutubeDescription(config) &&
     !usesShorts(config) &&
+    !usesShortMode(config) &&
     !editNeedsTiming(config) &&
     !reviewsNarration(config) &&
     voices?.audioFiles !== true
