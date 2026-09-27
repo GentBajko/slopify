@@ -100,6 +100,10 @@ export const planningHelp = {
     title: "Generate topics now",
     body: "Asks the LLM for new topics right away, at least 5, even when the queue is full and even during the 5 minutes Slopify waits after a failed try. One LLM call. When holding for approval they wait for you; otherwise they join the queue.",
   },
+  "planning.schedule.held-keywords": {
+    title: "Keywords of a waiting topic",
+    body: "The template's other keywords, set for this one topic's run, the same as a column in the queue's table. Leave one empty to use the schedule's every-run value (shown greyed). They go with the topic into the queue when you approve it.",
+  },
   "planning.schedule.held": {
     title: "Topics waiting",
     body: "Topics the LLM suggested, waiting for you. Approve adds one to the end of the queue; Edit changes its words first; Reject drops it for good, so it is never suggested again. Approve all queues every one in order. Waiting topics count toward Keep at least.",

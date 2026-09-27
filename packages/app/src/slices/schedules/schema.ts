@@ -157,10 +157,22 @@ export type ScheduleCreate = z.infer<typeof scheduleCreateSchema>;
 export type ScheduleUpdate = z.infer<typeof scheduleUpdateSchema>;
 export type ScheduleSummary = z.infer<typeof scheduleSummarySchema>;
 export type ScheduleRun = z.infer<typeof scheduleRunSchema>;
+// `values` are the keywords the person set on a held topic before approving it; they go with it
+// into the queue. Absent from a reply of a Slopify before they existed: none.
 export const heldTopicSchema = z
-  .object({ id, title: z.string(), rank: z.number().int(), createdAt: z.string() })
+  .object({
+    id,
+    title: z.string(),
+    values: z.record(z.string(), z.string()).readonly().default({}),
+    rank: z.number().int(),
+    createdAt: z.string(),
+  })
   .strict()
   .readonly();
+// Edit on a held topic: its title, and its keywords when given (replacing the ones it had).
+export const heldTopicEditSchema = z
+  .object({ title: z.string(), values: z.record(keywordName, z.string()).optional() })
+  .strict();
 export type HeldTopic = z.infer<typeof heldTopicSchema>;
 // Reordering is by position against the version the person saw, so a run taking the first
 // topic meanwhile makes the move refuse instead of moving the wrong one.

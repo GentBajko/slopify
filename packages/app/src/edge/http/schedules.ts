@@ -7,6 +7,7 @@ import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.
 import {
   calendarMaxDays,
   calendarSchema,
+  heldTopicEditSchema,
   heldTopicSchema,
   queueMax,
   scheduleCreateSchema,
@@ -258,10 +259,10 @@ function routes(deps: ScheduleDeps | undefined) {
       .put(
         "/:id/topics/held/:topicId",
         zValidator("param", topicParam, onInvalid),
-        zValidator("json", z.object({ title: z.string() }).strict(), onInvalid),
+        zValidator("json", heldTopicEditSchema, onInvalid),
         (c) => {
           const { id: scheduleId, topicId } = c.req.valid("param");
-          const result = editHeldTopic(service(), scheduleId, topicId, c.req.valid("json").title);
+          const result = editHeldTopic(service(), scheduleId, topicId, c.req.valid("json"));
           return result.ok ? c.json(heldTopicSchema.parse(result.value)) : refused(c, result);
         },
       )

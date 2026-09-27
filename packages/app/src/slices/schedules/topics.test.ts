@@ -26,6 +26,7 @@ import {
   generationDue,
   generationRetryMs,
   heldTopics,
+  heldValuesKey,
   knownTitles,
   moveTopic,
   parseTopics,
@@ -45,6 +46,8 @@ function setup(options: {
   readonly answers: (call: Call) => Promise<string>;
   // In place of the fake: the real standalone call, for the tests that meter it.
   readonly topicLlm?: TopicLlm;
+  // More keywords the template stores values for, beside {{Topic}}.
+  readonly keywords?: Readonly<Record<string, string>>;
 }) {
   const h = startFixture();
   const templateId = randomUUID();
@@ -56,7 +59,7 @@ function setup(options: {
       form: {
         ...h.document.form,
         title: "D&D Lore: {{Topic}}",
-        values: { Topic: "" },
+        values: { Topic: "", ...options.keywords },
         llm: { provider: "template-llm", model: "template-model" },
       },
     },
@@ -285,7 +288,9 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     if (first === undefined || second === undefined || third === undefined)
       throw new Error("three held topics");
     expect([first.title, second.title, third.title]).toEqual(["Tarrasque", "Orcus", "Demogorgon"]);
-    expect(editHeldTopic(s.deps, s.id, third.id, "Demogorgon, Prince of Demons").ok).toBe(true);
+    expect(
+      editHeldTopic(s.deps, s.id, third.id, { title: "Demogorgon, Prince of Demons" }).ok,
+    ).toBe(true);
     expect(rejectHeldTopic(s.deps, s.id, second.id).ok).toBe(true);
     const approved = approveHeldTopics(s.deps, s.id, [first.id], { [first.id]: "The Tarrasque" });
     expect(approved.ok && approved.value.items.map((item) => item.title)).toEqual([
@@ -307,6 +312,49 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     expect(heldTopics(s.deps, s.id).map((topic) => topic.title)).toEqual(["Asmodeus"]);
     const second_call = s.calls[1]?.messages.map((message) => message.content).join("\n") ?? "";
     expect(second_call).toContain("- Orcus");
+  } finally {
+    s.h.close();
+  }
+});
+
+it("lets Edit set a held topic's keywords, checks them, and queues them with it", async () => {
+  const s = setup({
+    generation: hold(2),
+    keywords: { "Word Count": "8000", Tone: "calm" },
+    answers: async () => JSON.stringify(["Tiamat", "Vecna"]),
+  });
+  try {
+    await generateTopics(s.deps, s.id);
+    const [first, second] = heldTopics(s.deps, s.id);
+    if (first === undefined || second === undefined) throw new Error("two held topics");
+    expect(first.values).toEqual({});
+    const refused = editHeldTopic(s.deps, s.id, first.id, {
+      title: "Tiamat",
+      values: { Mood: "grim" },
+    });
+    expect(refused).toMatchObject({ ok: false, reason: "invalid-topics" });
+    expect(!refused.ok && refused.message).toContain("“Mood” is not a keyword of this template");
+    const edited = editHeldTopic(s.deps, s.id, first.id, {
+      title: "Tiamat, Queen of Dragons",
+      values: { "Word Count": " 12000 ", Tone: "" },
+    });
+    expect(edited).toMatchObject({
+      ok: true,
+      value: { title: "Tiamat, Queen of Dragons", values: { "Word Count": "12000" } },
+    });
+    // A title-only edit keeps the keywords set before.
+    editHeldTopic(s.deps, s.id, first.id, { title: "Tiamat" });
+    expect(heldTopics(s.deps, s.id)[0]?.values).toEqual({ "Word Count": "12000" });
+    editHeldTopic(s.deps, s.id, second.id, { title: "Vecna", values: { Tone: "grim" } });
+    rejectHeldTopic(s.deps, s.id, second.id);
+    const approved = approveHeldTopics(s.deps, s.id, "all");
+    expect(approved.ok && approved.value.items).toEqual([
+      { title: "Tiamat", values: { "Word Count": "12000" } },
+    ]);
+    // Nothing is left behind for topics no longer held.
+    expect(
+      s.h.deps.db.prepare("SELECT value FROM settings WHERE key=?").get(heldValuesKey),
+    ).toEqual({ value: "{}" });
   } finally {
     s.h.close();
   }

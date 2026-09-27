@@ -186,16 +186,18 @@ export async function rejectHeldTopic(
   );
 }
 
+// `values` replaces the keywords the topic sets; left out, it keeps them.
 export async function editHeldTopic(
   api: Api,
   id: string,
   topicId: string,
   title: string,
+  values?: Readonly<Record<string, string>>,
 ): Promise<ScheduleReply<HeldTopic>> {
   return responseOf(
     await api.fetch(
       topicPath(api, id, `held/${encodeURIComponent(topicId)}`),
-      json("PUT", { title }),
+      json("PUT", values === undefined ? { title } : { title, values }),
     ),
     heldTopicSchema,
   );

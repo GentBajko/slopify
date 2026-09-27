@@ -1,14 +1,16 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
+import { templateKeywords } from "@app/slices/schedules/topic-list.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Input } from "@/components/kit/field";
+import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { readProjectTemplate } from "@/templates/api";
 import {
   approveAllHeldTopics,
   approveHeldTopic,
@@ -23,6 +25,18 @@ import {
 } from "./api";
 import { formatScheduleDate } from "./time";
 
+interface Editing {
+  readonly id: string;
+  readonly title: string;
+  readonly values: Readonly<Record<string, string>>;
+}
+
+// "Word Count: 12000 · Tone: calm": the keywords a held topic sets, under its title.
+export function heldValuesLine(values: Readonly<Record<string, string>>): string | undefined {
+  const set = Object.entries(values);
+  return set.length === 0 ? undefined : set.map(([name, value]) => `${name}: ${value}`).join(" · ");
+}
+
 // A schedule's topic generation: what went wrong last, a button to ask now, and the topics
 // held for approval with a visible action on every row.
 export function TopicGenerationPanel({
@@ -33,9 +47,7 @@ export function TopicGenerationPanel({
   const { api } = useApp();
   const client = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<{ readonly id: string; readonly title: string } | null>(
-    null,
-  );
+  const [editing, setEditing] = useState<Editing | null>(null);
   const live =
     schedule.deletedAt === null && (schedule.status === "active" || schedule.status === "paused");
   const held = useQuery({
@@ -48,6 +60,22 @@ export function TopicGenerationPanel({
       return reply.value;
     },
   });
+  // The template's keywords, which Edit offers beside the title, as the queue's table does.
+  const template = useQuery({
+    queryKey: ["project-template", schedule.templateId],
+    enabled: live && schedule.topicGeneration.mode === "hold",
+    queryFn: async () => {
+      const reply = await readProjectTemplate(api, schedule.templateId);
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+  });
+  const form = template.data?.document.form;
+  const keywords = (form === undefined ? [] : templateKeywords(form)).filter(
+    (name) => name !== schedule.topicKeyword,
+  );
+  // What a keyword left empty falls back on: the schedule's every-run value, else the template's.
+  const everyRun = (name: string): string => schedule.values[name] ?? form?.values[name] ?? "";
   const action = useMutation({
     mutationFn: (job: () => Promise<ScheduleReply<unknown>>) => job(),
     onSuccess: (reply) => {
@@ -133,19 +161,41 @@ export function TopicGenerationPanel({
                   key={topic.id}
                   title={
                     editing?.id === topic.id ? (
-                      <Input
-                        aria-label={`Edit ${topic.title}`}
-                        className="w-full"
-                        maxLength={200}
-                        value={editing.title}
-                        onChange={(event) =>
-                          setEditing({ id: topic.id, title: event.target.value })
-                        }
-                      />
+                      <div className="flex min-w-0 flex-col gap-2">
+                        <Input
+                          aria-label={`Edit ${topic.title}`}
+                          className="w-full"
+                          maxLength={200}
+                          value={editing.title}
+                          onChange={(event) =>
+                            setEditing({ ...editing, title: event.target.value })
+                          }
+                        />
+                        {keywords.length === 0 ? null : (
+                          <div className="grid grid-cols-1 gap-2 min-[600px]:grid-cols-2">
+                            {keywords.map((name) => (
+                              <Field key={name} label={name} tip="planning.schedule.held-keywords">
+                                <Input
+                                  maxLength={2000}
+                                  placeholder={everyRun(name) || "Not set"}
+                                  value={editing.values[name] ?? ""}
+                                  onChange={(event) =>
+                                    setEditing({
+                                      ...editing,
+                                      values: { ...editing.values, [name]: event.target.value },
+                                    })
+                                  }
+                                />
+                              </Field>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       topic.title
                     )
                   }
+                  meta={editing?.id === topic.id ? undefined : heldValuesLine(topic.values)}
                   actions={
                     editing?.id === topic.id ? (
                       <>
@@ -154,7 +204,17 @@ export function TopicGenerationPanel({
                           disabled={busy || editing.title.trim() === ""}
                           onClick={() =>
                             action.mutate(() =>
-                              editHeldTopic(api, schedule.id, topic.id, editing.title.trim()),
+                              editHeldTopic(
+                                api,
+                                schedule.id,
+                                topic.id,
+                                editing.title.trim(),
+                                Object.fromEntries(
+                                  Object.entries(editing.values).filter(
+                                    ([, value]) => value.trim() !== "",
+                                  ),
+                                ),
+                              ),
                             )
                           }
                         >
@@ -179,7 +239,9 @@ export function TopicGenerationPanel({
                           variant="quiet"
                           size="small"
                           disabled={busy}
-                          onClick={() => setEditing({ id: topic.id, title: topic.title })}
+                          onClick={() =>
+                            setEditing({ id: topic.id, title: topic.title, values: topic.values })
+                          }
                         >
                           Edit
                         </Button>

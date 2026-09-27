@@ -22,6 +22,7 @@ import {
   type ScheduleReply,
   schedulesKey,
 } from "@/schedules/api";
+import { heldValuesLine } from "@/schedules/held-topics";
 
 // The calendar's side panel: topics Slopify suggested from a schedule's series brief, held for
 // the person to queue or reject. One block per schedule that holds its suggestions.
@@ -156,6 +157,7 @@ function ScheduleSuggestions({
             <ListRow
               key={topic.id}
               title={topic.title}
+              meta={heldValuesLine(topic.values)}
               actions={
                 <>
                   <Button
