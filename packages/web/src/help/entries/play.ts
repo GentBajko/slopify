@@ -331,6 +331,10 @@ export const playHelp = {
     title: "Title on screen",
     body: "Keeps the short's title at the top for the whole clip, large and bold in the caption font, below where the apps draw their own buttons. Default: on.",
   },
+  "play.shorts.preview": {
+    title: "Shorts preview",
+    body: "A few seconds of the sample project's narration and images as a short: vertical, through the same renderer your shorts use, with the big word-by-word captions in your caption font, the title on screen when it is on, and the speed you chose. It renders again by itself a moment after you change a setting, costs no API calls, and Render again forces a fresh one.",
+  },
   "play.shorts.speed": {
     title: "Speed",
     body: "Plays each short faster than the narration, 1.00× to 1.25× in steps of 0.05, with the pitch kept. A little faster suits short-form viewers. Default: 1.00×.",

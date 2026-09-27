@@ -15,9 +15,10 @@ import { SectionHead } from "@/components/kit/section-head";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { renderStylePreview } from "./style-preview-api";
 
-// "See it before you make it": six seconds rendered by the real renderer with the captions
-// and the Look as they are set right now. Renders when shown and again shortly after a
-// setting changes; only the latest request's answer is shown.
+// "See it before you make it": six seconds of the bundled sample's images and narration,
+// rendered by the real renderer with the captions and the Look as they are set right now, or
+// through the Shorts renderer with the Shorts settings. Renders when shown and again shortly
+// after a setting changes; only the latest request's answer is shown.
 
 export interface StylePreviewSettings {
   readonly format: Format;
@@ -31,6 +32,15 @@ export interface StylePreviewSettings {
   readonly previewText?: string | undefined;
   // A picture to draw the preview on instead of the sample stills.
   readonly image?: StylePreviewImage | undefined;
+  // The Shorts layout instead of the video's: 9:16 through the Shorts renderer. Only the
+  // caption font counts of `subtitles` then.
+  readonly shorts?:
+    | {
+        readonly titleOnScreen: boolean;
+        readonly speed?: number | undefined;
+        readonly title?: string | undefined;
+      }
+    | undefined;
 }
 
 // ceiling: long enough that typing a size or stepping through pickers renders once.
@@ -44,7 +54,7 @@ type State =
 
 export function StylePreview({
   settings,
-  label = "Style preview",
+  label,
   drawnOn,
 }: {
   readonly settings: StylePreviewSettings;
@@ -54,9 +64,10 @@ export function StylePreview({
 }): ReactElement {
   const { api } = useApp();
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
-  const { format, subtitles, videoEdit, previewText, image } = settings;
+  const { format, subtitles, videoEdit, previewText, image, shorts } = settings;
   // The picture as text too: a new but equal object must not render again.
   const picture = image === undefined ? "" : JSON.stringify(image);
+  const short = shorts === undefined ? "" : JSON.stringify(shorts);
   // The request as text, so an equal object from a new render does not render again.
   const request = useMemo(
     () =>
@@ -71,6 +82,7 @@ export function StylePreview({
         ...(videoEdit === undefined ? {} : { videoEdit }),
         ...(previewText === undefined || previewText.trim() === "" ? {} : { previewText }),
         ...(picture === "" ? {} : { image: JSON.parse(picture) as unknown }),
+        ...(short === "" ? {} : { shorts: JSON.parse(short) as unknown }),
       }),
     [
       format,
@@ -81,6 +93,7 @@ export function StylePreview({
       videoEdit,
       previewText,
       picture,
+      short,
     ],
   );
   const valid = useMemo(
@@ -133,19 +146,35 @@ export function StylePreview({
     fonts.data?.fonts.find((one) => one.id === subtitles.fontId)?.name ??
     (subtitles.fontId === "default" ? "Barlow" : "Chosen font");
   const summary =
-    subtitles.mode === "burn-in"
-      ? `Captions: ${fontName} ${String(subtitles.fontSize)} · ${positionLabel(subtitles.position)}`
-      : subtitles.mode === "files"
-        ? "Captions: a separate file, which players show in their own style"
-        : "Captions: off";
+    shorts !== undefined
+      ? [
+          `Captions: ${fontName}, word by word`,
+          shorts.titleOnScreen ? "Title on screen" : "No title on screen",
+          shorts.speed === undefined || shorts.speed === 1
+            ? undefined
+            : `${shorts.speed.toFixed(2)}×`,
+        ]
+          .filter((part) => part !== undefined)
+          .join(" · ")
+      : subtitles.mode === "burn-in"
+        ? `Captions: ${fontName} ${String(subtitles.fontSize)} · ${positionLabel(subtitles.position)}`
+        : subtitles.mode === "files"
+          ? "Captions: a separate file, which players show in their own style"
+          : "Captions: off";
 
+  const heading = shorts === undefined ? "Style preview" : "Shorts preview";
+  const portrait = format === "9:16" || shorts !== undefined;
   return (
-    <section aria-label="Style preview" className="min-w-0 space-y-3">
+    <section aria-label={heading} className="min-w-0 space-y-3">
       <SectionHead
         as="h3"
-        title="Style preview"
-        meta="6 seconds rendered with your settings"
-        info="project.video.style-preview"
+        title={heading}
+        meta={
+          shorts === undefined
+            ? "6 seconds of the sample, rendered with your settings"
+            : "A few seconds of the sample as a short, rendered with your settings"
+        }
+        info={shorts === undefined ? "project.video.style-preview" : "play.shorts.preview"}
       >
         <Button
           variant="quiet"
@@ -165,9 +194,9 @@ export function StylePreview({
       {shown === undefined ? null : (
         <Player
           src={shown}
-          label={label}
-          portrait={format === "9:16"}
-          className={format === "9:16" ? "max-w-[270px]" : "max-w-[480px]"}
+          label={label ?? heading}
+          portrait={portrait}
+          className={portrait ? "max-w-[270px]" : "max-w-[480px]"}
         />
       )}
       {state.kind === "pending" ? (

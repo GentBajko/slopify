@@ -231,6 +231,10 @@ export interface ShortRender {
   readonly onProgress: (elapsedMs: number) => void;
   // Level the volume: the target the clip's sound, music and all, is mastered to.
   readonly master?: LoudnessGoal | undefined;
+  // The size the clip is drawn at; absent is the full 1080×1920. The captions keep the full
+  // frame's layout and are scaled with it, so a smaller frame (the style preview) shows them
+  // exactly where a real short does.
+  readonly frame?: { readonly width: number; readonly height: number } | undefined;
 }
 
 // What the master measured, when the run asked for one.
@@ -264,26 +268,27 @@ export async function renderShort(run: ShortRender): Promise<MasterReport | unde
     );
     mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
     copyFileSync(run.font.path, join(workspace, "fonts", `selected${run.font.extension}`));
+    const edit = shortEditList({
+      audioPath: audio,
+      seconds,
+      images: run.images,
+      imageSeconds: run.imageSeconds / speed,
+      motionStyle: run.motionStyle,
+      zoomPercent: run.zoomPercent,
+      ...(run.figures === undefined
+        ? {}
+        : {
+            figures: run.figures.map((figure) => ({
+              ...figure,
+              start: figure.start / speed,
+              end: figure.end / speed,
+            })),
+          }),
+    });
     return await renderSlideshow({
       bin: run.bin,
       master: run.master,
-      edit: shortEditList({
-        audioPath: audio,
-        seconds,
-        images: run.images,
-        imageSeconds: run.imageSeconds / speed,
-        motionStyle: run.motionStyle,
-        zoomPercent: run.zoomPercent,
-        ...(run.figures === undefined
-          ? {}
-          : {
-              figures: run.figures.map((figure) => ({
-                ...figure,
-                start: figure.start / speed,
-                end: figure.end / speed,
-              })),
-            }),
-      }),
+      edit: run.frame === undefined ? edit : { ...edit, ...run.frame },
       output: run.output,
       burnSubtitles: true,
       cwd: workspace,

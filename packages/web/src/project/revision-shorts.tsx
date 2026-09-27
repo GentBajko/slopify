@@ -17,8 +17,9 @@ import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Field, Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Shorts } from "@/play/shorts";
+import { Shorts, shortsPreviewOf } from "@/play/shorts";
 import type { ShortsForm } from "@/play/state";
+import { StylePreview } from "@/video/style-preview";
 import { editOfForm, setPrompt } from "./revision-form-state";
 import { RevisionUpload } from "./revision-upload.js";
 
@@ -112,6 +113,11 @@ export function RevisionShorts({
             disabled={!settings.enabled}
             onChange={onChange}
             onPending={onPending}
+          />
+        }
+        preview={
+          <StylePreview
+            settings={shortsPreviewOf(value, edit.config.subtitles?.fontId ?? "default")}
           />
         }
         onChange={(next) => {

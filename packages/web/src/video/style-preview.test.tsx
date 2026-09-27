@@ -2,6 +2,7 @@ import { legacyVideoEdit } from "@app/slices/video/edit-settings.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
+import { freshShorts, shortsPreviewOf } from "@/play/shorts";
 import {
   type Answer,
   jsonAnswer,
@@ -55,7 +56,7 @@ it("renders the preview with the settings and plays it", async () => {
     testDeps({ "GET /api/fonts": fonts, "POST /api/style-preview": posted.answer }),
   );
   expect(screen.getByRole("heading", { name: "Style preview" })).toBeTruthy();
-  expect(screen.getByText("6 seconds rendered with your settings")).toBeTruthy();
+  expect(screen.getByText("6 seconds of the sample, rendered with your settings")).toBeTruthy();
   expect(await screen.findByRole("status")).toHaveProperty("textContent", "Rendering the preview…");
   release();
   const video = await screen.findByLabelText("Style preview", { selector: "video" });
@@ -109,4 +110,30 @@ it("waits for a valid caption size before rendering", async () => {
   ).toBeTruthy();
   await new Promise((resolve) => setTimeout(resolve, 800));
   expect(posted.bodies).toHaveLength(0);
+});
+
+it("renders the Shorts layout from the Shorts settings", async () => {
+  const posted = recording(
+    jsonAnswer({ hash, url: `/api/style-preview/${hash}.mp4`, cached: false, seconds: 5 }),
+  );
+  renderApp(
+    <StylePreview
+      settings={shortsPreviewOf(
+        { ...freshShorts, enabled: true, titleOnScreen: true, speed: "1.20" },
+        "system-sans",
+      )}
+    />,
+    testDeps({ "GET /api/fonts": fonts, "POST /api/style-preview": posted.answer }),
+  );
+  expect(screen.getByRole("heading", { name: "Shorts preview" })).toBeTruthy();
+  const video = await screen.findByLabelText("Shorts preview", { selector: "video" });
+  expect(video.getAttribute("src")).toBe(`${testOrigin}/api/style-preview/${hash}.mp4`);
+  expect(posted.bodies[0]).toEqual({
+    format: "9:16",
+    subtitles: { mode: "burn-in", fontId: "system-sans", fontSize: 48, position: "bottom" },
+    shorts: { titleOnScreen: true, speed: 1.2 },
+  });
+  expect(
+    await screen.findByText("Captions: System sans, word by word · Title on screen · 1.20×"),
+  ).toBeTruthy();
 });

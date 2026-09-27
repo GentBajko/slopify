@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import type { ShortsForm } from "@/play/state";
+import type { StylePreviewSettings } from "@/video/style-preview";
 
 // The Shorts settings as a form edits them: the draft's own shape, numbers as typed. A new
 // form starts with the title on screen.
@@ -30,6 +31,22 @@ export const freshShorts: ShortsForm = {
   imagePrompt: "",
   titleOnScreen: true,
 };
+
+// What the Shorts preview renders: the sample as a short in the caption font, with the title
+// and the speed as set. A speed not yet chosen or out of range previews at normal speed.
+export function shortsPreviewOf(value: ShortsForm, fontId: string): StylePreviewSettings {
+  const speed = Number(value.speed);
+  return {
+    format: "9:16",
+    subtitles: { mode: "burn-in", fontId, fontSize: 48, position: "bottom" },
+    shorts: {
+      titleOnScreen: value.titleOnScreen === true,
+      ...(Number.isFinite(speed) && speed >= shortsSpeedMin && speed <= shortsSpeedMax
+        ? { speed }
+        : {}),
+    },
+  };
+}
 
 // 1.00, 1.05 … 1.25: the speeds a short may play at.
 const speeds = Array.from(
@@ -52,6 +69,7 @@ export function Shorts({
   problem,
   music,
   musicName,
+  preview,
   onChange,
 }: {
   readonly value: ShortsForm;
@@ -61,6 +79,9 @@ export function Shorts({
   readonly music?: ReactNode;
   // The attached music file's name, which the closed disclosure's summary names.
   readonly musicName?: string | undefined;
+  // The Shorts preview, shown in the open disclosure while Shorts is on; mounted only then,
+  // since each change renders a few seconds of video.
+  readonly preview?: ReactNode;
   readonly onChange: (next: ShortsForm) => void;
 }): ReactElement {
   const id = useId();
@@ -264,6 +285,7 @@ export function Shorts({
             <InfoTip id="play.shorts.full-video-link" />
           </span>
           {music}
+          {open && on && preview !== undefined ? <div className="basis-full">{preview}</div> : null}
           {moreIssue ? (
             <p role="alert" className="basis-full text-small text-red">
               {moreIssue}

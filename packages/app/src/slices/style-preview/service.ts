@@ -4,8 +4,8 @@ import { join } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { PreviewPicture, PreviewPictures } from "./images.js";
 import type { StylePreviewRenderer } from "./render.js";
-import { type StylePreviewRequest, stylePreviewSeconds } from "./schema.js";
-import { normalizeStylePreview, stylePreviewHash } from "./settings.js";
+import type { StylePreviewRequest } from "./schema.js";
+import { normalizeStylePreview, previewSeconds, stylePreviewHash } from "./settings.js";
 
 // Rendered previews are kept in the data folder by the hash of their settings, so a setting
 // changed back, or the same style in another project, plays at once. `force` renders again
@@ -85,7 +85,7 @@ export function createStylePreviews(deps: StylePreviewDeps): StylePreviews {
     const saved = file(hash);
     if (saved === undefined)
       throw new Error("The style preview render finished without writing its video.");
-    return { hash, cached: false, seconds: stylePreviewSeconds, version: saved.version };
+    return { hash, cached: false, seconds: previewSeconds(settings), version: saved.version };
   };
   return {
     file,
@@ -100,7 +100,7 @@ export function createStylePreviews(deps: StylePreviewDeps): StylePreviews {
         return Promise.resolve({
           hash,
           cached: true,
-          seconds: stylePreviewSeconds,
+          seconds: previewSeconds(settings),
           version: saved.version,
         });
       const started = run(hash, settings, picture).finally(() => {

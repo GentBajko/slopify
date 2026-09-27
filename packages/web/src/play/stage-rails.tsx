@@ -11,10 +11,11 @@ import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
-import { freshShorts, Shorts } from "@/play/shorts";
+import { freshShorts, Shorts, shortsPreviewOf } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
+import { StylePreview } from "@/video/style-preview";
 import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
 import { ShowFiguresToggle } from "./describe-figures.js";
@@ -373,6 +374,11 @@ export function VideoExtras({
                 Plays at the volume above under every short and dips while the narrator speaks.
               </p>
             </div>
+          }
+          preview={
+            <StylePreview
+              settings={shortsPreviewOf(form.shorts ?? freshShorts, form.subtitles.fontId)}
+            />
           }
           onChange={(shorts) => update({ shorts })}
         />

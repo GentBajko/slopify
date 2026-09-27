@@ -89,7 +89,7 @@ export const projectHelp = {
   },
   "project.video.style-preview": {
     title: "Style preview",
-    body: "Six seconds rendered on this computer by the real video renderer, with your captions, Look and motion on the establishing image or a cast picture. It renders again by itself a moment after you change a setting. It costs no API calls, only a few seconds of your computer's time. Render again forces a fresh one.",
+    body: "Six seconds of the sample project's narration and images, rendered on this computer by the real video renderer with your captions, Look and motion, on the establishing image or a cast picture when there is one. The captions follow the narration word by word. It renders again by itself a moment after you change a setting. It costs no API calls, only a few seconds of your computer's time. Render again forces a fresh one.",
   },
   "project.edit.article-text": {
     title: "Article text",
