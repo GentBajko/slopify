@@ -23,6 +23,7 @@ import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const providerParam = z.object({ id: z.enum(providerIds) });
+const healthQuery = z.object({ provider: z.enum(providerIds).optional() });
 // ceiling: no format check is allowed on a key, so the only thing said about the value is
 // that it is a string of a length a key could plausibly have. Raise the bound if a provider
 // ever issues something longer.
@@ -78,21 +79,25 @@ export function providerRoutes(deps: AppDeps) {
         dismissFirstRun(deps.db);
         return c.body(null, 204);
       })
-      // "Check all": every CLI signed in, every key valid, every chosen model still offered.
-      .post("/health", async (c) => {
+      // "Check all": every CLI signed in, every key valid, every chosen model still offered and
+      // answering for the key. `?provider=` checks that one alone (its own Check button).
+      .post("/health", zValidator("query", healthQuery, onInvalid), async (c) => {
         if (deps.fetch === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
         const catalogue = deps.catalogue;
         return c.json(
-          await checkProviderHealth({
-            ...readiness,
-            clock: deps.clock,
-            fetch: deps.fetch,
-            probes: keyProbes,
-            ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
-            ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }),
-            ...(deps.cliLogin === undefined ? {} : { login: deps.cliLogin }),
-          }),
+          await checkProviderHealth(
+            {
+              ...readiness,
+              clock: deps.clock,
+              fetch: deps.fetch,
+              probes: keyProbes,
+              ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
+              ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }),
+              ...(deps.cliLogin === undefined ? {} : { login: deps.cliLogin }),
+            },
+            c.req.valid("query").provider,
+          ),
         );
       })
       // Checks for new, repriced and retired models now instead of waiting for the daily check.

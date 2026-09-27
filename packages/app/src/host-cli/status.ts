@@ -11,6 +11,7 @@ import {
   cliProbeTimeoutMs,
   readinessFromProbe,
 } from "../slices/settings/cli-status.js";
+import { type GeminiLoginHost, nodeGeminiLoginHost, readGeminiLogin } from "./gemini-login.js";
 
 export function hostCommandName(id: HostCliId): string {
   return id === "claude-code" ? "claude" : id === "codex-image" ? "codex" : id;
@@ -58,8 +59,10 @@ export async function readHostLogin(
   binary: string,
   id: HostLlmId,
   signal: AbortSignal,
+  gemini: GeminiLoginHost = nodeGeminiLoginHost(),
 ): Promise<HostCliStatus["login"]> {
-  if (id === "gemini") return "unknown";
+  // The Gemini CLI has no status command; its settings and credential files answer instead.
+  if (id === "gemini") return readGeminiLogin(gemini);
   const command = cliCommand(binary);
   return new Promise((resolve) => {
     execFile(

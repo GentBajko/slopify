@@ -12,6 +12,7 @@ import { keyGuides } from "./key-guides.js";
 import { type KeyTestDeps, testProviderKey } from "./key-test.js";
 import type { ProviderId, ProviderStatus } from "./model.js";
 import { isLocalCliProvider } from "./model.js";
+import { modelReach } from "./model-reach.js";
 import { providerStatuses, type ReadinessDeps } from "./readiness.js";
 
 // One line of the health check: what was checked, whether it passed, and what to do if not.
@@ -84,8 +85,14 @@ function overall(
 
 // "Check all" on Settings → Providers: each command-line tool found and signed in, each saved
 // key accepted by its provider, and each chosen model still offered.
-export async function checkProviderHealth(deps: HealthDeps): Promise<HealthReport> {
-  const statuses = await providerStatuses(deps);
+// `only` checks one provider (its own Check button); absent checks every one.
+export async function checkProviderHealth(
+  deps: HealthDeps,
+  only?: ProviderId,
+): Promise<HealthReport> {
+  const statuses = (await providerStatuses(deps)).filter(
+    (status) => only === undefined || status.id === only,
+  );
   const inUse = uses(deps.db);
   const catalogue = deps.catalogue?.();
   const retired = catalogue === undefined ? [] : retiredModelUsage(deps.db, catalogue);
@@ -137,7 +144,7 @@ async function cliHealth(
   let login: HostCliStatus["login"] = "unknown";
   if (status.cliPath?.managedOnHost === true && deps.hostCliStatus !== undefined) {
     login = (await deps.hostCliStatus(status.id)).login;
-  } else if (deps.login !== undefined && source !== "gemini") {
+  } else if (deps.login !== undefined) {
     try {
       login = await deps.login(
         cliPathStatus(deps.db, status.id).command,
@@ -155,14 +162,17 @@ async function cliHealth(
         ? {
             label: "Signed in",
             state: "problem",
-            detail: `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
+            detail:
+              source === "gemini"
+                ? `Gemini CLI is not signed in: ~/.gemini has no Google sign-in and no GEMINI_API_KEY is set. Open a terminal on the computer running it, run "gemini" and choose Login with Google (or set GEMINI_API_KEY), then choose Check all again.`
+                : `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
           }
         : {
             label: "Signed in",
             state: "skipped",
             detail:
               source === "gemini"
-                ? `Gemini CLI has no sign-in check Slopify can ask. Run "gemini" in a terminal once to confirm it is signed in.`
+                ? `Slopify could not tell from the Gemini CLI's files (~/.gemini/settings.json) whether it is signed in. Run "gemini" in a terminal once to confirm it is signed in.`
                 : `Slopify could not tell whether ${name} is signed in. Run "${signInCommand[source]}" in a terminal if runs fail with a sign-in error.`,
           },
   );
@@ -203,6 +213,46 @@ async function cliModels(
     label: "Chosen models",
     state: "problem",
     detail: `${status.displayName} does not offer ${describe(missing)}. Update ${status.displayName}, or pick another model there and save.`,
+  };
+}
+
+// Asks the provider, with the saved key, for each chosen model: a model the account can't use
+// fails here before a run does.
+async function reachable(
+  deps: HealthDeps,
+  status: ProviderStatus,
+  used: readonly { model: string; where: string }[],
+): Promise<HealthCheck> {
+  const name = status.displayName;
+  const found = await modelReach(
+    deps,
+    status.id,
+    used.map((use) => use.model),
+  );
+  if (found === undefined)
+    return {
+      label: "Model reachable",
+      state: "skipped",
+      detail: `${name} has no model check Slopify can ask without generating something. The key works; the first run shows whether the model does.`,
+    };
+  const missing = used.filter((use) => found.get(use.model) === "missing");
+  if (missing.length > 0)
+    return {
+      label: "Model reachable",
+      state: "problem",
+      detail: `${name} does not offer ${describe(missing)} to this key: the model id is wrong, retired, or the account has no access to it. Pick another model there and save, or enable the model for your account, then choose Check all again.`,
+    };
+  const unknown = [...found].filter(([, reach]) => reach === "unknown").map(([model]) => model);
+  if (unknown.length > 0)
+    return {
+      label: "Model reachable",
+      state: "warning",
+      detail: `${name} didn't answer for ${unknown.join(", ")}, so Slopify couldn't confirm the key can use ${unknown.length === 1 ? "it" : "them"}. Check your internet connection, then choose Check all again.`,
+    };
+  return {
+    label: "Model reachable",
+    state: "ok",
+    detail: `${name} answered for ${[...found.keys()].join(", ")} with this key.`,
   };
 }
 
@@ -262,5 +312,6 @@ async function keyedHealth(
       state: "ok",
       detail: "Every chosen model is still offered.",
     });
+  if (used.length > 0 && test.ok) checks.push(await reachable(deps, status, used));
   return { ...base, state: overall(checks, used.length > 0, true), checks };
 }

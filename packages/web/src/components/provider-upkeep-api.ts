@@ -29,8 +29,10 @@ export async function testKey(api: Api, provider: ProviderId): Promise<KeyTestOu
     await api.fetch(`${api.origin}/api/providers/${provider}/key/test`, post),
   );
 }
-export async function checkHealth(api: Api): Promise<HealthReport> {
-  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health`, post));
+// Every provider, or `provider` alone (its own Check again button).
+export async function checkHealth(api: Api, provider?: ProviderId): Promise<HealthReport> {
+  const query = provider === undefined ? "" : `?provider=${encodeURIComponent(provider)}`;
+  return read<HealthReport>(await api.fetch(`${api.origin}/api/providers/health${query}`, post));
 }
 export async function readCatalogue(api: Api): Promise<CatalogueStatus> {
   return read<CatalogueStatus>(await api.fetch(`${api.origin}/api/providers/catalogue`));

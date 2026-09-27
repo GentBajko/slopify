@@ -85,7 +85,7 @@ export const settingsHelp = {
   },
   "settings.health": {
     title: "Health check",
-    body: "Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered. Run it after changing a key or when a run stops at a provider.",
+    body: "Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered and answer for your key. Run it after changing a key or when a run stops at a provider; Check again on a provider's row checks that one alone.",
   },
 
   // Models

@@ -120,6 +120,40 @@ describe("the health check", () => {
     expect(screen.getByText(/Run "codex login"/)).not.toBeNull();
     expect(screen.getByText("Not set up and not used anywhere: fal.ai.")).not.toBeNull();
   });
+
+  it("checks one provider again from its row and shows the new answer", async () => {
+    const asked: string[] = [];
+    const codex = (signedIn: boolean) => ({
+      id: "codex",
+      displayName: "Codex CLI",
+      family: "llm",
+      state: signedIn ? "ok" : "problem",
+      checks: [
+        signedIn
+          ? { label: "Signed in", state: "ok", detail: "Codex CLI is signed in." }
+          : { label: "Signed in", state: "problem", detail: 'Run "codex login".' },
+      ],
+    });
+    renderApp(
+      <ProviderHealthCheck />,
+      testDeps({
+        "POST /api/providers/health": (request) => {
+          const one = new URL(request.url).searchParams.get("provider");
+          asked.push(one ?? "all");
+          return jsonAnswer({
+            checkedAt: "2026-09-27T10:00:00.000Z",
+            providers: [codex(one !== null)],
+          })(request);
+        },
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Check all" }));
+    expect(await screen.findByText("Needs fixing")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Check Codex CLI again" }));
+    expect(await screen.findByText("Ready")).not.toBeNull();
+    expect(screen.queryByText("Needs fixing")).toBeNull();
+    expect(asked).toEqual(["all", "codex"]);
+  });
 });
 
 describe("retired models", () => {
