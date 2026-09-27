@@ -168,6 +168,20 @@ describe("GET/PUT /api/settings/autostart (Docker)", () => {
     );
   });
 
+  it("names Docker Desktop's own setting on a Mac or Windows install, never systemctl", async () => {
+    const { db, paths } = database();
+    const desktop: LoginStart = { ...record, platform: "darwin", desktop: true };
+    const call = app(
+      createAutostartService(db, { kind: "docker", record: async () => desktop }),
+      paths,
+      db,
+    );
+    const view = (await (await call("GET")).json()) as { summary: string; howTo: string };
+    expect(view.summary).toMatch(/Docker Desktop doesn't start when you sign in/u);
+    expect(view.howTo).toMatch(/Start Docker Desktop when you sign in to your computer/u);
+    expect(view.howTo).not.toMatch(/systemctl/u);
+  });
+
   it("says plainly when it can't know, with Docker Desktop's setting", async () => {
     const { db, paths } = database();
     const call = app(

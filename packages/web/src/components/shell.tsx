@@ -13,6 +13,7 @@ import {
 import { type ReactElement, useEffect, useState } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { SupportGlyph } from "@/components/glyph";
@@ -401,6 +402,7 @@ function ShellContent() {
 
       <AppearanceSkin />
       <FirstRunNotice />
+      <AutostartReminder />
       <WhatsNewTour />
       <PatchNotesPopup />
       <VersionPrompt

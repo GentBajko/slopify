@@ -9,7 +9,10 @@ You are asked once:
 
 - on the first-run screen (**Start when I log in** or **No thanks**);
 - in the terminal, the first time `npx @gentbajko/slopify` starts on an interactive terminal:
-  `Start Slopify when you log in? (Y/n)`. Enter means yes.
+  `Start Slopify when you log in? (Y/n)`. Enter means yes;
+- after an update, when neither of those asked (the first-run screen is for new installs, and an
+  update started without a terminal can't ask): a one-time dialog in the app, **Start when I
+  log in** or **No thanks**. Closing it counts as No thanks.
 
 Answering in either place, or using the switch, ends the question for good (the settings row
 `autostart.answered`). Without a terminal, for scripts, use `--autostart` or `--no-autostart`;
@@ -68,15 +71,22 @@ Login starts append their output to `<data folder>/logs/autostart.log`.
 The container already restarts with Docker (`restart: unless-stopped`), so Slopify in Docker
 starts at login exactly when Docker does. Slopify never changes Docker's own settings. The
 `--docker` installer asks `Start Slopify when you log in? (Y/n)` once (or takes `--autostart` /
-`--no-autostart`), then reads, without changing, whether Docker starts by itself:
-`systemctl is-enabled docker.service` for the system Docker, `systemctl --user is-enabled
-docker.service` for rootless Docker. It prints how to turn it on when it is off
-(`sudo systemctl enable docker`, or `systemctl --user enable docker`), and leaves the answer in
-the installation's `activation/login-start.json`, which the container reads read-only as
+`--no-autostart`), then reads, without changing, whether Docker starts by itself. With Docker
+Desktop (always on macOS and Windows, and on Linux when its settings file is there) that is
+Docker Desktop's own **Start Docker Desktop when you sign in**, read from its settings file:
+`~/Library/Group Containers/group.com.docker/settings-store.json` on macOS,
+`%APPDATA%\Docker\settings-store.json` on Windows, `~/.docker/desktop/settings-store.json` on
+Linux (or `settings.json` beside it in older versions; `AutoStart` / `autoStart`). Otherwise
+it asks `systemctl is-enabled docker.service` for the system Docker, `systemctl --user
+is-enabled docker.service` for rootless Docker. It prints how to turn it on when it is off (the
+Docker Desktop setting, `sudo systemctl enable docker`, or `systemctl --user enable docker`),
+and leaves the answer, with the system and whether it is Docker Desktop, in the installation's
+`activation/login-start.json`, which the container reads read-only as
 `/opt/slopify-install/login-start.json`.
 
-Settings → General then shows **Starts with Docker: yes / no / unknown**, when the installer
-last looked, and where to change it. Run `npx @gentbajko/slopify --docker` again to check again
+Settings → General and the first-run screen then show **Starts with Docker: yes / no /
+unknown**, when the installer last looked, and where to change it (nothing to switch: the first
+run only informs). Run `npx @gentbajko/slopify --docker` again to check again
 after changing Docker's setting. A compose file run by hand has no such record, so the screen
 says it can't know and points to Docker Desktop → Settings → General → Start Docker Desktop when
 you sign in (or `sudo systemctl enable docker` for Docker Engine).
