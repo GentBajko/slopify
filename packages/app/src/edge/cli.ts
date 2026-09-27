@@ -108,6 +108,7 @@ try {
       (process.env.SLOPIFY_NO_MODEL_PREFETCH ?? "").trim().toLowerCase(),
     ),
     subtitleModelSeed: process.env.SLOPIFY_SUBTITLE_MODEL_SEED?.trim() || undefined,
+    seedSample: true,
   });
   console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);

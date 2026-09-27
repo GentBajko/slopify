@@ -42,6 +42,7 @@ import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
+import type { SubtitleAligner } from "./kernel/ports/subtitles.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
 import {
   type CheckpointAuthority,
@@ -68,6 +69,7 @@ import { decodePeaks } from "./slices/narration/peaks.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
+import { seedSample } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
@@ -121,6 +123,9 @@ export interface BootOptions {
   readonly prefetchSubtitleModel?: boolean;
   // A verified model shipped with the install, copied instead of downloaded.
   readonly subtitleModelSeed?: string | undefined;
+  // Import the bundled sample project on the first launch. The CLI turns it on; tests boot
+  // without it so each starts with no projects.
+  readonly seedSample?: boolean;
 }
 
 export interface ScheduleTickLifecycle {
@@ -427,6 +432,14 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       bootedAt: clock.now(),
       beginMutation: updater.beginMutation,
     });
+    // Before the server answers, so the first page already lists the sample. A failure costs
+    // only the sample: the log says why and Settings → Restore sample tries again.
+    if (options.seedSample === true && !pendingActivation)
+      await seedSample({ db, paths, clock, ids, log, appVersion: version }).catch(
+        (error: unknown) => {
+          log.write("warn", "sample.seed", { detail: causedBy(error) });
+        },
+      );
     const app = createApp({
       rebuild,
       drafts: draftDeps,
@@ -575,6 +588,8 @@ interface Wiring {
   readonly flusher: Flusher;
   readonly registry: Registry;
   readonly catalogue: CatalogueStore;
+  // The bundled sample's build paces the words itself instead of listening for them.
+  readonly alignSubtitles?: SubtitleAligner | undefined;
 }
 
 export function wireRunner({
@@ -590,6 +605,7 @@ export function wireRunner({
   registry,
   catalogue,
   ffmpeg,
+  alignSubtitles: aligner = alignSubtitles,
 }: Wiring): Runner & { readonly checkpoints: CheckpointAuthority<CheckpointRow> } {
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the
@@ -598,7 +614,17 @@ export function wireRunner({
     record(telemetry, type, counters);
     flusher.soon();
   };
-  const execution = { db, paths, ids, clock, log, ffmpeg, alignSubtitles, audioPreviews, count };
+  const execution = {
+    db,
+    paths,
+    ids,
+    clock,
+    log,
+    ffmpeg,
+    alignSubtitles: aligner,
+    audioPreviews,
+    count,
+  };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
   const providers: ProviderDeps = {
