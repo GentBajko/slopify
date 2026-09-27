@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { tutorialAnchors } from "@app/slices/tutorials/anchors.js";
 import { describe, expect, it } from "vitest";
 import { catalog } from "./catalog.js";
 
@@ -63,5 +64,28 @@ describe("the help catalogue", () => {
       return found;
     });
     expect(problems).toEqual([]);
+  });
+});
+
+// The tutorials are the wiki's pages in the repository (docs/wiki), the same files the app
+// ships for Help → Tutorials.
+const wiki = join(src, "..", "..", "..", "docs", "wiki");
+
+describe("the help catalogue's Learn more links", () => {
+  it("name a tutorial page and heading that exist", () => {
+    const broken = Object.entries(catalog).flatMap(([id, entry]) => {
+      const tutorial = (entry as { tutorial?: { page: string; anchor?: string } }).tutorial;
+      if (tutorial === undefined) return [];
+      const file = join(wiki, `${tutorial.page}.md`);
+      if (tutorial.page.startsWith("_") || !existsSync(file))
+        return [`${id}: no tutorial page ${tutorial.page}`];
+      if (
+        tutorial.anchor !== undefined &&
+        !tutorialAnchors(readFileSync(file, "utf8")).has(tutorial.anchor)
+      )
+        return [`${id}: ${tutorial.page} has no heading #${tutorial.anchor}`];
+      return [];
+    });
+    expect(broken).toEqual([]);
   });
 });

@@ -36,6 +36,19 @@ describe("an info button", () => {
   });
 });
 
+describe("Learn more", () => {
+  it("links the entry's tutorial section in Help → Tutorials", async () => {
+    render(<InfoTip id="play.voice" />);
+    await userEvent.click(screen.getByRole("button", { name: /^About/ }));
+    const link = await screen.findByRole("link", { name: "Learn more" });
+    const tutorial = catalog["play.voice"].tutorial;
+    expect(tutorial).toBeDefined();
+    expect(link.getAttribute("href")).toBe(
+      `/help/tutorials/${tutorial?.page ?? ""}${tutorial?.anchor === undefined ? "" : `#${tutorial.anchor}`}`,
+    );
+  });
+});
+
 describe("the coverage check", () => {
   it("passes a field and a switch that carry a tip and names the ones that do not", () => {
     const { container } = render(
