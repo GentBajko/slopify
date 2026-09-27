@@ -54,12 +54,16 @@ export async function revisionAudio(
   deps: ExportExecutionDeps,
   context: StageContext,
   view: RevisionView,
+  // Level the volume: what plays the sound (the video, a short, the audio files) asks for the
+  // levelled joins (`recipe-loudness.ts`); what only times it (the word timing, the description,
+  // the shorts' pick) reads the plain ones, which it waits for. An uploaded narration has no
+  // levelled join: only the master reaches it.
+  options: { readonly levelled?: boolean } = {},
 ): Promise<readonly AudioSegment[]> {
   const config = view.revision.config;
   if (config.sources.audio === "off") return [];
-  // Level the volume: the exports play the levelled joins (`recipe-loudness.ts`), never the plain
-  // ones, which the word timing reads. An uploaded narration has none: only the master reaches it.
-  const levelled = usesLoudness(config) && config.sources.audio === "generate";
+  const levelled =
+    options.levelled === true && usesLoudness(config) && config.sources.audio === "generate";
   const input = async (role: "audio_body" | "audio_intro" | "audio_outro") => {
     const segment = role === "audio_body" ? "body" : role === "audio_intro" ? "intro" : "outro";
     const row = view.outputs.find(

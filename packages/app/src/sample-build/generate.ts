@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   createWriteStream,
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -24,6 +25,7 @@ import type { ImagePort } from "../kernel/ports/image.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../kernel/ports/llm.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TimedWord } from "../kernel/ports/subtitles.js";
+import type { TtsPort } from "../kernel/ports/tts.js";
 import { wireRunner } from "../main.js";
 import type { RunDraft } from "../slices/admission/model.js";
 import { stagesOf } from "../slices/admission/repo.js";
@@ -31,6 +33,8 @@ import { admit } from "../slices/admission/rules.js";
 import { startRun } from "../slices/admission/start.js";
 import { insertPrompt } from "../slices/library/repo.js";
 import { pickTemplates, renderPicked } from "../slices/library/slots.js";
+import { type LoudnessGoal, masterFile, masterReport } from "../slices/loudness/loudnorm.js";
+import { masterGoal } from "../slices/loudness/model.js";
 import { planBackup, streamBackup } from "../slices/storage/backup-export.js";
 import { insertStagedFile, stagedFiles } from "../slices/storage/repo.js";
 import { defaultVideoEdit } from "../slices/video/edit-settings.js";
@@ -38,13 +42,16 @@ import { drawScene } from "./art.js";
 import {
   type SampleStyle,
   sampleArticle,
+  sampleDirection,
   sampleImagePrompts,
   sampleThumbnailPrompt,
   sampleThumbnailSubject,
   sampleTitle,
+  sampleVoice,
   sceneOf,
 } from "./content.js";
 import { type DemoSetup, demoSetup, shrinkAudio } from "./demo-build.js";
+import { type DemoRequest, requestFile } from "./demo-turns.js";
 import { type Demo, demoOf } from "./demos.js";
 import { scriptedAnswer } from "./script.js";
 
@@ -73,6 +80,10 @@ import { scriptedAnswer } from "./script.js";
 //   node packages/app/scripts/build-sample.mjs [--short] [--assets <folder>] <out.tar>
 //
 // `--demo <audiobook|podcast>` builds one of the multi-voice demos instead (`demo-build.ts`).
+
+// The bundled copies' smaller encodes lift the peaks more than the pipeline's own, so their
+// sound is held this much lower before them (measured: 64 kbps AAC adds 2 to 3 dB).
+const smallAacPeak = -4.5;
 
 const wordsPerMinute = 165;
 const leadSeconds = 0.4;
@@ -173,8 +184,22 @@ async function build(
   await runner.settled();
   // A demo carries three voices' audio files as well, so it is squeezed harder to stay under
   // 10 MB.
-  shrinkVideos(db, paths.projects, project.id, ffmpeg, demo === undefined ? 30 : 38);
-  if (demo !== undefined) shrinkAudio(db, paths.projects, project.id, ffmpeg);
+  await shrinkVideos(
+    db,
+    paths.projects,
+    project.id,
+    ffmpeg,
+    demo === undefined ? 30 : 39,
+    masterGoal(setup.draft, "video"),
+  );
+  if (demo !== undefined)
+    await shrinkAudio(
+      db,
+      paths.projects,
+      project.id,
+      ffmpeg,
+      masterGoal(setup.draft, "audioFiles"),
+    );
   // The sample carries its project only: no prompts, voices, settings or usage of the machine
   // that built it.
   for (const table of [
@@ -208,23 +233,34 @@ function librarySetup(input: {
   const style: SampleStyle = assets === undefined ? "procedural" : "painted";
 
   const seconds = sampleWords().length / (wordsPerMinute / 60) + leadSeconds + 1;
+  // With a pictures folder the narration is spoken: Tristan on Inworld TTS-2, one request per
+  // paragraph, each prepared with delivery cues, levelled and paced like any new run. Without
+  // one (CI) an ambient track is uploaded in its place.
+  const spoken = assets !== undefined;
   const audioId = ids.next();
-  writeFileSync(
-    join(paths.staging, audioId),
-    assets === undefined
-      ? ambientTrack(ffmpeg, seconds, dataDir)
-      : readFileSync(join(assets, "narration.mp3")),
-  );
-  insertStagedFile(db, {
-    id: audioId,
-    stageKind: "audio",
-    path: audioId,
-    originalFilename: assets === undefined ? "ambient.mp3" : "narration.mp3",
-    bytes: statSync(join(paths.staging, audioId)).size,
-    state: "staged",
-    createdAt: clock.now().toISOString(),
-  });
+  if (!spoken) {
+    writeFileSync(join(paths.staging, audioId), ambientTrack(ffmpeg, seconds, dataDir));
+    insertStagedFile(db, {
+      id: audioId,
+      stageKind: "audio",
+      path: audioId,
+      originalFilename: "ambient.mp3",
+      bytes: statSync(join(paths.staging, audioId)).size,
+      state: "staged",
+      createdAt: clock.now().toISOString(),
+    });
+  }
   const at = clock.now().toISOString();
+  const directionName = "Sample · Delivery";
+  if (spoken)
+    insertPrompt(db, {
+      id: ids.next(),
+      kind: "narration",
+      name: directionName,
+      body: sampleDirection,
+      slots: [],
+      updatedAt: at,
+    });
   const imagePrompts = sampleImagePrompts(style);
   const thumbnailPrompt = sampleThumbnailPrompt(style);
   for (const prompt of imagePrompts)
@@ -252,7 +288,7 @@ function librarySetup(input: {
     sources: {
       research: "off",
       article: "provide",
-      audio: "provide",
+      audio: spoken ? "generate" : "provide",
       images: "generate",
       thumbnail: short ? "off" : "from_prompt",
       video: "generate",
@@ -266,7 +302,18 @@ function librarySetup(input: {
     imagePrompts: imagePrompts.map((prompt) => ({ name: prompt.name, number: 1 })),
     ...(short ? {} : { thumbnailPrompt: thumbnailPrompt.name }),
     values: {},
-    provided: { article: sampleArticle, audio: audioId },
+    provided: { article: sampleArticle, ...(spoken ? {} : { audio: audioId }) },
+    ...(spoken
+      ? {
+          audio: { ...sampleVoice },
+          narrationPrompt: directionName,
+          chunking: { mode: "paragraph" as const },
+          // A documentary's pace between sentences (`narration/pauses-model.ts`).
+          sentencePauseSeconds: 0.45,
+        }
+      : {}),
+    // Level the volume at the recommended targets, as every new run starts.
+    loudness: { videoLufs: -14, audioFilesLufs: -18 },
     silenceGapSeconds: 1,
     imageSeconds: short ? 12 : 35,
     zoomPercent: 12,
@@ -444,10 +491,81 @@ function sampleRegistry(style: SampleStyle, assets: string | undefined): Registr
       return artist;
     },
     tts: (id) => {
-      throw new Error(`The sample has no voice ${id}.`);
+      if (assets === undefined || id !== sampleVoice.provider)
+        throw new Error(`The sample has no voice ${id}.`);
+      return spokenVoice(assets);
     },
     list: async () => [],
   };
+}
+
+// The Library's narrator: each request answered with the file spoken for exactly its voice
+// and words ahead of time (`voices.ts --library`). With SAMPLE_RECORD set to a file, a request
+// with no file yet is written there and answered with a quiet tone instead, so a first build
+// lists what to speak.
+function spokenVoice(folder: string): TtsPort {
+  return {
+    id: sampleVoice.provider,
+    capabilities: { streams: false },
+    models: async () => [{ id: sampleVoice.model, name: "Realtime TTS-2" }],
+    synthesize: async (request) => {
+      const file = requestFile(request.voiceId, request.text);
+      const path = join(folder, file);
+      let bytes: Uint8Array;
+      if (existsSync(path)) bytes = readFileSync(path);
+      else {
+        const record = process.env.SAMPLE_RECORD;
+        if (record === undefined)
+          throw new Error(
+            `No request was spoken for ${request.voiceId}: "${request.text.slice(0, 80)}". Build once with SAMPLE_RECORD=<file>, then run voices.ts --library.`,
+          );
+        recorded.push({
+          turn: recorded.length + 1,
+          speaker: "narrator",
+          voice: request.voiceId,
+          model: request.model ?? sampleVoice.model,
+          text: request.text,
+          spokenText: request.text,
+          file,
+        });
+        writeFileSync(record, `${JSON.stringify(recorded, null, 2)}\n`);
+        bytes = quietTone(folder, request.text);
+      }
+      return {
+        container: "mp3",
+        audio: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(bytes);
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+}
+
+const recorded: DemoRequest[] = [];
+
+// A stand-in while recording: a second of quiet tone per few words.
+function quietTone(folder: string, text: string): Uint8Array {
+  const seconds = Math.max(1, text.split(/\s+/).length / 2.6);
+  const path = join(folder, ".record-tone.mp3");
+  execFileSync(process.env.FFMPEG ?? "ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-f",
+    "lavfi",
+    "-i",
+    `sine=f=220:d=${seconds.toFixed(2)}`,
+    "-af",
+    "volume=0.05",
+    path,
+  ]);
+  const bytes = readFileSync(path);
+  rmSync(path, { force: true });
+  return bytes;
 }
 
 // The same prompt draws the same picture; a different one varies it.
@@ -480,13 +598,18 @@ function staticCatalogue(): CatalogueStore {
 // The pipeline renders at 1080p; the bundled copy is re-encoded smaller so the sample stays a
 // few megabytes. Same length and frames, so every row that describes a video still does; the
 // byte counts are updated to match.
-function shrinkVideos(
+// With Level the volume on, the sound is mastered again before the smaller AAC, with the
+// peaks held lower: 64 kbps lifts them about 2 dB more than the pipeline's own encode, and the
+// file that ships is what has to stay under the ceiling. The output's master report is measured
+// again from the file that ships.
+async function shrinkVideos(
   db: ReturnType<typeof openDb>,
   projects: string,
   projectId: string,
   ffmpeg: string,
   crf = 30,
-): void {
+  master?: LoudnessGoal,
+): Promise<void> {
   const rows = db
     .prepare(
       "SELECT id,path FROM project_assets WHERE project_id=? AND (path LIKE '%/video.mp4' OR path LIKE '%/short.mp4')",
@@ -496,6 +619,23 @@ function shrinkVideos(
     const path = join(projects, projectId, String(row.path));
     const smaller = `${path}.small.mp4`;
     const vertical = String(row.path).endsWith("/short.mp4") || process.argv.includes("--short");
+    const sound = `${path}.master.wav`;
+    const run = {
+      bin: ffmpeg,
+      log: { write: () => undefined },
+      signal: new AbortController().signal,
+    };
+    if (master !== undefined)
+      await masterFile(
+        run,
+        path,
+        sound,
+        { ...master, truePeak: smallAacPeak },
+        {
+          sampleRate: 44100,
+          channels: 2,
+        },
+      );
     execFileSync(
       ffmpeg,
       [
@@ -505,6 +645,7 @@ function shrinkVideos(
         "-y",
         "-i",
         path,
+        ...(master === undefined ? [] : ["-i", sound, "-map", "0:v:0", "-map", "1:a:0"]),
         "-vf",
         vertical ? "scale=720:1280" : "scale=1280:720",
         "-c:v",
@@ -526,11 +667,21 @@ function shrinkVideos(
       { stdio: ["ignore", "ignore", "inherit"] },
     );
     execFileSync("mv", [smaller, path]);
+    rmSync(sound, { force: true });
     const bytes = statSync(path).size;
     db.prepare("UPDATE project_assets SET bytes=? WHERE id=?").run(bytes, String(row.id));
     db.prepare(
       "UPDATE revision_outputs SET descriptor=json_set(descriptor,'$.bytes',?) WHERE asset_id=? AND json_extract(descriptor,'$.bytes') IS NOT NULL",
     ).run(bytes, String(row.id));
+    if (master !== undefined) {
+      const report = JSON.stringify(await masterReport(run, path, master));
+      db.prepare(
+        "UPDATE revision_outputs SET descriptor=json_set(descriptor,'$.meta.master',json(?)) WHERE asset_id=? AND json_extract(descriptor,'$.meta.master') IS NOT NULL",
+      ).run(report, String(row.id));
+      db.prepare(
+        "UPDATE outputs SET meta=json_set(meta,'$.master',json(?)) WHERE project_id=? AND path=? AND json_extract(meta,'$.master') IS NOT NULL",
+      ).run(report, projectId, String(row.path));
+    }
     db.prepare("UPDATE outputs SET bytes=? WHERE project_id=? AND path=?").run(
       bytes,
       projectId,

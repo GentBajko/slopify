@@ -8,7 +8,14 @@ import { joinNarration } from "../narration/concat.js";
 import { joinTurns } from "../rebuild/runtime-local.js";
 import { resolveFfmpeg } from "../video/ffmpeg.js";
 import { levelPieces } from "./level-pieces.js";
-import { levelFilter, masterFile, measureFile, parseMeasured } from "./loudnorm.js";
+import {
+  gainFilter,
+  levelFilter,
+  masterFile,
+  masterReport,
+  measureFile,
+  parseMeasured,
+} from "./loudnorm.js";
 import { pieceLufs, pieceTruePeak, videoTruePeak } from "./model.js";
 
 // Level the volume with the bundled ffmpeg: pieces made at very different loudness (a quiet
@@ -22,6 +29,8 @@ const log = { write: (): void => {} };
 const signal = new AbortController().signal;
 const run = { bin, log, signal };
 const goal = { lufs: pieceLufs, truePeak: pieceTruePeak };
+// The filters as written for a -18 LUFS level, whatever the pieces are levelled to.
+const eighteen = { lufs: -18, truePeak: -2 };
 let scratch = "";
 
 // A voice stand-in: a tone that comes and goes like speech, over pink noise, as a TTS-like mp3.
@@ -77,15 +86,29 @@ describe("parseMeasured", () => {
       threshold: -70,
       offset: 0,
     };
-    expect(levelFilter(goal, silent, 44100)).toBe("aresample=44100");
+    expect(levelFilter(eighteen, silent, 44100)).toBe("aresample=44100");
     expect(
       levelFilter(
-        goal,
+        eighteen,
         { integrated: -30, truePeak: -12, range: 3, threshold: -40, offset: 0.1 },
         44100,
       ),
     ).toBe(
       "loudnorm=I=-18.0:TP=-2.0:LRA=7:measured_I=-30.00:measured_TP=-12.00:measured_LRA=3.00:measured_thresh=-40.00:offset=0.10:linear=true:print_format=summary,aresample=44100",
+    );
+  });
+});
+
+describe("gainFilter", () => {
+  const measured = { integrated: -30, truePeak: -12, range: 3, threshold: -40, offset: 0.1 };
+  it("applies the one gain that lands a piece on the level", () => {
+    expect(gainFilter(eighteen, { ...measured, truePeak: -16 }, 44100)).toBe(
+      "volume=12.00dB,aresample=44100",
+    );
+  });
+  it("holds the peaks under the ceiling when the gain would push them over", () => {
+    expect(gainFilter(eighteen, { ...measured, truePeak: -5 }, 44100)).toBe(
+      "volume=12.00dB,alimiter=limit=0.7943:attack=5:release=50:level=false,aresample=44100",
     );
   });
 });
@@ -139,13 +162,12 @@ describe.skipIf(!present)("levelling with the bundled ffmpeg", () => {
     );
     expect(Math.abs(durationMs - plainMs)).toBeLessThanOrEqual(30);
 
-    const report = await masterFile(
-      run,
-      joined,
-      join(scratch, "master.wav"),
-      { lufs: -14, truePeak: videoTruePeak },
-      { sampleRate: 44100, channels: 2 },
-    );
+    const master = { lufs: -14, truePeak: videoTruePeak };
+    await masterFile(run, joined, join(scratch, "master.wav"), master, {
+      sampleRate: 44100,
+      channels: 2,
+    });
+    const report = await masterReport(run, join(scratch, "master.wav"), master);
     expect(Math.abs(report.integrated - -14)).toBeLessThanOrEqual(1);
     expect(report.truePeak).toBeLessThanOrEqual(videoTruePeak + 0.5);
   }, 60_000);
@@ -176,6 +198,16 @@ describe.skipIf(!present)("levelling with the bundled ffmpeg", () => {
     // The joined turns sit at the common level too.
     const whole = await measureFile(run, output, goal);
     expect(Math.abs(whole.integrated - pieceLufs)).toBeLessThanOrEqual(1);
+  }, 60_000);
+
+  it("lands a line of dialogue too short for loudnorm's window on the level too", async () => {
+    const lines = [piece("said.mp3", -8, 1.3), piece("shout.mp3", 12, 1.6, 44100)];
+    const levelled = await levelPieces(run, lines, join(scratch, "short"));
+    for (const file of levelled.files) {
+      const after = await measureFile(run, file, goal);
+      expect(Math.abs(after.integrated - pieceLufs)).toBeLessThanOrEqual(0.5);
+    }
+    expect(levelled.report.spreadAfter).toBeLessThanOrEqual(0.5);
   }, 60_000);
 
   it("keeps a piece too quiet to measure as it is, and says so", async () => {

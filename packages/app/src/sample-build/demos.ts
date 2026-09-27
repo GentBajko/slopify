@@ -60,6 +60,9 @@ export interface Demo {
   // format: an instruction or a sound at a sentence of the turn. A turn not listed gets none.
   readonly direction: string;
   readonly delivery: Readonly<Record<number, readonly DemoCue[]>>;
+  // The least pause between sentences inside a turn, in seconds (`narration/pauses-model.ts`):
+  // an audiobook's relaxed pace, a podcast's conversational one.
+  readonly sentencePause: number;
 }
 
 export type DemoCue =
@@ -241,6 +244,7 @@ export const demos: Readonly<Record<DemoId, Demo>> = {
       scenes: ["river", "boat", "bank"],
     },
     imageSeconds: 25,
+    sentencePause: 0.6,
     direction:
       "Direct an audiobook of a classic children's story. The narrator reads warmly and unhurriedly, like a storyteller by the fire; each character speaks with the feeling of the line. Tasteful and sparing, never theatrical.",
     delivery: {
@@ -343,6 +347,7 @@ export const demos: Readonly<Record<DemoId, Demo>> = {
       scenes: ["gears", "sky", "fragment"],
     },
     imageSeconds: 22,
+    sentencePause: 0.35,
     direction:
       "Direct a lively, friendly two-host history podcast: conversational and curious, with the odd laugh where a person would laugh. Never overdone.",
     delivery: {

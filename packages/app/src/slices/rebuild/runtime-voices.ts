@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { masterFile } from "../loudness/loudnorm.js";
+import { masterFile, masterReport } from "../loudness/loudnorm.js";
 import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
@@ -41,6 +41,8 @@ export async function executeVoicesRecipe(
   const { view } = exportSnapshot(deps, context, piece);
   const sections = z
     .tuple([z.unknown(), z.unknown(), z.array(z.tuple([z.string(), z.number()])), z.string()])
+    // Level the volume's master may follow (`recipe-loudness.ts`).
+    .rest(z.unknown())
     .parse(piece.input.values)[2]
     .map(([title, firstTurn]) => ({ title, firstTurn }));
   const timing = view.outputs.find(
@@ -60,7 +62,7 @@ export async function executeVoicesRecipe(
       readFileSync(outputPath(deps.paths, context.work.projectId, timing.output.path), "utf8"),
     ),
   );
-  const audio = await revisionAudio(deps, context, view);
+  const audio = await revisionAudio(deps, context, view, { levelled: true });
   if (audio.length === 0)
     throw new Error(
       "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Audio, or Edit project → Providers), then Try again.",
@@ -85,7 +87,6 @@ export async function executeVoicesRecipe(
     // files are encoded from that (`loudness/model.ts`).
     const goal = masterGoal(view.revision.config, "audioFiles");
     let sound: readonly Pick<AudioSegment, "path" | "seconds">[] = audio;
-    let master: MasterReport | undefined;
     if (goal !== undefined) {
       const mixed = join(directory, "mix.wav");
       await runFfmpeg({
@@ -96,7 +97,7 @@ export async function executeVoicesRecipe(
         onProgress: (): void => {},
       });
       const mastered = join(directory, "master.wav");
-      master = await masterFile(
+      await masterFile(
         { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
         mixed,
         mastered,
@@ -116,6 +117,15 @@ export async function executeVoicesRecipe(
         onProgress: (): void => {},
       });
       context.signal.throwIfAborted();
+      // What each finished file measures, after its encode.
+      const master: MasterReport | undefined =
+        goal === undefined
+          ? undefined
+          : await masterReport(
+              { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
+              target.absolutePath,
+              goal,
+            );
       prepared.push(
         preparedResult(
           deps,

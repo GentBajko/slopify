@@ -333,12 +333,13 @@ function paceScaled<T extends { readonly pauses: PiecePauses; readonly padEnd: n
   });
 }
 
-// The words a narration piece speaks, where its sentences end: the clean text of a request, or
+// The words a narration piece speaks, where its sentences end: the clean words of a request, or
 // of a piece supplied as a file.
 function pieceText(recipe: { readonly input: WorkPiece["input"] } | undefined): string {
   if (recipe === undefined) return "";
   const input = recipe.input;
-  if (input.kind === "tts") return input.text;
+  // The words as said: a prepared request's delivery tags take no time of their own.
+  if (input.kind === "tts") return (input.spokenText ?? input.text).replace(/\[[^\]]*\]/g, "");
   if (
     input.kind === "provided" &&
     Array.isArray(input.semantic) &&

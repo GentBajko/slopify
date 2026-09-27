@@ -42,9 +42,16 @@ export const defaultLoudness: LoudnessDefault = {
 export const videoTruePeak = -1.5;
 export const audioFilesTruePeak = -3;
 
+// The master aims this far under the ceiling: a lossy encode (the video's AAC, the MP3 and
+// M4B) lifts the peaks by about half a dB at the bitrates Slopify writes, and what is measured
+// is the finished file.
+export const encodeHeadroom = 0.5;
+
 // The common level every narration piece is brought to before the join. Fixed, so changing the
-// Volume only masters the finished files again and never re-joins the narration.
-export const pieceLufs = -18;
+// Volume only masters the finished files again and never re-joins the narration. ceiling: a
+// voice's peaks run 14 to 18 dB over its loudness, so -20 LUFS leaves room for nearly all of
+// them under -2 dBTP; the master then lifts the whole to the target.
+export const pieceLufs = -20;
 export const pieceTruePeak = -2;
 
 // The Volume control is in dB from the recommended level: 0 dB is the recommendation. Below
@@ -75,7 +82,7 @@ export function masterGoal(
   if (settings === undefined || !usesLoudness(config)) return undefined;
   return {
     lufs: target === "video" ? settings.videoLufs : settings.audioFilesLufs,
-    truePeak: truePeakOf(target),
+    truePeak: truePeakOf(target) - encodeHeadroom,
   };
 }
 
@@ -190,7 +197,8 @@ export interface LoudnessReport {
   readonly target: number;
 }
 
-// What a mastered export measured once written, in LUFS and dBTP.
+// What a mastered export measured once written (the finished file, after its encode), in LUFS
+// and dBTP. `target` is the loudness asked for.
 export interface MasterReport {
   readonly target: number;
   readonly integrated: number;

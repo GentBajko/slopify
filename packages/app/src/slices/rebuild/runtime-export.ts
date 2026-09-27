@@ -4,7 +4,7 @@ import type { SubtitleAligner } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesShortMode } from "../admission/short-mode.js";
-import { masterFile } from "../loudness/loudnorm.js";
+import { masterFile, masterReport } from "../loudness/loudnorm.js";
 import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
@@ -46,7 +46,7 @@ export async function executeExportRecipe(
   context.signal.throwIfAborted();
   const snapshot = exportSnapshot(deps, context, piece);
   const { view } = snapshot;
-  const audio = await revisionAudio(deps, context, view);
+  const audio = await revisionAudio(deps, context, view, { levelled: true });
   const wav = piece.key === "export:wav";
   if (!wav && piece.key !== "export:video")
     throw new Error(
@@ -159,16 +159,41 @@ export async function executeExportRecipe(
           log: deps.log,
           onProgress,
         });
-        if (goal !== undefined)
-          master = await masterFile(
-            { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
-            mixed,
-            pending.absolutePath,
-            goal,
-            { sampleRate: 48000, channels: 2 },
-          );
+        if (goal !== undefined) {
+          const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
+          await masterFile(run, mixed, `${pending.absolutePath}.master.wav`, goal, {
+            sampleRate: 48000,
+            channels: 2,
+          });
+          // The export is 16-bit PCM, as it always was.
+          await runFfmpeg({
+            bin: deps.ffmpeg,
+            args: [
+              "-hide_banner",
+              "-nostdin",
+              "-loglevel",
+              "error",
+              "-nostats",
+              "-y",
+              "-i",
+              `${pending.absolutePath}.master.wav`,
+              "-c:a",
+              "pcm_s16le",
+              "-f",
+              "wav",
+              pending.absolutePath,
+            ],
+            signal: context.signal,
+            log: deps.log,
+            onProgress: (): void => {},
+          });
+          master = await masterReport(run, pending.absolutePath, goal);
+        }
       } finally {
-        if (goal !== undefined) rmSync(mixed, { force: true });
+        if (goal !== undefined) {
+          rmSync(mixed, { force: true });
+          rmSync(`${pending.absolutePath}.master.wav`, { force: true });
+        }
       }
     } else
       master = await renderSlideshow({

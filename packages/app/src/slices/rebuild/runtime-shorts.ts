@@ -302,7 +302,7 @@ async function render(
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
   const words = clipWords(timingWords(deps, context, view), clip.start, clip.end);
-  const timeline = await revisionAudio(deps, context, view);
+  const timeline = await revisionAudio(deps, context, view, { levelled: true });
   // The bundled Barlow is drawn in its own Bold face; any other font is emboldened.
   // In another language, a font that has its letters (`fonts/coverage.ts`).
   const font = await captionBoldFont(

@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Ids } from "../kernel/ids.js";
@@ -12,6 +12,7 @@ import type { TtsPort } from "../kernel/ports/tts.js";
 import type { RunDraft } from "../slices/admission/model.js";
 import { insertImageBlob } from "../slices/channels/repo.js";
 import { insertPrompt } from "../slices/library/repo.js";
+import { type LoudnessGoal, masterFile, masterReport } from "../slices/loudness/loudnorm.js";
 import { defaultVideoEdit } from "../slices/video/edit-settings.js";
 import type { Speaker } from "../slices/voices/model.js";
 import { drawScene } from "./art.js";
@@ -136,6 +137,9 @@ export function demoSetup(input: {
       nativeDialogue: true,
       audioFiles: true,
     },
+    // Level the volume at the recommended targets and pace the sentences, as every new run.
+    loudness: { videoLufs: -14, audioFilesLufs: -18 },
+    ...(procedural ? {} : { sentencePauseSeconds: demo.sentencePause }),
     silenceGapSeconds: 1,
     imageSeconds: demo.imageSeconds,
     zoomPercent: 12,
@@ -289,26 +293,61 @@ function painted(folder: string, scratch: string, scene: string, aspect: string)
   return readFileSync(out);
 }
 
+// The small mono encodes below lift the peaks well over the pipeline's own (measured: about
+// 1 dB for 64 kbps MP3, 1.5 dB for 48 kbps AAC), so the listening files' sound is held this much
+// lower before them, to ship under the -3 dBTP audiobook shops ask.
+const smallFilePeak = { mp3: -4.5, m4b: -5 } as const;
+
 // The pipeline writes its narration files at 128 kbps stereo-ready MP3 and 96 kbps AAC; the
-// bundled demo carries them as 48 kbps mono MP3 and 32 kbps AAC (speech needs no more), with
+// bundled demo carries them as 64 kbps mono MP3 and 48 kbps AAC (speech needs no more), with
 // their chapters, so the archive stays a few megabytes. Same length and words; the byte counts
-// are updated to match, as for the videos.
-export function shrinkAudio(
+// are updated to match, as for the videos. With Level the volume on, the listening files are
+// mastered again, mono, before the smaller encode.
+export async function shrinkAudio(
   db: DatabaseSync,
   projects: string,
   projectId: string,
   ffmpeg: string,
-): void {
+  master?: LoudnessGoal,
+): Promise<void> {
   const rows = db
     .prepare(
       "SELECT id,path FROM project_assets WHERE project_id=? AND (path LIKE '%.mp3' OR path LIKE '%.m4b')",
     )
     .all(projectId);
+  const files = new Set(
+    db
+      .prepare(
+        "SELECT DISTINCT asset_id FROM revision_outputs WHERE project_id=? AND work_key='voices:files'",
+      )
+      .all(projectId)
+      .map((row) => String(row.asset_id)),
+  );
   for (const row of rows) {
     const path = join(projects, projectId, String(row.path));
     if (!existsSync(path)) continue;
     const m4b = String(row.path).endsWith(".m4b");
     const smaller = `${path}.small.${m4b ? "m4b" : "mp3"}`;
+    // The listening files only: a narration join is levelled, never mastered.
+    const listening = files.has(String(row.id));
+    const mastered = `${path}.master.wav`;
+    const run = {
+      bin: ffmpeg,
+      log: { write: () => undefined },
+      signal: new AbortController().signal,
+    };
+    if (master !== undefined && listening)
+      await masterFile(
+        run,
+        path,
+        mastered,
+        { ...master, truePeak: smallFilePeak[m4b ? "m4b" : "mp3"] },
+        {
+          sampleRate: 44100,
+          channels: 1,
+        },
+      );
+    const source = master !== undefined && listening ? mastered : path;
     execFileSync(
       ffmpeg,
       [
@@ -317,28 +356,39 @@ export function shrinkAudio(
         "error",
         "-y",
         "-i",
-        path,
+        source,
+        ...(source === path ? [] : ["-i", path]),
         "-map",
         "0:a",
         "-map_metadata",
-        "0",
+        source === path ? "0" : "1",
         "-map_chapters",
-        "0",
+        source === path ? "0" : "1",
         "-ac",
         "1",
         ...(m4b
-          ? ["-c:a", "aac", "-b:a", "32k", "-movflags", "+faststart", "-f", "mp4"]
-          : ["-c:a", "libmp3lame", "-b:a", "48k", "-id3v2_version", "3", "-f", "mp3"]),
+          ? ["-c:a", "aac", "-b:a", "48k", "-movflags", "+faststart", "-f", "mp4"]
+          : ["-c:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-f", "mp3"]),
         smaller,
       ],
       { stdio: ["ignore", "ignore", "inherit"] },
     );
     execFileSync("mv", [smaller, path]);
+    rmSync(mastered, { force: true });
     const bytes = statSync(path).size;
     db.prepare("UPDATE project_assets SET bytes=? WHERE id=?").run(bytes, String(row.id));
     db.prepare(
       "UPDATE revision_outputs SET descriptor=json_set(descriptor,'$.bytes',?) WHERE asset_id=? AND json_extract(descriptor,'$.bytes') IS NOT NULL",
     ).run(bytes, String(row.id));
+    if (master !== undefined && listening) {
+      const report = JSON.stringify(await masterReport(run, path, master));
+      db.prepare(
+        "UPDATE revision_outputs SET descriptor=json_set(descriptor,'$.meta.master',json(?)) WHERE asset_id=? AND json_extract(descriptor,'$.meta.master') IS NOT NULL",
+      ).run(report, String(row.id));
+      db.prepare(
+        "UPDATE outputs SET meta=json_set(meta,'$.master',json(?)) WHERE project_id=? AND path=? AND json_extract(meta,'$.master') IS NOT NULL",
+      ).run(report, projectId, String(row.path));
+    }
     db.prepare("UPDATE outputs SET bytes=? WHERE project_id=? AND path=?").run(
       bytes,
       projectId,

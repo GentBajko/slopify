@@ -1,9 +1,9 @@
 import type { Message } from "../kernel/ports/llm.js";
-import { type SampleStyle, styled } from "./content.js";
+import { type SampleStyle, sampleDelivery, styled } from "./content.js";
 
-// The sample's "text model": fixed, hand-written answers to the three questions the pipeline
-// asks it - the YouTube description, which moments make the shorts, and each short's image
-// prompts - worked out from the transcript the pipeline sends, so the times are real.
+// The sample's "text model": fixed, hand-written answers to what the pipeline asks it - each
+// paragraph's delivery cues, the YouTube description, which moments make the shorts, and each
+// short's image prompts - worked out from what the pipeline sends, so the times are real.
 
 const chapters: readonly { readonly opens: string; readonly title: string }[] = [
   { opens: "Around three hundred years", title: "A Library at the Edge of the Sea" },
@@ -47,11 +47,23 @@ export function scriptedAnswer(messages: readonly Message[], style: SampleStyle)
   const system = messages.find((message) => message.role === "system")?.content ?? "";
   // The first ask carries the transcript; a retry only adds what was wrong.
   const user = messages.find((message) => message.role === "user")?.content ?? "";
+  if (system.startsWith('Return JSON only: {"cues"')) return cues(user);
   if (system.startsWith("You write YouTube descriptions")) return description(user);
   if (system.startsWith("You pick clips")) return picks(user, system);
   if (system.startsWith("You write prompts for an image model"))
     return prompts(user, system, style);
   throw new Error(`The sample's text script has no answer for: ${system.slice(0, 80)}`);
+}
+
+// The preparation step's answer for one paragraph: the cues written for the paragraph whose
+// sentences it is sent (`content.ts`).
+function cues(user: string): string {
+  const request = JSON.parse(user) as { sentences?: { text?: string }[] };
+  const first = request.sentences?.[0]?.text?.trim() ?? "";
+  const paragraph = sampleDelivery.find((one) => first.startsWith(one.opens));
+  if (paragraph === undefined)
+    throw new Error(`The sample has no delivery cues for "${first.slice(0, 60)}".`);
+  return JSON.stringify({ cues: paragraph.cues });
 }
 
 function seconds(stamp: string): number {

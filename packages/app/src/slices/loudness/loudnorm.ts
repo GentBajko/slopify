@@ -82,6 +82,27 @@ export function levelFilter(
   return `${goalFilter(goal, measured)},${resample}`;
 }
 
+// A piece's second pass: the one fixed gain loudnorm's linear mode would apply, from its first
+// pass, done with ffmpeg's volume filter. loudnorm itself cannot stay linear on a piece shorter
+// than its 3 s window and falls back to riding the level, which leaves a line of dialogue a few
+// LU off; a plain gain lands every piece on the level whatever its length. A piece whose peaks
+// the gain would push over the ceiling is held under it by a limiter, which touches only those
+// peaks. Unity for a piece there was nothing to measure in.
+export function gainFilter(
+  goal: LoudnessGoal,
+  measured: Measured | undefined,
+  sampleRate: number,
+): string {
+  const resample = `aresample=${String(sampleRate)}`;
+  if (measured === undefined || !measurable(measured)) return resample;
+  const gain = goal.lufs - measured.integrated;
+  const limit =
+    Number.isFinite(measured.truePeak) && measured.truePeak + gain > goal.truePeak
+      ? `,alimiter=limit=${(10 ** (goal.truePeak / 20)).toFixed(4)}:attack=5:release=50:level=false`
+      : "";
+  return `volume=${gain.toFixed(2)}dB${limit},${resample}`;
+}
+
 export function measurable(measured: Measured): boolean {
   return Number.isFinite(measured.integrated) && measured.integrated > silentBelow;
 }
@@ -146,14 +167,17 @@ export async function measureFile(
   return measure(run, ["-i", path], goal);
 }
 
-// One file measured and written again at `goal`, as 16-bit PCM WAV at `sampleRate` with
-// `channels` channels. Returns what the first pass measured.
+// One file measured and written again at `goal`, as WAV at `sampleRate` with `channels`
+// channels (32-bit float, so nothing clips between here and the encode). Returns what the first
+// pass measured.
 export async function normalizeFile(
   run: FfmpegRun,
   input: string,
   output: string,
   goal: LoudnessGoal,
   format: { readonly sampleRate: number; readonly channels: number },
+  // "gain" for a narration piece (`gainFilter`), "loudnorm" for a finished file.
+  mode: "gain" | "loudnorm" = "loudnorm",
 ): Promise<Measured> {
   const measured = await measureFile(run, input, goal);
   await runFfmpeg({
@@ -170,11 +194,13 @@ export async function normalizeFile(
       "-map",
       "0:a:0",
       "-af",
-      levelFilter(goal, measured, format.sampleRate),
+      mode === "gain"
+        ? gainFilter(goal, measured, format.sampleRate)
+        : levelFilter(goal, measured, format.sampleRate),
       "-ac",
       String(format.channels),
       "-c:a",
-      "pcm_s16le",
+      "pcm_f32le",
       "-f",
       "wav",
       output,
@@ -186,17 +212,24 @@ export async function normalizeFile(
   return measured;
 }
 
-// A finished file's sound brought to its master target, then measured again: what the export
-// keeps on its output (`MasterReport`).
+// A finished file's sound brought to its master target.
 export async function masterFile(
   run: FfmpegRun,
   input: string,
   output: string,
   goal: LoudnessGoal,
   format: { readonly sampleRate: number; readonly channels: number },
-): Promise<MasterReport> {
+): Promise<void> {
   await normalizeFile(run, input, output, goal, format);
-  const check = await measureFile(run, output, goal);
+}
+
+// What a finished file measures, for its output (`MasterReport`).
+export async function masterReport(
+  run: FfmpegRun,
+  file: string,
+  goal: LoudnessGoal,
+): Promise<MasterReport> {
+  const check = await measureFile(run, file, goal);
   return {
     target: goal.lufs,
     integrated: Math.round(check.integrated * 10) / 10,

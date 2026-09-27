@@ -103,3 +103,63 @@ export function sceneOf(prompt: string): SampleScene {
   if (text.includes("disc") || text.includes("night")) return "disc";
   return "scrolls";
 }
+
+// The Library's narrator: one Inworld stock voice on TTS-2, prepared with delivery cues like
+// the audiobook's narrator. The requests are spoken ahead of time (`voices.ts --library`) and
+// the build's stand-in voice answers each with its file.
+export const sampleVoice = {
+  provider: "inworld",
+  model: "inworld-tts-2",
+  voice: "Tristan",
+} as const;
+
+export const sampleDirection =
+  "Direct a warm, unhurried history documentary read by one narrator: clear and friendly, like a storyteller who loves the subject. Tasteful and sparing, never theatrical.";
+
+export type SampleCue =
+  | { readonly sentence: number; readonly kind: "instruction"; readonly text: string }
+  | { readonly sentence: number; readonly kind: "sound"; readonly sound: "breathe" };
+
+const cue = (text: string, sentence = 1): SampleCue => ({ sentence, kind: "instruction", text });
+
+// The delivery cues the sample writer answers for each paragraph of the narration (one request
+// per paragraph), found by the paragraph's opening words; the headings are read as titles.
+export const sampleDelivery: readonly {
+  readonly opens: string;
+  readonly cues: readonly SampleCue[];
+}[] = [
+  { opens: "A library at the edge", cues: [cue("announce the chapter title warmly and clearly")] },
+  {
+    opens: "Around three hundred years",
+    cues: [
+      cue("narrate warmly and unhurriedly, like a documentary storyteller"),
+      cue("say with quiet wonder", 4),
+    ],
+  },
+  { opens: "Collecting everything", cues: [cue("announce the chapter title warmly and clearly")] },
+  {
+    opens: "Nobody knows how many",
+    cues: [cue("narrate with quiet curiosity"), cue("say with admiration, a little brighter", 3)],
+  },
+  {
+    opens: "Scholars worked there",
+    cues: [cue("narrate warmly and steadily"), cue("say with quiet admiration", 3)],
+  },
+  { opens: "How it disappeared", cues: [cue("announce the chapter title calmly and clearly")] },
+  {
+    opens: "The famous picture",
+    cues: [
+      cue("narrate calmly, gently setting a myth straight"),
+      cue("narrate soberly and evenly", 3),
+    ],
+  },
+  { opens: "What it left behind", cues: [cue("announce the chapter title softly and clearly")] },
+  {
+    opens: "The library did not vanish",
+    cues: [
+      cue("narrate softly and reflectively"),
+      { sentence: 4, kind: "sound", sound: "breathe" },
+      cue("close warmly, with quiet hope", 5),
+    ],
+  },
+];

@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import type { Log } from "../../kernel/log.js";
-import { type LoudnessGoal, masterFile } from "../loudness/loudnorm.js";
+import { type LoudnessGoal, masterFile, masterReport } from "../loudness/loudnorm.js";
 import type { MasterReport } from "../loudness/model.js";
 import { cardsAss } from "./cards.js";
 import type { EditList } from "./edit-list.js";
@@ -117,7 +117,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
         onProgress: (): void => {},
       });
       const mastered = join(workspace, "master.wav");
-      master = await masterFile(run, mixed, mastered, run.master, masterFormat);
+      await masterFile(run, mixed, mastered, run.master, masterFormat);
       joined = {
         ...edit,
         audio: [
@@ -139,6 +139,9 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
       onProgress: (elapsedMs) =>
         report(rendered + elapsedMs * (run.burnSubtitles ? 1 : copyWeight)),
     });
+    // What the finished video measures, after its AAC encode.
+    if (run.master !== undefined && edit.audio.length > 0)
+      master = await masterReport(run, run.output, run.master);
     return master;
   } finally {
     rmSync(workspace, { recursive: true, force: true });
