@@ -127,6 +127,16 @@ export async function executeReviewRecipe(
     outcome: saved.outcome,
     attempt: saved.attempt,
   });
+  // Kept and flagged: nothing more happens to the item until someone decides.
+  if (saved.outcome === "flagged")
+    context.emit({
+      type: "review.flagged",
+      projectId: context.work.projectId,
+      verdictId: saved.id,
+      stage: saved.stage,
+      itemKey: saved.itemKey,
+      ...(saved.reasons[0] === undefined ? {} : { reason: saved.reasons[0] }),
+    });
   deps.count?.("stage.completed", {
     provider,
     model,

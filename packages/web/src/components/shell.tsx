@@ -261,6 +261,7 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
+      reviewFlagged: runs.observeReview,
       scheduleTopics: (event) => {
         runs.observeTopics(event);
         void queryClient.invalidateQueries({ queryKey: ["schedules"] });

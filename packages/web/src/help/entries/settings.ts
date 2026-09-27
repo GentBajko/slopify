@@ -119,7 +119,7 @@ export const settingsHelp = {
   // Notifications
   "settings.notifications": {
     title: "Notifications",
-    body: "Slopify tells you when a run finishes, fails, or stops to wait for your review. The message holds the project title and what happened, never your keys. Browser notifications need a Slopify tab open; a Notification URL works with none open.",
+    body: "Slopify tells you when a run finishes, fails, or stops to wait for your review, and when an automatic review kept an item flagged and needs your decision. The message holds the project title, what happened and a link to the project, never your keys. Browser notifications need a Slopify tab open; a Notification URL works with none open.",
   },
   "settings.notifications.browser": {
     title: "Browser notifications",

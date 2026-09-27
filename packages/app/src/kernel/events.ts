@@ -68,6 +68,20 @@ export interface ProjectStateEvent extends EventOrigin {
   readonly state: ProjectState;
 }
 
+// An automatic review flagged an item and kept it: its redos ran out, or the review only
+// flags. The run carries on; the item waits for the user's Overrule or Redo. Open pages
+// refresh on it and the notifications slice says "Review needs a decision".
+export interface ReviewFlaggedEvent extends EventOrigin {
+  readonly type: "review.flagged";
+  readonly projectId: string;
+  readonly verdictId: string;
+  // `reviews/model.ts` reviewStages: "article", "narration", "image" and so on.
+  readonly stage: string;
+  readonly itemKey: string;
+  // The reviewer's first reason, when it gave one.
+  readonly reason?: string;
+}
+
 export interface ProjectUpdatedEvent extends EventOrigin {
   readonly type: "project.updated";
   readonly projectId: string;
@@ -98,6 +112,7 @@ export type ProjectEvent =
   | ImageLandedEvent
   | NarrationPieceEvent
   | ProjectStateEvent
-  | ProjectUpdatedEvent;
+  | ProjectUpdatedEvent
+  | ReviewFlaggedEvent;
 
 export type EmitProject = (event: ProjectEvent) => void;

@@ -32,6 +32,36 @@ export function noticeOf(
 export interface NoticeText {
   readonly headline: string;
   readonly detail: string;
+  // The project's address in Slopify, when the server knows where it is reachable.
+  readonly link?: string | undefined;
+}
+
+// An automatic review flagged an item and kept it (`review.flagged`): the run goes on, the
+// item waits for Overrule or Redo on the project page.
+export interface ReviewNoticeSubject {
+  readonly title: string;
+  // `reviews/model.ts` reviewStages.
+  readonly stage: string;
+  readonly reason?: string | undefined;
+}
+
+const reviewItemNames: Readonly<Record<string, string>> = {
+  article: "the article",
+  images: "an image",
+  narration: "the narration",
+  thumbnail: "the thumbnail",
+  shorts: "a short",
+};
+
+export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
+  const title = subject.title.trim() === "" ? "Untitled project" : subject.title.trim();
+  const reason = shortReason(subject.reason);
+  const item = reviewItemNames[subject.stage] ?? "an item";
+  const headline = `Review needs a decision: ${title}`;
+  return {
+    headline: reason === undefined ? headline : `${headline} — ${reason}`,
+    detail: `The automatic review flagged ${item} and kept it. Open the project and press Overrule to keep it or Redo to make it again.`,
+  };
 }
 
 export interface NoticeSubject {
@@ -106,13 +136,22 @@ export function topicsNoticeText(subject: TopicsNoticeSubject): NoticeText {
 
 export const testNotice: NoticeText = {
   headline: "Slopify test notification",
-  detail: "Notifications work. You'll get one when a run finishes, fails or waits for you.",
+  detail:
+    "Notifications work. You'll get one when a run finishes, fails or waits for you, and when a review needs your decision.",
 };
 
 // The body a Notification URL receives: plain text, which ntfy shows as the message. Nothing
 // but the project's title, what happened and the provider's own short reason goes in it.
 export function webhookBody(text: NoticeText): string {
-  return `${text.headline}\n${text.detail}\n`;
+  return `${text.headline}\n${text.detail}\n${text.link === undefined ? "" : `${text.link}\n`}`;
+}
+
+// Where a project opens in the browser, from the address the server listens on. A wildcard
+// (0.0.0.0 in Docker) or loopback address is reached as localhost from the same machine.
+export function projectLink(host: string, port: number, projectId: string): string {
+  const wildcard = host === "0.0.0.0" || host === "::" || host === "" || host === "127.0.0.1";
+  const authority = wildcard ? "localhost" : host.includes(":") ? `[${host}]` : host;
+  return `http://${authority}:${String(port)}/projects/${encodeURIComponent(projectId)}`;
 }
 
 export const notificationUrlMax = 2048;

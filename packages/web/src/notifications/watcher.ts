@@ -5,6 +5,7 @@ import {
   noticeOf,
   noticeText,
   type RunNotice,
+  reviewNoticeText,
   topicsNoticeText,
 } from "@app/slices/notifications/rules.js";
 
@@ -32,6 +33,19 @@ export interface TopicsEvent {
   readonly waiting: number;
 }
 
+// An automatic review kept an item flagged (`review.flagged`).
+export interface ReviewEvent {
+  readonly projectId: string;
+  readonly verdictId: string;
+  readonly stage: string;
+  readonly reason?: string | undefined;
+}
+
+export interface ShownReviewNotice {
+  readonly projectId: string;
+  readonly text: NoticeText;
+}
+
 export interface RunWatcherDeps {
   // The toggle is on and the browser has granted permission.
   readonly enabled: () => boolean;
@@ -43,6 +57,7 @@ export interface RunWatcherDeps {
   readonly claim: (key: string) => Promise<boolean>;
   readonly show: (notice: ShownNotice) => void;
   readonly showTopics?: (notice: ShownTopicsNotice) => void;
+  readonly showReview?: (notice: ShownReviewNotice) => void;
   readonly report: (error: unknown) => void;
 }
 
@@ -50,6 +65,8 @@ export interface RunWatcher {
   readonly observe: (event: { readonly projectId: string; readonly state: ProjectState }) => void;
   // A schedule held new suggested topics. Every tab hears it; one shows it.
   readonly observeTopics: (event: TopicsEvent) => void;
+  // A review needs a decision. Every tab hears it; one shows it, once per verdict.
+  readonly observeReview: (event: ReviewEvent) => void;
   // Fills in the projects no event has named yet; never overwrites one an event has.
   readonly seed: () => Promise<void>;
   // Resolves once every notification started so far is shown or dropped. Tests.
@@ -94,6 +111,25 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
         (async () => {
           if (!(await deps.claim(`topics:${event.scheduleId}:${String(event.waiting)}`))) return;
           show({ scheduleId: event.scheduleId, text: topicsNoticeText(event) });
+        })(),
+      );
+    },
+    observeReview: (event) => {
+      if (!deps.enabled() || deps.showReview === undefined) return;
+      const show = deps.showReview;
+      track(
+        (async () => {
+          const subject = await deps.subject(event.projectId);
+          if (subject === undefined) return;
+          if (!(await deps.claim(`review:${event.verdictId}`))) return;
+          show({
+            projectId: event.projectId,
+            text: reviewNoticeText({
+              title: subject.title,
+              stage: event.stage,
+              reason: event.reason,
+            }),
+          });
         })(),
       );
     },

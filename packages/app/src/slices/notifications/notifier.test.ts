@@ -4,6 +4,7 @@ import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
+import { projectLink } from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
@@ -16,6 +17,7 @@ function harness(
     readonly url?: string | null;
     readonly answer?: () => Promise<SendResult>;
     readonly makesVideo?: boolean;
+    readonly link?: boolean;
   } = {},
 ) {
   const posted: Posted[] = [];
@@ -35,6 +37,9 @@ function harness(
       projectId === "p1"
         ? { title: "Black holes", makesVideo: options.makesVideo ?? true }
         : undefined,
+    ...(options.link === true
+      ? { link: (projectId: string) => projectLink("0.0.0.0", 6969, projectId) }
+      : {}),
     send,
     log,
   };
@@ -147,6 +152,40 @@ describe("createRunNotifier", () => {
     notifier.observe(state("done"));
     await notifier.settled();
     expect(posted[0]?.body.split("\n")[0]).toBe("Run finished: Black holes");
+  });
+
+  it("says once when a review kept an item flagged, with the project's link", async () => {
+    const { notifier, posted } = harness({ link: true });
+    const flagged: ProjectEvent = {
+      type: "review.flagged",
+      projectId: "p1",
+      verdictId: "v1",
+      stage: "images",
+      itemKey: "image:3",
+      reason: "The dragon has five legs.\nAnd a second reason.",
+    };
+    notifier.observe(flagged);
+    notifier.observe(flagged);
+    await notifier.settled();
+    expect(posted).toEqual([
+      {
+        url: "https://ntfy.example/topic",
+        body: "Review needs a decision: Black holes — The dragon has five legs.\nThe automatic review flagged an image and kept it. Open the project and press Overrule to keep it or Redo to make it again.\nhttp://localhost:6969/projects/p1\n",
+      },
+    ]);
+  });
+
+  it("sends no review notice without a Notification URL", async () => {
+    const { notifier, posted } = harness({ url: null });
+    notifier.observe({
+      type: "review.flagged",
+      projectId: "p1",
+      verdictId: "v1",
+      stage: "article",
+      itemKey: "article:body",
+    });
+    await notifier.settled();
+    expect(posted).toEqual([]);
   });
 
   it("says how many generated topics wait for approval", async () => {

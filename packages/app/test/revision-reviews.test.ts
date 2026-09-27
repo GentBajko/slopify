@@ -4,10 +4,11 @@ import { expect, it } from "vitest";
 import { fakeImage } from "../src/adapters/fake/image.js";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
-import { createHub } from "../src/edge/events/hub.js";
+import { createHub, observedHub } from "../src/edge/events/hub.js";
 import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
+import type { ReviewFlaggedEvent } from "../src/kernel/events.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import { wireRunner } from "../src/main.js";
@@ -62,10 +63,16 @@ async function reviewedRun(mode: Exclude<ReviewMode, "off">) {
     ],
   });
   const redos = createReviewRedos();
+  const flaggedEvents: ReviewFlaggedEvent[] = [];
   const runner = wireRunner({
     ...service.deps,
     ffmpeg: resolveFfmpeg({}, ffmpegStatic),
-    hub: createHub({ ...h.deps, acceptEvent: (event) => currentProjectEvent(h.deps.db, event) }),
+    hub: observedHub(
+      createHub({ ...h.deps, acceptEvent: (event) => currentProjectEvent(h.deps.db, event) }),
+      (event) => {
+        if (event.type === "review.flagged") flaggedEvents.push(event);
+      },
+    ),
     registry,
     audioPreviews: createAudioPreviewStore(),
     telemetry: { ...h.deps, appVersion: "test" },
@@ -92,17 +99,28 @@ async function reviewedRun(mode: Exclude<ReviewMode, "off">) {
   }
   await runner.settled();
   const verdicts = listVerdicts(deps.db, h.projectId).toReversed();
-  return { h, deps, reviewer, images, verdicts, shown };
+  return { h, deps, reviewer, images, verdicts, shown, flaggedEvents };
 }
 
 it("sends a failed image back once, then keeps it and flags it; the passed one is left alone", async () => {
-  const { h, deps, reviewer, images, verdicts, shown } = await reviewedRun("redo");
+  const { h, deps, reviewer, images, verdicts, shown, flaggedEvents } = await reviewedRun("redo");
   const one = verdicts.filter((row) => row.itemKey === "image:one");
   expect(one.map((row) => [row.attempt, row.outcome, row.redoState])).toEqual([
     [1, "redo", "started"],
     [2, "flagged", null],
   ]);
   expect(one[1]?.reasons).toEqual(["Stray letters across the sky."]);
+  // Only the kept-and-flagged verdict asks for a decision; the redo did not.
+  expect(flaggedEvents).toMatchObject([
+    {
+      type: "review.flagged",
+      projectId: h.projectId,
+      verdictId: one[1]?.id,
+      stage: "images",
+      itemKey: "image:one",
+      reason: "Stray letters across the sky.",
+    },
+  ]);
   expect(verdicts.filter((row) => row.itemKey === "image:two").map((row) => row.outcome)).toEqual([
     "passed",
   ]);
