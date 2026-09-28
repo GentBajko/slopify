@@ -528,7 +528,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     };
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
-      template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
+      template: (id) => templateById(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);

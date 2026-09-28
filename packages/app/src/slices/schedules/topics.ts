@@ -138,7 +138,7 @@ async function ask(
       .run(failedAt.toISOString(), text, schedule.id);
     return { ok: false, reason: "failed", message: text };
   };
-  const template = deps.template(schedule.templateId, schedule.templateVersion);
+  const template = deps.template(schedule.templateId);
   const llm = schedule.topicGeneration.llm ?? template?.document.form.llm;
   if (llm === undefined)
     return fail(
@@ -510,7 +510,7 @@ export function editHeldTopic(
   if (values !== undefined && Object.keys(values).length > 0) {
     const schedule = scheduleById(deps.db, scheduleId);
     if (schedule === undefined) return { ok: false, reason: "not-found" };
-    const template = deps.template(schedule.templateId, schedule.templateVersion);
+    const template = deps.template(schedule.templateId);
     if (template === undefined) return { ok: false, reason: "missing-template" };
     const problems = topicRowProblems([{ title: parsed.data, values }], {
       keywords: templateKeywords(template.document.form).filter(
@@ -580,7 +580,7 @@ export function replaceTopics(
     if (!open.ok) return open;
     const schedule = open.value;
     if (schedule.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
-    const template = deps.template(schedule.templateId, schedule.templateVersion);
+    const template = deps.template(schedule.templateId);
     if (!template) return { ok: false, reason: "missing-template" };
     const problems = topicRowProblems(parsed.data.items, {
       keywords: templateKeywords(template.document.form),

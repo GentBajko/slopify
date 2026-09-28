@@ -47,7 +47,7 @@ it("creates, pauses, resumes and updates a schedule with a timezone preview", ()
     expect(createdTemplate.ok).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const created = createSchedule(deps, scheduleInput(templateId));
     expect(created.ok).toBe(true);
@@ -82,7 +82,7 @@ it("refuses a template whose shorts use supplied background music, and accepts i
   try {
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const shorts = {
       enabled: true,
@@ -134,7 +134,7 @@ it("replays a committed update when its response was lost", () => {
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const created = createSchedule(deps, scheduleInput(templateId));
     expect(created.ok).toBe(true);
@@ -165,7 +165,7 @@ it("claims a due one-off schedule once and records the started project", async (
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const input = {
       ...scheduleInput(templateId),
@@ -206,7 +206,7 @@ it("records a missed occurrence without dispatching when skip is selected", asyn
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const created = createSchedule(deps, {
       ...scheduleInput(templateId),

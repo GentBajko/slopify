@@ -24,7 +24,7 @@ function fixture() {
   expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
   const deps: ScheduleDeps = {
     ...h.deps,
-    template: (id, version) => templateById(h.deps.db, id, version),
+    template: (id: string) => templateById(h.deps.db, id),
   };
   const input = (
     items: readonly { title: string; values: Record<string, string> }[],

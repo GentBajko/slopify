@@ -26,7 +26,7 @@ function fixture() {
   if (!template.ok) throw new Error(template.reason);
   const deps = {
     ...h.deps,
-    template: (id: string, version: number) => templateById(h.deps.db, id, version),
+    template: (id: string) => templateById(h.deps.db, id),
   };
   const input = {
     id: randomUUID(),

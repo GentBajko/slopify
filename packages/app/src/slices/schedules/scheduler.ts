@@ -172,11 +172,12 @@ function noTopicReason(schedule: ScheduleSummary): string {
 async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise<void> {
   let run = claimed.run;
   try {
-    const template = deps.template(claimed.schedule.templateId, claimed.schedule.templateVersion);
+    // The template as it is now, so an edit to it reaches the next run.
+    const template = deps.template(claimed.schedule.templateId);
     if (template === undefined) throw new ScheduleDispatchError("missing-template");
     const document = freshTemplateDraft(deps, template.document, {
       id: claimed.schedule.templateId,
-      version: claimed.schedule.templateVersion,
+      version: template.version,
     });
     const topic = claimed.schedule.items[0];
     const fresh = {

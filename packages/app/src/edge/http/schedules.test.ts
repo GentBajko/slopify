@@ -17,7 +17,7 @@ it("refuses a topic naming a keyword the template doesn't use with a 400 naming 
     expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const response = await scheduleRoutes(deps).request("/", {
       method: "POST",
@@ -53,7 +53,7 @@ it("creates, reads and pauses a schedule through the HTTP contract", async () =>
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     const app = new Hono().route("/api/schedules", scheduleRoutes(deps));
     const id = randomUUID();

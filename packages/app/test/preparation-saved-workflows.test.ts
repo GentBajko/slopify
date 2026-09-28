@@ -127,7 +127,7 @@ it.each([undefined, false, true])(
               ...provider,
               readiness: { kind: "cli" as const, installed: true },
             })),
-        template: (id: string, version: number) => templateById(target.deps.db, id, version),
+        template: (id: string) => templateById(target.deps.db, id),
       };
       const scheduleId = randomUUID();
       expect(

@@ -17,7 +17,7 @@ it("skips a later occurrence until every project from the prior dispatch is term
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     expect(
       createSchedule(deps, {
@@ -193,7 +193,7 @@ it("reports a failed finalization and recovers its running occurrence on the nex
     ).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     expect(
       createSchedule(deps, {
@@ -295,7 +295,7 @@ it("recovers admitted project ids from the exact Start receipt after a crash bef
     ).toBe(true);
     const scheduleDeps = () => ({
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     });
     expect(
       createSchedule(scheduleDeps(), {
@@ -396,7 +396,7 @@ it("fills the chosen keyword and the project title from the first topic", async 
     expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
     const deps = {
       ...h.deps,
-      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+      template: (id: string) => templateById(h.deps.db, id),
     };
     expect(
       createSchedule(deps, {

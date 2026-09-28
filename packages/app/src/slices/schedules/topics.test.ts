@@ -76,7 +76,7 @@ function setup(options: {
   const deps: ScheduleDeps = {
     ...h.deps,
     clock: { now: () => now, sleep: async () => undefined },
-    template: (id, version) => templateById(h.deps.db, id, version),
+    template: (id: string) => templateById(h.deps.db, id),
     topicLlm: options.topicLlm ?? topicLlm,
     topicsWaiting: (event) => {
       waiting.push(event);

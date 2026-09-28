@@ -58,14 +58,19 @@ export function createSchedule(
         ? { ok: true, value: scheduleById(deps.db, parsed.data.id) as ScheduleSummary }
         : { ok: false, reason: "conflict" };
     }
-    const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
+    const checked = checkTemplate(deps, parsed.data.templateId);
     if (!checked.ok) return checked;
     const topics = checkTopics(deps, parsed.data, []);
     if (!topics.ok) return topics;
     const now = deps.clock.now();
     const next = nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
     if (next === null) return { ok: false, reason: "not-due" };
-    const value = summary(parsed.data, next.toISOString(), now.toISOString());
+    // The version it was saved against, for the record; runs use the newest.
+    const value = summary(
+      { ...parsed.data, templateVersion: checked.value },
+      next.toISOString(),
+      now.toISOString(),
+    );
     insertSchedule(deps.db, value, hash);
     return { ok: true, value };
   });
@@ -97,7 +102,7 @@ export function updateSchedule(
     if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
     if (previous.status === "canceled" || previous.status === "completed")
       return { ok: false, reason: "conflict" };
-    const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
+    const checked = checkTemplate(deps, parsed.data.templateId);
     if (!checked.ok) return checked;
     const topics = checkTopics(deps, parsed.data, previous.items);
     if (!topics.ok) return topics;
@@ -211,12 +216,14 @@ function control(
   return { ok: true, value: scheduleById(deps.db, previous.id) as ScheduleSummary };
 }
 
+// Answers the template's newest version when a schedule may use it.
 function checkTemplate(
   deps: ScheduleDeps,
   id: string,
-  version: number,
-): ScheduleResult<ScheduleSummary> | { readonly ok: true; readonly value: true } {
-  const template = deps.template(id, version);
+):
+  | Extract<ScheduleResult<ScheduleSummary>, { ok: false }>
+  | { readonly ok: true; readonly value: number } {
+  const template = deps.template(id);
   if (!template) return { ok: false, reason: "missing-template" };
   const sources = template.document.form.sources;
   const mediaSources = ["audio", "images", "thumbnail"] as const;
@@ -230,7 +237,7 @@ function checkTemplate(
     (sources.images === "generate" && form.reference?.source === "provide")
   )
     return { ok: false, reason: "unsupported-media" };
-  return { ok: true, value: true };
+  return { ok: true, value: template.version };
 }
 
 // The queue's keywords must be the template's: a topic (or an every-run value) naming a keyword
@@ -241,7 +248,7 @@ function checkTopics(
   input: ScheduleCreate,
   kept: readonly TopicRow[],
 ): ScheduleResult<ScheduleSummary> | { readonly ok: true; readonly value: true } {
-  const template = deps.template(input.templateId, input.templateVersion);
+  const template = deps.template(input.templateId);
   if (!template) return { ok: false, reason: "missing-template" };
   const keywords = templateKeywords(template.document.form);
   const named = keywords.length === 0 ? "none" : keywords.map((one) => `“${one}”`).join(", ");

@@ -79,7 +79,7 @@ function upcomingRuns(
       : paused
         ? nextOccurrence(schedule.cadence, schedule.timezone, now)
         : new Date(schedule.nextRunAt);
-  const template = deps.template(schedule.templateId, schedule.templateVersion);
+  const template = deps.template(schedule.templateId);
   const templateName = template?.name ?? null;
   const form = template?.document.form;
   const { items } = schedule;

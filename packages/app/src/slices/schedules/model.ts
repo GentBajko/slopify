@@ -12,7 +12,9 @@ export type { ScheduleCreate, ScheduleRun, ScheduleSummary, ScheduleUpdate } fro
 export type TopicLlm = StandaloneLlm;
 
 export interface ScheduleDeps extends DraftStartDeps {
-  readonly template: (id: string, version: number) => ProjectTemplate | undefined;
+  // The template as it is now: a schedule always runs, previews and checks against the
+  // template's newest version, so editing the template changes its next run.
+  readonly template: (id: string) => ProjectTemplate | undefined;
   // Absent: topic generation records that no LLM is available instead of asking one.
   readonly topicLlm?: TopicLlm;
   // Told when a generation holds topics for approval.

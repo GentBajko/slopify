@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { writeSampleRecord } from "../../slices/onboarding/state.js";
 import { startFixture } from "../../slices/play-drafts/draft.fake.js";
 import { templateById } from "../../slices/project-templates/repo.js";
-import { createTemplate } from "../../slices/project-templates/service.js";
+import { createTemplate, updateTemplate } from "../../slices/project-templates/service.js";
 import { calendarRange } from "../../slices/schedules/agenda.js";
 import type { ScheduleDeps } from "../../slices/schedules/model.js";
 import { calendarSchema, type TopicGeneration } from "../../slices/schedules/schema.js";
@@ -17,7 +17,7 @@ function fixture() {
   if (!template.ok) throw new Error(template.reason);
   const deps: ScheduleDeps = {
     ...h.deps,
-    template: (id, version) => templateById(h.deps.db, id, version),
+    template: (id: string) => templateById(h.deps.db, id),
   };
   const schedule = (
     name: string,
@@ -52,7 +52,7 @@ function fixture() {
       .run(randomUUID(), id, "article", "generate", state, finishedAt);
     return id;
   };
-  return { h, deps, schedule, project };
+  return { h, deps, schedule, project, templateId };
 }
 
 it("lists every coming run with its topic, and projects and batch items in the range", async () => {
@@ -235,6 +235,31 @@ it("refuses a backwards or overlong range", async () => {
       "/?from=2026-09-12T00:00:00.000Z&to=2026-09-11T00:00:00.000Z",
     );
     expect(response.status).toBe(400);
+  } finally {
+    f.h.close();
+  }
+});
+
+it("shows and runs the template as it is now, not as it was when the schedule was made", () => {
+  const f = fixture();
+  try {
+    const made = f.schedule("Nightly", "09:00", ["A"]);
+    expect(made.templateVersion).toBe(1);
+    const renamed = updateTemplate(f.h.deps, {
+      id: f.templateId,
+      baseVersion: 1,
+      mutationId: randomUUID(),
+      name: "Lore, renamed",
+      document: f.h.document,
+    });
+    if (!renamed.ok) throw new Error(renamed.reason);
+    const result = calendarRange(
+      f.deps,
+      new Date("2026-09-11T00:00:00.000Z"),
+      new Date("2026-09-15T00:00:00.000Z"),
+    );
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.value.runs[0]?.templateName).toBe("Lore, renamed");
   } finally {
     f.h.close();
   }

@@ -99,7 +99,7 @@ describe("cast voices on every start path", () => {
       expect(createTemplate(deps, { id: templateId, name: "Podcast", document }).ok).toBe(true);
       const scheduled = {
         ...deps,
-        template: (id: string, version: number) => templateById(deps.db, id, version),
+        template: (id: string) => templateById(deps.db, id),
       };
       expect(
         createSchedule(scheduled, {
