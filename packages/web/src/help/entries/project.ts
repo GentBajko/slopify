@@ -260,7 +260,7 @@ export const projectHelp = {
   },
   "project.cost.by-stage": {
     title: "Cost by stage",
-    body: "What each stage of this project has cost so far, from every provider call it made, retries and remakes included, priced from the model catalogue when each call finished. Failed calls are not charged here, and taxes and included credits are not counted. Stage time is how long the stage ran.",
+    body: "What each stage of this project has cost so far, from every provider call it made, retries and remakes included, priced from the model catalogue when each call finished. Failed calls are not charged here, and taxes and included credits are not counted. Working time is how long the stage's steps were running, over every run.",
     tutorial: { page: "Costs-and-Run-Cost", anchor: "after-a-run-the-run-cost-tab" },
   },
   "project.cost.by-model": {

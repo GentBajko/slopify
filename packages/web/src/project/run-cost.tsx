@@ -7,9 +7,10 @@ import type {
   StageCost,
   UsageTotals,
 } from "@app/slices/run-cost/panel.js";
+import type { RunTiming } from "@app/slices/run-cost/timing.js";
 import { useQuery } from "@tanstack/react-query";
-import { ReceiptIcon } from "lucide-react";
-import type { ReactElement } from "react";
+import { ReceiptIcon, TimerIcon } from "lucide-react";
+import { type ReactElement, useEffect, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
@@ -22,7 +23,7 @@ import { stageNames } from "./summary.js";
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
 // what its CLI calls would have cost through the API, the usage behind both, and the share of
 // each CLI plan's windows the run took. Everything comes from `GET /projects/:id/run-cost`.
-// A row of big numbers first (paid, via API, plan meters, end-to-end time), then the tables.
+// A row of big numbers first (paid, via API, plan meters, this run's time), then the tables.
 export function RunCostPanel({ projectId }: { readonly projectId: string }): ReactElement {
   const { api } = useApp();
   const cost = useQuery(runCostQuery(api, projectId));
@@ -59,7 +60,7 @@ export function RunCostSummary({
   const parts = [
     `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${money(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
     ...(cost.apiEquivalent === null ? [] : [`~${money(cost.apiEquivalent)} via API`]),
-    `${duration(cost.totals.wallMs)} end to end`,
+    ...(cost.run === null ? [] : [`took ${took(cost.run)}`]),
   ];
   return (
     <section
@@ -77,6 +78,50 @@ export function RunCostSummary({
 
 const ended: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
 
+// "36 min 0 s (6 min 0 s working)": a run from start to finish, and the part of it some step
+// was running when waiting on a review or a limit made the two differ by a minute or more.
+function took(run: RunTiming): string {
+  return run.spanMs - run.workingMs >= 60_000
+    ? `${duration(run.spanMs)} (${duration(run.workingMs)} working)`
+    : duration(run.spanMs);
+}
+
+// "Running for 12 min 4 s · 9 min 30 s working": the current run's clock on the project page
+// while it runs, pauses or waits, ticking each second. The working part only grows while a
+// step runs; `measuredAt` is when the server counted it. Nothing before the current
+// revision's run starts or once it ended, where the cost line says how long it took.
+export function RunClock({
+  cost,
+  status,
+  measuredAt,
+}: {
+  readonly cost: RunCost | undefined;
+  readonly status: ProjectState;
+  readonly measuredAt: number;
+}): ReactElement | null {
+  const run = cost?.run ?? null;
+  const on = run?.current === true && !ended.has(status);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [on]);
+  if (!on || run === null) return null;
+  const elapsed = Math.max(run.spanMs, now - Date.parse(run.startedAt));
+  const working = run.workingMs + (run.endedAt === null ? Math.max(0, now - measuredAt) : 0);
+  return (
+    <p
+      role="timer"
+      aria-label="Run time"
+      className="m-0 flex items-center gap-2 border-b border-line pb-3 text-small text-ink-2"
+    >
+      <TimerIcon aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+      {`${status === "running" ? "Running for" : "Started"} ${duration(elapsed)}${status === "running" ? "" : " ago"} · ${duration(working)} working`}
+    </p>
+  );
+}
+
 const stageColumns: readonly Column<StageCost>[] = [
   { id: "stage", header: "Stage", cell: (row) => <strong>{stageNames[row.stage]}</strong> },
   { id: "cost", header: "Cost", numeric: true, cell: lineCost },
@@ -84,7 +129,7 @@ const stageColumns: readonly Column<StageCost>[] = [
   { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
   {
     id: "time",
-    header: "Time",
+    header: "Working time",
     numeric: true,
     cell: (row) => (row.wallMs === null ? "—" : duration(row.wallMs)),
   },
@@ -138,7 +183,12 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
               </Stat>
             );
           })}
-          <Stat value={duration(cost.totals.wallMs)} label="end to end" />
+          {cost.run === null ? null : (
+            <Stat value={duration(cost.run.spanMs)} label="this run, start to finish" />
+          )}
+          {cost.run === null ? null : (
+            <Stat value={duration(cost.run.workingMs)} label="of it working" />
+          )}
         </Stats>
         <div className="flex flex-col gap-1 text-small text-ink-2">
           {cost.unpriced > 0 ? (
@@ -181,7 +231,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
 
       <div className="flex flex-col gap-1">
         <p className="m-0 text-small text-ink-2">
-          {`In total: ${usage(cost.totals) || "no reported usage"} · ${duration(cost.totals.wallMs)} of stage time.`}
+          {`In total: ${usage(cost.totals) || "no reported usage"} · ${duration(cost.totals.wallMs)} working, over every run.`}
         </p>
         <p className="m-0 text-small text-ink-3">
           {`Priced from the model catalogue${cost.catalogueDate === null ? "" : ` of ${cost.catalogueDate}`} when each call finished. Retries that failed are not charged here; taxes and included credits are not counted.`}

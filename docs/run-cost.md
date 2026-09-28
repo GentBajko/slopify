@@ -5,7 +5,9 @@
 Every successful provider call is recorded against its project with what it used: tokens in
 and out (and how many were cached) per model for text, characters for narration, images per
 model with their aspect and effort, video seconds for animated clips, and the wall time of the
-call. Stage times come from the stages themselves.
+call. Times come from the attempts each step made: a run's start to finish (first attempt
+starting to last one ending), and its working time (while some attempt ran; steps side by side
+count once), so hours waiting on a review do not read as work.
 
 Each call is priced when it lands, from the same model catalogue (`assets/models.yaml`, or the
 refreshed copy in the data folder) the estimate uses, and the rates it was priced at are
@@ -16,8 +18,9 @@ free. Per-minute voices are left unpriced rather than guessed from characters.
 The project page's **Run cost** tab shows the total, then the cost, API equivalent, usage and
 time per stage and per model. Data: `GET /api/projects/:id/run-cost`. Once the run ends (done,
 done with problems, failed or canceled), the top of the project page sums it up in one line,
-such as "This run cost $3.37 · ~$9.10 via API · 12 min 4 s end to end", with **See cost by
-stage** to open the Cost section.
+such as "This run cost $3.37 · ~$9.10 via API · took 1 h 5 min (12 min 4 s working)", with **See cost
+by stage** to open the Cost section. While it runs, the same place shows a clock ticking each
+second: "Running for 12 min 4 s · 9 min 30 s working".
 
 ## CLI runs
 

@@ -49,7 +49,7 @@ When a CLI's plan is used up, the run waits instead of failing: the status reads
 
 ## After a run: the run cost line
 
-When a run has ended, one line at the top of its project page, under the title, sums it up: for example `This run cost $0.42 · ~$3.10 via API · 12 min end to end`. A failed or cancelled run says **Spent so far**, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the full breakdown below. The line doesn't show while the run is going, or when it spent nothing.
+When a run has ended, one line at the top of its project page, under the title, sums it up: for example `This run cost $0.42 · ~$3.10 via API · took 1 h 5 min (12 min working)`. A failed or cancelled run says **Spent so far**, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the full breakdown below. The line doesn't show while the run is going, or when it spent nothing.
 
 ## After a run: the Run cost tab
 
@@ -65,7 +65,8 @@ If nothing has been spent yet, it says "Nothing has been spent yet. The cost of 
 | **paid to providers** | The total cost of this project's calls. Reads "known cost, paid to providers" when some calls have no price, with a line "Plus N calls the model catalogue has no price for." |
 | **same work via API** | The API equivalent of the calls that ran on a CLI plan. |
 | Plan meters | One per plan window a CLI reported, for example "3% of weekly Codex limit". Hover or read the line below for the level it is at now. |
-| **end to end** | How long the whole run took. |
+| **this run, start to finish** | From the run's first step starting to its last one ending, waits on reviews and limits included. Each save that remakes something starts a new run. |
+| **of it working** | How long some step was running in that run. Steps that ran side by side count once. |
 
 Lines under the summary:
 
@@ -89,7 +90,7 @@ Lines under the summary:
 
 **Cost by model**: the same spending split by provider and model, with **Cost**, **Via API**, **Usage** and **Calls**. A CLI model shows the API model it was priced as, in brackets after "as". The CLI's own default model shows as "default model".
 
-The last lines give the total usage and stage time, and "Priced from the model catalogue of <date> when each call finished."
+The last lines give the total usage and the working time over every run, and "Priced from the model catalogue of <date> when each call finished."
 
 ## Across all projects: Home → This week
 

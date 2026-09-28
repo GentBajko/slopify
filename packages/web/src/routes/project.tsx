@@ -50,7 +50,7 @@ import {
   useRevisionController,
 } from "@/project/revision-workspace";
 import { CostSoFar, RunSteps, runSteps, StageAnnouncements } from "@/project/run-aside";
-import { RunCostPanel, RunCostSummary } from "@/project/run-cost";
+import { RunClock, RunCostPanel, RunCostSummary } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { SectionEmpty, StageSection } from "@/project/stage-section";
 import { finalOutput } from "@/project/summary";
@@ -524,6 +524,11 @@ function ProjectWorkspace({
                 />
               </div>
               <StageAnnouncements stages={stages} />
+              <RunClock
+                cost={runCost.data}
+                status={summary.status}
+                measuredAt={runCost.dataUpdatedAt}
+              />
               {selected === "cost" ? null : (
                 <RunCostSummary
                   cost={runCost.data}

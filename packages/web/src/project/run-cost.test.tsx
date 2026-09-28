@@ -1,6 +1,6 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RunReview } from "@/play/run-review";
@@ -9,6 +9,7 @@ import {
   limitWaitMessage,
   planLine,
   planUse,
+  RunClock,
   RunCostPanel,
   RunCostSummary,
   usage,
@@ -126,6 +127,13 @@ describe("the Run cost tab", () => {
     ],
     waits: [],
     catalogueDate: "2026-09-27",
+    run: {
+      current: true,
+      startedAt: "2026-09-27T10:00:00.000Z",
+      endedAt: "2026-09-27T10:36:00.000Z",
+      spanMs: 36 * 60_000,
+      workingMs: 9 * 60_000,
+    },
   };
 
   it("leads with paid, via API, the plan meter and the end-to-end time, then the tables", async () => {
@@ -140,6 +148,7 @@ describe("the Run cost tab", () => {
     expect(stats).toContain("$3.37");
     expect(stats).toContain("~$1.50");
     expect(stats).toContain("18%");
+    expect(stats).toContain("36 min 0 s");
     expect(stats).toContain("9 min 0 s");
     const meter = within(summary).getByRole("meter", {
       name: "Share of the weekly Codex limit this run used",
@@ -159,7 +168,7 @@ describe("the Run cost tab", () => {
     render(<RunCostSummary cost={cost} status="done" onOpen={onOpen} />);
     const line = screen.getByRole("region", { name: "Run cost" });
     expect(line.textContent).toContain(
-      "This run cost $3.37 · ~$1.50 via API · 9 min 0 s end to end",
+      "This run cost $3.37 · ~$1.50 via API · took 36 min 0 s (9 min 0 s working)",
     );
     await user.click(within(line).getByRole("button", { name: "See cost by stage" }));
     expect(onOpen).toHaveBeenCalledOnce();
@@ -184,6 +193,48 @@ describe("the Run cost tab", () => {
       />,
     );
     expect(screen.queryByRole("region", { name: "Run cost" })).toBeNull();
+  });
+});
+
+describe("the run clock", () => {
+  it("ticks start to finish every second, and working only while a step runs", () => {
+    vi.useFakeTimers({ now: Date.parse("2026-09-27T10:12:00.000Z") });
+    try {
+      const measuredAt = Date.now();
+      const running = (endedAt: string | null) =>
+        ({
+          run: {
+            current: true,
+            startedAt: "2026-09-27T10:00:00.000Z",
+            endedAt,
+            spanMs: 0,
+            workingMs: 5 * 60_000,
+          },
+        }) as RunCost;
+      render(<RunClock cost={running(null)} status="running" measuredAt={measuredAt} />);
+      const clock = screen.getByRole("timer", { name: "Run time" });
+      expect(clock.textContent).toBe("Running for 12 min 0 s · 5 min 0 s working");
+      act(() => vi.advanceTimersByTime(5000));
+      expect(clock.textContent).toBe("Running for 12 min 5 s · 5 min 5 s working");
+      cleanup();
+      // Waiting on a review: the run goes on, the work does not.
+      render(
+        <RunClock
+          cost={running("2026-09-27T10:05:00.000Z")}
+          status="paused"
+          measuredAt={measuredAt}
+        />,
+      );
+      act(() => vi.advanceTimersByTime(5000));
+      expect(screen.getByRole("timer").textContent).toBe(
+        "Started 12 min 10 s ago · 5 min 0 s working",
+      );
+      cleanup();
+      render(<RunClock cost={running(null)} status="done" measuredAt={measuredAt} />);
+      expect(screen.queryByRole("timer")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

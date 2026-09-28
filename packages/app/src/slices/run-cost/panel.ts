@@ -9,6 +9,7 @@ import {
   planAccounts,
 } from "../../kernel/ports/plan-limits.js";
 import type { ListingLimitWait } from "../admission/model.js";
+import { projectTiming, type RunTiming } from "./timing.js";
 
 // The data behind a project's Run cost tab: what the run actually cost, per stage and per
 // model, what its CLI calls would have cost through the API, the usage behind both, and how
@@ -35,7 +36,7 @@ export interface CostLine {
 
 export interface StageCost extends CostLine, UsageTotals {
   readonly stage: StageKind;
-  // From the stage starting to finishing, null while it has not run.
+  // The time the stage's steps spent running, over every run; null while it has not run.
   readonly wallMs: number | null;
 }
 
@@ -76,7 +77,10 @@ export interface LimitWait {
 
 export interface RunCost extends CostLine {
   readonly currency: "USD";
+  // The time some step was running, over every run (`timing.ts`).
   readonly totals: UsageTotals & { readonly wallMs: number };
+  // The current run's start to finish and working time; null before it makes anything.
+  readonly run: RunTiming | null;
   readonly byStage: readonly StageCost[];
   readonly byModel: readonly ModelCost[];
   readonly plans: readonly PlanUse[];
@@ -147,7 +151,7 @@ function add<T extends CostLine & UsageTotals>(into: T, row: UsageRow): T {
   };
 }
 
-export function runCostOf(db: DatabaseSync, projectId: string): RunCost {
+export function runCostOf(db: DatabaseSync, projectId: string, now = Date.now()): RunCost {
   const rows = db
     .prepare(
       "SELECT stage, kind, provider, model, tokens_in, tokens_out, tokens_cached, characters, images, seconds, on_plan, cost, api_model, api_cost, price_json FROM provider_usage WHERE project_id = ? ORDER BY created_at, rowid",
@@ -155,7 +159,8 @@ export function runCostOf(db: DatabaseSync, projectId: string): RunCost {
     .all(projectId)
     .map((row) => usageRow.parse(row));
 
-  const walls = stageWalls(db, projectId);
+  const timing = projectTiming(db, projectId, now);
+  const walls = timing.byStage;
   const stages = new Map<StageKind, StageCost>();
   const models = new Map<string, ModelCost>();
   let total: CostLine & UsageTotals = { ...emptyLine, ...emptyTotals };
@@ -207,8 +212,9 @@ export function runCostOf(db: DatabaseSync, projectId: string): RunCost {
       characters: total.characters,
       images: total.images,
       seconds: total.seconds,
-      wallMs: [...walls.values()].reduce((sum, ms) => sum + ms, 0),
+      wallMs: timing.workingMs,
     },
+    run: timing.run,
     byStage: stageKinds.flatMap((kind) => {
       const found = stages.get(kind);
       return found === undefined ? [] : [found];
@@ -230,25 +236,6 @@ function catalogueOf(json: string | null): string | null {
   if (json === null) return null;
   const parsed = z.object({ catalogue: z.string() }).safeParse(JSON.parse(json));
   return parsed.success ? parsed.data.catalogue : null;
-}
-
-function stageWalls(db: DatabaseSync, projectId: string): Map<StageKind, number> {
-  const walls = new Map<StageKind, number>();
-  for (const raw of db
-    .prepare("SELECT kind, started_at, finished_at FROM stages WHERE project_id = ?")
-    .all(projectId)) {
-    const row = z
-      .object({
-        kind: z.enum(stageKinds),
-        started_at: z.string().nullable(),
-        finished_at: z.string().nullable(),
-      })
-      .parse(raw);
-    if (row.started_at === null || row.finished_at === null) continue;
-    const ms = Date.parse(row.finished_at) - Date.parse(row.started_at);
-    if (Number.isFinite(ms) && ms >= 0) walls.set(row.kind, ms);
-  }
-  return walls;
 }
 
 // Two readings belong to the same window when their resets agree to within a few minutes;

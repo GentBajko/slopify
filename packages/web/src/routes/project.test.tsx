@@ -84,6 +84,13 @@ describe("the project workspace", () => {
           currency: "USD",
           totals: { ...line, wallMs: 90_000 },
           byStage: [{ ...line, stage: "article", wallMs: 90_000 }],
+          run: {
+            current: true,
+            startedAt: "2026-09-27T10:00:00.000Z",
+            endedAt: "2026-09-27T10:01:30.000Z",
+            spanMs: 90_000,
+            workingMs: 90_000,
+          },
           byModel: [],
           plans: [],
           waits: [],
@@ -92,7 +99,7 @@ describe("the project workspace", () => {
       }),
     );
     const summary = await screen.findByRole("region", { name: "Run cost" });
-    expect(summary.textContent).toContain("This run cost $1.25 · 1 min 30 s end to end");
+    expect(summary.textContent).toContain("This run cost $1.25 · took 1 min 30 s");
     await userEvent.click(within(summary).getByRole("button", { name: "See cost by stage" }));
     expect(await screen.findByRole("region", { name: "Run cost summary" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: "See cost by stage" })).toBeNull();

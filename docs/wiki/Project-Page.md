@@ -20,7 +20,7 @@ The page opens where the next action points: the failed step, the held review or
 
 ### The run cost line
 
-When a run has ended (done, done with problems, failed or cancelled), a line under the title sums it up, for example `This run cost $0.42 · ~$3.10 via API · 12 min end to end`. A run that ended early says **Spent so far** instead, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the **Cost** section. The line is hidden while the run is going and when it spent nothing. See [Costs and Run Cost](Costs-and-Run-Cost).
+When a run has ended (done, done with problems, failed or cancelled), a line under the title sums it up, for example `This run cost $0.42 · ~$3.10 via API · took 1 h 5 min (12 min working)`: start to finish, and how much of it Slopify was working when waiting on a review or a limit made the two differ. A run that ended early says **Spent so far** instead, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the **Cost** section. The line is hidden while the run is going and when it spent nothing. While the run is going, a clock sits there instead: `Running for 12 min 4 s · 9 min 30 s working`, or `Started … ago` while it is paused or waits on you. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Time left
 

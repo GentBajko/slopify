@@ -52,10 +52,26 @@ function database(): DatabaseSync {
   migrate(db, fixedClock("2026-09-27T10:00:00.000Z"));
   db.exec("INSERT INTO projects VALUES ('p1','Run','16:9','{}','2026-09-27','2026-09-27')");
   db.exec(
-    `INSERT INTO stages (id, project_id, kind, source, state, started_at, finished_at) VALUES
-     ('s1','p1','article','generate','done','2026-09-27T10:00:00.000Z','2026-09-27T10:02:00.000Z'),
-     ('s2','p1','audio','generate','done','2026-09-27T10:02:00.000Z','2026-09-27T10:05:00.000Z'),
-     ('s3','p1','video','generate','done','2026-09-27T10:05:00.000Z','2026-09-27T10:06:00.000Z')`,
+    `INSERT INTO stages (id, project_id, kind, source, state) VALUES
+     ('s1','p1','article','generate','done'),
+     ('s2','p1','audio','generate','done'),
+     ('s3','p1','images','generate','done'),
+     ('s4','p1','video','generate','done')`,
+  );
+  db.exec(`
+    INSERT INTO project_revisions (id, project_id, config, content, fingerprints, created_at)
+      VALUES ('r0','p1','{}','{}','{}','2026-09-26'), ('r1','p1','{}','{}','{}','2026-09-27');
+    INSERT INTO project_heads VALUES ('p1','r1');
+  `);
+  // An earlier run's 4 minutes, then this run: the article, the audio with the images beside
+  // it, and the render after half an hour waiting on a review.
+  db.exec(
+    `INSERT INTO attempts (id, stage_id, n, started_at, ended_at, revision_id) VALUES
+     ('a0','s1',1,'2026-09-26T09:00:00.000Z','2026-09-26T09:04:00.000Z','r0'),
+     ('a1','s1',1,'2026-09-27T10:00:00.000Z','2026-09-27T10:02:00.000Z','r1'),
+     ('a2','s2',1,'2026-09-27T10:02:00.000Z','2026-09-27T10:05:00.000Z','r1'),
+     ('a3','s3',1,'2026-09-27T10:03:00.000Z','2026-09-27T10:04:00.000Z','r1'),
+     ('a4','s4',1,'2026-09-27T10:35:00.000Z','2026-09-27T10:36:00.000Z','r1')`,
   );
   return db;
 }
@@ -133,11 +149,20 @@ describe("the Run cost tab", () => {
       characters: 20_000,
       images: 0,
       seconds: 0,
-      wallMs: 6 * 60_000,
+      // Both runs' working time: the images ran beside the audio, so they count once.
+      wallMs: 10 * 60_000,
+    });
+    expect(cost.run).toEqual({
+      current: true,
+      startedAt: "2026-09-27T10:00:00.000Z",
+      endedAt: "2026-09-27T10:36:00.000Z",
+      spanMs: 36 * 60_000,
+      workingMs: 6 * 60_000,
     });
     expect(cost.byStage.map((row) => [row.stage, row.calls, row.wallMs])).toEqual([
-      ["article", 2, 120_000],
-      ["audio", 2, 180_000],
+      ["article", 2, 6 * 60_000],
+      ["audio", 2, 3 * 60_000],
+      ["images", 0, 60_000],
       ["video", 0, 60_000],
     ]);
     expect(cost.byModel[0]).toMatchObject({ provider: "elevenlabs", cost: 2, onPlan: false });
