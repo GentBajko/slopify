@@ -37,21 +37,24 @@ export function ImagePreview({
   const missing =
     !available &&
     (retained !== undefined || (definition.source === "provide" && definition.assetId !== null));
+  const marked = edit.regenerate?.includes(`image:${imageKey}`) === true;
   const status = staged
     ? available
       ? "Replacement ready to save; previous image shown until Save"
       : "Replacement ready to save; preview available after Save"
-    : missing
-      ? "Image file unavailable"
-      : !available
-        ? "No completed image yet"
-        : definition.source === "provide" && retained !== selected
-          ? "Provided image selected"
-          : retained.state === "review"
-            ? "Image retained; review required"
-            : retained.state === "outdated"
-              ? "Outdated image retained until rebuilt"
-              : "Current image retained";
+    : marked
+      ? "Made again after you press Save changes; the current image stays until then"
+      : missing
+        ? "Image file unavailable"
+        : !available
+          ? "No completed image yet"
+          : definition.source === "provide" && retained !== selected
+            ? "Provided image selected"
+            : retained.state === "review"
+              ? "Image retained; review required"
+              : retained.state === "outdated"
+                ? "Outdated image retained until rebuilt"
+                : "Current image retained";
   // An uploaded clip plays in the image's place; it is shown as the muted clip it will be.
   const clip = available && /\.(mp4|mov|m4v|webm|mkv)$/i.test(retained.output.path);
   return (

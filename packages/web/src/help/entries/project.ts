@@ -184,8 +184,8 @@ export const projectHelp = {
     tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
   },
   "project.images.regenerate": {
-    title: "Regenerate image after review",
-    body: "Marks this image to be drawn again from its prompt, one paid image call, with a new result. Nothing runs yet: save, and the rebuild review lists it with the video it outdates. The current image stays until the new one is made.",
+    title: "Regenerate image",
+    body: "Marks this image to be drawn again from its prompt, one paid image call, with a new result. Nothing runs yet: the image says it is marked, and Keep takes the mark off. Press Save changes, and the rebuild review lists it with the video it outdates. The current image stays until the new one is made.",
     tutorial: { page: "Editing-a-Project", anchor: "edit-images" },
   },
   "project.narration.editor": {

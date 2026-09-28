@@ -85,3 +85,32 @@ export function useOutputChange(
     ready: !revisioned || view !== undefined,
   };
 }
+
+// Making every slideshow image again in one go: Edit project opens with all of them marked to
+// regenerate, to review and save. Undefined for an older project without revisions, or before
+// the revision has loaded, where each image's own Regenerate still works.
+export function useRegenerateAll(
+  images: readonly Output[],
+  busy: boolean,
+): { readonly act: () => void; readonly unavailable: boolean } | undefined {
+  const revisioned = use(RevisionControlContext);
+  const requestEdit = use(EditRequestContext);
+  const view = useCurrentRevisionView();
+  if (!revisioned || view === undefined) return undefined;
+  const ids = new Set(images.map((image) => image.id));
+  const workKeys = view.outputs.flatMap((row) =>
+    ids.has(row.output.id) && row.workKey.startsWith("image:") ? [row.workKey] : [],
+  );
+  if (workKeys.length === 0) return undefined;
+  return {
+    act: () =>
+      requestEdit?.({
+        section: "images",
+        change: (edit) => ({
+          ...edit,
+          regenerate: [...new Set([...(edit.regenerate ?? []), ...workKeys])],
+        }),
+      }),
+    unavailable: busy || requestEdit === undefined,
+  };
+}

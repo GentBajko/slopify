@@ -20,7 +20,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { ThumbnailPanel } from "./body-thumbnail.js";
 import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
-import { useOutdated, useOutputChange } from "./output-change.js";
+import { useOutdated, useOutputChange, useRegenerateAll } from "./output-change.js";
 import { DownloadLink } from "./parts.js";
 import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
@@ -52,6 +52,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
   const shown = [...all, ...cards];
   const regenerate = useRegenerateByNumber(project, all, cards, actions, busy);
+  const regenerateAll = useRegenerateAll(all, busy);
   const files = useOutputMediaList(shown);
   const [open, setOpen] = useState<number | null>(null);
   // The pictures the lightbox pages through, and the output behind each, for its actions.
@@ -115,6 +116,17 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
       {stage.state === "skipped" ? null : (
         <section aria-label="Slideshow images" className="flex min-w-0 flex-col gap-5">
           <SectionHead title="Images" {...(meta === "" ? {} : { meta })}>
+            {regenerateAll === undefined ? null : (
+              <Button
+                size="small"
+                disabled={regenerateAll.unavailable}
+                disabledReason="Wait until the work on this project is done"
+                onClick={regenerateAll.act}
+              >
+                <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+                Regenerate all
+              </Button>
+            )}
             <DownloadLink projectId={project.id} asset="images.zip" label="Download all" />
             <SectionMore stages={[stage]} project={project} actions={actions} />
           </SectionHead>

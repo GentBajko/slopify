@@ -4,11 +4,17 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
-import { renderApp, testDeps, testOrigin } from "@/test-app";
+import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
 import type { BodyProps } from "./body.js";
 import { ImagesBody } from "./body-images.js";
 import { playerChapters, VideoBody } from "./body-video.js";
+import {
+  type EditRequest,
+  EditRequestContext,
+  RevisionControlContext,
+} from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
+import { RevisionMedia } from "./revision-media.js";
 import type { Action } from "./use-actions.js";
 
 afterEach(cleanup);
@@ -68,6 +74,47 @@ it("shows the images in the media grid, and offers Regenerate and Download at fu
   // A project without saved versions asks first, then regenerates the picture shown.
   await userEvent.click(await screen.findByRole("button", { name: "Regenerate it" }));
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-image-2" });
+});
+
+it("opens Edit project with every image marked to regenerate from Regenerate all", async () => {
+  const requests: EditRequest[] = [];
+  const { props: given } = props(pictures);
+  const view = {
+    ...revisionView(),
+    outputs: pictures.map((one, index) => ({
+      recordId: one.id,
+      publicationId: null,
+      selected: true,
+      available: true,
+      slot: one.id,
+      workKey: `image:key-${String(index + 1)}`,
+      assetId: one.id,
+      output: one,
+      fingerprint: "image",
+      state: "ready" as const,
+    })),
+  };
+  renderApp(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <RevisionControlContext value>
+        <EditRequestContext value={(request) => requests.push(request)}>
+          <ImagesBody {...given} />
+        </EditRequestContext>
+      </RevisionControlContext>
+    </RevisionMedia>,
+    testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }) }),
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Regenerate all" }));
+  const edit = {
+    config: view.revision.config,
+    content: view.revision.content,
+    regenerate: ["image:key-2"],
+  };
+  expect(requests.map((request) => request.section)).toEqual(["images"]);
+  // Every image stays in the order; each is only marked to be made again.
+  const next = requests[0]?.change(edit, view);
+  expect(next?.regenerate).toEqual(["image:key-2", "image:key-1"]);
+  expect(next?.content).toBe(edit.content);
 });
 
 it("offers the thumbnail's Regenerate and Download in its lightbox too", async () => {

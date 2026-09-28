@@ -259,17 +259,32 @@ export function ImageEditor({
             </Button>
             {image.source === "generate" ? (
               <span className="inline-flex items-center gap-1">
-                <Button
-                  type="button"
-                  onClick={() =>
-                    emit({
-                      ...edit,
-                      regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
-                    })
-                  }
-                >
-                  Regenerate image {index + 1} after review
-                </Button>
+                {/* Marked, the press takes the mark off again; the image's status says which. */}
+                {edit.regenerate?.includes(`image:${key}`) === true ? (
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      emit({
+                        ...edit,
+                        regenerate: (edit.regenerate ?? []).filter((one) => one !== `image:${key}`),
+                      })
+                    }
+                  >
+                    Keep image {index + 1}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      emit({
+                        ...edit,
+                        regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
+                      })
+                    }
+                  >
+                    Regenerate image {index + 1}
+                  </Button>
+                )}
                 <InfoTip id="project.images.regenerate" />
               </span>
             ) : null}
