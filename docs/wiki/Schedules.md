@@ -134,9 +134,9 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 
 **Run history** lists each run with its status (running, done, failed, skipped and so on), the time it was due, and either the project it made or the reason it didn't run. Deleted schedules are listed under **Deleted schedules** at the bottom; pick one to see its history.
 
-## Use a newer template version
+## When you edit the template
 
-A schedule keeps the template version it was set up with, so saving a newer template doesn't change what the schedule makes. To switch, edit the schedule, pick the template again in **Template**, and save.
+A schedule always uses its template as it is now: save a change to the template and the next run, the Calendar and topic generation use it. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
 
 ## Tips
 
