@@ -58,8 +58,42 @@ jobs:
       - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/src/kernel/cli-command.test.ts packages/app/src/adapters/llm packages/app/src/slices/settings/cli-paths.test.ts packages/app/src/slices/settings/cli-status.test.ts packages/app/src/adapter-registry-paths.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts
       - run: npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"
 
-  container:
+  # Whether this push touches what only the Docker install uses. The Linux test shards cover
+  # the app itself; the container jobs cover the image, the host CLI bridge and the Docker
+  # installer, so they run when those, the dependencies or the app's package.json (every
+  # release bumps its version, so every release is tested in Docker) change.
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.diff.outputs.docker }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(Dockerfile|compose\.yaml|\.dockerignore|docker/|package-lock\.json|package\.json|packages/app/package\.json|packages/app/src/(edge/docker|edge/docker-install|edge/host-cli|host-cli|adapters/host-cli)|packages/app/scripts/(container|host-cli|docker-install)|\.github/workflows/)'; then
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The image's smoke tests in two jobs side by side, each building the image itself (cached):
+  # the Docker install test alone was over half of one job's time.
+  container:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        smoke: [image, docker-install]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -69,6 +103,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: docker build -t slopify:smoke .
-      - run: bash packages/app/scripts/container-smoke.sh
-      - run: node packages/app/scripts/host-cli-smoke.mjs
-      - run: node packages/app/scripts/docker-install-smoke.mjs
+      - if: matrix.smoke == 'image'
+        run: bash packages/app/scripts/container-smoke.sh
+      - if: matrix.smoke == 'image'
+        run: node packages/app/scripts/host-cli-smoke.mjs
+      - if: matrix.smoke == 'docker-install'
+        run: node packages/app/scripts/docker-install-smoke.mjs

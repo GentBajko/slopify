@@ -18,59 +18,69 @@ try {
   const archive = join(root, `gentbajko-slopify-${packageJson.version}.tgz`);
   await run(npm, [npmCli, "pack", "--workspace", "@gentbajko/slopify", "--pack-destination", root]);
   if (!(await exists(archive))) throw new Error("npm pack did not produce a package archive.");
-  const globalPrefix = join(root, "global");
-  await run(npm, [npmCli, "install", "--global", "--prefix", globalPrefix, archive]);
-  const globalBin = join(
-    globalPrefix,
-    process.platform === "win32" ? "slopify.cmd" : "bin/slopify",
-  );
-  await smoke(
-    process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : globalBin,
-    "global",
-    process.platform === "win32" ? ["/d", "/s", "/c", "call", globalBin] : [],
-    {},
-    true,
-  );
-  await smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
-  const skippedPrefix = join(root, "skipped-scripts");
-  await run(npm, [
-    npmCli,
-    "install",
-    "--global",
-    "--ignore-scripts",
-    "--prefix",
-    skippedPrefix,
-    archive,
-  ]);
-  const skippedPackage = join(
-    skippedPrefix,
-    process.platform === "win32" ? "node_modules" : "lib/node_modules",
-    "@gentbajko/slopify",
-  );
-  const skippedCli = join(skippedPackage, "dist/edge/cli.js");
-  await smoke(npm, "skipped-scripts", [skippedCli]);
-  const cached = join(root, "skipped-scripts-data/bin");
-  const [build] = await readdir(cached);
-  if (!build?.startsWith("ffmpeg-static-"))
-    throw new Error("FFmpeg was not installed automatically.");
-  const binary = join(cached, build, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg");
-  for (const path of [binary, `${binary}.LICENSE`, `${binary}.README`]) {
-    if (!(await exists(path))) throw new Error(`Missing FFmpeg installation file: ${path}`);
-  }
-  await run(binary, [
-    "-v",
-    "error",
-    "-f",
-    "lavfi",
-    "-i",
-    "color=s=64x64:d=0.1",
-    "-c:v",
-    "libx264",
-    "-f",
-    "null",
-    "-",
-  ]);
-  await smoke(npm, "skipped-scripts", [skippedCli], { FFMPEG_BINARIES_URL: "http://127.0.0.1:1" });
+  // The three ways to install are independent (their own prefix, data folder and port), so
+  // they run side by side; one after another they were most of the Windows job's time.
+  const viaGlobal = async () => {
+    const globalPrefix = join(root, "global");
+    await run(npm, [npmCli, "install", "--global", "--prefix", globalPrefix, archive]);
+    const globalBin = join(
+      globalPrefix,
+      process.platform === "win32" ? "slopify.cmd" : "bin/slopify",
+    );
+    await smoke(
+      process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : globalBin,
+      "global",
+      process.platform === "win32" ? ["/d", "/s", "/c", "call", globalBin] : [],
+      {},
+      true,
+    );
+  };
+  const viaNpx = () =>
+    smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
+  const withScriptsSkipped = async () => {
+    const skippedPrefix = join(root, "skipped-scripts");
+    await run(npm, [
+      npmCli,
+      "install",
+      "--global",
+      "--ignore-scripts",
+      "--prefix",
+      skippedPrefix,
+      archive,
+    ]);
+    const skippedPackage = join(
+      skippedPrefix,
+      process.platform === "win32" ? "node_modules" : "lib/node_modules",
+      "@gentbajko/slopify",
+    );
+    const skippedCli = join(skippedPackage, "dist/edge/cli.js");
+    await smoke(npm, "skipped-scripts", [skippedCli]);
+    const cached = join(root, "skipped-scripts-data/bin");
+    const [build] = await readdir(cached);
+    if (!build?.startsWith("ffmpeg-static-"))
+      throw new Error("FFmpeg was not installed automatically.");
+    const binary = join(cached, build, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg");
+    for (const path of [binary, `${binary}.LICENSE`, `${binary}.README`]) {
+      if (!(await exists(path))) throw new Error(`Missing FFmpeg installation file: ${path}`);
+    }
+    await run(binary, [
+      "-v",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=s=64x64:d=0.1",
+      "-c:v",
+      "libx264",
+      "-f",
+      "null",
+      "-",
+    ]);
+    await smoke(npm, "skipped-scripts", [skippedCli], {
+      FFMPEG_BINARIES_URL: "http://127.0.0.1:1",
+    });
+  };
+  await Promise.all([viaGlobal(), viaNpx(), withScriptsSkipped()]);
 } finally {
   // Windows releases a killed process's file handles a moment after taskkill returns, so
   // the database can still be locked here; rm retries EBUSY for this long.
