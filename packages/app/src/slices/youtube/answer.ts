@@ -63,7 +63,7 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
         `- The pinned comment is plain text without links, at most ${String(pinnedCommentMaxCharacters)} characters.`,
         `- Titles are exactly ${String(alternativeTitles)} other titles for this video, for YouTube's title A/B test beside the video's own title: each at most ${String(titleMaxCharacters)} characters, one line, different from the video title and from each other.`,
         "",
-        "The pinned comment is what the channel pins under the video, unless the instructions below say otherwise: thank the viewer in one line, ask one question a viewer can answer from their own experience of the subject, point to the chapters in the description, and end by inviting a suggestion for the next video. Two to four short paragraphs, in the same voice as the summary.",
+        "The pinned comment is what the channel pins under the video, unless the instructions below say otherwise: one or two short sentences, at most 200 characters, in the same voice as the summary. Ask one question a viewer can answer from their own experience of the subject, and invite a suggestion for the next video.",
         "The other titles try different angles on the same video (a question, a stake, a surprising fact) while staying true to it and in the video title's language and tone.",
       ].join("\n"),
     },

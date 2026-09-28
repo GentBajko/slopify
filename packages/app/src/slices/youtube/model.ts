@@ -18,8 +18,9 @@ export const descriptionMaxCharacters = 5000;
 // these alternatives. YouTube's limit on a title.
 export const alternativeTitles = 2;
 export const titleMaxCharacters = 100;
-// YouTube's limit on a comment is 10,000; a pinned comment people read in full is far shorter.
-export const pinnedCommentMaxCharacters = 1500;
+// YouTube's limit on a comment is 10,000; a pinned comment people read in full is a line or
+// two. The model is asked for 200; this is the most a hand-picked prompt may make it.
+export const pinnedCommentMaxCharacters = 500;
 
 // What a project uses when no Description prompt from the library is picked. No keywords,
 // so it never asks Play for a field.

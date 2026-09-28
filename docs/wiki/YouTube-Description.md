@@ -12,7 +12,7 @@ Slopify can write your video's YouTube description for you: a short summary, cha
 | **Chapters** | Timestamped lines such as `0:00 Introduction`, at the narration's real times. YouTube turns them into chapters. |
 | **Hashtags** | The hashtags at the end of the description. YouTube shows the first three above the title. |
 | **Tags** | Search tags for YouTube Studio's **Tags** field, kept separate from the description. Viewers don't see them. |
-| **Pinned comment** | A comment to post under the video and pin: a thank-you, a question viewers can answer from their own experience, a pointer to the chapters and an ask for the next topic. Your Description prompt can say how you want it. |
+| **Pinned comment** | A comment to post under the video and pin: a line or two asking viewers a question they can answer from their own experience, and what to cover next. Your Description prompt can say how you want it. |
 | **Other titles** | Two more titles for YouTube's **A/B Testing** (Test & compare), beside the project's own title: each a different angle on the same video, one per line. |
 
 Slopify lays out the description itself (summary, blank line, one chapter per line, blank line, hashtags), so the layout YouTube needs never depends on the model's spacing. The files are saved in the project as `description.txt`, `tags.txt`, `pinned-comment.txt` and `titles.txt`.

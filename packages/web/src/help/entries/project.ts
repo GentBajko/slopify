@@ -235,7 +235,7 @@ export const projectHelp = {
   },
   "project.youtube.pinned-comment": {
     title: "Pinned comment",
-    body: "A comment to pin under the video, written with the description: a thank-you, a question for viewers and a pointer to the chapters. Your Description prompt can shape it. YouTube pins comments only on a published video: post it from your channel, then choose Pin in its menu. Your edits survive the next rewrite.",
+    body: "A comment to pin under the video, written with the description: a line or two asking viewers a question about the subject and what to cover next. Your Description prompt can shape it. YouTube pins comments only on a published video: post it from your channel, then choose Pin in its menu. Your edits survive the next rewrite.",
     tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
   },
   "project.youtube.titles": {

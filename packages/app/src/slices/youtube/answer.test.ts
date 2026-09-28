@@ -152,8 +152,8 @@ describe("checkDescriptionAnswer", () => {
   it("refuses tags over YouTube's limits, repeated or with commas", () => {
     expect(reason({ ...good, tags: [] })).toMatch(/at least one tag/);
     expect(reason({ ...good, pinnedComment: "  " })).toMatch(/wrote no pinned comment/);
-    expect(reason({ ...good, pinnedComment: "x".repeat(1501) })).toMatch(
-      /pinned comment is 1501 characters, over the 1500/,
+    expect(reason({ ...good, pinnedComment: "x".repeat(501) })).toMatch(
+      /pinned comment is 501 characters, over the 500/,
     );
     const { pinnedComment: _left, ...withoutComment } = good;
     expect(reason(withoutComment)).toMatch(/a pinned comment and titles\)/);
