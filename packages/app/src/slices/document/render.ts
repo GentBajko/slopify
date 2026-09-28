@@ -64,7 +64,7 @@ export function renderDocument(input: DocumentInput): RenderedDocument {
     format: theme.page.format,
     compress: true,
   });
-  registerFonts(doc, input.assets.cinzel);
+  registerFonts(doc, input.assets);
   const fill = (template: string): string => template.replaceAll("{title}", input.title).trim();
   doc.setProperties({
     title: input.title,

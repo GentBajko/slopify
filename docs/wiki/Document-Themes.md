@@ -57,7 +57,7 @@ Sizes are in millimetres (mm) unless marked pt (points; 1 pt is about 0.35 mm). 
 
 ### Fonts
 
-Each font has three controls: the family, its weight or italic, and **Letter spacing (mm)** from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
+Each font has three controls: the family, its weight or italic, and **Letter spacing (mm)** from −0.5 to 2. The families are **Cinzel** (bundled; four weights, no italics), **Literata** (bundled; a text face made for long reading, in regular, bold, italic and bold italic) and **Times**, **Helvetica** and **Courier** (built into every PDF reader).
 
 | Setting | Where it is used | Default |
 |---|---|---|

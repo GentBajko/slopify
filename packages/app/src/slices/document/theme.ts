@@ -22,9 +22,9 @@ export interface RGB {
   readonly b: number;
 }
 
-// "Cinzel" is bundled (assets/document/fonts) in the styles below; the other three are the
-// PDF standard fonts every reader has.
-export const fontFamilies = ["Cinzel", "times", "helvetica", "courier"] as const;
+// "Cinzel" and "Literata" are bundled (assets/document/fonts); the other three are the PDF
+// standard fonts every reader has.
+export const fontFamilies = ["Cinzel", "Literata", "times", "helvetica", "courier"] as const;
 export type FontFamily = (typeof fontFamilies)[number];
 export const fontStyles = ["normal", "medium", "bold", "black", "italic", "bolditalic"] as const;
 export type FontStyle = (typeof fontStyles)[number];

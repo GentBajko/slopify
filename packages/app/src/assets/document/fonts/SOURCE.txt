@@ -3,9 +3,21 @@ Cinzel 2.000 by Natanael Gama, from the embedded font data of the lore2script2 P
 (same owner). Copyright and licence are read from each file's own name table.
 Upstream: https://github.com/NDISCOVER/Cinzel
 
+Literata-Regular.ttf, Literata-SemiBold.ttf, Literata-Italic.ttf, Literata-SemiBoldItalic.ttf
+Literata 3 by TypeTogether, instanced from Google Fonts' variable Literata[opsz,wght].ttf and
+Literata-Italic[opsz,wght].ttf (https://github.com/google/fonts/tree/main/ofl/literata) at
+opsz 12 and wght 400 / 600, subset to Latin, Greek, Cyrillic, punctuation and symbols
+(fontTools instancer and subsetter).
+
 OFL.txt
-SIL Open Font License 1.1, with the copyright line from the fonts' name table.
+SIL Open Font License 1.1, with the copyright line from the fonts' name table (Cinzel).
+Literata-OFL.txt
+SIL Open Font License 1.1 for Literata, as published with it.
 7445469e9f302618200b15b1645d6aa3565b93a6634a0f9e5cd069c7fc2343fe  Cinzel-Black.ttf
 cbe8f6a665cc58d4540b6ce2a29e6f1b7e096fa6835aea1d2ffb40c088c5cdf6  Cinzel-Bold.ttf
 3d50001a451ba6cfd3ef07a2dfb0c564980a5229f70decdfa23f08f4a30e1bed  Cinzel-Medium.ttf
 540b628614b728fc87e50b883189a524dac4d8163ca4a0f8e49b499910762e86  Cinzel-Regular.ttf
+184bbf724352ffbf7313dc9463f4d242246bcc587aaf10a78f0f4fe826a547bb  Literata-Italic.ttf
+efcb6ed9f994f21e3a1759d193d655708d4b836568616967cef80c6a015481cd  Literata-Regular.ttf
+a0eeda32c8098fee2cabf5951f6f65aa9396121053e511a11406076f2cd41569  Literata-SemiBoldItalic.ttf
+68415d934f51efd396dfdfc5628ba4bc35042b7ac753e3a4b75b677b970c89a1  Literata-SemiBold.ttf

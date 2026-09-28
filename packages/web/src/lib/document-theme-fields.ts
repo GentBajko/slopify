@@ -334,7 +334,13 @@ export const faceFamilies: readonly {
   readonly label: string;
 }[] = fontFamilies.map((value) => ({
   value,
-  label: { Cinzel: "Cinzel", times: "Times", helvetica: "Helvetica", courier: "Courier" }[value],
+  label: {
+    Cinzel: "Cinzel",
+    Literata: "Literata",
+    times: "Times",
+    helvetica: "Helvetica",
+    courier: "Courier",
+  }[value],
 }));
 
 // Cinzel ships in four weights and no italics; the standard fonts in regular, bold and the
