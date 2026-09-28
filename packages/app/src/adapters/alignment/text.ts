@@ -67,8 +67,10 @@ export function speechWords(
     words.push({ text: textWord, spoken, forms, aliased: touching.length > 0 });
   }
   if (words.length === 0) throw new Error(empty);
-  return words.map(({ text: shown, spoken, forms }) =>
-    forms.length > 1 ? { text: shown, spoken, forms } : { text: shown, spoken },
+  // An aliased word keeps its forms even when there is one: `respoken` would otherwise read
+  // the written text again without the aliases, and "&" alone says nothing.
+  return words.map(({ text: shown, spoken, forms, aliased }) =>
+    forms.length > 1 || aliased ? { text: shown, spoken, forms } : { text: shown, spoken },
   );
 }
 

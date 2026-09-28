@@ -81,6 +81,18 @@ describe("subtitle speech normalization", () => {
     // Without aliases nothing changes.
     expect(speechWords("Dr. Grey").map((word) => word.spoken)).toEqual(["DR", "GREY"]);
   });
+  it("keeps a word only an alias makes speakable, such as a lone ampersand", () => {
+    const aliases = [{ written: "&", spoken: "and", wholeWord: true, caseSensitive: false }];
+    const words = speechWords("Dungeons & Dragons", "", aliases);
+    expect(words.map((word) => word.spoken)).toEqual(["DUNGEONS", "AND", "DRAGONS"]);
+    // The timing worker checks each word again against what it hears; "&" has no spoken
+    // form of its own, so the alias's must stay with the word.
+    expect(words.map((word) => respoken(word, "DUNGEONS AND DRAGONS").spoken)).toEqual([
+      "DUNGEONS",
+      "AND",
+      "DRAGONS",
+    ]);
+  });
   it("refuses a transcript with no English speech", () => {
     expect(() => speechWords("你好 世界")).toThrow(/English/);
     expect(() => speechWords("Hello 世界")).toThrow(/English/);
