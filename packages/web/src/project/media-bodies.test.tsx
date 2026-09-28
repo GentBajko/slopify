@@ -11,6 +11,7 @@ import { playerChapters, VideoBody } from "./body-video.js";
 import {
   type EditRequest,
   EditRequestContext,
+  RegenerateNowContext,
   RevisionControlContext,
 } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
@@ -76,9 +77,9 @@ it("shows the images in the media grid, and offers Regenerate and Download at fu
   expect(run).toHaveBeenCalledWith({ kind: "regenerate-image", outputId: "o-image-2" });
 });
 
-it("opens Edit project with every image marked to regenerate from Regenerate all", async () => {
+function mountRevisioned(regenerateNow: (workKeys: readonly string[]) => void) {
   const requests: EditRequest[] = [];
-  const { props: given } = props(pictures);
+  const { props: given, run } = props(pictures);
   const view = {
     ...revisionView(),
     outputs: pictures.map((one, index) => ({
@@ -98,23 +99,41 @@ it("opens Edit project with every image marked to regenerate from Regenerate all
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
         <EditRequestContext value={(request) => requests.push(request)}>
-          <ImagesBody {...given} />
+          <RegenerateNowContext value={regenerateNow}>
+            <ImagesBody {...given} />
+          </RegenerateNowContext>
         </EditRequestContext>
       </RevisionControlContext>
     </RevisionMedia>,
     testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }) }),
   );
+  return { requests, run };
+}
+
+it("makes every image again at once from Regenerate all, after asking", async () => {
+  const regenerateNow = vi.fn();
+  const { requests } = mountRevisioned(regenerateNow);
   await userEvent.click(await screen.findByRole("button", { name: "Regenerate all" }));
-  const edit = {
-    config: view.revision.config,
-    content: view.revision.content,
-    regenerate: ["image:key-2"],
-  };
-  expect(requests.map((request) => request.section)).toEqual(["images"]);
-  // Every image stays in the order; each is only marked to be made again.
-  const next = requests[0]?.change(edit, view);
-  expect(next?.regenerate).toEqual(["image:key-2", "image:key-1"]);
-  expect(next?.content).toBe(edit.content);
+  const dialog = await screen.findByRole("dialog", { name: "Regenerate all 2 images?" });
+  expect(dialog.textContent).toContain("one paid image call each");
+  expect(regenerateNow).not.toHaveBeenCalled();
+  await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate them" }));
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"]);
+  // Nothing opens the settings on the way.
+  expect(requests).toEqual([]);
+});
+
+it("makes one image again at once on a project with saved versions, leaving the video", async () => {
+  const regenerateNow = vi.fn();
+  const { requests, run } = mountRevisioned(regenerateNow);
+  await screen.findByRole("button", { name: "Regenerate all" });
+  await userEvent.click(screen.getByRole("button", { name: "Regenerate image 2" }));
+  const dialog = await screen.findByRole("dialog", { name: "Regenerate this image?" });
+  expect(dialog.textContent).toContain("The video keeps the current one until you remake it");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"]);
+  expect(run).not.toHaveBeenCalled();
+  expect(requests).toEqual([]);
 });
 
 it("offers the thumbnail's Regenerate and Download in its lightbox too", async () => {

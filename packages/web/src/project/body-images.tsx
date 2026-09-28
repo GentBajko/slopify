@@ -127,6 +127,19 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                 Regenerate all
               </Button>
             )}
+            {regenerateAll === undefined ? null : (
+              <ConfirmDialog
+                open={regenerateAll.asking}
+                tone="primary"
+                title={`Regenerate all ${String(regenerateAll.count)} images?`}
+                consequence={`Makes ${String(regenerateAll.count)} new images now, one paid image call each. The video keeps the current ones until you remake it; the old images stay in History.`}
+                confirmLabel="Regenerate them"
+                cancelLabel="Keep them"
+                pending={actions.pending}
+                onConfirm={regenerateAll.confirm}
+                onCancel={regenerateAll.dismiss}
+              />
+            )}
             <DownloadLink projectId={project.id} asset="images.zip" label="Download all" />
             <SectionMore stages={[stage]} project={project} actions={actions} />
           </SectionHead>
@@ -227,7 +240,6 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                   }
                   actions={actions}
                   busy={busy}
-                  onLeave={() => setOpen(null)}
                 />
               );
             }}
@@ -249,38 +261,32 @@ function opened(openable: readonly Output[], image: Output): number | null {
   return at === -1 ? null : at;
 }
 
-// Regenerate and Download on the lightbox's bar, for the picture shown full size. A change
-// that opens in Edit project closes the lightbox first, so the form is not behind it.
+// Regenerate and Download on the lightbox's bar, for the picture shown full size.
 export function OutputLightboxActions({
   output,
   name,
   actions,
   busy,
-  onLeave,
 }: {
   readonly output: Output;
   // "image 4", "thumbnail 2", "the establishing image".
   readonly name: string;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-  readonly onLeave: () => void;
 }): ReactElement {
   const media = useOutputMedia(output);
   const change = useOutputChange(output, actions, busy);
   const copy =
     change.asking === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: output.id });
+      : confirmationFor({ kind: change.asking, outputId: output.id, now: change.now });
   return (
     <>
       <Button
         size="small"
         disabled={change.unavailable}
         disabledReason="Wait until the work on this project is done"
-        onClick={() => {
-          change.act("regenerate-image");
-          if (change.viaEdit) onLeave();
-        }}
+        onClick={() => change.act("regenerate-image")}
         aria-label={`Regenerate ${name}`}
       >
         <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
@@ -508,7 +514,7 @@ function ImageTile({
   const copy =
     change.asking === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: image.id });
+      : confirmationFor({ kind: change.asking, outputId: image.id, now: change.now });
   return (
     <>
       <MediaFrame

@@ -68,14 +68,14 @@ When the project was narrated as one whole request (Chunking set to the whole ar
 | **Replace image N** | Uses your own picture in its place. |
 | **Move image N earlier** / **later** | Changes the order. |
 | **Delete image N** | Removes it. Deleting the last image also turns Images and Video off. |
-| **Regenerate image N after review** | Draws the image again from its prompt, one paid image call, with a new result. The current image stays until the new one is made. |
+| **Regenerate image N** | Marks the image to be drawn again from its prompt, one paid image call, with a new result, when you save. The image says it is marked, and **Keep image N** takes the mark off. The current image stays until the new one is made. |
 | **Add generated image** | Adds a new image with an empty prompt at the end. |
 | **Add provided image** | Adds your own picture at the end. |
 | **Add a video clip** | Adds a clip (MP4, MOV, M4V, WebM or MKV). It plays muted in an image's place, trimmed, slowed (to half speed at most) or looped to fit. |
 
 A project holds at most 60 images, or 240 with **More images for long videos** on.
 
-The **Regenerate** button on an image in the project's Images section does the same thing: it opens Edit project with the change applied to the draft, and saving marks the image outdated.
+The **Regenerate** button on an image in the project's Images section, and **Regenerate all** beside Download all, do it without the settings: they ask once, then make the new images straight away. The video keeps the old images, marked outdated, until you remake it, so you can regenerate several images and render the video once. If the settings have unsaved changes of their own, the images are marked there instead, to go with them when you save.
 
 ### Image prompts and More images for long videos
 

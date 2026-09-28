@@ -13,7 +13,11 @@ import { type TabItem, TabPanel, Tabs } from "@/components/kit/tabs";
 import { keys } from "@/queries";
 import { outputLabel } from "./output-label.js";
 import { type RebuildConsent, RebuildReview } from "./rebuild-review.js";
-import { type EditRequest, EditRequestContext } from "./revision-action-context.js";
+import {
+  type EditRequest,
+  EditRequestContext,
+  RegenerateNowContext,
+} from "./revision-action-context.js";
 import {
   prepareRevision,
   previewProjectRebuild,
@@ -79,6 +83,9 @@ export interface RevisionController {
   readonly reloadDraft: () => void;
   readonly reloadCurrent: () => void;
   readonly requestEdit: (request: EditRequest) => void;
+  // Makes pictures again now: saves a version with them marked and starts only them. A draft
+  // with changes of its own gets the marks instead, to go with them when it is saved.
+  readonly regenerateNow: (workKeys: readonly string[]) => void;
   // Previews a rebuild. With `autoStart`, a preview that needs no consent (nothing blocked,
   // no provided content to confirm, no unknown cost) starts at once; otherwise the review
   // drawer opens so the person can see why.
@@ -175,7 +182,8 @@ export function useRevisionController(
       });
     return result.value.view;
   }
-  async function accepted(next: RevisionView): Promise<void> {
+  // False when the project changed again meanwhile: the draft is kept and nothing more runs.
+  async function accepted(next: RevisionView): Promise<boolean> {
     const latest = await readProject(api, projectId);
     client.setQueryData(keys.project(projectId), latest);
     await client.invalidateQueries({ queryKey: keys.revisions(projectId) });
@@ -187,12 +195,13 @@ export function useRevisionController(
         currentRevisionId: latest.revisionId,
         fields: [],
       });
-      return;
+      return false;
     }
     setView(next);
     setEdit(undefined);
     setRefusal(undefined);
     setPreview(undefined);
+    return true;
   }
   async function save(): Promise<void> {
     if (uploading || view === undefined || edit === undefined) return;
@@ -320,6 +329,34 @@ export function useRevisionController(
         setEdit(request.change(draft, base));
         setFocus({ section: request.section });
         openEdit.current?.();
+      }),
+    regenerateNow: (workKeys) =>
+      void perform(async () => {
+        const marked = (draft: RevisionEdit): RevisionEdit => ({
+          ...draft,
+          regenerate: [...new Set([...(draft.regenerate ?? []), ...workKeys])],
+        });
+        if (edit !== undefined && unsaved) {
+          setEdit(marked(edit));
+          setFocus({ section: "images" });
+          openEdit.current?.();
+          return;
+        }
+        const base = await prepare(false);
+        if (base === undefined) return;
+        const result = await saveProjectRevision(api, projectId, {
+          baseRevisionId: base.revision.id,
+          edit: marked({
+            config: structuredClone(base.revision.config),
+            content: structuredClone(base.revision.content),
+          }),
+          idempotencyKey: crypto.randomUUID(),
+        });
+        if (!result.ok) {
+          setRefusal(result);
+          return;
+        }
+        if (await accepted(result.value.view)) await review({ kind: "selected", workKeys }, true);
       }),
     review: (selection, reviewOptions) =>
       void perform(() => review(selection, reviewOptions?.autoStart === true)),
@@ -592,7 +629,15 @@ export function RevisionWorkspace({
                 : controller.requestEdit
             }
           >
-            {output}
+            <RegenerateNowContext
+              value={
+                controller.pending || controller.preview !== undefined
+                  ? undefined
+                  : controller.regenerateNow
+              }
+            >
+              {output}
+            </RegenerateNowContext>
           </EditRequestContext>
         </TabPanel>
       )}

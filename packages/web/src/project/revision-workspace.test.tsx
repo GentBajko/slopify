@@ -6,7 +6,7 @@ import { type ReactElement, use } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { unreachable } from "@/http";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
-import { EditRequestContext } from "./revision-action-context.js";
+import { EditRequestContext, RegenerateNowContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import type { EditorProps } from "./revision-workspace.js";
 import { RevisionWorkspace } from "./revision-workspace.js";
@@ -441,4 +441,91 @@ it("says unsaved only once the draft differs from the saved revision", async () 
   await waitFor(() =>
     expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved"),
   );
+});
+
+function RegenerateButton(): ReactElement {
+  const regenerateNow = use(RegenerateNowContext);
+  return (
+    <button
+      type="button"
+      disabled={regenerateNow === undefined}
+      onClick={() => regenerateNow?.(["image:a"])}
+    >
+      Regenerate image a
+    </button>
+  );
+}
+
+it("makes pictures again at once: saves them marked, then starts only them", async () => {
+  const user = userEvent.setup();
+  const baseline = revisionView();
+  const next = revisionView("r2", "Saved");
+  let head = baseline;
+  const saved: unknown[] = [];
+  const previewed: unknown[] = [];
+  const start = vi.fn(
+    jsonAnswer(
+      {
+        ok: true,
+        value: { revisionId: "r2", admissionId: "a1", workIds: ["w1"], replayed: false },
+      },
+      202,
+    ),
+  );
+  const preview = {
+    id: "pv1",
+    projectId: "p1",
+    baseRevisionId: "r2",
+    planFingerprint: "f1",
+    selection: { kind: "selected", workKeys: ["image:a"] },
+    changedInputs: [],
+    retained: [],
+    warnings: [],
+    work: [],
+    wholeRequestNotice: null,
+    providedReuseRequired: [],
+    costs: {
+      currency: "USD",
+      rows: [],
+      low: 0.04,
+      high: 0.04,
+      unknown: 0,
+      expectedWords: 0,
+      catalogueDate: null,
+      assumptions: [],
+    },
+  };
+  renderApp(
+    <RevisionWorkspace
+      projectId="p1"
+      currentRevisionId="r1"
+      renderEditor={titleEditor}
+      output={<RegenerateButton />}
+    />,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
+      "POST /api/projects/p1/revisions/prepare": () =>
+        jsonAnswer({ ok: true, view: head, created: false })(new Request("http://x")),
+      "POST /api/projects/p1/revisions": async (request) => {
+        saved.push(saveRevisionSchema.parse(await request.json()));
+        head = next;
+        return jsonAnswer({ ok: true, view: next, duplicate: false })(request);
+      },
+      "GET /api/projects/p1": () => jsonAnswer(currentBody(head))(new Request("http://x")),
+      "POST /api/projects/p1/rebuild/preview": async (request) => {
+        previewed.push(await request.json());
+        return jsonAnswer({ ok: true, value: preview })(request);
+      },
+      "POST /api/projects/p1/rebuild": start,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Regenerate image a" }));
+  await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+  expect(saved).toHaveLength(1);
+  expect(saved[0]).toMatchObject({ baseRevisionId: "r1", edit: { regenerate: ["image:a"] } });
+  expect(previewed).toEqual([
+    { baseRevisionId: "r2", request: { kind: "selected", workKeys: ["image:a"] } },
+  ]);
+  // Nothing opened the settings.
+  expect(screen.queryByRole("textbox", { name: "Project title" })).toBeNull();
 });

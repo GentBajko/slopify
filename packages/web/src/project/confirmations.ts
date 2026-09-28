@@ -12,7 +12,9 @@ export type Destructive =
   | { readonly kind: "cancel" }
   | { readonly kind: "rerun"; readonly stage: StageKind }
   | { readonly kind: "delete-image"; readonly outputId: string }
-  | { readonly kind: "regenerate-image"; readonly outputId: string }
+  // `now`: a project with saved versions makes the picture at once and leaves the video
+  // outdated, instead of rendering the video again.
+  | { readonly kind: "regenerate-image"; readonly outputId: string; readonly now?: boolean }
   | { readonly kind: "save-article"; readonly markdown: string }
   | { readonly kind: "discard-article" };
 
@@ -68,7 +70,9 @@ export function confirmationFor(action: Destructive): Confirmation {
     case "regenerate-image":
       return {
         title: "Regenerate this image?",
-        consequence: "Replaces the image with a new one and re-renders video when enabled.",
+        consequence: action.now
+          ? "Makes a new image now, one paid image call. The video keeps the current one until you remake it; the old image stays in History."
+          : "Replaces the image with a new one and re-renders video when enabled.",
         verb: "Regenerate",
         dismiss: "Cancel",
       };

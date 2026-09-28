@@ -117,7 +117,6 @@ export function ThumbnailPanel({
               name={count === 1 ? "the thumbnail" : `thumbnail ${String(output.meta.index ?? 1)}`}
               actions={actions}
               busy={busy}
-              onLeave={() => setOpen(null)}
             />
           );
         }}
@@ -164,7 +163,7 @@ function ThumbnailVariant({
   const copy =
     change.asking === undefined || output === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: output.id });
+      : confirmationFor({ kind: change.asking, outputId: output.id, now: change.now });
   return (
     <>
       <MediaFrame
