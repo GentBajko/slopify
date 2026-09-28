@@ -58,7 +58,7 @@ The section is headed **Upload pack and extension**.
 
 | Option | What it does | Default / range |
 |---|---|---|
-| **Playlist** | The YouTube playlist upload packs name, so the extension ticks it in Studio's dialog. Pick **Every channel (default)** or one channel in the channel list, type the playlist exactly as it is called in Studio, and press **Save**. The default is used by every channel without its own; a channel's own playlist wins for its videos. Leave it empty for no playlist. | Empty; up to 150 characters |
+| **Playlists** | The YouTube playlists upload packs offer, so the extension ticks them in Studio's dialog. Pick **Every channel (default)** or one channel, **Add playlist** for each, type it exactly as it is called in Studio, tick **On by default** for the ones every video joins, and press **Save playlists**. A channel's own list wins for its videos; Prepare upload changes the ticks for one project. | None; up to 20, each up to 150 characters |
 | **Extension pairing token** | The secret the extension needs before it may read your upload packs. **Copy** copies it; **New pairing token** makes a new one and unpairs the extension. | Made for you |
 | **Install the Studio extension** | The download and install steps (see [Get the extension](#get-the-extension)). | |
 
@@ -89,7 +89,7 @@ Each press of **Fill in YouTube Studio** adds the item to **Waiting for Studio**
 | **Title** | Types the title (up to 100 characters for the video, the short's own title for a short). |
 | **Description** | Types the description line by line, so line breaks are kept. |
 | **Thumbnail** | Sets the first thumbnail. With three thumbnails, it looks for Studio's **A/B Testing** button beside the title and puts all three in. If the button isn't there or its dialog can't be filled, it sets the first and asks you to add the others in A/B Testing by hand. Shorts get no thumbnail. |
-| **Playlists** | Opens the dropdown, ticks the playlist named in Settings → YouTube Studio, and closes it. |
+| **Playlists** | Opens the dropdown, ticks every playlist the project goes into (Settings → YouTube Studio, and the project's own ticks in Prepare upload), and closes it. |
 | **Audience** | Picks "No, it's not made for kids". |
 | **Show more** | Presses it once, to reach the advanced settings. |
 | **AI use** | Picks Yes or No, as Prepare upload worked it out. See [AI use disclosure](Publishing-to-YouTube#ai-use-disclosure). |

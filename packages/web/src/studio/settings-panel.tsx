@@ -1,8 +1,8 @@
-import { studioPlaylistMax } from "@app/slices/studio/model.js";
+import { type StudioPlaylist, studioPlaylistMax } from "@app/slices/studio/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon } from "lucide-react";
+import { CopyIcon, PlusIcon } from "lucide-react";
 import { useId, useState } from "react";
-import { newStudioPairing, readStudioSettings, saveStudioPlaylist } from "@/api";
+import { newStudioPairing, readStudioSettings, saveStudioPlaylists } from "@/api";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
@@ -14,14 +14,14 @@ import { ExtensionInstall } from "./extension-install";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
-// Settings → YouTube Studio: the playlist each channel's upload packs name, the pairing token
+// Settings → YouTube Studio: the playlists each channel's upload packs offer, the pairing token
 // the Slopify Studio browser extension needs before it may read a pack, and how to install it.
 export function StudioSettings() {
   return (
     <div>
       <SectionHead title="Upload pack and extension" info="settings.studio.extension" />
       <div className="flex flex-col gap-8">
-        <Playlist />
+        <Playlists />
         <Pairing />
         <section aria-label="Install the Studio extension">
           <SectionHead as="h3" title="Install the Studio extension" className="mb-3" />
@@ -32,10 +32,13 @@ export function StudioSettings() {
   );
 }
 
-// "" is the default, which every channel without its own playlist uses.
+// "" is the default, which every channel without its own playlists uses.
 const everyChannel = "";
 
-function Playlist() {
+// Each channel's playlists: a list of names, each ticked by default or not. Every upload of a
+// project on that channel goes into the ticked ones; Prepare upload can change them for one
+// project. A channel with no list of its own uses the default list.
+function Playlists() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
@@ -44,42 +47,44 @@ function Playlist() {
   const channels = useQuery(channelsQuery(api));
   const channelId = useId();
   const [channel, setChannel] = useState(everyChannel);
-  const [typed, setTyped] = useState<string | undefined>(undefined);
-  const fallback = saved.data?.playlist ?? null;
-  const stored =
-    channel === everyChannel ? fallback : (saved.data?.channelPlaylists[channel] ?? null);
-  const value = typed ?? stored ?? "";
-  const tooLong =
-    value.trim().length > studioPlaylistMax
-      ? `The playlist name is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it.`
-      : undefined;
+  const [draft, setDraft] = useState<StudioPlaylist[] | undefined>(undefined);
+  const fallback = saved.data?.playlists ?? [];
+  const own = channel === everyChannel ? undefined : saved.data?.channelPlaylists[channel];
+  const stored = channel === everyChannel ? fallback : (own ?? []);
+  const rows = draft ?? stored;
+  const problem = playlistsProblem(rows);
   const save = useMutation({
-    mutationFn: (playlist: string) =>
-      saveStudioPlaylist(api, playlist, channel === everyChannel ? undefined : channel),
+    mutationFn: (list: readonly StudioPlaylist[]) =>
+      saveStudioPlaylists(api, list, channel === everyChannel ? undefined : channel),
     onSuccess: () => {
-      setTyped(undefined);
+      setDraft(undefined);
       void queryClient.invalidateQueries({ queryKey: studioSettingsKey });
-      notify("Playlist saved.", "success");
+      notify("Playlists saved.", "success");
     },
   });
-  const error = tooLong ?? save.error?.message;
+  const change = (next: StudioPlaylist[]) => {
+    save.reset();
+    setDraft(next);
+  };
+  const error = problem ?? save.error?.message;
   const options = [
     { value: everyChannel, label: "Every channel (default)" },
     ...(channels.data ?? []).map((one) => ({ value: one.id, label: one.name })),
   ];
+  const names = (list: readonly StudioPlaylist[]) => list.map((one) => one.name).join(", ");
   return (
     <Field
-      label="Playlist"
+      label="Playlists"
       tip="settings.studio.playlist"
       help={
         channel === everyChannel
-          ? "The playlist upload packs name, for every channel without its own."
-          : fallback === null
-            ? "This channel's own playlist. Empty: no playlist."
-            : `This channel's own playlist. Empty: the default, "${fallback}".`
+          ? "The playlists upload packs offer, for every channel without its own. Ticked ones are on for every project; Prepare upload changes them for one project."
+          : own === undefined && fallback.length > 0
+            ? `This channel uses the default list (${names(fallback)}) until you add its own.`
+            : "This channel's own playlists. Ticked ones are on for every project; Prepare upload changes them for one project."
       }
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2">
         <Select
           id={channelId}
           aria-label="Channel"
@@ -87,35 +92,72 @@ function Playlist() {
           options={options}
           onChange={(event) => {
             save.reset();
-            setTyped(undefined);
+            setDraft(undefined);
             setChannel(event.currentTarget.value);
           }}
-          className="max-w-[220px]"
+          className="max-w-[260px]"
         />
-        <Input
-          autoComplete="off"
-          placeholder={
-            channel !== everyChannel && fallback !== null
-              ? `Default: ${fallback}`
-              : "The playlist's name in Studio"
-          }
-          className="min-w-0 flex-1 basis-[220px]"
-          value={value}
-          disabled={saved.data === undefined}
-          aria-invalid={tooLong !== undefined}
-          aria-describedby={error === undefined ? undefined : errorId}
-          onChange={(event) => {
-            save.reset();
-            setTyped(event.target.value);
-          }}
-        />
-        <Button
-          variant="primary"
-          disabled={save.isPending || typed === undefined || tooLong !== undefined}
-          onClick={() => save.mutate(value)}
-        >
-          Save
-        </Button>
+        {rows.map((row, at) => (
+          <div
+            // Rows have no id of their own; their place is stable while editing.
+            // biome-ignore lint/suspicious/noArrayIndexKey: see above
+            key={at}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <Input
+              autoComplete="off"
+              aria-label={`Playlist ${String(at + 1)} name`}
+              placeholder="The playlist's name in Studio"
+              className="min-w-0 flex-1 basis-[220px]"
+              value={row.name}
+              disabled={saved.data === undefined}
+              aria-invalid={row.name.trim().length > studioPlaylistMax}
+              aria-describedby={error === undefined ? undefined : errorId}
+              onChange={(event) =>
+                change(
+                  rows.map((one, i) => (i === at ? { ...one, name: event.target.value } : one)),
+                )
+              }
+            />
+            <label className="flex min-h-9 items-center gap-2 text-small">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-accent)]"
+                checked={row.byDefault}
+                onChange={(event) => {
+                  const on = event.currentTarget.checked;
+                  change(rows.map((one, i) => (i === at ? { ...one, byDefault: on } : one)));
+                }}
+              />
+              On by default
+            </label>
+            <Button
+              variant="quiet"
+              size="small"
+              aria-label={`Remove ${row.name.trim() || `playlist ${String(at + 1)}`}`}
+              onClick={() => change(rows.filter((_one, i) => i !== at))}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            disabled={saved.data === undefined || rows.length >= 20}
+            onClick={() => change([...rows, { name: "", byDefault: rows.length === 0 }])}
+          >
+            <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+            Add playlist
+          </Button>
+          <Button
+            variant="primary"
+            disabled={save.isPending || draft === undefined || problem !== undefined}
+            onClick={() => save.mutate(rows)}
+          >
+            Save playlists
+          </Button>
+        </div>
       </div>
       {error === undefined ? null : (
         <p id={errorId} role="alert" className="m-0 text-small text-danger">
@@ -124,6 +166,20 @@ function Playlist() {
       )}
     </Field>
   );
+}
+
+function playlistsProblem(rows: readonly StudioPlaylist[]): string | undefined {
+  const long = rows.find((one) => one.name.trim().length > studioPlaylistMax);
+  if (long !== undefined)
+    return `A playlist name is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it.`;
+  const seen = new Set<string>();
+  for (const one of rows) {
+    const key = one.name.trim().toLowerCase();
+    if (key === "") continue;
+    if (seen.has(key)) return `"${one.name.trim()}" is listed twice. Remove one.`;
+    seen.add(key);
+  }
+  return undefined;
 }
 
 function Pairing() {

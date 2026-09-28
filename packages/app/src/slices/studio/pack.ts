@@ -26,7 +26,7 @@ import {
   studioTitleMax,
   type UploadPack,
 } from "./model.js";
-import { readRealFootage, readStudioPlaylist } from "./settings.js";
+import { projectPlaylists, readRealFootage } from "./settings.js";
 
 export interface PackDeps {
   readonly db: DatabaseSync;
@@ -74,8 +74,10 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       ? undefined
       : readFileSync(outputPath(deps.paths, projectId, output.path), "utf8").trim();
   const channelId = projectChannelId(deps.db, projectId);
-  // The channel's own playlist, else the default (Settings → YouTube Studio).
-  const playlist = readStudioPlaylist(deps.db, channelId);
+  // The channel's playlists (Settings → YouTube Studio), ticked as this project chose.
+  const playlistChoices = projectPlaylists(deps.db, projectId, channelId);
+  const playlists = playlistChoices.filter((one) => one.chosen).map((one) => one.name);
+  const playlist = playlists[0] ?? null;
   const missing: string[] = [];
   // The channel's setting, then what the project narrates and shows (`disclosure.ts`).
   const setting = channelById(deps.db, channelId)?.aiDisclosure ?? "auto";
@@ -146,9 +148,9 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       `Only ${String(thumbnails.length)} of the ${String(count)} thumbnails are made. Regenerate the missing ones in the project's Images section.`,
     );
-  if (playlist === null)
+  if (playlistChoices.length === 0)
     missing.push(
-      "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio → Playlist.",
+      "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio → Playlists.",
     );
 
   const items: PackItem[] = [
@@ -165,6 +167,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       thumbnails: thumbnails.map(file),
       audience: studioAudience,
       alteredContent: disclosure("video"),
+      playlists,
       playlist,
       ...(edited?.chapterNotice === undefined ? {} : { chapterNotice: edited.chapterNotice }),
     },
@@ -205,6 +208,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       thumbnails: [],
       audience: studioAudience,
       alteredContent: disclosure("short"),
+      playlists,
       playlist,
     });
   }
@@ -215,6 +219,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       projectTitle: project.title,
       items,
       missing,
+      playlistChoices,
       ...(uploadedClips > 0 ? { footage: { clips: uploadedClips, real: realFootage } } : {}),
     },
   };

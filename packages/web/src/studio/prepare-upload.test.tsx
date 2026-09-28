@@ -1,5 +1,5 @@
 import type { UploadPack } from "@app/slices/studio/model.js";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudioSettingsBody } from "@/api";
@@ -22,6 +22,7 @@ const pack: UploadPack = {
   projectId: "p1",
   projectTitle: "The Fox",
   missing: [],
+  playlistChoices: [],
   items: [
     {
       kind: "video",
@@ -33,6 +34,7 @@ const pack: UploadPack = {
       thumbnails: [file("thumbnail", "the-fox-thumbnail.png"), file("thumbnail-2", "t2.png")],
       audience: "not_made_for_kids",
       alteredContent: { altered: true, why: "Yes because its images are photorealistic." },
+      playlists: ["Fox tales"],
       playlist: "Fox tales",
       chapterNotice: 'Chapters adjusted for YouTube: moved the first, "Intro", from 0:04 to 0:00.',
     },
@@ -47,13 +49,14 @@ const pack: UploadPack = {
       thumbnails: [],
       audience: "not_made_for_kids",
       alteredContent: { altered: false, why: "This channel is set to Always No." },
+      playlists: [],
       playlist: null,
     },
   ],
 };
 
 const pairedSettings: StudioSettingsBody = {
-  playlist: null,
+  playlists: [],
   channelPlaylists: {},
   pairing: { token: "t".repeat(32), origin: "chrome-extension://abc", pairedAt: "2026-09-27" },
 };
@@ -144,6 +147,48 @@ describe("Prepare upload", () => {
     expect(opened).toHaveBeenCalledWith("https://www.youtube.com/upload", "_blank", "noopener");
     await within(drawer).findByText(/Drop the video file/);
     expect(chosen).toEqual([{ short: 1 }]);
+  });
+
+  it("ticks which of the channel's playlists this project goes into", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const choices: UploadPack = {
+      ...pack,
+      playlistChoices: [
+        { name: "Fox tales", chosen: true },
+        { name: "Cliff series", chosen: false },
+      ],
+    };
+    const both: UploadPack = {
+      ...choices,
+      playlistChoices: choices.playlistChoices.map((one) => ({ ...one, chosen: true })),
+      items: pack.items.map((one) => ({
+        ...one,
+        playlists: ["Fox tales", "Cliff series"],
+        playlist: "Fox tales",
+      })),
+    };
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(),
+        "GET /api/studio/packs/p1": jsonAnswer(choices),
+        "PUT /api/studio/packs/p1/playlists": async (request) => {
+          sent.push(await request.json());
+          return jsonAnswer(both)(request);
+        },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
+    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    const cliff = await within(drawer).findByRole<HTMLInputElement>("checkbox", {
+      name: "Cliff series",
+    });
+    expect(cliff.checked).toBe(false);
+    await user.click(cliff);
+    await waitFor(() => expect(sent).toEqual([{ playlists: ["Fox tales", "Cliff series"] }]));
+    await waitFor(() => expect(cliff.checked).toBe(true));
+    await user.click(within(drawer).getByRole("button", { name: "Copy playlist" }));
   });
 
   it("marks the uploaded clips as real footage from the AI use step", async () => {

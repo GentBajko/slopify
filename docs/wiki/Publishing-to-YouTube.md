@@ -2,11 +2,11 @@
 
 Slopify never uploads or publishes for you: there is no YouTube sign-in and no upload API. Instead, **Prepare upload** lists everything YouTube Studio asks for, in the order it asks, with a Copy button for each value, for the long video and for every short. You upload in Studio in your own browser and press Publish yourself. The optional [Studio-Extension](Studio-Extension) can fill Studio's upload dialog from the same list.
 
-**Where to find it:** a finished project → **Prepare upload** (the next action, and in the **YouTube** section), Home → **Ready to upload** → **Prepare upload**, or the Calendar's **Needs you** → **Prepare upload**. Settings → **YouTube Studio** holds the playlist, and each channel's **Brand** tab holds the links it uses.
+**Where to find it:** a finished project → **Prepare upload** (the next action, and in the **YouTube** section), Home → **Ready to upload** → **Prepare upload**, or the Calendar's **Needs you** → **Prepare upload**. Settings → **YouTube Studio** holds the playlists, and each channel's **Brand** tab holds the links it uses.
 
 ## Before your first upload
 
-1. Open **Settings → YouTube Studio** and type your **Playlist** name exactly as it is called in Studio (up to 150 characters), then press **Save**. It is the default for every channel; pick a channel in the list above the field to give that channel its own playlist. Leave it empty for no playlist.
+1. Open **Settings → YouTube Studio**, press **Add playlist** and type each playlist exactly as it is called in Studio (up to 150 characters). Tick **On by default** for the ones every video goes into, then press **Save playlists**. The list is the default for every channel; pick a channel above it to give that channel its own list.
 2. Open **Channels** → your channel → **Brand** and, under **Channel links**, add any links your descriptions use, such as `Patreon` or `Discord`. See [Channels](Channels#channel-links).
 3. In **Settings → Voices**, turn on **Real person** for any voice cloned from, or made to sound like, a real person.
 4. In **Library → Prompts**, turn on **Draws photorealistic pictures** for any Image prompt whose style looks like real photos or film.
@@ -27,7 +27,7 @@ Steps 3 and 4 decide the AI use answer; see [AI use disclosure](#ai-use-disclosu
 | **Title** | The project's title (up to 100 characters), or the short's title. **Copy**. |
 | **Description** | The description with chapters and hashtags, links filled in. For a short: its description, the "Watch the full video:" line and its hashtags. **Copy**. |
 | **Thumbnail** | The thumbnail file, with **Open folder**. With three thumbnails: "The first under Thumbnail; all 3 in A/B Testing (beside the title)." Shorts have no thumbnail step, since Studio shows a frame of a short. |
-| **Playlist** | The project's channel's playlist from Settings → YouTube Studio (or the default one), or "None set". **Copy**. |
+| **Playlist** | The project's channel's playlists from Settings → YouTube Studio (or the default list), or "None set". With more than one, each has a tick: tick the ones this project goes into (saved for this project; the others keep the defaults). **Copy**. |
 | **Audience** | "No, it's not made for kids". |
 | **AI use (under Show more)** | **Yes** or **No**, with the reason. |
 | **Tags (under Show more)** | The tags, comma-separated. For a short, its hashtags without the `#`. **Copy**. |
@@ -119,7 +119,7 @@ Slopify does not check YouTube, so it can't know when you've published. After yo
 
 ## Tips
 
-- Set the playlist once in Settings (per channel if your channels upload to different playlists); every upload pack names it.
+- Set the playlists once in Settings (per channel if your channels upload to different playlists), and tick the few a single video joins in its Prepare upload.
 - Upload the long video first, then paste its link as the shorts' **Full video link** so each short's description points to it.
 - If the AI use answer surprises you, read its reason: it names the voice, footage or prompt that made it Yes.
 

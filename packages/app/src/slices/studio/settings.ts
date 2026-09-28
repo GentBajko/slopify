@@ -2,9 +2,9 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readSetting, writeSetting } from "../settings/repo.js";
-import { type StudioPairingView, studioPlaylistMax } from "./model.js";
+import { type StudioPairingView, type StudioPlaylist, studioPlaylistMax } from "./model.js";
 
-// Two rows of the key/value `settings` table. The playlist travels with a backup; the
+// Rows of the key/value `settings` table. The playlists travel with a backup; the
 // pairing stays on this machine (`slices/storage/portable.ts`): its token is what lets the
 // browser extension read a project's upload pack.
 export const studioPlaylistKey = "studio.playlist";
@@ -16,70 +16,149 @@ const pairingSchema = z.object({
   pairedAt: z.string().nullable(),
 });
 
-// A channel's own playlist is a row of its own, `studio.playlist.<channelId>`; a channel
-// without one uses the default above.
+// A channel's own playlists are a row of their own, `studio.playlist.<channelId>`; a channel
+// without one uses the default list above. Each playlist is ticked by default or not; a
+// project's Prepare upload can change which it goes into. A row saved before lists existed
+// holds one name, read as one playlist ticked by default.
 export const studioChannelPlaylistPrefix = `${studioPlaylistKey}.`;
 
 function playlistKey(channelId: string | undefined): string {
   return channelId === undefined ? studioPlaylistKey : `${studioChannelPlaylistPrefix}${channelId}`;
 }
 
-// The playlist an upload pack names: the channel's own, else the default. Without a channel,
-// the default alone.
-export function readStudioPlaylist(db: DatabaseSync, channelId?: string): string | null {
+// Up to 20 playlists a list: Studio's own dialog shows every playlist of the channel, and a
+// video in more than a handful of them is rare.
+export const studioPlaylistsMax = 20;
+
+export const studioPlaylistSchema = z.object({
+  name: z.string().trim().min(1).max(studioPlaylistMax),
+  byDefault: z.boolean(),
+});
+// What a row holds: the list, or the one name a row held before lists.
+export const storedPlaylistsSchema = z.union([
+  z.string().max(studioPlaylistMax),
+  z.array(studioPlaylistSchema).max(studioPlaylistsMax),
+]);
+
+// The playlists a channel's upload packs offer: the channel's own list, else the default.
+// Without a channel, the default alone.
+export function readStudioPlaylists(db: DatabaseSync, channelId?: string): StudioPlaylist[] {
   if (channelId !== undefined) {
-    const own = storedPlaylist(db, playlistKey(channelId));
+    const own = storedPlaylists(db, playlistKey(channelId));
     if (own !== null) return own;
   }
-  return storedPlaylist(db, studioPlaylistKey);
+  return storedPlaylists(db, studioPlaylistKey) ?? [];
 }
 
-// Every channel's own playlist, by channel id.
-export function readChannelPlaylists(db: DatabaseSync): Record<string, string> {
+// Every channel's own list, by channel id.
+export function readChannelPlaylists(db: DatabaseSync): Record<string, StudioPlaylist[]> {
   const prefix = studioChannelPlaylistPrefix;
   const rows = db
     .prepare("SELECT key FROM settings WHERE substr(key, 1, ?) = ? ORDER BY key")
     .all(prefix.length, prefix) as { key: string }[];
-  const out: Record<string, string> = {};
+  const out: Record<string, StudioPlaylist[]> = {};
   for (const { key } of rows) {
-    const value = storedPlaylist(db, key);
+    const value = storedPlaylists(db, key);
     if (value !== null) out[key.slice(prefix.length)] = value;
   }
   return out;
 }
 
-function storedPlaylist(db: DatabaseSync, key: string): string | null {
+function storedPlaylists(db: DatabaseSync, key: string): StudioPlaylist[] | null {
   const stored = readSetting(db, key);
   if (stored === undefined) return null;
   try {
-    const value: unknown = JSON.parse(stored);
-    return typeof value === "string" && value.trim() !== "" ? value : null;
+    const parsed = storedPlaylistsSchema.safeParse(JSON.parse(stored));
+    if (!parsed.success) return null;
+    if (typeof parsed.data === "string")
+      return parsed.data.trim() === "" ? null : [{ name: parsed.data.trim(), byDefault: true }];
+    return parsed.data.length === 0 ? null : parsed.data;
   } catch {
     return null;
   }
 }
 
-export function studioPlaylistProblem(raw: string): string | undefined {
-  return raw.trim().length > studioPlaylistMax
-    ? `The playlist name is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it in Settings → YouTube Studio.`
-    : undefined;
+// Why a list can't be saved, in words for Settings → YouTube Studio; undefined when it can.
+export function studioPlaylistsProblem(list: readonly StudioPlaylist[]): string | undefined {
+  const long = list.find((one) => one.name.trim().length > studioPlaylistMax);
+  if (long !== undefined)
+    return `The playlist name "${long.name.slice(0, 40)}…" is longer than YouTube allows (${String(studioPlaylistMax)} characters). Shorten it in Settings → YouTube Studio.`;
+  const seen = new Set<string>();
+  for (const one of list) {
+    const key = one.name.trim().toLowerCase();
+    if (seen.has(key))
+      return `"${one.name.trim()}" is listed twice. Remove one in Settings → YouTube Studio.`;
+    seen.add(key);
+  }
+  return undefined;
 }
 
-// Saves the default playlist, or a channel's own; empty clears it (the channel then uses the
-// default again).
-export function saveStudioPlaylist(
+// Saves the default list, or a channel's own; an empty list clears it (the channel then uses
+// the default again). Blank names are dropped.
+export function saveStudioPlaylists(
   db: DatabaseSync,
-  raw: string,
+  list: readonly StudioPlaylist[],
   channelId?: string,
-): string | null {
-  const value = raw.trim();
+): StudioPlaylist[] {
+  const value = list
+    .map((one) => ({ name: one.name.trim(), byDefault: one.byDefault }))
+    .filter((one) => one.name !== "");
   const key = playlistKey(channelId);
-  if (value === "") {
+  if (value.length === 0) {
     db.prepare("DELETE FROM settings WHERE key = ?").run(key);
-    return null;
+    return [];
   }
   writeSetting(db, key, JSON.stringify(value));
   return value;
+}
+
+// The playlists a project's uploads go into, when its Prepare upload changed them from the
+// channel's defaults: one row, project id to names.
+export const studioProjectPlaylistsKey = "studio.projectPlaylists";
+export const storedProjectPlaylistsSchema = z.record(
+  z.string().max(64),
+  z.array(z.string().max(studioPlaylistMax)).max(studioPlaylistsMax),
+);
+
+function projectChoices(db: DatabaseSync): Record<string, string[]> {
+  const stored = readSetting(db, studioProjectPlaylistsKey);
+  if (stored === undefined) return {};
+  try {
+    const parsed = storedProjectPlaylistsSchema.safeParse(JSON.parse(stored));
+    return parsed.success ? parsed.data : {};
+  } catch {
+    return {};
+  }
+}
+
+// The channel's playlists, each ticked as this project goes into it: the project's own choice
+// when it made one (a playlist the channel no longer lists is dropped), else the defaults.
+export function projectPlaylists(
+  db: DatabaseSync,
+  projectId: string,
+  channelId?: string,
+): { readonly name: string; readonly chosen: boolean }[] {
+  const list = readStudioPlaylists(db, channelId);
+  const own = projectChoices(db)[projectId];
+  return list.map((one) => ({
+    name: one.name,
+    chosen:
+      own === undefined
+        ? one.byDefault
+        : own.some((name) => name.toLowerCase() === one.name.toLowerCase()),
+  }));
+}
+
+export function saveProjectPlaylists(
+  db: DatabaseSync,
+  projectId: string,
+  names: readonly string[] | null,
+): void {
+  const { [projectId]: _previous, ...others } = projectChoices(db);
+  const next = names === null ? others : { ...others, [projectId]: [...names] };
+  if (Object.keys(next).length === 0)
+    db.prepare("DELETE FROM settings WHERE key = ?").run(studioProjectPlaylistsKey);
+  else writeSetting(db, studioProjectPlaylistsKey, JSON.stringify(next));
 }
 
 // The projects whose uploaded clips are real footage (filmed, not generated): ticked in the

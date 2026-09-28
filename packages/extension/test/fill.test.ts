@@ -473,6 +473,35 @@ describe("filling Studio's upload dialog", () => {
     expect(pressed).toEqual([]);
   });
 
+  it("ticks every playlist the upload goes into in one visit to the list", async () => {
+    const results = await fillFields(
+      document,
+      { ...item, playlists: ["Fox tales", "Cooking"] },
+      [],
+      noWait,
+    );
+    expect(results.find((result) => result.field === "playlist")).toMatchObject({
+      ok: true,
+      message: 'Added to the playlists "Fox tales" and "Cooking".',
+    });
+    expect(ticks()).toEqual(["true", "true"]);
+    expect(shown("ytcp-playlist-dialog")).toBe(false);
+  });
+
+  it("ticks the playlists Studio has and names the one it doesn't", async () => {
+    const results = await fillFields(
+      document,
+      { ...item, playlists: ["Fox tales", "Owls"] },
+      [],
+      noWait,
+    );
+    expect(results.find((result) => result.field === "playlist")).toMatchObject({
+      ok: false,
+      copy: "Owls",
+    });
+    expect(ticks()).toEqual(["false", "true"]);
+  });
+
   it("waits for the playlist rows, which Studio renders only after the list shows", async () => {
     // Nothing waits the first time the filler looks; the rows come later.
     const results = await fillFields(document, item, [], noWait);
@@ -614,7 +643,7 @@ describe("the whole pack as text", () => {
         "Title:\nThe Fox of Cliffside",
         "Description:\nA fox learns to fly.\n\n0:00 Intro\n0:40 The Cliff\n\n#fox",
         "Tags:\nfox, cliff diving",
-        "Playlist: Fox tales",
+        "Playlists: Fox tales",
         "Audience: No, it's not made for kids",
         "AI use (under Show more): Yes. Yes because its images are photorealistic.\n",
       ].join("\n\n"),

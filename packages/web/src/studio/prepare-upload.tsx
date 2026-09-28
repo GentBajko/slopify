@@ -15,6 +15,7 @@ import {
   readStudioSettings,
   readUploadPack,
   removeFromStudioQueue,
+  saveProjectPlaylists,
   saveRealFootage,
 } from "@/api";
 import { useApp } from "@/app-context";
@@ -146,6 +147,18 @@ export function PrepareUploadDrawer({
         tone: "error",
       }),
   });
+  const playlists = useMutation({
+    mutationFn: (names: readonly string[]) => saveProjectPlaylists(api, projectId, names),
+    onSuccess: (saved) => {
+      client.setQueryData(packKey, saved);
+      setStatus({ text: "Saved this project's playlists.", tone: "success" });
+    },
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't save the playlists: ${error.message} Tick the playlist again.`,
+        tone: "error",
+      }),
+  });
   const copy = (text: string, what: string) => {
     if (!navigator.clipboard) {
       setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
@@ -257,6 +270,31 @@ export function PrepareUploadDrawer({
                   />
                 ) : undefined
               }
+              playlistPicker={
+                pack.data.playlistChoices.length > 1 ? (
+                  <span className="flex flex-col gap-1">
+                    {pack.data.playlistChoices.map((choice) => (
+                      <label key={choice.name} className="flex min-h-8 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[var(--color-accent)]"
+                          checked={choice.chosen}
+                          disabled={playlists.isPending}
+                          onChange={(event) => {
+                            const on = event.currentTarget.checked;
+                            playlists.mutate(
+                              pack.data.playlistChoices
+                                .filter((one) => (one.name === choice.name ? on : one.chosen))
+                                .map((one) => one.name),
+                            );
+                          }}
+                        />
+                        {choice.name}
+                      </label>
+                    ))}
+                  </span>
+                ) : undefined
+              }
               copy={copy}
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
@@ -336,6 +374,7 @@ function Steps({
   projectId,
   item,
   footageSwitch,
+  playlistPicker,
   copy,
   doneKey,
 }: {
@@ -343,6 +382,8 @@ function Steps({
   readonly item: PackItem;
   // The AI use step's "real footage" switch, for a video with uploaded clips.
   readonly footageSwitch?: ReactNode;
+  // The channel's playlists to tick for this project, when it has more than one.
+  readonly playlistPicker?: ReactNode;
   readonly copy: (text: string, what: string) => void;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
@@ -466,9 +507,13 @@ function Steps({
             };
       case "playlist":
         return {
-          value: item.playlist ?? (
-            <span className="text-ink-3">None set (Settings → YouTube Studio).</span>
-          ),
+          value:
+            playlistPicker ??
+            (item.playlists.length > 0 ? (
+              item.playlists.join(", ")
+            ) : (
+              <span className="text-ink-3">None set (Settings → YouTube Studio).</span>
+            )),
           actions: copyAction(step),
         };
       default:
@@ -580,7 +625,7 @@ function copyTextOf(item: PackItem, step: StudioStep): string {
     case "tags":
       return tagsLine(item.tags);
     case "playlist":
-      return item.playlist ?? "";
+      return item.playlists.join(", ");
     default:
       return "";
   }

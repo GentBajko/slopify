@@ -355,6 +355,7 @@ describe("Prepare upload and the project list", () => {
       projectId: "p1",
       projectTitle: "The Fox",
       missing: [],
+      playlistChoices: [],
       footage: { clips: 1, real: false },
       items: [
         {
@@ -367,6 +368,7 @@ describe("Prepare upload and the project list", () => {
           thumbnails: [file("thumbnail", "t.png")],
           audience: "not_made_for_kids",
           alteredContent: { altered: false, why: "No." },
+          playlists: [],
           playlist: null,
         },
         {
@@ -380,6 +382,7 @@ describe("Prepare upload and the project list", () => {
           thumbnails: [],
           audience: "not_made_for_kids",
           alteredContent: { altered: false, why: "No." },
+          playlists: [],
           playlist: null,
         },
       ],

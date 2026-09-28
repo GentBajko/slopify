@@ -1,4 +1,4 @@
-import type { PackItem } from "./pack.js";
+import { type PackItem, playlistsOf } from "./pack.js";
 import {
   abTestButton,
   abTestChips,
@@ -126,7 +126,8 @@ export async function fillStudio(
   // Every field this item needs, before anything is written.
   const needed: FieldSelectors[] = [title, description];
   if (thumbnails.length > 0) needed.push(thumbnailInput);
-  if (item.playlist !== null) needed.push(playlistTrigger);
+  const playlists = playlistsOf(item);
+  if (playlists.length > 0) needed.push(playlistTrigger);
   needed.push(notForKids);
   const missing = needed
     .filter((field) => findField(root, field) === null)
@@ -182,13 +183,13 @@ export async function fillStudio(
     abSlot = results.length;
     results.push(thumbnailFallback);
   }
-  if (item.playlist !== null) {
-    const playlist = item.playlist;
-    await attempt(() => fillPlaylist(root, playlist, waits), {
+  if (playlists.length > 0) {
+    const names = playlists.join(", ");
+    await attempt(() => fillPlaylists(root, playlists, waits), {
       field: "playlist",
       ok: false,
-      message: `Couldn't find the Playlists field — the playlist name "${playlist}" is copied, pick it by hand.`,
-      copy: playlist,
+      message: `Couldn't find the Playlists field — the playlist name "${names}" is copied, pick it by hand.`,
+      copy: names,
     });
   }
   await attempt(
@@ -350,7 +351,15 @@ async function fillAbTest(
 // Opens the Playlists list, waits for its rows (an iron-list, which renders them only once the
 // list shows), ticks the one row named `name` (leaving the others as they are) and closes the
 // list with its own Done, never its Save.
-async function fillPlaylist(root: Document, name: string, waits: Waits): Promise<FieldResult> {
+// Opens Studio's playlist list once and ticks each playlist by name, then closes it. One the
+// list doesn't show (not made in Studio yet), or whose tick doesn't hold, is named with the
+// names copied, to pick by hand.
+async function fillPlaylists(
+  root: Document,
+  names: readonly string[],
+  waits: Waits,
+): Promise<FieldResult> {
+  const all = names.join(", ");
   const trigger = findField(root, playlistTrigger);
   if (trigger === null) throw new Error("missing");
   click(trigger);
@@ -359,8 +368,8 @@ async function fillPlaylist(root: Document, name: string, waits: Waits): Promise
     return {
       field: "playlist",
       ok: false,
-      message: `Couldn't open the playlist list — the playlist name "${name}" is copied, press Select under Playlists and pick it by hand.`,
-      copy: name,
+      message: `Couldn't open the playlist list — the playlist name "${all}" is copied, press Select under Playlists and pick it by hand.`,
+      copy: all,
     };
   const list = dialog.closest("ytcp-playlist-dialog") ?? dialog;
   const close = () => {
@@ -382,32 +391,42 @@ async function fillPlaylist(root: Document, name: string, waits: Waits): Promise
       const found = findAll(dialog, playlistItems);
       return found.length > 0 ? found : null;
     }, waits.rowsMs)) ?? [];
-  const wanted = name.trim().toLowerCase();
   const nameOf = (row: Element) =>
     (findField(row, playlistItemName)?.textContent ?? row.textContent ?? "").trim().toLowerCase();
-  const row = rows.find((candidate) => nameOf(candidate) === wanted);
-  if (row === undefined) {
-    close();
+  const absent: string[] = [];
+  const unticked: string[] = [];
+  for (const name of names) {
+    const row = rows.find((candidate) => nameOf(candidate) === name.trim().toLowerCase());
+    if (row === undefined) {
+      absent.push(name);
+      continue;
+    }
+    const box = findField(row, playlistItemCheckbox) ?? row;
+    if (!checked(box)) click(box);
+    // The checkbox may re-render after the click, so its tick is looked for a moment.
+    if ((await waits.until(() => (checked(box) ? true : null), 1000)) !== true) unticked.push(name);
+  }
+  close();
+  const quoted = (list: readonly string[]) => list.map((one) => `"${one}"`).join(" and ");
+  if (absent.length > 0)
     return {
       field: "playlist",
       ok: false,
-      message: `Couldn't find the playlist "${name}" in Studio — create it there or pick one by hand; the name is copied.`,
-      copy: name,
+      message: `Couldn't find the playlist ${quoted(absent)} in Studio — create it there or pick one by hand; the name is copied.`,
+      copy: absent.join(", "),
     };
-  }
-  const box = findField(row, playlistItemCheckbox) ?? row;
-  if (!checked(box)) click(box);
-  // The checkbox may re-render after the click, so its tick is looked for a moment.
-  const ticked = (await waits.until(() => (checked(box) ? true : null), 1000)) === true;
-  close();
-  return ticked
-    ? { field: "playlist", ok: true, message: `Added to the playlist "${name}".` }
-    : {
-        field: "playlist",
-        ok: false,
-        message: `Couldn't tick the playlist "${name}" — the name is copied, press Select under Playlists and tick it by hand.`,
-        copy: name,
-      };
+  if (unticked.length > 0)
+    return {
+      field: "playlist",
+      ok: false,
+      message: `Couldn't tick the playlist ${quoted(unticked)} — the name is copied, press Select under Playlists and tick it by hand.`,
+      copy: unticked.join(", "),
+    };
+  return {
+    field: "playlist",
+    ok: true,
+    message: `Added to the playlist${names.length > 1 ? "s" : ""} ${quoted(names)}.`,
+  };
 }
 
 // Types each tag into the chip bar's input and ends it with Enter, then a comma if Studio

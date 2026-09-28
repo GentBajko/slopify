@@ -176,8 +176,8 @@ export const settingsHelp = {
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
   "settings.studio.playlist": {
-    title: "Playlist",
-    body: "The YouTube playlist an upload pack names, so the extension ticks it in Studio's dialog. Pick Every channel for the default, or a channel to give it its own; a channel without its own uses the default. Type it exactly as it is called in Studio, up to 150 characters. Empty means no playlist (for a channel: the default). Default: empty.",
+    title: "Playlists",
+    body: "The YouTube playlists upload packs offer, typed exactly as Studio names them. Pick Every channel for the default list, or a channel to give it its own. Ticked On by default means every project goes into it; Prepare upload changes the ticks for one project. The extension ticks each one in Studio. Default: none.",
     tutorial: { page: "Studio-Extension", anchor: "settings--youtube-studio" },
   },
   "settings.studio.install": {

@@ -9,6 +9,7 @@ import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { RunConfig } from "../../slices/admission/model.js";
 import { insertProject } from "../../slices/admission/repo.js";
+import { writeSetting } from "../../slices/settings/repo.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import type { Output, OutputMeta, OutputRole } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
@@ -164,10 +165,10 @@ describe("the upload pack", () => {
   it("lists every part Studio asks for, in its order, for the video and each short", async () => {
     const { call, output } = harness();
     finished(output);
-    await call("/settings/playlist", {
+    await call("/settings/playlists", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ playlist: " Fox tales " }),
+      body: JSON.stringify({ playlists: [{ name: " Fox tales ", byDefault: true }] }),
     });
     const response = await call("/packs/p1");
     expect(response.status).toBe(200);
@@ -588,35 +589,109 @@ describe("a playlist per channel", () => {
   const put = (body: unknown): RequestInit => ({ ...json(body), method: "PUT" });
   const defaultChannel = "00000000-0000-4000-8000-000000000001";
 
-  it("names the channel's own playlist, else the default", async () => {
+  it("names the channel's own playlists, else the default list", async () => {
     const h = harness();
     finished(h.output);
-    const playlist = async () =>
-      ((await (await h.call("/packs/p1")).json()) as UploadPack).items[0]?.playlist;
-    expect(await playlist()).toBeNull();
-    await h.call("/settings/playlist", put({ playlist: "Everything" }));
-    expect(await playlist()).toBe("Everything");
-    const own = await h.call(
-      "/settings/playlist",
-      put({ playlist: " Fox tales ", channelId: defaultChannel }),
+    const video = async () => ((await (await h.call("/packs/p1")).json()) as UploadPack).items[0];
+    expect((await video())?.playlists).toEqual([]);
+    await h.call(
+      "/settings/playlists",
+      put({ playlists: [{ name: "Everything", byDefault: true }] }),
     );
-    expect(await own.json()).toEqual({ playlist: "Fox tales", channelId: defaultChannel });
-    expect(await playlist()).toBe("Fox tales");
-    expect(await (await h.call("/settings")).json()).toMatchObject({
-      playlist: "Everything",
-      channelPlaylists: { [defaultChannel]: "Fox tales" },
+    expect((await video())?.playlists).toEqual(["Everything"]);
+    const own = await h.call(
+      "/settings/playlists",
+      put({
+        playlists: [
+          { name: " Fox tales ", byDefault: true },
+          { name: "Cliff series", byDefault: false },
+          { name: "  ", byDefault: true },
+        ],
+        channelId: defaultChannel,
+      }),
+    );
+    expect(await own.json()).toEqual({
+      playlists: [
+        { name: "Fox tales", byDefault: true },
+        { name: "Cliff series", byDefault: false },
+      ],
+      channelId: defaultChannel,
     });
-    // Emptied, the channel uses the default again.
-    await h.call("/settings/playlist", put({ playlist: "", channelId: defaultChannel }));
-    expect(await playlist()).toBe("Everything");
+    // Only the ones ticked by default; the first also as `playlist`, for older extensions.
+    expect(await video()).toMatchObject({ playlists: ["Fox tales"], playlist: "Fox tales" });
+    expect(await (await h.call("/settings")).json()).toMatchObject({
+      playlists: [{ name: "Everything", byDefault: true }],
+      channelPlaylists: { [defaultChannel]: [{ name: "Fox tales" }, { name: "Cliff series" }] },
+    });
+    // Emptied, the channel uses the default list again.
+    await h.call("/settings/playlists", put({ playlists: [], channelId: defaultChannel }));
+    expect((await video())?.playlists).toEqual(["Everything"]);
+    const twice = await h.call(
+      "/settings/playlists",
+      put({
+        playlists: [
+          { name: "Owls", byDefault: true },
+          { name: "owls", byDefault: false },
+        ],
+      }),
+    );
+    expect(twice.status).toBe(400);
+    expect(((await twice.json()) as { detail: string }).detail).toContain("listed twice");
     const unknown = await h.call(
-      "/settings/playlist",
-      put({ playlist: "Owls", channelId: "11111111-1111-4111-8111-111111111111" }),
+      "/settings/playlists",
+      put({
+        playlists: [{ name: "Owls", byDefault: true }],
+        channelId: "11111111-1111-4111-8111-111111111111",
+      }),
     );
     expect(unknown.status).toBe(404);
     expect(((await unknown.json()) as { detail: string }).detail).toContain(
       "Settings → YouTube Studio",
     );
+  });
+
+  it("reads a playlist saved before lists as one ticked by default", async () => {
+    const h = harness();
+    finished(h.output);
+    writeSetting(h.db, "studio.playlist", JSON.stringify("Fox tales"));
+    const pack = (await (await h.call("/packs/p1")).json()) as UploadPack;
+    expect(pack.playlistChoices).toEqual([{ name: "Fox tales", chosen: true }]);
+    expect(pack.items[0]?.playlists).toEqual(["Fox tales"]);
+  });
+
+  it("keeps a project's own playlist ticks, and drops one the channel no longer lists", async () => {
+    const h = harness();
+    finished(h.output);
+    await h.call(
+      "/settings/playlists",
+      put({
+        playlists: [
+          { name: "Everything", byDefault: true },
+          { name: "Cliff series", byDefault: false },
+        ],
+      }),
+    );
+    const chosen = await h.call("/packs/p1/playlists", put({ playlists: ["Cliff series"] }));
+    const pack = (await chosen.json()) as UploadPack;
+    expect(pack.playlistChoices).toEqual([
+      { name: "Everything", chosen: false },
+      { name: "Cliff series", chosen: true },
+    ]);
+    // The shorts go into the same playlists as the video.
+    expect(pack.items.map((item) => item.playlists)).toEqual(
+      pack.items.map(() => ["Cliff series"]),
+    );
+    await h.call(
+      "/settings/playlists",
+      put({ playlists: [{ name: "Everything", byDefault: true }] }),
+    );
+    const after = (await (await h.call("/packs/p1")).json()) as UploadPack;
+    expect(after.items[0]?.playlists).toEqual([]);
+    // Back to the channel's defaults.
+    await h.call("/packs/p1/playlists", put({ playlists: null }));
+    expect(((await (await h.call("/packs/p1")).json()) as UploadPack).items[0]?.playlists).toEqual([
+      "Everything",
+    ]);
   });
 });
 

@@ -28,6 +28,12 @@ export interface PackFile {
   readonly bytes: number;
 }
 
+// A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not.
+export interface StudioPlaylist {
+  readonly name: string;
+  readonly byDefault: boolean;
+}
+
 export interface PackItem {
   // "video" is the long video; a short carries its 1-based number.
   readonly kind: "video" | "short";
@@ -45,6 +51,9 @@ export interface PackItem {
   readonly audience: typeof studioAudience;
   // Studio's "AI use" answer (it was "Altered or synthetic content") and why (`disclosure.ts`).
   readonly alteredContent: AiDisclosure;
+  // The playlists this upload goes into, ticked in Studio's playlist list.
+  readonly playlists: readonly string[];
+  // The first of them, for an extension from before several playlists: it ticks one.
   readonly playlist: string | null;
   // What was changed in the description's chapters to meet YouTube's rules
   // (`slices/youtube/chapters.ts`); absent when nothing was.
@@ -60,6 +69,9 @@ export interface UploadPack {
   // The video's uploaded clips and whether they are marked as real footage (the AI use step's
   // tick). Absent when the project has none.
   readonly footage?: { readonly clips: number; readonly real: boolean } | undefined;
+  // The channel's playlists, each ticked as this project's uploads go into it; Prepare upload
+  // changes the ticks for this project.
+  readonly playlistChoices: readonly { readonly name: string; readonly chosen: boolean }[];
 }
 
 // The pack as the extension asks for it: which item the person chose in Slopify.

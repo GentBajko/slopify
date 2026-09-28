@@ -39,12 +39,14 @@ import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { realPersonVoicesKey, voiceIdMax, voiceNameMax } from "../settings/voices.js";
 import { whatsNewSeenKey } from "../settings/whats-new.js";
-import { studioPlaylistMax } from "../studio/model.js";
 import {
+  storedPlaylistsSchema,
+  storedProjectPlaylistsSchema,
   studioChannelPlaylistPrefix,
   studioFillQueuePrefix,
   studioPairingKey,
   studioPlaylistKey,
+  studioProjectPlaylistsKey,
   studioRealFootageKey,
 } from "../studio/settings.js";
 import { channelLinksKey } from "../youtube/edits-repo.js";
@@ -460,7 +462,6 @@ const storedAppearance = z.enum(appearances);
 const storedLoudness = z
   .object({ enabled: z.boolean(), videoLufs: z.number(), audioFilesLufs: z.number() })
   .strict();
-const storedPlaylist = z.string().max(studioPlaylistMax);
 // Settings → Channel links, and the providers a fresh Play form starts with.
 // The AI use marks: ticked voices, Image prompts and projects, by id.
 const storedIds = z.array(z.string().max(200)).max(100_000);
@@ -495,7 +496,8 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === "loudness") storedLoudness.parse(parsed);
     else if (key === studioPlaylistKey || key.startsWith(studioChannelPlaylistPrefix))
-      storedPlaylist.parse(parsed);
+      storedPlaylistsSchema.parse(parsed);
+    else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
     else if (
       key === realPersonVoicesKey ||

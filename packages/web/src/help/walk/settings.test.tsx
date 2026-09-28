@@ -120,7 +120,8 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
       links: [{ name: "Patreon", url: "https://patreon.com/slopify" }],
     }),
     "GET /api/studio/settings": jsonAnswer({
-      playlist: "Lore",
+      playlists: [{ name: "Lore", byDefault: true }],
+      channelPlaylists: {},
       pairing: { token: "a".repeat(64), origin: null },
     }),
     "GET /api/providers/catalogue": jsonAnswer({

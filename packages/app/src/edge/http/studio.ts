@@ -20,12 +20,14 @@ import {
   isExtensionOrigin,
   pairStudioExtension,
   readChannelPlaylists,
-  readStudioPlaylist,
+  readStudioPlaylists,
   resetStudioPairing,
+  saveProjectPlaylists,
   saveRealFootage,
-  saveStudioPlaylist,
+  saveStudioPlaylists,
   studioPairing,
-  studioPlaylistProblem,
+  studioPlaylistsMax,
+  studioPlaylistsProblem,
   studioRequestAllowed,
 } from "../../slices/studio/settings.js";
 import type { AppDeps } from "./app.js";
@@ -49,10 +51,21 @@ const queueItemBody = z.object({
   projectId: id,
   short: z.number().int().min(1).max(99).nullable().optional(),
 });
-const playlistBody = z.object({
-  playlist: z.string().max(studioPlaylistMax * 2),
-  // A channel's own playlist; absent is the default every other channel uses.
+const playlistsBody = z.object({
+  playlists: z
+    .array(
+      z.object({
+        name: z.string().max(studioPlaylistMax * 2),
+        byDefault: z.boolean(),
+      }),
+    )
+    .max(studioPlaylistsMax),
+  // A channel's own list; absent is the default every other channel uses.
   channelId: id.optional(),
+});
+// The names this project's uploads go into; null goes back to the channel's defaults.
+const projectPlaylistsBody = z.object({
+  playlists: z.array(z.string().max(studioPlaylistMax)).max(studioPlaylistsMax).nullable(),
 });
 const realFootageBody = z.object({ realFootage: z.boolean() });
 // The extension builds the app ships (`scripts/copy-extension.mjs`), by browser.
@@ -113,32 +126,32 @@ export function studioRoutes(deps: AppDeps) {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
         return c.json({
-          playlist: readStudioPlaylist(deps.db),
+          playlists: readStudioPlaylists(deps.db),
           channelPlaylists: readChannelPlaylists(deps.db),
           pairing: studioPairing(deps.db),
         });
       })
-      .put("/settings/playlist", zValidator("json", playlistBody, onInvalid), (c) => {
+      .put("/settings/playlists", zValidator("json", playlistsBody, onInvalid), (c) => {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
-        const { playlist: raw, channelId } = c.req.valid("json");
+        const { playlists: raw, channelId } = c.req.valid("json");
         if (channelId !== undefined && channelById(deps.db, channelId) === undefined)
           return problem(c, {
             status: 404,
             title: titleOf(404),
             detail:
-              "The playlist wasn't saved: that channel no longer exists. Reload Settings → YouTube Studio and pick the channel again.",
+              "The playlists weren't saved: that channel no longer exists. Reload Settings → YouTube Studio and pick the channel again.",
           });
-        const invalid = studioPlaylistProblem(raw);
+        const invalid = studioPlaylistsProblem(raw);
         if (invalid !== undefined)
           return problem(c, {
             status: 400,
             title: titleOf(400),
             detail: invalid,
-            extensions: { fields: [{ field: "playlist", message: invalid }] },
+            extensions: { fields: [{ field: "playlists", message: invalid }] },
           });
         return c.json({
-          playlist: saveStudioPlaylist(deps.db, raw, channelId),
+          playlists: saveStudioPlaylists(deps.db, raw, channelId),
           channelId: channelId ?? null,
         });
       })
@@ -163,6 +176,21 @@ export function studioRoutes(deps: AppDeps) {
           const { projectId } = c.req.valid("param");
           if (!uploadPack(deps, projectId).ok) return unknownProject(c);
           saveRealFootage(deps.db, projectId, c.req.valid("json").realFootage);
+          const result = uploadPack(deps, projectId);
+          return result.ok ? c.json(result.pack) : unknownProject(c);
+        },
+      )
+      // Prepare upload's playlist ticks: which of the channel's playlists this project goes into.
+      .put(
+        "/packs/:projectId/playlists",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", projectPlaylistsBody, onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          if (!uploadPack(deps, projectId).ok) return unknownProject(c);
+          saveProjectPlaylists(deps.db, projectId, c.req.valid("json").playlists);
           const result = uploadPack(deps, projectId);
           return result.ok ? c.json(result.pack) : unknownProject(c);
         },

@@ -42,6 +42,7 @@ import type {
   FillQueueItem,
   StudioExtensionBrowser,
   StudioPairingView,
+  StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
@@ -466,12 +467,12 @@ export async function sendTestNotification(api: Api, url: string): Promise<void>
   );
 }
 
-// Settings → YouTube Studio: the default playlist, each channel's own, and the extension's
+// Settings → YouTube Studio: the default playlists, each channel's own, and the extension's
 // pairing.
 export interface StudioSettingsBody {
-  readonly playlist: string | null;
-  // By channel id; a channel missing here uses `playlist`.
-  readonly channelPlaylists: Readonly<Record<string, string>>;
+  readonly playlists: readonly StudioPlaylist[];
+  // By channel id; a channel missing here uses `playlists`.
+  readonly channelPlaylists: Readonly<Record<string, readonly StudioPlaylist[]>>;
   readonly pairing: StudioPairingView;
 }
 
@@ -479,15 +480,31 @@ export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> 
   return read<StudioSettingsBody>(await api.client.studio.settings.$get());
 }
 
-// The default playlist, or a channel's own when `channelId` is given.
-export async function saveStudioPlaylist(
+// The default playlists, or a channel's own when `channelId` is given; empty clears them.
+export async function saveStudioPlaylists(
   api: Api,
-  playlist: string,
+  playlists: readonly StudioPlaylist[],
   channelId?: string,
-): Promise<{ readonly playlist: string | null }> {
+): Promise<{ readonly playlists: readonly StudioPlaylist[] }> {
+  const list = playlists.map((one) => ({ name: one.name, byDefault: one.byDefault }));
   return detailed(
-    await api.client.studio.settings.playlist.$put({
-      json: channelId === undefined ? { playlist } : { playlist, channelId },
+    await api.client.studio.settings.playlists.$put({
+      json: channelId === undefined ? { playlists: list } : { playlists: list, channelId },
+    }),
+  );
+}
+
+// Prepare upload's playlist ticks for this project; null goes back to the channel's defaults.
+// Answers the pack as it now reads.
+export async function saveProjectPlaylists(
+  api: Api,
+  projectId: string,
+  playlists: readonly string[] | null,
+): Promise<UploadPack> {
+  return detailed<UploadPack>(
+    await api.client.studio.packs[":projectId"].playlists.$put({
+      param: { projectId },
+      json: { playlists: playlists === null ? null : [...playlists] },
     }),
   );
 }

@@ -15,7 +15,7 @@ Every section of Settings, what each control does and its default. Sections with
 | [Playback & appearance](#playback--appearance) | Silence gap, light or dark, volume levelling | This page |
 | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
-| [YouTube Studio](#youtube-studio) | Playlist per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
+| [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
 | [Backup & storage](#backup--storage) | Your files folder, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live) |
 | [Backups](#backups) | The daily automatic backup | [Backups](Backups) |
 | [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
@@ -140,12 +140,12 @@ Each channel now keeps its own links, on its **Brand** tab under **Channel links
 
 ## YouTube Studio
 
-"The playlist upload packs name, and the Studio extension's pairing."
+"The playlists upload packs offer, and the Studio extension's pairing."
 
 | Control | What it does | Default / limit |
 |---|---|---|
 | **Upload pack and extension** | Explains that Slopify never uploads or publishes: **Prepare upload** on a finished project lists everything Studio asks for, and the optional extension fills Studio's upload dialog from it. | |
-| **Playlist** | The YouTube playlist upload packs name, typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default is used by every channel without its own. **Save** stores it. Empty means no playlist (or, for a channel, the default). | Empty; up to 150 characters |
+| **Playlists** | The YouTube playlists upload packs offer, each typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default list is used by every channel without its own. **Add playlist** adds a row; **On by default** puts every project into it; **Remove** drops it; **Save playlists** stores the list. A project's **Prepare upload** changes which ones it goes into. | None; up to 20, each up to 150 characters |
 | **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your upload packs. **Copy** it into the extension's options and press Pair there. | |
 | **New pairing token** | Makes a fresh token, unpairs the extension until you paste the new one, and clears the uploads waiting for Studio. | |
 | **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox**, then **Download for Chrome** or **Download for Firefox**, with the three install steps. | |

@@ -22,8 +22,16 @@ export interface PackItem {
   // Studio's "Altered or synthetic content" answer and why. Absent from a Slopify older than
   // the answer, and then the question is left to the person.
   readonly alteredContent?: { readonly altered: boolean; readonly why: string } | undefined;
+  // Every playlist the upload goes into. Absent from a Slopify older than several playlists,
+  // which sends `playlist` alone.
+  readonly playlists?: readonly string[] | undefined;
   readonly playlist: string | null;
   readonly chapterNotice?: string | undefined;
+}
+
+// The playlists to tick, from either kind of Slopify.
+export function playlistsOf(item: PackItem): readonly string[] {
+  return item.playlists ?? (item.playlist === null ? [] : [item.playlist]);
 }
 
 export interface ActivePack {
@@ -62,7 +70,7 @@ export function packText(item: PackItem): string {
     `Title:\n${item.title}`,
     `Description:\n${item.description}`,
     `Tags:\n${item.tags.join(", ")}`,
-    `Playlist: ${item.playlist ?? "(none)"}`,
+    `Playlists: ${playlistsOf(item).join(", ") || "(none)"}`,
     "Audience: No, it's not made for kids",
   ];
   if (item.alteredContent !== undefined)

@@ -5,3 +5,4 @@
 - Nothing becomes outdated: a description written before shows no pinned comment until it is written again.
 - The same call writes two more titles for YouTube's title A/B test (Test & compare). They show as **Other titles** in the YouTube section (editable, one per line, Copy), download as `titles.txt`, and Prepare upload's Title step lists them with **Copy others**.
 - Prepare upload has **Select all** above its steps.
+- Several playlists per channel: Settings → YouTube Studio → **Playlists** is a list, each **On by default** or not. Prepare upload's Playlist step ticks which ones a project goes into, and the Studio extension ticks each in Studio. A playlist saved before reads as one list entry, on by default; an older extension still ticks the first.
