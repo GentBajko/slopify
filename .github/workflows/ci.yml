@@ -40,8 +40,7 @@ jobs:
       - run: npm ci
       - run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # Windows only on a release push (the one that bumps the app's version), so everyday pushes
-  # don't wait on its ~5 minutes and a release still can't be tagged without it passing.
+  # Release pushes only (see `changes`).
   windows:
     needs: changes
     if: needs.changes.outputs.release == 'true'
@@ -62,15 +61,12 @@ jobs:
       - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/src/kernel/cli-command.test.ts packages/app/src/adapters/llm packages/app/src/slices/settings/cli-paths.test.ts packages/app/src/slices/settings/cli-status.test.ts packages/app/src/adapter-registry-paths.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts
       - run: npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"
 
-  # Whether this push touches what only the Docker install uses. The Linux test shards cover
-  # the app itself; the container jobs cover the image, the host CLI bridge and the Docker
-  # installer, so they run when those, the dependencies or the app's package.json (every
-  # release bumps its version, so every release is tested in Docker) change.
+  # Whether this is a release push: one that bumps the app's version. Windows and Docker run
+  # only then, so everyday pushes don't wait on them and a release still can't be tagged
+  # without them passing (the tag needs a green CI run on main for its commit).
   changes:
     runs-on: ubuntu-latest
     outputs:
-      docker: ${{ steps.diff.outputs.docker }}
-      install: ${{ steps.diff.outputs.install }}
       release: ${{ steps.diff.outputs.release }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -81,12 +77,9 @@ jobs:
           BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            echo "docker=true" >> "$GITHUB_OUTPUT"
-            echo "install=true" >> "$GITHUB_OUTPUT"
             echo "release=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # A release push bumps the app's version.
           version() { node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version"; }
           before=$(git show "$BEFORE:packages/app/package.json" | version)
           now=$(version < packages/app/package.json)
@@ -95,25 +88,13 @@ jobs:
           else
             echo "release=false" >> "$GITHUB_OUTPUT"
           fi
-          changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
-          if echo "$changed" | grep -qE '^(Dockerfile|compose\.yaml|\.dockerignore|docker/|package-lock\.json|package\.json|packages/app/package\.json|packages/app/src/(edge/docker|edge/docker-install|edge/host-cli|host-cli|adapters/host-cli)|packages/app/scripts/(container|host-cli|docker-install)|\.github/workflows/)'; then
-            echo "docker=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "docker=false" >> "$GITHUB_OUTPUT"
-          fi
-          # How Slopify installs and starts: the package, its dependencies, the start-up
-          # code, the updater and the scripts that copy files into the package.
-          if echo "$changed" | grep -qE '^(package-lock\.json|package\.json|packages/app/package\.json|packages/app/scripts/|packages/app/src/(main\.ts|edge/cli|edge/launch|updater/|kernel/paths)|\.github/workflows/)'; then
-            echo "install=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "install=false" >> "$GITHUB_OUTPUT"
-          fi
 
   # The image's smoke tests in two jobs side by side, each building the image itself (cached):
   # the Docker install test alone was over half of one job's time.
+  # Release pushes only (see `changes`).
   container:
     needs: changes
-    if: needs.changes.outputs.docker == 'true'
+    if: needs.changes.outputs.release == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
