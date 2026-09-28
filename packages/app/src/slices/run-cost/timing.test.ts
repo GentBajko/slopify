@@ -51,13 +51,7 @@ describe("how long a project took", () => {
 
   it("keeps a running run's clock open, and never one a crash left open", () => {
     const timing = projectTiming(running(), "p1", at("10:12"));
-    expect(timing.run).toEqual({
-      current: true,
-      startedAt: "2026-09-27T09:00:00.000Z",
-      endedAt: null,
-      spanMs: 72 * 60_000,
-      workingMs: 12 * 60_000,
-    });
+    expect(timing.run).toEqual({ current: true, running: true, workingMs: 12 * 60_000 });
     expect(timing.byStage.get("images")).toBe(0);
   });
 
@@ -69,7 +63,6 @@ describe("how long a project took", () => {
       UPDATE project_heads SET revision_id = 'r2';
     `);
     const run = projectTiming(db, "p1", at("10:12")).run;
-    expect(run?.current).toBe(false);
-    expect(run?.startedAt).toBe("2026-09-27T09:00:00.000Z");
+    expect(run).toEqual({ current: false, running: true, workingMs: 12 * 60_000 });
   });
 });

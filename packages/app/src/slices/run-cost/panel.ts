@@ -79,7 +79,7 @@ export interface RunCost extends CostLine {
   readonly currency: "USD";
   // The time some step was running, over every run (`timing.ts`).
   readonly totals: UsageTotals & { readonly wallMs: number };
-  // The current run's start to finish and working time; null before it makes anything.
+  // The latest run's working time; null before anything ran.
   readonly run: RunTiming | null;
   readonly byStage: readonly StageCost[];
   readonly byModel: readonly ModelCost[];

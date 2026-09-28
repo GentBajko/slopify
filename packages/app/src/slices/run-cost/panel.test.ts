@@ -152,13 +152,8 @@ describe("the Run cost tab", () => {
       // Both runs' working time: the images ran beside the audio, so they count once.
       wallMs: 10 * 60_000,
     });
-    expect(cost.run).toEqual({
-      current: true,
-      startedAt: "2026-09-27T10:00:00.000Z",
-      endedAt: "2026-09-27T10:36:00.000Z",
-      spanMs: 36 * 60_000,
-      workingMs: 6 * 60_000,
-    });
+    // This run's 6 working minutes; the half hour waiting on the review is not among them.
+    expect(cost.run).toEqual({ current: true, running: false, workingMs: 6 * 60_000 });
     expect(cost.byStage.map((row) => [row.stage, row.calls, row.wallMs])).toEqual([
       ["article", 2, 6 * 60_000],
       ["audio", 2, 3 * 60_000],

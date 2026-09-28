@@ -7,7 +7,6 @@ import type {
   StageCost,
   UsageTotals,
 } from "@app/slices/run-cost/panel.js";
-import type { RunTiming } from "@app/slices/run-cost/timing.js";
 import { useQuery } from "@tanstack/react-query";
 import { ReceiptIcon, TimerIcon } from "lucide-react";
 import { type ReactElement, useEffect, useState } from "react";
@@ -60,7 +59,7 @@ export function RunCostSummary({
   const parts = [
     `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${money(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
     ...(cost.apiEquivalent === null ? [] : [`~${money(cost.apiEquivalent)} via API`]),
-    ...(cost.run === null ? [] : [`took ${took(cost.run)}`]),
+    ...(cost.run === null ? [] : [`${duration(cost.run.workingMs)} of work`]),
   ];
   return (
     <section
@@ -78,18 +77,10 @@ export function RunCostSummary({
 
 const ended: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
 
-// "36 min 0 s (6 min 0 s working)": a run from start to finish, and the part of it some step
-// was running when waiting on a review or a limit made the two differ by a minute or more.
-function took(run: RunTiming): string {
-  return run.spanMs - run.workingMs >= 60_000
-    ? `${duration(run.spanMs)} (${duration(run.workingMs)} working)`
-    : duration(run.spanMs);
-}
-
-// "Running for 12 min 4 s · 9 min 30 s working": the current run's clock on the project page
-// while it runs, pauses or waits, ticking each second. The working part only grows while a
-// step runs; `measuredAt` is when the server counted it. Nothing before the current
-// revision's run starts or once it ended, where the cost line says how long it took.
+// "Working for 9 min 30 s": the current run's working time on the project page, ticking each
+// second while a step runs and holding still while it pauses or waits ("9 min 30 s of work so
+// far"); `measuredAt` is when the server counted it. Nothing before the current revision's
+// run starts or once it ended, where the cost line says how long it worked.
 export function RunClock({
   cost,
   status,
@@ -108,8 +99,7 @@ export function RunClock({
     return () => clearInterval(timer);
   }, [on]);
   if (!on || run === null) return null;
-  const elapsed = Math.max(run.spanMs, now - Date.parse(run.startedAt));
-  const working = run.workingMs + (run.endedAt === null ? Math.max(0, now - measuredAt) : 0);
+  const working = duration(run.workingMs + (run.running ? Math.max(0, now - measuredAt) : 0));
   return (
     <p
       role="timer"
@@ -117,7 +107,7 @@ export function RunClock({
       className="m-0 flex items-center gap-2 border-b border-line pb-3 text-small text-ink-2"
     >
       <TimerIcon aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
-      {`${status === "running" ? "Running for" : "Started"} ${duration(elapsed)}${status === "running" ? "" : " ago"} · ${duration(working)} working`}
+      {run.running ? `Working for ${working}` : `${working} of work so far`}
     </p>
   );
 }
@@ -184,10 +174,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
             );
           })}
           {cost.run === null ? null : (
-            <Stat value={duration(cost.run.spanMs)} label="this run, start to finish" />
-          )}
-          {cost.run === null ? null : (
-            <Stat value={duration(cost.run.workingMs)} label="of it working" />
+            <Stat value={duration(cost.run.workingMs)} label="this run's working time" />
           )}
         </Stats>
         <div className="flex flex-col gap-1 text-small text-ink-2">

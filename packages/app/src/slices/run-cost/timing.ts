@@ -3,19 +3,16 @@ import { z } from "zod";
 import { type StageKind, stageKinds } from "../../kernel/pipeline.js";
 import { currentRevisionId } from "../revisions/repo.js";
 
-// How long a project took, from the attempts its steps made. Two numbers, because a run can
-// sit for hours on a review or a plan limit: start to finish (the first attempt starting to
-// the last one ending) and working (the time some attempt was running; steps that run side by
-// side count once). A run is one revision's work: each save that remakes something starts a
+// How long a project's steps spent working, from the attempts they made: only the time some
+// attempt was running, with steps side by side counted once, so waiting on a review, a plan
+// limit or a pause never counts. A run is one revision's work: each save that remakes something starts a
 // new one. The latest run is the current revision's, or, when that one reused everything and
 // ran nothing, the last revision that ran something; `current` says which.
 
 export interface RunTiming {
   readonly current: boolean;
-  readonly startedAt: string;
-  // Null while a step of the run still runs.
-  readonly endedAt: string | null;
-  readonly spanMs: number;
+  // Whether a step of the run runs now, so its working time is still growing.
+  readonly running: boolean;
   readonly workingMs: number;
 }
 
@@ -100,13 +97,5 @@ export function projectTiming(db: DatabaseSync, projectId: string, now: number):
 }
 
 function runOf(intervals: readonly Interval[], running: boolean, current: boolean): RunTiming {
-  const start = Math.min(...intervals.map((one) => one[0]));
-  const end = Math.max(...intervals.map((one) => one[1]));
-  return {
-    current,
-    startedAt: new Date(start).toISOString(),
-    endedAt: running ? null : new Date(end).toISOString(),
-    spanMs: end - start,
-    workingMs: coveredMs(intervals),
-  };
+  return { current, running, workingMs: coveredMs(intervals) };
 }
