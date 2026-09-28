@@ -89,6 +89,7 @@ export function summaryOf(
     case "running":
       if (preparingSubtitles(stage, project.config))
         return `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`;
+      if (stage.activity !== undefined) return capitalised(activityText(stage) ?? "");
       if (stage.kind === "video" && finalOutput(project.config) === "audio")
         return "Exporting combined audio";
       return stage.progressTotal === null || stage.progressTotal <= 0
@@ -97,6 +98,33 @@ export function summaryOf(
     case "done":
       return done(stage.kind, mine, project);
   }
+}
+
+// A running stage's step in words, when the server named it (`rebuild/activity.ts`): "drawing
+// the shorts' pictures (12 of 38)", "rendering the video (45%)".
+export function activityText(stage: Stage): string | undefined {
+  const activity = stage.activity;
+  if (activity === undefined) return undefined;
+  if (activity.percent !== undefined) return `${activity.label} (${String(activity.percent)}%)`;
+  if (activity.done !== undefined && activity.total !== undefined)
+    return `${activity.label} (${String(activity.done)} of ${String(activity.total)})`;
+  return activity.label;
+}
+
+export function capitalised(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
+// How far a running stage is, 0 to 1, for a meter: its named step's own progress when it has
+// one, else its whole count. Undefined when there is nothing to measure.
+export function stageFraction(stage: Stage): number | undefined {
+  const activity = stage.activity;
+  if (activity?.percent !== undefined) return activity.percent / 100;
+  if (activity?.done !== undefined && activity.total !== undefined && activity.total > 0)
+    return activity.done / activity.total;
+  if (activity !== undefined) return undefined;
+  if (stage.progressTotal === null || stage.progressTotal <= 0) return undefined;
+  return Math.min(1, Math.max(0, (stage.progressCurrent ?? 0) / stage.progressTotal));
 }
 
 // "14:05": when a step waiting out a rate limit or a timeout runs again by itself.

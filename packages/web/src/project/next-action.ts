@@ -4,7 +4,7 @@ import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
-import { finalOutput } from "./summary.js";
+import { activityText, finalOutput } from "./summary.js";
 
 // The next action rule (docs/design-system.md, "Controls that say what they do"): a project
 // shows exactly one action for its situation, named for its result, and only when it applies.
@@ -385,9 +385,13 @@ function approveLabel(gate: HeldGate, name: (kind: StageKind) => string): string
   return `Approve the ${lower(name(gate.stage))}`;
 }
 
+// " · rendering the video (45%)" when the server named the step, else " · 3 of 8" in whole
+// steps: a step part-way through counts as not done yet.
 function progressOf(stage: Stage): string {
+  const named = activityText(stage);
+  if (named !== undefined) return ` · ${named}`;
   if (stage.progressTotal === null || stage.progressTotal <= 0) return "";
-  return ` · ${String(stage.progressCurrent ?? 0)} of ${String(stage.progressTotal)}`;
+  return ` · ${String(Math.floor(stage.progressCurrent ?? 0))} of ${String(stage.progressTotal)}`;
 }
 
 // Names a stage in a "Try … again" label: "Try images again", "Try the article again".

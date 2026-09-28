@@ -15,6 +15,7 @@ import { defaultChannelId } from "../../slices/channels/model.js";
 import { projectChannels } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
+import { videoActivity } from "../../slices/rebuild/activity.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -111,7 +112,11 @@ export function projectRoutes(deps: AppDeps) {
             stagesOf(deps.db, project.id),
             project.config,
             deps.clock.now(),
-          ),
+          ).map((stage) => {
+            if (stage.kind !== "video" || stage.state !== "running") return stage;
+            const activity = videoActivity(deps.db, project.id);
+            return activity === undefined ? stage : { ...stage, activity };
+          }),
           outputs: outputsOf(deps.db, project.id),
         });
       })

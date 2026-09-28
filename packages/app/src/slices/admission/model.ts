@@ -281,6 +281,15 @@ export interface Project {
   readonly paused?: boolean;
 }
 
+// A running step in words, with its own progress: a percentage, or how many of its things
+// are done.
+export interface StageActivity {
+  readonly label: string;
+  readonly percent?: number;
+  readonly done?: number;
+  readonly total?: number;
+}
+
 export interface Stage {
   readonly id: string;
   readonly projectId: string;
@@ -295,6 +304,8 @@ export interface Stage {
   readonly finishedAt: string | null;
   // The provider error's kind behind `failureReason`, which picks the fix-it button.
   readonly failureKind?: string;
+  // What a running stage is doing, when its step count would mislead (`rebuild/activity.ts`).
+  readonly activity?: StageActivity;
   // Waiting to run again by itself after a failure time can fix (a rate limit, a timeout).
   readonly retryAt?: string;
   // A running step's time left (`slices/eta`), as the server saw it when it answered: seconds

@@ -16,7 +16,7 @@ import { type SectionId, stageWords } from "./next-action.js";
 import { NextActionBeside, type NextActionState } from "./next-action-view.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
-import { summaryOf } from "./summary.js";
+import { stageFraction, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
 // One section of the project page's main column: its head (title, one meta line, its rare
@@ -87,10 +87,7 @@ export function StageSection({
       !(next.next?.situation === "failed" && next.next.section === id),
   );
   const running = stages.find((stage) => stage.state === "running");
-  const progress =
-    running === undefined || running.progressTotal === null || running.progressTotal <= 0
-      ? undefined
-      : Math.min(1, Math.max(0, (running.progressCurrent ?? 0) / running.progressTotal));
+  const progress = running === undefined ? undefined : stageFraction(running);
   const summary =
     meta ??
     (own === undefined

@@ -63,7 +63,7 @@ function runningDetail(stage: Stage, now: number): string | undefined {
   if (eta === undefined) return undefined;
   const counted =
     stage.progressTotal !== null && stage.progressTotal > 0
-      ? `${String(stage.progressCurrent ?? 0)} of ${String(stage.progressTotal)} · `
+      ? `${String(Math.floor(stage.progressCurrent ?? 0))} of ${String(stage.progressTotal)} · `
       : "";
   return `${counted}${etaLabel(eta)}`;
 }

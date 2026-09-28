@@ -2,7 +2,7 @@ import type { StageKind, StageState } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { describe, expect, it } from "vitest";
-import { duration, summaryOf } from "./summary.js";
+import { duration, stageFraction, summaryOf } from "./summary.js";
 
 const project = {
   id: "p1",
@@ -106,6 +106,23 @@ describe("the summary in a rundown row", () => {
   it("reads the video's meter as a render percentage", () => {
     const meter = { progressCurrent: 42, progressTotal: 100 };
     expect(summaryOf(stage("video", "running", meter), [], project)).toBe("42% rendered");
+  });
+
+  it("names the video's step with its own count, not the stage's growing step count", () => {
+    const drawing = stage("video", "running", {
+      progressCurrent: 16.820000000000004,
+      progressTotal: 50,
+      activity: { label: "drawing the shorts' pictures", done: 12, total: 38 },
+    });
+    expect(summaryOf(drawing, [], project)).toBe("Drawing the shorts' pictures (12 of 38)");
+    expect(stageFraction(drawing)).toBeCloseTo(12 / 38);
+    const rendering = stage("video", "running", {
+      progressCurrent: 49.4,
+      progressTotal: 50,
+      activity: { label: "rendering the video", percent: 40 },
+    });
+    expect(summaryOf(rendering, [], project)).toBe("Rendering the video (40%)");
+    expect(stageFraction(rendering)).toBe(0.4);
   });
 
   it("says only Running when the stage cannot report a count yet", () => {

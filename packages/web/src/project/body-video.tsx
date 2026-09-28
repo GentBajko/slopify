@@ -18,7 +18,7 @@ import { currentShorts, useShortClips } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import { MetaLine, StageBody, StageFiles, useOutputText } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
-import { duration, percent, preparingSubtitles } from "./summary.js";
+import { activityText, capitalised, duration, percent, preparingSubtitles } from "./summary.js";
 import { WaveAudioPlayer } from "./waveform.js";
 
 // The final stage plays the MP4 in a real player or, when Video is Off, the combined narration
@@ -92,9 +92,11 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
             ? `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`
             : audioExport
               ? "Exporting combined audio"
-              : stage.progressTotal === null
-                ? "Rendering"
-                : `Rendering · ${String(done)}%`}
+              : stage.activity !== undefined
+                ? capitalised(activityText(stage) ?? "")
+                : stage.progressTotal === null
+                  ? "Rendering"
+                  : `Rendering · ${String(done)}%`}
         </p>
       ) : null}
 
