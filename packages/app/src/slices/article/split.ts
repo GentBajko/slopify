@@ -32,7 +32,25 @@ interface Mark {
   readonly at: number;
 }
 
+// ceiling: articles whose split is remembered; a run plans from the same article again and
+// again (`plain.ts` says why that matters). The oldest goes first.
+const rememberedSplits = 16;
+const splits = new Map<string, EndMatter>();
+
 export function splitEndMatter(markdown: string): EndMatter {
+  const known = splits.get(markdown);
+  if (known !== undefined) return known;
+  const split = splitOnce(markdown);
+  splits.set(markdown, split);
+  while (splits.size > rememberedSplits) {
+    const oldest = splits.keys().next().value;
+    if (oldest === undefined) break;
+    splits.delete(oldest);
+  }
+  return split;
+}
+
+function splitOnce(markdown: string): EndMatter {
   const marks = endMatterMarks(markdown);
   const first = marks[0];
   if (first === undefined) {
@@ -69,7 +87,21 @@ function endMatterMarks(markdown: string): readonly Mark[] {
   return marks;
 }
 
+// Each end heading's letters, in order: a paragraph whose letters don't hold one of these in
+// order can't be that heading, so it is never converted. Most of an article is such text.
+const headingLetters = Object.keys(endHeadings).map((heading) => heading.replace(/[^a-z]/g, ""));
+
+function mightBeHeading(source: string): boolean {
+  const letters = source.toLowerCase().replace(/[^a-z]/g, "");
+  return headingLetters.some((wanted) => {
+    let at = 0;
+    for (const letter of letters) if (letter === wanted[at]) at += 1;
+    return at >= wanted.length;
+  });
+}
+
 function partOf(source: string): Part | undefined {
+  if (!mightBeHeading(source)) return undefined;
   // The heading's own markup is dropped by the same conversion the narration source uses,
   // so nothing here has to know what a heading looks like.
   const heading = plainText(source).trim().toLowerCase().replace(/:$/, "");
