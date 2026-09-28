@@ -54,6 +54,9 @@ for (const [name, target] of Object.entries(targets)) {
     logLevel: "warning",
   });
   cpSync(join(root, "static", "options.html"), join(out, "options.html"));
+  // The app's own mark, from packages/web/public/app-icon.svg, for the toolbar and the
+  // extensions page.
+  cpSync(join(root, "static", "icons"), join(out, "icons"), { recursive: true });
   writeFileSync(join(out, "manifest.json"), `${JSON.stringify(target, null, 2)}\n`);
   const files = {};
   const walk = (dir) => {
