@@ -40,8 +40,11 @@ jobs:
       - run: npm ci
       - run: npx vitest run --shard=${{ matrix.shard }}/4
 
+  # Windows only on a release push (the one that bumps the app's version), so everyday pushes
+  # don't wait on its ~5 minutes and a release still can't be tagged without it passing.
   windows:
     needs: changes
+    if: needs.changes.outputs.release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -52,9 +55,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Verify the package can be launched both through npx and a global npm install.
-      # Every release changes the version, so every release is install-tested here.
-      - if: needs.changes.outputs.install == 'true'
-        run: node packages/app/scripts/install-smoke.mjs
+      - run: node packages/app/scripts/install-smoke.mjs
       # Only what differs on Windows: the native FFmpeg binary and fonts, boot (paths, lock,
       # port), CLI discovery and process spawning, file and folder handling, and one full native
       # run. Platform-neutral pipeline logic is covered by the Linux job.
@@ -70,6 +71,7 @@ jobs:
     outputs:
       docker: ${{ steps.diff.outputs.docker }}
       install: ${{ steps.diff.outputs.install }}
+      release: ${{ steps.diff.outputs.release }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -81,7 +83,17 @@ jobs:
           if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             echo "docker=true" >> "$GITHUB_OUTPUT"
             echo "install=true" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          # A release push bumps the app's version.
+          version() { node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version"; }
+          before=$(git show "$BEFORE:packages/app/package.json" | version)
+          now=$(version < packages/app/package.json)
+          if [ "$before" != "$now" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
           fi
           changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
           if echo "$changed" | grep -qE '^(Dockerfile|compose\.yaml|\.dockerignore|docker/|package-lock\.json|package\.json|packages/app/package\.json|packages/app/src/(edge/docker|edge/docker-install|edge/host-cli|host-cli|adapters/host-cli)|packages/app/scripts/(container|host-cli|docker-install)|\.github/workflows/)'; then

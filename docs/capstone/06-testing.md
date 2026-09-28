@@ -127,7 +127,7 @@ The historical test-bearing directory inventory below records 398 test files at 
 
 Fixture-only directories contain captured provider responses under `packages/app/src/adapters/{image,llm,tts}/fixtures`; they are consumed by the adapter tests and are not separate Vitest suites. Other helper files live beside their callers, including `revision-rebuild.fake.ts`, `editable-projects.fixture.ts`, and web `test-app.tsx`. `packages/app/src/adapters/image/fal.test.ts:1` `packages/app/src/adapters/llm/claude-code.test.ts:1` `packages/app/src/adapters/tts/elevenlabs.test.ts:1` `packages/app/test/revision-rebuild.fake.ts:52` `packages/app/test/e2e/editable-projects.test.ts:13` `packages/web/src/test-app.tsx:18`
 
-Ubuntu CI uses Node 26 and runs `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npm audit --audit-level=high`. Windows CI uses Node 26, installs and builds, then executes the focused commands below. The media and revision selections are narrower than the root full suite. `.github/workflows/ci.yml:8` `.github/workflows/ci.yml:25`
+Ubuntu CI uses Node 26 and runs `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npm audit --audit-level=high`. Windows CI runs only on a release push (one that changes `packages/app/package.json`'s version, so a release still can't be tagged without it); it uses Node 26, installs and builds, then executes the focused commands below. The media and revision selections are narrower than the root full suite. `.github/workflows/ci.yml:8` `.github/workflows/ci.yml:25`
 
 ```sh
 node packages/app/scripts/install-smoke.mjs
