@@ -329,6 +329,32 @@ image:
         - 9:16
 tts:
   - provider: elevenlabs
+    id: eleven_v4
+    name: Eleven v4
+    source: https://elevenlabs.io/docs/overview/models
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 22
+      note: Launch API rate, verified 2026-09-28 and offered for two weeks; the most expressive ElevenLabs model, 90+ languages. Your plan,
+        voice and account credits affect actual cost.
+    tts:
+      maxCharacters: 10000
+      streaming: true
+  - provider: elevenlabs
+    id: eleven_v4_turbo
+    name: Eleven v4 Turbo
+    source: https://elevenlabs.io/docs/overview/models
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 11
+      note: Launch API rate, verified 2026-09-28 and offered for two weeks; the fast v4, for low latency. Your plan,
+        voice and account credits affect actual cost.
+    tts:
+      maxCharacters: 10000
+      streaming: true
+  - provider: elevenlabs
     id: eleven_v3
     name: Eleven v3
     source: https://elevenlabs.io/docs/overview/models

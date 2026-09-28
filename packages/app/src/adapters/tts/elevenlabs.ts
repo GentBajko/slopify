@@ -17,6 +17,8 @@ export const elevenLabsBase = "https://api.elevenlabs.io/v1";
 // keep arriving.
 export const elevenLabsModel = "eleven_multilingual_v2";
 export const elevenLabsModels: readonly ModelInfo[] = [
+  { id: "eleven_v4", name: "Eleven v4" },
+  { id: "eleven_v4_turbo", name: "Eleven v4 Turbo" },
   { id: "eleven_v3", name: "Eleven v3" },
   { id: "eleven_multilingual_v2", name: "Eleven Multilingual v2" },
   { id: "eleven_flash_v2_5", name: "Eleven Flash v2.5" },
