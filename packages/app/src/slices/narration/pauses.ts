@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { numberForms } from "../../kernel/ports/number-words.js";
 import type { FfmpegRun } from "../loudness/loudnorm.js";
 import { measureFile } from "../loudness/loudnorm.js";
 import { pieceLufs, pieceTruePeak } from "../loudness/model.js";
@@ -9,8 +10,8 @@ import type { PauseSettings } from "./pauses-model.js";
 
 // Pauses between sentences, made in the join (`pauses-model.ts` says why there). For each
 // narration piece:
-// 1. its text gives where its sentences end, as a share of its characters, and which of those
-//    ends are paragraph ends;
+// 1. its text gives where its sentences end, as a share of how long its words take to say, and
+//    which of those ends are paragraph ends;
 // 2. ffmpeg's silencedetect gives where the audio is quiet;
 // 3. each sentence end is matched, in order, to the quiet stretch nearest where the words say
 //    it should be, preferring longer stretches (a comma's breath is shorter than a full stop's);
@@ -24,7 +25,7 @@ import type { PauseSettings } from "./pauses-model.js";
 export type BoundaryKind = "sentence" | "paragraph";
 
 export interface TextBoundary {
-  // Where the sentence ends, as a share of the text's characters, 0 to 1.
+  // Where the sentence ends, as a share of the text's spoken length (`spokenLength`), 0 to 1.
   readonly ratio: number;
   readonly kind: BoundaryKind;
 }
@@ -42,18 +43,33 @@ export interface PiecePauses {
   readonly trailing: number;
 }
 
-// The sentence ends inside a text, not counting its last.
+// How long a stretch of text takes to say, in letters. Digits count as their words ("1982" as
+// "nineteen eighty two", English's being a fair measure for any language's), an IPA spelling's
+// slashes and stress marks count nothing, and a run of spacing counts one. Counted as written,
+// a paragraph full of years and issue numbers put its end seconds early.
+export function spokenLength(text: string): number {
+  return Array.from(
+    text
+      .replace(/\d[\d,]*(?:\.\d+)?(?:s|st|nd|rd|th)?\b/gi, (raw) => numberForms(raw)[0] ?? raw)
+      .replace(/[/ˈˌː]/g, "")
+      .replace(/\s+/g, " "),
+  ).length;
+}
+
+// The sentence ends inside a text, not counting its last. A name's initial ("Mary J. Blake")
+// ends no sentence, whatever the sentence splitter makes of its full stop.
 export function textBoundaries(text: string): readonly TextBoundary[] {
   const parts = [...sentences(text)];
-  const total = Array.from(text).length;
+  const total = parts.reduce((sum, part) => sum + spokenLength(part), 0);
   if (parts.length < 2 || total === 0) return [];
   const boundaries: TextBoundary[] = [];
   let offset = 0;
   for (const part of parts.slice(0, -1)) {
-    offset += Array.from(part).length;
+    offset += spokenLength(part);
     const trailing = /\s*$/.exec(part)?.[0] ?? "";
     // Only a real sentence: text that is only spacing is no sentence of its own.
     if (part.trim() === "") continue;
+    if (/(?:^|[\s("'])\p{Lu}\.\s*$/u.test(part)) continue;
     boundaries.push({
       ratio: offset / total,
       kind: /\n[ \t\r]*\n/.test(trailing) || /\n/.test(trailing) ? "paragraph" : "sentence",
@@ -90,6 +106,12 @@ const windowShare = 0.2;
 const durationWeight = 3;
 // A stretch this near either end of the piece is the piece's own lead-in or tail.
 const edgeSeconds = 0.02;
+// ceiling: a stretch shorter than this share of the voice's usual sentence pause (the median of
+// its as many longest stretches as the piece has sentence ends) is a breath between words, and
+// never a sentence end. The words only say roughly where an end is: a voice's pace swings with
+// its delivery cues, and one narration put a paragraph end 17 seconds after where its words
+// did. Lengthening a breath there cut "sixty-two" in two.
+const breathShare = 0.4;
 
 export function planPauses(input: {
   readonly durationSeconds: number;
@@ -108,7 +130,13 @@ export function planPauses(input: {
   const speechStart = leading;
   const speechEnd = Math.max(speechStart, durationSeconds - trailing);
   const speech = speechEnd - speechStart;
-  const inner = silences.filter((one) => one !== leadingSilence && one !== trailingSilence);
+  const between = silences.filter((one) => one !== leadingSilence && one !== trailingSilence);
+  const longest = between
+    .map((one) => one.end - one.start)
+    .sort((a, b) => b - a)
+    .slice(0, boundaries.length);
+  const usual = longest[Math.floor((longest.length - 1) / 2)] ?? 0;
+  const inner = between.filter((one) => one.end - one.start >= usual * breathShare);
   if (speech <= 0 || inner.length === 0 || boundaries.length === 0)
     return { inserts: [], leading, trailing };
   const window = Math.max(windowSeconds, speech * windowShare);

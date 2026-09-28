@@ -1,5 +1,5 @@
 import { aliasMatches, type NarrationAlias } from "../../kernel/ports/narration-aliases.js";
-import { cardinal, numberForms } from "./numbers.js";
+import { cardinal, numberForms } from "../../kernel/ports/number-words.js";
 
 export interface SpeechWord {
   readonly text: string;

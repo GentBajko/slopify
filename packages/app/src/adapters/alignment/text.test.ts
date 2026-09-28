@@ -83,14 +83,14 @@ describe("subtitle speech normalization", () => {
   });
   it("keeps a word only an alias makes speakable, such as a lone ampersand", () => {
     const aliases = [{ written: "&", spoken: "and", wholeWord: true, caseSensitive: false }];
-    const words = speechWords("Dungeons & Dragons", "", aliases);
-    expect(words.map((word) => word.spoken)).toEqual(["DUNGEONS", "AND", "DRAGONS"]);
+    const words = speechWords("Salt & Pepper", "", aliases);
+    expect(words.map((word) => word.spoken)).toEqual(["SALT", "AND", "PEPPER"]);
     // The timing worker checks each word again against what it hears; "&" has no spoken
     // form of its own, so the alias's must stay with the word.
-    expect(words.map((word) => respoken(word, "DUNGEONS AND DRAGONS").spoken)).toEqual([
-      "DUNGEONS",
+    expect(words.map((word) => respoken(word, "SALT AND PEPPER").spoken)).toEqual([
+      "SALT",
       "AND",
-      "DRAGONS",
+      "PEPPER",
     ]);
   });
   it("refuses a transcript with no English speech", () => {

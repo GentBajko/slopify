@@ -10,6 +10,16 @@ interface AcceptedWindow {
   readonly omissionStart: number;
 }
 
+// ceiling: the longest run of words a voice may say its own way (a year, an abbreviation, a
+// name the model cannot spell) and still be placed between the words around it.
+const theirWayWords = 10;
+const theirWaySeconds = 6;
+// floor: the share of a window's words that must match what is heard, so a recording of
+// other words, or of the right words in the wrong order, is still refused.
+const matchingShare = 0.6;
+// Words either side of a run that hold it in place.
+const holdingWords = 3;
+
 // Recovery omits bounded transcript spans only after confirming surrounding speech.
 export function alignSpeechWindow(
   logits: Float32Array,
@@ -19,6 +29,8 @@ export function alignSpeechWindow(
   cutoff: number,
   skipBudget: number,
   spec: AlignmentSpec = englishSpec,
+  // The window starts right after words already placed, which hold its first words in place.
+  held = true,
 ): AcceptedWindow {
   const { gates, mismatch } = spec;
   const agrees = (expected: string, observed: string, maximumError: number): boolean =>
@@ -32,7 +44,14 @@ export function alignSpeechWindow(
   } catch (error) {
     if (!(error instanceof Error) || error.message !== mismatch) throw error;
   }
-  if (skipBudget <= 0) throw new Error(mismatch);
+  // Last, words the voice said its own way: after skipped passages, which leave no words to
+  // place and are better told apart.
+  const theirWay = (): AcceptedWindow => {
+    const said = saidTheirWay(logits, frames, candidate, complete, cutoff, spec, held);
+    if (said === undefined) throw new Error(mismatch);
+    return { words: said, skipped: 0, omissionStart: 0 };
+  };
+  if (skipBudget <= 0) return theirWay();
   const heard = greedy(logits, frames, spec).split(/\s+/);
   for (let skipped = 1; skipped <= Math.min(40, skipBudget, candidate.length - 4); skipped += 1) {
     const remaining = candidate.slice(skipped);
@@ -100,7 +119,76 @@ export function alignSpeechWindow(
       }
     }
   }
-  throw new Error(mismatch);
+  return theirWay();
+}
+
+// The window's words when all that differs from what is heard is short runs the voice said its
+// own way ("eleven o four" for 1104, "Saint" for St., a name heard as other letters):
+// forced alignment still places every word, and each run sits between words that match on both
+// sides, so its captions keep time with the ones around it. A run that reaches the end of the
+// window is left for the next one, which starts right before it. Undefined when the words do
+// not match enough of the window, or a run is too long or has nothing holding it.
+export function saidTheirWay(
+  logits: Float32Array,
+  frames: number,
+  candidate: readonly SpeechWord[],
+  complete: boolean,
+  cutoff: number,
+  spec: AlignmentSpec,
+  held: boolean,
+): readonly TimedWord[] | undefined {
+  let words: readonly TimedWord[];
+  try {
+    words = alignWindow(logits, frames, candidate, complete, spec).words.filter(
+      (word) => word.end <= cutoff,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === spec.mismatch) return undefined;
+    throw error;
+  }
+  if (words.length < holdingWords + 1) return undefined;
+  const matches = words.map((word, index) => {
+    const expected = candidate[index]?.spoken ?? "";
+    // A word too short to tell apart takes its neighbours' word for it.
+    if (spec.lettersOnly(expected).length < 3) return true;
+    const heard = greedyBetween(
+      logits,
+      Math.floor(word.start / frameSeconds),
+      Math.min(frames, Math.ceil(word.end / frameSeconds)),
+      spec,
+    );
+    return agreesWithSpeech(expected, heard, 0.5, spec.comparable);
+  });
+  if (matches.filter(Boolean).length < words.length * matchingShare) return undefined;
+  let keep = words.length;
+  for (let start = 0; start < words.length; start += 1) {
+    if (matches[start]) continue;
+    let end = start;
+    while (end < words.length && !matches[end]) end += 1;
+    const after = matches.slice(end, end + holdingWords);
+    const heldAfter = after.length === holdingWords && after.every(Boolean);
+    const heldBefore = start === 0 ? held : matches[start - 1] === true;
+    const first = words[start];
+    const last = words[end - 1];
+    if (
+      first === undefined ||
+      last === undefined ||
+      end - start > theirWayWords ||
+      last.end - first.start > theirWaySeconds
+    )
+      return undefined;
+    if (!heldAfter) {
+      // Nothing after it in this window: the next window starts before the run.
+      keep = start;
+      break;
+    }
+    if (!heldBefore) return undefined;
+    start = end;
+  }
+  if (keep < holdingWords) return undefined;
+  return words
+    .slice(0, keep)
+    .map((word, index) => (matches[index] ? word : { ...word, confidence: 0 }));
 }
 
 function accepted(
@@ -137,10 +225,20 @@ export function greedy(
   frames: number,
   spec: AlignmentSpec = englishSpec,
 ): string {
+  return greedyBetween(logits, 0, frames, spec);
+}
+
+// What the model heard between two frames.
+function greedyBetween(
+  logits: Float32Array,
+  from: number,
+  to: number,
+  spec: AlignmentSpec = englishSpec,
+): string {
   const labels = spec.labels;
   let previous = -1;
   let text = "";
-  for (let frame = 0; frame < frames; frame += 1) {
+  for (let frame = from; frame < to; frame += 1) {
     let best = 0;
     for (let label = 1; label < labels; label += 1)
       if (

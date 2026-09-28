@@ -1,3 +1,7 @@
+// English number words, as a narrator reads digits: subtitle timing matches them against the
+// audio (`adapters/alignment/text.ts`) and the pauses weigh a sentence by how long it takes to
+// say (`slices/narration/pauses.ts`).
+
 const small = [
   "ZERO",
   "ONE",
@@ -80,11 +84,7 @@ export function numberForms(raw: string): readonly string[] {
           .map((digit) => small[Number(digit)])
           .join(" ")}`;
   const ordinary = `${cardinal(value)}${decimal}`;
-  const year =
-    value >= 1900 && value <= 2099 && value % 100 >= 10
-      ? `${cardinal(Math.floor(value / 100))} ${cardinal(value % 100)}`
-      : undefined;
-  const forms = year === undefined ? [ordinary] : [year, ordinary];
+  const forms = [...(fraction === undefined ? yearForms(value) : []), ordinary];
   if (suffix === "s") return forms.map((form) => `${form.replace(/Y$/, "IE")}S`);
   if (suffix !== undefined)
     return forms.map((form) =>
@@ -94,4 +94,16 @@ export function numberForms(raw: string): readonly string[] {
       ),
     );
   return forms;
+}
+
+// A four-digit number said as a year: "eleven fifty seven", "eleven o four", "thirteen hundred".
+// Any year from 1000 is read this way, not only this age's: a history or a fantasy setting's
+// calendar ("the year 1104") has them all through it. 2000 to 2009 are "two thousand four".
+function yearForms(value: number): readonly string[] {
+  if (value < 1000 || value > 2099 || (value >= 2000 && value <= 2009)) return [];
+  const century = cardinal(Math.floor(value / 100));
+  const rest = value % 100;
+  if (rest === 0) return [`${century} HUNDRED`];
+  if (rest < 10) return [`${century} O ${cardinal(rest)}`, `${century} OH ${cardinal(rest)}`];
+  return [`${century} ${cardinal(rest)}`];
 }

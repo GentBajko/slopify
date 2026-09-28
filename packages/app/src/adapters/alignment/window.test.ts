@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { englishSpec } from "./spec.js";
 import { speechWords } from "./text.js";
 import { vocabulary } from "./vocabulary.js";
-import { alignSpeechWindow } from "./window.js";
+import { alignSpeechWindow, saidTheirWay } from "./window.js";
 
 function recording(text: string): { logits: Float32Array; frames: number } {
   const labels = [...text.replaceAll(" ", "|")].flatMap((letter) => [letter, "<pad>"]);
@@ -126,4 +127,72 @@ it("keeps the spoken occurrence when a word repeats across an omission", () => {
   expect(result.omissionStart).toBe(speechWords(prefix).length);
   expect(result.skipped).toBe(speechWords(gap).length);
   expect(result.words.map((word) => word.text).join(" ")).toBe(`${prefix} ${suffix}`);
+});
+
+describe("words a voice says its own way", () => {
+  const lead = "THE HIGH COUNCIL OF THE EASTERN PLATEAU";
+  const tail = "RULED THE MOUNTAIN PASSES FOR MANY CENTURIES";
+  it("places a short run the model hears differently between the words that hold it", () => {
+    // Written as a name the model cannot spell, said as other letters.
+    const audio = recording(`${lead} BLAT FROMP GRISH ${tail}`);
+    const text = speechWords(`${lead} Quorvexx Maltheryon Zybranthus ${tail}`);
+    const words = saidTheirWay(audio.logits, audio.frames, text, true, 12, englishSpec, true);
+    expect(words?.map((word) => word.text)).toEqual(text.map((word) => word.text));
+    // Every word in order, the run between its neighbours, the run marked as unsure.
+    const times = words?.map((word) => word.start) ?? [];
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+    const run = words?.filter((word) => word.confidence === 0).map((word) => word.text);
+    expect(run?.length).toBeGreaterThan(0);
+    expect(run?.every((word) => /Quorvexx|Maltheryon|Zybranthus/.test(word))).toBe(true);
+  });
+
+  it("leaves a run at the end of the window for the next window, which starts before it", () => {
+    const audio = recording(`${lead} ${tail} BLAT FROMP`);
+    const text = speechWords(`${lead} ${tail} Quorvexx Maltheryon`);
+    const words = saidTheirWay(audio.logits, audio.frames, text, false, 12, englishSpec, true);
+    expect(words?.map((word) => word.text).join(" ")).toBe(`${lead} ${tail}`);
+  });
+
+  it("still refuses other words, a long run, or a run with nothing holding it", () => {
+    const other = recording("COMPLETELY DIFFERENT NARRATION WITH NO CORRESPONDING WORDS AT ALL");
+    expect(
+      saidTheirWay(
+        other.logits,
+        other.frames,
+        speechWords(`${lead} ${tail}`),
+        true,
+        12,
+        englishSpec,
+        true,
+      ),
+    ).toBeUndefined();
+    const long = "BLAT FROMP GRISH BLAT FROMP GRISH BLAT FROMP GRISH BLAT FROMP";
+    const longText =
+      "Quorvexx Maltheryon Zybranthus Quorvexx Maltheryon Zybranthus Quorvexx Maltheryon Zybranthus Quorvexx Maltheryon";
+    const longAudio = recording(`${lead} ${long} ${tail}`);
+    expect(
+      saidTheirWay(
+        longAudio.logits,
+        longAudio.frames,
+        speechWords(`${lead} ${longText} ${tail}`),
+        true,
+        12,
+        englishSpec,
+        true,
+      ),
+    ).toBeUndefined();
+    // At the very start of the narration nothing before holds the run.
+    const opening = recording(`BLAT FROMP ${lead} ${tail}`);
+    expect(
+      saidTheirWay(
+        opening.logits,
+        opening.frames,
+        speechWords(`Quorvexx Maltheryon ${lead} ${tail}`),
+        true,
+        12,
+        englishSpec,
+        false,
+      ),
+    ).toBeUndefined();
+  });
 });

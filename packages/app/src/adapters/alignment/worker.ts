@@ -102,6 +102,7 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
           cutoff,
           cursor === 0 ? 0 : omissionBudget - omitted,
           spec,
+          cursor > 0,
         );
       } catch (error) {
         if (error instanceof Error && error.message === mismatch) throw stuck();

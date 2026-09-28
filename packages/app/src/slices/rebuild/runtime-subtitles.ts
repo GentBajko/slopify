@@ -414,9 +414,13 @@ export function describeMismatch(
   const heard = mismatch.heard === "" ? "no more speech" : `"${mismatch.heard.toLowerCase()}…"`;
   const fix =
     chunk === undefined
-      ? "Check that part of the narration, regenerate it in Edit project → Narration, then Continue the run."
-      : `In Edit project → Narration, regenerate narration chunk ${String(at + 1)}, then Continue the run.`;
-  return `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard} The recording there probably skips or changes words. ${fix}`;
+      ? `Listen at ${clock(mismatch.at)}: if words are missing or wrong, regenerate that part in Edit project → Narration, then Continue the run.`
+      : `Listen at ${clock(mismatch.at)}: if words are missing or wrong, regenerate narration chunk ${String(at + 1)} in Edit project → Narration, then Continue the run.`;
+  // A voice that reads a year, an abbreviation or a name its own way reads it the same way
+  // again, so a remake would cost a chunk and fail here once more.
+  const same =
+    "If it says them right, only another way (a year, an abbreviation or a name read its own way), regenerating gives the same reading: use Download diagnostics in Settings and report it.";
+  return `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard} The recording there probably skips or changes words. ${fix} ${same}`;
 }
 
 function comparable(text: string): string {
