@@ -256,7 +256,8 @@ export function validateRevisionEdit(
   if (config.sources.images !== "off" && content.imageOrder.length === 0)
     fields.push({
       field: "content.imageOrder",
-      message: "Keep at least one image, or turn Images and Video off.",
+      message:
+        "Every image is deleted, so the video has nothing to show. Press Discard changes to get them back, then press Regenerate all on the Images stage to make them again. To make the project without pictures, set Images and Video to Off on Inputs instead.",
     });
   if (config.sources.images === "off" && config.sources.video !== "off")
     fields.push({ field: "sources.video", message: "Turn Video off when Images is off." });

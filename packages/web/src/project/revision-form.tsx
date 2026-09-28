@@ -224,9 +224,7 @@ export function RevisionForm(
         {fields.length === 0 ? null : (
           <ul role="alert" className="m-0 space-y-1 pl-5 text-small text-danger">
             {fields.map((field) => (
-              <li key={`${field.field}-${field.message}`}>
-                {field.field}: {field.message}
-              </li>
+              <li key={`${field.field}-${field.message}`}>{field.message}</li>
             ))}
           </ul>
         )}

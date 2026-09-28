@@ -142,7 +142,8 @@ it("shows the video timing settings only where the export uses them", async () =
   expect(
     screen.getByRole("button", { name: "About Seconds per image" }).getAttribute("data-help-id"),
   ).toBe("play.image-seconds");
-  expect(screen.getByText("Enter a whole number of seconds between 1 and 600.")).toBeDefined();
+  // In the summary above the sections, and under the field itself.
+  expect(screen.getAllByText("Enter a whole number of seconds between 1 and 600.")).toHaveLength(2);
   await user.clear(seconds);
   await user.type(seconds, "20");
   expect(latest.config.imageSeconds).toBe(20);
