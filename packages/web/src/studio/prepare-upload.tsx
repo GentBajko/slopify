@@ -350,8 +350,7 @@ function Steps({
   const { api } = useApp();
   const [done, setDone] = useState<readonly string[]>(() => readDone(doneKey));
   const [openThumbnail, setOpenThumbnail] = useState<number | null>(null);
-  const tick = (step: StudioStep, on: boolean) => {
-    const next = on ? [...done, step] : done.filter((one) => one !== step);
+  const remember = (next: readonly string[]) => {
     setDone(next);
     try {
       localStorage.setItem(doneKey, JSON.stringify(next));
@@ -359,8 +358,11 @@ function Steps({
       // Not remembered in this browser; the tick still shows until the drawer closes.
     }
   };
+  const tick = (step: StudioStep, on: boolean) =>
+    remember(on ? [...done, step] : done.filter((one) => one !== step));
   // Shorts have no thumbnail step: Studio picks a frame of a short.
   const steps = studioSteps.filter((step) => step !== "thumbnails" || item.kind === "video");
+  const ticked = steps.filter((step) => done.includes(step)).length;
   const copyAction = (step: StudioStep) => {
     const text = copyTextOf(item, step);
     return (
@@ -455,6 +457,19 @@ function Steps({
         <div className="mb-2 flex items-center gap-1">
           <div className="sl-kicker">In the order Studio asks</div>
           <InfoTip id="project.upload.steps" className="-my-1" />
+          <span className="flex-1" />
+          <label className="flex min-h-8 cursor-pointer items-center gap-2 text-small text-ink-2">
+            <input
+              type="checkbox"
+              checked={ticked === steps.length}
+              ref={(box) => {
+                if (box !== null) box.indeterminate = ticked > 0 && ticked < steps.length;
+              }}
+              onChange={(event) => remember(event.currentTarget.checked ? [...steps] : [])}
+              className="size-4 shrink-0 accent-[var(--color-accent)]"
+            />
+            Select all
+          </label>
         </div>
         <List label="Upload steps" className="[&_.sl-row__actions]:flex-wrap">
           {steps.map((step) => {

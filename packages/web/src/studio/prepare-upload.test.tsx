@@ -86,9 +86,11 @@ describe("Prepare upload", () => {
     await user.click(screen.getByRole("button", { name: "Prepare upload" }));
     const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
     await within(drawer).findByText("the-fox-video.mp4");
-    const steps = within(drawer)
+    const all = within(drawer).getByRole("checkbox", { name: "Select all" });
+    const boxes = within(drawer)
       .getAllByRole("checkbox")
-      .map((box) => box.getAttribute("aria-label"));
+      .filter((box) => box !== all);
+    const steps = boxes.map((box) => box.getAttribute("aria-label"));
     expect(steps).toEqual([
       "Video file done",
       "Title done",
@@ -99,6 +101,11 @@ describe("Prepare upload", () => {
       "AI use (under Show more) done",
       "Tags (under Show more) done",
     ]);
+    // Select all ticks every step and clears them again.
+    await user.click(all);
+    expect(boxes.every((box) => (box as HTMLInputElement).checked)).toBe(true);
+    await user.click(all);
+    expect(boxes.some((box) => (box as HTMLInputElement).checked)).toBe(false);
     expect(within(drawer).getByText("Fox tales")).not.toBeNull();
     expect(within(drawer).getByText("Yes")).not.toBeNull();
     expect(within(drawer).getByText("Yes because its images are photorealistic.")).not.toBeNull();
