@@ -23,6 +23,7 @@ const answer = JSON.stringify({
   ],
   hashtags: ["#Rope"],
   tags: ["rope"],
+  pinnedComment: "Thanks for listening.",
 });
 
 // Every narration chunk that lands changes what the joined audio, the timing, the export and
