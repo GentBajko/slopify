@@ -43,7 +43,7 @@ jobs:
   # Release pushes only (see `changes`).
   windows:
     needs: changes
-    if: needs.changes.outputs.release == 'true'
+    if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -61,34 +61,30 @@ jobs:
       - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/src/kernel/cli-command.test.ts packages/app/src/adapters/llm packages/app/src/slices/settings/cli-paths.test.ts packages/app/src/slices/settings/cli-status.test.ts packages/app/src/adapter-registry-paths.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts
       - run: npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"
 
-  # Whether this push is on its way to a release: its app version has no tag yet (the push
-  # that bumps the version, and any fix after it before the tag). Windows and Docker run only
-  # then, so everyday pushes don't wait on them and a release still can't be tagged without
-  # them passing (the tag needs a green CI run on main for its commit).
+  # Windows and the Docker smoke tests run only on the way to a release (the app's version has
+  # no tag yet: the push that bumps it and any fix before the tag), and then only when
+  # something they check changed since the last release; a version bump alone doesn't count
+  # (packages/app/scripts/ci-changes.mjs). A release still can't be tagged without a green run.
   changes:
     runs-on: ubuntu-latest
     outputs:
-      release: ${{ steps.version.outputs.release }}
+      release: ${{ steps.diff.outputs.release }}
+      windows: ${{ steps.diff.outputs.windows }}
+      docker: ${{ steps.diff.outputs.docker }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           fetch-tags: true
-      - id: version
-        run: |
-          version=$(node -p "require('./packages/app/package.json').version")
-          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          fi
+      - id: diff
+        run: node packages/app/scripts/ci-changes.mjs
 
   # The image's smoke tests in two jobs side by side, each building the image itself (cached):
   # the Docker install test alone was over half of one job's time.
   # Release pushes only (see `changes`).
   container:
     needs: changes
-    if: needs.changes.outputs.release == 'true'
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
