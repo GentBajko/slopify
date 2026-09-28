@@ -9,25 +9,15 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": [
-    "storage",
-    "clipboardWrite"
-  ],
-  "host_permissions": [
-    "http://127.0.0.1/*",
-    "http://localhost/*"
-  ],
+  "permissions": ["storage", "clipboardWrite"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://studio.youtube.com/*"
-      ],
-      "js": [
-        "content.js"
-      ],
+      "matches": ["https://studio.youtube.com/*"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],

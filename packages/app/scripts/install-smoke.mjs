@@ -18,11 +18,23 @@ try {
   const archive = join(root, `gentbajko-slopify-${packageJson.version}.tgz`);
   await run(npm, [npmCli, "pack", "--workspace", "@gentbajko/slopify", "--pack-destination", root]);
   if (!(await exists(archive))) throw new Error("npm pack did not produce a package archive.");
-  // The three ways to install are independent (their own prefix, data folder and port), so
-  // they run side by side; one after another they were most of the Windows job's time.
+  // The two global installs run one after the other: two npm installs at once collide on
+  // Windows (one's package.json went missing mid-install). The starts and checks then run
+  // side by side, each with its own data folder and port; one after another they were most
+  // of the Windows job's time.
+  const globalPrefix = join(root, "global");
+  await run(npm, [npmCli, "install", "--global", "--prefix", globalPrefix, archive]);
+  const skippedPrefix = join(root, "skipped-scripts");
+  await run(npm, [
+    npmCli,
+    "install",
+    "--global",
+    "--ignore-scripts",
+    "--prefix",
+    skippedPrefix,
+    archive,
+  ]);
   const viaGlobal = async () => {
-    const globalPrefix = join(root, "global");
-    await run(npm, [npmCli, "install", "--global", "--prefix", globalPrefix, archive]);
     const globalBin = join(
       globalPrefix,
       process.platform === "win32" ? "slopify.cmd" : "bin/slopify",
@@ -38,16 +50,6 @@ try {
   const viaNpx = () =>
     smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
   const withScriptsSkipped = async () => {
-    const skippedPrefix = join(root, "skipped-scripts");
-    await run(npm, [
-      npmCli,
-      "install",
-      "--global",
-      "--ignore-scripts",
-      "--prefix",
-      skippedPrefix,
-      archive,
-    ]);
     const skippedPackage = join(
       skippedPrefix,
       process.platform === "win32" ? "node_modules" : "lib/node_modules",
@@ -80,7 +82,8 @@ try {
       FFMPEG_BINARIES_URL: "http://127.0.0.1:1",
     });
   };
-  await Promise.all([viaGlobal(), viaNpx(), withScriptsSkipped()]);
+  // npx is then the only npm install running, beside the two starts.
+  await Promise.all([viaGlobal(), withScriptsSkipped(), viaNpx()]);
 } finally {
   // Windows releases a killed process's file handles a moment after taskkill returns, so
   // the database can still be locked here; rm retries EBUSY for this long.

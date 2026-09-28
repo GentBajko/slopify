@@ -34,7 +34,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the tutorial in the real app", () => {
+// Each walks the whole app from Play to a finished download: a few seconds alone, past the
+// default five on a runner busy with the rest of its shard.
+describe("the tutorial in the real app", { timeout: 30_000 }, () => {
   it("waits for first-run disclosure before opening Settings, then gates on saved provider readiness", async () => {
     let release: ((response: Response) => void) | undefined;
     const answer = new Promise<Response>((resolve) => {
