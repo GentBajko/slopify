@@ -64,6 +64,10 @@ const sourceTips = {
   document: "play.source.document",
 } as const satisfies Readonly<Record<(typeof stageKinds)[number], HelpId>>;
 
+// The intro or outro picker's value for "this project's version" of an entry the Library has
+// changed since the project copied it.
+const keptValue = "\u0000kept:";
+
 // A group of settings inside a section: a sub-head, then its fields two to a row on desktop.
 function Group({
   title,
@@ -458,58 +462,95 @@ export function RevisionForm(
           )}
           <Rule />
           <Group title="Intro and outro">
-            {(["intro", "outro"] as const).map((category) => (
-              <Field
-                key={category}
-                label={category === "intro" ? "Intro" : "Outro"}
-                tip={category === "intro" ? "play.intro" : "play.outro"}
-              >
-                <Select
-                  value={config[category]?.name ?? ""}
-                  onChange={(event) => {
-                    const selected = entries.data?.entries.find(
-                      (entry) => entry.category === category && entry.name === event.target.value,
-                    );
-                    const next = { ...config };
-                    if (selected === undefined) delete next[category];
-                    else next[category] = { name: selected.name, mode: selected.mode };
-                    onChange(
-                      editOfForm({
-                        ...edit,
-                        config: next,
-                        content:
-                          selected === undefined
-                            ? edit.content
-                            : {
-                                ...edit.content,
-                                promptTemplates: {
-                                  ...edit.content.promptTemplates,
-                                  [category]: selected.body,
-                                },
-                              },
-                      }),
-                    );
-                  }}
+            {(["intro", "outro"] as const).map((category) => {
+              // The project keeps the wording it copied; when the Library's entry of the same
+              // name has changed since, both are offered: this project's version or the newer one.
+              const chosen = config[category]?.name;
+              const copy = view.revision.content.promptTemplates[category];
+              const library = entries.data?.entries.find(
+                (entry) => entry.category === category && entry.name === chosen,
+              );
+              const split =
+                chosen !== undefined &&
+                library !== undefined &&
+                typeof copy === "string" &&
+                view.revision.config[category]?.name === chosen &&
+                copy !== library.body;
+              const current = edit.content.promptTemplates[category];
+              const kept = `${keptValue}${chosen ?? ""}`;
+              const value =
+                chosen === undefined ? "" : split && current !== library?.body ? kept : chosen;
+              return (
+                <Field
+                  key={category}
+                  label={category === "intro" ? "Intro" : "Outro"}
+                  tip={category === "intro" ? "play.intro" : "play.outro"}
                 >
-                  <option value="">Off</option>
-                  {config[category] !== undefined &&
-                  !entries.data?.entries.some(
-                    (entry) => entry.category === category && entry.name === config[category]?.name,
-                  ) ? (
-                    <option value={config[category]?.name}>
-                      {config[category]?.name} (saved entry)
-                    </option>
-                  ) : null}
-                  {entries.data?.entries
-                    .filter((entry) => entry.category === category)
-                    .map((entry) => (
-                      <option key={entry.id} value={entry.name}>
-                        {entry.name}
-                      </option>
-                    ))}
-                </Select>
-              </Field>
-            ))}
+                  <Select
+                    value={value}
+                    onChange={(event) => {
+                      if (event.target.value === kept && typeof copy === "string") {
+                        // Back to the wording this project already had.
+                        onChange(
+                          editOfForm({
+                            ...edit,
+                            config: { ...config, [category]: view.revision.config[category] },
+                            content: {
+                              ...edit.content,
+                              promptTemplates: {
+                                ...edit.content.promptTemplates,
+                                [category]: copy,
+                              },
+                            },
+                          }),
+                        );
+                        return;
+                      }
+                      const selected = entries.data?.entries.find(
+                        (entry) => entry.category === category && entry.name === event.target.value,
+                      );
+                      const next = { ...config };
+                      if (selected === undefined) delete next[category];
+                      else next[category] = { name: selected.name, mode: selected.mode };
+                      onChange(
+                        editOfForm({
+                          ...edit,
+                          config: next,
+                          content:
+                            selected === undefined
+                              ? edit.content
+                              : {
+                                  ...edit.content,
+                                  promptTemplates: {
+                                    ...edit.content.promptTemplates,
+                                    [category]: selected.body,
+                                  },
+                                },
+                        }),
+                      );
+                    }}
+                  >
+                    <option value="">Off</option>
+                    {chosen !== undefined &&
+                    !entries.data?.entries.some(
+                      (entry) => entry.category === category && entry.name === chosen,
+                    ) ? (
+                      <option value={chosen}>{chosen} (saved entry)</option>
+                    ) : null}
+                    {split ? <option value={kept}>{chosen} · this project's version</option> : null}
+                    {entries.data?.entries
+                      .filter((entry) => entry.category === category)
+                      .map((entry) => (
+                        <option key={entry.id} value={entry.name}>
+                          {split && entry.name === chosen
+                            ? `${entry.name} · Library version (newer)`
+                            : entry.name}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+              );
+            })}
           </Group>
           {config.sources.research === "provide" ? (
             <>

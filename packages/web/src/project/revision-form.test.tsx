@@ -728,3 +728,61 @@ it("shows an old project's video as it was, and writes edit settings only once o
   expect(latest.config.videoEdit).toMatchObject({ cuts: "interval", grade: "sepia" });
   expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
 });
+
+it("offers this project's outro or the Library's newer one when the Library has changed it", async () => {
+  const user = userEvent.setup();
+  const base = revisionView();
+  const view: RevisionView = {
+    ...base,
+    revision: {
+      ...base.revision,
+      config: { ...base.revision.config, outro: { name: "Closing", mode: "llm" } },
+      content: {
+        ...base.revision.content,
+        promptTemplates: { ...base.revision.content.promptTemplates, outro: "Say goodbye." },
+      },
+    },
+  };
+  function Outro(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    return (
+      <>
+        <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
+        <output aria-label="Outro wording">{edit.content.promptTemplates.outro}</output>
+      </>
+    );
+  }
+  renderApp(
+    <Outro />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({ prompts: [] }),
+      "GET /api/entries": jsonAnswer({
+        entries: [
+          {
+            id: "e1",
+            category: "outro",
+            mode: "llm",
+            name: "Closing",
+            body: "Say goodbye warmly.",
+            slots: [],
+            updatedAt: "today",
+          },
+        ],
+      }),
+    }),
+  );
+  const picker = await screen.findByRole("combobox", { name: "Outro" });
+  await screen.findByRole("option", { name: "Closing · Library version (newer)" });
+  expect(screen.getByRole("option", { name: "Closing · this project's version" })).toBeDefined();
+  // It starts on the project's own wording.
+  expect(screen.getByLabelText("Outro wording").textContent).toBe("Say goodbye.");
+  await user.selectOptions(picker, "Closing");
+  expect(screen.getByLabelText("Outro wording").textContent).toBe("Say goodbye warmly.");
+  await user.selectOptions(
+    picker,
+    screen.getByRole("option", { name: "Closing · this project's version" }),
+  );
+  expect(screen.getByLabelText("Outro wording").textContent).toBe("Say goodbye.");
+});
