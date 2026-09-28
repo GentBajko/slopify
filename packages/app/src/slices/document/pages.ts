@@ -1,4 +1,4 @@
-import { useFace } from "./fonts.js";
+import { faceWidth, useFace } from "./fonts.js";
 import type { SourceItem } from "./sources.js";
 import type { Writer } from "./writer.js";
 
@@ -184,18 +184,41 @@ export function sourcesPage(w: Writer, items: readonly SourceItem[]): ContentsEn
     const lines = doc.splitTextToSize(item.text, w.contentWidth - bullet - 5) as string[];
     w.ensure(sources.line);
     w.write("•", w.left, w.y, fonts.body, sizes.body, "muted");
+    // The entry reads as text; only its addresses are links, each in the link colour and
+    // pointing at itself. An entry whose address isn't in its words (a titled link) is
+    // clickable as a whole, still in text colour.
+    const addresses = [...item.text.matchAll(/https?:\/\/[^\s)>\]]+/g)].map((match) => ({
+      from: match.index,
+      to: match.index + match[0].replace(/[.,;:]+$/, "").length,
+      url: match[0].replace(/[.,;:]+$/, ""),
+    }));
+    const width = (text: string) => faceWidth(doc, fonts.body, sizes.body, text);
+    let cursor = 0;
     for (const line of lines) {
       w.ensure(sources.line);
-      w.write(
-        line,
-        w.left + bullet,
-        w.y,
-        fonts.body,
-        sizes.body,
-        item.href === null ? "text" : "heading",
+      const start = Math.max(cursor, item.text.indexOf(line, cursor));
+      cursor = start + line.length;
+      let x = w.left + bullet;
+      let at = 0;
+      const draw = (text: string, color: "text" | "heading", url?: string) => {
+        if (text === "") return;
+        w.write(text, x, w.y, fonts.body, sizes.body, color);
+        if (url !== undefined) doc.link(x, w.y - 5, width(text), 7, { url });
+        x += width(text);
+      };
+      for (const address of addresses) {
+        const from = Math.min(line.length, Math.max(at, address.from - start));
+        const to = Math.min(line.length, Math.max(from, address.to - start));
+        if (to <= from) continue;
+        draw(line.slice(at, from), "text");
+        draw(line.slice(from, to), "heading", address.url);
+        at = to;
+      }
+      draw(
+        line.slice(at),
+        "text",
+        addresses.length === 0 && item.href !== null ? item.href : undefined,
       );
-      if (item.href !== null)
-        doc.link(w.left + bullet, w.y - 5, doc.getTextWidth(line), 7, { url: item.href });
       w.y += sources.line;
     }
     w.y += sources.gap;

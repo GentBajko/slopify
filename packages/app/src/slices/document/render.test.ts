@@ -128,6 +128,21 @@ describe("renderDocument", () => {
     expect(result.words).toBeLessThan(article.split(/\s+/).length);
   });
 
+  it("makes every address in a source a link to itself, and nothing else in it", () => {
+    const result = renderDocument(
+      input({
+        articleMarkdown: `${article}\n\n## Sources Consulted\n\n- A review and a preview — https://example.com/review ; https://example.com/preview\n`,
+      }),
+    );
+    const file = pdf(result.bytes);
+    expect(file).toContain("/URI (https://example.com/review)");
+    expect(file).toContain("/URI (https://example.com/preview)");
+    // One clickable box per address line, none over the words before them.
+    const boxes = file.split("/URI (https://example.com/").length - 1;
+    expect(boxes).toBeGreaterThanOrEqual(2);
+    expect(file).not.toContain("/URI (A review");
+  });
+
   it("places the thumbnail on the title page when there is one", () => {
     const without = renderDocument(input());
     const cover = renderDocument(input({ cover: png(32, 18) }));
