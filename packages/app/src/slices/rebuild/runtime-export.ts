@@ -15,6 +15,7 @@ import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
 import { writePortraits } from "../voices/portraits.js";
+import { linesLevelled } from "./recipe-lines.js";
 import { exportBed } from "./runtime-export-bed.js";
 import { exportEdit } from "./runtime-export-edit.js";
 import {
@@ -24,6 +25,7 @@ import {
   revisionAudio,
 } from "./runtime-export-inputs.js";
 import { executeShortExport } from "./runtime-export-short.js";
+import { lineLevelledAudio } from "./runtime-lines.js";
 import type { LocalExecutionDeps } from "./runtime-local.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
@@ -62,7 +64,16 @@ export async function executeExportRecipe(
   const pending = allocateAsset(deps, context.work.projectId, filename);
   const prepared: PreparedOutput[] = [];
   let directory: string | undefined;
+  // A multi-voice run's body narration levelled line by line (`runtime-lines.ts`), here
+  // until the export is written.
+  const linesDirectory = linesLevelled(view.revision.config)
+    ? mkdtempSync(join(projectDir(deps.paths, context.work.projectId), "lines-"))
+    : undefined;
   try {
+    const sound =
+      linesDirectory === undefined
+        ? audio
+        : await lineLevelledAudio(deps, context, view, audio, linesDirectory);
     const captions = snapshot.view.outputs.filter(
       (row) =>
         row.selected && row.available && row.state === "ready" && row.workKey === "subtitles:files",
@@ -81,7 +92,7 @@ export async function executeExportRecipe(
         : "off";
     const config = view.revision.config;
     const segment = (kind: "body" | "intro" | "outro") => {
-      const row = audio.find((one) => one.kind === kind);
+      const row = sound.find((one) => one.kind === kind);
       return row?.path === null || row === undefined
         ? undefined
         : { path: row.path, seconds: row.seconds };
@@ -154,7 +165,7 @@ export async function executeExportRecipe(
       try {
         await runFfmpeg({
           bin: deps.ffmpeg,
-          args: audioExportArgs(audio, mixed),
+          args: audioExportArgs(sound, mixed),
           signal: context.signal,
           log: deps.log,
           onProgress,
@@ -238,6 +249,7 @@ export async function executeExportRecipe(
   } finally {
     discardPreparedAssets(deps, [pending, ...prepared.map((one) => one.asset)]);
     if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
+    if (linesDirectory !== undefined) rmSync(linesDirectory, { recursive: true, force: true });
   }
 }
 // The project's images in slideshow order, as files.

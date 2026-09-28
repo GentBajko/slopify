@@ -15,6 +15,7 @@ import { audioChapters, audioFileArgs, ffmetadata } from "../voices/audio-files.
 import { turnStarts } from "../voices/timing.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
+import { lineLevelledAudio } from "./runtime-lines.js";
 import { preparedResult, publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
 import type { WorkPiece } from "./work-records.js";
@@ -93,9 +94,11 @@ export async function executeVoicesRecipe(
     let sound: readonly Pick<AudioSegment, "path" | "seconds">[] = audio;
     if (goal !== undefined) {
       const mixed = join(directory, "mix.wav");
+      // A multi-voice run's speakers levelled line by line first (`runtime-lines.ts`).
+      const levelled = await lineLevelledAudio(deps, context, view, audio, directory);
       await runFfmpeg({
         bin: deps.ffmpeg,
-        args: audioExportArgs(audio, mixed),
+        args: audioExportArgs(levelled, mixed),
         signal: context.signal,
         log: deps.log,
         onProgress: (): void => {},

@@ -9,6 +9,7 @@ import { editNeedsTiming } from "../video/edit-settings.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
 import { portraitValues } from "../voices/portraits.js";
 import type { AudioRecipes } from "./recipe-audio.js";
+import { linePlan, linesLevelled } from "./recipe-lines.js";
 import { masterPlan } from "./recipe-loudness.js";
 import {
   type RecipeContext,
@@ -26,6 +27,48 @@ export function exportRecipes(
   const recipes: ResolvedWorkRecipe[] = [];
   // Level the volume: the listening files are mastered to the audio files' target.
   const master = masterPlan(context, audio.levels, "audioFiles");
+  const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
+  // The YouTube description's chapters, the shorts' clips and captions, a short's own
+  // captions, and the video's cuts, chapter cards and chapter openers use the same word timing,
+  // so it runs for them even with captions off; only the caption files below wait for captions.
+  // A multi-voice run with Level the volume on levels its speakers line by line from it too.
+  const voices = usesVoices(config) ? config.voices : undefined;
+  const lined = linesLevelled(config);
+  const timed =
+    captions ||
+    usesYoutubeDescription(config) ||
+    usesShorts(config) ||
+    usesShortMode(config) ||
+    editNeedsTiming(config) ||
+    reviewsNarration(config) ||
+    voices?.audioFiles === true ||
+    lined;
+  const timing = timed
+    ? recipe(
+        context,
+        "subtitles:timing",
+        "video",
+        {
+          kind: "local",
+          version: 1,
+          operation: timingOperation(projectLanguage(config)),
+          // The lead-in moves every word, so the edge silence is part of the timing.
+          values: [
+            audio.timeline,
+            config.silenceGapSeconds,
+            // The project language; an English project reads "en" here as it always did.
+            config.language ?? config.subtitles?.language ?? "en",
+            config.edgeSilenceSeconds,
+            // Each word learns its speaker and turn on a multi-voice run.
+            ...(voices === undefined ? [] : ["voice-words-v1"]),
+          ],
+        },
+        audio.keys,
+      )
+    : undefined;
+  const lines = linePlan(context, timing);
+  // The timing goes ahead of what waits for it; any other run keeps its old order.
+  if (lined && timing !== undefined) recipes.push(timing);
   if (config.sources.video === "off")
     recipes.push(
       recipe(
@@ -40,48 +83,14 @@ export function exportRecipes(
             audio.mediaFingerprint,
             audioExportArgs([{ kind: "body", path: "$body", seconds: 0 }], "$output"),
             ...master.values,
+            ...lines.values,
           ],
         },
-        [...audio.keys, ...master.keys],
+        [...audio.keys, ...master.keys, ...lines.keys],
       ),
     );
-  const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
-  // The YouTube description's chapters, the shorts' clips and captions, a short's own
-  // captions, and the video's cuts, chapter cards and chapter openers use the same word timing,
-  // so it runs for them even with captions off; only the caption files below wait for captions.
-  const voices = usesVoices(config) ? config.voices : undefined;
-  if (
-    !captions &&
-    !usesYoutubeDescription(config) &&
-    !usesShorts(config) &&
-    !usesShortMode(config) &&
-    !editNeedsTiming(config) &&
-    !reviewsNarration(config) &&
-    voices?.audioFiles !== true
-  )
-    return recipes;
-  const timing = recipe(
-    context,
-    "subtitles:timing",
-    "video",
-    {
-      kind: "local",
-      version: 1,
-      operation: timingOperation(projectLanguage(config)),
-      // The lead-in moves every word, so the edge silence is part of the timing.
-      values: [
-        audio.timeline,
-        config.silenceGapSeconds,
-        // The project language; an English project reads "en" here as it always did.
-        config.language ?? config.subtitles?.language ?? "en",
-        config.edgeSilenceSeconds,
-        // Each word learns its speaker and turn on a multi-voice run.
-        ...(voices === undefined ? [] : ["voice-words-v1"]),
-      ],
-    },
-    audio.keys,
-  );
-  recipes.push(timing);
+  if (timing === undefined) return recipes;
+  if (!lined) recipes.push(timing);
   if (voices?.audioFiles === true)
     recipes.push(
       recipe(
@@ -98,6 +107,7 @@ export function exportRecipes(
             (audio.sections ?? []).map((section) => [section.title, section.firstTurn]),
             config.title,
             ...master.values,
+            ...lines.values,
             // The book's title and chapter become the files' album and track tags; a project
             // that is no chapter of a book keeps the values it always had.
             ...(voices.book === undefined
