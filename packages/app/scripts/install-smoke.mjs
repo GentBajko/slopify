@@ -18,21 +18,33 @@ try {
   const archive = join(root, `gentbajko-slopify-${packageJson.version}.tgz`);
   await run(npm, [npmCli, "pack", "--workspace", "@gentbajko/slopify", "--pack-destination", root]);
   if (!(await exists(archive))) throw new Error("npm pack did not produce a package archive.");
-  // The two global installs run one after the other: two npm installs at once collide on
-  // Windows (one's package.json went missing mid-install). The starts and checks then run
-  // side by side, each with its own data folder and port; one after another they were most
-  // of the Windows job's time.
+  // The two global installs run side by side, each with its own npm cache: sharing one, two
+  // installs at once collided on Windows (one's package.json went missing mid-install). The
+  // starts and checks run side by side too, each with its own data folder and port.
   const globalPrefix = join(root, "global");
-  await run(npm, [npmCli, "install", "--global", "--prefix", globalPrefix, archive]);
   const skippedPrefix = join(root, "skipped-scripts");
-  await run(npm, [
-    npmCli,
-    "install",
-    "--global",
-    "--ignore-scripts",
-    "--prefix",
-    skippedPrefix,
-    archive,
+  await Promise.all([
+    run(npm, [
+      npmCli,
+      "install",
+      "--global",
+      "--cache",
+      join(root, "npm-cache-global"),
+      "--prefix",
+      globalPrefix,
+      archive,
+    ]),
+    run(npm, [
+      npmCli,
+      "install",
+      "--global",
+      "--ignore-scripts",
+      "--cache",
+      join(root, "npm-cache-skipped"),
+      "--prefix",
+      skippedPrefix,
+      archive,
+    ]),
   ]);
   const viaGlobal = async () => {
     const globalBin = join(
