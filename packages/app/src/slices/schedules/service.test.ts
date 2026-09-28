@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
-import { createTemplate } from "../project-templates/service.js";
+import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import type { ScheduleCreate } from "./model.js";
 import { createScheduleRunner } from "./scheduler.js";
 import { scheduleCreateSchema } from "./schema.js";
@@ -65,6 +65,17 @@ it("creates, pauses, resumes and updates a schedule with a timezone preview", ()
     });
     expect(resumed.ok && resumed.value.status).toBe("active");
     if (!resumed.ok) return;
+    // The template changes after the schedule was made; saving the schedule records the
+    // template's newest version, whatever version the form still had.
+    expect(
+      updateTemplate(h.deps, {
+        id: templateId,
+        baseVersion: 1,
+        mutationId: randomUUID(),
+        name: "Supplied article, renamed",
+        document: h.document,
+      }).ok,
+    ).toBe(true);
     const updated = updateSchedule(deps, {
       ...scheduleInput(templateId, created.value.id),
       baseVersion: resumed.value.version,
@@ -72,6 +83,7 @@ it("creates, pauses, resumes and updates a schedule with a timezone preview", ()
       name: "Updated schedule",
     });
     expect(updated.ok && updated.value.name).toBe("Updated schedule");
+    expect(updated.ok && updated.value.templateVersion).toBe(2);
   } finally {
     h.close();
   }

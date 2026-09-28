@@ -113,8 +113,9 @@ export function updateSchedule(
         : previous.nextRunAt === null
           ? null
           : nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
+    // The version it was saved against, for the record; runs use the newest.
     const value = summary(
-      parsed.data,
+      { ...parsed.data, templateVersion: checked.value },
       next?.toISOString() ?? null,
       now.toISOString(),
       previous.status,
