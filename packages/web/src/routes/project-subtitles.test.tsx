@@ -110,7 +110,8 @@ describe("existing project subtitles", () => {
     await user.clear(screen.getByLabelText("Subtitle font size"));
     await user.type(screen.getByLabelText("Subtitle font size"), "64");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await screen.findByText("edit.config.subtitles.fontSize: Use a size from 16 to 120.");
+    // In the list above the settings, and under the field the server's path names.
+    expect(await screen.findAllByText("Use a size from 16 to 120.")).toHaveLength(2);
     expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
     expect(fixture.start).not.toHaveBeenCalled();
   });
