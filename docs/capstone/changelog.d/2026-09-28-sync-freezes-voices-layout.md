@@ -9,3 +9,4 @@
 - The Narration stage says when it is playing a levelled narration that an edit made outdated, and plays the new one beside it; a paused run says what it still has to make.
 - The PDF's Sources page reads as text with only the web addresses as links, every one of them clickable.
 - Pauses between sentences weigh numbers as they are said, skip a name's initial and never lengthen the breath between two words.
+- Edit project → Prompts says when the Library's intro or outro a project copied has changed, as it already did for prompts, and offers Use the Library version or Keep this project's version.

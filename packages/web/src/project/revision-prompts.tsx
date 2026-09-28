@@ -8,7 +8,7 @@ import {
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { Entry, Prompt } from "@/api";
 import { KeywordList } from "@/components/keyword-list";
 import { Button } from "@/components/kit/button";
@@ -237,15 +237,22 @@ export function RevisionPrompts({
   );
 }
 
-// The Library prompt this snapshot was copied from, found by the name the project saved.
+// The Library prompt (or, for the intro and outro, the Library entry) this snapshot was copied
+// from, found by the name the project saved.
 function libraryPrompt(
   edit: RevisionEdit,
   key: string,
   options: readonly (Prompt | Entry)[],
   saved: readonly ImagePromptChoice[],
-): Prompt | undefined {
+): Prompt | Entry | undefined {
   const { config } = edit;
   const image = imageIndex(key);
+  if (key === "intro" || key === "outro") {
+    const entry = config[key]?.name;
+    return entry === undefined || entry === ""
+      ? undefined
+      : options.find((option): option is Entry => "category" in option && option.name === entry);
+  }
   const name =
     key === "article"
       ? config.articlePrompt
@@ -270,9 +277,31 @@ function libraryPrompt(
   );
 }
 
-// A project keeps the prompt text it was given. When the Library prompt of the same name has
-// been edited since, say so here, so a newer wording is one press away instead of a mystery.
-function LibraryChanged({
+// A project keeps the prompt text it was given. When the Library prompt (or intro or outro
+// entry) of the same name has been edited since, say so here with both choices: take the
+// Library's new wording, or keep the project's own and stop being asked. Keeping is remembered
+// in this browser for exactly these two texts, so a later Library edit asks again.
+const keptKey = "slopify.library-kept";
+
+function textHash(text: string): string {
+  let hash = 5381;
+  for (let at = 0; at < text.length; at += 1) hash = ((hash * 33) ^ text.charCodeAt(at)) >>> 0;
+  return hash.toString(36);
+}
+
+function keptPairs(): readonly string[] {
+  try {
+    const raw = window.localStorage.getItem(keptKey);
+    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((one): one is string => typeof one === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function LibraryChanged({
   label,
   raw,
   library,
@@ -280,26 +309,51 @@ function LibraryChanged({
 }: {
   readonly label: string;
   readonly raw: string | null;
-  readonly library: Prompt | undefined;
+  readonly library: Pick<Prompt | Entry, "name" | "body"> | undefined;
   readonly onUse: (body: string) => void;
 }) {
-  if (library === undefined || raw === null || library.body === raw) return null;
+  const pair =
+    library === undefined || raw === null
+      ? ""
+      : `${label}:${textHash(raw)}:${textHash(library.body)}`;
+  const [kept, setKept] = useState(() => keptPairs().includes(pair));
+  if (library === undefined || raw === null || library.body === raw || kept) return null;
   return (
     <Callout
       tone="info"
       title={`The Library's "${library.name}" has changed since this project copied it`}
       actions={
-        <Button
-          aria-label={`Use the Library version for ${label}`}
-          onClick={() => {
-            onUse(library.body);
-          }}
-        >
-          Use the Library version
-        </Button>
+        <>
+          <Button
+            aria-label={`Use the Library version for ${label}`}
+            onClick={() => {
+              onUse(library.body);
+            }}
+          >
+            Use the Library version
+          </Button>
+          <Button
+            variant="quiet"
+            aria-label={`Keep this project's version for ${label}`}
+            onClick={() => {
+              try {
+                window.localStorage.setItem(
+                  keptKey,
+                  JSON.stringify([...keptPairs().filter((one) => one !== pair), pair].slice(-200)),
+                );
+              } catch {
+                // Not remembered in this browser; it is still hidden until the page reloads.
+              }
+              setKept(true);
+            }}
+          >
+            Keep this project's version
+          </Button>
+        </>
       }
     >
-      The project still uses its own copy below.
+      The project uses its own copy below until you choose. Using the Library version marks what it
+      wrote as outdated, to remake when you are ready.
     </Callout>
   );
 }
