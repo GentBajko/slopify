@@ -15,8 +15,8 @@ import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
   defaultZoomPercent,
-  usesNarrationPreparation,
-  usesYoutubeDescription,
+  type LlmUse,
+  llmUses,
 } from "@app/slices/admission/rules.js";
 import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -203,17 +203,14 @@ export function sourceOptions(
 // The LLM-row rule, said in the form's own vocabulary so the cue sheet can hide the row
 // before anything is posted. Admission says it again over the draft; this only decides
 // whether the row is drawn at all.
+// What the run asks an LLM for: the server's own list (`llmUses`) on the draft this form sends,
+// so the picker shows exactly when, and where, the run can't start without a model.
+export function llmUsesOf(form: PlayFormState, entries: readonly Entry[]): readonly LlmUse[] {
+  return llmUses(draftOf({ form, entries, slots: [], silenceGapSeconds: 0 }));
+}
+
 export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
-  return (
-    usesNarrationPreparation(form) ||
-    usesYoutubeDescription(form) ||
-    shortsOn(form) ||
-    form.sources.article === "generate" ||
-    form.sources.thumbnail === "prompt_by_llm" ||
-    (form.sources.audio === "generate" &&
-      (modeOf(entries, "intro", form.intro) === "llm" ||
-        modeOf(entries, "outro", form.outro) === "llm"))
-  );
+  return llmUsesOf(form, entries).length > 0;
 }
 
 export function modeOf(

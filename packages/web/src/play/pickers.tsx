@@ -20,7 +20,6 @@ export interface FieldProps {
   readonly label: string;
   readonly value: string;
   readonly problem: string | undefined;
-  readonly inline?: boolean | undefined;
   // The info button beside the label, from the help catalogue.
   readonly tip?: HelpId | undefined;
   readonly onPick: (next: string) => void;
@@ -30,14 +29,12 @@ export function LabelledField({
   label,
   field,
   problem,
-  inline = false,
   tip,
   children,
 }: {
   readonly field?: string | undefined;
   readonly label: string;
   readonly problem: string | undefined;
-  readonly inline?: boolean | undefined;
   readonly tip?: HelpId | undefined;
   readonly children: (props: {
     readonly id: string;
@@ -49,31 +46,27 @@ export function LabelledField({
   const noteId = useId();
 
   const labelled = (
-    <label htmlFor={fieldId} className={cn("sl-field__label", inline && "shrink-0")}>
+    <label htmlFor={fieldId} className="sl-field__label">
       {label}
     </label>
   );
   return (
     <div
-      className={cn(
-        inline
-          ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1"
-          : "sl-field [&>span]:w-full [&>select]:w-full",
-      )}
+      className="sl-field [&>span]:w-full [&>select]:w-full"
       {...(tip === undefined ? {} : helpScope)}
     >
       {/* The kit's field label and error, as Field draws them. */}
       {tip === undefined ? (
         labelled
       ) : (
-        <span className={cn("flex min-w-0 items-center gap-1", inline && "shrink-0")}>
+        <span className="flex min-w-0 items-center gap-1">
           {labelled}
           <InfoTip id={tip} label={label} className="-my-1" />
         </span>
       )}
       {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
-        <p id={noteId} className={cn("sl-field__error m-0", inline && "basis-full")}>
+        <p id={noteId} className="sl-field__error m-0">
           {problem}
         </p>
       )}
@@ -92,7 +85,6 @@ export function OptionPicker({
   field,
   value,
   problem,
-  inline,
   placeholder,
   options,
   disabled = false,
@@ -104,7 +96,7 @@ export function OptionPicker({
   readonly disabled?: boolean | undefined;
 }) {
   return (
-    <LabelledField field={field} label={label} problem={problem} inline={inline} tip={tip}>
+    <LabelledField field={field} label={label} problem={problem} tip={tip}>
       {({ id, describedBy }) => (
         <Select
           id={id}
@@ -113,7 +105,6 @@ export function OptionPicker({
           disabled={disabled}
           aria-invalid={problem !== undefined}
           aria-describedby={describedBy}
-          className={inline === true ? "w-auto min-w-[120px]" : undefined}
           onChange={(event) => {
             onPick(event.target.value);
           }}
@@ -165,7 +156,6 @@ export function ProviderPicker({
   providers,
   value,
   problem,
-  inline,
   tip,
   onPick,
 }: FieldProps & {
@@ -178,7 +168,6 @@ export function ProviderPicker({
       label={label}
       value={value}
       problem={problem}
-      inline={inline}
       tip={tip}
       placeholder="Pick a provider"
       options={[
@@ -202,7 +191,6 @@ function ProviderModelPicker({
   provider,
   value,
   problem,
-  inline,
   tip,
   onPick,
 }: FieldProps & { readonly provider: string }) {
@@ -226,7 +214,7 @@ function ProviderModelPicker({
 
   return (
     <div className="min-w-0 max-w-full">
-      <LabelledField field={field} label={label} problem={problem} inline={inline} tip={tip}>
+      <LabelledField field={field} label={label} problem={problem} tip={tip}>
         {({ id, describedBy }) => {
           const described =
             [
@@ -237,12 +225,7 @@ function ProviderModelPicker({
               .filter(Boolean)
               .join(" ") || undefined;
           return (
-            <div
-              className={cn(
-                "min-w-0 [&>span]:w-full [&>select]:w-full",
-                inline ? "max-w-[260px]" : "w-full",
-              )}
-            >
+            <div className={cn("min-w-0 [&>span]:w-full [&>select]:w-full", "w-full")}>
               {typing ? (
                 <Input
                   id={id}
@@ -252,7 +235,6 @@ function ProviderModelPicker({
                   placeholder="Type the model id"
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
-                  className={inline ? "w-[180px] max-w-full" : undefined}
                   onChange={(event) => onPick(event.target.value)}
                 />
               ) : (
@@ -263,7 +245,6 @@ function ProviderModelPicker({
                   disabled={provider === ""}
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
-                  className={inline ? "w-full min-w-[120px] max-w-[260px]" : undefined}
                   onChange={(event) => onPick(event.target.value)}
                 >
                   <option value="">

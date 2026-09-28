@@ -45,7 +45,7 @@ import {
   setupRows,
 } from "@/play/setup-rows";
 import { StartRail } from "@/play/start-rail";
-import type { PlayFormState, Upload, UploadSlot } from "@/play/state";
+import { llmUsesOf, type PlayFormState, type Upload, type UploadSlot } from "@/play/state";
 import { templateLibrary } from "@/play/template-library";
 import { MoreVideos, TemplateField, TopicFields } from "@/play/topic-fields";
 import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
@@ -186,8 +186,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     playReady: blocker === undefined && !session.review.starting,
   });
 
+  // The row the text model sits in: the section of the first thing that needs it.
+  const llmRow = llmUsesOf(form, choices.entries)[0]?.section ?? "article";
   const target = (field: string) =>
-    checkpointTarget(field, form) ?? playFieldTarget(field, form, batchItems);
+    checkpointTarget(field, form) ?? playFieldTarget(field, form, batchItems, choices.entries);
   const problem = (field: string): string | undefined => {
     const canonical = target(field).field;
     return errors.find(
@@ -233,7 +235,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       new Set(
         setupRows
           .map((row) => row.id)
-          .filter((row) => row !== "reviews" && rowProblem(row, errors, topics) !== undefined),
+          .filter(
+            (row) => row !== "reviews" && rowProblem(row, errors, topics, llmRow) !== undefined,
+          ),
       ),
     );
   }, [loaded, session.activeId, generation]);
@@ -260,7 +264,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         return;
       }
     } else if (!(field && topics.some((topic) => field === `values.${topic}`))) {
-      const owner = field ? rowOf(field) : undefined;
+      const owner = field ? rowOf(field, llmRow) : undefined;
       const rows = owner === undefined ? rowsOfSection(reveal.section) : [owner];
       const closed = rows.filter((row) => !open.has(row));
       if (!(field === "title" && topics.length === 0) && closed.length > 0) {
@@ -393,7 +397,15 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     ),
     images: <ImagesSection {...controls} />,
     video: <VideoSection {...controls} problemOf={problem} />,
-    outputs: <ExtrasSection {...controls} />,
+    outputs: (
+      <ExtrasSection
+        {...controls}
+        entries={choices.entries}
+        onSettings={() => {
+          void library("/settings");
+        }}
+      />
+    ),
     reviews: undefined,
     channel: (
       <div className="flex min-w-0 flex-col gap-4 py-4">
@@ -406,7 +418,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     id: row.id,
     label: row.label,
     summary: rowSummary(row.id, form, summaryContext),
-    problem: rowProblem(row.id, errors, topics)?.message,
+    problem: rowProblem(row.id, errors, topics, llmRow)?.message,
     editor: editors[row.id],
   }));
   const setRow = (row: SetupRowId, next: boolean): void => {

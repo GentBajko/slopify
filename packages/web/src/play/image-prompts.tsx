@@ -2,9 +2,10 @@ import type { ImagePromptChoice } from "@app/slices/admission/model.js";
 import { imagesPerRunMax, numberPerPromptMax } from "@app/slices/admission/rules.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { useId } from "react";
+import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 // Several image prompts run at once, each ticked and each with its own Number, bounded at
 // 1 to 20 per prompt and 60 across the run. Admission refuses a Number outside them; the
@@ -40,21 +41,26 @@ export function ImagePrompts({
 
   if (options.length === 0) {
     return (
-      <p className="basis-full text-right text-small text-ink-3">
+      <p className="sl-fields__wide basis-full text-small text-ink-3">
         No image prompts saved. Write one on Prompts.
       </p>
     );
   }
 
   return (
-    <div className="flex basis-full flex-col items-start gap-2" {...helpScope}>
+    <div className="sl-fields__wide flex w-full basis-full flex-col gap-2" {...helpScope}>
       <span className="flex items-center gap-1">
         <span id={listId} className="engraved text-ink-3">
           Image prompts
         </span>
         <InfoTip id="play.image-prompts" className="-my-1" />
       </span>
-      <ul aria-labelledby={listId} className="flex flex-wrap justify-start gap-x-4 gap-y-2">
+      {/* The prompts in the field grid's columns, each name with its Number at the end of its
+          own row, so the boxes line up down every column. */}
+      <ul
+        aria-labelledby={listId}
+        className="m-0 grid w-full list-none grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-x-6 gap-y-2 p-0"
+      >
         {options.map((prompt) => {
           const at = picked.findIndex((choice) => choice.name === prompt.name);
           const choice = at === -1 ? undefined : picked[at];
@@ -133,7 +139,7 @@ function PromptTick({
   const noteId = useId();
 
   return (
-    <span className="inline-flex items-center gap-2 text-small">
+    <span className="flex w-full min-w-0 items-center gap-2 text-small">
       <input
         id={tickId}
         data-play-field="imagePrompts"
@@ -144,7 +150,11 @@ function PromptTick({
           onTick(event.target.checked);
         }}
       />
-      <label htmlFor={tickId} className={number === undefined ? "text-ink-3" : "text-ink"}>
+      <label
+        htmlFor={tickId}
+        title={name}
+        className={cn("min-w-0 flex-1 truncate", number === undefined ? "text-ink-3" : "text-ink")}
+      >
         {name}
       </label>
       <Label htmlFor={numberId} className="sr-only">
@@ -160,7 +170,7 @@ function PromptTick({
         disabled={number === undefined}
         aria-invalid={problem !== undefined}
         aria-describedby={problem === undefined ? undefined : noteId}
-        className="w-[64px] tabular-nums"
+        className="sl-input--number"
         // Nought is drawn as an empty box: it is what an emptied box reports, and
         // showing a 0 the user did not type would fight the next keystroke.
         value={rawNumber?.value ?? (number === undefined || number === 0 ? "" : String(number))}

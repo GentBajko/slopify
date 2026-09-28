@@ -44,7 +44,7 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
     session.invalidateReview(true);
   };
   return (
-    <div className="grid grid-cols-1 items-end gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="sl-fields items-end">
       <Field label="Channel" tip="play.channel">
         <Select
           data-play-field="channelId"
@@ -73,7 +73,7 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
         }}
       />
       {channel ? (
-        <p className="m-0 text-small text-ink-3 min-[700px]:col-span-2">
+        <p className="sl-fields__wide m-0 text-small text-ink-3">
           <Link to="/channels/$channelId" params={{ channelId: channel.id }} className="underline">
             Edit {channel.name}
           </Link>

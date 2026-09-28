@@ -16,8 +16,8 @@ import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
+import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { promptsQuery, providersQuery } from "@/queries";
@@ -105,7 +105,7 @@ export function ReviewSettings({
         Automatic reviews
         <InfoTip id="play.reviews" />
       </legend>
-      <div className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
+      <div className="sl-fields">
         <ProviderPicker
           field="reviews.provider"
           label="Reviewer"

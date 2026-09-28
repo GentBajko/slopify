@@ -1,10 +1,11 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
+import { defaultVoicesSettings } from "@app/slices/voices/model.js";
 import { describe, expect, it } from "vitest";
 import type { AdmissionInput } from "@/play/admission";
 import { admission, keywordFields, keywordOrigins } from "@/play/admission";
 import type { PlayFormState, Upload } from "@/play/state";
-import { freshForm, needsLlm } from "@/play/state";
+import { freshForm, llmUsesOf, needsLlm } from "@/play/state";
 import { playFieldTarget } from "./field-targets";
 
 function prompt(kind: Prompt["kind"], name: string, body: string): Prompt {
@@ -104,6 +105,28 @@ it("collects narration slots and requires the shared LLM only while preparation 
   });
   for (const source of ["off", "provide"] as const)
     expect(needsLlm({ ...form, sources: { ...form.sources, audio: source } }, [])).toBe(false);
+});
+
+it("shows the text model for an audiobook whose speakers are worked out from a provided book", () => {
+  // The model splits the book into each speaker's lines, so the run can't start without one;
+  // the picker must show, or the Article row says Needs setup with nothing to set.
+  const form = {
+    ...freshForm,
+    sources: { ...freshForm.sources, research: "off", article: "provide" },
+    provided: { ...freshForm.provided, article: "\u201cWe should start back,\u201d she said." },
+    voices: { ...defaultVoicesSettings("audiobook"), source: "attribute" as const },
+    llm: { provider: "", model: "" },
+  } satisfies typeof freshForm;
+  expect(needsLlm(form, [])).toBe(true);
+  // Not the article's: the book is provided. It sits with the narration, saying what for.
+  expect(llmUsesOf(form, [])[0]).toEqual({
+    section: "narration",
+    label: "working out who speaks each line",
+  });
+  // Writing the article puts it under Article, whatever else needs it.
+  expect(
+    llmUsesOf({ ...form, sources: { ...form.sources, article: "generate" } }, [])[0]?.section,
+  ).toBe("article");
 });
 
 describe("the hint names the first missing item", () => {

@@ -113,18 +113,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
     }
   }
 
-  // The LLM row is required only when something in the run actually asks an LLM for text.
-  const needsLlm =
-    sources.research === "generate" ||
-    sources.article === "generate" ||
-    sources.thumbnail === "prompt_by_llm" ||
-    draft.intro?.mode === "llm" ||
-    draft.outro?.mode === "llm" ||
-    usesNarrationPreparation(draft) ||
-    usesYoutubeDescription(draft) ||
-    usesShorts(draft) ||
-    (usesVoices(draft) && draft.voices?.source === "attribute");
-  if (needsLlm && !chosen(draft.llm)) {
+  if (needsLlmFor(draft) && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
 
@@ -402,6 +391,40 @@ function checkValues(
 
 function blank(value: string | undefined): boolean {
   return value === undefined || value.trim() === "";
+}
+
+// Each thing in a run that asks an LLM for text, in the order Play lays its sections out, with
+// the section that holds it and what it is for in a person's words. The LLM row is required
+// only when there is one, and Play shows its picker in the first one's section, saying what it
+// is used for, so a run never needs a model it offers no way to pick.
+export interface LlmUse {
+  readonly section: "article" | "narration" | "outputs";
+  readonly label: string;
+}
+
+export function llmUses(draft: RunDraft): readonly LlmUse[] {
+  const sources = draft.sources;
+  const uses: LlmUse[] = [];
+  if (sources.research === "generate")
+    uses.push({ section: "article", label: "researching the topic" });
+  if (sources.article === "generate")
+    uses.push({ section: "article", label: "writing the article" });
+  if (usesVoices(draft) && draft.voices?.source === "attribute")
+    uses.push({ section: "narration", label: "working out who speaks each line" });
+  if (usesNarrationPreparation(draft))
+    uses.push({ section: "narration", label: "preparing the narration's delivery" });
+  if (draft.intro?.mode === "llm") uses.push({ section: "narration", label: "writing the intro" });
+  if (draft.outro?.mode === "llm") uses.push({ section: "narration", label: "writing the outro" });
+  if (sources.thumbnail === "prompt_by_llm")
+    uses.push({ section: "outputs", label: "writing the thumbnail prompt" });
+  if (usesYoutubeDescription(draft))
+    uses.push({ section: "outputs", label: "writing the YouTube description" });
+  if (usesShorts(draft)) uses.push({ section: "outputs", label: "picking the shorts" });
+  return uses;
+}
+
+export function needsLlmFor(draft: RunDraft): boolean {
+  return llmUses(draft).length > 0;
 }
 
 export function usesNarrationPreparation(

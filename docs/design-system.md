@@ -313,7 +313,10 @@ The regenerate confirmation stays: it spends money on a paid model and cannot be
   row titles; `reading` at a 68ch measure for long text.
 - **Layout.** Use the width. Three page shapes: Workspace (section rail, main, action rail),
   List and detail, Board. Page padding `space-7` on desktop, `space-4` on phones; nothing
-  scrolls sideways. Labels above fields; field groups in two columns on desktop. Section heads
+  scrolls sideways. Labels above fields; a group of fields is one `.sl-fields` grid (equal
+  columns at least 15rem wide, so three or four across a wide screen, one on a phone, and a
+  select as wide as its column, never half the page; `.sl-fields__wide` spans the row), and a
+  number box is `.sl-input--number`, one width everywhere. Section heads
   carry their actions on the right: primary, secondary, quiet, overflow.
 - **Actions.** Five button kinds, one meaning each; the Play key only starts runs. Actions are
   buttons, links go somewhere. A project shows exactly one primary action for its situation

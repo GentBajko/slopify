@@ -14,9 +14,9 @@ import {
 } from "@app/slices/images/scale.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { type ReactElement, useId } from "react";
+import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
-import { Input } from "@/components/ui/input";
 
 type Every = "minutes" | "hour";
 
@@ -86,7 +86,7 @@ export function ImageScaleControl({
             data-play-field="imageScale.value"
             aria-label={scale.every === "minutes" ? "Minutes per image" : "Images per hour"}
             inputMode="decimal"
-            className="w-[72px] tabular-nums"
+            className="sl-input--number"
             aria-invalid={line?.problem === true}
             aria-describedby={`${id}-line`}
             value={scale.value}

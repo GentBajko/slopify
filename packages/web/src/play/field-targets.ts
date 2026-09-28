@@ -1,5 +1,6 @@
+import type { Entry } from "@app/slices/library/model.js";
 import type { PlaySection } from "./sections";
-import { ambientUploadOn, type PlayFormState, shortsOn } from "./state";
+import { ambientUploadOn, llmUsesOf, type PlayFormState, shortsOn } from "./state";
 export function focusPlayField(root: HTMLElement, field: string): boolean {
   const target = [...root.querySelectorAll<HTMLElement>("[data-play-field]")].find(
     (element) => element.dataset.playField === field,
@@ -16,6 +17,7 @@ export function playFieldTarget(
   field: string,
   form: PlayFormState,
   items: readonly { readonly key: string }[],
+  entries: readonly Entry[] = [],
 ): { section: PlaySection; field: string } {
   let target = field;
   if (field === "fontUpload") target = "subtitles.fontUpload";
@@ -72,6 +74,8 @@ export function playFieldTarget(
         : `items.${items[Number(item[1]) - 1]?.key ?? item[1]}.${item[2]}`;
   const matches = (prefixes: readonly string[]) =>
     prefixes.some((prefix) => field === prefix || field.startsWith(`${prefix}.`));
+  // The text model sits under Article only when writing the article or research needs it.
+  const llmSection = llmUsesOf(form, entries)[0]?.section ?? "article";
   const section: PlaySection = matches([
     "title",
     "articlePrompt",
@@ -79,7 +83,7 @@ export function playFieldTarget(
     "provided.research",
     "sources.article",
     "sources.research",
-    "llm",
+    ...(llmSection === "article" ? ["llm"] : []),
     "values",
   ])
     ? "content"
@@ -116,6 +120,7 @@ export function playFieldTarget(
             "loudness",
             "sentencePauseSeconds",
             "paragraphPauseSeconds",
+            "llm",
           ])
         ? "outputs"
         : "review";

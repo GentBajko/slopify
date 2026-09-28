@@ -104,7 +104,7 @@ If you have the same draft open in another tab or window and it was saved there,
 | Row | What it holds | Details |
 | --- | --- | --- |
 | **Title and keywords** | The title pattern and every keyword value | This page |
-| **Article** | Article source, article prompt, text generation (LLM, model, thinking), research | [Play Title and Article](Play-Title-and-Article) |
+| **Article** | Article source, article prompt, text generation (LLM, model, thinking) when the article or research is written, research | [Play Title and Article](Play-Title-and-Article) |
 | **Narration** | Narration source, TTS, model, voice, speakers, Audio Advanced (chunking, intro, outro, preparation, glossary, aliases, tables and figures) | [Play Narration](Play-Narration) |
 | **Images** | Images source, provider, model, effort, image prompts, establishing image, more images for long videos | [Play Images](Play-Images) |
 | **Video and style** | Video source, seconds per image, zoom, motion, cuts, the Look, ambient sound, pauses and volume, silence, frame format, captions, preview text | [Play Video and Style](Play-Video-and-Style) |

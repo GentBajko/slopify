@@ -49,7 +49,7 @@ export function LoudnessControls({
         onChange={(enabled) => onChange({ ...value, enabled })}
       />
       {value.enabled ? (
-        <div className="flex min-w-0 flex-wrap gap-4">
+        <div className="sl-fields">
           <VolumeField
             target="video"
             label="Video volume"
@@ -126,7 +126,7 @@ function VolumeField({
         <Input
           type="text"
           inputMode="decimal"
-          className="w-[72px] tabular-nums"
+          className="sl-input--number"
           data-play-field={`loudness.${target === "video" ? "videoLufs" : "audioFilesLufs"}`}
           value={dbText}
           onChange={(event) => type("db", event.target.value)}
@@ -138,7 +138,7 @@ function VolumeField({
           aria-label={`${label} as a percentage of the recommended level`}
           type="text"
           inputMode="decimal"
-          className="w-[72px] tabular-nums"
+          className="sl-input--number"
           value={percentText}
           onChange={(event) => type("percent", event.target.value)}
           onBlur={() => setTyped(undefined)}

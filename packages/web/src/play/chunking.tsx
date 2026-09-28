@@ -1,6 +1,6 @@
 import type { Chunking, ChunkMode } from "@app/slices/narration/chunk.js";
 import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/kit/field";
 import { LabelledField } from "@/play/pickers";
 import { InlineSwitch } from "@/play/switches";
 
@@ -61,7 +61,6 @@ export function ChunkingControl({
           label={characterMode ? "Characters" : "Words"}
           tip="play.chunking.count"
           problem={undefined}
-          inline
         >
           {({ id }) => (
             <Input
@@ -71,7 +70,7 @@ export function ChunkingControl({
               min={1}
               max={characterMode ? 1000000 : 10000}
               inputMode="numeric"
-              className="w-[100px] tabular-nums"
+              className="sl-input--number"
               value={
                 rawCounts
                   ? characterMode

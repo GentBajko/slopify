@@ -6,6 +6,7 @@ import { renderRouted, testDeps } from "@/test-app";
 import { ContentSection } from "./content-section";
 import { AudioRail } from "./media-rails";
 import { freshForm, type PlayFormState } from "./state";
+import { TextGenerationIn } from "./text-generation";
 
 afterEach(cleanup);
 it("shows shared text generation for a provided article and preserves preparation while Audio is inactive", async () => {
@@ -36,6 +37,7 @@ it("shows shared text generation for a provided article and preserves preparatio
     return (
       <>
         <ContentSection {...props} entries={[]} onLibrary={() => {}} />
+        <TextGenerationIn {...props} section="narration" entries={[]} onSettings={() => {}} />
         <AudioRail {...props} />
       </>
     );

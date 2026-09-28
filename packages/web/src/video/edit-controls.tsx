@@ -93,7 +93,7 @@ export function useVideoEditControls({
       <Picker
         id={`${id}-cuts`}
         data-play-field={`${fieldPrefix}.cuts`}
-        className="w-auto min-w-[160px]"
+        className="min-w-0"
         value={noWordTiming === undefined ? edit.cuts : "interval"}
         disabled={noWordTiming !== undefined}
         aria-describedby={noWordTiming === undefined ? undefined : `${id}-cuts-note`}
@@ -121,12 +121,12 @@ export function useVideoEditControls({
           {summary.length === 0 ? "Plain cuts, no effects" : summary.join(" · ")}
         </span>
       </summary>
-      <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 border-line-strong border-t p-3 min-[700px]:grid-cols-2">
+      <div className="sl-fields border-line-strong border-t p-3">
         <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
           <Picker
             id={`${id}-transition`}
             data-play-field={`${fieldPrefix}.transition`}
-            className="w-auto min-w-[150px]"
+            className="min-w-0"
             value={edit.transition}
             onChange={(event) => set({ transition: event.target.value as TransitionKind })}
           >
@@ -140,7 +140,7 @@ export function useVideoEditControls({
             aria-label="Transition length"
             data-play-field={`${fieldPrefix}.transitionSeconds`}
             aria-invalid={issue("transitionSeconds") !== undefined}
-            className="w-auto min-w-[80px]"
+            className="w-24 flex-none"
             disabled={edit.transition === "cut"}
             value={String(edit.transitionSeconds)}
             onChange={(event) => set({ transitionSeconds: Number(event.target.value) })}
@@ -208,7 +208,7 @@ export function useVideoEditControls({
             id={`${id}-animate`}
             data-play-field={`${fieldPrefix}.animate`}
             aria-invalid={issue("animate") !== undefined}
-            className="w-auto min-w-[150px]"
+            className="min-w-0"
             value={edit.animate}
             onChange={(event) => set({ animate: event.target.value as AnimateMode })}
           >
@@ -222,7 +222,7 @@ export function useVideoEditControls({
             aria-label="Animate every how many images"
             data-play-field={`${fieldPrefix}.animateEvery`}
             aria-invalid={issue("animateEvery") !== undefined}
-            className="w-auto min-w-[80px]"
+            className="w-24 flex-none"
             disabled={edit.animate !== "every"}
             value={String(edit.animateEvery)}
             onChange={(event) => set({ animateEvery: Number(event.target.value) })}
@@ -240,7 +240,7 @@ export function useVideoEditControls({
             aria-label="Image-to-video model"
             data-play-field={`${fieldPrefix}.animateModel`}
             aria-invalid={issue("animateModel") !== undefined}
-            className="w-auto min-w-[180px]"
+            className="min-w-0"
             disabled={edit.animate === "off"}
             value={edit.animateModel}
             onChange={(event) => set({ animateModel: event.target.value })}
@@ -283,19 +283,19 @@ function Row({
   readonly wide?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
+  // Label above, as every field (`.sl-fields`); the control fills its column.
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-wrap items-center gap-2 text-small",
-        wide && "min-[700px]:col-span-2",
-      )}
-      {...helpScope}
-    >
-      <label htmlFor={id} className="min-w-[96px]">
-        {label}
-      </label>
-      {children}
-      <InfoTip id={tip} label={label.toLowerCase()} />
+    <div className={cn("sl-field", wide && "sl-fields__wide")} {...helpScope}>
+      <span className="flex min-w-0 items-center gap-1">
+        <label htmlFor={id} className="sl-field__label">
+          {label}
+        </label>
+        <InfoTip id={tip} label={label.toLowerCase()} />
+      </span>
+      {/* The main choice takes the room; a short one beside it (a length, a count) keeps its own. */}
+      <div className="flex min-w-0 flex-wrap items-start gap-2 [&>select]:min-w-0 [&>select]:flex-1">
+        {children}
+      </div>
     </div>
   );
 }
@@ -319,7 +319,7 @@ function Choice<T extends string>({
     <Picker
       id={id}
       data-play-field={field}
-      className="w-auto min-w-[130px]"
+      className="min-w-0"
       value={value}
       onChange={(event) => onChange(event.target.value as T)}
     >

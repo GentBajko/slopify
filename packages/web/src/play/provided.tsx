@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { Button } from "@/components/kit/button";
+import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HelpId } from "@/help/catalog";
 import type { Upload } from "@/play/state";

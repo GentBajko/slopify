@@ -63,18 +63,17 @@ export function AmbientBedControls({
           data-play-field={`${fieldPrefix}.${field}`}
           type="text"
           inputMode="decimal"
-          className="w-[90px] tabular-nums"
+          className="sl-input--number"
           value={value[field]}
           onChange={(event) => onChange({ ...value, [field]: event.target.value })}
         />
       </Field>
     );
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-3">
+    <div className="sl-fields">
       <Field label="Ambient sound" tip="project.ambient.source" error={problem("source")}>
         <Select
           data-play-field={`${fieldPrefix}.source`}
-          className="w-auto min-w-[180px]"
           value={value?.source ?? ""}
           onChange={(event) => pick(event.target.value)}
         >
@@ -89,7 +88,8 @@ export function AmbientBedControls({
       </Field>
       {value?.source === "upload" ? file : null}
       {playing ? (
-        <div className="flex min-w-0 flex-wrap gap-4">
+        // Its numbers are cells of the same field grid.
+        <div className="contents">
           {number(
             "level",
             "Level (dB)",

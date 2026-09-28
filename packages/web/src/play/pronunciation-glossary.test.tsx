@@ -14,6 +14,7 @@ import { ContentSection } from "./content-section";
 import { AudioRail } from "./media-rails";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { freshForm, type PlayFormState } from "./state";
+import { TextGenerationIn } from "./text-generation";
 
 afterEach(cleanup);
 
@@ -95,6 +96,7 @@ function PlaySubject({
   return (
     <>
       <ContentSection {...props} entries={[]} onLibrary={() => {}} />
+      <TextGenerationIn {...props} section="narration" entries={[]} onSettings={() => {}} />
       <AudioRail {...props} />
       <output aria-label="Saved audio">{JSON.stringify(form.audio)}</output>
     </>

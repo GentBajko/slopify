@@ -1,5 +1,5 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useEffect } from "react";
 import type { CastMember } from "@/channels/api";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ChunkingControl } from "@/play/chunking";
@@ -52,6 +52,24 @@ export function AudioRail({
     form.audio.voice || undefined,
   );
   const mine = language === undefined ? ofProvider : byLanguage.listed;
+  // With several speakers each one has its own voice, and the voice here only reads the intro
+  // and outro. Without either, it reads nothing: it is kept as the first speaker's voice (the
+  // run still records one) and not shown, so it can't pass for the book's narrator.
+  const lead = form.voices?.speakers.find(
+    (speaker) => speaker.voice.provider && speaker.voice.model && speaker.voice.voice,
+  )?.voice;
+  const framed = form.intro !== "" || form.outro !== "";
+  const hidden = form.voices !== undefined && !framed && lead !== undefined;
+  useEffect(() => {
+    if (!hidden || lead === undefined) return;
+    const now = form.audio;
+    if (now.provider === lead.provider && now.model === lead.model && now.voice === lead.voice)
+      return;
+    update({
+      audio: { ...now, provider: lead.provider, model: lead.model, voice: lead.voice },
+    });
+  }, [hidden, lead, form.audio, update]);
+  const framing = form.voices !== undefined;
   // The disclosure's own line says what is not at its default, so a closed Advanced still
   // tells the reader what it holds.
   const advancedSummary = [
@@ -70,49 +88,61 @@ export function AudioRail({
       <div className={railControls}>
         {form.sources.audio === "generate" ? (
           <>
-            <ProviderPicker
-              field="audio.provider"
-              label="TTS"
-              tip="play.tts.provider"
-              family="tts"
-              providers={providers}
-              value={form.audio.provider}
-              problem={problem("audio")}
-              onPick={(provider) => {
-                update({
-                  audio: { ...form.audio, provider, model: "", voice: "" },
-                });
-              }}
-            />
-            <ModelPicker
-              field="audio.model"
-              label="TTS model"
-              tip="play.tts.model"
-              provider={form.audio.provider}
-              value={form.audio.model}
-              problem={problem("audio.model")}
-              onPick={(model) => update({ audio: { ...form.audio, model } })}
-            />
-            <OptionPicker
-              field="audio.voice"
-              label="Voice"
-              tip="play.voice"
-              value={form.audio.voice}
-              placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
-              options={mine.map((voice) => ({ value: voice.voiceId, label: voice.name }))}
-              problem={problem("audio.voice")}
-              onPick={(voice) => {
-                update({ audio: { ...form.audio, voice } });
-              }}
-            />
-            {language === undefined ? null : (
-              <VoiceLanguageNote
-                language={language}
-                voice={ofProvider.find((voice) => voice.voiceId === form.audio.voice)}
-                hidden={byLanguage.hidden}
-                showAll={byLanguage.showAll}
-                onShowAll={byLanguage.setShowAll}
-              />
+            {hidden ? null : (
+              <>
+                <ProviderPicker
+                  field="audio.provider"
+                  label={framing ? "Intro and outro TTS" : "TTS"}
+                  tip="play.tts.provider"
+                  family="tts"
+                  providers={providers}
+                  value={form.audio.provider}
+                  problem={problem("audio")}
+                  onPick={(provider) => {
+                    update({
+                      audio: { ...form.audio, provider, model: "", voice: "" },
+                    });
+                  }}
+                />
+                <ModelPicker
+                  field="audio.model"
+                  label="TTS model"
+                  tip="play.tts.model"
+                  provider={form.audio.provider}
+                  value={form.audio.model}
+                  problem={problem("audio.model")}
+                  onPick={(model) => update({ audio: { ...form.audio, model } })}
+                />
+                <OptionPicker
+                  field="audio.voice"
+                  label={framing ? "Intro and outro voice" : "Voice"}
+                  tip="play.voice"
+                  value={form.audio.voice}
+                  placeholder={
+                    mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"
+                  }
+                  options={mine.map((voice) => ({ value: voice.voiceId, label: voice.name }))}
+                  problem={problem("audio.voice")}
+                  onPick={(voice) => {
+                    update({ audio: { ...form.audio, voice } });
+                  }}
+                />
+                {language === undefined ? null : (
+                  <VoiceLanguageNote
+                    language={language}
+                    voice={ofProvider.find((voice) => voice.voiceId === form.audio.voice)}
+                    hidden={byLanguage.hidden}
+                    showAll={byLanguage.showAll}
+                    onShowAll={byLanguage.setShowAll}
+                  />
+                )}
+                {framing ? (
+                  <p className="col-span-full m-0 text-small text-ink-2">
+                    This voice reads only the intro and outro. Each speaker's voice is set under
+                    Speakers.
+                  </p>
+                ) : null}
+              </>
             )}
             <details className="col-span-full rounded-control border border-line px-3">
               <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
@@ -132,18 +162,13 @@ export function AudioRail({
                   language={language}
                   onChange={(next) => update({ voices: next })}
                 />
-                {form.voices === undefined ? null : (
-                  <p className="mt-3 text-small text-ink-2">
-                    The TTS voice above reads the intro and outro.
-                  </p>
-                )}
               </div>
             </details>
             <details className="col-span-full rounded-control border border-line px-3">
               <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
                 Audio Advanced · {advancedSummary}
               </summary>
-              <div className="grid grid-cols-1 gap-4 pt-2 pb-3 min-[700px]:grid-cols-2">
+              <div className="sl-fields pt-2 pb-3">
                 <div className="col-span-full">
                   <ChunkingControl
                     {...(rawCounts ? { rawCounts } : {})}

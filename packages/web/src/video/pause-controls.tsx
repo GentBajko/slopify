@@ -24,7 +24,7 @@ export function PauseControls({
 }): ReactElement {
   const range = `0 to ${String(pauseSecondsMax)} in steps of ${String(pauseSecondsStep)}`;
   return (
-    <div className="flex min-w-0 flex-wrap gap-4">
+    <div className="sl-fields">
       <Field
         label="Pause between sentences (seconds)"
         tip="project.pause.sentence"
@@ -34,7 +34,7 @@ export function PauseControls({
         <Input
           type="text"
           inputMode="decimal"
-          className="w-[90px] tabular-nums"
+          className="sl-input--number"
           data-play-field="sentencePauseSeconds"
           value={sentence}
           onChange={(event) => onChange("sentencePauseSeconds", event.target.value)}
@@ -49,7 +49,7 @@ export function PauseControls({
         <Input
           type="text"
           inputMode="decimal"
-          className="w-[90px] tabular-nums"
+          className="sl-input--number"
           data-play-field="paragraphPauseSeconds"
           value={paragraph}
           onChange={(event) => onChange("paragraphPauseSeconds", event.target.value)}

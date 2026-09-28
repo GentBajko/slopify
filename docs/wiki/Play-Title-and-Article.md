@@ -52,7 +52,7 @@ Include everything that should be read, headings too. Headings become chapters. 
 
 One text model writes everything this run needs in words: the article, the research, the thumbnail's image prompt, intro and outro entries set to LLM, Narration Preparation, table and figure descriptions, the YouTube description and picking shorts. Each is a separate call, counted in usage.
 
-The **Text generation** section appears under the Article row whenever the run needs a text model. **Settings** beside it opens Settings, where you set the default for new drafts.
+The **Text generation** section appears whenever the run needs a text model, in the row of the first thing that needs it, and its line says what it is used for. It is under **Article** when the article or research is written for you; under **Narration** when only the narration needs it, such as an audiobook whose speakers are worked out from a book you pasted; and under **Outputs** when only the YouTube description, the shorts or the thumbnail prompt need it. There is one text model per run, wherever it shows. **Settings** beside it opens Settings, where you set the default for new drafts.
 
 | Option | What it does | Default |
 | --- | --- | --- |

@@ -10,6 +10,7 @@ import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
 import { DocumentRail, NumberField, ThumbnailRail, VideoExtras, VideoRail } from "./stage-rails";
 import { StyleSection } from "./style-section";
+import { TextGenerationIn } from "./text-generation";
 
 // The editors behind Play's Narration, Images, Video and style, and Outputs rows. Each is the
 // stage's own rail; the raw numbers are edited in the draft document itself so what was typed
@@ -70,14 +71,12 @@ export function NarrationSection(
             />
           ))}
           <div className="col-span-full flex flex-wrap gap-2">
-            {form.narrationPrompt ? (
-              <Button variant="quiet" size="small" onClick={() => props.onKeyword("llm")}>
-                Choose text generation under Article
-              </Button>
-            ) : null}
             <Button variant="quiet" size="small" onClick={props.onSettings}>
               Settings
             </Button>
+          </div>
+          <div className="col-span-full empty:hidden">
+            <TextGenerationIn {...props} section="narration" onSettings={props.onSettings} />
           </div>
         </>
       }
@@ -134,7 +133,7 @@ export function VideoSection(
         }}
       />
       {document.form.sources.audio !== "off" ? (
-        <div className="grid min-w-0 grid-cols-1 gap-4 border-b border-line py-4 min-[700px]:grid-cols-2">
+        <div className="sl-fields border-b border-line py-4">
           <NumberField
             field="silenceGapSeconds"
             label="Silence between segments (seconds)"
@@ -160,9 +159,12 @@ export function VideoSection(
 
 // What the run makes besides the long video: the thumbnail, the YouTube description, Shorts
 // and the PDF.
-export function ExtrasSection(props: RailProps): ReactElement {
+export function ExtrasSection(
+  props: RailProps & { readonly entries: readonly Entry[]; readonly onSettings: () => void },
+): ReactElement {
   return (
     <>
+      <TextGenerationIn {...props} section="outputs" onSettings={props.onSettings} />
       <ThumbnailRail {...props} />
       <section className="border-b border-line py-4">
         <VideoExtras

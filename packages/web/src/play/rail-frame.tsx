@@ -10,7 +10,8 @@ import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
 
-export const railControls = "col-span-3 grid min-w-0 grid-cols-1 gap-4 min-[700px]:grid-cols-2";
+// A section's fields: the kit's field grid (`.sl-fields`, labels above, equal columns).
+export const railControls = "col-span-3 min-w-0 sl-fields";
 export const railBeneath = "col-span-3 min-w-0";
 
 export interface RailProps {

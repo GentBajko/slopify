@@ -42,7 +42,7 @@ export function ReferenceImage({
     .filter((one) => one.kind === "image")
     .map((one) => ({ value: one.name, label: one.name }));
   return (
-    <div className="col-span-full grid min-w-0 grid-cols-1 gap-4 min-[700px]:grid-cols-2">
+    <div className="col-span-full sl-fields">
       <div className="min-w-0">
         <OptionPicker
           field="reference.source"

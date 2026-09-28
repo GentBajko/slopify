@@ -3,6 +3,7 @@ import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { type ReactElement, useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
+import { GridField } from "./grid-field";
 
 // The Video stage's optional step, on Play and in Edit project. Both controls stay mounted:
 // without narration the switch is disabled rather than removed, and so is the prompt while the
@@ -31,8 +32,8 @@ export function YoutubeDescription({
   const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
   const issue = problem?.("youtubeDescription") ?? problem?.("descriptionPrompt");
   return (
-    <div className="col-span-full flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-      <span className="flex items-center gap-1" {...helpScope}>
+    <div className="col-span-full sl-fields">
+      <span className="flex items-center gap-1 self-end" {...helpScope}>
         <label
           htmlFor={`${id}-switch`}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
@@ -56,36 +57,31 @@ export function YoutubeDescription({
         </label>
         <InfoTip id="play.youtube-description" />
       </span>
-      <span className="flex items-center gap-1" {...helpScope}>
-        <label htmlFor={`${id}-prompt`} className="flex items-center gap-2 text-small">
-          Description prompt
-          <Picker
-            id={`${id}-prompt`}
-            data-play-field="descriptionPrompt"
-            className="w-auto min-w-[120px]"
-            value={prompt}
-            disabled={!enabled}
-            onChange={(event) =>
-              onChange({ youtubeDescription: enabled, descriptionPrompt: event.target.value })
-            }
-          >
-            <option value="">{defaultDescriptionPromptName}</option>
-            {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
-            {choices.map((one) => (
-              <option key={one.id} value={one.name}>
-                {one.name}
-              </option>
-            ))}
-          </Picker>
-        </label>
-        <InfoTip id="play.description-prompt" />
-      </span>
+      <GridField htmlFor={`${id}-prompt`} label="Description prompt" tip="play.description-prompt">
+        <Picker
+          id={`${id}-prompt`}
+          data-play-field="descriptionPrompt"
+          value={prompt}
+          disabled={!enabled}
+          onChange={(event) =>
+            onChange({ youtubeDescription: enabled, descriptionPrompt: event.target.value })
+          }
+        >
+          <option value="">{defaultDescriptionPromptName}</option>
+          {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
+          {choices.map((one) => (
+            <option key={one.id} value={one.name}>
+              {one.name}
+            </option>
+          ))}
+        </Picker>
+      </GridField>
       {issue ? (
-        <p id={`${id}-error`} className="basis-full text-small text-danger">
+        <p id={`${id}-error`} className="sl-fields__wide m-0 text-small text-danger">
           {issue}
         </p>
       ) : !narrated ? (
-        <p className="basis-full text-label text-ink-3">Needs narration.</p>
+        <p className="sl-fields__wide m-0 text-label text-ink-3">Needs narration.</p>
       ) : null}
     </div>
   );

@@ -61,7 +61,7 @@ Has the text model add delivery directions and sounds, such as a sigh or a laugh
 | --- | --- | --- |
 | **Narration Preparation** | Pick a narration prompt from the Library, or **Off**. One text-model call per narration chunk and per intro or outro entry. | Off |
 
-It needs the Inworld TTS-2 model. With another model, the field says "Choose Inworld TTS-2 or turn preparation Off." With several speakers it works per speaker: each turn of a speaker on Inworld TTS-2 is prepared on its own, with the speaker's name and role, so every voice gets its own cues. At least one speaker must use TTS-2; turns of speakers on other voices are spoken as written. See [Multiple Voices](Multiple-Voices). When preparation is on, the row offers **Choose text generation under Article** to jump to the text model.
+It needs the Inworld TTS-2 model. With another model, the field says "Choose Inworld TTS-2 or turn preparation Off." With several speakers it works per speaker: each turn of a speaker on Inworld TTS-2 is prepared on its own, with the speaker's name and role, so every voice gets its own cues. At least one speaker must use TTS-2; turns of speakers on other voices are spoken as written. See [Multiple Voices](Multiple-Voices). Preparation is written by the text model: when nothing earlier needs one (a pasted article, say), **Text generation** appears in this row.
 
 ### Pronunciation Glossary
 

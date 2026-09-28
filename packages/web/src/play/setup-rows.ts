@@ -103,7 +103,9 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
 const owns = (prefixes: readonly string[], field: string): boolean =>
   prefixes.some((prefix) => field === prefix || field.startsWith(`${prefix}.`));
 
-export function rowOf(field: string): SetupRowId | undefined {
+// `llmRow` is the row the text model sits in (`llmUsesOf`): its refusal is that row's.
+export function rowOf(field: string, llmRow: SetupRowId = "article"): SetupRowId | undefined {
+  if (owns(["llm"], field)) return llmRow;
   return owners.find(([, prefixes]) => owns(prefixes, field))?.[0];
 }
 
@@ -128,9 +130,10 @@ export function rowProblem(
   row: SetupRowId,
   errors: readonly FieldError[],
   topics: readonly string[],
+  llmRow: SetupRowId = "article",
 ): FieldError | undefined {
   return errors.find((error) => {
-    if (rowOf(error.field) !== row) return false;
+    if (rowOf(error.field, llmRow) !== row) return false;
     if (row !== "title") return true;
     if (error.field === "title") return topics.length > 0;
     return !topics.some((topic) => error.field === `values.${topic}`);

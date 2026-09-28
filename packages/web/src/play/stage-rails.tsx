@@ -3,7 +3,7 @@ import { motionStyleLabels } from "@app/slices/admission/rules.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/kit/field";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
 import { ImageProviderControls } from "@/play/media-rails";
@@ -244,12 +244,12 @@ export function VideoRail({
             />
           ) : null}
           {form.sources.video === "generate" ? (
-            <LabelledField label="Motion" tip="play.motion" problem={undefined} inline>
+            <LabelledField label="Motion" tip="play.motion" problem={undefined}>
               {({ id }) => (
                 <Picker
                   id={id}
                   data-play-field="motionStyle"
-                  className="w-auto min-w-[120px]"
+                  className="w-full"
                   value={form.motionStyle}
                   onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
                 >
@@ -407,14 +407,14 @@ export function NumberField({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <LabelledField label={label} tip={tip} problem={problem} inline>
+    <LabelledField label={label} tip={tip} problem={problem}>
       {({ id, describedBy }) => (
         <Input
           id={id}
           data-play-field={field}
           type="text"
           inputMode={step < 1 ? "decimal" : "numeric"}
-          className="w-[80px] tabular-nums"
+          className="sl-input--number"
           aria-invalid={problem !== undefined}
           aria-describedby={describedBy}
           placeholder={placeholder}
@@ -433,7 +433,7 @@ export function DocumentRail({ form, update }: RailProps) {
     <StageRail kind="document" name="Document" dim={off}>
       <SourceSwitch kind="document" form={form} update={update} />
       <div className={railControls}>
-        <LabelledField label="Theme" tip="play.document-theme" problem={undefined} inline>
+        <LabelledField label="Theme" tip="play.document-theme" problem={undefined}>
           {({ id }) => (
             <span className="flex flex-wrap items-center gap-3">
               <DocumentThemePicker

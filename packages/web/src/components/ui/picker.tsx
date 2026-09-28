@@ -1,4 +1,3 @@
-import { ChevronDownIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -9,23 +8,13 @@ import { cn } from "@/lib/utils";
 // itself. The overlay picker stays where a rich row is wanted; this is for the eight plain
 // lists of one screen.
 function Picker({ className, children, ...props }: React.ComponentProps<"select">) {
+  // The kit's select, height and arrow and all (`.sl-select`), so every dropdown on a screen is
+  // the same size. `className` sizes it: by default it fills its field's column.
   return (
-    <span className="relative inline-flex min-w-0 items-center">
-      <select
-        data-slot="picker"
-        className={cn(
-          "h-8 w-full min-w-0 appearance-none rounded-control border border-line-strong bg-raised",
-          "py-1 pr-6 pl-3 text-small text-ink aria-invalid:border-danger",
-          className,
-        )}
-        {...props}
-      >
+    <span className={cn("relative flex w-full min-w-0", className)}>
+      <select data-slot="picker" className="sl-select" {...props}>
         {children}
       </select>
-      <ChevronDownIcon
-        aria-hidden="true"
-        className="pointer-events-none absolute right-[8px] size-[14px] text-ink-2"
-      />
     </span>
   );
 }
