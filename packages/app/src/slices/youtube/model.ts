@@ -1,5 +1,6 @@
 // The optional YouTube description step of the Video stage: a short summary, a chapter list
-// YouTube turns into chapters, hashtags, and a separate list for YouTube's Tags field.
+// YouTube turns into chapters, hashtags, a separate list for YouTube's Tags field, and a
+// comment to pin under the video.
 // Browser-safe: Play, Edit project and the project page read these names and limits too.
 
 // YouTube's own rules for chapters in a description: the first starts at 0:00, there are at
@@ -13,6 +14,8 @@ export const tagMaxCharacters = 100;
 export const hashtagsMax = 15;
 // YouTube's limit on a description.
 export const descriptionMaxCharacters = 5000;
+// YouTube's limit on a comment is 10,000; a pinned comment people read in full is far shorter.
+export const pinnedCommentMaxCharacters = 1500;
 
 // What a project uses when no Description prompt from the library is picked. No keywords,
 // so it never asks Play for a field.

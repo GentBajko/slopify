@@ -9,7 +9,11 @@ import {
   shownFields,
   splitDescription,
 } from "@app/slices/youtube/edits.js";
-import { descriptionMaxCharacters, tagsMaxCharacters } from "@app/slices/youtube/model.js";
+import {
+  descriptionMaxCharacters,
+  pinnedCommentMaxCharacters,
+  tagsMaxCharacters,
+} from "@app/slices/youtube/model.js";
 import {
   type ChannelLink,
   fillPlaceholders,
@@ -20,8 +24,8 @@ import {
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CopyIcon, PencilIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
+import { CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
+import { type ReactElement, type ReactNode, use, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
   readDescriptionEdits,
@@ -33,6 +37,7 @@ import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand } from "@/components/kit/command-palette";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
@@ -44,12 +49,14 @@ import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { useOutputText } from "./parts.js";
+import { RegenerateNowContext } from "./revision-action-context.js";
 
 const labels: Readonly<Record<DescriptionField, string>> = {
   summary: "Summary",
   chapters: "Chapters",
   hashtags: "Hashtags",
   tags: "Tags",
+  pinnedComment: "Pinned comment",
 };
 
 const fieldTips = {
@@ -57,10 +64,12 @@ const fieldTips = {
   Chapters: "project.youtube.chapters",
   Hashtags: "project.youtube.hashtags",
   Tags: "project.youtube.tags",
+  "Pinned comment": "project.youtube.pinned-comment",
 } as const satisfies Readonly<Record<string, HelpId>>;
 
-// The Video stage's YouTube part: the description (summary, chapters, hashtags) and the tags as
-// written, each editable in place. An edit is kept as the user's own and survives the next
+// The Video stage's YouTube part: the description (summary, chapters, hashtags), the tags and
+// the comment to pin under the video as written, each editable in place, and Write again to
+// have them all written anew. An edit is kept as the user's own and survives the next
 // regeneration: when the description is written again, a field the user changed keeps their
 // text and offers the new one (`slices/youtube/edits.ts`). `{{Name}}` placeholders fill from
 // the project's channel's links (its Brand tab) and this project's own Previous video when
@@ -74,8 +83,13 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const own = outputsOf(outputs, stage);
   const description = roleOf(own, "youtube_description");
   const tags = roleOf(own, "youtube_tags");
+  const pinned = roleOf(own, "youtube_pinned_comment");
   const descriptionText = useOutputText(description).data;
   const tagsText = useOutputText(tags).data;
+  const pinnedText = useOutputText(pinned).data;
+  // Write again remakes only this step, at once: it saves a version with it marked.
+  const regenerateNow = use(RegenerateNowContext);
+  const [rewriting, setRewriting] = useState(false);
   const edits = useQuery({
     queryKey: keys.youtubeEdits(project.id),
     queryFn: () => readDescriptionEdits(api, project.id),
@@ -106,7 +120,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   });
   // Copy description and Copy tags are palette commands too; they copy what is shown here,
   // placeholders filled, so they read the latest text when run.
-  const copyLatest = useRef<{ description?: () => void; tags?: () => void }>({});
+  const copyLatest = useRef<{
+    description?: () => void;
+    tags?: () => void;
+    pinnedComment?: () => void;
+  }>({});
   useCommand({
     id: "project.copy-description",
     title: "Copy description",
@@ -130,10 +148,23 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         ? notify("The tags have not been written yet.", "info")
         : copyLatest.current.tags(),
   });
+  useCommand({
+    id: "project.copy-pinned-comment",
+    title: "Copy pinned comment",
+    group: "This project",
+    context: project.title,
+    keywords: ["youtube", "comment", "pin", "clipboard"],
+    run: () =>
+      copyLatest.current.pinnedComment === undefined
+        ? notify("The pinned comment has not been written yet.", "info")
+        : copyLatest.current.pinnedComment(),
+  });
   if (project.config.youtubeDescription !== true && description === undefined) return null;
 
   const generated: DescriptionFields | undefined =
-    descriptionText === undefined ? undefined : splitDescription(descriptionText, tagsText ?? "");
+    descriptionText === undefined
+      ? undefined
+      : splitDescription(descriptionText, tagsText ?? "", pinnedText ?? "");
   const resolved = resolveFields(generated, edits.data?.fields ?? {});
   const shown = shownFields(resolved);
   const links = mergeLinks(channelLinks.data?.links ?? [], edits.data?.links ?? []);
@@ -151,11 +182,16 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const composed = composeDescription({ ...shown, chapters: fitted.text });
   const filledDescription = fillPlaceholders(composed, links);
   const filledTags = fillPlaceholders(shown.tags, links);
-  const unknown = [...filledDescription.unknown, ...filledTags.unknown].filter(
-    (name, index, all) => all.findIndex((one) => linkKey(one) === linkKey(name)) === index,
-  );
+  const filledComment = fillPlaceholders(shown.pinnedComment, links);
+  const unknown = [
+    ...filledDescription.unknown,
+    ...filledTags.unknown,
+    ...filledComment.unknown,
+  ].filter((name, index, all) => all.findIndex((one) => linkKey(one) === linkKey(name)) === index);
   const tagList = splitTags(filledTags.text);
   const written = generated !== undefined;
+  // A description written before pinned comments existed has none until it is written again.
+  const commented = filledComment.text.trim() !== "";
 
   const copy = (text: string, what: string) => {
     const failed = `Couldn't copy the ${what}. Select the text in the YouTube section and copy it.`;
@@ -179,6 +215,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     ? {
         description: () => copy(filledDescription.text, "description"),
         tags: () => copy(filledTags.text, "tags"),
+        ...(commented ? { pinnedComment: () => copy(filledComment.text, "pinned comment") } : {}),
       }
     : {};
   const waiting =
@@ -193,7 +230,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       links={links}
       disabled={!written || save.isPending}
       multiline={name !== "hashtags"}
-      placeholder={waiting}
+      placeholder={
+        written && name === "pinnedComment"
+          ? "Written before pinned comments existed. Use Write again above to have one written, or Edit to write your own."
+          : waiting
+      }
       render={render}
       onSave={(text) =>
         save.mutate({
@@ -242,6 +283,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             }
             over={filledDescription.text.length > descriptionMaxCharacters}
             main
+            again={
+              written && regenerateNow !== undefined && stage.state !== "running"
+                ? () => setRewriting(true)
+                : undefined
+            }
           />
           {field("summary")}
           {field("chapters", () =>
@@ -269,6 +315,23 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           {field("tags", (text) => (
             <TagChips text={text} links={links} />
           ))}
+          <PartHead
+            id={`${id}-pinned`}
+            label="Pinned comment"
+            copy={
+              written && commented ? () => copy(filledComment.text, "pinned comment") : undefined
+            }
+            count={
+              written && commented
+                ? `${String(filledComment.text.length)} / ${String(pinnedCommentMaxCharacters)} characters`
+                : undefined
+            }
+            over={filledComment.text.length > pinnedCommentMaxCharacters}
+          />
+          {field("pinnedComment")}
+          <p className="m-0 text-small text-ink-3">
+            Post it under the video once it is published, then choose Pin in the comment's menu.
+          </p>
         </div>
       </div>
       {unknown.length === 0 ? null : (
@@ -298,6 +361,20 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         onError={(message) => setStatus({ text: message, tone: "error" })}
       />
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+      <ConfirmDialog
+        open={rewriting}
+        title="Write the description again?"
+        consequence="Your text model writes a new summary, chapters, hashtags, tags and pinned comment. It is one AI call, billed like the first. A field you edited keeps your text and offers the new one beside it."
+        confirmLabel="Write again"
+        cancelLabel="Keep what is there"
+        tone="primary"
+        onConfirm={() => {
+          setRewriting(false);
+          regenerateNow?.(["youtube:description"]);
+          setStatus({ text: "Writing the description again.", tone: "info" });
+        }}
+        onCancel={() => setRewriting(false)}
+      />
     </section>
   );
 }
@@ -310,6 +387,7 @@ function PartHead({
   over,
   keyshortcuts,
   main = false,
+  again,
 }: {
   readonly id: string;
   readonly label: string;
@@ -321,6 +399,8 @@ function PartHead({
   readonly over: boolean;
   // Copy description is the section's main action (the one-click task); Copy tags is not.
   readonly main?: boolean;
+  // Write again, on the description's head; undefined where it is not offered.
+  readonly again?: (() => void) | undefined;
 }): ReactElement {
   return (
     <div className="flex min-h-8 flex-wrap items-center gap-3 border-b border-line pb-2">
@@ -333,6 +413,12 @@ function PartHead({
         </span>
       )}
       <span className="flex-1" />
+      {again === undefined ? null : (
+        <Button type="button" variant="secondary" onClick={again}>
+          <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+          Write again
+        </Button>
+      )}
       <Button
         type="button"
         variant={main ? "primary" : "secondary"}

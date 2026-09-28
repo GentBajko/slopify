@@ -5,6 +5,7 @@ import {
   hashtagsMax,
   minChapterSeconds,
   minChapters,
+  pinnedCommentMaxCharacters,
   tagMaxCharacters,
   tagsMaxCharacters,
 } from "./model.js";
@@ -33,6 +34,7 @@ export interface DescriptionAnswer {
   readonly chapters: readonly Chapter[];
   readonly hashtags: readonly string[];
   readonly tags: readonly string[];
+  readonly pinnedComment: string;
 }
 
 export function descriptionMessages(brief: DescriptionBrief): readonly Message[] {
@@ -42,7 +44,7 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
       role: "system",
       content: [
         "You write YouTube descriptions. Answer with one JSON object and nothing else, in this shape:",
-        '{"summary": "...", "chapters": [{"start": "0:00", "title": "..."}], "hashtags": ["#Example"], "tags": ["example tag"]}',
+        '{"summary": "...", "chapters": [{"start": "0:00", "title": "..."}], "hashtags": ["#Example"], "tags": ["example tag"], "pinnedComment": "..."}',
         "",
         "Rules YouTube enforces, which the answer must follow:",
         '- The first chapter starts at exactly "0:00".',
@@ -54,6 +56,9 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
         `- Tags are plain search terms without # or commas, each at most ${String(tagMaxCharacters)} characters, no tag repeated, and all tags together at most ${String(tagsMaxCharacters)} characters.`,
         "- No < or > anywhere.",
         "- The summary is plain text without chapters, hashtags or links.",
+        `- The pinned comment is plain text without links, at most ${String(pinnedCommentMaxCharacters)} characters.`,
+        "",
+        "The pinned comment is what the channel pins under the video, unless the instructions below say otherwise: thank the viewer in one line, ask one question a viewer can answer from their own experience of the subject, point to the chapters in the description, and end by inviting a suggestion for the next video. Two to four short paragraphs, in the same voice as the summary.",
       ].join("\n"),
     },
     {
@@ -77,6 +82,7 @@ const answerSchema = z.object({
   chapters: z.array(z.object({ start: z.union([z.string(), z.number()]), title: z.string() })),
   hashtags: z.array(z.string()),
   tags: z.array(z.string()),
+  pinnedComment: z.string(),
 });
 
 export type CheckedAnswer =
@@ -92,7 +98,7 @@ export function checkDescriptionAnswer(text: string, durationSeconds: number): C
   if (!parsed.success)
     return {
       ok: false,
-      reason: `The AI model's YouTube description didn't come back in the expected format (a JSON object with a summary, chapters, hashtags and tags). ${fix}`,
+      reason: `The AI model's YouTube description didn't come back in the expected format (a JSON object with a summary, chapters, hashtags, tags and a pinned comment). ${fix}`,
     };
   const summary = parsed.data.summary.trim();
   if (summary === "")
@@ -103,7 +109,21 @@ export function checkDescriptionAnswer(text: string, durationSeconds: number): C
   if (!hashtags.ok) return hashtags;
   const tags = checkTags(parsed.data.tags);
   if (!tags.ok) return tags;
-  const value = { summary, chapters: chapters.value, hashtags: hashtags.value, tags: tags.value };
+  const pinnedComment = parsed.data.pinnedComment.trim();
+  if (pinnedComment === "")
+    return { ok: false, reason: `The AI model wrote no pinned comment. ${fix}` };
+  if (pinnedComment.length > pinnedCommentMaxCharacters)
+    return {
+      ok: false,
+      reason: `The AI model's pinned comment is ${String(pinnedComment.length)} characters, over the ${String(pinnedCommentMaxCharacters)} Slopify allows. ${fix}`,
+    };
+  const value = {
+    summary,
+    chapters: chapters.value,
+    hashtags: hashtags.value,
+    tags: tags.value,
+    pinnedComment,
+  };
   const description = assembleDescription(value);
   if (/[<>]/.test(description))
     return {

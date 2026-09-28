@@ -26,6 +26,7 @@ export const outputRoles: readonly OutputRole[] = [
   "sources",
   "youtube_description",
   "youtube_tags",
+  "youtube_pinned_comment",
   "document_pdf",
   "audio_export",
   "subtitles_srt",

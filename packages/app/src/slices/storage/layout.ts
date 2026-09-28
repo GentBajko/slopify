@@ -84,6 +84,8 @@ export function outputFileName(
       return "description.txt";
     case "youtube_tags":
       return "tags.txt";
+    case "youtube_pinned_comment":
+      return "pinned-comment.txt";
     case "shorts":
       return "shorts.json";
     case "short_image":

@@ -94,7 +94,7 @@ export function readChannelLinksFor(db: DatabaseSync, channelId: string): readon
   return channel.id === defaultChannelId ? readChannelLinks(db) : [];
 }
 
-// The description and tags as the project page shows and copies them: the user's edits over
+// The description, tags and pinned comment as the project page shows and copies them: the user's edits over
 // the generated text, the chapters fitted to YouTube's rules (`chapters.ts`; the last one's
 // length only checked when the video's length is given), placeholders filled from the
 // project's and its channel's links (one with no link stays as typed). For anything that hands
@@ -106,12 +106,21 @@ export function effectiveDescription(
   generated: {
     readonly description: string;
     readonly tags: string;
+    readonly pinnedComment?: string | undefined;
     readonly durationSeconds?: number | undefined;
   },
-): { readonly description: string; readonly tags: string; readonly chapterNotice?: string } {
+): {
+  readonly description: string;
+  readonly tags: string;
+  readonly pinnedComment: string;
+  readonly chapterNotice?: string;
+} {
   const edits = readDescriptionEdits(db, projectId);
   const shown = shownFields(
-    resolveFields(splitDescription(generated.description, generated.tags), edits.fields),
+    resolveFields(
+      splitDescription(generated.description, generated.tags, generated.pinnedComment),
+      edits.fields,
+    ),
   );
   const fitted = fitChapters(shown.chapters, generated.durationSeconds);
   const notice = chapterNotice(fitted.adjustments);
@@ -120,6 +129,7 @@ export function effectiveDescription(
     description: fillPlaceholders(composeDescription({ ...shown, chapters: fitted.text }), links)
       .text,
     tags: fillPlaceholders(shown.tags, links).text,
+    pinnedComment: fillPlaceholders(shown.pinnedComment, links).text,
     ...(notice === undefined ? {} : { chapterNotice: notice }),
   };
 }

@@ -32,6 +32,9 @@ export const outputRoles = [
   "document_pdf",
   "youtube_description",
   "youtube_tags",
+  // A comment to pin under the video, written with the description. Projects described before
+  // it existed have none until the description is written again.
+  "youtube_pinned_comment",
   // The Shorts step: the picked clips (JSON), each clip's vertical images, and each clip.
   "shorts",
   "short_image",

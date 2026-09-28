@@ -5,7 +5,7 @@ import { body, output, stage } from "@/routes/project-fixtures";
 import type { Answer } from "@/test-app";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { YoutubeBlock } from "./body-youtube.js";
-import { RevisionControlContext } from "./revision-action-context.js";
+import { RegenerateNowContext, RevisionControlContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
 
@@ -22,6 +22,7 @@ function mount({
   edits = { fields: {}, links: [] } as unknown,
   links = [{ name: "Patreon", url: "https://patreon.com/rope" }] as unknown,
   extra = {} as Readonly<Record<string, Answer>>,
+  regenerateNow = undefined as ((workKeys: readonly string[]) => void) | undefined,
 } = {}) {
   const video = stage("video", "done");
   const config = { ...revisionView().revision.config, youtubeDescription: true };
@@ -48,13 +49,17 @@ function mount({
   renderRouted(
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
-        <YoutubeBlock stage={video} project={project} outputs={outputs} />
+        <RegenerateNowContext value={regenerateNow}>
+          <YoutubeBlock stage={video} project={project} outputs={outputs} />
+        </RegenerateNowContext>
       </RevisionControlContext>
     </RevisionMedia>,
     testDeps({
       "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }),
       "GET /files/p1/revisions/r1/youtube_description": () => new Response(description),
       "GET /files/p1/revisions/r1/youtube_tags": () => new Response("rope, knots, sailing knots"),
+      "GET /files/p1/revisions/r1/youtube_pinned_comment": () =>
+        new Response("Thanks for tying along. Support: {{Patreon}}"),
       [`GET /api/projects/${project.id}/youtube-edits`]: jsonAnswer(edits),
       [`GET /api/projects/${project.id}/channel-links`]: jsonAnswer({ channelId: "c1", links }),
       ...extra,
@@ -229,4 +234,39 @@ it("keeps the block in place with Copy and Edit disabled until the step has writ
   expect((screen.getByRole("button", { name: "Edit summary" }) as HTMLButtonElement).disabled).toBe(
     true,
   );
+});
+
+it("shows the pinned comment with its links filled, and copies it", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  mount({
+    outputs: [
+      output("youtube_description", "video"),
+      output("youtube_tags", "video"),
+      output("youtube_pinned_comment", "video"),
+    ],
+  });
+  const comment = await screen.findByRole("region", { name: "Pinned comment" });
+  await waitFor(() =>
+    expect(comment.textContent).toBe("Thanks for tying along. Support: https://patreon.com/rope"),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Copy pinned comment" }));
+  expect(writeText).toHaveBeenLastCalledWith(
+    "Thanks for tying along. Support: https://patreon.com/rope",
+  );
+});
+
+it("says a description written before pinned comments has none, and writes it again on request", async () => {
+  const regenerateNow = vi.fn();
+  mount({ regenerateNow });
+  await screen.findByText(/How rope holds/u);
+  expect(screen.getByText(/Written before pinned comments existed/u)).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Copy pinned comment" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Write again" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog.textContent).toContain("A field you edited keeps your text");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Write again" }));
+  expect(regenerateNow).toHaveBeenCalledWith(["youtube:description"]);
 });

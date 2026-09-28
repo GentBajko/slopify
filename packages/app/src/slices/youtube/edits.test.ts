@@ -18,6 +18,7 @@ const written = assembleDescription({
   ],
   hashtags: ["#ink", "#history"],
   tags: ["ink", "history of ink"],
+  pinnedComment: "Thanks for reading along.",
 });
 
 describe("splitDescription", () => {
@@ -27,7 +28,14 @@ describe("splitDescription", () => {
       chapters: "0:00 Intro\n1:15 Iron gall\n1:02:05 Today",
       hashtags: "#ink #history",
       tags: "ink, history of ink",
+      pinnedComment: "",
     });
+  });
+
+  it("carries the pinned comment beside the description", () => {
+    expect(splitDescription(written, "", "  Thanks for reading along.\n").pinnedComment).toBe(
+      "Thanks for reading along.",
+    );
   });
 
   it("keeps text it cannot place in the summary", () => {
@@ -36,6 +44,7 @@ describe("splitDescription", () => {
       chapters: "",
       hashtags: "",
       tags: "",
+      pinnedComment: "",
     });
   });
 

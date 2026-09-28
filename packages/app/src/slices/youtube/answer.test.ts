@@ -16,6 +16,7 @@ const good = {
   ],
   hashtags: ["#History", "AncientEgypt", "#Ashurbanipal"],
   tags: ["history", "ancient egypt", "ashurbanipal"],
+  pinnedComment: "Thanks for watching. Which heist would you plan?",
 };
 const duration = 20 * 60;
 const check = (answer: unknown, seconds = duration) =>
@@ -149,6 +150,12 @@ describe("checkDescriptionAnswer", () => {
 
   it("refuses tags over YouTube's limits, repeated or with commas", () => {
     expect(reason({ ...good, tags: [] })).toMatch(/at least one tag/);
+    expect(reason({ ...good, pinnedComment: "  " })).toMatch(/wrote no pinned comment/);
+    expect(reason({ ...good, pinnedComment: "x".repeat(1501) })).toMatch(
+      /pinned comment is 1501 characters, over the 1500/,
+    );
+    const { pinnedComment: _left, ...withoutComment } = good;
+    expect(reason(withoutComment)).toMatch(/and a pinned comment\)/);
     expect(reason({ ...good, tags: ["x".repeat(101)] })).toMatch(/over 100 characters/);
     expect(reason({ ...good, tags: ["history", "History"] })).toMatch(/"History" is listed twice/);
     expect(reason({ ...good, tags: ["history, egypt"] })).toMatch(/contains a comma/);

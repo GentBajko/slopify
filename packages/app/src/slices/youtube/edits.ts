@@ -1,12 +1,18 @@
 // Hand edits to the YouTube description. The project page lets the user edit the summary,
-// the chapters, the hashtags and the tags in place; each edit is saved with the generated
+// the chapters, the hashtags, the tags and the pinned comment in place; each edit is saved with the generated
 // text it was made from (`base`), so when the description is written again the page can tell
 // a field the user changed from one they left alone. Browser-safe: the project page applies
 // these rules to what it shows, and the server only stores the edits.
 
 import { parseTimestamp } from "./timestamps.js";
 
-export const descriptionFields = ["summary", "chapters", "hashtags", "tags"] as const;
+export const descriptionFields = [
+  "summary",
+  "chapters",
+  "hashtags",
+  "tags",
+  "pinnedComment",
+] as const;
 export type DescriptionField = (typeof descriptionFields)[number];
 
 // Each field as the text box shows it: the chapters one "M:SS Title" per line, the hashtags
@@ -32,10 +38,15 @@ export interface ResolvedField {
   readonly pending?: string | undefined;
 }
 
-// Splits a written description back into its three parts. `assembleDescription` (answer.ts) lays it out as
+// Splits a written description back into its three parts, beside the tags and the pinned
+// comment (empty for a description written before pinned comments existed). `assembleDescription` (answer.ts) lays it out as
 // the summary, a blank line, one chapter per line, a blank line and the hashtags; reading it
 // from the end keeps a summary with blank lines of its own whole.
-export function splitDescription(description: string, tags: string): DescriptionFields {
+export function splitDescription(
+  description: string,
+  tags: string,
+  pinnedComment = "",
+): DescriptionFields {
   const lines = description.replace(/\r\n?/gu, "\n").split("\n");
   while (lines.length > 0 && lines.at(-1)?.trim() === "") lines.pop();
   let hashtags = "";
@@ -54,6 +65,7 @@ export function splitDescription(description: string, tags: string): Description
     chapters: chapters.join("\n"),
     hashtags,
     tags: tags.trim(),
+    pinnedComment: pinnedComment.trim(),
   };
 }
 
@@ -97,6 +109,7 @@ export function resolveFields(
     chapters: one("chapters"),
     hashtags: one("hashtags"),
     tags: one("tags"),
+    pinnedComment: one("pinnedComment"),
   };
 }
 
@@ -108,6 +121,7 @@ export function shownFields(
     chapters: resolved.chapters.text,
     hashtags: resolved.hashtags.text,
     tags: resolved.tags.text,
+    pinnedComment: resolved.pinnedComment.text,
   };
 }
 

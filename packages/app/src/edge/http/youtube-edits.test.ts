@@ -147,6 +147,7 @@ describe("effectiveDescription", () => {
     const generated = {
       description: "Generated summary. {{Patreon}}\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
       tags: "rope, knots",
+      pinnedComment: "Support the channel: {{Patreon}}",
     };
     await send(app, "PUT", "/api/settings/channel-links", {
       links: [{ name: "Patreon", url: "https://patreon.com/me" }],
@@ -158,6 +159,7 @@ describe("effectiveDescription", () => {
     expect(effectiveDescription(db, "p1", generated)).toEqual({
       description: "Generated summary. https://patreon.com/me\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
       tags: "rope, {{Discord}}",
+      pinnedComment: "Support the channel: https://patreon.com/me",
     });
   });
 
@@ -199,6 +201,7 @@ describe("effectiveDescription", () => {
     expect(effectiveDescription(db, "p1", generated)).toEqual({
       description: "Support: https://patreon.com/night",
       tags: "https://discord.test/night",
+      pinnedComment: "",
     });
     expect(await (await send(app, "GET", "/api/projects/p1/channel-links")).json()).toEqual({
       channelId: channel.id,
@@ -252,6 +255,7 @@ describe("effectiveDescription", () => {
     expect(effectiveDescription(db, "p1", generated)).toEqual({
       description: "Summary.\n\n0:00 A\n0:26 Blink\n0:40 C\n\n#Rope",
       tags: "rope",
+      pinnedComment: "",
       chapterNotice:
         'Chapters adjusted for YouTube: moved the first, "A", from 0:03 to 0:00; merged "B" (6 s) into "A".',
     });

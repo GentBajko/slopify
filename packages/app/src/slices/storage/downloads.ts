@@ -90,7 +90,9 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
     return { ok: false, reason: "missing-file" };
   }
   const shown =
-    output.role === "youtube_description" || output.role === "youtube_tags"
+    output.role === "youtube_description" ||
+    output.role === "youtube_tags" ||
+    output.role === "youtube_pinned_comment"
       ? shownYoutubeText(deps, projectId, output.role)
       : undefined;
   return {
@@ -105,14 +107,14 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
   };
 }
 
-// The description and tags download as the project page shows and copies them, and as Prepare
+// The description, tags and pinned comment download as the project page shows and copies them, and as Prepare
 // upload hands them on: the user's hand edits over the written text, chapters fitted, and the
 // channel's and project's links filled in (`youtube/edits-repo.ts`). The file on disk stays
 // the generated text, so regeneration can tell the user's edits from its own.
 function shownYoutubeText(
   deps: DownloadDeps,
   projectId: string,
-  role: "youtube_description" | "youtube_tags",
+  role: "youtube_description" | "youtube_tags" | "youtube_pinned_comment",
 ): Uint8Array<ArrayBuffer> | undefined {
   const outputs = outputsOf(deps.db, projectId);
   const read = (wanted: string): string | undefined => {
@@ -127,12 +129,18 @@ function shownYoutubeText(
   const shown = effectiveDescription(deps.db, projectId, {
     description,
     tags: read("youtube_tags") ?? "",
+    pinnedComment: read("youtube_pinned_comment"),
     durationSeconds:
       video?.durationMs === null || video?.durationMs === undefined
         ? undefined
         : video.durationMs / 1000,
   });
-  const text = role === "youtube_description" ? shown.description : shown.tags;
+  const text =
+    role === "youtube_description"
+      ? shown.description
+      : role === "youtube_tags"
+        ? shown.tags
+        : shown.pinnedComment;
   return new TextEncoder().encode(`${text}\n`);
 }
 

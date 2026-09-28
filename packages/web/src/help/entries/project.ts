@@ -233,6 +233,11 @@ export const projectHelp = {
     body: "Search tags for YouTube's Tags field, which allows 500 characters in all, commas included. They are not shown to viewers. Edit changes them in place and your edit survives the next rewrite; Copy gives them comma-separated, ready to paste.",
     tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
   },
+  "project.youtube.pinned-comment": {
+    title: "Pinned comment",
+    body: "A comment to pin under the video, written with the description: a thank-you, a question for viewers and a pointer to the chapters. Your Description prompt can shape it. YouTube pins comments only on a published video: post it from your channel, then choose Pin in its menu. Your edits survive the next rewrite.",
+    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
+  },
   "project.youtube.previous-video": {
     title: "Previous video for this project",
     body: "The link that {{Previous video}} fills in this project's description, ahead of the one on its channel's Brand tab. Paste the video this one follows on from. It changes only what is shown and copied, with no text call. Save links keeps it.",

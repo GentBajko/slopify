@@ -1,0 +1,5 @@
+# A pinned comment with the YouTube description
+
+- The YouTube description step also writes a comment to pin under the video: a thank-you, a question viewers can answer from their own experience, a pointer to the chapters and an ask for the next topic. It shows under Tags in the project's YouTube section with Copy, is editable like the other parts (edits survive a rewrite), fills `{{Link}}` placeholders, downloads as `pinned-comment.txt` and has a Copy pinned comment command.
+- **Write again** beside Description writes the description, tags and pinned comment anew at once, after asking; it no longer takes Edit project → Prompts and a remake.
+- Nothing becomes outdated: a description written before shows no pinned comment until it is written again.

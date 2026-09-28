@@ -73,6 +73,7 @@ const chapters = (first: string) =>
     ],
     hashtags: ["#Saved"],
     tags: ["saved"],
+    pinnedComment: "Thanks for listening.",
   });
 
 it("fails in plain words when every answer breaks YouTube's chapter rules", async () => {
@@ -125,7 +126,7 @@ it("asks again after a malformed answer and fails on chapters shorter than YouTu
   }
 });
 
-it("publishes description.txt and tags.txt in the Video stage", async () => {
+it("publishes description.txt, tags.txt and pinned-comment.txt in the Video stage", async () => {
   // 30 s of silence either side makes room for three chapters around the 4 s narration.
   const h = await described(30);
   try {
@@ -139,6 +140,7 @@ it("publishes description.txt and tags.txt in the Video stage", async () => {
       ],
       hashtags: ["#Saved"],
       tags: ["saved", "article"],
+      pinnedComment: "Thanks for listening.\n\nWhat should come next?",
     });
     const counted: unknown[][] = [];
     expect(
@@ -165,6 +167,7 @@ it("publishes description.txt and tags.txt in the Video stage", async () => {
       "A saved article.\n\n0:00 One\n0:20 Two\n0:40 Three\n\n#Saved",
     );
     expect(read("youtube_tags")).toBe("saved, article");
+    expect(read("youtube_pinned_comment")).toBe("Thanks for listening.\n\nWhat should come next?");
   } finally {
     h.close();
   }

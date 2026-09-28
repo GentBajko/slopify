@@ -521,7 +521,7 @@ const groups: readonly OutdatedGroup[] = [
     plural: "YouTube descriptions",
     singular: true,
     section: "youtube",
-    roles: ["youtube_description", "youtube_tags"],
+    roles: ["youtube_description", "youtube_tags", "youtube_pinned_comment"],
     counted: ["youtube_description"],
   },
   {
