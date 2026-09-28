@@ -17,6 +17,7 @@ const good = {
   hashtags: ["#History", "AncientEgypt", "#Ashurbanipal"],
   tags: ["history", "ancient egypt", "ashurbanipal"],
   pinnedComment: "Thanks for watching. Which heist would you plan?",
+  titles: ["How Ashurbanipal Planned It", "The Heist Nobody Saw Coming"],
 };
 const duration = 20 * 60;
 const check = (answer: unknown, seconds = duration) =>
@@ -155,7 +156,20 @@ describe("checkDescriptionAnswer", () => {
       /pinned comment is 1501 characters, over the 1500/,
     );
     const { pinnedComment: _left, ...withoutComment } = good;
-    expect(reason(withoutComment)).toMatch(/and a pinned comment\)/);
+    expect(reason(withoutComment)).toMatch(/a pinned comment and titles\)/);
+  });
+
+  it("refuses other titles YouTube's test can't take", () => {
+    expect(reason({ ...good, titles: ["Only One"] })).toMatch(
+      /must be 2 other titles, and it wrote 1/,
+    );
+    expect(reason({ ...good, titles: ["A", "x".repeat(101)] })).toMatch(/over 100 characters/);
+    expect(reason({ ...good, titles: ["Same", "same"] })).toMatch(/"same" repeats a title/);
+    const result = check(good, duration);
+    expect(result.ok && result.value.titles).toEqual(good.titles);
+    expect(
+      checkDescriptionAnswer(JSON.stringify(good), duration, "How Ashurbanipal planned it"),
+    ).toMatchObject({ ok: false, reason: expect.stringMatching(/repeats a title/) });
     expect(reason({ ...good, tags: ["x".repeat(101)] })).toMatch(/over 100 characters/);
     expect(reason({ ...good, tags: ["history", "History"] })).toMatch(/"History" is listed twice/);
     expect(reason({ ...good, tags: ["history, egypt"] })).toMatch(/contains a comma/);

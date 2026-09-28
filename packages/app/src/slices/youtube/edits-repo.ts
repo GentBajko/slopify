@@ -94,7 +94,8 @@ export function readChannelLinksFor(db: DatabaseSync, channelId: string): readon
   return channel.id === defaultChannelId ? readChannelLinks(db) : [];
 }
 
-// The description, tags and pinned comment as the project page shows and copies them: the user's edits over
+// The description, tags, pinned comment and other titles as the project page shows and copies
+// them: the user's edits over
 // the generated text, the chapters fitted to YouTube's rules (`chapters.ts`; the last one's
 // length only checked when the video's length is given), placeholders filled from the
 // project's and its channel's links (one with no link stays as typed). For anything that hands
@@ -107,18 +108,24 @@ export function effectiveDescription(
     readonly description: string;
     readonly tags: string;
     readonly pinnedComment?: string | undefined;
+    readonly titles?: string | undefined;
     readonly durationSeconds?: number | undefined;
   },
 ): {
   readonly description: string;
   readonly tags: string;
   readonly pinnedComment: string;
+  // One per line.
+  readonly titles: string;
   readonly chapterNotice?: string;
 } {
   const edits = readDescriptionEdits(db, projectId);
   const shown = shownFields(
     resolveFields(
-      splitDescription(generated.description, generated.tags, generated.pinnedComment),
+      splitDescription(generated.description, generated.tags, {
+        pinnedComment: generated.pinnedComment,
+        titles: generated.titles,
+      }),
       edits.fields,
     ),
   );
@@ -130,6 +137,7 @@ export function effectiveDescription(
       .text,
     tags: fillPlaceholders(shown.tags, links).text,
     pinnedComment: fillPlaceholders(shown.pinnedComment, links).text,
+    titles: shown.titles,
     ...(notice === undefined ? {} : { chapterNotice: notice }),
   };
 }

@@ -238,6 +238,11 @@ export const projectHelp = {
     body: "A comment to pin under the video, written with the description: a thank-you, a question for viewers and a pointer to the chapters. Your Description prompt can shape it. YouTube pins comments only on a published video: post it from your channel, then choose Pin in its menu. Your edits survive the next rewrite.",
     tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
   },
+  "project.youtube.titles": {
+    title: "Other titles",
+    body: "Two more titles for this video, written with the description, each a different angle. YouTube's A/B Testing, beside the title in Studio, shows up to three titles to viewers and keeps the one watched most. Edit them one per line; your edits survive the next rewrite.",
+    tutorial: { page: "YouTube-Description", anchor: "edit-a-part" },
+  },
   "project.youtube.previous-video": {
     title: "Previous video for this project",
     body: "The link that {{Previous video}} fills in this project's description, ahead of the one on its channel's Brand tab. Paste the video this one follows on from. It changes only what is shown and copied, with no text call. Save links keeps it.",

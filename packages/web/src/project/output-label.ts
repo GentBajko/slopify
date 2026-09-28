@@ -26,6 +26,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   youtube_description: "YouTube description",
   youtube_tags: "YouTube tags",
   youtube_pinned_comment: "Pinned comment",
+  youtube_titles: "Other titles",
   shorts: "Shorts list",
   short_image: "Short image",
   short_video: "Short",

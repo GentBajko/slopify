@@ -92,7 +92,8 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
   const shown =
     output.role === "youtube_description" ||
     output.role === "youtube_tags" ||
-    output.role === "youtube_pinned_comment"
+    output.role === "youtube_pinned_comment" ||
+    output.role === "youtube_titles"
       ? shownYoutubeText(deps, projectId, output.role)
       : undefined;
   return {
@@ -107,14 +108,14 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
   };
 }
 
-// The description, tags and pinned comment download as the project page shows and copies them, and as Prepare
+// The description, tags, pinned comment and other titles download as the project page shows and copies them, and as Prepare
 // upload hands them on: the user's hand edits over the written text, chapters fitted, and the
 // channel's and project's links filled in (`youtube/edits-repo.ts`). The file on disk stays
 // the generated text, so regeneration can tell the user's edits from its own.
 function shownYoutubeText(
   deps: DownloadDeps,
   projectId: string,
-  role: "youtube_description" | "youtube_tags" | "youtube_pinned_comment",
+  role: "youtube_description" | "youtube_tags" | "youtube_pinned_comment" | "youtube_titles",
 ): Uint8Array<ArrayBuffer> | undefined {
   const outputs = outputsOf(deps.db, projectId);
   const read = (wanted: string): string | undefined => {
@@ -130,6 +131,7 @@ function shownYoutubeText(
     description,
     tags: read("youtube_tags") ?? "",
     pinnedComment: read("youtube_pinned_comment"),
+    titles: read("youtube_titles"),
     durationSeconds:
       video?.durationMs === null || video?.durationMs === undefined
         ? undefined
@@ -140,7 +142,9 @@ function shownYoutubeText(
       ? shown.description
       : role === "youtube_tags"
         ? shown.tags
-        : shown.pinnedComment;
+        : role === "youtube_pinned_comment"
+          ? shown.pinnedComment
+          : shown.titles;
   return new TextEncoder().encode(`${text}\n`);
 }
 

@@ -27,6 +27,7 @@ const pack: UploadPack = {
       kind: "video",
       video: { ...file("video", "the-fox-video.mp4"), contentType: "video/mp4" },
       title: "The Fox",
+      titles: ["The Fox Who Ran", "Why the Fox Ran"],
       description: "A fox.\n\n0:00 Intro",
       tags: ["fox", "cliff"],
       thumbnails: [file("thumbnail", "the-fox-thumbnail.png"), file("thumbnail-2", "t2.png")],
@@ -40,6 +41,7 @@ const pack: UploadPack = {
       short: 1,
       video: null,
       title: "The jump",
+      titles: [],
       description: "Leap.",
       tags: ["fox"],
       thumbnails: [],
@@ -112,6 +114,9 @@ describe("Prepare upload", () => {
     expect(within(drawer).getByText(/moved the first, "Intro", from 0:04 to 0:00/)).not.toBeNull();
     // Each row carries its own small action: Copy for text, Download for files.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
+    // The other titles for Studio's A/B Testing, with a Copy of their own.
+    expect(within(drawer).getByText(/also "The Fox Who Ran" and "Why the Fox Ran"/)).not.toBeNull();
+    expect(within(drawer).getByRole("button", { name: "Copy the other titles" })).not.toBeNull();
     expect(
       within(drawer).getByRole("link", { name: "Download the-fox-video.mp4" }).getAttribute("href"),
     ).toBe("http://slopify.test/files/p1/video");

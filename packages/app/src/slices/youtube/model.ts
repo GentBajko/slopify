@@ -1,6 +1,6 @@
 // The optional YouTube description step of the Video stage: a short summary, a chapter list
-// YouTube turns into chapters, hashtags, a separate list for YouTube's Tags field, and a
-// comment to pin under the video.
+// YouTube turns into chapters, hashtags, a separate list for YouTube's Tags field, a comment
+// to pin under the video, and two more titles for YouTube's title A/B test.
 // Browser-safe: Play, Edit project and the project page read these names and limits too.
 
 // YouTube's own rules for chapters in a description: the first starts at 0:00, there are at
@@ -14,6 +14,10 @@ export const tagMaxCharacters = 100;
 export const hashtagsMax = 15;
 // YouTube's limit on a description.
 export const descriptionMaxCharacters = 5000;
+// YouTube's title A/B test ("Test & compare") takes up to three titles: the video's own and
+// these alternatives. YouTube's limit on a title.
+export const alternativeTitles = 2;
+export const titleMaxCharacters = 100;
 // YouTube's limit on a comment is 10,000; a pinned comment people read in full is far shorter.
 export const pinnedCommentMaxCharacters = 1500;
 

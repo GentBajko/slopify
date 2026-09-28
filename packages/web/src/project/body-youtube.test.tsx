@@ -60,6 +60,8 @@ function mount({
       "GET /files/p1/revisions/r1/youtube_tags": () => new Response("rope, knots, sailing knots"),
       "GET /files/p1/revisions/r1/youtube_pinned_comment": () =>
         new Response("Thanks for tying along. Support: {{Patreon}}"),
+      "GET /files/p1/revisions/r1/youtube_titles": () =>
+        new Response("Rope That Holds\nThe Knot Sailors Trust"),
       [`GET /api/projects/${project.id}/youtube-edits`]: jsonAnswer(edits),
       [`GET /api/projects/${project.id}/channel-links`]: jsonAnswer({ channelId: "c1", links }),
       ...extra,
@@ -269,4 +271,21 @@ it("says a description written before pinned comments has none, and writes it ag
   expect(dialog.textContent).toContain("A field you edited keeps your text");
   await userEvent.click(within(dialog).getByRole("button", { name: "Write again" }));
   expect(regenerateNow).toHaveBeenCalledWith(["youtube:description"]);
+});
+
+it("shows the other titles for YouTube's A/B test and copies them one per line", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  mount({
+    outputs: [
+      output("youtube_description", "video"),
+      output("youtube_tags", "video"),
+      output("youtube_titles", "video"),
+    ],
+  });
+  const titles = await screen.findByRole("region", { name: "Other titles" });
+  await waitFor(() => expect(titles.textContent).toBe("Rope That Holds\nThe Knot Sailors Trust"));
+  expect(screen.getByText("3 titles to test")).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Copy other titles" }));
+  expect(writeText).toHaveBeenLastCalledWith("Rope That Holds\nThe Knot Sailors Trust");
 });

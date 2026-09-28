@@ -29,6 +29,7 @@ const answer = (first: string) =>
     hashtags: ["#Rope", "Knots"],
     tags: ["rope", "knots", "sailing knots"],
     pinnedComment: "Thanks for listening.",
+    titles: ["Another Title", "A Third Title"],
   });
 
 // With narration and captions off, the timing still runs so the chapters have real times.

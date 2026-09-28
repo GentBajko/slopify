@@ -437,6 +437,33 @@ function Steps({
             ),
           actions: copyAction(step),
         };
+      case "title":
+        return item.titles.length === 0
+          ? { value: copyTextOf(item, step), actions: copyAction(step) }
+          : {
+              value: (
+                <span className="flex flex-col gap-1">
+                  <span>{item.title}</span>
+                  <span className="text-ink-2">
+                    {`A/B Testing (beside the title): also ${item.titles.map((one) => `"${one}"`).join(" and ")}`}
+                  </span>
+                </span>
+              ),
+              actions: (
+                <>
+                  {copyAction(step)}
+                  <Button
+                    variant="quiet"
+                    size="small"
+                    aria-label="Copy the other titles"
+                    onClick={() => copy(item.titles.join("\n"), "other titles")}
+                  >
+                    <CopyIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+                    Copy others
+                  </Button>
+                </>
+              ),
+            };
       case "playlist":
         return {
           value: item.playlist ?? (

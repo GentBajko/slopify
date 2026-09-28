@@ -2,7 +2,7 @@
 
 Slopify can write your video's YouTube description for you: a short summary, chapters at the narration's real times, hashtags, and a separate list of search tags. Each part has a Copy button and can be edited in place, and your edits survive when the description is written again.
 
-**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags and Pinned comment), and Edit project → **Prompts**.
+**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the **YouTube** section (Description, Tags, Pinned comment and Other titles), and Edit project → **Prompts**.
 
 ## What you get
 
@@ -13,8 +13,9 @@ Slopify can write your video's YouTube description for you: a short summary, cha
 | **Hashtags** | The hashtags at the end of the description. YouTube shows the first three above the title. |
 | **Tags** | Search tags for YouTube Studio's **Tags** field, kept separate from the description. Viewers don't see them. |
 | **Pinned comment** | A comment to post under the video and pin: a thank-you, a question viewers can answer from their own experience, a pointer to the chapters and an ask for the next topic. Your Description prompt can say how you want it. |
+| **Other titles** | Two more titles for YouTube's **A/B Testing** (Test & compare), beside the project's own title: each a different angle on the same video, one per line. |
 
-Slopify lays out the description itself (summary, blank line, one chapter per line, blank line, hashtags), so the layout YouTube needs never depends on the model's spacing. The files are saved in the project as `description.txt`, `tags.txt` and `pinned-comment.txt`.
+Slopify lays out the description itself (summary, blank line, one chapter per line, blank line, hashtags), so the layout YouTube needs never depends on the model's spacing. The files are saved in the project as `description.txt`, `tags.txt`, `pinned-comment.txt` and `titles.txt`.
 
 ## Turn it on
 
@@ -43,11 +44,12 @@ To change the tone or add your own links, write a prompt of the kind **YouTube D
 
 ## Read and copy it
 
-When the step has run, the project page's **YouTube** section shows three parts. A finished project with a written description opens on this section, so copying it is one press:
+When the step has run, the project page's **YouTube** section shows four parts. A finished project with a written description opens on this section, so copying it is one press:
 
 - **Description**, with the Summary, Chapters and Hashtags, a character count such as `1,240 / 5000 characters`, and **Copy**.
 - **Tags**, shown as chips, with a count against YouTube's 500-character limit and **Copy**.
 - **Pinned comment**, below the tags, with **Copy**. YouTube pins comments only on a published video: once it is live, post the comment from your channel and choose **Pin** in its menu.
+- **Other titles**, below the pinned comment, with **Copy**. In Studio, press **A/B Testing** beside the title and add them next to the video's own title. Prepare upload lists them in its Title step with **Copy others**.
 
 **Copy** on Description copies the whole description, placeholders filled in. **Copy** on Tags copies them comma-separated, ready to paste. A count over YouTube's limit turns red and says "over YouTube's limit".
 
@@ -57,7 +59,7 @@ While the stage is running the parts say "Written after the subtitle timing."; b
 
 ## Edit a part
 
-1. In the project's YouTube section, press **Edit** beside Summary, Chapters, Hashtags, Tags or Pinned comment.
+1. In the project's YouTube section, press **Edit** beside Summary, Chapters, Hashtags, Tags, Pinned comment or Other titles.
 2. Change the text and save.
 
 Your text is now marked **Your edit**. It is kept as yours:
@@ -105,7 +107,7 @@ Because placeholders are filled when shown or copied, changing a channel's link 
 
 ## Write it again, or turn it on later
 
-To write a description again, press **Write again** beside **Description** in the project's YouTube section, then confirm. Only this step runs. A description written before pinned comments existed shows none until it is written again this way.
+To write a description again, press **Write again** beside **Description** in the project's YouTube section, then confirm. Only this step runs. A description written before pinned comments and other titles existed shows neither until it is written again this way.
 
 To turn it on, or to change its prompt first:
 

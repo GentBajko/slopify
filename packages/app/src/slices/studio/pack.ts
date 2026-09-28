@@ -115,6 +115,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       : effectiveDescription(deps.db, projectId, {
           description: written,
           tags: writtenTags ?? "",
+          titles: text(outputs.find((output) => output.role === "youtube_titles")),
           // The last chapter is checked against the video's own length when it is known.
           durationSeconds:
             video?.durationMs === null || video?.durationMs === undefined
@@ -155,6 +156,10 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       kind: "video",
       video: video === undefined ? null : file(video),
       title: project.title.slice(0, studioTitleMax),
+      titles: (edited?.titles ?? "")
+        .split("\n")
+        .map((one) => one.trim().slice(0, studioTitleMax))
+        .filter((one) => one !== ""),
       description: description ?? "",
       tags: tagsOf(tagsFile),
       thumbnails: thumbnails.map(file),
@@ -187,6 +192,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       short: clip.number,
       video: render === undefined ? null : file(render),
       title: clip.title.slice(0, studioTitleMax),
+      titles: [],
       description: [
         clip.description,
         fullVideoLine(config.shorts?.fullVideoLink),

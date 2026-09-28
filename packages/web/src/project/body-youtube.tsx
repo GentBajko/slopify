@@ -1,3 +1,4 @@
+import { studioTitleMax } from "@app/slices/studio/model.js";
 import { tagsLength } from "@app/slices/youtube/answer.js";
 import { chapterNotice, fitChapters } from "@app/slices/youtube/chapters.js";
 import {
@@ -57,6 +58,7 @@ const labels: Readonly<Record<DescriptionField, string>> = {
   hashtags: "Hashtags",
   tags: "Tags",
   pinnedComment: "Pinned comment",
+  titles: "Other titles",
 };
 
 const fieldTips = {
@@ -65,6 +67,7 @@ const fieldTips = {
   Hashtags: "project.youtube.hashtags",
   Tags: "project.youtube.tags",
   "Pinned comment": "project.youtube.pinned-comment",
+  "Other titles": "project.youtube.titles",
 } as const satisfies Readonly<Record<string, HelpId>>;
 
 // The Video stage's YouTube part: the description (summary, chapters, hashtags), the tags and
@@ -84,9 +87,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const description = roleOf(own, "youtube_description");
   const tags = roleOf(own, "youtube_tags");
   const pinned = roleOf(own, "youtube_pinned_comment");
+  const otherTitles = roleOf(own, "youtube_titles");
   const descriptionText = useOutputText(description).data;
   const tagsText = useOutputText(tags).data;
   const pinnedText = useOutputText(pinned).data;
+  const titlesText = useOutputText(otherTitles).data;
   // Write again remakes only this step, at once: it saves a version with it marked.
   const regenerateNow = use(RegenerateNowContext);
   const [rewriting, setRewriting] = useState(false);
@@ -164,7 +169,10 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const generated: DescriptionFields | undefined =
     descriptionText === undefined
       ? undefined
-      : splitDescription(descriptionText, tagsText ?? "", pinnedText ?? "");
+      : splitDescription(descriptionText, tagsText ?? "", {
+          pinnedComment: pinnedText,
+          titles: titlesText,
+        });
   const resolved = resolveFields(generated, edits.data?.fields ?? {});
   const shown = shownFields(resolved);
   const links = mergeLinks(channelLinks.data?.links ?? [], edits.data?.links ?? []);
@@ -192,6 +200,10 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const written = generated !== undefined;
   // A description written before pinned comments existed has none until it is written again.
   const commented = filledComment.text.trim() !== "";
+  const titleList = shown.titles
+    .split("\n")
+    .map((one) => one.trim())
+    .filter((one) => one !== "");
 
   const copy = (text: string, what: string) => {
     const failed = `Couldn't copy the ${what}. Select the text in the YouTube section and copy it.`;
@@ -233,7 +245,9 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       placeholder={
         written && name === "pinnedComment"
           ? "Written before pinned comments existed. Use Write again above to have one written, or Edit to write your own."
-          : waiting
+          : written && name === "titles"
+            ? "Written before other titles existed. Use Write again above to have two written, or Edit to write your own, one per line."
+            : waiting
       }
       render={render}
       onSave={(text) =>
@@ -331,6 +345,25 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           {field("pinnedComment")}
           <p className="m-0 text-small text-ink-3">
             Post it under the video once it is published, then choose Pin in the comment's menu.
+          </p>
+          <PartHead
+            id={`${id}-titles`}
+            label="Other titles"
+            copy={
+              written && titleList.length > 0
+                ? () => copy(titleList.join("\n"), "other titles")
+                : undefined
+            }
+            count={
+              written && titleList.length > 0
+                ? `${String(titleList.length + 1)} titles to test`
+                : undefined
+            }
+            over={titleList.some((one) => one.length > studioTitleMax)}
+          />
+          {field("titles")}
+          <p className="m-0 text-small text-ink-3">
+            {`For YouTube's A/B Testing beside the title, with this project's own title "${project.title}". One per line.`}
           </p>
         </div>
       </div>

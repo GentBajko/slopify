@@ -78,6 +78,7 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     case "youtube_description":
     case "youtube_tags":
     case "youtube_pinned_comment":
+    case "youtube_titles":
       return "youtube:description";
     case "shorts":
       return "shorts:pick";

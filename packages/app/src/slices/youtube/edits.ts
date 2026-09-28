@@ -12,11 +12,13 @@ export const descriptionFields = [
   "hashtags",
   "tags",
   "pinnedComment",
+  "titles",
 ] as const;
 export type DescriptionField = (typeof descriptionFields)[number];
 
 // Each field as the text box shows it: the chapters one "M:SS Title" per line, the hashtags
-// separated by spaces and the tags by commas, which is how YouTube's fields take them.
+// separated by spaces and the tags by commas, which is how YouTube's fields take them; the
+// other titles one per line.
 export type DescriptionFields = Readonly<Record<DescriptionField, string>>;
 
 export interface FieldEdit {
@@ -38,14 +40,17 @@ export interface ResolvedField {
   readonly pending?: string | undefined;
 }
 
-// Splits a written description back into its three parts, beside the tags and the pinned
-// comment (empty for a description written before pinned comments existed). `assembleDescription` (answer.ts) lays it out as
+// Splits a written description back into its three parts, beside the tags, the pinned comment
+// and the other titles (each empty for a description written before it existed). `assembleDescription` (answer.ts) lays it out as
 // the summary, a blank line, one chapter per line, a blank line and the hashtags; reading it
 // from the end keeps a summary with blank lines of its own whole.
 export function splitDescription(
   description: string,
   tags: string,
-  pinnedComment = "",
+  extras: {
+    readonly pinnedComment?: string | undefined;
+    readonly titles?: string | undefined;
+  } = {},
 ): DescriptionFields {
   const lines = description.replace(/\r\n?/gu, "\n").split("\n");
   while (lines.length > 0 && lines.at(-1)?.trim() === "") lines.pop();
@@ -65,7 +70,8 @@ export function splitDescription(
     chapters: chapters.join("\n"),
     hashtags,
     tags: tags.trim(),
-    pinnedComment: pinnedComment.trim(),
+    pinnedComment: (extras.pinnedComment ?? "").trim(),
+    titles: (extras.titles ?? "").trim(),
   };
 }
 
@@ -110,6 +116,7 @@ export function resolveFields(
     hashtags: one("hashtags"),
     tags: one("tags"),
     pinnedComment: one("pinnedComment"),
+    titles: one("titles"),
   };
 }
 
@@ -122,6 +129,7 @@ export function shownFields(
     hashtags: resolved.hashtags.text,
     tags: resolved.tags.text,
     pinnedComment: resolved.pinnedComment.text,
+    titles: resolved.titles.text,
   };
 }
 

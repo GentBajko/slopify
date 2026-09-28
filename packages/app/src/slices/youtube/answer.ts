@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
 import {
+  alternativeTitles,
   descriptionMaxCharacters,
   hashtagsMax,
   minChapterSeconds,
@@ -8,6 +9,7 @@ import {
   pinnedCommentMaxCharacters,
   tagMaxCharacters,
   tagsMaxCharacters,
+  titleMaxCharacters,
 } from "./model.js";
 import { parseTimestamp, youtubeTimestamp } from "./timestamps.js";
 
@@ -35,6 +37,8 @@ export interface DescriptionAnswer {
   readonly hashtags: readonly string[];
   readonly tags: readonly string[];
   readonly pinnedComment: string;
+  // Other titles for YouTube's title A/B test, beside the video's own.
+  readonly titles: readonly string[];
 }
 
 export function descriptionMessages(brief: DescriptionBrief): readonly Message[] {
@@ -44,7 +48,7 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
       role: "system",
       content: [
         "You write YouTube descriptions. Answer with one JSON object and nothing else, in this shape:",
-        '{"summary": "...", "chapters": [{"start": "0:00", "title": "..."}], "hashtags": ["#Example"], "tags": ["example tag"], "pinnedComment": "..."}',
+        '{"summary": "...", "chapters": [{"start": "0:00", "title": "..."}], "hashtags": ["#Example"], "tags": ["example tag"], "pinnedComment": "...", "titles": ["...", "..."]}',
         "",
         "Rules YouTube enforces, which the answer must follow:",
         '- The first chapter starts at exactly "0:00".',
@@ -57,8 +61,10 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
         "- No < or > anywhere.",
         "- The summary is plain text without chapters, hashtags or links.",
         `- The pinned comment is plain text without links, at most ${String(pinnedCommentMaxCharacters)} characters.`,
+        `- Titles are exactly ${String(alternativeTitles)} other titles for this video, for YouTube's title A/B test beside the video's own title: each at most ${String(titleMaxCharacters)} characters, one line, different from the video title and from each other.`,
         "",
         "The pinned comment is what the channel pins under the video, unless the instructions below say otherwise: thank the viewer in one line, ask one question a viewer can answer from their own experience of the subject, point to the chapters in the description, and end by inviting a suggestion for the next video. Two to four short paragraphs, in the same voice as the summary.",
+        "The other titles try different angles on the same video (a question, a stake, a surprising fact) while staying true to it and in the video title's language and tone.",
       ].join("\n"),
     },
     {
@@ -83,6 +89,7 @@ const answerSchema = z.object({
   hashtags: z.array(z.string()),
   tags: z.array(z.string()),
   pinnedComment: z.string(),
+  titles: z.array(z.string()),
 });
 
 export type CheckedAnswer =
@@ -93,12 +100,17 @@ const fix = "Try again, or choose another model in Edit project → Providers.";
 
 // Reads and checks the model's answer. The reason is the sentence the stage shows; the
 // provider wrapper's `check` asks the model again while attempts remain.
-export function checkDescriptionAnswer(text: string, durationSeconds: number): CheckedAnswer {
+export function checkDescriptionAnswer(
+  text: string,
+  durationSeconds: number,
+  // The video's own title, which the other titles must differ from.
+  title = "",
+): CheckedAnswer {
   const parsed = answerSchema.safeParse(jsonOf(text));
   if (!parsed.success)
     return {
       ok: false,
-      reason: `The AI model's YouTube description didn't come back in the expected format (a JSON object with a summary, chapters, hashtags, tags and a pinned comment). ${fix}`,
+      reason: `The AI model's YouTube description didn't come back in the expected format (a JSON object with a summary, chapters, hashtags, tags, a pinned comment and titles). ${fix}`,
     };
   const summary = parsed.data.summary.trim();
   if (summary === "")
@@ -117,7 +129,10 @@ export function checkDescriptionAnswer(text: string, durationSeconds: number): C
       ok: false,
       reason: `The AI model's pinned comment is ${String(pinnedComment.length)} characters, over the ${String(pinnedCommentMaxCharacters)} Slopify allows. ${fix}`,
     };
+  const titles = checkTitles(parsed.data.titles, title);
+  if (!titles.ok) return titles;
   const value = {
+    titles: titles.value,
     summary,
     chapters: chapters.value,
     hashtags: hashtags.value,
@@ -219,6 +234,32 @@ function checkChapters(
       );
   }
   return { ok: true, value: chapters };
+}
+
+function checkTitles(
+  raw: readonly string[],
+  title: string,
+): { readonly ok: true; readonly value: readonly string[] } | { ok: false; reason: string } {
+  const broke = (rule: string) => ({
+    ok: false as const,
+    reason: `The AI model's other titles broke YouTube's rules (${rule}). ${fix}`,
+  });
+  const titles = raw.map((one) => one.trim().replace(/\s+/g, " ")).filter((one) => one !== "");
+  if (titles.length !== alternativeTitles)
+    return broke(
+      `there must be ${String(alternativeTitles)} other titles, and it wrote ${String(titles.length)}`,
+    );
+  const long = titles.find((one) => one.length > titleMaxCharacters);
+  if (long !== undefined)
+    return broke(`"${long.slice(0, 40)}…" is over ${String(titleMaxCharacters)} characters`);
+  const odd = titles.find((one) => /[<>]/.test(one));
+  if (odd !== undefined) return broke(`"${odd}" contains < or >`);
+  const seen = new Set([title.trim().toLowerCase()]);
+  for (const one of titles) {
+    if (seen.has(one.toLowerCase())) return broke(`"${one}" repeats a title`);
+    seen.add(one.toLowerCase());
+  }
+  return { ok: true, value: titles };
 }
 
 function checkHashtags(

@@ -35,6 +35,8 @@ export const outputRoles = [
   // A comment to pin under the video, written with the description. Projects described before
   // it existed have none until the description is written again.
   "youtube_pinned_comment",
+  // Other titles for YouTube's title A/B test, one per line, written with the description.
+  "youtube_titles",
   // The Shorts step: the picked clips (JSON), each clip's vertical images, and each clip.
   "shorts",
   "short_image",

@@ -34,6 +34,9 @@ export interface PackItem {
   readonly short?: number | undefined;
   readonly video: PackFile | null;
   readonly title: string;
+  // Other titles for Studio's title A/B test (Test & compare), beside `title`; empty when none
+  // were written, and for a short.
+  readonly titles: readonly string[];
   // The whole description as it goes into Studio, chapters and hashtags included.
   readonly description: string;
   readonly tags: readonly string[];

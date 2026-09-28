@@ -19,7 +19,7 @@ import { preparedTexts, publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
 import type { WorkPiece } from "./work-records.js";
 
-// Writes the YouTube description, tags and pinned comment from the saved word timing: the transcript's
+// Writes the YouTube description, tags, pinned comment and other titles from the saved word timing: the transcript's
 // passages carry their start in the final video, so the chapters the model picks are real
 // times. An answer that breaks YouTube's chapter or tag rules is a failed attempt, which the
 // provider wrapper asks again while attempts remain.
@@ -104,16 +104,17 @@ export async function executeYoutubeRecipe(
     webSearch: false,
     previewLabel: piece.key,
     check: (value) => {
-      const checked = checkDescriptionAnswer(value.text, durationSeconds);
+      const checked = checkDescriptionAnswer(value.text, durationSeconds, config.title);
       return checked.ok ? undefined : checked.reason;
     },
   });
   if (!answer.ok) return "held";
-  const checked = checkDescriptionAnswer(answer.value.text, durationSeconds);
+  const checked = checkDescriptionAnswer(answer.value.text, durationSeconds, config.title);
   if (!checked.ok) throw new Error(checked.reason);
   const description = assembleDescription(checked.value);
   const tags = tagsText(checked.value.tags);
   const pinnedComment = checked.value.pinnedComment;
+  const titles = checked.value.titles.join("\n");
   await publishResult(
     deps,
     context,
@@ -122,12 +123,14 @@ export async function executeYoutubeRecipe(
       ["youtube_description", "description.txt", description],
       ["youtube_tags", "tags.txt", tags],
       ["youtube_pinned_comment", "pinned-comment.txt", pinnedComment],
+      ["youtube_titles", "titles.txt", titles],
     ]),
     {
       description,
       tags: checked.value.tags,
       chapters: checked.value.chapters,
       pinnedComment,
+      titles: checked.value.titles,
       durationSeconds,
     },
   );
