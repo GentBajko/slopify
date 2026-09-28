@@ -228,11 +228,11 @@ it("edits the displayed version and retains values after conflict", async () => 
   expect(update).toHaveBeenCalledOnce();
 });
 
-it("preserves pinned template version and keyword text during a title edit", async () => {
+it("saves against the template's newest version and keeps keyword text during a title edit", async () => {
   const user = userEvent.setup();
   const items = [{ title: "A | B", values: { topic: "One, two\nthree" } }];
   const update = vi.fn(async (request: Request) => {
-    expect(await request.json()).toMatchObject({ templateVersion: 1, items });
+    expect(await request.json()).toMatchObject({ templateVersion: 3, items });
     return Response.json({ ...summary, version: 2 });
   });
   renderRouted(
@@ -246,7 +246,7 @@ it("preserves pinned template version and keyword text during a title edit", asy
     }),
   );
   await user.click(await screen.findByRole("button", { name: "Edit Morning stories" }));
-  expect(screen.getByRole("option", { name: "Stories · v1" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Stories · v3" })).toBeTruthy();
   await user.type(screen.getByLabelText("Name"), " edited");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(update).toHaveBeenCalledOnce());

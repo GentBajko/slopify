@@ -91,17 +91,15 @@ export function ScheduleForm({
   const active = useRef(false);
   const attempt = useRef<ScheduleCreate | ScheduleUpdate | null>(null);
 
+  // A schedule always runs its template as it is now, so each template shows its newest
+  // version; only a template deleted since keeps the version the schedule last saved.
   const options =
     editing && !templates.some((row) => row.id === editing.templateId)
       ? [
           ...templates,
           { id: editing.templateId, version: editing.templateVersion, name: "Saved template" },
         ]
-      : templates.map((template) =>
-          editing?.templateId === template.id
-            ? { ...template, version: editing.templateVersion }
-            : template,
-        );
+      : templates;
   const selectedTemplate = options.find((template) => template.id === templateId);
   const template = useQuery({
     queryKey: ["project-template", templateId],
@@ -200,8 +198,7 @@ export function ScheduleForm({
           id: editing?.id ?? crypto.randomUUID(),
           name: name.trim(),
           templateId: selectedTemplate.id,
-          templateVersion:
-            editing?.templateId === templateId ? editing.templateVersion : selectedTemplate.version,
+          templateVersion: selectedTemplate.version,
           cadence,
           timezone: selectedZone,
           missedPolicy,
