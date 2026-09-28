@@ -121,12 +121,17 @@ async function smoke(command, label, prefix = [], extraEnv = {}, checkUpdate = f
         SLOPIFY_DISABLE_UPDATES: "1",
         ...extraEnv,
       },
-      stdio: "ignore",
+      stdio: ["ignore", "ignore", "pipe"],
       windowsHide: true,
     },
   );
+  // What Slopify said on its way out, so a start that fails says why.
+  let errors = "";
+  child.stderr.on("data", (chunk) => {
+    errors = `${errors}${chunk}`.slice(-4000);
+  });
   try {
-    await waitForHealth(port, child, healthTimeoutMs);
+    await waitForHealth(port, child, healthTimeoutMs, () => errors);
     // `slopify update` drives the running app's own updater, the same path as the Update button.
     if (checkUpdate) {
       const output = await capture(command, [...prefix, "update", "--port", String(port)]);
@@ -151,11 +156,11 @@ async function freePort() {
   return port;
 }
 
-async function waitForHealth(port, child, timeoutMs) {
+async function waitForHealth(port, child, timeoutMs, errors) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (child.exitCode !== null)
-      throw new Error(`Slopify exited before health check (${child.exitCode}).`);
+      throw new Error(`Slopify exited before health check (${child.exitCode}).\n${errors()}`);
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/health`);
       if (response.ok) return;
@@ -169,12 +174,13 @@ async function waitForHealth(port, child, timeoutMs) {
 
 async function stop(child) {
   if (child.exitCode !== null || child.signalCode !== null) return;
-  if (process.platform === "win32" && child.pid !== undefined) {
+  const exited = new Promise((resolve) => child.once("exit", resolve));
+  // taskkill can return while the process is still going away. Until it has, its instance
+  // lock still names a live process, and the next start on the same data folder quits.
+  if (process.platform === "win32" && child.pid !== undefined)
     await run("taskkill", ["/pid", String(child.pid), "/t", "/f"], { allowFailure: true });
-    return;
-  }
-  child.kill("SIGTERM");
-  await new Promise((resolve) => child.once("exit", resolve));
+  else child.kill("SIGTERM");
+  await exited;
 }
 
 function run(command, args, options = {}) {

@@ -61,32 +61,26 @@ jobs:
       - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/src/kernel/cli-command.test.ts packages/app/src/adapters/llm packages/app/src/slices/settings/cli-paths.test.ts packages/app/src/slices/settings/cli-status.test.ts packages/app/src/adapter-registry-paths.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts
       - run: npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"
 
-  # Whether this is a release push: one that bumps the app's version. Windows and Docker run
-  # only then, so everyday pushes don't wait on them and a release still can't be tagged
-  # without them passing (the tag needs a green CI run on main for its commit).
+  # Whether this push is on its way to a release: its app version has no tag yet (the push
+  # that bumps the version, and any fix after it before the tag). Windows and Docker run only
+  # then, so everyday pushes don't wait on them and a release still can't be tagged without
+  # them passing (the tag needs a green CI run on main for its commit).
   changes:
     runs-on: ubuntu-latest
     outputs:
-      release: ${{ steps.diff.outputs.release }}
+      release: ${{ steps.version.outputs.release }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - id: diff
-        env:
-          BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          fetch-tags: true
+      - id: version
         run: |
-          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          version() { node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version"; }
-          before=$(git show "$BEFORE:packages/app/package.json" | version)
-          now=$(version < packages/app/package.json)
-          if [ "$before" != "$now" ]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          else
+          version=$(node -p "require('./packages/app/package.json').version")
+          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
             echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
   # The image's smoke tests in two jobs side by side, each building the image itself (cached):
