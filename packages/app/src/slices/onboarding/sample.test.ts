@@ -91,7 +91,9 @@ const titles: Record<SampleId, string> = {
   podcast: "The Antikythera Mechanism",
 };
 
-describe("the bundled samples", () => {
+// Each unpacks and plans three whole sample projects: under two seconds alone, but past the
+// default five on a runner busy with the rest of the suite.
+describe("the bundled samples", { timeout: 30_000 }, () => {
   it("ship small enough for the package", () => {
     expect(readFileSync(sampleArchives.library).byteLength).toBeLessThan(25 * 1024 * 1024);
     for (const id of ["audiobook", "podcast"] as const) {
