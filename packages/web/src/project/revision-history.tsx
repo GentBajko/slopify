@@ -3,7 +3,6 @@ import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
-import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
@@ -13,6 +12,7 @@ import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
 import { historyOf, revisionFileUrl, revisionImagesUrl, viewOf } from "./revision-api.js";
+import { WaveAudioPlayer } from "./waveform.js";
 
 const retainedTextSchema = z.object({
   text: z.string().optional(),
@@ -171,7 +171,7 @@ export function RevisionHistory({
                     ) : ["audio_export", "audio_body", "audio_intro", "audio_outro"].includes(
                         output.output.role,
                       ) ? (
-                      <AudioPlayer
+                      <WaveAudioPlayer
                         label={outputLabel(output.output)}
                         src={revisionFileUrl(
                           api,
@@ -211,7 +211,7 @@ export function RevisionHistory({
                   {piece.available ? (
                     <details>
                       <summary>Preview retained audio part</summary>
-                      <AudioPlayer
+                      <WaveAudioPlayer
                         label={`Narration part ${String(piece.piece.idx)}`}
                         src={revisionFileUrl(
                           api,

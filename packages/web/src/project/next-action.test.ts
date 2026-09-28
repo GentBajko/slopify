@@ -81,6 +81,27 @@ describe("the next action", () => {
     expect(next?.section).toBeUndefined();
   });
 
+  it("says what a paused run still has to make, so an outdated file is not taken for done", () => {
+    const next = nextActionFor(
+      input({
+        project: { status: "paused", config },
+        stages: [stage("audio", "pending"), stage("images", "pending"), stage("video", "pending")],
+        outdated: [
+          { workKey: "level:body", role: "audio_levelled" },
+          { workKey: "image:a", role: "image" },
+          { workKey: "image:b", role: "image" },
+          { workKey: "image:c", role: "image" },
+          { workKey: "export:video", role: "video" },
+          { workKey: "subtitles:files", role: "subtitles_srt" },
+        ],
+      }),
+    );
+    expect(next?.why).toBe(
+      "Everything made so far is kept. Still to make: the narration, 3 images and the video. They stay outdated until you continue.",
+    );
+    expect(next?.action?.label).toBe("Continue the run");
+  });
+
   it("names a failed step's retry for the step and puts it beside the images", () => {
     const next = nextActionFor(
       input({

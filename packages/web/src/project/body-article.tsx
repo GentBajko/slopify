@@ -177,6 +177,9 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
           ...(notes === undefined
             ? []
             : [{ output: notes, label: `Research notes${extensionOf(notes)}` }]),
+          ...(speakerSplit === undefined
+            ? []
+            : [{ output: speakerSplit, label: `Script by speaker${extensionOf(speakerSplit)}` }]),
         ]}
       >
         {(

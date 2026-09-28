@@ -16,9 +16,24 @@ export function extensionOf(output: Output): string {
 // Every narration file in one Download menu, grouped by segment: the recording, then the
 // clean narration (the spoken text the captions use), then the TTS script (with its delivery
 // cues). One list and one Open folder for the stage, never a folder button per file.
+// `speakers` is a multi-voice run's speaker split (the text model's lines by speaker, the
+// Article stage's `script_md`), downloadable here too as the text the narration was read from.
 export function narrationFiles(
   outputs: readonly Output[],
   audio: readonly { readonly segment: string; readonly output: Output }[] = [],
+  speakers?: Output,
+): readonly StageFile[] {
+  return [
+    ...segmentFiles(outputs, audio),
+    ...(speakers === undefined
+      ? []
+      : [{ output: speakers, label: `Script by speaker${extensionOf(speakers)}` }]),
+  ];
+}
+
+function segmentFiles(
+  outputs: readonly Output[],
+  audio: readonly { readonly segment: string; readonly output: Output }[],
 ): readonly StageFile[] {
   return segments.flatMap(({ segment, name }) => {
     const text = (role: "narration_txt" | "tts_script") =>

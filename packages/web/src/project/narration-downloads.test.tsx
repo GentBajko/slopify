@@ -73,3 +73,31 @@ it("lists six named files in one Download menu, with one Open folder, scoped to 
     ).toBe(true);
   expect(container.querySelectorAll("audio")).toHaveLength(0);
 });
+
+it("offers the speaker split beside the narration files, as the text it was read from", () => {
+  const file = (
+    id: string,
+    role: Output["role"],
+    segment?: "intro" | "body" | "outro",
+  ): Output => ({
+    id,
+    projectId: "p1",
+    stageKind: role === "script_md" ? "article" : "audio",
+    role,
+    path: role === "script_md" ? "script.md" : `${id}.txt`,
+    originalFilename: null,
+    bytes: 10,
+    durationMs: null,
+    meta: segment === undefined ? {} : { segment },
+    createdAt: "today",
+  });
+  const labels = narrationFiles(
+    [file("body-script", "tts_script", "body")],
+    [],
+    file("speakers", "script_md"),
+  ).map((one) => one.label);
+  expect(labels).toEqual(["Body TTS script (.txt)", "Script by speaker (.md)"]);
+  expect(
+    narrationFiles([file("body-script", "tts_script", "body")]).map((one) => one.label),
+  ).toEqual(["Body TTS script (.txt)"]);
+});

@@ -214,45 +214,64 @@ export function RevisionProviders({
       ) : null}
       {config.sources.audio === "generate" ? (
         <>
-          <ProviderPicker
-            label="Narration provider"
-            tip="play.tts.provider"
-            family="tts"
-            providers={providers}
-            value={audio.provider}
-            problem={undefined}
-            onPick={(provider) =>
-              onChange({
-                ...edit,
-                config: { ...config, audio: { ...audio, provider, model: "", voice: "" } },
-              })
-            }
-          />
-          <ModelPicker
-            label="Narration model"
-            tip="play.tts.model"
-            provider={audio.provider}
-            value={audio.model}
-            problem={undefined}
-            onPick={(model) =>
-              onChange({ ...edit, config: { ...config, audio: { ...audio, model } } })
-            }
-          />
-          <OptionPicker
-            label="Narration voice"
-            tip="play.voice"
-            value={audio.voice}
-            problem={undefined}
-            placeholder="Choose a saved voice"
-            options={
-              audio.voice !== "" && !voiceOptions.some((voice) => voice.value === audio.voice)
-                ? [{ value: audio.voice, label: `${audio.voice} (saved voice)` }, ...voiceOptions]
-                : voiceOptions
-            }
-            onPick={(voice) =>
-              onChange({ ...edit, config: { ...config, audio: { ...audio, voice } } })
-            }
-          />
+          {/* With several speakers, each has its own voice (Speakers), and this one reads only
+              the intro and outro; with neither it reads nothing, so it isn't offered. */}
+          {config.voices !== undefined &&
+          config.intro === undefined &&
+          config.outro === undefined ? null : (
+            <>
+              {config.voices === undefined ? null : (
+                <p className="col-span-full m-0 text-small text-ink-2">
+                  The voice below reads only the intro and outro. Each speaker's voice is set under
+                  Speakers.
+                </p>
+              )}
+              <ProviderPicker
+                label={
+                  config.voices === undefined ? "Narration provider" : "Intro and outro provider"
+                }
+                tip="play.tts.provider"
+                family="tts"
+                providers={providers}
+                value={audio.provider}
+                problem={undefined}
+                onPick={(provider) =>
+                  onChange({
+                    ...edit,
+                    config: { ...config, audio: { ...audio, provider, model: "", voice: "" } },
+                  })
+                }
+              />
+              <ModelPicker
+                label={config.voices === undefined ? "Narration model" : "Intro and outro model"}
+                tip="play.tts.model"
+                provider={audio.provider}
+                value={audio.model}
+                problem={undefined}
+                onPick={(model) =>
+                  onChange({ ...edit, config: { ...config, audio: { ...audio, model } } })
+                }
+              />
+              <OptionPicker
+                label={config.voices === undefined ? "Narration voice" : "Intro and outro voice"}
+                tip="play.voice"
+                value={audio.voice}
+                problem={undefined}
+                placeholder="Choose a saved voice"
+                options={
+                  audio.voice !== "" && !voiceOptions.some((voice) => voice.value === audio.voice)
+                    ? [
+                        { value: audio.voice, label: `${audio.voice} (saved voice)` },
+                        ...voiceOptions,
+                      ]
+                    : voiceOptions
+                }
+                onPick={(voice) =>
+                  onChange({ ...edit, config: { ...config, audio: { ...audio, voice } } })
+                }
+              />
+            </>
+          )}
           <ChunkingControl
             value={config.chunking ?? { mode: "whole" }}
             onPick={(chunking) => onChange({ ...edit, config: { ...config, chunking } })}

@@ -6,6 +6,7 @@ import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
 import { replyForFolder } from "./folder-location.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
+import { waveformAnswer } from "./waveform.js";
 
 const id = z
   .string()
@@ -17,6 +18,7 @@ const recordParam = revisionParam.extend({ recordId: id });
 const folderParam = z.object({ id, revisionId: id, recordId: id });
 
 export function revisionFileRoutes(deps: AppDeps) {
+  const waveform = waveformAnswer(deps.decodePeaks);
   return new Hono()
     .get(
       "/files/:projectId/revisions/:revisionId/images.zip",
@@ -35,11 +37,14 @@ export function revisionFileRoutes(deps: AppDeps) {
     .get(
       "/files/:projectId/revisions/:revisionId/:recordId",
       zValidator("param", recordParam, onInvalid),
-      (c) => {
+      async (c) => {
         const { projectId, revisionId, recordId } = c.req.valid("param");
         const result = findRevisionDownload(deps, projectId, revisionId, recordId);
         if (!result.ok) return unavailable(c, result.reason);
         const value = result.download;
+        // `?waveform=N`: the audio player's bars instead of the file.
+        const bars = await waveform(c, value);
+        if (bars !== undefined) return bars;
         // `?inline=1` lets the project page open a PDF in a browser tab instead of saving
         // it. Only PDFs: anything else the browser might render stays a download.
         const inline = c.req.query("inline") === "1" && value.contentType === "application/pdf";

@@ -265,10 +265,14 @@ export function PlayTime({ controls }: { readonly controls: MediaControls }): Re
 export function SeekTrack({
   controls,
   chapters = [],
+  waveform,
 }: {
   readonly controls: MediaControls;
   // Marks on the track, each titled on hover.
   readonly chapters?: readonly PlayerChapter[];
+  // The audio's loudness as bars from 0 to 1, drawn in place of the rail: lime up to where it
+  // plays, pale after. Absent, the thin rail with its buffered range.
+  readonly waveform?: readonly number[] | undefined;
 }): ReactElement {
   const track = useRef<HTMLDivElement>(null);
   const { known, duration, current, buffered, seeking, hover } = controls;
@@ -326,10 +330,24 @@ export function SeekTrack({
       onPointerLeave={() => controls.setHover(null)}
       onKeyDown={onKey}
     >
-      <span className="sl-player__rail">
-        <span className="sl-player__buffered" style={{ width: `${String(loaded)}%` }} />
-        <span className="sl-player__played" style={{ width: `${String(played)}%` }} />
-      </span>
+      {waveform === undefined || waveform.length === 0 ? (
+        <span className="sl-player__rail">
+          <span className="sl-player__buffered" style={{ width: `${String(loaded)}%` }} />
+          <span className="sl-player__played" style={{ width: `${String(played)}%` }} />
+        </span>
+      ) : (
+        <span className="sl-player__wave" data-slot="waveform" aria-hidden="true">
+          {waveform.map((level, bar) => (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional and never reorder.
+              key={bar}
+              className="sl-player__peak"
+              data-played={((bar + 0.5) / waveform.length) * 100 <= played ? "" : undefined}
+              style={{ height: `${String(Math.max(12, Math.round(level * 100)))}%` }}
+            />
+          ))}
+        </span>
+      )}
       {marks.map((chapter) => (
         <span
           key={`${String(chapter.start)}-${chapter.title}`}

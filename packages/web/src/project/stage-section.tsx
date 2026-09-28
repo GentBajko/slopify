@@ -1,13 +1,12 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { EllipsisIcon } from "lucide-react";
+import { RefreshCwIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useContext, useState } from "react";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import { confirmationFor } from "./confirmations.js";
@@ -24,8 +23,7 @@ import type { ProjectActions } from "./use-actions.js";
 // actions behind More), the next action when it concerns this section, what a refused press
 // here said, and the body. Hidden sections stay mounted so an editor keeps its typing.
 
-// Re-running a whole stage replaces its outputs, so it is a rare action: behind the section's
-// More, named for its result, and confirmed first.
+// Re-running a whole stage replaces its outputs: named for its result, and confirmed first.
 const rerunLabels: Readonly<Record<StageKind, string>> = {
   research: "Research again",
   article: "Write the article again",
@@ -195,7 +193,8 @@ export function SectionEmpty({
   );
 }
 
-// The section's rare actions: re-running each of its stages from scratch.
+// Re-running each of the section's stages from scratch, as a button in its head: a person who
+// wants a stage made again should see how, not hunt for it behind a menu. Each asks first.
 export function SectionMore({
   stages,
   project,
@@ -222,20 +221,18 @@ export function SectionMore({
   const copy = asking === undefined ? undefined : confirmationFor({ kind: "rerun", stage: asking });
   return (
     <>
-      <Menu modal={false}>
-        <MenuTrigger asChild>
-          <IconButton label={`More actions for ${stageWords[stages[0]?.kind ?? "article"]}`}>
-            <EllipsisIcon aria-hidden="true" strokeWidth={1.75} />
-          </IconButton>
-        </MenuTrigger>
-        <MenuContent>
-          {rerunnable.map((stage) => (
-            <MenuItem key={stage.id} disabled={busy} onSelect={() => setAsking(stage.kind)}>
-              {rerunLabel(stage.kind, project)}
-            </MenuItem>
-          ))}
-        </MenuContent>
-      </Menu>
+      {rerunnable.map((stage) => (
+        <Button
+          key={stage.id}
+          size="small"
+          disabled={busy}
+          disabledReason="Wait until the work on this project is done"
+          onClick={() => setAsking(stage.kind)}
+        >
+          <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+          {rerunLabel(stage.kind, project)}
+        </Button>
+      ))}
       <ConfirmDialog
         open={asking !== undefined}
         title={asking === undefined ? "" : `${rerunLabel(asking, project)}?`}

@@ -340,7 +340,7 @@ describe("audio-only final export", () => {
     const section = screen.getByRole("region", { name: "Audio export" });
     expect(within(section).getByLabelText("Combined narration").tagName).toBe("AUDIO");
     expect(screen.queryByRole("menuitem", { name: "Video (.mp4)" })).toBeNull();
-    await userEvent.click(within(section).getByRole("button", { name: "More actions for Video" }));
-    expect(await screen.findByRole("menuitem", { name: "Export the audio again" })).not.toBeNull();
+    // In plain sight in the section's head, named for what it makes.
+    expect(within(section).getByRole("button", { name: "Export the audio again" })).not.toBeNull();
   });
 });

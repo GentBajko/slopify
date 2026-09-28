@@ -148,8 +148,7 @@ describe("the destructive actions", () => {
     );
 
     const video = await screen.findByRole("region", { name: "Video" });
-    await userEvent.click(within(video).getByRole("button", { name: "More actions for Video" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Render the video again" }));
+    await userEvent.click(within(video).getByRole("button", { name: "Render the video again" }));
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(

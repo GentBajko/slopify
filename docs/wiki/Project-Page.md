@@ -109,9 +109,9 @@ A section for a stage that is switched off says "*Article* is off for this run."
 
 ### Re-run a whole stage
 
-Each stage section has its own **More actions for ...** menu (the three dots in the section head) with the rare, whole-stage actions:
+Each stage section's head has a button for making that whole stage again, named for what it makes:
 
-| Menu item | What it does |
+| Button | What it does |
 | --- | --- |
 | **Research again** | Fresh research, then the affected article, narration, thumbnail and exports. |
 | **Write the article again** | A fresh article, then the affected narration, thumbnail and exports. |

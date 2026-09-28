@@ -16,12 +16,14 @@ import {
 // key, the time in tabular numerals, the same lime track (buffered range, marks, a time tip,
 // click, drag and keys to seek), mute and volume, and the speed menu. Inside it the keys are the
 // Player's: Space or K plays, J and L jump ten seconds, the arrows five, M mutes, 0 to 9 jump.
-// `compact` is the short strip for tight rows: a smaller key, no volume slider.
+// `compact` is the short strip for tight rows: a smaller key, no volume slider. With `waveform`
+// (the audio's loudness, `project/waveform.ts`) the track draws its bars instead of a thin line.
 
 export function AudioPlayer({
   src,
   label,
   marks = [],
+  waveform,
   compact = false,
   preload = "metadata",
   onError,
@@ -33,6 +35,8 @@ export function AudioPlayer({
   readonly label: string;
   // Chapter or segment marks on the track, each titled on hover.
   readonly marks?: readonly PlayerChapter[];
+  // Loudness bars from 0 to 1; absent while loading or where there is none.
+  readonly waveform?: readonly number[] | undefined;
   readonly compact?: boolean;
   readonly preload?: "none" | "metadata" | "auto";
   readonly onError?: ReactEventHandler<HTMLAudioElement>;
@@ -58,7 +62,12 @@ export function AudioPlayer({
       aria-label={`${label} controls`}
       data-slot="audio-player"
       data-state={controls.playing ? "playing" : "paused"}
-      className={cn("sl-audio", compact && "sl-audio--compact", className)}
+      className={cn(
+        "sl-audio",
+        compact && "sl-audio--compact",
+        waveform !== undefined && waveform.length > 0 && "sl-audio--wave",
+        className,
+      )}
       onKeyDown={onKey}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null))
@@ -75,7 +84,7 @@ export function AudioPlayer({
       />
       <PlayPause controls={controls} className="sl-audio__key" />
       <PlayTime controls={controls} />
-      <SeekTrack controls={controls} chapters={marks} />
+      <SeekTrack controls={controls} chapters={marks} waveform={waveform} />
       <VolumeControl controls={controls} />
       <SpeedMenu controls={controls} />
     </div>

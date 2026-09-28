@@ -8,7 +8,6 @@ import { parseTimestamp } from "@app/slices/youtube/timestamps.js";
 import { useQuery } from "@tanstack/react-query";
 import { readDescriptionEdits } from "@/api";
 import { useApp } from "@/app-context";
-import { AudioPlayer } from "@/components/kit/audio-player";
 import { useCommand } from "@/components/kit/command-palette";
 import { Player, type PlayerChapter } from "@/components/kit/player";
 import { useToast } from "@/components/kit/toast";
@@ -20,6 +19,7 @@ import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import { MetaLine, StageBody, StageFiles, useOutputText } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
+import { WaveAudioPlayer } from "./waveform.js";
 
 // The final stage plays the MP4 in a real player or, when Video is Off, the combined narration
 // WAV. The previous file stays playable until ffmpeg successfully replaces it. Every file the
@@ -103,7 +103,12 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           {audioExport ? "No combined audio export has landed yet." : "No render has landed yet."}
         </p>
       ) : audioExport ? (
-        <AudioPlayer key={video.id} label="Combined narration" src={media?.url} marks={chapters} />
+        <WaveAudioPlayer
+          key={video.id}
+          label="Combined narration"
+          src={media?.url}
+          marks={chapters}
+        />
       ) : media === undefined ? null : (
         <Player
           key={video.id}

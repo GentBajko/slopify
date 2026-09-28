@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { AudioPlayer } from "./audio-player.js";
@@ -128,4 +128,27 @@ it("has a compact strip for tight rows, and passes its element and errors on", (
   expect(ref.current).toBe(audio);
   fireEvent.error(audio);
   expect(onError).toHaveBeenCalledTimes(1);
+});
+
+it("draws the waveform on the track, lime up to where it plays", async () => {
+  const { strip, audio } = mount({ waveform: [0.2, 1, 0.5, 0.8] });
+  const wave = strip.querySelector("[data-slot='waveform']");
+  expect(wave?.querySelectorAll(".sl-player__peak")).toHaveLength(4);
+  expect(seek().querySelector(".sl-player__rail")).toBeNull();
+  expect(strip.className).toContain("sl-audio--wave");
+  // Halfway through two minutes: the first two bars are played.
+  act(() => {
+    audio.currentTime = 60;
+  });
+  expect(wave?.querySelectorAll(".sl-player__peak[data-played]")).toHaveLength(2);
+  // It is still the seek slider, keys and all.
+  seek().focus();
+  await userEvent.keyboard("{End}");
+  expect(wave?.querySelectorAll(".sl-player__peak[data-played]")).toHaveLength(4);
+});
+
+it("keeps the thin rail without a waveform", () => {
+  const { strip } = mount({ waveform: [] });
+  expect(seek().querySelector(".sl-player__rail")).not.toBeNull();
+  expect(strip.querySelector("[data-slot='waveform']")).toBeNull();
 });

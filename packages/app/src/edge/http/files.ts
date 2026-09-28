@@ -6,6 +6,7 @@ import { findDownload, imagesZip } from "../../slices/storage/downloads.js";
 import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
+import { waveformAnswer } from "./waveform.js";
 
 const projectParam = z.object({
   projectId: z
@@ -25,6 +26,7 @@ const assetParam = projectParam.extend({
 // The return type is inferred so Hono keeps the route types; see stagingRoutes.
 export function fileRoutes(deps: AppDeps) {
   const storage: DownloadDeps = { db: deps.db, paths: deps.paths };
+  const waveform = waveformAnswer(deps.decodePeaks);
 
   return (
     new Hono()
@@ -40,13 +42,18 @@ export function fileRoutes(deps: AppDeps) {
           "content-disposition": disposition(result.filename),
         });
       })
-      .get("/files/:projectId/:asset", zValidator("param", assetParam, onInvalid), (c) => {
+      .get("/files/:projectId/:asset", zValidator("param", assetParam, onInvalid), async (c) => {
         const { projectId, asset } = c.req.valid("param");
         const result = findDownload(storage, projectId, asset);
         if (!result.ok) {
           return missing(c, result.reason);
         }
         const { download } = result;
+        // `?waveform=N`: the audio player's bars instead of the file.
+        if (download.text === undefined) {
+          const bars = await waveform(c, download);
+          if (bars !== undefined) return bars;
+        }
         // The YouTube description and tags as the page shows them, edits and links in.
         if (download.text !== undefined)
           return c.body(download.text, 200, {

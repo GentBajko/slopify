@@ -98,7 +98,7 @@ it("offers every generated section but no provided/off conversion or edited-arti
   ).toBe(false);
 });
 
-it("makes a whole stage again only from the section's More, confirmed, by keyboard", async () => {
+it("makes a whole stage again from the section's own button, confirmed, by keyboard", async () => {
   const user = userEvent.setup();
   const run = vi.fn((_action: Action) => undefined);
   const view = generated();
@@ -125,29 +125,25 @@ it("makes a whole stage again only from the section's More, confirmed, by keyboa
     );
   }
   renderApp(<Control />, deps);
-  const more = await screen.findByRole("button", { name: "More actions for Images" });
-  await user.click(more);
-  await user.click(await screen.findByRole("menuitem", { name: "Make all images again" }));
+  const again = await screen.findByRole("button", { name: "Make all images again" });
+  await user.click(again);
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toMatch(/generated images.*video.*History/i);
   expect(within(dialog).queryByRole("checkbox")).toBeNull();
   await user.keyboard("{Escape}");
   expect(run).not.toHaveBeenCalled();
-  await user.click(more);
-  await user.click(await screen.findByRole("menuitem", { name: "Make all images again" }));
+  await user.click(again);
   const confirm = within(await screen.findByRole("dialog")).getByRole("button", {
     name: "Make all images again",
   });
   confirm.focus();
   await user.keyboard("{Enter}");
   expect(run).toHaveBeenCalledWith({ kind: "rerun", stage: "images" });
-  await user.click(more);
-  await waitFor(async () =>
-    expect(
-      (await screen.findByRole("menuitem", { name: "Make all images again" })).getAttribute(
-        "aria-disabled",
-      ),
-    ).toBe("true"),
+  // While it runs, the button stays in place but can't be pressed again.
+  await waitFor(() =>
+    expect(again.getAttribute("aria-disabled") === "true" || again.hasAttribute("disabled")).toBe(
+      true,
+    ),
   );
 });
 

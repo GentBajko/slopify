@@ -579,7 +579,7 @@ describe("the stage bodies", () => {
       }),
     );
     await screen.findByRole("region", { name: "Video" });
-    expect(screen.queryByRole("button", { name: "More actions for Video" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Render the video again" })).toBeNull();
     expect(screen.getByLabelText("Generated video")).not.toBeNull();
     expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
   });

@@ -161,15 +161,22 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       action: { label: "Make my own copy", intent: { kind: "copy-sample" } },
     };
 
-  if (project.status === "paused")
+  if (project.status === "paused") {
+    // What the paused run had still to make, so an "Outdated" file is not taken for a remake
+    // that finished.
+    const left = stillToMake(input.outdated);
     return {
       situation: "paused",
       tone: "waiting",
       status: "Paused",
       title: "The run is paused.",
-      why: "Everything made so far is kept. Continuing picks up where it stopped.",
+      why:
+        left === undefined
+          ? "Everything made so far is kept. Continuing picks up where it stopped."
+          : `Everything made so far is kept. Still to make: ${left}. They stay outdated until you continue.`,
       action: { label: "Continue the run", intent: { kind: "resume" } },
     };
+  }
 
   // A step that stopped and will not try again by itself.
   const failed = stages.find((stage) => stage.state === "failed" && stage.retryAt === undefined);
@@ -428,7 +435,15 @@ const groups: readonly OutdatedGroup[] = [
     plural: "narration parts",
     singular: true,
     section: "narration",
-    roles: ["narration_txt", "tts_script", "glossary", "audio_body", "audio_intro", "audio_outro"],
+    roles: [
+      "narration_txt",
+      "tts_script",
+      "glossary",
+      "audio_body",
+      "audio_intro",
+      "audio_outro",
+      "audio_levelled",
+    ],
     counted: ["audio_body"],
   },
   {
@@ -540,6 +555,27 @@ export function firstOutdated(outdated: readonly OutdatedOutput[]):
     };
   }
   return undefined;
+}
+
+// Every outdated group in the words a person uses, in the order the run makes them: "the
+// narration, 3 images and the video". Undefined when nothing is outdated.
+export function stillToMake(outdated: readonly OutdatedOutput[]): string | undefined {
+  const named = groups.flatMap((group) => {
+    const members = outdated.filter((output) => group.roles.includes(output.role));
+    if (members.length === 0) return [];
+    const count = Math.max(
+      1,
+      members.filter((output) => group.counted.includes(output.role)).length,
+    );
+    return [
+      group.singular
+        ? `the ${group.noun}`
+        : count === 1
+          ? `1 ${group.noun}`
+          : `${String(count)} ${group.plural}`,
+    ];
+  });
+  return named.length === 0 ? undefined : list(named);
 }
 
 // Every outdated group, for the palette: "Remake 3 outdated images", "Remake the video".

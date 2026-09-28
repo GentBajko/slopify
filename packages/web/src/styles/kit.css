@@ -194,11 +194,31 @@
     padding: 10px 12px;
     resize: vertical;
   }
+  /* A group of fields: labels above, equal columns at least 15rem wide (three or four across
+     a wide screen, one on a phone), so a select is as wide as its column and never half the
+     page. `.sl-fields__wide` (or `col-span-full`) spans the row: a disclosure, a long note. */
+  .sl-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    column-gap: var(--space-6);
+    row-gap: var(--space-4);
+    align-items: start;
+    min-width: 0;
+  }
+  .sl-fields > .sl-fields__wide {
+    grid-column: 1 / -1;
+  }
+  /* A number: one width everywhere, room for "-10", "22.5" or "100". */
+  .sl-input.sl-input--number {
+    width: 5.5rem;
+    font-variant-numeric: tabular-nums;
+  }
   .sl-input::placeholder,
   .sl-textarea::placeholder {
     color: var(--color-ink-3);
   }
-  .sl-input[aria-invalid="true"] {
+  .sl-input[aria-invalid="true"],
+  .sl-select[aria-invalid="true"] {
     border-color: var(--color-danger);
   }
   .sl-select {
@@ -696,6 +716,36 @@
   }
   .sl-player__played {
     background: var(--player-lime);
+  }
+  /* The bars share the track's width, however narrow: no minimum width and no gap, each bar
+     drawn at 60% of its share so the gaps come from inside it. Nothing reaches past the track. */
+  .sl-player__wave {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .sl-player__peak {
+    flex: 1 1 0;
+    min-width: 0;
+    transform: scaleX(0.6);
+    border-radius: 1px;
+    background: rgb(236 233 226 / 0.35);
+    transition: background-color 120ms;
+  }
+  .sl-player__peak[data-played] {
+    background: var(--player-lime);
+  }
+  .sl-player__track:hover .sl-player__peak:not([data-played]) {
+    background: rgb(236 233 226 / 0.5);
+  }
+  .sl-audio--wave .sl-player__track {
+    height: 28px;
+  }
+  .sl-audio--wave.sl-audio--compact .sl-player__track {
+    height: 20px;
   }
   .sl-player__mark {
     position: absolute;
