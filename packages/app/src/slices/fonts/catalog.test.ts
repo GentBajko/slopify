@@ -2,11 +2,18 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { layout } from "../../kernel/paths.js";
 import { listFonts, resolveBoldFont, resolveFont } from "./catalog.js";
 import { scanFontDirectories, systemFontDirectories } from "./discovery.js";
 import { uploadFont } from "./upload.js";
+
+// The computer's installed fonts are left out: scanning them took over 30 seconds on a slow
+// Windows runner. Their discovery has its own tests over temporary folders.
+vi.mock("./discovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./discovery.js")>()),
+  discoverSystemFonts: async () => [],
+}));
 
 const temporary: string[] = [];
 afterEach(async () => {
@@ -22,10 +29,7 @@ async function regular(): Promise<Uint8Array> {
 }
 
 describe("font catalog", () => {
-  // Listing includes the runner’s installed fonts, whose first scan can exceed five seconds.
-  it("always resolves the bundled default with matching renderer metadata", {
-    timeout: 30_000,
-  }, async () => {
+  it("always resolves the bundled default with matching renderer metadata", async () => {
     const paths = await fresh();
     expect(await resolveFont(paths, "default")).toMatchObject({
       id: "default",
@@ -42,10 +46,7 @@ describe("font catalog", () => {
     });
   });
 
-  // Listing scans the installed fonts too, like the test above.
-  it("draws bold text in the bundled Barlow's own Bold face, and any other font as itself", {
-    timeout: 30_000,
-  }, async () => {
+  it("draws bold text in the bundled Barlow's own Bold face, and any other font as itself", async () => {
     const paths = await fresh();
     const bold = await resolveBoldFont(paths, "default");
     expect(bold).toMatchObject({

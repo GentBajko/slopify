@@ -2,13 +2,20 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { layout } from "../../kernel/paths.js";
 import { fontMaxBytes } from "../../slices/fonts/index.js";
 import { createHub } from "../events/hub.js";
 import { fontsRoutes } from "./fonts.js";
+
+// The computer's installed fonts are left out: scanning them took over 30 seconds on a slow
+// Windows runner. Their discovery has its own tests over temporary folders.
+vi.mock("../../slices/fonts/discovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../slices/fonts/discovery.js")>()),
+  discoverSystemFonts: async () => [],
+}));
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -53,7 +60,6 @@ async function body(filename = "font.ttf"): Promise<FormData> {
 }
 
 describe("font HTTP routes", () => {
-  // This route enumerates real system fonts; a cold Windows scan can exceed five seconds.
   it("lists public summaries without server file paths", async () => {
     const { app } = await harness();
     const response = await app.request("/api/fonts");
@@ -62,7 +68,7 @@ describe("font HTTP routes", () => {
     expect(text).toContain('"id":"default"');
     expect(text).not.toContain('"path"');
     expect(text).not.toContain('"assName"');
-  }, 30_000);
+  });
 
   it("uploads a font and previews exactly the stored bytes", async () => {
     const { app } = await harness();
