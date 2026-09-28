@@ -453,7 +453,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     id: "play.start",
     title: startLabel(session.review, document),
     group: "Play",
-    context: form.title || "New video",
+    context: form.title || "New project",
     keywords: ["start", "queue", "run", "play", "go"],
     run: () => {
       if (canStart) void session.startRun();
@@ -525,7 +525,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       className="min-w-0 max-[767px]:[&_button]:min-h-11 max-[767px]:[&_input:not([type=checkbox])]:min-h-11 max-[767px]:[&_select]:min-h-11 max-[767px]:[&_summary]:min-h-11"
     >
       <PageHeader
-        crumb="New video"
+        crumb="New project"
         title={
           <span ref={heading} tabIndex={-1}>
             What's the video about?

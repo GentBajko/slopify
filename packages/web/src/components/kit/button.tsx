@@ -76,7 +76,7 @@ export function IconButton({
 }
 
 // The Play key: the primary button at its largest, used only to start runs. `asChild` is for
-// the shell's New video, the one link that opens the run setup and so wears the key.
+// the shell's New project, the one link that opens the run setup and so wears the key.
 export function PlayKey({
   className,
   asChild = false,

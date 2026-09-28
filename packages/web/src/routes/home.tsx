@@ -125,7 +125,7 @@ export function HomeRoute(): ReactElement {
           <>
             <ButtonLink to="/play" variant="secondary">
               <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New video
+              New project
             </ButtonLink>
             <ButtonLink to="/calendar" variant="quiet">
               <CalendarIcon aria-hidden="true" strokeWidth={1.75} />

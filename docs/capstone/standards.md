@@ -86,7 +86,7 @@ Set by the user on 2026-09-25 with the 2.0.0 console redesign. The kit lives in 
 
 - Nothing moves unless the user moved it: system-triggered messages go in a reserved `StatusSlot` or a toast, controls disable instead of mounting and unmounting by state, and skeletons match the loaded layout.
 - The primary action of an editing surface is always on screen, in a sticky `ActionBar` beside its status slot.
-- The frame stays fixed: the 3.0 shell's left rail with six destinations and the New video key, a bottom bar of five on phones; new page titles use `PageHeader` (`PageBar` until a screen is redesigned). Tokens, components and rules: `docs/design-system.md`.
+- The frame stays fixed: the 3.0 shell's left rail with six destinations and the New project key, a bottom bar of five on phones; new page titles use `PageHeader` (`PageBar` until a screen is redesigned). Tokens, components and rules: `docs/design-system.md`.
 - Summary before detail: secondary surfaces are tabs or drawers; never insert a block above the primary one.
 - Help hides until asked: at most one short line under a control; anything longer goes behind `InfoTip`.
 - A new feature lands in an existing place (a tab, drawer, rail row, rundown cell or status slot) rather than adding a top-level block to a page column.

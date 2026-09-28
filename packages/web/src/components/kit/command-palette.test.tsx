@@ -221,7 +221,7 @@ function Keyed({
   readonly onHome: () => void;
 }) {
   useCommand({ id: "save", title: "Save", group: "Editor", shortcut: ["Ctrl", "S"], run: onSave });
-  useCommand({ id: "new", title: "New video", group: "Create", shortcut: ["C"], run: onNew });
+  useCommand({ id: "new", title: "New project", group: "Create", shortcut: ["C"], run: onNew });
   useCommand({ id: "home", title: "Open home", group: "Go to", shortcut: ["G", "H"], run: onHome });
   return <input aria-label="Name" />;
 }
@@ -279,7 +279,7 @@ describe("keyboard shortcuts", () => {
     const { onNew } = mount();
     await user.keyboard("?");
     const sheet = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
-    for (const title of ["Search or run a command", "Save", "New video", "Open home"])
+    for (const title of ["Search or run a command", "Save", "New project", "Open home"])
       expect(within(sheet).getByText(title)).not.toBeNull();
     // A modal owns the keyboard: "c" does not start a video behind it.
     await user.keyboard("c");

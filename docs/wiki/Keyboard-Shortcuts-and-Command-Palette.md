@@ -7,7 +7,7 @@ The command palette lets you reach every screen, every project and the frequent 
 ## Use the command palette
 
 1. Press `Ctrl+K`.
-2. Type a few letters of what you want, such as `set` for **Open settings** or `back` for **Back up now**. Letters only need to appear in order, so `nwv` finds **New video**. Commands also match other words, for example `keys` finds **Open settings**. Several words match in any order across the command's name, the project it acts on and its other words: `cleopatra regenerate image 3` finds **Regenerate image 3 in Cleopatra**.
+2. Type a few letters of what you want, such as `set` for **Open settings** or `back` for **Back up now**. Letters only need to appear in order, so `nwv` finds **New project**. Commands also match other words, for example `keys` finds **Open settings**. Several words match in any order across the command's name, the project it acts on and its other words: `cleopatra regenerate image 3` finds **Regenerate image 3 in Cleopatra**.
 3. Use `Up` and `Down` to move through the list, `Home` and `End` to jump to the first or last, and `Enter` to run the highlighted command. You can also click a command.
 4. Press `Esc` (or `Ctrl+K` again) to close the palette without running anything.
 
@@ -23,7 +23,7 @@ Press `?` anywhere (outside a text field) to see **Keyboard shortcuts**: every k
 |---|---|---|
 | `Ctrl+K` / `Cmd+K` | Anywhere | Opens or closes the command palette. |
 | `?` | Anywhere | Shows the keyboard shortcuts. |
-| `C` | Anywhere | **New video** (opens Play). |
+| `C` | Anywhere | **New project** (opens Play). |
 | `G` then `H` | Anywhere | Go to Home. |
 | `G` then `P` | Anywhere | Go to Projects. |
 | `G` then `C` | Anywhere | Go to the Calendar. |
@@ -70,7 +70,7 @@ Commands are grouped under headings in the palette. Group names below are the he
 
 | Command | What it does |
 |---|---|
-| **New video** (`C`) | Opens Play. |
+| **New project** (`C`) | Opens Play. |
 | **Show all channels** | Shows every channel's projects, schedules and costs. |
 | **Switch to <channel>** | Shows one channel only. There is one command per channel. |
 

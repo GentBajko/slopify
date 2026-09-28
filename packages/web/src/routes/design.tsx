@@ -676,7 +676,10 @@ export function DesignRoute(): ReactElement {
       </Specimen>
 
       <Specimen title="Empty state">
-        <EmptyState title="No projects yet" actions={<Button variant="primary">New video</Button>}>
+        <EmptyState
+          title="No projects yet"
+          actions={<Button variant="primary">New project</Button>}
+        >
           A project appears here when you start a run from Play.
         </EmptyState>
       </Specimen>

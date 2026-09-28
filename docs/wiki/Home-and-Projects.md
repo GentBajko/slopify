@@ -19,7 +19,7 @@ From top to bottom:
 | Destinations | **Home**, **Projects**, **Calendar** (also lit on Schedules), **Channels**, **Library** (Prompts, Intros & Outros, Templates, Document themes, Narration aliases), **Settings** (also lit on Usage). |
 | **N running** | Shown while runs are going. It links to Running now on Home. |
 | **Channel** | The channel picker (see below). |
-| **New video** | Opens Play (`C` from anywhere). |
+| **New project** | Opens Play (`C` from anywhere). |
 | Links | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
 | Foot | "Free. Your keys, your machine.", the updates button (circular arrows, see [Updating and Patch Notes](Updating-and-Patch-Notes)) and the tutorial button (question mark, **Start interactive tutorial**). |
 
@@ -33,7 +33,7 @@ In every list, a press anywhere on a row or tile opens or picks it, not only on 
 
 ### The command palette
 
-Press `Ctrl+K`, or click **Search or run a command**, to jump anywhere or run an action by typing. The **Go to** group has **Open home**, **Open projects**, **Open calendar**, **Open schedules**, **Open channels**, **Open library**, **Open settings**, **Open usage and costs** and **Show patch notes**. **New video** opens Play. The **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
+Press `Ctrl+K`, or click **Search or run a command**, to jump anywhere or run an action by typing. The **Go to** group has **Open home**, **Open projects**, **Open calendar**, **Open schedules**, **Open channels**, **Open library**, **Open settings**, **Open usage and costs** and **Show patch notes**. **New project** opens Play. The **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
 
 ### The Channel picker
 
@@ -43,7 +43,7 @@ The **Channel** picker near the foot of the sidebar (at the top of Home on a pho
 
 **Where to find it:** the sidebar → **Home**.
 
-The page title is the channel you picked (or **Home**), under today's date. At the top right are **Open calendar** and **New video**.
+The page title is the channel you picked (or **Home**), under today's date. At the top right are **Open calendar** and **New project**.
 
 On a fresh install, Home sends you to the first-run screen once. See [First Launch and Welcome](First-Launch-and-Welcome).
 
@@ -98,7 +98,7 @@ See [Costs and Run Cost](Costs-and-Run-Cost).
 
 **Where to find it:** the sidebar → **Projects**.
 
-Every run ever started, newest first, for the channel picked in the sidebar. The heading says how many projects there are and for which channel. **New video** opens Play.
+Every run ever started, newest first, for the channel picked in the sidebar. The heading says how many projects there are and for which channel. **New project** opens Play.
 
 ### Search and filter
 

@@ -186,7 +186,7 @@ export function ProjectsRoute({
         actions={
           <ButtonLink to="/play" variant="primary">
             <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-            New video
+            New project
           </ButtonLink>
         }
       />

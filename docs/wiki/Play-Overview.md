@@ -2,7 +2,7 @@
 
 Play is the screen where you set up a new video and start it. You pick a template (or none), type what the video is about, check the setup rows, and press the Play key. You get a project that writes the article, records the narration, draws the images and renders the video, plus any extra outputs you switched on.
 
-**Where to find it:** **New video** in the sidebar, **New video** on Home or Projects, `Ctrl+K` → **New video**, or press `C` anywhere. The page header reads **What's the video about?**
+**Where to find it:** **New project** in the sidebar, **New project** on Home or Projects, `Ctrl+K` → **New project**, or press `C` anywhere. The page header reads **What's the video about?**
 
 ## How Play is laid out
 

@@ -143,7 +143,7 @@ describe("the projects list", () => {
 
   it("offers a new video", async () => {
     renderRouted(<ProjectsRoute />, deps([]));
-    expect((await screen.findByRole("link", { name: "New video" })).getAttribute("href")).toBe(
+    expect((await screen.findByRole("link", { name: "New project" })).getAttribute("href")).toBe(
       "/play",
     );
   });

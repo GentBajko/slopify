@@ -49,7 +49,7 @@ import { UpdateWidget } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
 // The 3.0 shell (docs/design-system.md, Layout): a 232px left rail with the wordmark, the
-// command palette button, the six destinations, the channel picker and the New video key; a
+// command palette button, the six destinations, the channel picker and the New project key; a
 // thin top bar for the running tally, updates and help; the page below, full width up to
 // content-max. On phones the rail becomes a bottom bar of five.
 //
@@ -179,7 +179,7 @@ export function Shell() {
   );
 }
 
-// Every destination, the New video key and the channel picker are commands too.
+// Every destination, the New project key and the channel picker are commands too.
 function NavigationCommands() {
   const navigate = useNavigate();
   const current = useCurrentChannel();
@@ -221,7 +221,7 @@ function NavigationCommands() {
 
   useCommand({
     id: "create.video",
-    title: "New video",
+    title: "New project",
     group: "Create",
     run: go("/play"),
     keywords: ["play", "make", "start"],
@@ -410,7 +410,7 @@ function ShellContent() {
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play" aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}>
               <PlusIcon {...iconProps} />
-              New video
+              New project
             </Link>
           </PlayKey>
           <nav aria-label="Support Slopify" className="sl-rail__links">

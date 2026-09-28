@@ -152,7 +152,7 @@ keyboard shortcuts" lists every key that works on the current screen.
 | --- | --- |
 | Ctrl+K | Search or run a command |
 | ? | Show keyboard shortcuts |
-| C | New video |
+| C | New project |
 | G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings |
 | / | Search the list (Projects, Prompts, Intros and outros) |
 | Shift+N | The project's next action (Soften and retry still asks at its button) |
@@ -163,14 +163,14 @@ keyboard shortcuts" lists every key that works on the current screen.
 ### Shell
 
 A 232px rail (wordmark, the palette button, Home `/`, Projects `/projects`, Calendar,
-Channels, Library, Settings, the channel picker and the New video key), a thin top bar, and the
+Channels, Library, Settings, the channel picker and the New project key), a thin top bar, and the
 page up to 1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out) and
 Home carries the channel picker itself.
 
 The channel picker (`channels/current.tsx`) is the current channel: Home, the calendar and
 Projects show only its work, or every channel's. `useCurrentChannel().includes(channelId)`
 answers whether something is in view; the choice is kept per browser. Every destination, each
-channel ("Switch to …") and New video are Ctrl+K commands; each screen adds its own actions.
+channel ("Switch to …") and New project are Ctrl+K commands; each screen adds its own actions.
 
 The rail's surface and hairline are painted on the shell itself as well (`.sl-app`'s
 background), so on a long page the rail's column never ends at the first screen, even where
