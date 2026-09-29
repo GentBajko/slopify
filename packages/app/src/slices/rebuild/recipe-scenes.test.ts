@@ -150,3 +150,65 @@ it("with Article Off, plans an empty given article and never writes one", () => 
   expect(article.input).toMatchObject({ kind: "local", operation: "provided-article", values: "" });
   expect(find(recipes, "image:harbor").input).toMatchObject({ kind: "image", prompt: "Harbor" });
 });
+
+const thumbnailed: RunConfig = {
+  ...scened,
+  sources: { ...scened.sources, thumbnail: "from_prompt" },
+  thumbnailCount: 3,
+};
+const thumbnailScene: RevisionContent = {
+  ...withScenes,
+  promptTemplates: {
+    ...withScenes.promptTemplates,
+    thumbnailPrompt: "A thumbnail.\n\nScene: {{Scene}}\n\nThe title on top.",
+  },
+};
+const promptOf = (recipes: readonly ResolvedWorkRecipe[], key: string): string => {
+  const input = find(recipes, key).input;
+  return input.kind === "image" ? input.prompt : input.kind;
+};
+
+it("writes a scene for each thumbnail whose prompt asks for one, after the images'", () => {
+  const recipes = plan([], undefined, thumbnailScene, thumbnailed);
+  const scenes = find(recipes, "images:scenes");
+  if (scenes.input.kind === "llm") {
+    expect(scenes.input.messages[0]?.content).toContain("Pictures: 2");
+    expect(scenes.input.messages[0]?.content).toContain("Thumbnails: 3");
+  }
+  const thumbnails = ["thumbnail:image", "thumbnail:image:2", "thumbnail:image:3"];
+  for (const key of thumbnails) {
+    expect(find(recipes, key).input.kind).toBe("deferred");
+    expect(find(recipes, key).dependsOn).toContain("images:scenes");
+  }
+  const written = plan(
+    [
+      done("images:scenes", scenes.fingerprint, {
+        scenes: ["A gate.", "A sea.", "Five heads roar.", "An eye in the dark.", "A hoard."],
+      }),
+    ],
+    undefined,
+    thumbnailScene,
+    thumbnailed,
+  );
+  expect(promptOf(written, "image:hill")).toContain("Scene: A sea.");
+  expect(promptOf(written, "thumbnail:image")).toBe(
+    "A thumbnail.\n\nScene: Five heads roar.\n\nThe title on top.",
+  );
+  expect(promptOf(written, "thumbnail:image:2")).toContain("Scene: An eye in the dark.");
+  expect(promptOf(written, "thumbnail:image:3")).toContain("Scene: A hoard.");
+});
+
+it("leaves a thumbnail without the keyword, or with the switch off, as it was", () => {
+  const plainThumbnail: RevisionContent = {
+    ...withScenes,
+    promptTemplates: { ...withScenes.promptTemplates, thumbnailPrompt: "A thumbnail." },
+  };
+  const plain = plan([], undefined, plainThumbnail, thumbnailed);
+  const scenes = find(plain, "images:scenes");
+  if (scenes.input.kind === "llm")
+    expect(scenes.input.messages[0]?.content).not.toContain("Thumbnails:");
+  expect(promptOf(plain, "thumbnail:image")).toBe("A thumbnail.");
+  const off = plan([], undefined, thumbnailScene, { ...thumbnailed, imageScenes: undefined });
+  expect(off.some((value) => value.key === "images:scenes")).toBe(false);
+  expect(promptOf(off, "thumbnail:image")).toBe("A thumbnail.\n\nThe title on top.");
+});

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withLanguage } from "../../kernel/ports/languages.js";
-import { pictureKind, sceneMessages } from "../images/scenes.js";
+import { thumbnailCountOf } from "../admission/model.js";
+import { pictureKind, sceneMessages, usesScene } from "../images/scenes.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -17,6 +18,19 @@ export interface ImageScenes {
   readonly keys: readonly string[];
   // Undefined until the step has written them for this request.
   readonly scenes: readonly string[] | undefined;
+  // How many thumbnails take a scene (their prompt has `{{Scene}}`), and their scenes, which
+  // follow the images' in the answer. Undefined until written.
+  readonly thumbnailCount: number;
+  readonly thumbnails: readonly string[] | undefined;
+}
+
+// A thumbnail drawn from a Library prompt whose text asks for `{{Scene}}` takes one scene per
+// thumbnail; any other thumbnail is drawn as it always was.
+export function thumbnailScenes(context: RecipeContext): number {
+  const { config, content } = context;
+  if (config.sources.thumbnail !== "from_prompt") return 0;
+  const body = content.promptTemplates.thumbnailPrompt ?? config.rendered.thumbnailPrompt;
+  return usesScene(body) ? thumbnailCountOf(config) : 0;
 }
 
 export const imageScenesKey = "images:scenes";
@@ -42,9 +56,15 @@ export function imageScenes(
     keys.push(key);
     pictures.push(pictureKind(body, name));
   }
-  if (keys.length === 0) return undefined;
+  const thumbnailCount = thumbnailScenes(context);
+  if (keys.length === 0 && thumbnailCount === 0) return undefined;
   const messages = withLanguage(
-    sceneMessages({ title: config.title, article: text.articleText ?? "", pictures }),
+    sceneMessages({
+      title: config.title,
+      article: text.articleText ?? "",
+      pictures,
+      ...(thumbnailCount === 0 ? {} : { thumbnails: thumbnailCount }),
+    }),
     config.language,
   );
   const value = recipe(
@@ -61,10 +81,16 @@ export function imageScenes(
       : llmInput(context, messages),
     [text.article.key],
   );
+  const saved =
+    text.articleText === null
+      ? undefined
+      : savedScenes(context, value, keys.length + thumbnailCount);
   return {
     recipe: value,
     keys,
-    scenes: text.articleText === null ? undefined : savedScenes(context, value, keys.length),
+    scenes: saved?.slice(0, keys.length),
+    thumbnailCount,
+    thumbnails: saved?.slice(keys.length),
   };
 }
 

@@ -35,6 +35,25 @@ it("asks for one scene per picture, in order, and reads the count back from the 
   expect(messages[1]?.content).toContain("Article:\n\nThe article.");
 });
 
+it("asks for the thumbnails' scenes after the pictures', and counts both", () => {
+  const both = sceneMessages({
+    title: "The lighthouse",
+    article: "The article.",
+    pictures: ["wide shot"],
+    thumbnails: 3,
+  });
+  expect(sceneCountOf(both)).toBe(4);
+  expect(both[0]?.content).toContain("then the 3 thumbnail scenes");
+  const only = sceneMessages({
+    title: "The lighthouse",
+    article: "The article.",
+    pictures: [],
+    thumbnails: 1,
+  });
+  expect(sceneCountOf(only)).toBe(1);
+  expect(only[1]?.content).not.toContain("pictures, in order");
+});
+
 it("takes exactly the scenes asked for and says what was wrong otherwise", () => {
   expect(checkScenes('Here: ["A  gate at dawn.", "Two gods fighting."]', 2)).toEqual({
     ok: true,

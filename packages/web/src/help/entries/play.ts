@@ -332,7 +332,7 @@ export const playHelp = {
   },
   "play.image-scenes": {
     title: "Scenes from the article",
-    body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. Off, a {{Scene}} line is left out. One more AI call per run.",
+    body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. A thumbnail prompt with {{Scene}} gets a scene too: the article's most striking moment, a different one per thumbnail. Off, a {{Scene}} line is left out. One more AI call per run.",
     tutorial: { page: "Play-Images", anchor: "scenes-from-the-article" },
   },
   "play.image-scale.rate": {

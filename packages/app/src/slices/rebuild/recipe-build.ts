@@ -33,14 +33,15 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   // The establishing image, when it is on: every other image is drawn from it.
   const reference = referenceRecipe(context);
   const drawnFrom = imageReference(context, reference);
+  // Each image's scene, written from the article, and the thumbnails' when their prompt asks.
+  const scenes = imageScenes(context, text);
   const thumbnail = thumbnailRecipes(
     context,
     text.recipes,
     referenceForThumbnail(context.config) ? drawnFrom : undefined,
+    scenes,
   );
   const youtube = youtubeRecipes(context, exports);
-  // Each image's scene, written from the article, for image prompts that ask for one.
-  const scenes = imageScenes(context, text);
   return withReviews(context, [
     ...text.recipes,
     ...audio.recipes,

@@ -232,6 +232,8 @@ export function thumbnailRecipes(
   textRecipes: readonly ResolvedWorkRecipe[],
   // The establishing image, when it is on and the thumbnail is drawn from it too.
   reference?: ImageReference,
+  // Scenes from the article: a thumbnail prompt with `{{Scene}}` takes one per thumbnail.
+  scenes?: ImageScenes,
 ): readonly ResolvedWorkRecipe[] {
   const { config, content } = context;
   if (config.sources.thumbnail === "off") return [];
@@ -252,13 +254,29 @@ export function thumbnailRecipes(
       ),
     ];
   const promptRecipe = textRecipes.find((value) => value.key === "thumbnail:prompt");
-  const prompt =
+  const written =
     config.sources.thumbnail === "prompt_by_llm" && promptRecipe !== undefined
       ? matchingText(context, promptRecipe, "prompt")
       : renderedPrompt(context, "thumbnailPrompt");
+  const sceneFor = (variant: number): string | undefined =>
+    scenes === undefined || scenes.thumbnailCount === 0
+      ? undefined
+      : scenes.thumbnails?.[variant - 1];
+  const withScenes = scenes !== undefined && scenes.thumbnailCount > 0;
   const variants = Array.from({ length: thumbnailCountOf(config) }, (_, index) => index + 1);
-  return variants.map((variant) =>
-    recipe(
+  return variants.map((variant) => {
+    const scene = sceneFor(variant);
+    // With a scene the thumbnail waits for it; with the switch off a `{{Scene}}` line is left
+    // out, as the images do.
+    const prompt =
+      written === null
+        ? null
+        : withScenes
+          ? scene === undefined
+            ? null
+            : withScene(written, scene)
+          : withoutScene(written);
+    return recipe(
       context,
       thumbnailKey(variant),
       "thumbnail",
@@ -277,6 +295,7 @@ export function thumbnailRecipes(
               ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
               ...(reference === undefined ? [] : [reference.input.fingerprint]),
               ...(variant === 1 ? [] : [["thumbnail-variant", variant]]),
+              ...(withScenes ? [["thumbnail-scene", scenes.recipe.fingerprint]] : []),
             ],
           }
         : {
@@ -292,9 +311,10 @@ export function thumbnailRecipes(
       [
         ...(promptRecipe === undefined ? [] : [promptRecipe.key]),
         ...(reference === undefined ? [] : [reference.key]),
+        ...(withScenes ? [scenes.recipe.key] : []),
       ],
-    ),
-  );
+    );
+  });
 }
 
 // The second and third thumbnails are the same prompt asked for another composition, so the

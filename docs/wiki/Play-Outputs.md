@@ -32,7 +32,7 @@ The Thumbnail part has its own **Source** switch:
 | Option | What it does | Default |
 | --- | --- | --- |
 | **Thumbnail prompt** | The Library thumbnail prompt, keywords filled in. **From prompt** sends it to the image model as it is; **Prompt by LLM** gives it to the text model with the title and article to write the image prompt. | None |
-| **Thumbnails** (**1** or **3**) | **3** makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. | 1 |
+| **Thumbnails** (**1** or **3**) | **3** makes two more thumbnails from the same prompt with different compositions, for YouTube's Test & compare. Each costs one more image, so 3 thumbnails are 3 image calls. With a thumbnail prompt that has `{{Scene}}` and Images → **Scenes from the article** on, each also shows a different moment of the article (see [Play Images](Play-Images#scenes-from-the-article)). | 1 |
 
 ### Make three thumbnails for Test & compare
 
