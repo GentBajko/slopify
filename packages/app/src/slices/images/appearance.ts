@@ -83,23 +83,35 @@ export function checkAppearance(
 // The most characters besides the subject one picture describes: a crowded prompt is ignored.
 const charactersPerPicture = 3;
 
-// What `{{Appearance}}` becomes in one picture: the subject's look, then the looks of the
-// characters the picture's scene names (by name or alias, as a whole word). Without a scene,
-// the subject alone.
-export function appearanceFor(appearance: Appearance, scene?: string): string {
-  const named =
-    scene === undefined
-      ? []
-      : appearance.characters
-          .filter((figure) => [figure.name, ...figure.aliases].some((name) => names(scene, name)))
-          .slice(0, charactersPerPicture);
-  return [appearance.subject, ...named]
-    .map((figure) => `${figure.name}: ${figure.look}`)
-    .join("\n");
+// What `{{Appearance}}` becomes in one picture: the looks of the figures the picture's scene
+// names (by name or alias, as a whole word), the subject first. Without a scene, the subject
+// alone. The subject goes in only when the scene names it, unless it always does (a thumbnail
+// stands for the subject): a scene of a place, or of another figure, is not redrawn with the
+// subject in it. Empty when the scene names no one.
+export function appearanceFor(
+  appearance: Appearance,
+  scene?: string,
+  options: { readonly subjectAlways?: boolean } = {},
+): string {
+  const shown = (figure: Figure): boolean =>
+    scene !== undefined && [figure.name, ...figure.aliases].some((name) => names(scene, name));
+  const subject =
+    scene === undefined || options.subjectAlways === true || shown(appearance.subject)
+      ? [appearance.subject]
+      : [];
+  const named = appearance.characters.filter(shown).slice(0, charactersPerPicture);
+  return [...subject, ...named].map((figure) => `${figure.name}: ${figure.look}`).join("\n");
 }
 
+// The prompt with its looks; a line asking for looks nobody in the picture has is left out.
 export function withAppearance(body: string, text: string): string {
-  return render(body, { [appearanceKeyword]: text });
+  if (text !== "") return render(body, { [appearanceKeyword]: text });
+  return body
+    .split("\n")
+    .filter((line) => !usesAppearance(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function names(text: string, name: string): boolean {

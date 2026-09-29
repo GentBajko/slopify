@@ -327,7 +327,11 @@ export function thumbnailRecipes(
             ? null
             : withScene(written, scene)
           : withoutScene(written);
-    const prompt = sceneFilled === null ? null : withLooks(sceneFilled, appearance, scene);
+    // A thumbnail stands for the subject, so it always has the subject's look.
+    const prompt =
+      sceneFilled === null
+        ? null
+        : withLooks(sceneFilled, appearance, scene, { subjectAlways: true });
     const wait = lookWait(written, appearance);
     return recipe(
       context,

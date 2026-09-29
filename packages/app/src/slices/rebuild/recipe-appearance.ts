@@ -118,10 +118,11 @@ export function withLooks(
   body: string,
   appearance: ImageAppearance | undefined,
   scene?: string,
+  options?: { readonly subjectAlways?: boolean },
 ): string | null {
   if (appearance === undefined || !usesAppearance(body)) return body;
   if (appearance.value === undefined) return null;
-  return withAppearance(body, appearanceFor(appearance.value, scene));
+  return withAppearance(body, appearanceFor(appearance.value, scene, options));
 }
 
 // What a picture waiting for the looks adds to its waiting request, and the step it waits on.

@@ -45,14 +45,18 @@ it("takes the looks as JSON and says what was wrong otherwise", () => {
   ).toMatchObject({ ok: false, reason: expect.stringContaining("no look") });
 });
 
-it("gives each picture the subject and the characters its scene names", () => {
+it("gives each picture the looks of the figures its scene names", () => {
   expect(appearanceFor(looks)).toBe("The Keeper: A tall man in a grey coat.");
-  expect(appearanceFor(looks, "The smuggler hands Iven a letter.")).toBe(
+  expect(appearanceFor(looks, "The old keeper and the smuggler hand Iven a letter.")).toBe(
     "The Keeper: A tall man in a grey coat.\nMara: A small woman with a red scarf.\nIven: A boy with a lantern.",
   );
-  // A name inside another word is not that character.
-  expect(appearanceFor(looks, "Marathon runners at dawn.")).toBe(
-    "The Keeper: A tall man in a grey coat.",
+  // The subject only when the scene shows it, unless it always goes in (a thumbnail).
+  expect(appearanceFor(looks, "Mara on the pier.")).toBe("Mara: A small woman with a red scarf.");
+  expect(appearanceFor(looks, "Mara on the pier.", { subjectAlways: true })).toBe(
+    "The Keeper: A tall man in a grey coat.\nMara: A small woman with a red scarf.",
   );
+  // A name inside another word is not that character.
+  expect(appearanceFor(looks, "Marathon runners at dawn.")).toBe("");
   expect(withAppearance("Draw.\n\nLooks: {{Appearance}}", "X: Y.")).toBe("Draw.\n\nLooks: X: Y.");
+  expect(withAppearance("Draw.\n\nLooks: {{Appearance}}\n\nMore.", "")).toBe("Draw.\n\nMore.");
 });

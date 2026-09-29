@@ -252,11 +252,10 @@ it("looks up the looks with a web search, and each image waits for them", () => 
     looked,
   );
   expect(promptOf(both, "image:harbor")).toBe(
-    "An engraving.\n\nScene: Mara at the door.\n\nLooks: The Keeper: A tall man in a grey coat.\nMara: A small woman with a red scarf.",
+    "An engraving.\n\nScene: Mara at the door.\n\nLooks: Mara: A small woman with a red scarf.",
   );
-  expect(promptOf(both, "image:hill")).toBe(
-    "An engraving.\n\nScene: An empty hill.\n\nLooks: The Keeper: A tall man in a grey coat.",
-  );
+  // A scene without anyone in it leaves the looks line out.
+  expect(promptOf(both, "image:hill")).toBe("An engraving.\n\nScene: An empty hill.");
 });
 
 it("gives the subject's look to images without scenes, and asks nothing without the keyword", () => {

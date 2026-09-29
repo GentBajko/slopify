@@ -127,7 +127,7 @@ The style, composition and everything else in the prompt stay as written; only t
 An image model draws a named figure from whatever it half remembers, so the same character can look different in every image. Put `{{Appearance}}` in an image, thumbnail or establishing prompt, for example a line `Looks: {{Appearance}}`, and Slopify looks the looks up instead.
 
 - Once the article exists, one call to the project's AI model **searches the web** for how the video's subject and every named character in the article look: build, face, clothing, colours and the marks that make them recognisable. Where depictions disagree, it describes the most iconic one.
-- Each picture gets the subject's look, plus the looks of up to three characters its scene names (with **Scenes from the article** on). Without scenes, every picture gets the subject's look.
+- With **Scenes from the article** on, each picture gets the looks of the figures its scene names (up to three besides the subject), so a scene of a place or of someone else isn't redrawn with the subject in it; a scene that names no one leaves the looks line out. A thumbnail always gets the subject's look. Without scenes, every picture gets the subject's look.
 - There is no switch: a prompt with `{{Appearance}}` turns it on, and prompts without it are drawn as they always were. `{{Appearance}}` is never a field to fill in.
 - It costs one more AI call per run, with web search. The pictures that use it wait for it.
 
