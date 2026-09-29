@@ -62,7 +62,12 @@ export async function restoreRevision(
       baseRevisionId: input.baseRevisionId,
       revisionId: revision.id,
       fingerprints: revision.fingerprints,
-      ...(comparison.ok ? { baseFingerprints: comparison.baseFingerprints } : {}),
+      ...(comparison.ok
+        ? {
+            baseFingerprints: comparison.baseFingerprints,
+            stages: Object.fromEntries(comparison.recipes.map((row) => [row.key, row.stage])),
+          }
+        : {}),
       logicalKeys: logicalKeys(deps, input.projectId, input.baseRevisionId, revision.fingerprints),
     });
     carryCheckpointGates(deps, input.baseRevisionId, revision);

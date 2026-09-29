@@ -22,6 +22,9 @@ export interface WorkTransition {
   readonly baseFingerprints?: Readonly<Record<string, string>>;
   readonly logicalKeys?: Readonly<Record<string, string>>;
   readonly recipes?: readonly ResolvedWorkRecipe[];
+  // Each planned step's stage, when the recipes themselves aren't passed (a restore keeps the
+  // restored version's own fingerprints, so only the plan's stages are borrowed).
+  readonly stages?: Readonly<Record<string, StageKind>>;
 }
 export function transitionRevisionWork(
   deps: Pick<RevisionDeps, "db" | "ids" | "clock">,
@@ -124,7 +127,7 @@ export function transitionRevisionWork(
         ).run(input.projectId, input.revisionId, key, existing.workId, existing.pieceId, fp);
         continue;
       }
-      const kind = exact?.stage ?? stageForKey(key);
+      const kind = exact?.stage ?? input.stages?.[key] ?? stageForKey(key);
       const stage = db
         .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
         .get(input.projectId, kind);
@@ -195,7 +198,7 @@ function existingWork(
     ? undefined
     : { workId: z.string().parse(row.work_id), pieceId: z.string().parse(row.piece_id) };
 }
-function stageForKey(key: string): StageKind {
+export function stageForKey(key: string): StageKind {
   // A review runs in its item's stage; the narration's review in Audio.
   if (key === "review:narration") return "audio";
   if (key.startsWith("review:shorts:")) return "video";
@@ -203,10 +206,21 @@ function stageForKey(key: string): StageKind {
   const prefix = key.split(":")[0];
   if (prefix === "research") return "research";
   if (prefix === "article" || prefix === "entry" || prefix === "script") return "article";
-  if (prefix === "audio" || prefix === "narration") return "audio";
-  if (prefix === "image" || prefix === "reference") return "images";
+  if (prefix === "audio" || prefix === "narration" || prefix === "level") return "audio";
+  // `images:scenes` and `images:appearance` (the latter is Thumbnail's in a project that draws
+  // no images, which the plan's own stages say).
+  if (prefix === "image" || prefix === "images" || prefix === "reference" || prefix === "figure")
+    return "images";
   if (prefix === "thumbnail") return "thumbnail";
-  if (prefix === "export" || prefix === "subtitles" || prefix === "video" || prefix === "voices")
+  if (
+    prefix === "export" ||
+    prefix === "subtitles" ||
+    prefix === "video" ||
+    prefix === "voices" ||
+    prefix === "shorts" ||
+    prefix === "youtube" ||
+    prefix === "animate"
+  )
     return "video";
   if (prefix === "document") return "document";
   throw new Error(
