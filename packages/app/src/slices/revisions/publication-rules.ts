@@ -7,7 +7,7 @@ import { pieceFile } from "../storage/reconcile.js";
 import { outputSchema } from "../storage/schema.js";
 import type { RevisionOutputRecord, RevisionPieceRecord } from "./model.js";
 import type { PreparedOutput, PreparedPiece } from "./publication-model.js";
-import { outputsForRevision, piecesForRevision, revisionById } from "./repo.js";
+import { currentRevisionId, outputsForRevision, piecesForRevision, revisionById } from "./repo.js";
 import { stagePieceSchema } from "./schema.js";
 
 export function publicationAuthority(
@@ -59,6 +59,14 @@ export function validatePublication(
           .prepare("SELECT logical_fingerprint FROM revision_work_pieces WHERE id=? AND work_id=?")
           .get(publication.pieceId, publication.work.workId);
   const revision = revisionById(db, publication.work.projectId, publication.work.revisionId);
+  // The captions an export carries are the ones selected when it started. An edit while it ran
+  // (a thumbnail redo, say) makes a newer revision: captions made after that are selected there
+  // only, so the current revision counts as well as the work's own.
+  const head = currentRevisionId(db, publication.work.projectId);
+  const captionRevisions = [
+    publication.work.revisionId,
+    ...(head === undefined || head === publication.work.revisionId ? [] : [head]),
+  ];
   for (const row of outputs) {
     const retainedMember =
       ((authority?.key === "subtitles:files" &&
@@ -71,14 +79,16 @@ export function validatePublication(
           ["subtitles_srt", "subtitles_vtt", "subtitle_ass", "subtitle_font"].includes(
             row.output.role,
           ))) &&
-      outputsForRevision(db, publication.work.projectId, publication.work.revisionId).some(
-        (old) =>
-          old.selected &&
-          old.state === "ready" &&
-          old.workKey === row.workKey &&
-          old.output.role === row.output.role &&
-          old.assetId === row.asset.id &&
-          old.fingerprint === row.fingerprint,
+      captionRevisions.some((revisionId) =>
+        outputsForRevision(db, publication.work.projectId, revisionId).some(
+          (old) =>
+            old.selected &&
+            old.state === "ready" &&
+            old.workKey === row.workKey &&
+            old.output.role === row.output.role &&
+            old.assetId === row.asset.id &&
+            old.fingerprint === row.fingerprint,
+        ),
       );
     if (
       !retainedMember &&

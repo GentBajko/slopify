@@ -226,3 +226,79 @@ it("complete article publication deselects omitted end matter without deleting h
     ),
   ).toHaveLength(0);
 });
+it("keeps a video whose captions were selected on a revision saved while it rendered", async () => {
+  const h = await fixture(true);
+  const exportWork = publicationFor(h.deps, h.base, "export:video");
+  const captionWork = publicationFor(h.deps, h.base, "subtitles:files");
+  // An edit while the video renders (a thumbnail redo) makes a newer revision.
+  const saved = await saveRevision(h.deps, {
+    projectId: h.projectId,
+    baseRevisionId: h.base.revision.id,
+    idempotencyKey: "edit-while-rendering",
+    edit: {
+      config: { ...h.base.revision.config, title: "Renamed while rendering" },
+      content: h.base.revision.content,
+    },
+  });
+  if (!saved.ok) throw new Error(JSON.stringify(saved));
+  // The captions finish after it: recorded on the video's revision, selected on the newer one.
+  const captions = (["subtitles_srt", "subtitles_vtt"] as const).map((role) => ({
+    ...preparedOutput(h.deps, captionWork, "subtitles:files", role, `video:${role}`),
+    fingerprint: "captions-as-made",
+  }));
+  for (const caption of captions) {
+    h.deps.db
+      .prepare("INSERT INTO project_assets(id,project_id,path,bytes,created_at) VALUES(?,?,?,?,?)")
+      .run(
+        caption.asset.id,
+        h.projectId,
+        caption.asset.path,
+        caption.asset.bytes,
+        caption.asset.createdAt,
+      );
+    for (const revision of [h.base.revision, saved.view.revision]) {
+      const record = h.deps.ids.next();
+      insertManifestOutput(
+        h.deps.db,
+        revision,
+        {
+          slot: caption.slot,
+          workKey: caption.workKey,
+          assetId: caption.asset.id,
+          output: caption.output,
+          fingerprint: caption.fingerprint,
+          state: "ready",
+        },
+        record,
+      );
+      if (revision.id === saved.view.revision.id)
+        selectOutputRecord(h.deps.db, revision.id, caption.slot, record);
+    }
+  }
+  const media = preparedOutput(h.deps, exportWork, "export:video", "video");
+  const video = {
+    ...media,
+    output: { ...media.output, meta: { subtitlesMode: "files" as const } },
+  };
+  const params = preparedOutput(h.deps, exportWork, "export:video", "render_params");
+  expect(() =>
+    commitRevisionOutputs(h.deps, exportWork, [video, params, ...captions], []),
+  ).not.toThrow();
+  // Captions no revision has selected are still refused.
+  h.deps.db
+    .prepare("UPDATE revision_outputs SET selected=0 WHERE work_key='subtitles:files'")
+    .run();
+  const again = preparedOutput(h.deps, exportWork, "export:video", "video");
+  expect(() =>
+    commitRevisionOutputs(
+      h.deps,
+      exportWork,
+      [
+        { ...again, output: { ...again.output, meta: { subtitlesMode: "files" as const } } },
+        preparedOutput(h.deps, exportWork, "export:video", "render_params"),
+        ...captions,
+      ],
+      [],
+    ),
+  ).toThrow("authorized recipe");
+});
