@@ -158,6 +158,11 @@ export const settingsHelp = {
     body: "Slopify tells you when a run finishes, fails, or stops to wait for your review, and when an automatic review kept an item flagged and needs your decision. The message holds the project title, what happened and a link to the project, never your keys. Browser notifications need a Slopify tab open; a Notification URL works with none open.",
     tutorial: { page: "Notifications", anchor: "when-slopify-notifies-you" },
   },
+  "settings.notifications.sounds": {
+    title: "Run sounds",
+    body: "Plays a chime when a run starts and a different, longer one when it finishes, fails or stops to wait for you, while any Slopify tab is open. Only one tab plays each. Needs no permission, but the browser stays silent until the page has been clicked once. This browser only. Default: on.",
+    tutorial: { page: "Notifications", anchor: "run-sounds" },
+  },
   "settings.notifications.browser": {
     title: "Browser notifications",
     body: "Shows a notification from this browser while any Slopify tab is open, even in the background. Turning it on asks the browser's permission. It applies to this browser only, so turn it on in each browser you use. Default: off.",

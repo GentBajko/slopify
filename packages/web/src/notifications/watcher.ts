@@ -41,6 +41,12 @@ export interface ReviewEvent {
   readonly reason?: string | undefined;
 }
 
+// "Started: Title": a run began.
+export interface ShownStartNotice {
+  readonly projectId: string;
+  readonly title: string;
+}
+
 export interface ShownReviewNotice {
   readonly projectId: string;
   readonly text: NoticeText;
@@ -49,6 +55,12 @@ export interface ShownReviewNotice {
 export interface RunWatcherDeps {
   // The toggle is on and the browser has granted permission.
   readonly enabled: () => boolean;
+  // Run sounds are on in this browser (`sounds.ts`).
+  readonly sounds?: () => boolean;
+  // Plays the start or the end chime.
+  readonly play?: (sound: "start" | "end") => void;
+  // A run started: shown with the start chime when browser notifications are on.
+  readonly showStart?: (notice: ShownStartNotice) => void;
   // Every project's state now, so a run already going when the page loaded is known to be
   // running when it finishes.
   readonly seed: () => Promise<readonly { readonly id: string; readonly status: ProjectState }[]>;
@@ -73,8 +85,14 @@ export interface RunWatcher {
   readonly settled: () => Promise<void>;
 }
 
+const ends: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
+
 export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
   const states = new Map<string, ProjectState>();
+  // The runs that have started and not ended, so a run that stops to wait for a review and
+  // goes on is one start, not two.
+  const started = new Set<string>();
+  const sounding = (): boolean => deps.sounds?.() === true && deps.play !== undefined;
   const pending = new Set<Promise<void>>();
 
   const track = (work: Promise<void>): void => {
@@ -92,7 +110,15 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
     if (!(await deps.claim(`${projectId}:${state}`))) return;
-    deps.show({ projectId, kind, text: noticeText(kind, subject) });
+    if (sounding()) deps.play?.("end");
+    if (deps.enabled()) deps.show({ projectId, kind, text: noticeText(kind, subject) });
+  };
+  const announceStart = async (projectId: string) => {
+    const subject = await deps.subject(projectId);
+    if (subject === undefined) return;
+    if (!(await deps.claim(`${projectId}:started`))) return;
+    if (sounding()) deps.play?.("start");
+    if (deps.enabled()) deps.showStart?.({ projectId, title: subject.title });
   };
 
   return {
@@ -100,8 +126,16 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       const previous = states.get(event.projectId);
       states.set(event.projectId, event.state);
       if (previous === event.state) return;
+      const on = deps.enabled() || sounding();
+      if (event.state === "running" && !started.has(event.projectId)) {
+        started.add(event.projectId);
+        if (sounding() || (deps.enabled() && deps.showStart !== undefined))
+          track(announceStart(event.projectId));
+        return;
+      }
+      if (ends.has(event.state)) started.delete(event.projectId);
       const kind = noticeOf(previous, event.state);
-      if (kind === undefined || !deps.enabled()) return;
+      if (kind === undefined || !on) return;
       track(announce(event.projectId, event.state, kind));
     },
     observeTopics: (event) => {
@@ -136,7 +170,12 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     seed: async () => {
       try {
         for (const project of await deps.seed())
-          if (!states.has(project.id)) states.set(project.id, project.status);
+          if (!states.has(project.id)) {
+            states.set(project.id, project.status);
+            // Already going when the page loaded: its start went by unheard.
+            if (project.status === "running" || project.status === "paused")
+              started.add(project.id);
+          }
       } catch (error) {
         deps.report(error);
       }

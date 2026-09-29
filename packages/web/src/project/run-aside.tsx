@@ -10,7 +10,7 @@ import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import type { HeldGate } from "./next-action.js";
 import { stageWords } from "./next-action.js";
-import { money } from "./run-cost.js";
+import { money, workDuration } from "./run-cost.js";
 import { finalOutput, summaryOf } from "./summary.js";
 
 // The right rail under the next action: the run's steps with their times and one detail
@@ -180,6 +180,10 @@ export function CostSoFar({
         <strong className="text-ink">{money(cost.cost)}</strong>
         {cost.unpriced > 0 ? " known, spent" : " spent"}
         {cost.apiEquivalent === null ? null : ` · ~${money(cost.apiEquivalent)} via API`}
+        {/* The run's working time once it has stopped; while it runs the clock above counts. */}
+        {cost.run === null || cost.run.running
+          ? null
+          : ` · ${workDuration(cost.run.workingMs)} of work`}
       </p>
       {windows.map((row) => {
         const used = row.used < 1 ? "under 1%" : `${percent.format(row.used)}%`;

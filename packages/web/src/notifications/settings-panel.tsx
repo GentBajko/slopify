@@ -17,6 +17,7 @@ import {
   setBrowserNotifications,
   showBrowserNotification,
 } from "./browser.js";
+import { onRunSoundsChange, playRunSound, runSoundsOn, setRunSounds } from "./sounds.js";
 
 const notificationUrlQueryKey = ["settings", "notifications"] as const;
 
@@ -31,6 +32,7 @@ export function NotificationSettings() {
       <SectionHead title="Browser and phone" info="settings.notifications" />
       <div className="flex flex-col gap-8">
         <BrowserNotifications />
+        <RunSounds />
         <NotificationUrl />
       </div>
     </div>
@@ -109,6 +111,34 @@ function BrowserNotifications() {
           {problem}
         </p>
       )}
+    </div>
+  );
+}
+
+// A chime when a run starts and another when it ends, in this browser. Needs a Slopify tab
+// open, like browser notifications, but not their permission.
+function RunSounds() {
+  const on = useSyncExternalStore(onRunSoundsChange, runSoundsOn, () => true);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <Switch
+          label="Run sounds"
+          tip="settings.notifications.sounds"
+          checked={on}
+          onChange={setRunSounds}
+        />
+        <Button variant="quiet" onClick={() => playRunSound("start")}>
+          Play start
+        </Button>
+        <Button variant="quiet" onClick={() => playRunSound("end")}>
+          Play end
+        </Button>
+      </div>
+      <p className="m-0 text-small text-ink-2">
+        A chime when a run starts and a different one when it finishes, fails or waits for you.
+        Works while any Slopify tab is open; set your computer's volume for how loud.
+      </p>
     </div>
   );
 }

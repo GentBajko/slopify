@@ -59,7 +59,7 @@ export function RunCostSummary({
   const parts = [
     `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${money(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
     ...(cost.apiEquivalent === null ? [] : [`~${money(cost.apiEquivalent)} via API`]),
-    ...(cost.run === null ? [] : [`${duration(cost.run.workingMs)} of work`]),
+    ...(cost.run === null ? [] : [`${workDuration(cost.run.workingMs)} of work`]),
   ];
   return (
     <section
@@ -99,7 +99,7 @@ export function RunClock({
     return () => clearInterval(timer);
   }, [on]);
   if (!on || run === null) return null;
-  const working = duration(run.workingMs + (run.running ? Math.max(0, now - measuredAt) : 0));
+  const working = workDuration(run.workingMs + (run.running ? Math.max(0, now - measuredAt) : 0));
   return (
     <p
       role="timer"
@@ -121,7 +121,7 @@ const stageColumns: readonly Column<StageCost>[] = [
     id: "time",
     header: "Working time",
     numeric: true,
-    cell: (row) => (row.wallMs === null ? "—" : duration(row.wallMs)),
+    cell: (row) => (row.wallMs === null ? "—" : workDuration(row.wallMs)),
   },
 ];
 
@@ -174,7 +174,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
             );
           })}
           {cost.run === null ? null : (
-            <Stat value={duration(cost.run.workingMs)} label="this run's working time" />
+            <Stat value={workDuration(cost.run.workingMs)} label="this run's working time" />
           )}
         </Stats>
         <div className="flex flex-col gap-1 text-small text-ink-2">
@@ -218,7 +218,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
 
       <div className="flex flex-col gap-1">
         <p className="m-0 text-small text-ink-2">
-          {`In total: ${usage(cost.totals) || "no reported usage"} · ${duration(cost.totals.wallMs)} working, over every run.`}
+          {`In total: ${usage(cost.totals) || "no reported usage"} · ${workDuration(cost.totals.wallMs)} working, over every run.`}
         </p>
         <p className="m-0 text-small text-ink-3">
           {`Priced from the model catalogue${cost.catalogueDate === null ? "" : ` of ${cost.catalogueDate}`} when each call finished. Retries that failed are not charged here; taxes and included credits are not counted.`}
@@ -319,7 +319,7 @@ export function money(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-function duration(ms: number): string {
+export function workDuration(ms: number): string {
   const seconds = Math.round(ms / 1000);
   if (seconds < 60) return `${seconds} s`;
   const minutes = Math.floor(seconds / 60);

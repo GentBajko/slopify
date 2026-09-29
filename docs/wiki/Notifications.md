@@ -42,6 +42,15 @@ If you blocked notifications for Slopify earlier, Slopify says "Notifications ar
 
 Some browsers only allow notifications from installed apps. If the test says so, use a Notification URL instead.
 
+## Run sounds
+
+**Settings → Notifications → Run sounds** (on by default) plays a chime when a run starts and a different, longer one when it finishes, fails or stops to wait for you, like a message arriving on a phone. **Play start** and **Play end** let you hear them.
+
+- Works while any Slopify tab is open; only one tab plays each chime.
+- Needs no permission, but browsers keep a page silent until it has been clicked once, so click anywhere in Slopify after opening it.
+- With **Browser notifications** on too, a run's start also shows "Started: *title*".
+- It is this browser's own setting. Your computer's volume sets how loud.
+
 ## Get notifications on your phone (Notification URL)
 
 A Notification URL works with no Slopify tab open. When a run finishes, fails or waits, or a review needs a decision, Slopify sends that address one `POST` with a short plain-text body. Its last line is the project's link, so you can open it straight from the message, for example:

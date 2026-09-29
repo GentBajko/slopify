@@ -1,0 +1,1 @@
+- Run sounds (Settings → Notifications, on by default): a chime when a run starts and a different one when it finishes, fails or waits, while a Slopify tab is open; with browser notifications on, a start also shows "Started: title". The run clock counts work an edit carried over (a retried video no longer freezes it), and Cost so far shows the run's working time once it stops.

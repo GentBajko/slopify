@@ -1,4 +1,4 @@
-import type { ShownNotice, ShownTopicsNotice } from "./watcher.js";
+import type { ShownNotice, ShownStartNotice, ShownTopicsNotice } from "./watcher.js";
 
 // The browser half of run notifications: the per-browser toggle, the permission, the one-tab
 // claim and the Notification itself. Storage can be missing or throw (private windows, blocked
@@ -136,6 +136,24 @@ export function showTopicsNotification(notice: ShownTopicsNotice, open: () => vo
   shown.onclick = () => {
     window.focus();
     open();
+    shown.close();
+  };
+}
+
+// "Started: Title", with the start chime; clicking it opens the project. Same tag as the
+// run's other notifications, so its end replaces it.
+export function showStartNotification(
+  notice: ShownStartNotice,
+  open: (projectId: string) => void,
+): void {
+  const title = notice.title.trim() === "" ? "Untitled project" : notice.title.trim();
+  const shown = new Notification(`Started: ${title}`, {
+    body: "Slopify is working on it. You'll hear a different chime when it ends.",
+    tag: `slopify-run-${notice.projectId}`,
+  });
+  shown.onclick = () => {
+    window.focus();
+    open(notice.projectId);
     shown.close();
   };
 }

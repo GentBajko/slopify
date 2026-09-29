@@ -9,8 +9,10 @@ import {
   claimOnce,
   onBrowserNotificationsChange,
   showBrowserNotification,
+  showStartNotification,
   showTopicsNotification,
 } from "./browser.js";
+import { onRunSoundsChange, playRunSound, runSoundsOn, unlockRunSounds } from "./sounds.js";
 import { createRunWatcher, type RunWatcher } from "./watcher.js";
 
 // The shell's one watcher. It rides the global event stream the shell already holds open, so
@@ -28,6 +30,13 @@ export function useRunNotifications(): RunWatcher {
     () =>
       createRunWatcher({
         enabled: browserNotificationsReady,
+        sounds: runSoundsOn,
+        play: playRunSound,
+        showStart: (notice) => {
+          showStartNotification(notice, (projectId) => {
+            void navigateRef.current({ to: "/projects/$projectId", params: { projectId } });
+          });
+        },
         seed: async () =>
           (await queryClient.fetchQuery({ ...projectsQuery(api), staleTime: 5_000 })).projects,
         subject: async (projectId) => {
@@ -65,10 +74,22 @@ export function useRunNotifications(): RunWatcher {
   );
 
   useEffect(() => {
-    if (browserNotificationsReady()) void watcher.seed();
-    return onBrowserNotificationsChange(() => {
-      if (browserNotificationsReady()) void watcher.seed();
-    });
+    const listening = (): boolean => browserNotificationsReady() || runSoundsOn();
+    if (listening()) void watcher.seed();
+    const seed = (): void => {
+      if (listening()) void watcher.seed();
+    };
+    const stopNotifications = onBrowserNotificationsChange(seed);
+    const stopSounds = onRunSoundsChange(seed);
+    // Browsers keep a page silent until it is clicked once.
+    window.addEventListener("pointerdown", unlockRunSounds, { once: true });
+    window.addEventListener("keydown", unlockRunSounds, { once: true });
+    return () => {
+      stopNotifications();
+      stopSounds();
+      window.removeEventListener("pointerdown", unlockRunSounds);
+      window.removeEventListener("keydown", unlockRunSounds);
+    };
   }, [watcher]);
 
   return watcher;

@@ -65,4 +65,26 @@ describe("how long a project took", () => {
     const run = projectTiming(db, "p1", at("10:12")).run;
     expect(run).toEqual({ current: false, running: true, workingMs: 12 * 60_000 });
   });
+
+  it("counts work an edit carried over to the current revision as the current run's", () => {
+    const db = running();
+    // A thumbnail redo made r2 while the audio (started on r1) went on; r2 ran a minute itself.
+    db.exec(`
+      INSERT INTO project_revisions (id, project_id, parent_id, config, content, fingerprints,
+        created_at) VALUES ('r2','p1','r1','{}','{}','{}','2026-09-28');
+      UPDATE project_heads SET revision_id = 'r2';
+      INSERT INTO revision_work (id, project_id, revision_id, stage_id, kind, fingerprint, state,
+        dispatch_state, created_at) VALUES
+        ('w3','p1','r2','s2','images','g','done','allowed','2026-09-27');
+      INSERT INTO attempts (id, stage_id, n, started_at, ended_at, revision_id, work_id) VALUES
+        ('a3','s2',2,'2026-09-27T10:01:00.000Z','2026-09-27T10:02:00.000Z','r2','w3');
+      INSERT INTO revision_work_reservations (project_id, revision_id, work_key, work_id,
+        fingerprint) VALUES ('p1','r2','audio:body','w1','f');
+    `);
+    expect(projectTiming(db, "p1", at("10:12")).run).toEqual({
+      current: true,
+      running: true,
+      workingMs: 12 * 60_000,
+    });
+  });
 });

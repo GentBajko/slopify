@@ -257,3 +257,56 @@ describe("claimOnce", () => {
     expect(await claimOnce("p1:done")).toBe(true);
   });
 });
+
+describe("run sounds", () => {
+  function sounding(seeded: readonly { id: string; status: ProjectState }[] = []) {
+    const played: string[] = [];
+    const starts: string[] = [];
+    const shown: ShownNotice[] = [];
+    const watcher = createRunWatcher({
+      enabled: () => false,
+      sounds: () => true,
+      play: (sound) => {
+        played.push(sound);
+      },
+      showStart: (notice) => {
+        starts.push(notice.title);
+      },
+      seed: () => Promise.resolve(seeded),
+      subject: (projectId) => Promise.resolve({ title: `Project ${projectId}`, makesVideo: true }),
+      claim: () => Promise.resolve(true),
+      show: (notice) => {
+        shown.push(notice);
+      },
+      report: () => {},
+    });
+    return { watcher, played, starts, shown };
+  }
+
+  it("chimes once when a run starts and differently when it ends, with notifications off", async () => {
+    const { watcher, played, starts, shown } = sounding();
+    watcher.observe({ projectId: "a", state: "pending" });
+    watcher.observe({ projectId: "a", state: "running" });
+    // A stop to wait for a review and back is the same run.
+    watcher.observe({ projectId: "a", state: "pending" });
+    watcher.observe({ projectId: "a", state: "running" });
+    watcher.observe({ projectId: "a", state: "done" });
+    await watcher.settled();
+    expect(played).toEqual(["start", "end", "end"]);
+    expect(starts).toEqual([]);
+    expect(shown).toEqual([]);
+    // Run again: a new start.
+    watcher.observe({ projectId: "a", state: "running" });
+    await watcher.settled();
+    expect(played.at(-1)).toBe("start");
+  });
+
+  it("stays quiet for a run that was already going when the page loaded", async () => {
+    const { watcher, played } = sounding([{ id: "b", status: "running" }]);
+    await watcher.seed();
+    watcher.observe({ projectId: "b", state: "running" });
+    watcher.observe({ projectId: "b", state: "done" });
+    await watcher.settled();
+    expect(played).toEqual(["end"]);
+  });
+});

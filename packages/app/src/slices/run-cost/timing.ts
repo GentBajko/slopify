@@ -28,6 +28,7 @@ type Interval = readonly [start: number, end: number];
 const attemptRow = z.object({
   kind: z.enum(stageKinds),
   revision_id: z.string().nullable(),
+  work_id: z.string().nullable(),
   started_at: z.string(),
   ended_at: z.string().nullable(),
   work_state: z.string().nullable(),
@@ -50,8 +51,8 @@ export function coveredMs(intervals: readonly Interval[]): number {
 export function projectTiming(db: DatabaseSync, projectId: string, now: number): ProjectTiming {
   const rows = db
     .prepare(
-      `SELECT s.kind AS kind, a.revision_id AS revision_id, a.started_at AS started_at,
-         a.ended_at AS ended_at, w.state AS work_state
+      `SELECT s.kind AS kind, a.revision_id AS revision_id, a.work_id AS work_id,
+         a.started_at AS started_at, a.ended_at AS ended_at, w.state AS work_state
        FROM attempts a JOIN stages s ON s.id = a.stage_id
        LEFT JOIN revision_work w ON w.id = a.work_id
        WHERE s.project_id = ?`,
@@ -59,6 +60,16 @@ export function projectTiming(db: DatabaseSync, projectId: string, now: number):
     .all(projectId)
     .map((row) => attemptRow.parse(row));
   const head = currentRevisionId(db, projectId);
+  // Work an edit carried over to the current revision is still its run's work: a video
+  // retried after a thumbnail redo renders on the revision it started on, and its hours count.
+  const carried = new Set(
+    head === undefined
+      ? []
+      : db
+          .prepare("SELECT work_id FROM revision_work_reservations WHERE revision_id=?")
+          .all(head)
+          .flatMap((row) => (typeof row.work_id === "string" ? [row.work_id] : [])),
+  );
   const all: Interval[] = [];
   const runs = new Map<string, { intervals: Interval[]; running: boolean; last: number }>();
   const stages = new Map<StageKind, Interval[]>();
@@ -73,12 +84,16 @@ export function projectTiming(db: DatabaseSync, projectId: string, now: number):
     const interval: Interval = [start, end];
     all.push(interval);
     stages.set(row.kind, [...(stages.get(row.kind) ?? []), interval]);
-    if (row.revision_id !== null) {
-      const run = runs.get(row.revision_id) ?? { intervals: [], running: false, last: start };
+    const owner =
+      head !== undefined && row.work_id !== null && carried.has(row.work_id)
+        ? head
+        : row.revision_id;
+    if (owner !== null) {
+      const run = runs.get(owner) ?? { intervals: [], running: false, last: start };
       run.intervals.push(interval);
       run.running ||= live;
       run.last = Math.max(run.last, start);
-      runs.set(row.revision_id, run);
+      runs.set(owner, run);
     }
   }
   const latest =
