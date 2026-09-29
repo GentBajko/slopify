@@ -155,7 +155,7 @@ export async function prepareEditAssets(
       prepared.push(item);
     }
     const article =
-      edit.config.sources.article === "provide" || content.articleEdited === true
+      edit.config.sources.article !== "generate" || content.articleEdited === true
         ? (content.articleMarkdown ?? edit.config.provided.article)
         : undefined;
     if (

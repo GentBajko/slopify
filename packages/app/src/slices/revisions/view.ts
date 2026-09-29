@@ -53,5 +53,7 @@ export function resolvedArticleMarkdown(
     return readFileSync(outputPath(deps.paths, revision.projectId, article.output.path), "utf8");
   return revision.config.sources.article === "provide"
     ? (revision.config.provided.article ?? null)
-    : null;
+    : revision.config.sources.article === "off"
+      ? ""
+      : null;
 }

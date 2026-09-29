@@ -25,6 +25,7 @@ The Article row starts with a **Source** switch:
 | --- | --- | --- |
 | **Generate** (default) | The text model writes the article from the article prompt, in one call. | One text-model call |
 | **Provide** | Slopify narrates the text you paste, word for word. No text model writes one. | No text-model cost for the article |
+| **Off** | No article at all, for a project of images or a thumbnail made from prompts. Research is off too, and Play refuses what reads the article: generated narration, captions, the YouTube description, shorts, the PDF, an AI-written thumbnail prompt and Scenes from the article. Each refusal says what to switch. | Nothing |
 
 The article is what the narration reads and what the PDF lays out.
 

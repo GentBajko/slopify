@@ -52,7 +52,12 @@ export function ContentSection(
         </p>
       )}
       <TextGenerationIn {...props} section="article" onSettings={() => onLibrary("/settings")} />
-      {form.sources.article === "provide" ? (
+      {form.sources.article === "off" ? (
+        <p className="py-4 text-small text-ink-3">
+          No article: for a project of images or a thumbnail made from prompts. Narration, the PDF
+          and anything else that reads the article stay off.
+        </p>
+      ) : form.sources.article === "provide" ? (
         <p className="py-4 text-small text-ink-3">
           Research is Off because the article is provided.
         </p>

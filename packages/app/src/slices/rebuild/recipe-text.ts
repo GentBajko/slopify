@@ -206,8 +206,9 @@ export function textRecipes(context: RecipeContext): TextRecipes {
           speakers: voices.speakers.map((speaker) => ({ id: speaker.id, name: speaker.name })),
           attribute: !writesScript,
         };
+  // A pasted article, or with Article Off an empty one: nothing is written.
   const article =
-    config.sources.article === "provide" || content.articleEdited === true
+    config.sources.article !== "generate" || content.articleEdited === true
       ? recipe(context, "article:body", "article", {
           kind: "local",
           version: 1,
@@ -416,7 +417,7 @@ export function matchingText(
 
 function articleMarkdownOf(context: RecipeContext): string | null {
   const { config, content, resolved } = context;
-  return config.sources.article === "provide" || content.articleEdited === true
+  return config.sources.article !== "generate" || content.articleEdited === true
     ? (content.articleMarkdown ?? config.provided.article ?? "")
     : resolved.articleMarkdown;
 }

@@ -168,17 +168,19 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
           : `${String(context.keywords)} keyword${context.keywords === 1 ? "" : "s"}`,
       ]);
     case "article":
-      return form.sources.article === "provide"
-        ? "Your article"
-        : join([
-            form.articlePrompt || "No prompt picked",
-            form.llm.provider
-              ? `${provider(form.llm.provider)} · ${form.llm.model || "no model"}`
-              : false,
-            form.sources.research === "off"
-              ? "research off"
-              : `research: ${sourceLabels[form.sources.research].toLowerCase()}`,
-          ]);
+      return form.sources.article === "off"
+        ? "Off: no article"
+        : form.sources.article === "provide"
+          ? "Your article"
+          : join([
+              form.articlePrompt || "No prompt picked",
+              form.llm.provider
+                ? `${provider(form.llm.provider)} · ${form.llm.model || "no model"}`
+                : false,
+              form.sources.research === "off"
+                ? "research off"
+                : `research: ${sourceLabels[form.sources.research].toLowerCase()}`,
+            ]);
     case "narration": {
       if (form.sources.audio === "off") return "Off, a silent video";
       if (form.sources.audio === "provide")

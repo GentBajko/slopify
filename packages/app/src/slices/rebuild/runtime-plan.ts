@@ -55,7 +55,7 @@ export function executionPlan(
   const resolved = {
     articleMarkdown:
       view.revision.content.articleEdited === true ||
-      view.revision.config.sources.article === "provide"
+      view.revision.config.sources.article !== "generate"
         ? view.articleMarkdown
         : textOutput("article_md"),
     researchNotes: textOutput("notes"),

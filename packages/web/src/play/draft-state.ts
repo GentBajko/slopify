@@ -97,7 +97,7 @@ export function withProviderDefaults(
 export function normalizePlayForm(form: PlayDraftForm): PlayDraftForm {
   const sources = {
     ...form.sources,
-    ...(form.sources.article === "provide" ? { research: "off" as const } : {}),
+    ...(form.sources.article !== "generate" ? { research: "off" as const } : {}),
     ...(form.sources.images === "off" ? { video: "off" as const } : {}),
   };
   const mode =

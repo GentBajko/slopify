@@ -335,7 +335,7 @@ describe("sources", () => {
     }
   });
 
-  it("allows every stage except article to be off", () => {
+  it("allows every stage to be off", () => {
     const result = admit({
       draft: provided({
         sources: sources({ audio: "off", images: "off", video: "off" }),
@@ -351,7 +351,9 @@ describe("sources", () => {
       expect(result.draft.intro).toBeUndefined();
       expect(result.draft.outro).toBeUndefined();
     }
-    expect(fields(provided({ sources: sources({ article: "off" }) }))).toContain("sources.article");
+    expect(fields(provided({ sources: sources({ article: "off" }) }))).not.toContain(
+      "sources.article",
+    );
   });
 
   it("makes the document locally, so Generate asks for no provider", () => {
@@ -773,5 +775,63 @@ describe("the zoom", () => {
     expect(
       fields(provided({ zoomPercent: 99, sources: sources({ images: "off", video: "off" }) })),
     ).toEqual([]);
+  });
+});
+
+describe("article off", () => {
+  const imagesOnly = (over: Partial<RunDraft> = {}): RunDraft =>
+    provided({
+      sources: {
+        research: "generate",
+        article: "off",
+        audio: "off",
+        images: "generate",
+        thumbnail: "from_prompt",
+        video: "off",
+        document: "off",
+      },
+      images: { provider: "fal", model: "image" },
+      imagePrompts: [{ name: "Figure", number: 1 }],
+      thumbnailPrompt: "A title card",
+      provided: {},
+      ...over,
+    });
+
+  it("makes images and a thumbnail from prompts with no article and no research", () => {
+    const result = admit({ draft: imagesOnly(), staged: files, requiredSlots: [] });
+    expect(result.ok ? [] : result.fields).toEqual([]);
+    if (result.ok) expect(result.draft.sources.research).toBe("off");
+  });
+
+  it("refuses what reads the article, and says how to fix it", () => {
+    const base = imagesOnly();
+    const result = admit({
+      draft: {
+        ...base,
+        sources: {
+          ...base.sources,
+          audio: "generate",
+          document: "generate",
+          thumbnail: "prompt_by_llm",
+        },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+        imageScenes: true,
+      },
+      staged: files,
+      requiredSlots: [],
+    });
+    const fields = result.ok ? [] : result.fields.map((field) => field.field);
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        "sources.audio",
+        "sources.document",
+        "sources.thumbnail",
+        "imageScenes",
+      ]),
+    );
+    const narration = result.ok
+      ? undefined
+      : result.fields.find((field) => field.field === "sources.audio");
+    expect(narration?.message).toContain("Set Article to Generate or Provide");
   });
 });

@@ -19,7 +19,7 @@ function Subject(): import("react").ReactElement {
     <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
   );
 }
-it("keeps Article required and pairs Images Off with Video Off", async () => {
+it("offers Article Off and pairs Images Off with Video Off", async () => {
   const user = userEvent.setup();
   renderApp(
     <Subject />,
@@ -31,7 +31,7 @@ it("keeps Article required and pairs Images Off with Video Off", async () => {
     }),
   );
   const article = screen.getByRole("combobox", { name: "Article source" });
-  expect(within(article).queryByRole("option", { name: "Off" })).toBeNull();
+  expect(within(article).queryByRole("option", { name: "Off" })).not.toBeNull();
   await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
   await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
   await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");

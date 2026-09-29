@@ -327,7 +327,7 @@ describe("the source switches", () => {
       "OffGenerateProvide",
     );
     expect(screen.getByRole("radiogroup", { name: "article source" }).textContent).toBe(
-      "GenerateProvide",
+      "OffGenerateProvide",
     );
     await section("Outputs");
     expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(

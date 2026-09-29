@@ -2,6 +2,7 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
 import {
   allowedSources,
+  articleOffFields,
   edgeSilenceSecondsProblem,
   type FieldError,
   imageSecondsProblem,
@@ -63,7 +64,7 @@ function shortRangeFields(
 export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): RevisionContent {
   const restart =
     edit.regenerate?.includes("article:body") === true ||
-    (base.revision.config.sources.article === "provide" &&
+    (base.revision.config.sources.article !== "generate" &&
       edit.config.sources.article === "generate");
   const submittedText =
     edit.content.articleEdited === true ||
@@ -303,6 +304,7 @@ export function validateRevisionEdit(
     !(content.articleMarkdown ?? config.provided.article)?.trim()
   )
     fields.push({ field: "provided.article", message: "Paste the article." });
+  fields.push(...articleOffFields(config));
   if (
     config.sources.audio === "off" &&
     config.subtitles !== undefined &&

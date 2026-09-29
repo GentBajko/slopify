@@ -85,7 +85,7 @@ export function edgeSilenceSecondsProblem(value: number): string | undefined {
 // drawn in; the rule itself only asks whether a source is on its stage's list.
 export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
   research: ["off", "generate", "provide"],
-  article: ["generate", "provide"],
+  article: ["off", "generate", "provide"],
   audio: ["off", "generate", "provide"],
   images: ["off", "generate", "provide"],
   thumbnail: ["off", "from_prompt", "prompt_by_llm", "provide"],
@@ -209,7 +209,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
 // only generated narration uses separately selected intro/outro entries.
 export function normaliseDraft(draft: RunDraft): RunDraft {
   const sources = { ...draft.sources };
-  if (sources.article === "provide") {
+  // A pasted article, or none, is not researched.
+  if (sources.article !== "generate") {
     sources.research = "off";
   }
   if (sources.images === "off" && sources.video === "generate") {
@@ -281,6 +282,7 @@ function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: F
   if (sources.article === "provide" && blank(provided.article)) {
     fields.push({ field: "provided.article", message: "Paste the article." });
   }
+  fields.push(...articleOffFields(draft));
   if (sources.audio === "provide") {
     checkFile(staged, provided.audio, "audio", "provided.audio", "Pick an audio file.", fields);
   }
@@ -633,4 +635,76 @@ export function usesPronunciationGlossary(draft: Pick<RunDraft, "sources" | "aud
     draft.audio.provider === "inworld" &&
     (draft.audio.model === "inworld-tts-2" || draft.audio.model === "inworld-tts-2-flash")
   );
+}
+
+// Article Off: a project of images or a thumbnail from prompts, with no text at all. What reads
+// the article can't be on with it.
+export function articleOffFields(
+  draft: Pick<
+    RunDraft,
+    "sources" | "imageScenes" | "subtitles" | "youtubeDescription" | "shorts" | "mode"
+  >,
+): readonly FieldError[] {
+  const { sources } = draft;
+  if (sources.article !== "off") return [];
+  const fix = "Set Article to Generate or Provide";
+  return [
+    ...(sources.audio === "generate"
+      ? [
+          {
+            field: "sources.audio",
+            message: `Narration reads the article, and Article is Off. ${fix}, or set Narration to Off or Provide.`,
+          },
+        ]
+      : []),
+    ...(sources.document === "generate"
+      ? [
+          {
+            field: "sources.document",
+            message: `The PDF is made from the article, and Article is Off. ${fix}, or set PDF to Off.`,
+          },
+        ]
+      : []),
+    ...(sources.thumbnail === "prompt_by_llm"
+      ? [
+          {
+            field: "sources.thumbnail",
+            message: `The AI writes the thumbnail prompt from the article, and Article is Off. ${fix}, or pick From prompt for the thumbnail.`,
+          },
+        ]
+      : []),
+    // Captions, the description and the shorts match the narration to the article's words.
+    ...(sources.audio !== "off" && draft.subtitles !== undefined && draft.subtitles.mode !== "off"
+      ? [
+          {
+            field: "subtitles.mode",
+            message: `Captions are matched to the article's words, and Article is Off. ${fix}, or turn captions off.`,
+          },
+        ]
+      : []),
+    ...(usesYoutubeDescription(draft)
+      ? [
+          {
+            field: "youtubeDescription",
+            message: `The YouTube description is written from the narration's words, which come from the article, and Article is Off. ${fix}, or turn the YouTube description off.`,
+          },
+        ]
+      : []),
+    ...(usesShorts(draft)
+      ? [
+          {
+            field: "shorts.enabled",
+            message: `Shorts are picked from the narration's words, which come from the article, and Article is Off. ${fix}, or turn Shorts off.`,
+          },
+        ]
+      : []),
+    ...(sources.images === "generate" && draft.imageScenes === true
+      ? [
+          {
+            field: "imageScenes",
+            message: `Scenes from the article need the article, and Article is Off. ${fix}, or turn Scenes from the article off.`,
+          },
+        ]
+      : []),
+  ];
 }

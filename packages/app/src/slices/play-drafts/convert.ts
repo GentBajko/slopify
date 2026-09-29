@@ -76,7 +76,7 @@ export function toAdmissionDraft(input: {
   const fields: FieldError[] = [];
   const sources = {
     ...form.sources,
-    ...(form.sources.article === "provide" ? { research: "off" as const } : {}),
+    ...(form.sources.article !== "generate" ? { research: "off" as const } : {}),
     ...(form.sources.images === "off" ? { video: "off" as const } : {}),
   };
   const number = (raw: string, field: string, max: number, min = 1) => {

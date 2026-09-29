@@ -137,3 +137,16 @@ it("waits for the article before asking, and leaves prompts without a scene as t
   expect(plain.some((value) => value.key === "images:scenes")).toBe(false);
   expect(find(plain, "image:harbor").input).toMatchObject({ kind: "image", prompt: "Harbor" });
 });
+
+it("with Article Off, plans an empty given article and never writes one", () => {
+  const off: RunConfig = {
+    ...scened,
+    imageScenes: undefined,
+    sources: { ...scened.sources, article: "off" },
+    provided: {},
+  };
+  const recipes = plan([], null, { ...content, articleMarkdown: undefined }, off);
+  const article = find(recipes, "article:body");
+  expect(article.input).toMatchObject({ kind: "local", operation: "provided-article", values: "" });
+  expect(find(recipes, "image:harbor").input).toMatchObject({ kind: "image", prompt: "Harbor" });
+});

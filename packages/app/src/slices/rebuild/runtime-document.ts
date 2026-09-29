@@ -37,7 +37,7 @@ export async function executeDocumentRecipe(
   };
   const config = view.revision.config;
   const article =
-    view.revision.content.articleEdited === true || config.sources.article === "provide"
+    view.revision.content.articleEdited === true || config.sources.article !== "generate"
       ? view.articleMarkdown
       : text("article_md", "article:body");
   if (article === null)
