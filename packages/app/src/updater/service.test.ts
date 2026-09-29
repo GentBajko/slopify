@@ -111,6 +111,14 @@ describe("app updater", () => {
     tick();
     expect(installs).toBe(0);
     busy = false;
+    // Idle has to hold for two looks, so the gap between two steps never installs it.
+    tick();
+    expect(stopped).toBe(false);
+    busy = true;
+    tick();
+    busy = false;
+    tick();
+    expect(installs).toBe(0);
     tick();
     expect(stopped).toBe(true);
     await vi.waitFor(() => expect(installs).toBe(1));
@@ -184,6 +192,7 @@ describe("app updater", () => {
     expect(release).toBeTypeOf("function");
     expect((await updater.start()).info.status).toBe("waiting");
     release?.();
+    tick();
     tick();
     await vi.waitFor(() => expect(installs).toBe(1));
     expect(updater.beginMutation()).toBeUndefined();

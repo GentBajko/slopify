@@ -25,6 +25,7 @@ interface UpdateDeps {
 }
 
 const waitCheckMs = 5_000;
+const idleLooksToInstall = 2;
 
 export function createUpdater(deps: UpdateDeps): AppUpdater {
   let latestVersion: string | null = null;
@@ -94,13 +95,22 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
         deps.report(error);
       });
   }
-  // Looks again every few seconds and installs the moment no work is running.
+  // Looks again every few seconds and installs once no work is running. Idle has to hold for
+  // two looks in a row, so the moment between one step finishing and the next starting is
+  // never mistaken for the end of the work.
   function wait(version: string): void {
     pending = version;
     status = "waiting";
     error = undefined;
+    let idleLooks = 0;
     stopWatching = every(() => {
-      if (status !== "waiting" || busyNow()) return;
+      if (status !== "waiting") return;
+      if (busyNow()) {
+        idleLooks = 0;
+        return;
+      }
+      idleLooks += 1;
+      if (idleLooks < idleLooksToInstall) return;
       stopWatching?.();
       stopWatching = undefined;
       pending = undefined;

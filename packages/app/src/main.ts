@@ -135,6 +135,7 @@ import { isUpdateToken } from "./updater/model.js";
 import { npmCommand, updateCommitted } from "./updater/plan.js";
 import { publishedVersion } from "./updater/registry.js";
 import { createUpdater } from "./updater/service.js";
+import { workInProgress } from "./updater/work-in-progress.js";
 
 // ceiling: a burst of finished stages coalesces into one delivery a second later, and the
 // collector gets ten seconds to answer before the attempt is abandoned and the events
@@ -437,26 +438,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
             : npm === undefined
               ? "npm was not found, so in-app updates are off. Install Node.js with npm (https://nodejs.org), or update from the terminal: npx @gentbajko/slopify@latest"
               : undefined,
+      // An update never installs while a job is going (`updater/work-in-progress.ts`).
       busy: () =>
-        updateDb.prepare("SELECT 1 FROM stages WHERE state = 'running' LIMIT 1").get() !==
-          undefined ||
-        updateDb
-          .prepare("SELECT id FROM projects")
-          .all()
-          .some((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true),
-      busyWith: () => {
-        const running = updateDb
-          .prepare(
-            "SELECT p.title FROM stages s JOIN projects p ON p.id=s.project_id WHERE s.state='running' LIMIT 1",
-          )
-          .get();
-        if (typeof running?.title === "string") return running.title;
-        const inflight = updateDb
-          .prepare("SELECT id,title FROM projects")
-          .all()
-          .find((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true);
-        return typeof inflight?.title === "string" ? inflight.title : undefined;
-      },
+        workInProgress(updateDb, (id) => runner.hasInflight?.(id) === true, Date.now()) !==
+        undefined,
+      busyWith: () =>
+        workInProgress(updateDb, (id) => runner.hasInflight?.(id) === true, Date.now()),
       report: (message) => log.write("warn", "update", { detail: message }),
       install: async (next, restarting) => {
         if (npm === undefined) throw new Error("npm is unavailable.");

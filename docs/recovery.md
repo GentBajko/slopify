@@ -61,10 +61,22 @@ written, the image is drawn from it, and the image keeps it as its prompt.
 
 ## Updating while work runs
 
-Pressing Update while a project is being made no longer refuses. The update waits: the button
-says "Update to 2.6.0 will install when 'Cleopatra' finishes", and it installs by itself as soon as
-no step is running. Pressing it again drops the wait. The Docker launcher does the same before
-it replaces the container (see [Docker](docker.md)).
+An update never installs while a job is going. Pressing Update then doesn't refuse: the update
+waits. The button says "Update to 2.6.0 will install when 'Cleopatra' finishes", and it installs
+by itself as soon as the work is done. Pressing it again drops the wait. What counts as a job
+(`updater/work-in-progress.ts`):
+
+- a step running, or waiting to try again ("Trying again at 14:05");
+- a project between two steps, with its next work admitted and free to start (work held for a
+  review checkpoint doesn't count, so a project waiting for you never blocks an update);
+- a batch with videos still queued;
+- a narration chunk about to be recorded again;
+- a schedule writing topics, or due to start a run within 10 minutes, since a restart at its
+  time could make it skip the run.
+
+While waiting it looks every 5 seconds, and idle has to hold for two looks in a row, so the
+moment between two steps never installs it. The Docker launcher waits the same way before it
+replaces the container (see [Docker](docker.md)).
 
 ## Keep outputs only
 
