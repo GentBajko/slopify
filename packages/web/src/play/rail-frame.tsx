@@ -102,11 +102,26 @@ export function SourceSwitch({
       tip={sourceTips[kind]}
       className="max-[700px]:col-span-3 max-[700px]:justify-self-start [&_[data-slot=toggle-group]]:flex-wrap"
       value={form.sources[kind]}
-      options={sourceOptions(kind).map((option) => ({
-        ...option,
-        disabled: kind === "video" && option.value === "generate" && form.sources.images === "off",
-      }))}
+      options={sourceOptions(kind)
+        // With no article there is nothing for the AI to write a thumbnail prompt from.
+        .filter(
+          (option) =>
+            !(
+              kind === "thumbnail" &&
+              option.value === "prompt_by_llm" &&
+              form.sources.article === "off"
+            ),
+        )
+        .map((option) => ({
+          ...option,
+          disabled:
+            kind === "video" && option.value === "generate" && form.sources.images === "off",
+        }))}
       onPick={(source) => {
+        if (kind === "article" && source === "off") {
+          update(articleOff(form));
+          return;
+        }
         update({
           sources: {
             ...form.sources,
@@ -126,4 +141,21 @@ export function promptNames(
   return prompts
     .filter((prompt) => prompt.kind === kind)
     .map((prompt) => ({ value: prompt.name, label: prompt.name }));
+}
+
+// Article Off: what reads the article goes off with it, and its sections leave Play.
+export function articleOff(form: PlayFormState): Partial<PlayFormState> {
+  return {
+    sources: {
+      ...form.sources,
+      article: "off",
+      research: "off",
+      audio: "off",
+      document: "off",
+      ...(form.sources.thumbnail === "prompt_by_llm" ? { thumbnail: "from_prompt" as const } : {}),
+    },
+    subtitles: { ...form.subtitles, mode: "off" },
+    youtubeDescription: false,
+    ...(form.shorts === undefined ? {} : { shorts: { ...form.shorts, enabled: false } }),
+  };
 }

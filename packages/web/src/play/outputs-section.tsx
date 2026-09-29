@@ -95,7 +95,9 @@ export function ImagesSection(props: RailProps): ReactElement {
       more={
         <>
           <ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />
-          <ImageScenesControl document={document} onEdit={session.edit} />
+          {document.form.sources.article === "off" ? null : (
+            <ImageScenesControl document={document} onEdit={session.edit} />
+          )}
         </>
       }
       rawNumbers={{
@@ -183,7 +185,8 @@ export function ExtrasSection(
           {...(props.onReattachFile === undefined ? {} : { onReattachFile: props.onReattachFile })}
         />
       </section>
-      <DocumentRail {...props} />
+      {/* The PDF is made from the article, so with Article Off it isn't offered. */}
+      {props.form.sources.article === "off" ? null : <DocumentRail {...props} />}
     </>
   );
 }

@@ -336,53 +336,59 @@ export function VideoExtras({
           onChange={(showFigures) => update({ showFigures })}
         />
       ) : null}
-      <div>
-        <YoutubeDescription
-          enabled={form.youtubeDescription === true}
-          prompt={form.descriptionPrompt ?? ""}
-          prompts={prompts}
-          narrated={form.sources.audio !== "off"}
-          problem={problem}
-          onChange={(next) => update(next)}
-        />
-      </div>
-      <div>
-        <Shorts
-          value={form.shorts ?? freshShorts}
-          prompts={prompts}
-          narrated={form.sources.audio !== "off"}
-          problem={problem}
-          musicName={form.provided.shortsMusic?.name}
-          music={
-            <div className="basis-full">
-              <FilePick
-                field="shorts.music"
-                label="Background music (optional): an audio file, looped if shorter than a short"
-                accept="audio/*"
-                disabled={!shortsOn(form)}
-                uploads={form.provided.shortsMusic === undefined ? [] : [form.provided.shortsMusic]}
-                problem={problem("shorts.music")}
-                onPick={(files) => onPickFiles("shortsMusic", files)}
-                onReattach={
-                  onReattachFile
-                    ? (key, file) => onReattachFile("shortsMusic", key, file)
-                    : undefined
-                }
-                onRemove={(key) => onRemoveFile("shortsMusic", key)}
+      {form.sources.article === "off" ? null : (
+        <div>
+          <YoutubeDescription
+            enabled={form.youtubeDescription === true}
+            prompt={form.descriptionPrompt ?? ""}
+            prompts={prompts}
+            narrated={form.sources.audio !== "off"}
+            problem={problem}
+            onChange={(next) => update(next)}
+          />
+        </div>
+      )}
+      {form.sources.article === "off" ? null : (
+        <div>
+          <Shorts
+            value={form.shorts ?? freshShorts}
+            prompts={prompts}
+            narrated={form.sources.audio !== "off"}
+            problem={problem}
+            musicName={form.provided.shortsMusic?.name}
+            music={
+              <div className="basis-full">
+                <FilePick
+                  field="shorts.music"
+                  label="Background music (optional): an audio file, looped if shorter than a short"
+                  accept="audio/*"
+                  disabled={!shortsOn(form)}
+                  uploads={
+                    form.provided.shortsMusic === undefined ? [] : [form.provided.shortsMusic]
+                  }
+                  problem={problem("shorts.music")}
+                  onPick={(files) => onPickFiles("shortsMusic", files)}
+                  onReattach={
+                    onReattachFile
+                      ? (key, file) => onReattachFile("shortsMusic", key, file)
+                      : undefined
+                  }
+                  onRemove={(key) => onRemoveFile("shortsMusic", key)}
+                />
+                <p className="mt-1 text-label text-ink-3">
+                  Plays at the volume above under every short and dips while the narrator speaks.
+                </p>
+              </div>
+            }
+            preview={
+              <StylePreview
+                settings={shortsPreviewOf(form.shorts ?? freshShorts, form.subtitles.fontId)}
               />
-              <p className="mt-1 text-label text-ink-3">
-                Plays at the volume above under every short and dips while the narrator speaks.
-              </p>
-            </div>
-          }
-          preview={
-            <StylePreview
-              settings={shortsPreviewOf(form.shorts ?? freshShorts, form.subtitles.fontId)}
-            />
-          }
-          onChange={(shorts) => update({ shorts })}
-        />
-      </div>
+            }
+            onChange={(shorts) => update({ shorts })}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -158,7 +158,15 @@ export function RevisionForm(
     readonly badge?: string;
   }[] = [
     { id: "inputs", label: "Inputs" },
-    { id: "article", label: "Article", ...(edit.content.articleEdited ? { badge: "edited" } : {}) },
+    ...(config.sources.article === "off"
+      ? []
+      : [
+          {
+            id: "article" as const,
+            label: "Article",
+            ...(edit.content.articleEdited ? { badge: "edited" } : {}),
+          },
+        ]),
     { id: "providers", label: "Providers" },
     { id: "prompts", label: "Prompts" },
     {
@@ -175,18 +183,22 @@ export function RevisionForm(
           },
         ]
       : []),
-    { id: "subtitles", label: "Subtitles" },
+    ...(config.sources.article === "off" ? [] : [{ id: "subtitles" as const, label: "Subtitles" }]),
     { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
     ...(config.sources.audio === "generate"
       ? [{ id: "narration" as const, label: "Narration" }]
       : []),
-    {
-      id: "captions",
-      label: "Captions",
-      ...(edit.content.subtitleCues === undefined
-        ? {}
-        : { badge: String(edit.content.subtitleCues.cues.length) }),
-    },
+    ...(config.sources.article === "off"
+      ? []
+      : [
+          {
+            id: "captions" as const,
+            label: "Captions",
+            ...(edit.content.subtitleCues === undefined
+              ? {}
+              : { badge: String(edit.content.subtitleCues.cues.length) }),
+          },
+        ]),
   ];
   const current = sections.some((one) => one.id === section) ? section : "inputs";
   const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");
@@ -261,52 +273,71 @@ export function RevisionForm(
           </Group>
           <Rule />
           <Group title="Stages">
-            {stageKinds.map((kind) => (
-              <Field
-                key={kind}
-                label={stageLabels[kind]}
-                tip={sourceTips[kind]}
-                error={problem(`sources.${kind}`)}
-              >
-                <Select
-                  value={sourceOf(config.sources, kind)}
-                  onChange={(event) => {
-                    const option = sourceOptions(kind).find(
-                      (one) => one.value === event.target.value,
-                    );
-                    if (option === undefined) return;
-                    const next = changeSource(edit, kind, option.value);
-                    onChange(
-                      kind === "article" &&
-                        option.value === "provide" &&
-                        !edit.content.articleEdited
-                        ? {
-                            ...next,
-                            content: {
-                              ...next.content,
-                              articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
-                            },
-                          }
-                        : next,
-                    );
-                  }}
+            {stageKinds
+              // With Article Off, what reads the article is off and not offered.
+              .filter(
+                (kind) =>
+                  !(
+                    config.sources.article === "off" &&
+                    (kind === "research" || kind === "audio" || kind === "document")
+                  ),
+              )
+              .map((kind) => (
+                <Field
+                  key={kind}
+                  label={stageLabels[kind]}
+                  tip={sourceTips[kind]}
+                  error={problem(`sources.${kind}`)}
                 >
-                  {sourceOptions(kind).map((option) => (
-                    <option
-                      key={option.value}
-                      value={option.value}
-                      disabled={
-                        kind === "video" &&
-                        option.value === "generate" &&
-                        config.sources.images === "off"
-                      }
-                    >
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ))}
+                  <Select
+                    value={sourceOf(config.sources, kind)}
+                    onChange={(event) => {
+                      const option = sourceOptions(kind).find(
+                        (one) => one.value === event.target.value,
+                      );
+                      if (option === undefined) return;
+                      const next = changeSource(edit, kind, option.value);
+                      onChange(
+                        kind === "article" &&
+                          option.value === "provide" &&
+                          !edit.content.articleEdited
+                          ? {
+                              ...next,
+                              content: {
+                                ...next.content,
+                                articleMarkdown:
+                                  view.articleMarkdown ?? edit.content.articleMarkdown,
+                              },
+                            }
+                          : next,
+                      );
+                    }}
+                  >
+                    {sourceOptions(kind)
+                      .filter(
+                        (option) =>
+                          !(
+                            kind === "thumbnail" &&
+                            option.value === "prompt_by_llm" &&
+                            config.sources.article === "off"
+                          ),
+                      )
+                      .map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                          disabled={
+                            kind === "video" &&
+                            option.value === "generate" &&
+                            config.sources.images === "off"
+                          }
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+              ))}
             {config.sources.images === "off" ? (
               <p className="m-0 text-small text-ink-2 md:col-span-2">
                 Images are Off. Video is also Off in these changes.

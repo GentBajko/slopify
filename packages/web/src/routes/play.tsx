@@ -414,7 +414,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       </div>
     ),
   };
-  const rows: readonly SetupListRow[] = setupRows.map((row) => ({
+  // With Article Off nothing is narrated, so the Narration row leaves Play.
+  const visibleRows = setupRows.filter(
+    (row) => !(row.id === "narration" && form.sources.article === "off"),
+  );
+  const rows: readonly SetupListRow[] = visibleRows.map((row) => ({
     id: row.id,
     label: row.label,
     summary: rowSummary(row.id, form, summaryContext),
@@ -582,7 +586,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         <ReviewSection fields={fields} errors={errors} problem={problem} onReveal={revealField} />
       </Drawer>
       <SaveTemplateDialog open={saving} onClose={() => setSaving(false)} />
-      {setupRows.map((row) => (
+      {visibleRows.map((row) => (
         <RowCommand key={row.id} id={row.id} label={row.label} onOpen={openRow} />
       ))}
     </div>

@@ -360,6 +360,20 @@ describe("the source switches", () => {
     // Research only feeds article writing.
     expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
   });
+
+  it("takes away what reads the article when the article is Off", async () => {
+    await mount();
+    await section("Content");
+    await userEvent.click(segment("article", "Off"));
+
+    expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "audio source" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "document source" })).toBeNull();
+    await section("Outputs");
+    expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
+      "OffFrom promptProvide",
+    );
+  });
 });
 
 describe("optional stages", () => {

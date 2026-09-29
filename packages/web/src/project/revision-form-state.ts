@@ -46,17 +46,38 @@ export function changeSource(
   kind: StageKind,
   source: StageSource,
 ): RevisionEdit {
+  const off = kind === "article" && source === "off";
   const sources = {
     ...edit.config.sources,
     [kind]: source,
     ...(kind === "images" && source === "off" ? { video: "off" as const } : {}),
+    // Article Off: what reads the article goes off with it.
+    ...(off
+      ? {
+          research: "off" as const,
+          audio: "off" as const,
+          document: "off" as const,
+          ...(edit.config.sources.thumbnail === "prompt_by_llm"
+            ? { thumbnail: "from_prompt" as const }
+            : {}),
+        }
+      : {}),
   };
+  const { imageScenes: _scenes, ...rest } = edit.config;
   return {
     ...edit,
     config: {
-      ...edit.config,
+      ...(off ? rest : edit.config),
       sources,
       subtitles: subtitlesFor(edit.config.subtitles, sources),
+      ...(off
+        ? {
+            youtubeDescription: false,
+            ...(edit.config.shorts === undefined
+              ? {}
+              : { shorts: { ...edit.config.shorts, enabled: false } }),
+          }
+        : {}),
     },
   };
 }

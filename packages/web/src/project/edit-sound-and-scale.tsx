@@ -295,7 +295,8 @@ export function EditImageScenes({
   readonly onChange: (next: RevisionEdit) => void;
 }): ReactElement | null {
   const { config } = edit;
-  if (config.sources.images !== "generate") return null;
+  // Scenes are written from the article, so with Article Off the switch isn't offered.
+  if (config.sources.images !== "generate" || config.sources.article === "off") return null;
   return (
     <div className="flex flex-col items-start gap-2" {...helpScope}>
       <Switch
