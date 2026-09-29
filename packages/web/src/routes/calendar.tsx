@@ -301,9 +301,11 @@ export function CalendarRoute({
         >
           {status}
         </StatusSlot>
-        <Board split="aside">
-          <BoardColumn label="Coming weeks">
-            {attention.length === 0 ? null : (
+        <Board split="aside" className="mb-6">
+          <BoardColumn label="Needs you">
+            {attention.length === 0 ? (
+              <p className="m-0 text-small text-ink-3">Nothing needs you right now.</p>
+            ) : (
               <section aria-label="Needs you">
                 <SectionHead title="Needs you" meta={attentionMeta(attention)} />
                 <List label="Needs you">
@@ -313,6 +315,13 @@ export function CalendarRoute({
                 </List>
               </section>
             )}
+          </BoardColumn>
+          <BoardColumn as="aside" label="Suggested topics">
+            <SuggestedTopics schedules={mySchedules} />
+          </BoardColumn>
+        </Board>
+        {/* The weeks take the page's full width: seven days side by side need it. */}
+        <section aria-label="Coming weeks" className="flex min-w-0 flex-col gap-4">
             {calendar.isPending ? (
               <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
             ) : view === "weeks" ? (
@@ -411,11 +420,7 @@ export function CalendarRoute({
                 </List>
               </section>
             ) : null}
-          </BoardColumn>
-          <BoardColumn as="aside" label="Suggested topics">
-            <SuggestedTopics schedules={mySchedules} />
-          </BoardColumn>
-        </Board>
+        </section>
       </TabPanel>
       <AddToCalendar open={adding} onOpenChange={setAdding} schedules={mySchedules} />
     </div>
@@ -444,7 +449,11 @@ function DayCell({
   readonly onStep: (run: CalendarRun, by: -1 | 1) => void;
 }): ReactElement {
   const [over, setOver] = useState(false);
+  // A busy day shows its first few projects and a count; the rest open in place.
+  const [all, setAll] = useState(false);
   const runs = day?.runs ?? [];
+  const projects = day?.projects ?? [];
+  const shownProjects = all ? projects : projects.slice(0, dayProjectsShown);
   // A drop on the day itself lands on its first run of the dragged topic's schedule, else its
   // first run.
   const dayTarget = (): CalendarRun | undefined =>
@@ -486,7 +495,7 @@ function DayCell({
           onStep={onStep}
         />
       ))}
-      {(day?.projects ?? []).map((project) => {
+      {shownProjects.map((project) => {
         const look = projectLook(project);
         return (
           <div key={project.id} className={`sl-cal-item sl-cal-item--project ${hitArea}`}>
@@ -501,9 +510,23 @@ function DayCell({
           </div>
         );
       })}
+      {projects.length > dayProjectsShown ? (
+        <Button
+          variant="quiet"
+          size="small"
+          aria-expanded={all}
+          className="self-start"
+          onClick={() => setAll((open) => !open)}
+        >
+          {all ? "Show fewer" : `+${String(projects.length - dayProjectsShown)} more`}
+        </Button>
+      ) : null}
     </section>
   );
 }
+
+// How many of a day's projects show before "+N more".
+const dayProjectsShown = 3;
 
 function RunChip({
   run,

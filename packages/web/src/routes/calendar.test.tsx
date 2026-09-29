@@ -264,6 +264,9 @@ describe("what needs you and what is ready", () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+    // A busy day shows three projects; the rest open from "+N more".
+    const more = screen.queryByRole("button", { name: /^\+\d+ more$/ });
+    if (more !== null) await userEvent.click(more);
     expect(screen.getByText(`Waiting for Codex limits (resets at ${time})`)).not.toBeNull();
     // The schedules themselves are edited from the calendar's own Schedules tab.
     expect(screen.getByRole("tab", { name: /^Schedules/ })).not.toBeNull();
