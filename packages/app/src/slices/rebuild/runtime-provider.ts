@@ -7,6 +7,7 @@ import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { checkAppearance } from "../images/appearance.js";
 import { checkScenes, sceneCountOf } from "../images/scenes.js";
 import { spokenPassage } from "../narration/describe.js";
 import { observeNarration } from "../narration/live.js";
@@ -22,6 +23,7 @@ import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { parseAttribution } from "../voices/attribution.js";
 import { parseScript } from "../voices/script.js";
+import { imageAppearanceKey } from "./recipe-appearance.js";
 import { imageScenesKey } from "./recipe-scenes.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
@@ -270,6 +272,11 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
     return checked.ok ? undefined : checked.reason;
   }
+  // The looks it looked up: at least the video's subject.
+  if (piece.key === imageAppearanceKey && piece.input.kind === "llm") {
+    const checked = checkAppearance(answer.text);
+    return checked.ok ? undefined : checked.reason;
+  }
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -307,6 +314,20 @@ async function publishText(
         ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
       ]),
       { scenes: checked.scenes, text: answer.text },
+    );
+    return;
+  }
+  if (piece.key === imageAppearanceKey && piece.input.kind === "llm") {
+    const checked = checkAppearance(answer.text);
+    if (!checked.ok) throw new Error(checked.reason);
+    await publishResult(
+      deps,
+      context,
+      piece,
+      preparedTexts(deps, context, piece, [
+        ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
+      ]),
+      { appearance: checked.appearance, text: answer.text },
     );
     return;
   }

@@ -212,3 +212,64 @@ it("leaves a thumbnail without the keyword, or with the switch off, as it was", 
   expect(off.some((value) => value.key === "images:scenes")).toBe(false);
   expect(promptOf(off, "thumbnail:image")).toBe("A thumbnail.\n\nThe title on top.");
 });
+
+const looked: RevisionContent = {
+  ...withScenes,
+  promptTemplates: {
+    "imagePrompts.0": "An engraving.\n\nScene: {{Scene}}\n\nLooks: {{Appearance}}",
+  },
+};
+const looksFound = {
+  subject: { name: "The Keeper", aliases: [], look: "A tall man in a grey coat." },
+  characters: [{ name: "Mara", aliases: [], look: "A small woman with a red scarf." }],
+};
+
+it("looks up the looks with a web search, and each image waits for them", () => {
+  const recipes = plan([], undefined, looked);
+  const lookup = find(recipes, "images:appearance");
+  expect(lookup.input).toMatchObject({ kind: "llm", webSearch: true });
+  expect(lookup.dependsOn).toEqual(["article:body"]);
+  const scenes = find(recipes, "images:scenes");
+  const onlyScenes = plan(
+    [
+      done("images:scenes", scenes.fingerprint, {
+        scenes: ["Mara at the door.", "An empty hill."],
+      }),
+    ],
+    undefined,
+    looked,
+  );
+  expect(find(onlyScenes, "image:harbor").input.kind).toBe("deferred");
+  expect(find(onlyScenes, "image:harbor").dependsOn).toContain("images:appearance");
+  const both = plan(
+    [
+      done("images:scenes", scenes.fingerprint, {
+        scenes: ["Mara at the door.", "An empty hill."],
+      }),
+      done("images:appearance", lookup.fingerprint, { appearance: looksFound }),
+    ],
+    undefined,
+    looked,
+  );
+  expect(promptOf(both, "image:harbor")).toBe(
+    "An engraving.\n\nScene: Mara at the door.\n\nLooks: The Keeper: A tall man in a grey coat.\nMara: A small woman with a red scarf.",
+  );
+  expect(promptOf(both, "image:hill")).toBe(
+    "An engraving.\n\nScene: An empty hill.\n\nLooks: The Keeper: A tall man in a grey coat.",
+  );
+});
+
+it("gives the subject's look to images without scenes, and asks nothing without the keyword", () => {
+  const noScenes: RunConfig = { ...scened, imageScenes: undefined };
+  const lookup = find(plan([], undefined, looked, noScenes), "images:appearance");
+  const recipes = plan(
+    [done("images:appearance", lookup.fingerprint, { appearance: looksFound })],
+    undefined,
+    looked,
+    noScenes,
+  );
+  expect(promptOf(recipes, "image:hill")).toBe(
+    "An engraving.\n\nLooks: The Keeper: A tall man in a grey coat.",
+  );
+  expect(plan().some((value) => value.key === "images:appearance")).toBe(false);
+});

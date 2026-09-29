@@ -61,10 +61,15 @@ export function detectSlots(body: string): DetectedSlots {
 // Filled by Slopify, never by the person: each image's own scene, which the project's AI model
 // writes from the article when an image prompt asks for it (`images/scenes.ts`).
 export const sceneKeyword = "Scene";
+// Filled by Slopify too: how the video's subject and the characters in an image look, which the
+// project's AI model looks up on the web when a prompt asks for it (`images/appearance.ts`).
+export const appearanceKeyword = "Appearance";
+// The keywords Slopify fills itself, which are never fields for the person.
+export const filledKeywords: readonly string[] = [sceneKeyword, appearanceKeyword];
 
 // One field per distinct name; Common when a name is used on both sides, otherwise Text or
 // Image. The order is first appearance, which is why both sides arrive as ordered lists of
-// bodies rather than as sets. The scene keyword is not a field: Slopify fills it.
+// bodies rather than as sets. The scene and appearance keywords are not fields: Slopify fills them.
 export function collectFields(
   textBodies: readonly string[],
   imageBodies: readonly string[],
@@ -73,7 +78,7 @@ export function collectFields(
   const image = namesOf(imageBodies);
   const fields: Field[] = [];
   for (const name of [...text, ...image]) {
-    if (name === sceneKeyword || fields.some((field) => field.name === name)) {
+    if (filledKeywords.includes(name) || fields.some((field) => field.name === name)) {
       continue;
     }
     const onText = text.includes(name);

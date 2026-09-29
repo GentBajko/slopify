@@ -122,6 +122,15 @@ Where the scene goes:
 
 The style, composition and everything else in the prompt stay as written; only the scene changes from image to image. The scenes are written once the article exists, and each image waits for them. Switching it on or off in **Edit project** remakes the images.
 
+## Looks looked up: {{Appearance}}
+
+An image model draws a named figure from whatever it half remembers, so the same character can look different in every image. Put `{{Appearance}}` in an image, thumbnail or establishing prompt, for example a line `Looks: {{Appearance}}`, and Slopify looks the looks up instead.
+
+- Once the article exists, one call to the project's AI model **searches the web** for how the video's subject and every named character in the article look: build, face, clothing, colours and the marks that make them recognisable. Where depictions disagree, it describes the most iconic one.
+- Each picture gets the subject's look, plus the looks of up to three characters its scene names (with **Scenes from the article** on). Without scenes, every picture gets the subject's look.
+- There is no switch: a prompt with `{{Appearance}}` turns it on, and prompts without it are drawn as they always were. `{{Appearance}}` is never a field to fill in.
+- It costs one more AI call per run, with web search. The pictures that use it wait for it.
+
 ## How long each image stays on screen
 
 **Seconds per image** (1 to 600, default 15) is in the **Video and style** row, beside **Cuts**, **Zoom** and **Motion**. When cuts follow the narration, it is the target length and a cut waits for a sentence end. When images run out, they start again. See [Play Video and Style](Play-Video-and-Style).

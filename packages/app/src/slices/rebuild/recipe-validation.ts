@@ -10,7 +10,7 @@ import {
   videoEditFields,
   youtubeDescriptionFields,
 } from "../admission/rules.js";
-import { detectSlots, render, sceneKeyword } from "../admission/substitute.js";
+import { detectSlots, filledKeywords, render } from "../admission/substitute.js";
 import { imagesPerVideoMax } from "../images/scale.js";
 import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
@@ -172,7 +172,7 @@ export function validateRecipeInputs(
       fields.push({ field: prompt.field, message: "Fix the keyword placeholders in this prompt." });
     for (const key of slots.names)
       if (
-        key !== sceneKeyword &&
+        !filledKeywords.includes(key) &&
         (!Object.hasOwn(config.values, key) || !config.values[key]?.trim())
       )
         fields.push({ field: `values.${key}`, message: "Enter a value for this keyword." });

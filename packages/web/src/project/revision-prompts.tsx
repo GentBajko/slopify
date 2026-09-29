@@ -5,7 +5,7 @@ import {
   usesShorts,
   usesYoutubeDescription,
 } from "@app/slices/admission/rules.js";
-import { detectSlots, sceneKeyword } from "@app/slices/admission/substitute.js";
+import { detectSlots, filledKeywords } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { useId, useState } from "react";
@@ -71,7 +71,7 @@ export function RevisionPrompts({
       ),
     ]),
     // Slopify writes each image's scene; it is not a keyword to fill in.
-  ].filter((name) => name !== sceneKeyword);
+  ].filter((name) => !filledKeywords.includes(name));
   // What each keyword feeds, in the project's own copies of its prompts: the same list Play
   // and templates show.
   const feeds = (name: string): readonly string[] => [

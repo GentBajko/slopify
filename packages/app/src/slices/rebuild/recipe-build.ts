@@ -1,4 +1,5 @@
 import { referenceForThumbnail } from "../admission/rules.js";
+import { imageAppearance } from "./recipe-appearance.js";
 import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
 import { editPlan } from "./recipe-edit.js";
@@ -30,8 +31,10 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   const exports = exportRecipes(context, audio);
   const captions = exports.find((value) => value.key === "subtitles:files");
   const timing = exports.find((value) => value.key === "subtitles:timing");
+  // How the subject and characters look, looked up when a prompt has `{{Appearance}}`.
+  const appearance = imageAppearance(context, text);
   // The establishing image, when it is on: every other image is drawn from it.
-  const reference = referenceRecipe(context);
+  const reference = referenceRecipe(context, appearance);
   const drawnFrom = imageReference(context, reference);
   // Each image's scene, written from the article, and the thumbnails' when their prompt asks.
   const scenes = imageScenes(context, text);
@@ -40,6 +43,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     text.recipes,
     referenceForThumbnail(context.config) ? drawnFrom : undefined,
     scenes,
+    appearance,
   );
   const youtube = youtubeRecipes(context, exports);
   return withReviews(context, [
@@ -69,8 +73,10 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         timing === undefined ? null : resourceIdentity(context, timing),
         withLines(masterPlan(context, audio.levels, "video"), linePlan(context, timing)),
         scenes,
+        appearance,
       ),
     ),
     ...(scenes === undefined ? [] : [scenes.recipe]),
+    ...(appearance === undefined ? [] : [appearance.recipe]),
   ]);
 }

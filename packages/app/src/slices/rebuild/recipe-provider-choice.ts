@@ -49,7 +49,8 @@ export function recipeProviderChoice(
   const family =
     input.operation === "narration-preparation" ||
     input.operation === "narration-description" ||
-    input.operation === "image-scenes"
+    input.operation === "image-scenes" ||
+    input.operation === "image-appearance"
       ? "llm"
       : recipe.stage === "audio"
         ? "tts"

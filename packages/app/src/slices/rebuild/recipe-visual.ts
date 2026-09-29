@@ -5,6 +5,7 @@ import { render } from "../admission/substitute.js";
 import { withoutScene, withScene } from "../images/scenes.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
+import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
 import { type MasterPlan, noMaster } from "./recipe-loudness.js";
@@ -33,6 +34,8 @@ export function visualRecipes(
   master: MasterPlan = noMaster,
   // Each image's own scene, for the images whose prompt asks for one (`recipe-scenes.ts`).
   scenes?: ImageScenes,
+  // How the subject and characters look, for prompts with `{{Appearance}}`.
+  appearance?: ImageAppearance,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -49,17 +52,57 @@ export function visualRecipes(
     const at = scenes?.keys.indexOf(key) ?? -1;
     if (scenes !== undefined && at !== -1 && image.source === "generate") {
       recipes.push(
-        sceneImage(config, content, key, raw ?? image.prompt ?? "", scenes, at, reference),
+        sceneImage(
+          config,
+          content,
+          key,
+          raw ?? image.prompt ?? "",
+          scenes,
+          at,
+          reference,
+          appearance,
+        ),
       );
       continue;
     }
     // With Scenes from the article off, a prompt's `{{Scene}}` line is left out.
-    const prompt =
+    const written =
       raw === undefined || raw === null
         ? image.prompt === null || image.prompt === undefined
           ? image.prompt
           : withoutScene(image.prompt)
         : render(withoutScene(raw), config.values);
+    const prompt =
+      written === null || written === undefined || image.source !== "generate"
+        ? written
+        : withLooks(written, appearance);
+    // Waiting for the looks: the same wait an image with a scene has, on the lookup instead.
+    if (prompt === null && written !== null && written !== undefined) {
+      const wait = lookWait(written, appearance);
+      recipes.push(
+        recipe(
+          { content },
+          `image:${key}`,
+          "images",
+          {
+            kind: "deferred",
+            version: 1,
+            operation: "image-scene",
+            template: [
+              ...wait.template,
+              written,
+              config.images?.provider ?? null,
+              config.images?.model ?? null,
+              config.format,
+              ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+              ...(reference === undefined ? [] : [reference.input.fingerprint]),
+            ],
+          },
+          [...wait.dependsOn, ...(reference === undefined ? [] : [reference.key])],
+        ),
+      );
+      continue;
+    }
     recipes.push(
       recipe(
         { content },
@@ -174,9 +217,14 @@ function sceneImage(
   scenes: ImageScenes,
   at: number,
   reference: ImageReference | undefined,
+  appearance: ImageAppearance | undefined,
 ): ResolvedWorkRecipe {
   const scene = scenes.scenes?.[at];
-  const prompt = scene === undefined ? undefined : withScene(render(body, config.values), scene);
+  const prompt =
+    scene === undefined
+      ? undefined
+      : (withLooks(withScene(render(body, config.values), scene), appearance, scene) ?? undefined);
+  const wait = lookWait(body, appearance);
   return recipe(
     { content },
     `image:${key}`,
@@ -194,6 +242,7 @@ function sceneImage(
             config.format,
             ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
             ...(reference === undefined ? [] : [reference.input.fingerprint]),
+            ...wait.template,
           ],
         }
       : {
@@ -205,7 +254,7 @@ function sceneImage(
           ...(reference === undefined ? {} : { reference: reference.input }),
           ...castField(castFor(config, prompt)),
         },
-    [scenes.recipe.key, ...(reference === undefined ? [] : [reference.key])],
+    [scenes.recipe.key, ...wait.dependsOn, ...(reference === undefined ? [] : [reference.key])],
   );
 }
 
@@ -234,6 +283,8 @@ export function thumbnailRecipes(
   reference?: ImageReference,
   // Scenes from the article: a thumbnail prompt with `{{Scene}}` takes one per thumbnail.
   scenes?: ImageScenes,
+  // How the subject and characters look, for a prompt with `{{Appearance}}`.
+  appearance?: ImageAppearance,
 ): readonly ResolvedWorkRecipe[] {
   const { config, content } = context;
   if (config.sources.thumbnail === "off") return [];
@@ -268,7 +319,7 @@ export function thumbnailRecipes(
     const scene = sceneFor(variant);
     // With a scene the thumbnail waits for it; with the switch off a `{{Scene}}` line is left
     // out, as the images do.
-    const prompt =
+    const sceneFilled =
       written === null
         ? null
         : withScenes
@@ -276,6 +327,8 @@ export function thumbnailRecipes(
             ? null
             : withScene(written, scene)
           : withoutScene(written);
+    const prompt = sceneFilled === null ? null : withLooks(sceneFilled, appearance, scene);
+    const wait = lookWait(written, appearance);
     return recipe(
       context,
       thumbnailKey(variant),
@@ -296,6 +349,7 @@ export function thumbnailRecipes(
               ...(reference === undefined ? [] : [reference.input.fingerprint]),
               ...(variant === 1 ? [] : [["thumbnail-variant", variant]]),
               ...(withScenes ? [["thumbnail-scene", scenes.recipe.fingerprint]] : []),
+              ...wait.template,
             ],
           }
         : {
@@ -312,6 +366,7 @@ export function thumbnailRecipes(
         ...(promptRecipe === undefined ? [] : [promptRecipe.key]),
         ...(reference === undefined ? [] : [reference.key]),
         ...(withScenes ? [scenes.recipe.key] : []),
+        ...wait.dependsOn,
       ],
     );
   });

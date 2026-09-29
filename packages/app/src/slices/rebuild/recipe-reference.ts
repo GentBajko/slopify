@@ -1,5 +1,6 @@
 import { type RunConfig, referenceKey } from "../admission/model.js";
 import { usesReference } from "../admission/rules.js";
+import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { type CastInput, castFor } from "./recipe-cast.js";
 import {
   type RecipeContext,
@@ -34,7 +35,11 @@ export function imageChoice(config: Pick<RunConfig, "images">): {
   };
 }
 
-export function referenceRecipe(context: RecipeContext): ResolvedWorkRecipe | undefined {
+export function referenceRecipe(
+  context: RecipeContext,
+  // How the subject looks, for an establishing prompt with `{{Appearance}}`.
+  appearance?: ImageAppearance,
+): ResolvedWorkRecipe | undefined {
   const { config, content } = context;
   if (!usesReference(config) || config.reference === undefined) return undefined;
   if (config.reference.source === "provide")
@@ -51,7 +56,30 @@ export function referenceRecipe(context: RecipeContext): ResolvedWorkRecipe | un
       [],
       { unresolved: content.provided.reference === undefined },
     );
-  const prompt = renderedPrompt(context, referencePromptKey);
+  const written = renderedPrompt(context, referencePromptKey);
+  const prompt = withLooks(written, appearance);
+  if (prompt === null) {
+    const wait = lookWait(written, appearance);
+    return recipe(
+      context,
+      referenceKey,
+      "images",
+      {
+        kind: "deferred",
+        version: 1,
+        operation: "image-scene",
+        template: [
+          ...wait.template,
+          written,
+          config.images?.provider ?? null,
+          config.images?.model ?? null,
+          config.format,
+          ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+        ],
+      },
+      wait.dependsOn,
+    );
+  }
   return recipe(
     context,
     referenceKey,

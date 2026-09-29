@@ -1,0 +1,1 @@
+- `{{Appearance}}` in an image, thumbnail or establishing prompt: once the article exists, one web-searching call to the project's AI model looks up how the subject and every named character look (the most iconic depiction), and each picture gets the subject's look plus those of the characters its scene names. No switch; prompts without it are unchanged.

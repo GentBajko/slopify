@@ -404,7 +404,9 @@ export function priceRecipe(
   // one call that reads the article (its length is known once the article is written).
   if (
     input.kind === "deferred" &&
-    (input.operation === "image-scene" || input.operation === "image-scenes")
+    (input.operation === "image-scene" ||
+      input.operation === "image-scenes" ||
+      input.operation === "image-appearance")
   ) {
     const choice = config === undefined ? undefined : recipeProviderChoice(value, config);
     if (choice !== undefined && input.operation === "image-scene")
@@ -416,7 +418,7 @@ export function priceRecipe(
         provider: choice.provider,
         model: choice.model,
         inputCharacters: 90000,
-        outputCharacters: 4000,
+        outputCharacters: input.operation === "image-appearance" ? 6000 : 4000,
         detail:
           "The article is read when the step runs; its length is estimated. Retries are excluded.",
       };
