@@ -406,6 +406,7 @@ export function priceRecipe(
     input.kind === "deferred" &&
     (input.operation === "image-scene" ||
       input.operation === "image-scenes" ||
+      input.operation === "thumbnail-scenes" ||
       input.operation === "image-appearance")
   ) {
     const choice = config === undefined ? undefined : recipeProviderChoice(value, config);

@@ -9,7 +9,7 @@ import { masterPlan } from "./recipe-loudness.js";
 import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
-import { imageScenes } from "./recipe-scenes.js";
+import { imageScenes, thumbnailScenes } from "./recipe-scenes.js";
 import { shortsRecipes } from "./recipe-shorts.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
@@ -36,13 +36,15 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   // The establishing image, when it is on: every other image is drawn from it.
   const reference = referenceRecipe(context, appearance);
   const drawnFrom = imageReference(context, reference);
-  // Each image's scene, written from the article, and the thumbnails' when their prompt asks.
+  // Each image's scene, written from the article, and the thumbnails' in a step of their own
+  // when their prompt asks.
   const scenes = imageScenes(context, text);
+  const thumbnailScened = thumbnailScenes(context, text);
   const thumbnail = thumbnailRecipes(
     context,
     text.recipes,
     referenceForThumbnail(context.config) ? drawnFrom : undefined,
-    scenes,
+    thumbnailScened,
     appearance,
   );
   const youtube = youtubeRecipes(context, exports);
@@ -77,6 +79,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
       ),
     ),
     ...(scenes === undefined ? [] : [scenes.recipe]),
+    ...(thumbnailScened === undefined ? [] : [thumbnailScened.recipe]),
     ...(appearance === undefined ? [] : [appearance.recipe]),
   ]);
 }

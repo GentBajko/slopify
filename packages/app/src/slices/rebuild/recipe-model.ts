@@ -70,6 +70,7 @@ export const deferredOperations = [
   // Scenes from the article (`recipe-scenes.ts`): the scenes step and each image waiting on it.
   "image-scenes",
   "image-scene",
+  "thumbnail-scenes",
   // How the subject and characters look (`recipe-appearance.ts`), looked up on the web.
   "image-appearance",
 ] as const;

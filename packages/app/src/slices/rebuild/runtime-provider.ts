@@ -24,7 +24,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { parseAttribution } from "../voices/attribution.js";
 import { parseScript } from "../voices/script.js";
 import { imageAppearanceKey } from "./recipe-appearance.js";
-import { imageScenesKey } from "./recipe-scenes.js";
+import { imageScenesKey, thumbnailScenesKey } from "./recipe-scenes.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
@@ -268,7 +268,10 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
       ? "The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project, or turn off Describe tables and figures there."
       : undefined;
   // Scenes from the article: one scene per image, as many as the request lists.
-  if (piece.key === imageScenesKey && piece.input.kind === "llm") {
+  if (
+    (piece.key === imageScenesKey || piece.key === thumbnailScenesKey) &&
+    piece.input.kind === "llm"
+  ) {
     const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
     return checked.ok ? undefined : checked.reason;
   }
@@ -303,7 +306,10 @@ async function publishText(
   piece: WorkPiece,
   answer: LlmAnswer,
 ): Promise<void> {
-  if (piece.key === imageScenesKey && piece.input.kind === "llm") {
+  if (
+    (piece.key === imageScenesKey || piece.key === thumbnailScenesKey) &&
+    piece.input.kind === "llm"
+  ) {
     const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
     if (!checked.ok) throw new Error(checked.reason);
     await publishResult(

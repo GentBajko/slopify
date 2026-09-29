@@ -118,7 +118,7 @@ Where the scene goes:
 - A prompt with `{{Scene}}` gets the scene there, for example a line `Scene: {{Scene}}` under the prompt's first sentence. `{{Scene}}` is never a field to fill in: Slopify writes it.
 - A prompt without it gets the scene as a line of its own after its first paragraph, so any prompt works unchanged.
 - With the switch off, a line holding `{{Scene}}` is left out and the prompt is drawn as it always was.
-- A **thumbnail** prompt with `{{Scene}}` gets a scene from the same call: the article's most striking moment, the one that would make someone click, taken from anywhere in the article. With **Thumbnails** set to 3, each thumbnail gets a different moment, so the A/B test compares ideas as well as compositions. A thumbnail prompt without `{{Scene}}` is drawn as it always was.
+- A **thumbnail** prompt with `{{Scene}}` gets a scene from a call of its own (one more AI call, in the Thumbnail stage, so changing the thumbnail never remakes the images): the article's most striking moment, the one that would make someone click, taken from anywhere in the article. With **Thumbnails** set to 3, each thumbnail gets a different moment, so the A/B test compares ideas as well as compositions. A thumbnail prompt without `{{Scene}}` is drawn as it always was.
 
 The style, composition and everything else in the prompt stay as written; only the scene changes from image to image. The scenes are written once the article exists, and each image waits for them. Switching it on or off in **Edit project** remakes the images.
 

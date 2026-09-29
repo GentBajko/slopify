@@ -18,22 +18,60 @@ export interface ImageScenes {
   readonly keys: readonly string[];
   // Undefined until the step has written them for this request.
   readonly scenes: readonly string[] | undefined;
-  // How many thumbnails take a scene (their prompt has `{{Scene}}`), and their scenes, which
-  // follow the images' in the answer. Undefined until written.
-  readonly thumbnailCount: number;
-  readonly thumbnails: readonly string[] | undefined;
 }
 
-// A thumbnail drawn from a Library prompt whose text asks for `{{Scene}}` takes one scene per
-// thumbnail; any other thumbnail is drawn as it always was.
-export function thumbnailScenes(context: RecipeContext): number {
-  const { config, content } = context;
-  if (config.sources.thumbnail !== "from_prompt") return 0;
-  const body = content.promptTemplates.thumbnailPrompt ?? config.rendered.thumbnailPrompt;
-  return usesScene(body) ? thumbnailCountOf(config) : 0;
+// The thumbnails' own scenes step, in the Thumbnail stage, so changing the thumbnail never
+// touches the images' scenes: one scene per thumbnail, scene N for thumbnail N.
+export interface ThumbnailScenes {
+  readonly recipe: ResolvedWorkRecipe;
+  readonly count: number;
+  readonly scenes: readonly string[] | undefined;
 }
 
 export const imageScenesKey = "images:scenes";
+export const thumbnailScenesKey = "thumbnail:scenes";
+
+// With Scenes from the article on, a thumbnail drawn from a Library prompt whose text asks for
+// `{{Scene}}` takes one scene per thumbnail; any other thumbnail is drawn as it always was.
+export function thumbnailScenes(
+  context: RecipeContext,
+  text: { readonly articleText: string | null; readonly article: ResolvedWorkRecipe },
+): ThumbnailScenes | undefined {
+  const { config, content } = context;
+  if (config.sources.images !== "generate" || config.imageScenes !== true) return undefined;
+  if (config.sources.thumbnail !== "from_prompt") return undefined;
+  const body = content.promptTemplates.thumbnailPrompt ?? config.rendered.thumbnailPrompt;
+  if (!usesScene(body)) return undefined;
+  const count = thumbnailCountOf(config);
+  const messages = withLanguage(
+    sceneMessages({
+      title: config.title,
+      article: text.articleText ?? "",
+      pictures: [],
+      thumbnails: count,
+    }),
+    config.language,
+  );
+  const value = recipe(
+    context,
+    thumbnailScenesKey,
+    "thumbnail",
+    text.articleText === null
+      ? {
+          kind: "deferred",
+          version: 1,
+          operation: "thumbnail-scenes",
+          template: [llmInputFingerprint(context, messages), text.article.fingerprint],
+        }
+      : llmInput(context, messages),
+    [text.article.key],
+  );
+  return {
+    recipe: value,
+    count,
+    scenes: text.articleText === null ? undefined : savedScenes(context, value, count),
+  };
+}
 
 export function imageScenes(
   context: RecipeContext,
@@ -56,15 +94,9 @@ export function imageScenes(
     keys.push(key);
     pictures.push(pictureKind(body, name));
   }
-  const thumbnailCount = thumbnailScenes(context);
-  if (keys.length === 0 && thumbnailCount === 0) return undefined;
+  if (keys.length === 0) return undefined;
   const messages = withLanguage(
-    sceneMessages({
-      title: config.title,
-      article: text.articleText ?? "",
-      pictures,
-      ...(thumbnailCount === 0 ? {} : { thumbnails: thumbnailCount }),
-    }),
+    sceneMessages({ title: config.title, article: text.articleText ?? "", pictures }),
     config.language,
   );
   const value = recipe(
@@ -81,16 +113,10 @@ export function imageScenes(
       : llmInput(context, messages),
     [text.article.key],
   );
-  const saved =
-    text.articleText === null
-      ? undefined
-      : savedScenes(context, value, keys.length + thumbnailCount);
   return {
     recipe: value,
     keys,
-    scenes: saved?.slice(0, keys.length),
-    thumbnailCount,
-    thumbnails: saved?.slice(keys.length),
+    scenes: text.articleText === null ? undefined : savedScenes(context, value, keys.length),
   };
 }
 

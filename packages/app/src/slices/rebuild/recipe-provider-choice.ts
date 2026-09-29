@@ -50,6 +50,7 @@ export function recipeProviderChoice(
     input.operation === "narration-preparation" ||
     input.operation === "narration-description" ||
     input.operation === "image-scenes" ||
+    input.operation === "thumbnail-scenes" ||
     input.operation === "image-appearance"
       ? "llm"
       : recipe.stage === "audio"

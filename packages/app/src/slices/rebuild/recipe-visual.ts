@@ -16,7 +16,7 @@ import {
   resourceIdentity,
 } from "./recipe-model.js";
 import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
-import type { ImageScenes } from "./recipe-scenes.js";
+import type { ImageScenes, ThumbnailScenes } from "./recipe-scenes.js";
 import { matchingText, renderedPrompt } from "./recipe-text.js";
 
 export function visualRecipes(
@@ -282,7 +282,7 @@ export function thumbnailRecipes(
   // The establishing image, when it is on and the thumbnail is drawn from it too.
   reference?: ImageReference,
   // Scenes from the article: a thumbnail prompt with `{{Scene}}` takes one per thumbnail.
-  scenes?: ImageScenes,
+  scenes?: ThumbnailScenes,
   // How the subject and characters look, for a prompt with `{{Appearance}}`.
   appearance?: ImageAppearance,
 ): readonly ResolvedWorkRecipe[] {
@@ -309,11 +309,8 @@ export function thumbnailRecipes(
     config.sources.thumbnail === "prompt_by_llm" && promptRecipe !== undefined
       ? matchingText(context, promptRecipe, "prompt")
       : renderedPrompt(context, "thumbnailPrompt");
-  const sceneFor = (variant: number): string | undefined =>
-    scenes === undefined || scenes.thumbnailCount === 0
-      ? undefined
-      : scenes.thumbnails?.[variant - 1];
-  const withScenes = scenes !== undefined && scenes.thumbnailCount > 0;
+  const sceneFor = (variant: number): string | undefined => scenes?.scenes?.[variant - 1];
+  const withScenes = scenes !== undefined;
   const variants = Array.from({ length: thumbnailCountOf(config) }, (_, index) => index + 1);
   return variants.map((variant) => {
     const scene = sceneFor(variant);
