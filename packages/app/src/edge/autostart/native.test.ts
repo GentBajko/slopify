@@ -167,6 +167,22 @@ describe("Linux: XDG autostart", () => {
     );
   });
 
+  it("leaves another data folder's entry alone: off there, and never removed or taken over", async () => {
+    const fake = fakes();
+    await linux(fake).enable();
+    const entry = "/home/Ann Lee/.config/autostart/slopify.desktop";
+    const before = fake.files.get(entry)?.text;
+    // A second Slopify on the same account, e.g. a test copy with its own data folder.
+    const other = linux(fake, { dataDir: "/tmp/other", log: "/tmp/other/logs/autostart.log" });
+    expect((await other.status()).enabled).toBe(false);
+    await other.disable();
+    expect(fake.files.get(entry)?.text).toBe(before);
+    expect(fake.files.has("/home/Ann Lee/.slopify/autostart/start-slopify.sh")).toBe(true);
+    await expect(other.enable()).rejects.toThrow(/Another Slopify, with a different data folder/u);
+    expect(fake.files.get(entry)?.text).toBe(before);
+    expect((await linux(fake).status()).enabled).toBe(true);
+  });
+
   it("does nothing on refresh while the switch is off", async () => {
     const fake = fakes();
     await linux(fake).refresh();

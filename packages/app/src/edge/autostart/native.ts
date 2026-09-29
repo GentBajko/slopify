@@ -143,6 +143,11 @@ export function createNativeAutostart(o: NativeAutostartOptions): NativeAutostar
     return { state: ours ? "ours" : "foreign", text };
   }
 
+  const thisLauncher = launcherRef(platform, at.launcher);
+  function runsThisFolder(now: { state: string; text?: string }): boolean {
+    return now.state === "ours" && (now.text?.includes(thisLauncher) ?? false);
+  }
+
   function state(enabled: boolean): NativeState {
     return {
       available: true,
@@ -183,13 +188,19 @@ export function createNativeAutostart(o: NativeAutostartOptions): NativeAutostar
   }
 
   return {
-    status: async () => state((await entryNow()).state === "ours"),
+    // On only when the entry starts this data folder: a second Slopify (another --data-dir,
+    // a test copy) sees the switch off, so turning it off there can't remove this one's entry.
+    status: async () => state(runsThisFolder(await entryNow())),
     enable: async () => {
       if (platform === "win32") {
         const problem = windowsPathProblem(o.dataDir);
         if (problem !== undefined) throw new Error(problem);
       }
       const now = await entryNow();
+      if (now.state === "ours" && !runsThisFolder(now))
+        throw new Error(
+          `Another Slopify, with a different data folder, already starts when you log in (${at.where}). Slopify left it alone. Turn it off in that Slopify's Settings → General, or delete ${platform === "win32" ? `the ${runValue} entry in Task Manager → Startup apps` : "that file"}, then turn the switch on here again.`,
+        );
       if (now.state === "foreign")
         throw new Error(
           platform === "win32"
@@ -202,7 +213,8 @@ export function createNativeAutostart(o: NativeAutostartOptions): NativeAutostar
     },
     disable: async () => {
       const now = await entryNow();
-      if (now.state === "ours") {
+      // Only this data folder's entry: another Slopify's is not this switch's to remove.
+      if (runsThisFolder(now)) {
         if (platform === "win32") {
           const result = await o.exec("reg", ["delete", runKey, "/v", runValue, "/f"]);
           if (result.code !== 0)
@@ -221,7 +233,7 @@ export function createNativeAutostart(o: NativeAutostartOptions): NativeAutostar
       const now = await entryNow();
       // Only the entry that runs this data folder's launcher: a Slopify started with another
       // --data-dir must not take over the one the switch was turned on from.
-      if (now.state !== "ours" || !now.text?.includes(launcherRef(platform, at.launcher))) return;
+      if (!runsThisFolder(now)) return;
       await writeLauncher();
       await writeEntry(now.text);
     },
