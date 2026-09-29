@@ -655,7 +655,6 @@
       min-height: 0;
       overflow-y: auto;
       overscroll-behavior: contain;
-      scrollbar-width: thin;
     }
     .sl-project .sl-workspace__main {
       padding-right: 6px;

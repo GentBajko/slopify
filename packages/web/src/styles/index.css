@@ -236,6 +236,14 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* No visible scroll bars anywhere: areas still scroll by wheel, touch and keyboard. */
+  * {
+    scrollbar-width: none;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
   code,
   kbd,
   pre {
