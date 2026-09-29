@@ -44,7 +44,7 @@
     "strip-json-comments": "^5.0.3",
     "strip-markdown": "^6.0.0",
     "ulid": "^3.0.2",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.5.4"
   }
 }
