@@ -330,6 +330,11 @@ export const playHelp = {
     body: "Adds images as the narration gets longer, planned from the expected length when the run starts. The extra images are shared among the ticked prompts in order, up to 240 in all; each is one more image call. The line under it shows the count. Turning it on switches Motion from Zoom to Mix of both.",
     tutorial: { page: "Play-Images", anchor: "more-images-for-long-videos" },
   },
+  "play.image-scenes": {
+    title: "Scenes from the article",
+    body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. Off, a {{Scene}} line is left out. One more AI call per run.",
+    tutorial: { page: "Play-Images", anchor: "scenes-from-the-article" },
+  },
   "play.image-scale.rate": {
     title: "Image rate",
     body: "Give the rate as one image every N minutes of narration (0.25 to 60) or as N images per hour (1 to 240); switching keeps the same rate. Narration runs about 150 words a minute. Starts at one image every 2 minutes.",

@@ -47,7 +47,9 @@ export function recipeProviderChoice(
         };
   if (input.kind !== "deferred") return undefined;
   const family =
-    input.operation === "narration-preparation" || input.operation === "narration-description"
+    input.operation === "narration-preparation" ||
+    input.operation === "narration-description" ||
+    input.operation === "image-scenes"
       ? "llm"
       : recipe.stage === "audio"
         ? "tts"

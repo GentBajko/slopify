@@ -67,6 +67,9 @@ export const deferredOperations = [
   "shorts",
   "animate",
   "script-attribution",
+  // Scenes from the article (`recipe-scenes.ts`): the scenes step and each image waiting on it.
+  "image-scenes",
+  "image-scene",
 ] as const;
 export interface DialogueLine {
   readonly speaker: string;

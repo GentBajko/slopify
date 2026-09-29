@@ -400,6 +400,27 @@ export function priceRecipe(
   const input = value.input;
   const onPlan = config === undefined ? undefined : cliRequest(work, value, config);
   if (onPlan !== undefined) return onPlan;
+  // Scenes from the article: an image waiting for its scene is one image, and the scenes are
+  // one call that reads the article (its length is known once the article is written).
+  if (
+    input.kind === "deferred" &&
+    (input.operation === "image-scene" || input.operation === "image-scenes")
+  ) {
+    const choice = config === undefined ? undefined : recipeProviderChoice(value, config);
+    if (choice !== undefined && input.operation === "image-scene")
+      return { kind: "image", stage: work.key, provider: choice.provider, model: choice.model };
+    if (choice !== undefined)
+      return {
+        kind: "llm",
+        stage: work.key,
+        provider: choice.provider,
+        model: choice.model,
+        inputCharacters: 90000,
+        outputCharacters: 4000,
+        detail:
+          "The article is read when the step runs; its length is estimated. Retries are excluded.",
+      };
+  }
   if (input.kind === "deferred" && input.operation === "narration-preparation")
     return {
       kind: "unknown",

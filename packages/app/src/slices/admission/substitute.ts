@@ -58,9 +58,13 @@ export function detectSlots(body: string): DetectedSlots {
   return { names, errors };
 }
 
+// Filled by Slopify, never by the person: each image's own scene, which the project's AI model
+// writes from the article when an image prompt asks for it (`images/scenes.ts`).
+export const sceneKeyword = "Scene";
+
 // One field per distinct name; Common when a name is used on both sides, otherwise Text or
 // Image. The order is first appearance, which is why both sides arrive as ordered lists of
-// bodies rather than as sets.
+// bodies rather than as sets. The scene keyword is not a field: Slopify fills it.
 export function collectFields(
   textBodies: readonly string[],
   imageBodies: readonly string[],
@@ -69,7 +73,7 @@ export function collectFields(
   const image = namesOf(imageBodies);
   const fields: Field[] = [];
   for (const name of [...text, ...image]) {
-    if (fields.some((field) => field.name === name)) {
+    if (name === sceneKeyword || fields.some((field) => field.name === name)) {
       continue;
     }
     const onText = text.includes(name);

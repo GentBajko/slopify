@@ -284,3 +284,29 @@ function convert(value: string, from: Every, to: Every): string {
   if (value.trim() === "" || !Number.isFinite(typed) || typed <= 0) return value;
   return String(Math.round((60 / typed) * 100) / 100);
 }
+
+// Images → Scenes from the article in Edit project; saving remakes the images with their own
+// scenes, or without them when it is switched off.
+export function EditImageScenes({
+  edit,
+  onChange,
+}: {
+  readonly edit: RevisionEdit;
+  readonly onChange: (next: RevisionEdit) => void;
+}): ReactElement | null {
+  const { config } = edit;
+  if (config.sources.images !== "generate") return null;
+  return (
+    <div className="flex flex-col items-start gap-2" {...helpScope}>
+      <Switch
+        checked={config.imageScenes === true}
+        label="Scenes from the article"
+        tip="play.image-scenes"
+        onChange={(on) => {
+          const { imageScenes: _old, ...rest } = config;
+          onChange({ ...edit, config: { ...rest, ...(on ? { imageScenes: true } : {}) } });
+        }}
+      />
+    </div>
+  );
+}

@@ -114,6 +114,8 @@ export const runDraftSchema = z.object({
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
   // The ranges are `slices/images/scale.ts`'s, checked by admission, not the schema's.
   imageScale: z.object({ perHour: z.number(), words: z.number() }).optional(),
+  // Scenes from the article: each image drawn from its own scene (`images/scenes.ts`).
+  imageScenes: z.boolean().optional(),
   thumbnailPrompt: z.string().optional(),
   thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
   intro: entryChoice.optional(),

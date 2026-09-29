@@ -1,0 +1,139 @@
+import { expect, it } from "vitest";
+import type { RunConfig } from "../admission/model.js";
+import type { ManifestPiece, RevisionContent } from "../revisions/model.js";
+import { buildRecipes } from "./recipe-build.js";
+import { config, content } from "./recipe-fixture.js";
+import type { ResolvedWorkRecipe } from "./recipe-model.js";
+
+const scened: RunConfig = {
+  ...config,
+  imagePrompts: [{ name: "Wide", number: 2 }],
+  imageScenes: true,
+};
+const withScenes: RevisionContent = {
+  ...content,
+  imageDefinitions: {
+    harbor: { source: "generate", assetId: null, prompt: null, templateKey: "imagePrompts.0" },
+    hill: { source: "generate", assetId: null, prompt: null, templateKey: "imagePrompts.0" },
+  },
+  promptTemplates: {
+    "imagePrompts.0": "An engraving.\n\nComposition: wide shot.\n\nScene: {{Scene}}",
+  },
+};
+
+function plan(
+  pieces: readonly ManifestPiece[] = [],
+  article: string | null = "First paragraph.\n\nSecond paragraph.",
+  value: RevisionContent = withScenes,
+  c: RunConfig = scened,
+): readonly ResolvedWorkRecipe[] {
+  return buildRecipes({
+    config: c,
+    content: value,
+    manifest: { outputs: [], pieces },
+    resolved: { articleMarkdown: article, researchNotes: null },
+  });
+}
+const find = (recipes: readonly ResolvedWorkRecipe[], key: string) => {
+  const found = recipes.find((value) => value.key === key);
+  if (found === undefined) throw new Error(`Missing ${key}`);
+  return found;
+};
+function done(key: string, fingerprint: string, payload: unknown): ManifestPiece {
+  return {
+    key,
+    stageKind: "images",
+    assetId: null,
+    fingerprint,
+    piece: {
+      id: `piece-${key}`,
+      stageId: "images",
+      kind: "article_written",
+      idx: 1,
+      state: "done",
+      payload: JSON.stringify(payload),
+    },
+  };
+}
+
+it("writes the scenes from the article, and each image waits for its own", () => {
+  const recipes = plan();
+  const scenes = find(recipes, "images:scenes");
+  expect(scenes.input.kind).toBe("llm");
+  expect(scenes.dependsOn).toEqual(["article:body"]);
+  if (scenes.input.kind === "llm") {
+    expect(scenes.input.messages.at(-1)?.content).toContain("1. wide shot.\n2. wide shot.");
+    expect(scenes.input.messages.at(-1)?.content).toContain("Second paragraph.");
+  }
+  const images = ["image:harbor", "image:hill"].map((key) => find(recipes, key));
+  expect(images.map((value) => value.input.kind)).toEqual(["deferred", "deferred"]);
+  expect(images.every((value) => value.dependsOn.includes("images:scenes"))).toBe(true);
+  // Two waiting images are two requests, not one.
+  expect(new Set(images.map((value) => value.fingerprint)).size).toBe(2);
+});
+
+it("draws each image from its own scene once they are written", () => {
+  const scenes = find(plan(), "images:scenes");
+  const recipes = plan([
+    done("images:scenes", scenes.fingerprint, {
+      scenes: ["The Ishtar Gate at dawn.", "Marduk splits the sea."],
+    }),
+  ]);
+  const prompts = ["image:harbor", "image:hill"].map((key) => {
+    const input = find(recipes, key).input;
+    return input.kind === "image" ? input.prompt : "";
+  });
+  expect(prompts).toEqual([
+    "An engraving.\n\nComposition: wide shot.\n\nScene: The Ishtar Gate at dawn.",
+    "An engraving.\n\nComposition: wide shot.\n\nScene: Marduk splits the sea.",
+  ]);
+  // Scenes for another request, or the wrong number of them, are not used.
+  const stale = plan([done("images:scenes", "other", { scenes: ["A.", "B."] })]);
+  expect(find(stale, "image:harbor").input.kind).toBe("deferred");
+  const miscounted = plan([done("images:scenes", scenes.fingerprint, { scenes: ["A."] })]);
+  expect(find(miscounted, "image:harbor").input.kind).toBe("deferred");
+});
+
+it("adds the scene after the first paragraph of a prompt without the keyword", () => {
+  const plain: RevisionContent = {
+    ...withScenes,
+    promptTemplates: {
+      "imagePrompts.0": "An engraving about {{Topic}}.\n\nComposition: wide shot.",
+    },
+  };
+  const c: RunConfig = { ...scened, values: { Topic: "Tiamat" } };
+  const scenes = find(plan([], undefined, plain, c), "images:scenes");
+  const recipes = plan(
+    [done("images:scenes", scenes.fingerprint, { scenes: ["A gate.", "A sea."] })],
+    undefined,
+    plain,
+    c,
+  );
+  const input = find(recipes, "image:hill").input;
+  expect(input.kind === "image" ? input.prompt : "").toBe(
+    "An engraving about Tiamat.\n\nScene: A sea.\n\nComposition: wide shot.",
+  );
+});
+
+it("with the switch off, draws every image as before and leaves the scene line out", () => {
+  const off = plan([], undefined, withScenes, { ...scened, imageScenes: undefined });
+  expect(off.some((value) => value.key === "images:scenes")).toBe(false);
+  expect(find(off, "image:harbor").input).toMatchObject({
+    kind: "image",
+    prompt: "An engraving.\n\nComposition: wide shot.",
+  });
+});
+
+it("waits for the article before asking, and leaves prompts without a scene as they were", () => {
+  const unwritten: RunConfig = {
+    ...scened,
+    sources: { ...scened.sources, article: "generate" },
+    rendered: { ...scened.rendered, article: "Write an article." },
+  };
+  const early = plan([], null, { ...withScenes, articleMarkdown: undefined }, unwritten);
+  expect(find(early, "images:scenes").input.kind).toBe("deferred");
+  expect(find(early, "image:harbor").input.kind).toBe("deferred");
+  const plain = plan([], "Text.", content, { ...scened, imageScenes: undefined });
+  expect(plain.some((value) => value.key === "images:scenes")).toBe(false);
+  expect(find(plain, "image:harbor").input).toMatchObject({ kind: "image", prompt: "Harbor" });
+});

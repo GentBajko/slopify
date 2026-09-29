@@ -105,6 +105,22 @@ How the count is worked out:
 
 Turning it on also switches **Motion** (in the **Video and style** row) from **Zoom in and out** to **Mix of both**, so a long video pans and zooms by turns. A **Pan across** or **Still** you picked stays, and you can pick Zoom again.
 
+## Scenes from the article
+
+Without it, every image of a prompt is drawn from the same text, so three images of one prompt tend to show the same picture three times. **Scenes from the article** gives every image its own moment.
+
+| Option | What it does | Default |
+| --- | --- | --- |
+| **Scenes from the article** | Before the images are drawn, the project's AI model reads the article once and writes a short scene for each image. Scene 1 comes from the article's opening and the last from its ending, in the order the images are shown. Each image is drawn from its prompt with its scene added. One more AI call per run. | Off |
+
+Where the scene goes:
+
+- A prompt with `{{Scene}}` gets the scene there, for example a line `Scene: {{Scene}}` under the prompt's first sentence. `{{Scene}}` is never a field to fill in: Slopify writes it.
+- A prompt without it gets the scene as a line of its own after its first paragraph, so any prompt works unchanged.
+- With the switch off, a line holding `{{Scene}}` is left out and the prompt is drawn as it always was.
+
+The style, composition and everything else in the prompt stay as written; only the scene changes from image to image. The scenes are written once the article exists, and each image waits for them. Switching it on or off in **Edit project** remakes the images.
+
 ## How long each image stays on screen
 
 **Seconds per image** (1 to 600, default 15) is in the **Video and style** row, beside **Cuts**, **Zoom** and **Motion**. When cuts follow the narration, it is the target length and a cut waits for a sentence end. When images run out, they start again. See [Play Video and Style](Play-Video-and-Style).

@@ -107,7 +107,9 @@ export function previewDetails(
                   ? "Research"
                   : row.key.startsWith("shorts:")
                     ? "Short image prompts"
-                    : "Thumbnail prompt";
+                    : row.key === "images:scenes"
+                      ? "Image scenes"
+                      : "Thumbnail prompt";
       return [
         {
           key: row.key,

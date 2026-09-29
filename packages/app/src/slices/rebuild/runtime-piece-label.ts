@@ -40,6 +40,7 @@ export function pieceLabel(
   if (turn !== null) return `Turn ${turn[1] ?? ""}`;
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
   if (key === "animate:future") return "Animated images";
+  if (key === "images:scenes") return "Image scenes";
   const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);
   if (short !== null)
     return short[2] === "prompts"

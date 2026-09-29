@@ -262,6 +262,7 @@ export function documentFromProject(
         : { paragraphPause: String(config.paragraphPauseSeconds) }),
       imagePrompts,
       ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
+      ...(config.imageScenes === true ? { imageScenes: true } : {}),
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",
       outro: config.outro?.name ?? "",

@@ -384,7 +384,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     ...(script === undefined ? {} : { script }),
   };
 }
-function llmInputFingerprint(context: RecipeContext, messages: readonly Message[]): string {
+export function llmInputFingerprint(context: RecipeContext, messages: readonly Message[]): string {
   return fingerprint(JSON.parse(JSON.stringify(llmInput(context, messages))) as FingerprintValue);
 }
 export function matchingText(

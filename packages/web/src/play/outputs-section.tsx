@@ -5,6 +5,7 @@ import { useDraftLanguage } from "@/language/play-language";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
 import { ImageScaleControl } from "./image-scale";
+import { ImageScenesControl } from "./image-scenes";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -91,7 +92,12 @@ export function ImagesSection(props: RailProps): ReactElement {
     <ImagesRail
       {...props}
       titled={false}
-      more={<ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />}
+      more={
+        <>
+          <ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />
+          <ImageScenesControl document={document} onEdit={session.edit} />
+        </>
+      }
       rawNumbers={{
         values: document.form.imagePrompts,
         onChange: (name, number) =>

@@ -281,6 +281,7 @@ export function toAdmissionDraft(input: {
     ...(sources.images === "generate" && form.imageScale !== undefined
       ? { imageScale: imageScaleOf(input.document, fields) }
       : {}),
+    ...(sources.images === "generate" && form.imageScenes === true ? { imageScenes: true } : {}),
     thumbnailPrompt: ["from_prompt", "prompt_by_llm"].includes(sources.thumbnail)
       ? form.thumbnailPrompt
       : undefined,

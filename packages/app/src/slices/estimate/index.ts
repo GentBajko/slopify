@@ -284,6 +284,9 @@ export function estimateRun(
         : `${images} images. ${imageNote}`,
     });
   if (images === 0) local("Images", "Provided or off.");
+  // Scenes from the article: one call reads the article and writes every image's scene.
+  if (images > 0 && draft.imageScenes === true)
+    text("Image scenes", articleChars + 1500, 120 * images);
   // The establishing image is one more image when it is made from a prompt.
   if (usesReference(draft) && draft.reference?.source === "prompt")
     requests.push({

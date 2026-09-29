@@ -9,7 +9,7 @@ import { ThumbnailCountPicker } from "@/play/thumbnail-count";
 import { promptsQuery } from "@/queries";
 import { CaptionEditor } from "./caption-editor.js";
 import { EditImagePrompts } from "./edit-image-prompts.js";
-import { EditImageScale } from "./edit-sound-and-scale.js";
+import { EditImageScale, EditImageScenes } from "./edit-sound-and-scale.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
@@ -207,6 +207,7 @@ export function RevisionContentEditors({
           }
           onChange={emit}
         />
+        <EditImageScenes edit={edit} onChange={emit} />
         <RevisionReference
           edit={edit}
           prompts={prompts}

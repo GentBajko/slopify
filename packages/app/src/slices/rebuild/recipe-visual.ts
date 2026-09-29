@@ -2,6 +2,7 @@ import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
 import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
+import { withoutScene, withScene } from "../images/scenes.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
 import { castFor } from "./recipe-cast.js";
@@ -14,6 +15,7 @@ import {
   resourceIdentity,
 } from "./recipe-model.js";
 import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
+import type { ImageScenes } from "./recipe-scenes.js";
 import { matchingText, renderedPrompt } from "./recipe-text.js";
 
 export function visualRecipes(
@@ -29,6 +31,8 @@ export function visualRecipes(
   timing: FingerprintValue = null,
   // Level the volume: the levelled narration and the master (`recipe-loudness.ts`).
   master: MasterPlan = noMaster,
+  // Each image's own scene, for the images whose prompt asks for one (`recipe-scenes.ts`).
+  scenes?: ImageScenes,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -42,7 +46,20 @@ export function visualRecipes(
       image.templateKey === undefined || image.templateKey === null
         ? undefined
         : content.promptTemplates[image.templateKey];
-    const prompt = raw === undefined || raw === null ? image.prompt : render(raw, config.values);
+    const at = scenes?.keys.indexOf(key) ?? -1;
+    if (scenes !== undefined && at !== -1 && image.source === "generate") {
+      recipes.push(
+        sceneImage(config, content, key, raw ?? image.prompt ?? "", scenes, at, reference),
+      );
+      continue;
+    }
+    // With Scenes from the article off, a prompt's `{{Scene}}` line is left out.
+    const prompt =
+      raw === undefined || raw === null
+        ? image.prompt === null || image.prompt === undefined
+          ? image.prompt
+          : withoutScene(image.prompt)
+        : render(withoutScene(raw), config.values);
     recipes.push(
       recipe(
         { content },
@@ -146,6 +163,52 @@ export function visualRecipes(
   }
   return recipes;
 }
+// An image drawn from its own scene. Until the scenes are written it waits as a deferred
+// request that names the scenes step and the image's place among them, so writing them turns
+// it into its image request (materialization), and writing them again draws it again.
+function sceneImage(
+  config: RunConfig,
+  content: RevisionContent,
+  key: string,
+  body: string,
+  scenes: ImageScenes,
+  at: number,
+  reference: ImageReference | undefined,
+): ResolvedWorkRecipe {
+  const scene = scenes.scenes?.[at];
+  const prompt = scene === undefined ? undefined : withScene(render(body, config.values), scene);
+  return recipe(
+    { content },
+    `image:${key}`,
+    "images",
+    prompt === undefined
+      ? {
+          kind: "deferred",
+          version: 1,
+          operation: "image-scene",
+          template: [
+            scenes.recipe.fingerprint,
+            at,
+            config.images?.provider ?? null,
+            config.images?.model ?? null,
+            config.format,
+            ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+            ...(reference === undefined ? [] : [reference.input.fingerprint]),
+          ],
+        }
+      : {
+          kind: "image",
+          version: 1,
+          ...imageChoice(config),
+          aspect: config.format,
+          prompt,
+          ...(reference === undefined ? {} : { reference: reference.input }),
+          ...castField(castFor(config, prompt)),
+        },
+    [scenes.recipe.key, ...(reference === undefined ? [] : [reference.key])],
+  );
+}
+
 // What the ambient bed adds to the render's fingerprint: its settings and, for the user's own
 // file, the project asset it plays. Undefined without a bed.
 export function ambientBedValues(

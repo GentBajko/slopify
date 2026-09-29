@@ -7,6 +7,7 @@ import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { checkScenes, sceneCountOf } from "../images/scenes.js";
 import { spokenPassage } from "../narration/describe.js";
 import { observeNarration } from "../narration/live.js";
 import { validatePreparation } from "../narration/preparation.js";
@@ -21,6 +22,7 @@ import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { parseAttribution } from "../voices/attribution.js";
 import { parseScript } from "../voices/script.js";
+import { imageScenesKey } from "./recipe-scenes.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
@@ -263,6 +265,11 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     return spokenPassage(answer.text) === ""
       ? "The AI model's description had no words a narrator could say. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project, or turn off Describe tables and figures there."
       : undefined;
+  // Scenes from the article: one scene per image, as many as the request lists.
+  if (piece.key === imageScenesKey && piece.input.kind === "llm") {
+    const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
+    return checked.ok ? undefined : checked.reason;
+  }
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
       ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
@@ -289,6 +296,20 @@ async function publishText(
   piece: WorkPiece,
   answer: LlmAnswer,
 ): Promise<void> {
+  if (piece.key === imageScenesKey && piece.input.kind === "llm") {
+    const checked = checkScenes(answer.text, sceneCountOf(piece.input.messages) ?? 0);
+    if (!checked.ok) throw new Error(checked.reason);
+    await publishResult(
+      deps,
+      context,
+      piece,
+      preparedTexts(deps, context, piece, [
+        ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
+      ]),
+      { scenes: checked.scenes, text: answer.text },
+    );
+    return;
+  }
   if (piece.input.kind === "llm" && piece.input.preparation !== undefined) {
     const checked = validatePreparation(answer.text, piece.input.preparation.source);
     if (!checked.ok) throw new Error(checked.reason);

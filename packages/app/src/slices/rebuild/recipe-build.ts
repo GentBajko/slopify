@@ -8,6 +8,7 @@ import { masterPlan } from "./recipe-loudness.js";
 import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
+import { imageScenes } from "./recipe-scenes.js";
 import { shortsRecipes } from "./recipe-shorts.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
@@ -38,6 +39,8 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     referenceForThumbnail(context.config) ? drawnFrom : undefined,
   );
   const youtube = youtubeRecipes(context, exports);
+  // Each image's scene, written from the article, for image prompts that ask for one.
+  const scenes = imageScenes(context, text);
   return withReviews(context, [
     ...text.recipes,
     ...audio.recipes,
@@ -64,7 +67,9 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         drawnFrom,
         timing === undefined ? null : resourceIdentity(context, timing),
         withLines(masterPlan(context, audio.levels, "video"), linePlan(context, timing)),
+        scenes,
       ),
     ),
+    ...(scenes === undefined ? [] : [scenes.recipe]),
   ]);
 }

@@ -150,6 +150,8 @@ export const playDraftFormSchema = z
       .strict()
       .readonly()
       .optional(),
+    // Scenes from the article, switched on. Absent is off.
+    imageScenes: z.boolean().optional(),
     thumbnailPrompt: text,
     intro: text,
     outro: text,

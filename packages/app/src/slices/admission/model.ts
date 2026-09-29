@@ -171,6 +171,10 @@ export interface RunDraft {
   // planned for (`images/scale.ts`); the prompts' Numbers stay the floor. Absent is each
   // prompt's Number exactly, which is what every project saved before it made.
   readonly imageScale?: import("../images/scale.js").ImageScale | undefined;
+  // Scenes from the article: the project's AI model reads the article once and writes each
+  // image its own scene (`images/scenes.ts`). Absent is off: every image of a prompt is drawn
+  // from the same text, as every project saved before it was.
+  readonly imageScenes?: boolean | undefined;
   readonly thumbnailPrompt?: string | undefined;
   // `thumbnailCountOf` reads it; absent is one thumbnail.
   readonly thumbnailCount?: ThumbnailCount | undefined;
