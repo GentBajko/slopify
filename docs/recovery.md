@@ -19,6 +19,16 @@ to wait and runs again by itself.
   the project reads as running and the step says "Trying again at 14:05"; Pause holds it.
   Only when the waits are used up does the step fail and say why.
 
+A voice that garbles or skips a sentence is caught when captions are timed: the audio stops
+matching the text. The chunk that holds it is recorded again by itself, with a new request,
+and everything built on it (the joined narration, the captions, the video) is rebuilt, as
+Regenerate in Edit project → Narration would. Each chunk gets two tries; the step says which
+try is running. A voice rarely garbles the same sentence twice, so a third mismatch means it
+reads something its own way (a year, an abbreviation or a name), and the step fails and says
+to reword that sentence. Uploaded narration, captions edited by hand and multi-voice turns
+aren't retried. The tries are kept in the database (migration 0042), so a restart starts one
+that was asked for and never counts a try twice.
+
 ## Done with problems
 
 A failed step stops only the steps that need its output. The video never reads the thumbnail,

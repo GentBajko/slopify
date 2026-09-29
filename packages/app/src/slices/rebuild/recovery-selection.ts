@@ -63,6 +63,12 @@ export function redoTarget(
     return plan.recipes.some((row) => row.key === `${item}:prompts`)
       ? own([`${item}:prompts`])
       : undefined;
+  // One narration chunk, by the key the Narration editor regenerates it by: its TTS requests
+  // are the roots (`narration-retry.ts`).
+  const chunk = plan.recipes
+    .filter((row) => row.input.kind === "tts" && row.input.logicalKey === item)
+    .map((row) => row.key);
+  if (chunk.length > 0) return own(chunk);
   return plan.recipes.some((row) => row.key === item && row.kind === "provider")
     ? own([item])
     : undefined;

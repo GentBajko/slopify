@@ -238,3 +238,22 @@ it("still gives the time when no chunk holds the expected words", () => {
     describeMismatch([], "outro", { at: 75, expected: "", heard: "THANKS FOR LISTENING" }),
   ).toContain("at 1:15 into the outro narration. The text expected the end of the text");
 });
+
+it("says the chunk is being recorded again, and says when its tries are used up", () => {
+  const chunks = [
+    { key: "audio:body:a-1", spokenText: "The Basilisk and Cockatrice are dragons." },
+  ];
+  const mismatch = {
+    at: 388,
+    expected: "The Basilisk and Cockatrice are dragons.",
+    heard: "THE BASSOF TIS COES",
+  };
+  const trying = describeMismatch(chunks, "body", mismatch, { chunk: 1, try: 1 });
+  expect(trying).toContain(
+    "Slopify is recording narration chunk 1 again by itself (try 1 of 2) and carries on with the video when it's done.",
+  );
+  expect(trying).toContain("regenerate narration chunk 1 in Edit project → Narration");
+  const spent = describeMismatch(chunks, "body", mismatch, { chunk: 1, try: undefined });
+  expect(spent).toContain("Slopify already recorded narration chunk 1 again 2 times");
+  expect(spent).toContain("reword that sentence in Edit project → Narration → narration chunk 1");
+});

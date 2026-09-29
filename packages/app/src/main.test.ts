@@ -204,6 +204,7 @@ describe("boot", { timeout: 30_000 }, () => {
       { version: 39 },
       { version: 40 },
       { version: 41 },
+      { version: 42 },
     ]);
     db.close();
   });

@@ -85,6 +85,7 @@ import { readNotificationUrl } from "./slices/notifications/settings.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
+import { createNarrationRetries } from "./slices/rebuild/narration-retry.js";
 import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { waitToRetry, wakeRetries } from "./slices/rebuild/retry.js";
@@ -360,8 +361,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     });
     const audioPreviews = createAudioPreviewStore();
     const reviewRedos = createReviewRedos();
+    const narrationRetries = createNarrationRetries();
     const runner = wireRunner({
-      onFinished: (work) => reviewRedos.kick(work.projectId),
+      onFinished: (work) => {
+        reviewRedos.kick(work.projectId);
+        narrationRetries.kick(work.projectId);
+      },
       db,
       paths,
       clock,
@@ -493,6 +498,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     // Redos a review asked for before the last shutdown start now.
     reviewRedos.bind(rebuild);
     reviewRedos.kick();
+    // So do narration chunks the captions asked to record again.
+    narrationRetries.bind(rebuild);
+    narrationRetries.kick();
     // A stage that was waiting for a CLI's plan limits when the app stopped carries on waiting.
     void resumeAfterRestart(
       db,

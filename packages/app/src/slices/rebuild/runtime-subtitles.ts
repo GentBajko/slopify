@@ -21,6 +21,7 @@ import { type CaptionSpeakers, speakerColour } from "../voices/palette.js";
 import { speakerPanelEvents, usesSpeakerPanel } from "../voices/panel.js";
 import { panelPortraits } from "../voices/portraits.js";
 import { attributeWords, type SpeakerWord } from "../voices/timing.js";
+import { narrationRetryLimit, requestNarrationRetry } from "./narration-retry.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import {
   type ExportSnapshot,
@@ -111,7 +112,7 @@ async function timing(
     context.signal.throwIfAborted();
     const { path, kind } = segment;
     if (path !== null && spoken(kind)) {
-      const aligned = await located(snapshot, kind, () =>
+      const aligned = await located(deps, context, snapshot, kind, () =>
         alignSubtitles({
           audioPath: path,
           text: revisionTranscript(deps, snapshot, kind),
@@ -367,8 +368,12 @@ async function files(
 
 // A mismatch names the place to fix: the time in the narration, the chunk that holds it (as
 // the Narration editor numbers them) and what was expected against what was heard. The
-// usual cause is a TTS request that skipped or reworded a sentence.
+// usual cause is a TTS request that skipped or reworded a sentence, which a second request
+// almost always reads right, so a chunk made by a voice is first recorded again by itself
+// (`narration-retry.ts`); the message says so, and says when its tries are used up.
 async function located<T>(
+  deps: ExportExecutionDeps,
+  context: StageContext,
   snapshot: ExportSnapshot,
   segment: "intro" | "body" | "outro",
   align: () => Promise<T>,
@@ -377,7 +382,44 @@ async function located<T>(
     return await align();
   } catch (error) {
     if (!(error instanceof SubtitleMismatch)) throw error;
-    throw new Error(mismatchMessage(snapshot, segment, error), { cause: error });
+    const chunks = mismatchChunks(snapshot, segment);
+    const at = mismatchChunk(chunks, error);
+    const chunk = at === -1 ? undefined : chunks[at];
+    const retry =
+      chunk !== undefined && retryable(snapshot, chunk.key)
+        ? {
+            chunk: at + 1,
+            try: requestNarrationRetry(deps.db, {
+              projectId: context.work.projectId,
+              chunkKey: chunk.key,
+              now: deps.clock.now().toISOString(),
+            }),
+          }
+        : undefined;
+    throw new Error(describeMismatch(chunks, segment, error, retry), { cause: error });
+  }
+}
+
+// A chunk a voice made from the text: not uploaded audio, not captions edited by hand (their
+// remake waits for the person) and not a multi-voice turn, whose key the regeneration list
+// can't hold yet.
+function retryable(snapshot: Pick<ExportSnapshot, "view" | "plan">, key: string): boolean {
+  if (snapshot.view.revision.content.subtitleCues !== undefined) return false;
+  if (/:turn:\d+$/.test(key)) return false;
+  return snapshot.plan.recipes.some(
+    (row) => row.input.kind === "tts" && row.input.logicalKey === key,
+  );
+}
+
+function mismatchChunks(
+  snapshot: Pick<ExportSnapshot, "view" | "plan">,
+  segment: "intro" | "body" | "outro",
+): readonly NarrationChunk[] {
+  try {
+    return narrationChunks(narrationTextParts(snapshot.view, snapshot.plan, segment));
+  } catch {
+    // Without a readable plan the message still gives the time and the words.
+    return [];
   }
 }
 
@@ -386,25 +428,29 @@ export function mismatchMessage(
   segment: "intro" | "body" | "outro",
   mismatch: SubtitleMismatch,
 ): string {
-  let chunks: readonly NarrationChunk[] = [];
-  try {
-    chunks = narrationChunks(narrationTextParts(snapshot.view, snapshot.plan, segment));
-  } catch {
-    // Without a readable plan the message still gives the time and the words.
-  }
-  return describeMismatch(chunks, segment, mismatch);
+  return describeMismatch(mismatchChunks(snapshot, segment), segment, mismatch);
+}
+
+// The chunk that holds the words the audio stopped matching, by index; -1 when none does.
+export function mismatchChunk(
+  chunks: readonly NarrationChunk[],
+  mismatch: Pick<SubtitleMismatch, "expected">,
+): number {
+  const probe = comparable(mismatch.expected).split(" ").slice(0, 6).join(" ");
+  return probe === ""
+    ? chunks.length - 1
+    : chunks.findIndex((chunk) => comparable(chunk.spokenText).includes(probe));
 }
 
 export function describeMismatch(
   chunks: readonly NarrationChunk[],
   segment: "intro" | "body" | "outro",
   mismatch: Pick<SubtitleMismatch, "at" | "expected" | "heard">,
+  // Set when the chunk is one a voice made: `try` is the automatic try just asked for, or
+  // undefined once its tries are used up.
+  retry?: { readonly chunk: number; readonly try: number | undefined },
 ): string {
-  const probe = comparable(mismatch.expected).split(" ").slice(0, 6).join(" ");
-  const at =
-    probe === ""
-      ? chunks.length - 1
-      : chunks.findIndex((chunk) => comparable(chunk.spokenText).includes(probe));
+  const at = mismatchChunk(chunks, mismatch);
   const chunk = at === -1 ? undefined : chunks[at];
   const where =
     chunk === undefined
@@ -412,6 +458,13 @@ export function describeMismatch(
       : `${clock(mismatch.at)} into the ${segment} narration, in narration chunk ${String(at + 1)} of ${String(chunks.length)} (it starts "${opening(chunk.spokenText)}")`;
   const expected = mismatch.expected === "" ? "the end of the text" : `"${mismatch.expected}…"`;
   const heard = mismatch.heard === "" ? "no more speech" : `"${mismatch.heard.toLowerCase()}…"`;
+  const stopped = `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard}`;
+  if (retry !== undefined) {
+    const n = String(retry.chunk);
+    return retry.try === undefined
+      ? `${stopped} Slopify already recorded narration chunk ${n} again ${String(narrationRetryLimit)} times and the audio still doesn't match there, so the voice probably reads something its own way (a year, an abbreviation or a name). Listen at ${clock(mismatch.at)}: if words are missing or wrong, reword that sentence in Edit project → Narration → narration chunk ${n}, save, then Continue the run. If it says them right, use Download diagnostics in Settings and report it.`
+      : `${stopped} The voice probably skipped or garbled words there, so Slopify is recording narration chunk ${n} again by itself (try ${String(retry.try)} of ${String(narrationRetryLimit)}) and carries on with the video when it's done. If this message is still here in a few minutes, regenerate narration chunk ${n} in Edit project → Narration, then Continue the run.`;
+  }
   const fix =
     chunk === undefined
       ? `Listen at ${clock(mismatch.at)}: if words are missing or wrong, regenerate that part in Edit project → Narration, then Continue the run.`
@@ -420,7 +473,7 @@ export function describeMismatch(
   // again, so a remake would cost a chunk and fail here once more.
   const same =
     "If it says them right, only another way (a year, an abbreviation or a name read its own way), regenerating gives the same reading: use Download diagnostics in Settings and report it.";
-  return `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard} The recording there probably skips or changes words. ${fix} ${same}`;
+  return `${stopped} The recording there probably skips or changes words. ${fix} ${same}`;
 }
 
 function comparable(text: string): string {

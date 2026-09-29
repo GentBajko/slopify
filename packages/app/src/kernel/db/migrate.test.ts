@@ -52,6 +52,7 @@ describe("migrate", () => {
       "library_versions",
       "machine",
       "narration_aliases",
+      "narration_retries",
       "outputs",
       "plan_limit_readings",
       "plan_limit_waiters",
@@ -111,6 +112,7 @@ describe("migrate", () => {
       "entries_name",
       "episode_memories_channel",
       "episode_memories_project",
+      "narration_retries_pending",
       "outputs_project",
       "plan_limit_readings_project",
       "play_draft_attachment_file",
@@ -182,6 +184,7 @@ describe("migrate", () => {
       { version: 39, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 40, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 41, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 42, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -191,16 +194,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 34 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 35 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(43, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (41)",
+      "database schema 43 is newer than this app knows (42)",
     );
   });
 
