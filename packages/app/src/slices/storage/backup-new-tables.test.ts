@@ -42,6 +42,7 @@ const leftOut = new Set([
   "plan_limit_waits",
   "plan_limit_waiters",
   "prompt_softening",
+  "narration_retries",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
 ]);

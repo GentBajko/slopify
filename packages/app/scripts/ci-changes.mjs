@@ -56,8 +56,10 @@ const realChange = (path) => {
   return withoutVersions(path, before) !== withoutVersions(path, now);
 };
 
-const changed = base === "" ? null : git("diff", "--name-only", base, "HEAD").split("\n").filter(Boolean);
-const touched = (pattern) => changed === null || changed.some((path) => pattern.test(path) && realChange(path));
+const changed =
+  base === "" ? null : git("diff", "--name-only", base, "HEAD").split("\n").filter(Boolean);
+const touched = (pattern) =>
+  changed === null || changed.some((path) => pattern.test(path) && realChange(path));
 
 const shared = String.raw`^(package-lock\.json|package\.json|packages/app/package\.json|\.github/workflows/|packages/app/scripts/ci-changes\.mjs)`;
 // What the Windows job installs and tests: the package and how it starts and updates, and the
