@@ -7,6 +7,7 @@ import {
   type RefCallback,
   type RefObject,
   type SyntheticEvent,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -276,6 +277,10 @@ export function SeekTrack({
 }): ReactElement {
   const track = useRef<HTMLDivElement>(null);
   const { known, duration, current, buffered, seeking, hover } = controls;
+  // One bar per few pixels of the track, the loudest of the peaks it covers: however many peaks
+  // a long narration has, the bars stay apart and readable.
+  const width = useTrackWidth(track);
+  const bars = waveform === undefined ? undefined : foldPeaks(waveform, width);
   const marks = known
     ? chapters.filter((chapter) => chapter.start > 0 && chapter.start < duration)
     : [];
@@ -330,19 +335,19 @@ export function SeekTrack({
       onPointerLeave={() => controls.setHover(null)}
       onKeyDown={onKey}
     >
-      {waveform === undefined || waveform.length === 0 ? (
+      {bars === undefined || bars.length === 0 ? (
         <span className="sl-player__rail">
           <span className="sl-player__buffered" style={{ width: `${String(loaded)}%` }} />
           <span className="sl-player__played" style={{ width: `${String(played)}%` }} />
         </span>
       ) : (
         <span className="sl-player__wave" data-slot="waveform" aria-hidden="true">
-          {waveform.map((level, bar) => (
+          {bars.map((level, bar) => (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional and never reorder.
               key={bar}
               className="sl-player__peak"
-              data-played={((bar + 0.5) / waveform.length) * 100 <= played ? "" : undefined}
+              data-played={((bar + 0.5) / bars.length) * 100 <= played ? "" : undefined}
               style={{ height: `${String(Math.max(12, Math.round(level * 100)))}%` }}
             />
           ))}
@@ -491,4 +496,35 @@ export function SpeedMenu({ controls }: { readonly controls: MediaControls }): R
       ) : null}
     </span>
   );
+}
+
+// Pixels per bar: a 2-pixel bar and its gap.
+const pixelsPerBar = 4;
+
+// The peaks folded to fit: at most one bar per `pixelsPerBar`, each the loudest peak it covers.
+// Before the track is measured (width 0), the peaks as they are.
+export function foldPeaks(peaks: readonly number[], width: number): readonly number[] {
+  const room = Math.floor(width / pixelsPerBar);
+  if (room <= 0 || peaks.length <= room) return peaks;
+  const folded: number[] = [];
+  for (let bar = 0; bar < room; bar += 1) {
+    const from = Math.floor((bar * peaks.length) / room);
+    const to = Math.max(from + 1, Math.floor(((bar + 1) * peaks.length) / room));
+    folded.push(Math.max(...peaks.slice(from, to)));
+  }
+  return folded;
+}
+
+function useTrackWidth(track: RefObject<HTMLDivElement | null>): number {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = track.current;
+    if (element === null) return;
+    setWidth(element.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [track]);
+  return width;
 }

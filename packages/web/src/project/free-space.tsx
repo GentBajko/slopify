@@ -69,20 +69,19 @@ export function FreeSpaceOffer({
         title="Free space"
         meta={`Outputs ${formatBytes(data.outputsBytes)} · working files ${formatBytes(data.workingBytes)}`}
         info="project.free-space"
-      />
-      <div>
+      >
+        {/* The rail is narrow: the button says what it frees, the dialog says the rest. */}
         <Button
           variant="secondary"
           size="small"
-          // A long label in a narrow rail wraps inside the button rather than running past it.
-          className="h-auto min-h-8 max-w-full whitespace-normal py-1 text-left"
+          aria-label={`Free ${freed}: keep the outputs, drop the working files`}
           disabled={trim.isPending}
           disabledReason="Removing the working files…"
           onClick={() => setAsking(true)}
         >
-          {trim.isPending ? "Removing…" : `Free ${freed}: keep the outputs, drop the working files`}
+          {trim.isPending ? "Removing…" : `Free ${freed}`}
         </Button>
-      </div>
+      </SectionHead>
       <ConfirmDialog
         open={asking}
         title={`Free ${freed} from "${title}"?`}

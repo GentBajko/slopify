@@ -346,10 +346,15 @@
   }
   .sl-section-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-4);
     padding-bottom: var(--space-4);
+  }
+  /* The title and its summary keep a readable width; the actions wrap below them first. */
+  .sl-section-head > div:first-child {
+    flex: 1 1 18ch;
   }
   .sl-section-head__title {
     margin: 0;
@@ -574,6 +579,14 @@
   .sl-grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: var(--space-3);
+  }
+  /* In a project the open section is a column between two rails: three shorts across instead
+     of two, so five fit in about a screen. */
+  @media (min-width: 1181px) {
+    .sl-project .sl-grid--shorts {
+      grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+      column-gap: var(--space-4);
+    }
   }
   /* Player: the screen is dark in both themes, so the bar's colours are fixed, not themed. */
   .sl-player {
@@ -919,7 +932,9 @@
   .sl-audio--compact .sl-btn--small {
     height: 28px;
   }
-  @container (max-width: 420px) {
+  /* The waveform needs the width more than the slider does: below 640px only the mute button
+     stays, and the track gets the room. */
+  @container (max-width: 640px) {
     .sl-audio .sl-player__volume {
       display: none;
     }
@@ -1005,6 +1020,21 @@
     font-size: 13px;
     color: var(--color-ink-3);
     font-variant-numeric: tabular-nums;
+  }
+  .sl-steps--dense .sl-step {
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    padding: 5px 0;
+    border-bottom: 0;
+  }
+  .sl-steps--dense .sl-step__time {
+    display: none;
+  }
+  .sl-steps--dense .sl-step__detail {
+    grid-column: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
   }
 
   /* Next action */

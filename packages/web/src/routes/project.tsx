@@ -50,7 +50,7 @@ import {
   useRevisionController,
 } from "@/project/revision-workspace";
 import { CostSoFar, RunSteps, runSteps, StageAnnouncements } from "@/project/run-aside";
-import { RunClock, RunCostPanel, RunCostSummary } from "@/project/run-cost";
+import { RunClock, RunCostPanel } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { SectionEmpty, StageSection } from "@/project/stage-section";
 import { finalOutput } from "@/project/summary";
@@ -513,220 +513,215 @@ function ProjectWorkspace({
                   : controller.regenerateNow
               }
             >
-              <div data-tour="project-controls">
-                <ProjectHeader
-                  project={summary}
-                  prompts={prompts.data?.prompts}
-                  editing={selected === "settings"}
-                  onEdit={() => setChosen("settings")}
-                  more={more}
-                  nextChapter={nextChapter}
-                />
-              </div>
-              <StageAnnouncements stages={stages} />
-              <RunClock
-                cost={runCost.data}
-                status={summary.status}
-                measuredAt={runCost.dataUpdatedAt}
-              />
-              {selected === "cost" ? null : (
-                <RunCostSummary
+              <div className="sl-project">
+                <div data-tour="project-controls">
+                  <ProjectHeader
+                    project={summary}
+                    prompts={prompts.data?.prompts}
+                    editing={selected === "settings"}
+                    onEdit={() => setChosen("settings")}
+                    more={more}
+                    nextChapter={nextChapter}
+                  />
+                </div>
+                <StageAnnouncements stages={stages} />
+                <RunClock
                   cost={runCost.data}
                   status={summary.status}
-                  onOpen={() => openSection("cost")}
+                  measuredAt={runCost.dataUpdatedAt}
                 />
-              )}
-              <Workspace
-                sections={
-                  <Rail label="Project sections">
-                    {railItems.map((item) => (
-                      <SectionLink
-                        key={item.id}
-                        item={item}
-                        selected={selected}
-                        onSelect={openSection}
-                      />
-                    ))}
-                    <hr className="sl-rule my-2" />
-                    {settingsItems.map((item) => (
-                      <SectionLink
-                        key={item.id}
-                        item={item}
-                        selected={selected}
-                        onSelect={openSection}
-                      />
-                    ))}
-                  </Rail>
-                }
-                aside={
-                  <>
-                    <NextActionPanel state={next} feedback={feedback} />
-                    {summary === undefined ? null : (
-                      <FreeSpaceOffer
-                        projectId={projectId}
-                        title={summary.title}
-                        status={summary.status}
-                        sample={isSample || sample.isPending}
-                      />
-                    )}
-                    <div className="flex flex-col gap-6 max-[1180px]:hidden">
-                      <RunSteps steps={steps} />
-                      <CostSoFar cost={runCost.data} />
-                      <BatchQueueCount />
-                    </div>
-                  </>
-                }
-              >
-                <StageSection
-                  id="article"
-                  title="Article"
-                  stages={[article, research].filter(isStage)}
-                  active={selected === "article"}
-                  {...sectionProps}
+                <Workspace
+                  sections={
+                    <Rail label="Project sections">
+                      {railItems.map((item) => (
+                        <SectionLink
+                          key={item.id}
+                          item={item}
+                          selected={selected}
+                          onSelect={openSection}
+                        />
+                      ))}
+                      <hr className="sl-rule my-2" />
+                      {settingsItems.map((item) => (
+                        <SectionLink
+                          key={item.id}
+                          item={item}
+                          selected={selected}
+                          onSelect={openSection}
+                        />
+                      ))}
+                    </Rail>
+                  }
+                  aside={
+                    <>
+                      <NextActionPanel state={next} feedback={feedback} />
+                      {summary === undefined ? null : (
+                        <FreeSpaceOffer
+                          projectId={projectId}
+                          title={summary.title}
+                          status={summary.status}
+                          sample={isSample || sample.isPending}
+                        />
+                      )}
+                      <div className="flex flex-col gap-6 max-[1180px]:hidden">
+                        <RunSteps steps={steps} />
+                        <CostSoFar cost={runCost.data} onOpen={() => openSection("cost")} />
+                        <BatchQueueCount />
+                      </div>
+                    </>
+                  }
                 >
-                  {/* The article's body says itself what it waits for, and stays mounted so a
+                  <StageSection
+                    id="article"
+                    title="Article"
+                    stages={[article, research].filter(isStage)}
+                    active={selected === "article"}
+                    {...sectionProps}
+                  >
+                    {/* The article's body says itself what it waits for, and stays mounted so a
                     new revision's text replaces the old one in place. */}
-                  {on(article) || on(research) ? (
-                    body(article, research)
-                  ) : (
-                    <SectionEmpty stage={article} project={summary} name="Article" />
-                  )}
-                </StageSection>
-                <StageSection
-                  id="narration"
-                  title="Narration"
-                  stages={[audio].filter(isStage)}
-                  active={selected === "narration"}
-                  {...sectionProps}
-                >
-                  {opens(audio) ? (
-                    body(audio)
-                  ) : (
-                    <SectionEmpty stage={audio} project={summary} name="Narration" />
-                  )}
-                </StageSection>
-                <StageSection
-                  id="images"
-                  title="Images"
-                  head={false}
-                  stages={[images, thumbnail].filter(isStage)}
-                  active={selected === "images"}
-                  {...sectionProps}
-                >
-                  {body(images, thumbnail)}
-                </StageSection>
-                <StageSection
-                  id="video"
-                  title={finalOutput(config) === "audio" ? "Audio export" : "Video"}
-                  stages={[videoStage].filter(isStage)}
-                  active={selected === "video"}
-                  {...sectionProps}
-                >
-                  {body(videoStage)}
-                </StageSection>
-                {videoStage === undefined ? null : (
-                  <StageSection
-                    id="shorts"
-                    title="Shorts"
-                    stages={[]}
-                    active={selected === "shorts"}
-                    {...sectionProps}
-                    meta="Vertical clips picked from the video, each with its title and hashtags"
-                  >
-                    <ShortsBlock stage={videoStage} project={summary} outputs={outputs} />
-                  </StageSection>
-                )}
-                {videoStage === undefined ? null : (
-                  <StageSection
-                    id="youtube"
-                    title="YouTube"
-                    stages={[]}
-                    active={selected === "youtube"}
-                    {...sectionProps}
-                    meta="The description, chapters, hashtags and tags, as they go into YouTube Studio"
-                    // Prepare upload is the next action once the video is done; before that (an
-                    // outdated output waiting, say) it is here, where the upload is prepared.
-                    {...(uploadReady && next.next?.action?.intent.kind !== "prepare-upload"
-                      ? {
-                          extra: (
-                            <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-                              Prepare upload
-                            </Button>
-                          ),
-                        }
-                      : {})}
-                  >
-                    <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
-                  </StageSection>
-                )}
-                {documentStage === undefined ? null : (
-                  <StageSection
-                    id="document"
-                    title="PDF"
-                    stages={[documentStage]}
-                    active={selected === "document"}
-                    {...sectionProps}
-                  >
-                    {opens(documentStage) ? (
-                      body(documentStage)
+                    {on(article) || on(research) ? (
+                      body(article, research)
                     ) : (
-                      <SectionEmpty stage={documentStage} project={summary} name="PDF" />
+                      <SectionEmpty stage={article} project={summary} name="Article" />
                     )}
                   </StageSection>
-                )}
-                <View id="cost" title="Run cost" selected={selected}>
-                  <RunCostPanel projectId={projectId} />
-                </View>
-                <View id="live" title="Live" selected={selected}>
-                  {selected === "live" ? (
-                    <LiveBuild
-                      project={summary}
-                      revisionId={revisionId}
-                      stages={stages}
-                      outputs={outputs}
-                    />
-                  ) : null}
-                </View>
-                <View id="settings" title="Settings" selected={selected}>
-                  <RevisionEditPanel
-                    controller={controller}
-                    active={selected === "settings"}
-                    renderEditor={(props) => (
-                      <RevisionForm
-                        {...props}
-                        renderContent={(contentProps) => (
-                          <RevisionContentEditors
-                            key={contentProps.view.revision.id}
-                            {...contentProps}
-                          />
-                        )}
-                      />
+                  <StageSection
+                    id="narration"
+                    title="Narration"
+                    stages={[audio].filter(isStage)}
+                    active={selected === "narration"}
+                    {...sectionProps}
+                  >
+                    {opens(audio) ? (
+                      body(audio)
+                    ) : (
+                      <SectionEmpty stage={audio} project={summary} name="Narration" />
                     )}
-                  />
-                </View>
-                {revisionId === null ? null : (
-                  <View id="checkpoints" title="Checkpoints" selected={selected}>
-                    <CheckpointPanel
-                      projectId={projectId}
-                      revisionId={revisionId}
-                      paused={summary.status === "paused"}
-                      stages={stages}
-                      approvedInRail={
-                        next.next?.action?.intent.kind === "approve"
-                          ? next.next.action.intent.gate.checkpointId
-                          : undefined
-                      }
+                  </StageSection>
+                  <StageSection
+                    id="images"
+                    title="Images"
+                    head={false}
+                    stages={[images, thumbnail].filter(isStage)}
+                    active={selected === "images"}
+                    {...sectionProps}
+                  >
+                    {body(images, thumbnail)}
+                  </StageSection>
+                  <StageSection
+                    id="video"
+                    title={finalOutput(config) === "audio" ? "Audio export" : "Video"}
+                    stages={[videoStage].filter(isStage)}
+                    active={selected === "video"}
+                    {...sectionProps}
+                  >
+                    {body(videoStage)}
+                  </StageSection>
+                  {videoStage === undefined ? null : (
+                    <StageSection
+                      id="shorts"
+                      title="Shorts"
+                      stages={[]}
+                      active={selected === "shorts"}
+                      {...sectionProps}
+                      meta="Vertical clips picked from the video, each with its title and hashtags"
+                    >
+                      <ShortsBlock stage={videoStage} project={summary} outputs={outputs} />
+                    </StageSection>
+                  )}
+                  {videoStage === undefined ? null : (
+                    <StageSection
+                      id="youtube"
+                      title="YouTube"
+                      stages={[]}
+                      active={selected === "youtube"}
+                      {...sectionProps}
+                      meta="The description, chapters, hashtags and tags, as they go into YouTube Studio"
+                      // Prepare upload is the next action once the video is done; before that (an
+                      // outdated output waiting, say) it is here, where the upload is prepared.
+                      {...(uploadReady && next.next?.action?.intent.kind !== "prepare-upload"
+                        ? {
+                            extra: (
+                              <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+                                Prepare upload
+                              </Button>
+                            ),
+                          }
+                        : {})}
+                    >
+                      <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
+                    </StageSection>
+                  )}
+                  {documentStage === undefined ? null : (
+                    <StageSection
+                      id="document"
+                      title="PDF"
+                      stages={[documentStage]}
+                      active={selected === "document"}
+                      {...sectionProps}
+                    >
+                      {opens(documentStage) ? (
+                        body(documentStage)
+                      ) : (
+                        <SectionEmpty stage={documentStage} project={summary} name="PDF" />
+                      )}
+                    </StageSection>
+                  )}
+                  <View id="cost" title="Run cost" selected={selected}>
+                    <RunCostPanel projectId={projectId} />
+                  </View>
+                  <View id="live" title="Live" selected={selected}>
+                    {selected === "live" ? (
+                      <LiveBuild
+                        project={summary}
+                        revisionId={revisionId}
+                        stages={stages}
+                        outputs={outputs}
+                      />
+                    ) : null}
+                  </View>
+                  <View id="settings" title="Settings" selected={selected}>
+                    <RevisionEditPanel
+                      controller={controller}
+                      active={selected === "settings"}
+                      renderEditor={(props) => (
+                        <RevisionForm
+                          {...props}
+                          renderContent={(contentProps) => (
+                            <RevisionContentEditors
+                              key={contentProps.view.revision.id}
+                              {...contentProps}
+                            />
+                          )}
+                        />
+                      )}
                     />
                   </View>
-                )}
-                <View id="history" title="History" selected={selected}>
-                  <RevisionHistoryPanel
-                    controller={controller}
-                    projectId={projectId}
-                    active={selected === "history"}
-                  />
-                </View>
-              </Workspace>
+                  {revisionId === null ? null : (
+                    <View id="checkpoints" title="Checkpoints" selected={selected}>
+                      <CheckpointPanel
+                        projectId={projectId}
+                        revisionId={revisionId}
+                        paused={summary.status === "paused"}
+                        stages={stages}
+                        approvedInRail={
+                          next.next?.action?.intent.kind === "approve"
+                            ? next.next.action.intent.gate.checkpointId
+                            : undefined
+                        }
+                      />
+                    </View>
+                  )}
+                  <View id="history" title="History" selected={selected}>
+                    <RevisionHistoryPanel
+                      controller={controller}
+                      projectId={projectId}
+                      active={selected === "history"}
+                    />
+                  </View>
+                </Workspace>
+              </div>
               <RebuildDrawer controller={controller} />
               {uploadOpen ? (
                 <PrepareUploadDrawer projectId={projectId} onClose={() => setUploadOpen(false)} />

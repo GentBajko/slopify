@@ -1,26 +1,16 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import { type ReactElement, use } from "react";
 import { useApp } from "@/app-context";
-import { List, ListRow } from "@/components/kit/list-row";
+import { Button } from "@/components/kit/button";
 import { type Aspect, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
-import { StageLamp } from "@/components/lamp";
 import { peaksKey, readPeaks } from "@/onboarding/api";
 import { frameAspect } from "./body-images.js";
+import { OpenProjectTab } from "./fix-it.js";
 import { LiveWriting } from "./live-writing.js";
 import { useOutputMedia } from "./revision-media.js";
-
-const stageNames: Readonly<Record<Stage["kind"], string>> = {
-  research: "Research",
-  article: "Article",
-  audio: "Narration",
-  images: "Images",
-  thumbnail: "Thumbnail",
-  video: "Video",
-  document: "Document",
-};
 
 // Watching the project build: the steps and where each stands, the article as it is written,
 // the images as they land and the narration's waveform growing piece by piece. Everything here
@@ -36,26 +26,35 @@ export function LiveBuild({
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
 }): ReactElement {
-  const images = outputs.filter((output) => output.role === "image");
+  // In the order they are shown, not the order they happened to land in.
+  const images = outputs
+    .filter((output) => output.role === "image")
+    .sort((a, b) => (a.meta.index ?? 0) - (b.meta.index ?? 0));
+  const article = stages.find((stage) => stage.kind === "article");
+  const openTab = use(OpenProjectTab);
+  // The steps are in the status rail beside this; here is what they make.
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-      <div className="min-w-0">
-        <SectionHead title="Steps" />
-        <List label="Steps">
-          {stages
-            .filter((stage) => stage.state !== "skipped")
-            .map((stage) => (
-              <ListRow
-                key={stage.id}
-                title={stageNames[stage.kind]}
-                actions={<StageLamp label={stageNames[stage.kind]} state={stage.state} />}
-              />
-            ))}
-        </List>
-      </div>
+    <div className="flex min-w-0 flex-col">
       <div className="min-w-0">
         <SectionHead title="Article" />
-        <LiveWriting projectId={project.id} stage="article" className="mb-6" />
+        {article?.state === "running" ? (
+          <LiveWriting projectId={project.id} stage="article" className="mb-6" />
+        ) : article?.state === "done" ? (
+          <p className="mb-6 flex flex-wrap items-center gap-3 text-small text-ink-2">
+            The article is written.
+            {openTab === undefined ? null : (
+              <Button variant="secondary" size="small" onClick={() => openTab("output")}>
+                Read it
+              </Button>
+            )}
+          </p>
+        ) : (
+          <p className="mb-6 text-small text-ink-2">
+            {article === undefined || article.state === "skipped"
+              ? "This project has no article."
+              : "The article appears here as it is written."}
+          </p>
+        )}
         <SectionHead title="Narration" />
         <Waveform projectId={project.id} revisionId={revisionId} />
         <SectionHead title="Images" />

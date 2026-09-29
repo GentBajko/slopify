@@ -351,7 +351,9 @@ const calloutTone: Readonly<Record<NextAction["situation"], CalloutTone | undefi
   held: "waiting",
   waiting: "waiting",
   outdated: "info",
-  done: "info",
+  // "The video is ready" is the rail's card; repeating it above the section only pushes the
+  // section down.
+  done: undefined,
 };
 
 // The same action beside the thing it affects: at the top of the section it concerns, with

@@ -157,10 +157,6 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
         projectId={project.id}
         busy={busy}
       />
-      <h3 className="m-0 text-title-3 font-semibold text-ink">
-        <InlineProse markdown={title} />
-      </h3>
-
       {/* The stage's files behind one Download, its one Open folder, then Copy for the open
           tab and the instructions behind it. Writing either again is in the section's More. */}
       <StageFiles
@@ -197,8 +193,9 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
         ) : (
           <Instructions output={roleOf(mine, "instructions")} />
         )}
+        {/* Copy's answer beside the buttons, not a line of its own under them. */}
+        <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
       </StageFiles>
-      <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
 
       {stored.error === null ? null : (
         <p className="m-0 text-body text-danger">{stored.error.message}</p>
@@ -217,6 +214,10 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
         />
       ) : null}
 
+      <h3 className="m-0 text-title-3 font-semibold text-ink">
+        <InlineProse markdown={title} />
+      </h3>
+
       <TabPanel idPrefix={idPrefix} id="article" active={open === "article"}>
         {running ? (
           // While it is written the text grows token by token; the reading tools wait for it.
@@ -224,7 +225,7 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
             aria-label="Article content"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
             tabIndex={0}
-            className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+            className="sl-stage-scroll min-h-48 pr-3"
           >
             {hasLivePreview ? (
               <LiveWriting projectId={project.id} stage="article" className="" />
@@ -262,7 +263,7 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
             aria-label="Script by speaker"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
             tabIndex={0}
-            className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+            className="sl-stage-scroll min-h-48 pr-3"
           >
             <ScriptView script={script} voices={voices} />
           </section>
@@ -311,7 +312,7 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
               </p>
             </Callout>
           )}
-          <div className="max-h-[min(58vh,640px)] overflow-auto pr-3">
+          <div className="sl-stage-scroll pr-3">
             <Prose markdown={table} />
           </div>
         </TabPanel>

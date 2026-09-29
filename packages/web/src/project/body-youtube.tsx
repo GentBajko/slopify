@@ -25,7 +25,7 @@ import {
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
+import { ChevronRightIcon, CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, use, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
@@ -95,6 +95,12 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   // Write again remakes only this step, at once: it saves a version with it marked.
   const regenerateNow = use(RegenerateNowContext);
   const [rewriting, setRewriting] = useState(false);
+  // One part open at a time, so the section fits the window; each head still copies its part.
+  const [openPart, setOpenPart] = useState<YoutubePart>("description");
+  const fold = (part: YoutubePart) => ({
+    open: openPart === part,
+    onToggle: () => setOpenPart(part),
+  });
   const edits = useQuery({
     queryKey: keys.youtubeEdits(project.id),
     queryFn: () => readDescriptionEdits(api, project.id),
@@ -279,13 +285,12 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       <h3 id={`${id}-title`} className="sr-only">
         YouTube
       </h3>
-      {/* The description reads best at a paragraph's width; the tags take the room beside
-          it when the column is wide enough, and drop below it otherwise. The column, not the
-          window, decides: beside the project's two rails a wide window is still a narrow
-          column. */}
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-6 @4xl:grid-cols-[minmax(0,75ch)_minmax(0,1fr)]">
+      {/* The parts fold, one open at a time: every head (with its count and Copy) is in view
+          at once, and the open part reads at a paragraph's width. */}
+      <div className="flex min-w-0 max-w-[80ch] flex-col gap-2">
         <div className="flex min-w-0 flex-col gap-3">
           <PartHead
+            {...fold("description")}
             id={`${id}-description`}
             label="Description"
             copy={written ? () => copy(filledDescription.text, "description") : undefined}
@@ -303,19 +308,22 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 : undefined
             }
           />
-          {field("summary")}
-          {field("chapters", () =>
-            fitted.text === "" ? (
-              <span className="text-ink-3">Left out; see the note below.</span>
-            ) : (
-              <Filled text={fitted.text} links={links} />
-            ),
-          )}
-          {adjusted === undefined ? null : <p className="text-small text-waiting">{adjusted}</p>}
-          {field("hashtags")}
+          <div hidden={openPart !== "description"} className="flex min-w-0 flex-col gap-3">
+            {field("summary")}
+            {field("chapters", () =>
+              fitted.text === "" ? (
+                <span className="text-ink-3">Left out; see the note below.</span>
+              ) : (
+                <Filled text={fitted.text} links={links} />
+              ),
+            )}
+            {adjusted === undefined ? null : <p className="text-small text-waiting">{adjusted}</p>}
+            {field("hashtags")}
+          </div>
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <PartHead
+            {...fold("tags")}
             id={`${id}-tags`}
             label="Tags"
             copy={written ? () => copy(filledTags.text, "tags") : undefined}
@@ -326,10 +334,13 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             }
             over={tagsLength(tagList) > tagsMaxCharacters}
           />
-          {field("tags", (text) => (
-            <TagChips text={text} links={links} />
-          ))}
+          <div hidden={openPart !== "tags"}>
+            {field("tags", (text) => (
+              <TagChips text={text} links={links} />
+            ))}
+          </div>
           <PartHead
+            {...fold("pinned")}
             id={`${id}-pinned`}
             label="Pinned comment"
             copy={
@@ -342,11 +353,14 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             }
             over={filledComment.text.length > pinnedCommentMaxCharacters}
           />
-          {field("pinnedComment")}
-          <p className="m-0 text-small text-ink-3">
-            Post it under the video once it is published, then choose Pin in the comment's menu.
-          </p>
+          <div hidden={openPart !== "pinned"} className="flex min-w-0 flex-col gap-3">
+            {field("pinnedComment")}
+            <p className="m-0 text-small text-ink-3">
+              Post it under the video once it is published, then choose Pin in the comment's menu.
+            </p>
+          </div>
           <PartHead
+            {...fold("titles")}
             id={`${id}-titles`}
             label="Other titles"
             copy={
@@ -361,10 +375,12 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             }
             over={titleList.some((one) => one.length > studioTitleMax)}
           />
-          {field("titles")}
-          <p className="m-0 text-small text-ink-3">
-            {`For YouTube's A/B Testing beside the title, with this project's own title "${project.title}". One per line.`}
-          </p>
+          <div hidden={openPart !== "titles"} className="flex min-w-0 flex-col gap-3">
+            {field("titles")}
+            <p className="m-0 text-small text-ink-3">
+              {`For YouTube's A/B Testing beside the title, with this project's own title "${project.title}". One per line.`}
+            </p>
+          </div>
         </div>
       </div>
       {unknown.length === 0 ? null : (
@@ -412,6 +428,8 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   );
 }
 
+type YoutubePart = "description" | "tags" | "pinned" | "titles";
+
 function PartHead({
   id,
   label,
@@ -421,7 +439,12 @@ function PartHead({
   keyshortcuts,
   main = false,
   again,
+  open,
+  onToggle,
 }: {
+  // Folded parts: whether this one is open, and opening it (closing the one that was).
+  readonly open?: boolean;
+  readonly onToggle?: () => void;
   readonly id: string;
   readonly label: string;
   // The Copy button's key, as `aria-keyshortcuts`.
@@ -438,7 +461,24 @@ function PartHead({
   return (
     <div className="flex min-h-8 flex-wrap items-center gap-3 border-b border-line pb-2">
       <h4 id={id} className="m-0 text-title-3 font-semibold text-ink">
-        {label}
+        {onToggle === undefined ? (
+          label
+        ) : (
+          <Button
+            type="button"
+            variant="quiet"
+            aria-expanded={open === true}
+            onClick={onToggle}
+            className="-ml-2 h-auto px-2 py-1 text-title-3 font-semibold text-ink"
+          >
+            <ChevronRightIcon
+              aria-hidden="true"
+              strokeWidth={1.75}
+              className={cn("size-4 transition-transform", open === true && "rotate-90")}
+            />
+            {label}
+          </Button>
+        )}
       </h4>
       {count === undefined ? null : (
         <span className={cn("text-small tabular-nums", over ? "text-danger" : "text-ink-3")}>

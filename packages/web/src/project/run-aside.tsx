@@ -3,8 +3,9 @@ import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
+import { Button } from "@/components/kit/button";
 import { SectionHead } from "@/components/kit/section-head";
-import { Meter, Stat, Stats } from "@/components/kit/stats";
+import { Meter } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import type { HeldGate } from "./next-action.js";
@@ -133,7 +134,7 @@ export function RunSteps({ steps }: { readonly steps: readonly Step[] }): ReactE
   return (
     <section aria-labelledby="run-steps-title" className="flex flex-col gap-2">
       <SectionHead id="run-steps-title" title="Run" size="small" className="pb-0" />
-      <Steps steps={steps} label="Run steps" />
+      <Steps steps={steps} label="Run steps" dense />
     </section>
   );
 }
@@ -141,7 +142,14 @@ export function RunSteps({ steps }: { readonly steps: readonly Step[] }): ReactE
 const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 // "$3.37 spent · ~$9.10 via API", then each plan's share: "Codex: 14% of your weekly limit".
-export function CostSoFar({ cost }: { readonly cost: RunCost | undefined }): ReactElement | null {
+export function CostSoFar({
+  cost,
+  onOpen,
+}: {
+  readonly cost: RunCost | undefined;
+  // Opens the Cost section, the breakdown by stage.
+  readonly onOpen?: () => void;
+}): ReactElement | null {
   if (cost === undefined || (cost.calls === 0 && cost.byStage.length === 0)) return null;
   const windows = cost.plans.flatMap((plan) =>
     plan.reported
@@ -161,13 +169,18 @@ export function CostSoFar({ cost }: { readonly cost: RunCost | undefined }): Rea
   );
   return (
     <section aria-labelledby="cost-so-far-title" className="flex flex-col gap-3">
-      <SectionHead id="cost-so-far-title" title="Cost so far" size="small" className="pb-0" />
-      <Stats className="grid-cols-2">
-        <Stat value={money(cost.cost)} label={cost.unpriced > 0 ? "known, spent" : "spent"} />
-        {cost.apiEquivalent === null ? null : (
-          <Stat value={`~${money(cost.apiEquivalent)}`} label="same work via API" />
+      <SectionHead id="cost-so-far-title" title="Cost so far" size="small" className="pb-0">
+        {onOpen === undefined ? null : (
+          <Button variant="quiet" size="small" onClick={onOpen}>
+            By stage
+          </Button>
         )}
-      </Stats>
+      </SectionHead>
+      <p className="m-0 text-small text-ink-2">
+        <strong className="text-ink">{money(cost.cost)}</strong>
+        {cost.unpriced > 0 ? " known, spent" : " spent"}
+        {cost.apiEquivalent === null ? null : ` · ~${money(cost.apiEquivalent)} via API`}
+      </p>
       {windows.map((row) => {
         const used = row.used < 1 ? "under 1%" : `${percent.format(row.used)}%`;
         const name = `${row.window} ${row.name} limit`;

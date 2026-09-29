@@ -359,6 +359,12 @@
     gap: var(--space-2);
     margin-bottom: var(--space-5);
   }
+  /* A stage's own text (a live article, research notes), in a box of its own on a page that
+     scrolls; in a project the section scrolls instead (below). */
+  .sl-stage-scroll {
+    max-height: min(58vh, 640px);
+    overflow: auto;
+  }
   .sl-reading__scroll {
     max-height: min(64vh, 720px);
     min-height: 12rem;
@@ -615,6 +621,67 @@
     flex-direction: column;
     gap: 28px;
     min-width: 0;
+  }
+  /* A project: the page itself doesn't scroll. The header stays put and each column (the
+     sections, the open section, the status rail) scrolls on its own, so the whole project is
+     in view at once. Narrower screens keep the page's own scroll (below). */
+  @media (min-width: 1181px) {
+    .sl-page:has(> .sl-project),
+    .sl-page:has(.sl-project) {
+      padding-bottom: 20px;
+    }
+    .sl-project {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      height: calc(100dvh - 44px);
+    }
+    .sl-project > .sl-workspace {
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+      /* The open section gets the width: the section list and the status rail stay slim. */
+      grid-template-columns: 160px minmax(0, 1fr) 280px;
+      gap: var(--space-5);
+    }
+    .sl-project .sl-reading-layout {
+      grid-template-columns: 170px minmax(0, 1fr);
+      gap: var(--space-5);
+    }
+    .sl-project .sl-workspace__sections,
+    .sl-project .sl-workspace__main,
+    .sl-project .sl-workspace__aside {
+      position: static;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    .sl-project .sl-workspace__main {
+      padding-right: 6px;
+    }
+    /* The section already scrolls: text reads straight down it, no box inside the box. The
+       article's search stays at the top while reading. */
+    .sl-project .sl-reading__scroll,
+    .sl-project .sl-stage-scroll {
+      max-height: none;
+      overflow: visible;
+    }
+    .sl-project .sl-reading__tools {
+      flex-wrap: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: var(--space-2) 0;
+      background: var(--color-ground);
+    }
+    .sl-project .sl-reading-layout > .sl-toc {
+      top: 0;
+    }
+    .sl-project .sl-reading__tools > div:has(input) {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   }
   /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
      stays in reach however long the page is. */

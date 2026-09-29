@@ -9,6 +9,7 @@ import { ConfirmDialog } from "./dialog.js";
 import { Field, Input, Select, Textarea } from "./field.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "./media.js";
+import { foldPeaks } from "./media-controls.js";
 import { ReadingView, splitSections } from "./reading-view.js";
 import { Segmented, Switch } from "./switch.js";
 import { Tabs } from "./tabs.js";
@@ -496,5 +497,14 @@ describe("buttons", () => {
     expect(button.getAttribute("type")).toBe("button");
     expect(button.getAttribute("title")).toBe("Codex is signed out. Sign in first.");
     expect(button.className).toContain("sl-btn--primary");
+  });
+});
+
+describe("foldPeaks", () => {
+  it("keeps the peaks when they fit, and folds them to one bar per 4 pixels when not", () => {
+    expect(foldPeaks([0.1, 0.5], 0)).toEqual([0.1, 0.5]);
+    expect(foldPeaks([0.1, 0.5], 400)).toEqual([0.1, 0.5]);
+    // 8 peaks into 16 pixels: 4 bars, each the loudest of the two it covers.
+    expect(foldPeaks([0.1, 0.9, 0.2, 0.3, 0.8, 0.1, 0.4, 0.4], 16)).toEqual([0.9, 0.3, 0.8, 0.4]);
   });
 });

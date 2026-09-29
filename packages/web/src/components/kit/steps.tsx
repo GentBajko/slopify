@@ -16,14 +16,20 @@ export interface Step {
 export function Steps({
   steps,
   label,
+  dense = false,
   className,
 }: {
   readonly steps: readonly Step[];
   readonly label: string;
+  // One line per step, the detail beside the name: a rail that shows the whole run at a glance.
+  readonly dense?: boolean;
   readonly className?: string;
 }): ReactElement {
   return (
-    <ol aria-label={label} className={cn("sl-steps m-0 list-none p-0", className)}>
+    <ol
+      aria-label={label}
+      className={cn("sl-steps m-0 list-none p-0", dense && "sl-steps--dense", className)}
+    >
       {steps.map((step) => (
         <li key={step.id} className="sl-step" data-tone={step.tone}>
           <Lamp tone={step.tone} />

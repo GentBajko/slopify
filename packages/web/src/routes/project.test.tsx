@@ -62,7 +62,7 @@ describe("the project workspace", () => {
     );
   });
 
-  it("sums up a finished run's cost at the top and opens the Cost section from it", async () => {
+  it("sums up the run's cost in the status rail and opens the Cost section from it", async () => {
     const line = {
       calls: 3,
       cost: 1.25,
@@ -92,11 +92,10 @@ describe("the project workspace", () => {
         }),
       }),
     );
-    const summary = await screen.findByRole("region", { name: "Run cost" });
-    expect(summary.textContent).toContain("This run cost $1.25 · 1 min 30 s of work");
-    await userEvent.click(within(summary).getByRole("button", { name: "See cost by stage" }));
+    const summary = await screen.findByRole("region", { name: "Cost so far" });
+    expect(summary.textContent).toContain("$1.25 spent");
+    await userEvent.click(within(summary).getByRole("button", { name: "By stage" }));
     expect(await screen.findByRole("region", { name: "Run cost summary" })).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "See cost by stage" })).toBeNull();
   });
 
   it("adds the PDF section once the run makes one", async () => {

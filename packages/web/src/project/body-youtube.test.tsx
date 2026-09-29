@@ -82,6 +82,8 @@ it("shows the description in its parts with placeholders filled, and copies it f
     "0:00 Opening\n0:20 Knots\n0:40 Close",
   );
   expect(screen.getByRole("region", { name: "Hashtags" }).textContent).toBe("#Rope #Knots");
+  // The parts fold, one open at a time: Tags opens from its head.
+  await userEvent.click(screen.getByRole("button", { name: "Tags" }));
   expect(
     within(screen.getByRole("region", { name: "Tags" }))
       .getAllByRole("listitem")
@@ -248,6 +250,7 @@ it("shows the pinned comment with its links filled, and copies it", async () => 
       output("youtube_pinned_comment", "video"),
     ],
   });
+  await userEvent.click(await screen.findByRole("button", { name: "Pinned comment" }));
   const comment = await screen.findByRole("region", { name: "Pinned comment" });
   await waitFor(() =>
     expect(comment.textContent).toBe("Thanks for tying along. Support: https://patreon.com/rope"),
@@ -283,6 +286,7 @@ it("shows the other titles for YouTube's A/B test and copies them one per line",
       output("youtube_titles", "video"),
     ],
   });
+  await userEvent.click(await screen.findByRole("button", { name: "Other titles" }));
   const titles = await screen.findByRole("region", { name: "Other titles" });
   await waitFor(() => expect(titles.textContent).toBe("Rope That Holds\nThe Knot Sailors Trust"));
   expect(screen.getByText("3 titles to test")).not.toBeNull();
