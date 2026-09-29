@@ -322,104 +322,101 @@ export function CalendarRoute({
         </Board>
         {/* The weeks take the page's full width: seven days side by side need it. */}
         <section aria-label="Coming weeks" className="flex min-w-0 flex-col gap-4">
-            {calendar.isPending ? (
-              <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
-            ) : view === "weeks" ? (
-              <>
-                <p className="m-0 text-small text-ink-2">
-                  Drag a topic to another day to change when it runs, or onto another schedule's run
-                  to move it there. With the keyboard: focus a topic and press Alt+← or Alt+→.
-                </p>
-                {weekDays(new Date(range.from), weeks).map((week) => (
-                  <div key={dayKey(week[0] ?? new Date())} className="sl-cal-week">
-                    {week.map((date) => {
-                      const key = dayKey(date);
-                      const day = days.get(key);
-                      return (
-                        <DayCell
-                          key={key}
-                          date={date}
-                          today={key === today}
-                          day={day}
-                          dragging={dragging}
-                          busy={action.isPending}
-                          onDragStart={setDragging}
-                          onDragEnd={() => setDragging(null)}
-                          onDrop={(target) => {
-                            if (dragging === null) return;
-                            apply(planDrop(dragging, target, fullDay.format(date)));
-                            setDragging(null);
-                          }}
-                          onStep={step}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-              </>
-            ) : (
-              <ListView
-                days={days}
-                busy={action.isPending}
-                onStep={step}
-                schedules={mySchedules}
-                onTransfer={(run, targetId) => {
-                  // To the end of the other schedule's queue.
-                  if (run.index !== null)
-                    apply({
-                      kind: "transfer",
-                      scheduleId: run.scheduleId,
-                      baseVersion: run.scheduleVersion,
-                      index: run.index,
-                      targetId,
-                      position: undefined,
-                    });
-                }}
+          {calendar.isPending ? (
+            <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
+          ) : view === "weeks" ? (
+            <>
+              <p className="m-0 text-small text-ink-2">
+                Drag a topic to another day to change when it runs, or onto another schedule's run
+                to move it there. With the keyboard: focus a topic and press Alt+← or Alt+→.
+              </p>
+              {weekDays(new Date(range.from), weeks).map((week) => (
+                <div key={dayKey(week[0] ?? new Date())} className="sl-cal-week">
+                  {week.map((date) => {
+                    const key = dayKey(date);
+                    const day = days.get(key);
+                    return (
+                      <DayCell
+                        key={key}
+                        date={date}
+                        today={key === today}
+                        day={day}
+                        dragging={dragging}
+                        busy={action.isPending}
+                        onDragStart={setDragging}
+                        onDragEnd={() => setDragging(null)}
+                        onDrop={(target) => {
+                          if (dragging === null) return;
+                          apply(planDrop(dragging, target, fullDay.format(date)));
+                          setDragging(null);
+                        }}
+                        onStep={step}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          ) : (
+            <ListView
+              days={days}
+              busy={action.isPending}
+              onStep={step}
+              schedules={mySchedules}
+              onTransfer={(run, targetId) => {
+                // To the end of the other schedule's queue.
+                if (run.index !== null)
+                  apply({
+                    kind: "transfer",
+                    scheduleId: run.scheduleId,
+                    baseVersion: run.scheduleVersion,
+                    index: run.index,
+                    targetId,
+                    position: undefined,
+                  });
+              }}
+            />
+          )}
+          {visible !== undefined && visible.queued.length > 0 ? (
+            <section aria-label="Batch queue">
+              <SectionHead
+                title="Batch queue"
+                meta={`${String(visible.queued.length)} waiting to start`}
+                info="play.queue"
               />
-            )}
-            {visible !== undefined && visible.queued.length > 0 ? (
-              <section aria-label="Batch queue">
-                <SectionHead
-                  title="Batch queue"
-                  meta={`${String(visible.queued.length)} waiting to start`}
-                  info="play.queue"
-                />
-                <List label="Batch queue">
-                  {visible.queued
-                    .toSorted((a, b) => a.position - b.position)
-                    .map((item, index) => {
-                      // Pausing a queued project holds the whole queue, so it says so.
-                      const paused =
-                        visible.projects.find((one) => one.id === item.projectId)?.state ===
-                        "paused";
-                      return (
-                        <ListRow
-                          key={item.projectId}
-                          title={
-                            <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
-                              {item.title}
-                            </Link>
-                          }
-                          meta={`${String(index + 1)} in line`}
-                          actions={
-                            <Status
-                              tone={
-                                paused ? "waiting" : item.state === "active" ? "running" : "off"
-                              }
-                            >
-                              {paused
-                                ? "Paused"
-                                : item.state === "active"
-                                  ? "Running now"
-                                  : "Waiting its turn"}
-                            </Status>
-                          }
-                        />
-                      );
-                    })}
-                </List>
-              </section>
-            ) : null}
+              <List label="Batch queue">
+                {visible.queued
+                  .toSorted((a, b) => a.position - b.position)
+                  .map((item, index) => {
+                    // Pausing a queued project holds the whole queue, so it says so.
+                    const paused =
+                      visible.projects.find((one) => one.id === item.projectId)?.state === "paused";
+                    return (
+                      <ListRow
+                        key={item.projectId}
+                        title={
+                          <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
+                            {item.title}
+                          </Link>
+                        }
+                        meta={`${String(index + 1)} in line`}
+                        actions={
+                          <Status
+                            tone={paused ? "waiting" : item.state === "active" ? "running" : "off"}
+                          >
+                            {paused
+                              ? "Paused"
+                              : item.state === "active"
+                                ? "Running now"
+                                : "Waiting its turn"}
+                          </Status>
+                        }
+                      />
+                    );
+                  })}
+              </List>
+            </section>
+          ) : null}
         </section>
       </TabPanel>
       <AddToCalendar open={adding} onOpenChange={setAdding} schedules={mySchedules} />
