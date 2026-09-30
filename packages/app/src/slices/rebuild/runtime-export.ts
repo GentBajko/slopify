@@ -153,7 +153,8 @@ export async function executeExportRecipe(
         type: "stage.progress",
         projectId: context.work.projectId,
         stage: "video",
-        current: Math.min(100, Math.round(elapsedMs / (totalSeconds * 10))),
+        // A tenth of a percent, so a two-hour render moves every few seconds, not minutes.
+        current: Math.min(100, Math.round(elapsedMs / totalSeconds) / 10),
         total: 100,
       });
     // Level the volume: the audio-only file is mastered to the audio files' target, the video to

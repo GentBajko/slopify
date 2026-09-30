@@ -4,13 +4,16 @@ import type {
   ProjectStateEvent,
   ReviewFlaggedEvent,
   ScheduleTopicsEvent,
+  StageProgressEvent,
+  StageStateEvent,
 } from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
-// One EventSource per open project page and one for the running tally. Every frame the
-// hub writes names its own type (`event: stage.state`), so the listener is registered
-// per name and the name is the discriminant; nothing has to guess at the payload.
+// A project's events and the global ones, over the page's one live connection
+// (`event-mux.ts`). Every frame the hub writes names its own type (`event: stage.state`), so
+// the listener is registered per name and the name is the discriminant; nothing has to guess
+// at the payload.
 
 export interface EventSourceLike {
   addEventListener(type: "open", listener: () => void): void;
@@ -71,6 +74,10 @@ const globalEventNames = [
   "project.state",
   "schedule.topics",
   "review.flagged",
+  // A step starting, finishing or moving on: the lists, meters and cards showing the
+  // project refresh, not only its own page.
+  "stage.state",
+  "stage.progress",
 ] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
@@ -108,27 +115,38 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
 }
 
 export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink): () => void {
-  return listen<GlobalEvent>(open, url, globalEventNames, sink.refetch, (event) => {
-    if (event.type === "running.count") {
-      sink.tally(event.count);
-      return;
-    }
-    if (event.type === "project.updated" || event.type === "project.state") {
-      if (event.type === "project.state") sink.projectState?.(event);
-      sink.refetch(event.projectId);
-      return;
-    }
-    if (event.type === "schedule.topics") {
-      sink.scheduleTopics?.(event);
-      return;
-    }
-    if (event.type === "review.flagged") {
-      sink.reviewFlagged?.(event);
-      sink.refetch(event.projectId);
-      return;
-    }
-    sink.stagingChanged();
-  });
+  return listen<GlobalEvent | StageStateEvent | StageProgressEvent>(
+    open,
+    url,
+    globalEventNames,
+    sink.refetch,
+    (event) => {
+      if (event.type === "running.count") {
+        sink.tally(event.count);
+        return;
+      }
+      if (
+        event.type === "project.updated" ||
+        event.type === "project.state" ||
+        event.type === "stage.state" ||
+        event.type === "stage.progress"
+      ) {
+        if (event.type === "project.state") sink.projectState?.(event);
+        sink.refetch(event.projectId);
+        return;
+      }
+      if (event.type === "schedule.topics") {
+        sink.scheduleTopics?.(event);
+        return;
+      }
+      if (event.type === "review.flagged") {
+        sink.reviewFlagged?.(event);
+        sink.refetch(event.projectId);
+        return;
+      }
+      sink.stagingChanged();
+    },
+  );
 }
 
 function listen<Event extends ProjectEvent | GlobalEvent>(

@@ -22,7 +22,7 @@ import {
   dockerFolderConfiguration,
 } from "./edge/docker-install/activation.js";
 import { createHub, observedHub } from "./edge/events/hub.js";
-import { currentProjectEvent } from "./edge/events/visibility.js";
+import { eventPresenter } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { limitRequestTimes } from "./edge/http/timeouts.js";
@@ -309,7 +309,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       createHub({
         ids,
         log,
-        acceptEvent: (event) => currentProjectEvent(eventDb, event),
+        presentEvent: eventPresenter(eventDb),
       }),
       (event) => {
         notifier.observe(event);

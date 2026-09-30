@@ -108,7 +108,8 @@ describe("createHub", () => {
       },
     ]);
     expect(other.written).toEqual([]);
-    expect(global.written).toHaveLength(1);
+    // The global stream carries every project's events: the tally, then this one.
+    expect(global.written.map((frame) => frame.event)).toEqual(["running.count", "stage.state"]);
   });
 
   it("emits to a project with no subscribers without failing", () => {
@@ -209,7 +210,12 @@ describe("live writing reconnects", () => {
       { ...event, text: " continues" },
     ]);
     expect(other.written).toEqual([]);
-    expect(global.written.map((frame) => frame.event)).toEqual(["running.count"]);
+    // The global stream replays every project's live text after the tally, then goes on.
+    expect(global.written.map((frame) => JSON.parse(frame.data))).toEqual([
+      { type: "running.count", count: 0 },
+      { ...event, text: "New attempt", reset: true },
+      { ...event, text: " continues" },
+    ]);
     controller.abort();
     await done;
     h.emit("p1", { type: "stage.state", projectId: "p1", stage: "research", state: "done" });

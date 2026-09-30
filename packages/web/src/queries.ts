@@ -55,12 +55,31 @@ export const keys = {
   projectChannelLinks: (projectId: string) => ["channel-links", "project", projectId] as const,
 };
 
+// Live events keep these fresh (`events.ts`); while something runs they are also looked at
+// again every 15 seconds, so a missed event never leaves a page behind until a refresh.
+const whileRunningMs = 15_000;
+const active = new Set(["running", "pending"]);
+
 export function projectsQuery(api: Api) {
-  return queryOptions({ queryKey: keys.projects, queryFn: () => listProjects(api) });
+  return queryOptions({
+    queryKey: keys.projects,
+    queryFn: () => listProjects(api),
+    refetchInterval: (query) =>
+      query.state.data?.projects.some((project) => active.has(project.status)) === true
+        ? whileRunningMs
+        : false,
+  });
 }
 
 export function projectQuery(api: Api, id: string) {
-  return queryOptions({ queryKey: keys.project(id), queryFn: () => readProject(api, id) });
+  return queryOptions({
+    queryKey: keys.project(id),
+    queryFn: () => readProject(api, id),
+    refetchInterval: (query) =>
+      query.state.data !== undefined && active.has(query.state.data.project.status)
+        ? whileRunningMs
+        : false,
+  });
 }
 
 export function runCostQuery(api: Api, id: string) {

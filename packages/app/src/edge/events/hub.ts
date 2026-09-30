@@ -28,8 +28,10 @@ export type {
   StageStateEvent,
 };
 
-// Project state/configuration changes refresh listings in other windows even when
-// the running tally stays the same. Token and stage-progress events stay local.
+// What only the global stream carries. It carries every project event too: a browser allows
+// six connections to one address over HTTP/1.1, and a stream per open project used them up
+// until the page's own requests waited forever, so each page opens this one stream and hands
+// each project's events to whatever shows that project (`web/src/event-mux.ts`).
 export type GlobalEvent =
   | RunningCountEvent
   | ScheduleTopicsEvent
@@ -52,6 +54,12 @@ export interface EventStream {
 
 export interface HubDeps {
   readonly acceptEvent?: (event: ProjectEvent) => boolean;
+  // The event as pages should see it (carried work told under the current revision), or
+  // undefined for one they must not. Takes the place of `acceptEvent` when given.
+  readonly presentEvent?: (event: ProjectEvent) => ProjectEvent | undefined;
+  // How often an idle stream is sent a heartbeat, so nothing between the page and Slopify
+  // closes it for being quiet. Tests pass 0 to send none.
+  readonly heartbeatMs?: number;
   readonly ids: Ids;
   readonly log: Log;
 }
@@ -81,6 +89,14 @@ export function createHub(deps: HubDeps): Hub {
   // changes, so the newest one is kept here and replayed to whoever opens next; a page
   // that loads mid-render would otherwise be told nothing is running.
   let tally: RunningCountEvent = { type: "running.count", count: 0 };
+
+  const present = (event: ProjectEvent): ProjectEvent | undefined =>
+    deps.presentEvent !== undefined
+      ? deps.presentEvent(event)
+      : deps.acceptEvent?.(event) === false
+        ? undefined
+        : event;
+  const heartbeatMs = deps.heartbeatMs ?? 20_000;
 
   const send = (subscriber: Subscriber, event: ProjectEvent | GlobalEvent): void => {
     // writeSSE rejects on a socket that is already gone, asynchronously and long after
@@ -118,6 +134,15 @@ export function createHub(deps: HubDeps): Hub {
       subscriber.drop();
     } else {
       signal.addEventListener("abort", subscriber.drop, { once: true });
+      if (heartbeatMs > 0) {
+        const beat = setInterval(() => {
+          subscriber.stream
+            .writeSSE({ event: "ping", data: "", id: deps.ids.next() })
+            .catch(() => subscriber.drop());
+        }, heartbeatMs);
+        beat.unref?.();
+        void done.then(() => clearInterval(beat));
+      }
     }
     return subscriber;
   };
@@ -132,8 +157,10 @@ export function createHub(deps: HubDeps): Hub {
         }
       });
       if (set.has(subscriber))
-        for (const event of previews.snapshot(projectId))
-          if (deps.acceptEvent?.(event) !== false) send(subscriber, event);
+        for (const event of previews.snapshot(projectId)) {
+          const shown = present(event);
+          if (shown !== undefined) send(subscriber, shown);
+        }
       return subscriber.done;
     },
 
@@ -141,24 +168,22 @@ export function createHub(deps: HubDeps): Hub {
       const subscriber = join(globals, stream, signal, () => {});
       if (globals.has(subscriber)) {
         send(subscriber, tally);
+        // What the AI models are writing right now, so a page opened mid-call shows it.
+        for (const event of previews.snapshotAll()) {
+          const shown = present(event);
+          if (shown !== undefined) send(subscriber, shown);
+        }
       }
       return subscriber.done;
     },
 
     emit: (projectId: string, event: ProjectEvent): void => {
-      const accepted = deps.acceptEvent?.(event) !== false;
-      if (accepted || event.type === "stage.state") previews.observe(event);
-      if (!accepted) return;
-      for (const subscriber of projects.get(projectId) ?? []) {
-        send(subscriber, event);
-      }
-      if (
-        event.type === "project.state" ||
-        event.type === "project.updated" ||
-        event.type === "review.flagged"
-      ) {
-        for (const subscriber of globals) send(subscriber, event);
-      }
+      const shown = present(event);
+      if (shown !== undefined) previews.observe(shown);
+      else if (event.type === "stage.state") previews.observe(event);
+      if (shown === undefined) return;
+      for (const subscriber of projects.get(projectId) ?? []) send(subscriber, shown);
+      for (const subscriber of globals) send(subscriber, shown);
     },
 
     emitGlobal: (event: GlobalEvent): void => {

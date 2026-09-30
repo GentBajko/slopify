@@ -5,6 +5,8 @@ import type { LlmPreviewEvent, ProjectEvent } from "../../kernel/events.js";
 export function createPreviewCache(): {
   readonly observe: (event: ProjectEvent) => void;
   readonly snapshot: (projectId: string) => readonly LlmPreviewEvent[];
+  // Every project's, for a page's one stream that carries them all.
+  readonly snapshotAll: () => readonly LlmPreviewEvent[];
 } {
   const projects = new Map<string, Map<string, LlmPreviewEvent>>();
   return {
@@ -44,5 +46,6 @@ export function createPreviewCache(): {
       }
     },
     snapshot: (projectId) => [...(projects.get(projectId)?.values() ?? [])],
+    snapshotAll: () => [...projects.values()].flatMap((calls) => [...calls.values()]),
   };
 }

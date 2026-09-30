@@ -17,6 +17,7 @@ import type { AppDeps } from "@/app-context";
 import { AppProvider } from "@/app-context";
 import { createAppRouter } from "@/router";
 import { createVersionWatch, watchingFetch } from "@/version";
+import { createEventMux } from "./event-mux.js";
 
 // The composition root. Everything with a lifetime is built here, once, and handed down through
 // providers; nothing below reaches for a client of its own.
@@ -31,7 +32,8 @@ function start(container: HTMLElement): void {
         if (seen !== null) version.observe(seen);
       }),
     ),
-    openEvents: (url) => new EventSource(url),
+    // One live connection for the whole page (`event-mux.ts`).
+    openEvents: createEventMux((url) => new EventSource(url)),
     version,
   };
 

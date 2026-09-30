@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { workFixture } from "../../slices/rebuild/work.fake.js";
-import { currentProjectEvent, currentWorkOrigin } from "./visibility.js";
+import { currentEvent, currentProjectEvent, currentWorkOrigin } from "./visibility.js";
 
-it("keeps carried audio visible but rejects revoked pieces and old writing events", async () => {
+it("tells carried work under the current revision and rejects revoked pieces", async () => {
   const h = await workFixture();
   try {
     const db = h.deps.db;
@@ -14,14 +14,15 @@ it("keeps carried audio visible but rejects revoked pieces and old writing event
       "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,piece_id,fingerprint) SELECT project_id,'r2',work_key,work_id,piece_id,fingerprint FROM revision_work_reservations WHERE revision_id=?",
     ).run(h.work.revisionId);
     expect(currentWorkOrigin(db, h.projectId, origin)).toBe(true);
+    // Carried work is the current revision's work: its events show, told under that revision.
     expect(
-      currentProjectEvent(db, {
+      currentEvent(db, {
         type: "article.delta",
         projectId: h.projectId,
-        text: "old",
+        text: "still writing",
         ...origin,
       }),
-    ).toBe(false);
+    ).toMatchObject({ type: "article.delta", revisionId: "r2", workId: h.work.workId });
     expect(
       currentProjectEvent(db, { type: "project.updated", projectId: h.projectId, ...origin }),
     ).toBe(true);

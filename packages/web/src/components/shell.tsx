@@ -327,9 +327,11 @@ function ShellContent() {
   useInstallKind();
 
   useEffect(() => {
+    // Step events from every running project come here now, so a burst of them is one
+    // reload of the lists a second at most.
     const refreshProjects = coalesce(() => {
       void queryClient.invalidateQueries({ queryKey: keys.projects });
-    }, 200);
+    }, 1000);
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
