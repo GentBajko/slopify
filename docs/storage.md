@@ -7,7 +7,9 @@ Slopify keeps two kinds of files apart:
 
   ```
   <Documents>/Slopify/
-    Projects/   one folder per project
+    Projects/   one folder per project, and a hidden .render-cache with each project's last
+                video clips (at most 30 GB in all), so a render after an edit only makes
+                the clips that changed; safe to delete
     Backups/    scheduled backups (Settings → Backups), unless you pick another folder
     Exports/    files Slopify saves for you; downloads today go through the browser, so it
                 stays empty and Slopify never cleans it
