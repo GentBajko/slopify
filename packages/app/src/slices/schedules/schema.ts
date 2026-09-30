@@ -218,6 +218,9 @@ export const calendarRunSchema = z
     // be known yet (a topic still to be approved or generated, or a deleted template). Older
     // servers leave it out.
     renderedTitle: z.string().nullable().default(null),
+    // The project prepared ahead for this run (Prepare), which its day continues. Older servers
+    // leave it out.
+    prepared: z.string().nullable().default(null),
   })
   .strict()
   .readonly();

@@ -16,6 +16,8 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 
 The calendar follows the channel picked in the sidebar, or shows every channel. See [Channels](Channels).
 
+Each queued run has **Prepare**, which makes its video ahead of the day and leaves only the render for the day; a prepared run shows **Prepared** and **Open**. See [Schedules](Schedules#prepare-a-video-ahead).
+
 ## Needs you
 
 Above the weeks, **Needs you** lists what cannot move on without you, then what is ready to upload. Its heading counts them, for example "2 waiting for you · 1 ready to upload". It is hidden when there is nothing.

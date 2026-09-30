@@ -10,6 +10,7 @@ import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
 import { uploadedProjects } from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
+import { preparedProject } from "./prepare.js";
 import { scheduleRows } from "./repo.js";
 import {
   type Calendar,
@@ -63,7 +64,7 @@ export function calendarRange(
 // completes when its queue empties, so its runs stop there; one with no queue at all runs the
 // template as saved every time.
 function upcomingRuns(
-  deps: Pick<ScheduleDeps, "template">,
+  deps: Pick<ScheduleDeps, "template" | "db">,
   schedule: ScheduleSummary,
   now: Date,
   from: Date,
@@ -92,6 +93,7 @@ function upcomingRuns(
     // Known for a queued topic, and for a run of the template as saved; a held or generated
     // topic has no text yet.
     const known = queuedTopic !== undefined || generation === "off";
+    const title = form !== undefined && known ? renderedTitle(form, schedule, queuedTopic) : null;
     if (at >= from)
       runs.push({
         at: at.toISOString(),
@@ -112,8 +114,12 @@ function upcomingRuns(
               : k < items.length + held
                 ? "held"
                 : "generated",
-        renderedTitle:
-          form !== undefined && known ? renderedTitle(form, schedule, queuedTopic) : null,
+        renderedTitle: title,
+        // Prepared ahead (`prepare.ts`): the project the day continues.
+        prepared:
+          title === null || queuedTopic === undefined
+            ? null
+            : (preparedProject(deps.db, schedule.id, title)?.projectId ?? null),
       });
     if (schedule.cadence.kind === "once") break;
     at = nextOccurrence(schedule.cadence, schedule.timezone, new Date(at.valueOf() + 1000));

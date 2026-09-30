@@ -15,6 +15,7 @@ const run = (over: Partial<CalendarRun> = {}): CalendarRun => ({
   topic: "Cleopatra",
   topicSource: "queued",
   renderedTitle: null,
+  prepared: null,
   ...over,
 });
 

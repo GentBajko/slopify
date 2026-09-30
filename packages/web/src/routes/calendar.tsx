@@ -43,6 +43,7 @@ import {
   calendarKey,
   calendarQuery,
   moveTopic,
+  prepareTopic,
   type ScheduleReply,
   schedulesKey,
   schedulesQuery,
@@ -577,10 +578,73 @@ function RunChip({
         <Status tone="waiting">Paused</Status>
       ) : run.topicSource === "held" ? (
         <Status tone="info">Needs a topic</Status>
+      ) : run.prepared !== null ? (
+        <Status tone="info">Prepared</Status>
       ) : (
         <Status tone="off">Queued</Status>
       )}
+      <PrepareRun run={run} compact />
     </article>
+  );
+}
+
+// Prepare a queued topic ahead: its project runs everything but the video now, and its day
+// renders. Once prepared, the way to its project.
+function PrepareRun({
+  run,
+  compact = false,
+}: {
+  readonly run: CalendarRun;
+  readonly compact?: boolean;
+}): ReactElement | null {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const [problem, setProblem] = useState<string | undefined>();
+  const prepare = useMutation({
+    mutationFn: async () => {
+      if (run.topic === null) throw new Error("This run has no topic to prepare yet.");
+      const reply = await prepareTopic(api, run.scheduleId, run.topic);
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+    onSuccess: () => {
+      setProblem(undefined);
+      void client.invalidateQueries({ queryKey: calendarKey });
+      void client.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => setProblem(error.message),
+  });
+  if (run.prepared !== null)
+    return (
+      <ButtonLink
+        to="/projects/$projectId"
+        params={{ projectId: run.prepared }}
+        size="small"
+        variant="quiet"
+      >
+        {compact ? "Open" : "Open prepared"}
+      </ButtonLink>
+    );
+  if (run.index === null || run.topic === null || run.topicSource !== "queued") return null;
+  return (
+    <>
+      <Button
+        size="small"
+        variant={compact ? "quiet" : "secondary"}
+        disabled={prepare.isPending}
+        onClick={(event) => {
+          event.stopPropagation();
+          prepare.mutate();
+        }}
+      >
+        {prepare.isPending ? "Preparing…" : "Prepare"}
+      </Button>
+      {problem === undefined ? null : (
+        <span role="alert" className="text-label text-danger">
+          {problem}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -670,6 +734,7 @@ function ListView({
                   actions={
                     run.index === null ? undefined : (
                       <>
+                        <PrepareRun run={run} />
                         <IconButton
                           size="small"
                           label={`Move ${title} earlier`}

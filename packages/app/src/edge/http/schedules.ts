@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { calendarRange } from "../../slices/schedules/agenda.js";
 import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.js";
+import { preparedTopics, prepareTopic } from "../../slices/schedules/prepare.js";
 import {
   calendarMaxDays,
   calendarSchema,
@@ -206,6 +207,41 @@ function routes(deps: ScheduleDeps | undefined) {
           topics: heldTopics(service(), scheduleId).map((topic) => heldTopicSchema.parse(topic)),
         });
       })
+      // Which queued topics are prepared ahead, and their projects.
+      .get("/:id/prepared", zValidator("param", id, onInvalid), (c) =>
+        c.json({ prepared: preparedTopics(service(), c.req.valid("param").id) }),
+      )
+      // Prepare one queued topic now: everything but the video, which its scheduled day renders.
+      .post(
+        "/:id/topics/prepare",
+        zValidator("param", id, onInvalid),
+        zValidator("json", z.object({ topic: z.string().min(1).max(500) }).strict(), onInvalid),
+        async (c) => {
+          const result = await prepareTopic(service(), {
+            scheduleId: c.req.valid("param").id,
+            title: c.req.valid("json").topic,
+          });
+          if (result.ok) return c.json({ projectId: result.projectId, title: result.title }, 201);
+          const detail: Record<string, string> = {
+            "not-found":
+              "This topic is no longer in the schedule's queue. Reload the page to see the queue as it is now.",
+            "already-prepared":
+              "This topic is already prepared: its project is in Projects under the same title.",
+            "missing-template":
+              "This schedule's template was deleted, so there is nothing to prepare from. Choose another template under Edit.",
+            "spend-limit":
+              "Preparing it would go over this schedule's spend limit. Raise the limit under Edit, or prepare it from Play instead.",
+          };
+          return problem(c, {
+            status: result.reason === "not-found" ? 404 : 409,
+            title: titleOf(result.reason === "not-found" ? 404 : 409),
+            detail:
+              detail[result.reason] ??
+              `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`,
+            extensions: { reason: result.reason },
+          });
+        },
+      )
       // Starts a generation in the background; the schedule's `topics` says when it is done.
       .post("/:id/topics/generate", zValidator("param", id, onInvalid), (c) => {
         const deps = service();

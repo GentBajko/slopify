@@ -147,6 +147,18 @@ export async function generateTopicsNow(
   );
 }
 
+// Prepare a queued topic now: everything but the video, which its scheduled day renders.
+export async function prepareTopic(
+  api: Api,
+  id: string,
+  topic: string,
+): Promise<ScheduleReply<{ readonly projectId: string; readonly title: string }>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "prepare"), json("POST", { topic })),
+    z.object({ projectId: z.string(), title: z.string() }),
+  );
+}
+
 export async function approveHeldTopic(
   api: Api,
   id: string,

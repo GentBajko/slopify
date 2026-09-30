@@ -1,0 +1,1 @@
+- Calendar → a queued run → **Prepare**: the schedule's video is made ahead of its day (everything but the video, held at a Before Video checkpoint), and on the day the schedule continues the project of the same title instead of making another. Table `prepared_videos` (migration 0043) records which hold is the preparation's own.

@@ -2,9 +2,9 @@ import { transact } from "../../kernel/db/tx.js";
 import { reviewDraft } from "../play-drafts/review.js";
 import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
-import { freshTemplateDraft } from "../project-templates/setup.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ClaimedScheduleRun, ScheduleDeps } from "./model.js";
+import { continuePrepared, preparedProject, scheduledDocument } from "./prepare.js";
 import {
   activeRun,
   dueSchedules,
@@ -17,7 +17,6 @@ import {
   updateRun,
 } from "./repo.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
-import { renderedTitle, scheduledValues } from "./topic-list.js";
 import { generateTopics, generationDue, releaseTopicLeases } from "./topics.js";
 
 const missedGraceMs = 60_000;
@@ -173,18 +172,24 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
   let run = claimed.run;
   try {
     // The template as it is now, so an edit to it reaches the next run.
-    const template = deps.template(claimed.schedule.templateId);
-    if (template === undefined) throw new ScheduleDispatchError("missing-template");
-    const document = freshTemplateDraft(deps, template.document, {
-      id: claimed.schedule.templateId,
-      version: template.version,
-    });
     const topic = claimed.schedule.items[0];
-    const fresh = {
-      ...document,
-      form: runForm(document.form, claimed.schedule, topic),
-      variants: [],
-    };
+    const fresh = scheduledDocument(deps, claimed.schedule, topic);
+    if (fresh === undefined) throw new ScheduleDispatchError("missing-template");
+    // Prepared ahead (`prepare.ts`), or made by hand under the same title: continue it rather
+    // than make the same video twice.
+    const prepared = preparedProject(
+      deps.db,
+      claimed.schedule.id,
+      fresh.form.title,
+      topic !== undefined,
+    );
+    if (prepared !== undefined) {
+      continuePrepared(deps, prepared);
+      run = { ...run, projectIds: [prepared.projectId] };
+      recordRunDispatch(deps.db, run, deps.clock.now().toISOString(), topic);
+      updateRun(deps.db, { ...run, status: "succeeded", endedAt: deps.clock.now().toISOString() });
+      return;
+    }
     const draft = createDraft(deps, { id: deps.uuid(), document: fresh });
     if (!draft.ok) throw new ScheduleDispatchError("conflict");
     const review = await reviewDraft(deps, { id: draft.value.draft.id, baseVersion: 1 });
@@ -228,20 +233,6 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
     };
   }
   updateRun(deps.db, run);
-}
-
-// One project per run. The first queued topic fills the chosen keyword, the schedule's fixed
-// values fill the rest over the template's own, and the template's title is filled from the
-// same keywords, so "History: {{Topic}}" names the project after the topic. A topic saved
-// before topics had a keyword brings its own title and values instead.
-function runForm<
-  F extends { readonly title: string; readonly values: Readonly<Record<string, string>> },
->(form: F, schedule: ScheduleSummary, topic: ScheduleSummary["items"][number] | undefined): F {
-  return {
-    ...form,
-    title: renderedTitle(form, schedule, topic),
-    values: scheduledValues(form, schedule, topic),
-  };
 }
 
 class ScheduleDispatchError extends Error {
