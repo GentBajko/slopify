@@ -365,11 +365,12 @@ function audioMix(
   return { inputs, chains };
 }
 
-// The video's sound alone, as a WAV: what Level the volume masters before the join plays it
-// (`slideshow.ts`).
+// The video's sound alone: as a WAV, what Level the volume masters, or as AAC, the finished
+// sound the join copies in (`slideshow.ts`, which makes it while the picture renders).
 export function audioMixArgs(
   edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "bed">>,
   output: string,
+  codec: "wav" | "aac" = "wav",
 ): string[] {
   const mix = audioMix(edit, 0);
   return [
@@ -379,34 +380,35 @@ export function audioMixArgs(
     mix.chains.join(";"),
     "-map",
     "[a]",
-    "-c:a",
-    "pcm_s16le",
-    "-f",
-    "wav",
+    ...(codec === "wav" ? ["-c:a", "pcm_s16le", "-f", "wav"] : ["-c:a", "aac", "-f", "mp4"]),
     output,
   ];
 }
 
+// `sound`, when given, is the finished AAC (`audioMixArgs`), copied in; without it the join
+// mixes and encodes the edit list's audio itself.
 export function joinArgs(
   edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
   output: string,
   list: string,
   burnSubtitles = false,
   portraits: readonly PortraitOverlay[] = [],
+  sound?: string,
 ): string[] {
-  const mix = audioMix(edit, 1);
+  const mix = sound === undefined ? audioMix(edit, 1) : { inputs: ["-i", sound], chains: [] };
   const inputs: string[] = ["-f", "concat", "-i", list, ...mix.inputs];
   const chains: string[] = burnSubtitles ? burnIn(inputs, portraits) : [];
   chains.push(...mix.chains);
+  const audio = sound !== undefined || edit.audio.length > 0;
   return [
     ...progressArgs,
     ...inputs,
     ...(chains.length > 0 ? ["-filter_complex", chains.join(";")] : []),
     "-map",
     burnSubtitles ? "[v]" : "0:v",
-    ...(edit.audio.length > 0 ? ["-map", "[a]"] : []),
+    ...(audio ? ["-map", sound === undefined ? "[a]" : "1:a"] : []),
     ...(burnSubtitles ? [...videoCodec, ...lookEncoding(edit.look)] : ["-c:v", "copy"]),
-    ...(edit.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
+    ...(audio ? ["-c:a", sound === undefined ? "aac" : "copy"] : ["-an"]),
     "-movflags",
     "+faststart",
     output,

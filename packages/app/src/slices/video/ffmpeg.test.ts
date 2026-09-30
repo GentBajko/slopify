@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { Log, LogLevel } from "../../kernel/log.js";
 import type { EditList, Motion, Shot } from "./edit-list.js";
 import {
+  audioMixArgs,
   burnPartArgs,
   clipArgs,
   concatList,
@@ -388,6 +389,34 @@ describe("joinArgs", () => {
         { path: "portrait-0.jpg", x: 10, y: 20, size: 119 },
       ]),
     ).toEqual(joinArgs(plan(), "/p/video.mp4", "/w/l"));
+  });
+
+  it("copies in a finished sound instead of mixing one", () => {
+    const args = joinArgs(plan(), "/p/video.mp4", "/w/l", false, [], "/w/sound.m4a");
+    expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual(["/w/l", "/w/sound.m4a"]);
+    expect(args).not.toContain("-filter_complex");
+    expect(args.slice(-11)).toEqual([
+      "-map",
+      "0:v",
+      "-map",
+      "1:a",
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
+      "/p/video.mp4",
+    ]);
+    const burned = joinArgs(plan(), "/p/video.mp4", "/w/l", true, [], "/w/sound.m4a");
+    expect(burned[burned.indexOf("-filter_complex") + 1]).toBe(
+      "[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]",
+    );
+  });
+
+  it("encodes the sound alone as AAC for the join to copy", () => {
+    const args = audioMixArgs(plan(), "/w/sound.m4a", "aac");
+    expect(args.slice(-5)).toEqual(["-c:a", "aac", "-f", "mp4", "/w/sound.m4a"]);
   });
 
   it("writes a silent video with no filtergraph and no audio stream", () => {

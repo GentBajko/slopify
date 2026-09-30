@@ -90,107 +90,104 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
       mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
       copyFileSync(font.path, join(workspace, "fonts", `card${extname(font.path)}`));
     }
-    // Each run's own progress, summed: runs side by side each report their own elapsed time.
-    let rendered = 0;
-    const running = new Map<string, number>();
-    const tell = (): void => {
-      report(rendered + [...running.values()].reduce((sum, one) => sum + one, 0));
+    // The sound is mixed, levelled and encoded while the picture renders, on its own run; the
+    // join then only copies it in. Either failing stops the other, and the first failure is
+    // the one reported.
+    const stop = new AbortController();
+    const follow = (): void => {
+      stop.abort();
     };
-    const keys = new Set<string>();
-    await inPool(clips, jobs, run.signal, async (clip, signal) => {
-      const script = clip.name.replace(/\.mp4$/, ".ass");
-      const shown = cardsIn(cards, clip.segment.start, clip.segment.count);
-      const drawn =
-        shown.length > 0 && font !== undefined
-          ? cardsAss(edit, shown, font.name, clip.segment.start, edit.cardColor)
-          : undefined;
-      if (drawn !== undefined) writeFileSync(join(workspace, script), drawn, { mode: 0o600 });
-      const output = join(workspace, clip.name);
-      const args = segmentArgs(edit, clip.segment, output, run.burnSubtitles, script);
-      const weight = msOf(clip.frames) * clipWeight;
-      const cache = run.cache;
-      let key: string | undefined;
-      // The cache only saves time: a clip it cannot name or give back (another project's render
-      // let it go a moment ago) is encoded as if there were none.
-      try {
-        if (cache !== undefined) {
-          key = cacheKey(
-            run.bin,
-            args.map((value) =>
-              drawn === undefined ? value : value.replaceAll(script, "\u0000cards"),
-            ),
-            output,
-            drawn === undefined || font === undefined ? [] : [drawn, fileIdentity(font.path)],
-          );
-          keys.add(key);
-          if (reuseClip(cache, key, output)) {
-            rendered += weight;
-            tell();
-            return;
-          }
-        }
-      } catch (error) {
-        run.log.write("warn", "video.cache", { detail: messageOf(error) });
-        rmSync(output, { force: true });
-      }
-      await runFfmpeg({
-        bin: run.bin,
-        ...(cards.length > 0 ? { cwd: workspace } : {}),
-        args,
-        signal,
-        log: run.log,
-        onProgress: (elapsedMs) => {
-          running.set(clip.name, Math.min(elapsedMs * clipWeight, weight));
-          tell();
-        },
+    if (run.signal.aborted) stop.abort();
+    else run.signal.addEventListener("abort", follow, { once: true });
+    let failed: { readonly error: unknown } | undefined;
+    const watched = <T>(work: Promise<T>): Promise<T> =>
+      work.catch((error: unknown) => {
+        failed ??= { error };
+        stop.abort();
+        throw error;
       });
-      running.delete(clip.name);
-      rendered += weight;
-      if (cache !== undefined && key !== undefined) {
+    const sounding =
+      edit.audio.length > 0
+        ? watched(renderSound(run, edit, workspace, stop.signal))
+        : Promise.resolve(undefined);
+    // Handled now, since the picture is awaited first and the sound may fail meanwhile.
+    sounding.catch((): void => {});
+    let rendered = 0;
+    const keys = new Set<string>();
+    const picture = async (halt: AbortSignal): Promise<string> => {
+      // Each run's own progress, summed: runs side by side each report their own elapsed time.
+      const running = new Map<string, number>();
+      const tell = (): void => {
+        report(rendered + [...running.values()].reduce((sum, one) => sum + one, 0));
+      };
+      await inPool(clips, jobs, halt, async (clip, signal) => {
+        const script = clip.name.replace(/\.mp4$/, ".ass");
+        const shown = cardsIn(cards, clip.segment.start, clip.segment.count);
+        const drawn =
+          shown.length > 0 && font !== undefined
+            ? cardsAss(edit, shown, font.name, clip.segment.start, edit.cardColor)
+            : undefined;
+        if (drawn !== undefined) writeFileSync(join(workspace, script), drawn, { mode: 0o600 });
+        const output = join(workspace, clip.name);
+        const args = segmentArgs(edit, clip.segment, output, run.burnSubtitles, script);
+        const weight = msOf(clip.frames) * clipWeight;
+        const cache = run.cache;
+        let key: string | undefined;
+        // The cache only saves time: a clip it cannot name or give back (another project's render
+        // let it go a moment ago) is encoded as if there were none.
         try {
-          keepClip(cache, key, output);
+          if (cache !== undefined) {
+            key = cacheKey(
+              run.bin,
+              args.map((value) =>
+                drawn === undefined ? value : value.replaceAll(script, "\u0000cards"),
+              ),
+              output,
+              drawn === undefined || font === undefined ? [] : [drawn, fileIdentity(font.path)],
+            );
+            keys.add(key);
+            if (reuseClip(cache, key, output)) {
+              rendered += weight;
+              tell();
+              return;
+            }
+          }
         } catch (error) {
           run.log.write("warn", "video.cache", { detail: messageOf(error) });
+          rmSync(output, { force: true });
         }
-      }
-    });
-    const list = join(workspace, "slides.ffconcat");
-    writeFileSync(list, concatList(order), { mode: 0o600 });
-    // Level the volume: the sound, with its bed, is mixed alone and mastered first, and the join
-    // plays that one file.
-    let joined: EditList = edit;
-    let master: MasterReport | undefined;
-    if (run.master !== undefined && edit.audio.length > 0) {
-      const mixed = join(workspace, "mix.wav");
-      await runFfmpeg({
-        bin: run.bin,
-        args: audioMixArgs(edit, mixed),
-        signal: run.signal,
-        log: run.log,
-        onProgress: (): void => {},
-      });
-      const mastered = join(workspace, "master.wav");
-      await masterFile(run, mixed, mastered, run.master, masterFormat);
-      joined = {
-        ...edit,
-        audio: [
-          {
-            kind: "body",
-            path: mastered,
-            seconds: edit.audio.reduce((sum, segment) => sum + segment.seconds, 0),
+        await runFfmpeg({
+          bin: run.bin,
+          ...(cards.length > 0 ? { cwd: workspace } : {}),
+          args,
+          signal,
+          log: run.log,
+          onProgress: (elapsedMs) => {
+            running.set(clip.name, Math.min(elapsedMs * clipWeight, weight));
+            tell();
           },
-        ],
-        bed: undefined,
-      };
-    }
-    if (parts.length > 1) {
+        });
+        running.delete(clip.name);
+        rendered += weight;
+        if (cache !== undefined && key !== undefined) {
+          try {
+            keepClip(cache, key, output);
+          } catch (error) {
+            run.log.write("warn", "video.cache", { detail: messageOf(error) });
+          }
+        }
+      });
+
+      const list = join(workspace, "slides.ffconcat");
+      writeFileSync(list, concatList(order), { mode: 0o600 });
+      if (parts.length <= 1) return list;
       // A long video's captions are burned in parts side by side, and the parts joined by
-      // copying with the sound, as the clips are without captions.
+      // copying, as the clips are without captions.
       const done = new Map<string, number>();
       const burned = (): void => {
         report(rendered + [...done.values()].reduce((sum, one) => sum + one, 0));
       };
-      await inPool(parts, jobs, run.signal, async (part, signal) => {
+      await inPool(parts, jobs, halt, async (part, signal) => {
         const partList = join(workspace, `${part.name}.ffconcat`);
         writeFileSync(partList, concatList(part.names), { mode: 0o600 });
         await runFfmpeg({
@@ -218,23 +215,22 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
       writeFileSync(joinedList, concatList(parts.map((part) => `${part.name}.mp4`)), {
         mode: 0o600,
       });
-      await runFfmpeg({
-        bin: run.bin,
-        args: joinArgs(joined, run.output, joinedList),
-        signal: run.signal,
-        log: run.log,
-        onProgress: (elapsedMs) => report(rendered + elapsedMs * copyWeight),
-      });
-    } else
-      await runFfmpeg({
-        bin: run.bin,
-        cwd: run.cwd,
-        args: joinArgs(joined, run.output, list, run.burnSubtitles, run.portraits),
-        signal: run.signal,
-        log: run.log,
-        onProgress: (elapsedMs) =>
-          report(rendered + elapsedMs * (run.burnSubtitles ? 1 : copyWeight)),
-      });
+      return joinedList;
+    };
+    const played = await watched(picture(stop.signal)).catch(() => undefined);
+    const sound = await sounding.catch(() => undefined);
+    run.signal.removeEventListener("abort", follow);
+    if (failed !== undefined) throw failed.error;
+    if (played === undefined) throw new Error("the render was canceled");
+    const burnsHere = run.burnSubtitles && parts.length <= 1;
+    await runFfmpeg({
+      bin: run.bin,
+      cwd: run.cwd,
+      args: joinArgs(edit, run.output, played, burnsHere, run.portraits, sound),
+      signal: run.signal,
+      log: run.log,
+      onProgress: (elapsedMs) => report(rendered + elapsedMs * (burnsHere ? 1 : copyWeight)),
+    });
     if (run.cache !== undefined) {
       try {
         pruneClips(run.cache, keys);
@@ -243,12 +239,44 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
       }
     }
     // What the finished video measures, after its AAC encode.
-    if (run.master !== undefined && edit.audio.length > 0)
-      master = await masterReport(run, run.output, run.master);
-    return master;
+    return run.master !== undefined && edit.audio.length > 0
+      ? await masterReport(run, run.output, run.master)
+      : undefined;
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }
+}
+
+// The video's finished sound as AAC in the working folder: the narration, silences and bed
+// mixed, and with Level the volume mastered first, alone and then as one file.
+async function renderSound(
+  run: SlideshowRun,
+  edit: EditList,
+  workspace: string,
+  signal: AbortSignal,
+): Promise<string> {
+  const quiet = { bin: run.bin, signal, log: run.log, onProgress: (): void => {} };
+  let played: EditList = edit;
+  if (run.master !== undefined) {
+    const mixed = join(workspace, "mix.wav");
+    await runFfmpeg({ ...quiet, args: audioMixArgs(edit, mixed) });
+    const mastered = join(workspace, "master.wav");
+    await masterFile({ ...run, signal }, mixed, mastered, run.master, masterFormat);
+    played = {
+      ...edit,
+      audio: [
+        {
+          kind: "body",
+          path: mastered,
+          seconds: edit.audio.reduce((sum, segment) => sum + segment.seconds, 0),
+        },
+      ],
+      bed: undefined,
+    };
+  }
+  const sound = join(workspace, "sound.m4a");
+  await runFfmpeg({ ...quiet, args: audioMixArgs(played, sound, "aac") });
+  return sound;
 }
 
 export interface BurnPart {
