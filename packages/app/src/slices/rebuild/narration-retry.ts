@@ -140,6 +140,15 @@ async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<vo
       projectId: retry.projectId,
       detail: `Recording ${retry.chunkKey} again (try ${String(retry.tries)} of ${String(narrationRetryLimit)}).`,
     });
+  } else if (result.reason === "running") {
+    // Another step of the project is still going (its PDF, say): the retry waits for it and
+    // starts when that step finishes, which kicks this again (`onFinished`). Giving up here
+    // left the video failed with a message promising a retry that never came.
+    deps.log.write("info", "narration.retry", {
+      projectId: retry.projectId,
+      detail: `Recording ${retry.chunkKey} again once the project's running steps finish.`,
+    });
+    return;
   } else {
     settle(deps.db, retry, "failed", refusal(result), now);
     deps.log.write("warn", "narration.retry", {
