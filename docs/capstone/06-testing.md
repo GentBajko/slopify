@@ -1,215 +1,197 @@
 ---
-docker_project_folder_verified_at_commit: a472d513f12c
-glossary_pronunciation_verified_at_commit: 6eeac3fd9043
-video_recovery_verified_at_commit: 4a83abd9a070
-research_documents_verified_at_commit: 735cf5b
-host_cli_verified_at_commit: 9bd6517
-generated_at_commit: 4cfe3473f74d
-generated_date: '2026-09-13'
-capstone_version: 5.2.0
-content_hash: b42211738f09
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 318a9627abe8
 paths_covered:
-  - :(top)packages/*/src/**
-  - :(top)packages/app/test/**
-  - :(top)packages/site/public/**
-  - :(top)packages/*/vitest.config.*
-  - :(top)vitest.config.*
-  - :(top)package*.json
-  - :(top)packages/*/package.json
-  - :(top).github/workflows/**
-  - :(top)packages/site/*.test.js
-absorbed_from:
-  - features/2026-09-25-docker-project-folder@2026-09-25
-  - features/2026-09-25-glossary-pronunciation@2026-09-25
-  - features/2026-09-25-video-recovery@2026-09-25
-  - features/2026-09-24-host-cli-bridge@2026-09-24
-  - features/2026-09-24-narration-preparation@2026-09-24
-  - features/2026-09-10-editable-projects@2026-09-12
-  - features/2026-09-10-play-redesign-drafts@2026-09-13
-  - features/2026-09-10-review-checkpoints@2026-09-13
+  - ":(top)package.json"
+  - ":(top)vitest.config.ts"
+  - ":(top)vitest.tmpdir.ts"
+  - ":(top).github/**"
+  - ":(top)packages/*/package.json"
+  - ":(top)packages/*/vitest.config.ts"
+  - ":(top)packages/web/aliases.ts"
+  - ":(top)packages/app/scripts/**"
+  - ":(top)packages/site/scripts/**"
+  - ":(top)packages/app/test/**"
+  - ":(top)packages/extension/test/**"
+  - ":(top)packages/site/*.test.js"
+  - ":(top)packages/*/src/**/*.test.ts"
+  - ":(top)packages/web/src/**/*.test.tsx"
+  - ":(top)packages/**/*.fake.ts"
+  - ":(top)packages/**/*fixture*"
+  - ":(top)packages/**/fixtures/**"
+  - ":(top)packages/app/src/adapters/fake/**"
+  - ":(top)packages/web/src/test-app.tsx"
+  - ":(top)packages/web/src/play/review-test-harness.tsx"
 ---
 
 # Testing
 
-Review checkpoint acceptance covers zero/three gate setup, independent closure dispatch, typed approval/refusal/replay, add/remove before start, title-only Save carry, materialization retirement, pause/resume, restart recovery, late results, concurrent project tabs and secret-free resolver diagnostics (`packages/app/test/review-checkpoints-*.test.ts`, `packages/web/src/project/checkpoint-panel.test.tsx`).
-
-Inspected source and test configuration at `4cfe3473f74d` on 2026-09-13. Test-run evidence below identifies its own source checkpoint; the broad file inventory remains a historical checkpoint.
-
 ## Layout
 
-Host CLI verification (2026-09-24): colocated protocol/client/status/runtime/service tests plus `packages/app/test/host-cli-e2e.test.ts` exercise real local sockets and fake host child processes without paid calls. Coverage includes auth-before-parse, request/response limits, concurrent metadata/generation gates, cancel isolation, consumer abandonment, deadlines, shutdown, helper restart, one persisted unavailable attempt after lost acceptance, consent, service ownership, busy upgrades and rollback after canceled setup. `systemd-analyze verify` validates a temporary unit without installing it (`packages/app/src/host-cli/service.test.ts:15`).
+### Runner and projects
 
-`packages/app/scripts/host-cli-smoke.mjs` packs the candidate, installs the helper with scripts disabled under a disposable prefix, and runs fake CLIs under a test HOME. Its direct container has a private `/data` volume and one host bind for the helper share; this fixture's mount assertion does not describe the managed launcher's additional project and activation binds. It checks another container UID, model/status reads, image publication and actual volume bytes, helper restart without Docker recreation, and complete document reads through all three host adapters. CI runs it between the API-only container smoke and the separate managed project-folder smoke (`packages/app/scripts/host-cli-smoke.mjs:104`, `packages/app/scripts/host-cli-smoke.mjs:123`, `packages/app/scripts/host-cli-smoke.mjs:238`, `.github/workflows/ci.yml:55`).
+One runner: Vitest (`vitest` `^4.1.11`, `package.json:23`). `npm test` runs `vitest run` from the repository root (`package.json:11`). The root config declares every `packages/*/vitest.config.ts` as a project and a global setup (`vitest.config.ts:5-7`).
 
-Document/image candidate 1.5.0: 440 files, 3,395 passing tests and one skipped; lint, typecheck, build and zero-vulnerability audit passed. Reader tests cover full large Unicode reports, scope, invalid IDs, tampering, missing reads and cleanup. All three host adapters use fake CLI executables against the real SDK reader; OpenRouter tests inspect exact labelled contents. Real CLI metadata-only checks confirmed the isolated reader connects on Claude 2.1.281, Codex 0.155.1 and Gemini 0.61.0 without model turns. A database-copy rehearsal and scoped live recovery preserved 13 reports and six saved images without generation. Container/release verification is recorded separately in the release ledger; the historical inventory below is not claimed current.
+| Project (`name`) | Config | Include | Environment | Test files |
+| --- | --- | --- | --- | ---: |
+| `app` | `packages/app/vitest.config.ts:5` | `src/**/*.test.ts`, `test/**/*.test.ts` | node | 564 (507 in `src`, 57 in `test`) |
+| `web` | `packages/web/vitest.config.ts:8` | `src/**/*.test.ts`, `src/**/*.test.tsx` | `happy-dom` | 197 |
+| `extension` | `packages/extension/vitest.config.ts:5` | `test/**/*.test.ts` | `happy-dom` | 1 |
+| `collector` | `packages/collector/vitest.config.ts:5` | `src/**/*.test.ts` | node | 1 |
+| `site` | `packages/site/vitest.config.ts:5` | `*.test.js` (package root only) | node | 5 |
 
-### Docker project-folder test layout
+Total: 768 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
 
-Scoped source `a472d513f12c`, 2026-09-25. Docker storage tests are colocated under `packages/app/src/edge/docker-projects/`; composed launcher/seed tests are in `packages/app/test/`. Folder contracts are tested in app HTTP suites, mounted behavior in `packages/web/src/project/open-folder.test.tsx`, and install copy in `packages/site/install.test.js`. Existing app/web/site inclusion rules run these through `npm test`; smoke scripts are separate CI commands (`packages/app/vitest.config.ts:6`, `packages/web/vitest.config.ts:10`, `packages/site/vitest.config.ts:6`, `.github/workflows/ci.yml:55`).
+- `vitest.tmpdir.ts:8-16`: global setup points `TMPDIR` at one `slopify-vitest-*` directory per run, inherited by workers, and removes it on teardown; fixtures create their data directories under `os.tmpdir()` and do not clean them individually.
+- `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. 40 test files set their own per-test timeout (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
+- `packages/web/vitest.config.ts:6` resolves the same aliases as the web build (`packages/web/aliases.ts:13-17`): `@/` to `packages/web/src`, and `@app/*.js` to the app package's TypeScript source.
+- Web test libraries: `@testing-library/dom`, `@testing-library/react`, `@testing-library/user-event`, `happy-dom` (`packages/web/package.json:32-38`). No other package declares test-only libraries.
+- No coverage provider or threshold is configured in any Vitest config or `package.json`.
+- Platform skips: host-CLI socket tests use `it.skipIf(process.platform === "win32")` (`packages/app/src/adapters/host-cli/transport.test.ts:9`, `packages/app/test/host-cli-e2e.test.ts:140`); host folder-open tests run on Linux only (`packages/app/src/host-cli/open-folder.test.ts:47`). No `.only` or `.todo` markers exist.
 
-Focused source tests, from the repository root:
+### Placement
 
-```sh
-npx vitest run packages/app/src/edge/docker-projects packages/app/test/docker-launcher.test.ts packages/app/test/docker-projects-fixture.test.ts packages/app/src/edge/http/folder-location.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/edge/http/revision-files.test.ts packages/web/src/project/open-folder.test.tsx packages/site/install.test.js
-```
+- Unit and slice tests sit beside the file they test, one test file per concern, often split by behavior with a suffix (`packages/app/src/slices/rebuild/runtime-export.test.ts`, `runtime-export-entries.test.ts`).
+- `packages/app/test/*.test.ts` (51 files): composed tests that wire several slices, the runner and real SQLite together (`revision-rebuild.test.ts`, `revision-shorts.test.ts`, `backup-round-trip.test.ts`, `host-cli-e2e.test.ts`, `docker-launcher.test.ts`).
+- `packages/app/test/e2e/*.test.ts` (6 files: `document`, `editable-projects`, `optional-outputs`, `play-drafts`, `review-checkpoints`, `skeleton`): boot the production app through `boot` from `packages/app/src/main.ts` on `127.0.0.1` port 0 and drive it over HTTP (`packages/app/test/e2e/skeleton.test.ts:9`, `packages/app/test/e2e/skeleton.test.ts:135`). Request helpers and zod response schemas live in sibling `*.http.ts` files (`packages/app/test/e2e/editable-projects.http.ts:15`).
+- Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`).
+- Site tests sit at the package root and read the static pages, tokens and walkthrough steps (`packages/site/pages.test.js:11`, `packages/site/walkthrough.test.js:7`).
 
-Built-artifact verification:
+### Running targeted tests
 
-```sh
-npm run build
-node packages/app/scripts/install-smoke.mjs
-docker build -t slopify:smoke .
-bash packages/app/scripts/container-smoke.sh
-node packages/app/scripts/host-cli-smoke.mjs
-node packages/app/scripts/docker-projects-smoke.mjs
-```
-
-The last smoke packs/installs the candidate and invokes its installed CLI with `--docker --host-cli=off`, checking that the shell shim and emitted launcher/install/volume/activation modules ship. The workspace alias is `npm run smoke:docker-projects --workspace @gentbajko/slopify` (`packages/app/package.json:19`, `packages/app/package.json:29`, `packages/app/scripts/docker-projects-smoke.mjs:42`, `packages/app/scripts/docker-projects-smoke.mjs:106`).
-
-`npm test` runs `vitest run` from the workspace root. Root Vitest discovers `packages/*/vitest.config.ts`. There are four configured projects: `app` includes `src/**/*.test.ts` and `test/**/*.test.ts`; `web` includes `src/**/*.test.ts` and `src/**/*.test.tsx` under `happy-dom`; `collector` includes `src/**/*.test.ts`; `site` includes root-level `*.test.js`. Application/unit tests are colocated with production modules, while composed application tests live under `packages/app/test` and real HTTP/media journeys under its `e2e` subdirectory. `package.json:11` `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3` `packages/app/test/revision-rebuild.test.ts:11` `packages/app/test/e2e/editable-projects.test.ts:39`
-
-The historical test-bearing directory inventory below records 398 test files at its full-map checkpoint. Counts are file counts from the tracked tree, not instrumented statement/branch coverage. All listed test files match one of the four configured inclusion rules; no discovered `.spec.ts`, `.spec.tsx`, or `.spec.js` files sit outside them. Each row cites a concrete member, while the config pointers above establish runner inclusion.
-
-| Directory | Test files | Example source |
-| --- | ---: | --- |
-| `packages/app/src` | 5 | `packages/app/src/adapter-registry-paths.test.ts:1` |
-| `packages/app/src/adapters` | 2 | `packages/app/src/adapters/ffmpeg.test.ts:1` |
-| `packages/app/src/adapters/alignment` | 7 | `packages/app/src/adapters/alignment/cache.test.ts:1` |
-| `packages/app/src/adapters/image` | 6 | `packages/app/src/adapters/image/bytes.test.ts:1` |
-| `packages/app/src/adapters/llm` | 7 | `packages/app/src/adapters/llm/claude-code.test.ts:1` |
-| `packages/app/src/adapters/tts` | 5 | `packages/app/src/adapters/tts/cartesia.test.ts:1` |
-| `packages/app/src/catalog` | 2 | `packages/app/src/catalog/registry.test.ts:1` |
-| `packages/app/src/edge` | 3 | `packages/app/src/edge/open-browser.test.ts:1` |
-| `packages/app/src/edge/events` | 3 | `packages/app/src/edge/events/hub.test.ts:1` |
-| `packages/app/src/edge/http` | 32 | `packages/app/src/edge/http/actions.test.ts:1` |
-| `packages/app/src/kernel` | 7 | `packages/app/src/kernel/audio-preview.test.ts:1` |
-| `packages/app/src/kernel/config` | 1 | `packages/app/src/kernel/config/index.test.ts:1` |
-| `packages/app/src/kernel/db` | 2 | `packages/app/src/kernel/db/migrate.test.ts:1` |
-| `packages/app/src/kernel/ports` | 2 | `packages/app/src/kernel/ports/model.test.ts:1` |
-| `packages/app/src/kernel/runner` | 10 | `packages/app/src/kernel/runner/attempt-repo.test.ts:1` |
-| `packages/app/src/slices/admission` | 3 | `packages/app/src/slices/admission/rules.test.ts:1` |
-| `packages/app/src/slices/article` | 5 | `packages/app/src/slices/article/continuation.test.ts:1` |
-| `packages/app/src/slices/batch` | 2 | `packages/app/src/slices/batch/index.test.ts:1` |
-| `packages/app/src/slices/cancel` | 1 | `packages/app/src/slices/cancel/index.test.ts:1` |
-| `packages/app/src/slices/checkpoints` | 5 | `packages/app/src/slices/checkpoints/change.test.ts:1` |
-| `packages/app/src/slices/control` | 2 | `packages/app/src/slices/control/index.test.ts:1` |
-| `packages/app/src/slices/estimate` | 2 | `packages/app/src/slices/estimate/index.test.ts:1` |
-| `packages/app/src/slices/fonts` | 3 | `packages/app/src/slices/fonts/catalog.test.ts:1` |
-| `packages/app/src/slices/library` | 3 | `packages/app/src/slices/library/lint.test.ts:1` |
-| `packages/app/src/slices/narration` | 5 | `packages/app/src/slices/narration/chunk.test.ts:1` |
-| `packages/app/src/slices/play-drafts` | 12 | `packages/app/src/slices/play-drafts/attachments.test.ts:1` |
-| `packages/app/src/slices/project-templates` | 1 | `packages/app/src/slices/project-templates/service.test.ts:1` |
-| `packages/app/src/slices/rebuild` | 44 | `packages/app/src/slices/rebuild/attempt-origin.test.ts:1` |
-| `packages/app/src/slices/reruns` | 2 | `packages/app/src/slices/reruns/cascade.test.ts:1` |
-| `packages/app/src/slices/research` | 3 | `packages/app/src/slices/research/planner.test.ts:1` |
-| `packages/app/src/slices/revisions` | 28 | `packages/app/src/slices/revisions/adopt-history.test.ts:1` |
-| `packages/app/src/slices/settings` | 8 | `packages/app/src/slices/settings/cli-paths.test.ts:1` |
-| `packages/app/src/slices/schedules` | 3 | `packages/app/src/slices/schedules/calendar.test.ts:1` |
-| `packages/app/src/slices/storage` | 12 | `packages/app/src/slices/storage/asset-name.test.ts:1` |
-| `packages/app/src/slices/subtitles` | 3 | `packages/app/src/slices/subtitles/captions.test.ts:1` |
-| `packages/app/src/slices/telemetry` | 7 | `packages/app/src/slices/telemetry/collector-client.test.ts:1` |
-| `packages/app/src/slices/thumbnail` | 1 | `packages/app/src/slices/thumbnail/by-llm.test.ts:1` |
-| `packages/app/src/slices/video` | 5 | `packages/app/src/slices/video/audio-inputs.test.ts:1` |
-| `packages/app/src/updater` | 8 | `packages/app/src/updater/candidate.test.ts:1` |
-| `packages/app/test` | 26 | `packages/app/test/article-run.test.ts:1` |
-| `packages/app/test/e2e` | 5 | `packages/app/test/e2e/editable-projects.test.ts:1` |
-| `packages/collector/src` | 1 | `packages/collector/src/index.test.ts:1` |
-| `packages/site` | 1 | `packages/site/main.test.js:1` |
-| `packages/web/src` | 2 | `packages/web/src/events.test.ts:1` |
-| `packages/web/src/components` | 7 | `packages/web/src/components/lamp.test.tsx:1` |
-| `packages/web/src/lib` | 2 | `packages/web/src/lib/draft-lint.test.ts:1` |
-| `packages/web/src/play` | 32 | `packages/web/src/play/admission.test.ts:1` |
-| `packages/web/src/project` | 32 | `packages/web/src/project/api.test.ts:1` |
-| `packages/web/src/routes` | 17 | `packages/web/src/routes/entries.test.tsx:1` |
-| `packages/web/src/subtitles` | 2 | `packages/web/src/subtitles/config.test.ts:1` |
-| `packages/web/src/tutorial` | 5 | `packages/web/src/tutorial/play-navigation.test.tsx:1` |
-| `packages/web/src/updates` | 2 | `packages/web/src/updates/api.test.ts:1` |
-
-Fixture-only directories contain captured provider responses under `packages/app/src/adapters/{image,llm,tts}/fixtures`; they are consumed by the adapter tests and are not separate Vitest suites. Other helper files live beside their callers, including `revision-rebuild.fake.ts`, `editable-projects.fixture.ts`, and web `test-app.tsx`. `packages/app/src/adapters/image/fal.test.ts:1` `packages/app/src/adapters/llm/claude-code.test.ts:1` `packages/app/src/adapters/tts/elevenlabs.test.ts:1` `packages/app/test/revision-rebuild.fake.ts:52` `packages/app/test/e2e/editable-projects.test.ts:13` `packages/web/src/test-app.tsx:18`
-
-Ubuntu CI uses Node 26 and runs `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npm audit --audit-level=high`. Windows CI and the container smoke tests run only while the app's version has no tag yet (the release push and any fix before the tag), and then only when what they check changed since the last release, a version bump alone not counting (`packages/app/scripts/ci-changes.mjs`); a release still can't be tagged without a green run; it uses Node 26, installs and builds, then executes the focused commands below. The media and revision selections are narrower than the root full suite. `.github/workflows/ci.yml:8` `.github/workflows/ci.yml:25`
+All commands run from the repository root; the root config resolves each path to its project.
 
 ```sh
-node packages/app/scripts/install-smoke.mjs
-npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/test/e2e/optional-outputs.test.ts packages/app/test/e2e/editable-projects.test.ts packages/app/test/e2e/play-drafts.test.ts packages/app/test/e2e/review-checkpoints.test.ts packages/app/test/review-checkpoints-restart.test.ts packages/app/src/adapters/alignment packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts packages/app/src/slices/subtitles
-npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"
-npx vitest run packages/app/src/kernel/cli-command.test.ts packages/app/src/adapters/llm packages/app/src/slices/settings/cli-paths.test.ts packages/app/src/slices/settings/cli-status.test.ts packages/app/src/adapter-registry-paths.test.ts
-npx vitest run packages/app/src/catalog packages/app/src/kernel/runner/queue.test.ts packages/app/src/slices/batch packages/app/src/slices/narration/plan.test.ts packages/app/src/slices/narration/chunk.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/edge/http/storage.test.ts packages/app/src/edge/http/diagnostics.test.ts packages/app/src/edge/http/schedules.test.ts packages/app/src/slices/schedules packages/app/src/slices/video/subtitle-only.test.ts
-npx vitest run packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/storage/prepare.test.ts packages/app/src/slices/storage/reconcile.test.ts packages/app/src/slices/revisions packages/app/src/slices/rebuild packages/app/test/revision-rebuild.test.ts packages/app/test/revision-narration.test.ts packages/app/test/revision-provided.test.ts packages/app/test/revision-restart.test.ts packages/app/test/revision-article-recovery.test.ts packages/app/test/revision-bundle-recovery.test.ts packages/app/test/revision-research-rebuild.test.ts
+npx vitest run packages/app/src/slices/shorts              # one directory
+npx vitest run packages/web/src/routes/home.test.tsx        # one file
+npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"   # one named case
+npx vitest run --project web                                # one project (names in the table above)
+npm test                                                    # the whole suite
 ```
 
-The bundle-completeness matrix and saved-font subtitle recovery case use a 30-second per-test deadline because each composes temporary storage, SQLite revisions and publication work; the global five-second Vitest default still applies elsewhere. `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts:67` `packages/app/src/slices/rebuild/runtime-subtitles.test.ts:141`
+Filters used in CI take the same form (`.github/workflows/ci.yml:61-62`). Web tests import `@app/*` from source, so they need no app build; `npm run typecheck --workspace @slopify/web` builds the app's declarations first (`packages/web/package.json:9`).
+
+### CI (`.github/workflows/ci.yml`)
+
+Triggers: pushes to any branch and pull requests; tags do not trigger CI (`.github/workflows/ci.yml:3-7`). All jobs use Node 26 (`.github/workflows/ci.yml:16`).
+
+| Job | Runs | When | Site |
+| --- | --- | --- | --- |
+| `check` | `npm ci`, `npm run lint` (Biome), `npm run typecheck`, `npm run build`, `npm audit --audit-level=high` | every push/PR | `.github/workflows/ci.yml:10-24` |
+| `test` | `npx vitest run --shard=N/4` on four parallel runners, `fail-fast: false` | every push/PR | `.github/workflows/ci.yml:28-41` |
+| `changes` | `node packages/app/scripts/ci-changes.mjs` with full history and tags | every push/PR | `.github/workflows/ci.yml:68-80` |
+| `windows` | build, `install-smoke.mjs`, one focused Vitest selection (FFmpeg, boot, CLI discovery/spawn, CLI paths/status, files/folders, assets, fonts, `e2e/skeleton`), then `video-render.test.ts -t "real subtitle export"` | `changes.windows == 'true'` | `.github/workflows/ci.yml:44-62` |
+| `container` (matrix `image`, `docker-install`) | `npm ci --ignore-scripts`, build, `docker build -t slopify:smoke .`; `image` runs `container-smoke.sh` then `host-cli-smoke.mjs`; `docker-install` runs `docker-install-smoke.mjs` | `changes.docker == 'true'` | `.github/workflows/ci.yml:85-107` |
+
+`ci-changes.mjs` sets `release` when `packages/app/package.json`'s version has no tag yet (`packages/app/scripts/ci-changes.mjs:21-22`). `windows` and `docker` are true only on such release pushes and only when files matching their path sets changed since the last reachable release tag (`packages/app/scripts/ci-changes.mjs:64-79`); a `package.json`/`package-lock.json` diff that only changes workspace versions does not count (`packages/app/scripts/ci-changes.mjs:33-57`). With no prior tag, everything runs (`packages/app/scripts/ci-changes.mjs:59-62`).
+
+Release (`.github/workflows/release.yml`), on `*.*.*` tags: `metadata` requires the tag to equal the app package version (`.github/workflows/release.yml:19-20`); `verify` requires a successful `ci.yml` run on `main` for the tagged SHA and runs no tests itself (`.github/workflows/release.yml:24-39`); then npm publish with provenance and a two-architecture GHCR image (`.github/workflows/release.yml:41-135`).
+
+No pre-commit hook tooling (husky, lefthook, simple-git-hooks) is configured. Dependabot updates npm (root manifest only) and GitHub Actions weekly (`.github/dependabot.yml:9-16`).
+
+### Smoke and maintenance scripts
+
+These are not Vitest suites; each is run as a plain `node`/`bash` command.
+
+| Script | What it proves | Run by |
+| --- | --- | --- |
+| `packages/app/scripts/install-smoke.mjs` | `npm pack` of `@gentbajko/slopify` (`:19`), global installs (with and without install scripts) and `npm exec` (`:63`) each start and answer `/api/health` within 210 s (`:108`, `:165`) | CI `windows` |
+| `packages/app/scripts/container-smoke.sh` | on throwaway names (`:2`): image FFmpeg comes from the image (`:46`), bare image stays healthy (`:56`), compose install on a free port (`:68`), same-settings rerun is a no-op (`:90`), changed settings recreate with snapshot (`:94`), only the newest recovery volume is kept (`:102`), `update` no-op and recreate-from-volume (`:108`) | CI `container/image` |
+| `packages/app/scripts/host-cli-smoke.mjs` | Linux only (`:13`); installs the host helper under a disposable prefix with fake `claude`/`codex`/`gemini` CLIs under a test `HOME` and checks the container reaches them; image from `SLOPIFY_SMOKE_IMAGE` (default `slopify:smoke`, `:18`); 15-minute limit (`:23`) | CI `container/image` |
+| `packages/app/scripts/docker-install-smoke.mjs` | adopts an older `docker run` installation with the packaged install command, rolls a failing image back, reuses the data volume by name (`:1-3`); seeds data by running `packages/app/test/docker-projects-fixture.test.ts` with `SLOPIFY_DOCKER_FIXTURE_OUT` (`:131-138`); `SLOPIFY_SMOKE_KEEP=1` retains resources after failure (`:249`). Alias `npm run smoke:docker-install --workspace @gentbajko/slopify` (`packages/app/package.json:29`) | CI `container/docker-install` |
+| `packages/app/scripts/validate-multilingual-alignment.mjs` | aligns one local audio file against its text and prints timing quality; downloads the alignment model on first run (`:2-12`) | manual only |
+| `packages/app/scripts/build-sample.mjs` | rebuilds bundled sample archives from source; needs `ffmpeg` and `magick` (`:5-16`) | manual only |
+| `packages/site/scripts/record-walkthrough.mjs` | boots the built app on a loopback port with a seeded data directory and records the site walkthrough video (`:2-12`) | manual only (`packages/site/package.json:9`) |
+
+`packages/app/test/docker-projects-fixture.test.ts:10` also runs inside the normal suite; without `SLOPIFY_DOCKER_FIXTURE_OUT` it seeds into a temporary directory.
 
 ## Doubles
 
-- Docker installation tests use real temporary filesystem trees/control records with an injected `Engine`, in-memory container inventory, call recording and named failure points. Snapshot/copy/restore are fixture filesystem operations; ownership probes, daemon commands and health are simulated. These tests establish orchestration/refusal behavior, not actual daemon ownership mapping (`packages/app/src/edge/docker-projects/install.fake.ts:9`, `packages/app/src/edge/docker-projects/install.fake.ts:47`).
-- Engine tests inject Docker command responses and inspect exact argv, signals and inventory decisions. Rootful/rootless selection is simulated; leftover-reader tests vary labels, image, running state and mounts without running Docker (`packages/app/src/edge/docker-projects/engine.test.ts:21`, `packages/app/src/edge/docker-projects/engine.test.ts:180`, `packages/app/src/edge/docker-projects/claims.test.ts:91`).
-- The real project-folder smoke seeds SQLite revisions, retained research/audio/partial records and failed/paused state with zero attempts. It uses a disposable real Docker installation, a deliberately failing derived image and a verified leftover copy reader; its saved text payloads establish byte/ID retention rather than media playback quality. Failure or the keep flag retains the fixture for inspection; ordinary success cleans its recorded resources (`packages/app/test/docker-projects-fixture.test.ts:9`, `packages/app/scripts/docker-projects-smoke.mjs:185`, `packages/app/scripts/docker-projects-smoke.mjs:263`).
-- Folder-route tests combine temporary SQLite/files with injected container-location configuration and a fake native opener. Mounted web tests inject typed HTTP replies under happy-dom; real browser layout and keyboard observations require separately identified browser evidence (`packages/app/src/edge/http/files.test.ts:158`, `packages/app/src/edge/http/revision-files.test.ts:153`, `packages/web/src/project/open-folder.test.tsx:10`).
+Provider ports are replaced by structural fakes that implement the real port interfaces; `vi.mock` module replacement appears in 17 files, limited to a few seams listed at the end.
 
-- Play draft fixtures use disposable on-disk SQLite, real migrations, a fixed clock and independent IDs; reopen tests close/reopen that database, and review catalogue fetch throws if used. Web creation-replay fixtures route injected fetch calls through real draft CRUD against temporary SQLite, while held responses exercise late acknowledgements. `packages/app/src/slices/play-drafts/draft.fake.ts:17` `packages/app/src/slices/play-drafts/draft.fake.ts:71` `packages/app/src/slices/play-drafts/draft.fake.ts:83` `packages/web/src/play/draft-sqlite-fixture.ts:19` `packages/web/src/play/draft-sqlite-fixture.ts:54`
-- Play real-HTTP tests boot the production application on an ephemeral loopback port in a temporary directory, upload supplied audio/images, restart the same data directory, cancel the accepted Start response body and replay its receipt. Assertions inspect saved bytes, project/batch/receipt counts and zero provider attempts; this is supplied-input admission evidence, not a real paid-provider journey. `packages/app/test/e2e/play-drafts.test.ts:34` `packages/app/test/e2e/play-drafts.test.ts:52` `packages/app/test/e2e/play-drafts.test.ts:92` `packages/app/test/e2e/play-drafts.test.ts:120`
-- Provider doubles implement the actual ports: `fakeLlm` yields scripted `LlmEvent` streams and records calls/messages; `fakeTts` returns scripted or real fixture bytes through `TtsAudio`; `fakeImage` returns fixture bytes and records `ImageRequest`s. Their options inject refusal, per-attempt failures, and clock-driven delays. `packages/app/src/adapters/fake/llm.ts:17` `packages/app/src/adapters/fake/llm.ts:46` `packages/app/src/adapters/fake/tts.ts:6` `packages/app/src/adapters/fake/tts.ts:25` `packages/app/src/adapters/fake/image.ts:6` `packages/app/src/adapters/fake/image.ts:24`
-- Revision/rebuild fixtures inject IDs, clocks, temporary SQLite/data directories, catalogue readers, readiness, and duration probes. Composed revision tests connect the real `wireRunner` to fake `Registry` ports and real FFmpeg; held promises make the ordering of edits, responses, and publication explicit. `packages/app/src/slices/revisions/revision.fake.ts:1` `packages/app/src/slices/rebuild/service.fake.ts:1` `packages/app/test/revision-rebuild.fake.ts:52` `packages/app/test/revision-rebuild.test.ts:13`
-- Queue tests hold callback promises and use abort controllers to prove the global five-request limit, lower provider limit, canceled waiting requests, and slot reuse. `packages/app/src/kernel/runner/queue.test.ts:5` `packages/app/src/kernel/runner/queue.test.ts:28` `packages/app/src/kernel/runner/queue.test.ts:45`
-- Catalogue tests use temporary YAML files and injected fetch responses to check last-valid retention, validation before replacement, and backups. Registry tests use fake ports for thinking compatibility and reject oversized physical TTS requests before submission. `packages/app/src/catalog/store.test.ts:19` `packages/app/src/catalog/store.test.ts:29` `packages/app/src/catalog/registry.test.ts:34` `packages/app/src/catalog/registry.test.ts:60`
-- The real-HTTP fixtures boot the app with an ephemeral loopback port and temporary data directory, stage files through HTTP, inspect revision responses and downloads, and restart the app. The original skeleton additionally follows SSE. Media fixtures use the bundled FFmpeg or generated PCM WAV bytes; their assertions check playable media and byte preservation rather than fake audio strings. `packages/app/test/e2e/editable-projects.test.ts:39` `packages/app/test/e2e/editable-projects.test.ts:50` `packages/app/test/e2e/skeleton.test.ts:42` `packages/app/src/slices/rebuild/runtime-export-native.test.ts:9` `packages/app/src/slices/rebuild/runtime-export-native.test.ts:26` `packages/app/src/slices/rebuild/runtime-export-native.test.ts:50`
-- Alignment worker tests create temporary child-process scripts that reply through the actual IPC boundary, hang, exit unsuccessfully, or emit omissions. These test process/protocol behavior without running a downloaded speech model. The application also exposes the `SubtitleAligner` port for controlled alignment output in media tests. `packages/app/src/adapters/alignment/runner.test.ts:12` `packages/app/src/adapters/alignment/runner.test.ts:21` `packages/app/src/adapters/alignment/runner.test.ts:45` `packages/app/src/kernel/ports/subtitles.ts:9`
-- Web fixtures render real components through Testing Library, React Query, `AppProvider`, and a memory router where needed. Their injected fetch handles a local route-answer table and their default `EventSourceLike` never opens a connection; individual tests supply deliberate live events. `packages/web/src/test-app.tsx:48` `packages/web/src/test-app.tsx:61` `packages/web/src/test-app.tsx:80` `packages/web/src/test-app.tsx:146` `packages/web/src/routes/project-revisions.test.tsx:1`
-- Collector tests implement `CollectorDb`/`CollectorStatement` over an in-memory `node:sqlite` database and invoke `worker.fetch` directly. Website tests pass structural fetch and UI doubles to the public site's functions. Neither fixture proves the deployed Cloudflare binding or actual browser layout. `packages/collector/src/index.test.ts:11` `packages/collector/src/index.test.ts:58` `packages/site/main.test.js:23` `packages/site/main.test.js:66`
+**Provider fakes** (`packages/app/src/adapters/fake/`):
+
+- `fakeLlm` (`packages/app/src/adapters/fake/llm.ts:51`) implements `LlmPort`: scripted `deltas` or a per-request `reply(req, attempt)`, optional `usage` (explicit `null` = provider that reports none), `gapMs` spent on an injected `clock` to drive idle timeouts, `failOnAttempt` keyed by 1-based attempt, `refuse`, `webSearchUnsupported` (`packages/app/src/adapters/fake/llm.ts:17-41`).
+- `fakeTts` (`packages/app/src/adapters/fake/tts.ts:25`) implements `TtsPort`: audio as text `chunks`, or real bytes via `bytesFor` for tests that hand output to FFmpeg; same `gapMs`/`clock`/`failOnAttempt`/`refuse` options (`packages/app/src/adapters/fake/tts.ts:6-18`).
+- `fakeImage` (`packages/app/src/adapters/fake/image.ts:35`) implements `ImagePort`: fixed `bytes`/`mime`, `takesMs` on the clock, `failOnAttempt`, `refuse`, and an optional `video` clip for animation with `failAnimateOnAttempt` (`packages/app/src/adapters/fake/image.ts:12-27`).
+
+**Captured provider responses:** `packages/app/src/adapters/image/fixtures/` (fal, Google, OpenAI image, Replicate: success, 401/422/429, NSFW, truncated), `packages/app/src/adapters/llm/fixtures/` (Claude Code and Codex `.jsonl` streams, OpenRouter SSE `.txt`), `packages/app/src/adapters/tts/fixtures/` (Cartesia, ElevenLabs, OpenAI error bodies). Real adapters parse these in their colocated tests. `packages/app/src/slices/narration/fixtures/cleopatra-glossary.md` feeds `pronunciation.test.ts`.
+
+**Fake CLIs and processes:** `packages/app/test/fixtures/host-cli.cjs` is a scripted host CLI read by `packages/app/test/host-cli-e2e.test.ts:49`. Claude Code adapter tests write throwaway executable scripts that answer the stream-JSON control protocol (`packages/app/src/adapters/llm/claude-code-models.test.ts:25-40`).
+
+**Clock and runner seams:**
+
+- `fixedClock`, `manualClock` (`packages/app/src/kernel/clock.fake.ts:7`, `:28`).
+- `standaloneOver` builds a slice's deps around the real standalone call over a fake provider, because slices may not hold a `Registry` (`packages/app/src/kernel/runner/standalone.fake.ts:9-11`).
+- `recordingCounter` replaces the telemetry recorder and keeps counters without writing rows (`packages/app/src/slices/telemetry/record.fake.ts:3-18`).
+
+**Database and storage fixtures** (real SQLite via `openDb` + `migrate`, temporary data directories, fixed clock, sequential IDs):
+
+| Fixture | Site | Builds |
+| --- | --- | --- |
+| `harness`, `deferred` | `packages/app/src/slices/control/control.fake.ts:62`, `:159` | project with chosen stage states on disk SQLite |
+| `revisionFixture(upgradeFrom10)` | `packages/app/src/slices/revisions/revision.fake.ts:33` | `RevisionDeps` over in-memory SQLite; optional replay of migrations ≤ 0010 to test upgrades |
+| `mutationFixture`, `imageFixture`, `publicationFor`, `preparedOutput` | `packages/app/src/slices/revisions/mutation.fake.ts:12-81` | Save/publication inputs |
+| `retainedOutput`, `retainedPiece` | `packages/app/src/slices/revisions/downloads.fake.ts:11`, `:47` | retained historical outputs |
+| `createRebuildDeps`, `serviceFixture`, `paidServiceFixture` | `packages/app/src/slices/rebuild/service.fake.ts:9-72` | rebuild service deps |
+| `recipe-fixture.ts` (`config`, `content`, `catalogue`, `emptyView`, `readyView`, `workFor`) | `packages/app/src/slices/rebuild/recipe-fixture.ts:5-137` | pure recipe inputs |
+| `exportFixture`, `narrationFixture`, `workFixture`, `admitPendingRevision` | `packages/app/src/slices/rebuild/runtime-export.fake.ts:22`, `runtime-narration.fake.ts:67`, `work.fake.ts:5`, `legacy-admission.fake.ts:9` | runtime stage inputs |
+| `exportFixture`, `inspectMedia`, `wavParts` | `packages/app/src/slices/video/export.fake.ts:19-149` | real bundled FFmpeg (`:17`) and media inspection |
+| `draftFixture`, `reviewFixture`, `startFixture` | `packages/app/src/slices/play-drafts/draft.fake.ts:20-141` | Play drafts through review and Start |
+| `composedFixture`, `deferred`, `tone`, `save`, `start` | `packages/app/test/revision-rebuild.fake.ts:22-113` | real `wireRunner` over fake `Registry` ports and real FFmpeg; held promises order edits, responses and publication |
+| `preparationFixture` | `packages/app/test/revision-preparation.fake.ts:6` | narration preparation composition |
+| `legacyAttempts`, `legacyStage` | `packages/app/test/legacy-runner.ts:6-16` | pre-revision storage for old slice composition tests |
+| `seedLegacy`, `verifyPcmWav` | `packages/app/test/e2e/editable-projects.fixture.ts:33`, `:174` | legacy project on disk for real-HTTP tests |
+
+**Web** (`packages/web/src/test-app.tsx`): component tests never reach a server (`packages/web/src/test-app.tsx:19-20`).
+
+- `fakeFetch(routes)` answers a route table with `jsonAnswer`, `problemAnswer`, `emptyAnswer` (`packages/web/src/test-app.tsx:27-49`); `silentEvents` is an `EventSourceLike` that never opens (`:62`); `testDeps` combines them into `AppDeps` at origin `http://slopify.test` (`:24`, `:69`).
+- `renderApp` mounts under `QueryClientProvider` (retries off) and `AppProvider` (`packages/web/src/test-app.tsx:174`, `:188-194`); `renderRouted` adds a memory-history TanStack router whose routes mirror `router.tsx` so `Link`s resolve (`:80`, `:180`).
+- Navigation helpers: `openEditSection`, `openProjectSection`, `openProjectTab`, `openProjectEditor`, `downloadItem` (`packages/web/src/test-app.tsx:201-229`).
+- Feature fixtures beside their tests: `playRoutes`, `draftView` (`packages/web/src/play/play-test-fixture.tsx:93`, `:292`); `sqliteSessionFixture` routes fetch through real draft CRUD on temporary SQLite (`packages/web/src/play/draft-sqlite-fixture.ts:19`); `mountSupplied` (`packages/web/src/play/draft-upload-test-fixture.ts:8`); `reviewFixture` (`packages/web/src/play/review-test-fixture.ts:7`); `reviewHarness` (`packages/web/src/play/review-test-harness.tsx:27`); project-page `stage`/`output`/`body` rows (`packages/web/src/routes/project-fixtures.ts:10-51`); `revisionRouteFixture` (`packages/web/src/routes/project-revision.fake.ts:8`); `revisionView` (`packages/web/src/project/revision-fixture.ts:2`); editor fixtures (`packages/web/src/project/revision-editor-test-fixtures.ts:5-80`); tutorial `mount`/`start`/`skipTo`/`fill` (`packages/web/src/tutorial/test-fixture.tsx:79-311`).
+
+**Other packages:**
+
+- Collector: `d1()` implements the Worker's `CollectorDb` port over in-memory `node:sqlite` with `schema.sql`, and tests call `worker.fetch` directly (`packages/collector/src/index.test.ts:8-13`).
+- Extension: `fill.test.ts` loads a captured YouTube Studio upload page (`packages/extension/test/fixtures/studio-upload.html`) under happy-dom (`packages/extension/test/fill.test.ts:15`).
+- Site: tests read `packages/site` HTML/CSS/JS and walkthrough steps from disk (`packages/site/tokens.test.js:1`, `packages/site/walkthrough.test.js:7`).
+
+**`vi.mock` seams:** the alignment adapter in composed video tests (`packages/app/test/revision-shorts.test.ts:31`, `revision-video-edit.test.ts:32`, `revision-youtube.test.ts:10`); FFmpeg and font discovery in rebuild runtime tests (`packages/app/src/slices/rebuild/runtime-export.test.ts:12-20`, `packages/app/src/slices/fonts/catalog.test.ts:13`); batch dispatch (`packages/app/src/slices/play-drafts/start-run-count.test.ts:9`); `node:fs` (`packages/app/src/slices/revisions/download-permissions.test.ts:8`); `StylePreview` and tutorial context in web route tests (`packages/web/src/click-budget.test.tsx:23-24`, `packages/web/src/routes/play.test.tsx:22-24`).
 
 ## Coverage shape
 
-### Docker project-folder verification
+File counts by directory (tracked `*.test.*` files, not instrumented coverage).
 
-- Tree/state coverage includes 1,200-file complete streaming digests, Unicode names, empty directories, changed content, symlinks, Linux FIFOs/sockets, broad/private paths, replaced directory identities, existing-owner access, default/custom-name paths, populated-destination refusal and private bounded control records (`packages/app/src/edge/docker-projects/tree.test.ts:16`, `packages/app/src/edge/docker-projects/state.test.ts:17`).
-- Installation coverage includes complete project migration, private-state separation, remembered-path reuse, legitimate new outputs, container recreation, copy/snapshot/ownership/start/health failures, interrupted publication/recovery, stale copied baselines, retained partial staging, original restart-policy restoration and committed-record validation before restart. Later regressions preserve candidate identity and original unreceipted-bind authority, avoid repeated private restore after restart, permit a new empty recovery destination and accept configured volume names of 82/83/128 characters (`packages/app/src/edge/docker-projects/install.test.ts:38`, `packages/app/src/edge/docker-projects/install.test.ts:142`, `packages/app/src/edge/docker-projects/install.test.ts:379`, `packages/app/src/edge/docker-projects/install.test.ts:406`, `packages/app/src/edge/docker-projects/install.test.ts:487`, `packages/app/src/edge/docker-projects/install.test.ts:505`, `packages/app/src/edge/docker-projects/install.test.ts:582`).
-- Claims/engine coverage distinguishes stopped volume claimants from active writers, requires full permitted IDs, validates leftover readers before removal, refuses mismatched journals and foreign mount shapes, and tests Linux mapping selection, remote/userns/Desktop refusal, default-latest refresh versus cached custom images, bounded probe retry and cancellation (`packages/app/src/edge/docker-projects/claims.test.ts:91`, `packages/app/src/edge/docker-projects/claims.test.ts:115`, `packages/app/src/edge/docker-projects/engine.test.ts:116`, `packages/app/src/edge/docker-projects/engine.test.ts:180`, `packages/app/src/edge/docker-projects/engine.test.ts:258`).
-- Activation/folder coverage includes exact committed-token matching, provisional mutation refusal with health available, current output and virtual-image-archive locations, historical/partial records with unchanged downloads, cross-origin/foreign-record refusal, missing/symlink/outside paths, no-store replies and native opener preservation. Mounted UI tests cover selectable machine-local paths, historical endpoints and downloads surviving folder errors; site tests preserve both Docker commands and managed/direct storage distinctions (`packages/app/src/edge/docker-projects/activation.test.ts:8`, `packages/app/src/edge/http/files.test.ts:158`, `packages/app/src/edge/http/folder-location.test.ts:8`, `packages/app/src/edge/http/revision-files.test.ts:153`, `packages/web/src/project/open-folder.test.tsx:10`, `packages/site/install.test.js:6`).
-- Container smoke covers offline bundled FFmpeg, API-only readiness, repeat reuse, changed-configuration replacement and private-data persistence. Project-folder smoke adds real rollback, copy-reader reconciliation, complete tree equality, mapped host ownership, current/history downloads and folder replies, unchanged asset IDs, repeated launch, recreation and zero attempts with failed/paused work retained (`packages/app/scripts/container-smoke.sh:68`, `packages/app/scripts/container-smoke.sh:84`, `packages/app/scripts/docker-projects-smoke.mjs:70`, `packages/app/scripts/docker-projects-smoke.mjs:185`, `packages/app/scripts/docker-projects-smoke.mjs:224`).
+| Area | Test files | Heaviest directories |
+| --- | ---: | --- |
+| `packages/app/src/slices` | 322 | `rebuild` 90, `revisions` 34, `storage` 17, `narration` 15, `play-drafts` 15, `video` 15, `settings` 11, `voices` 10 |
+| `packages/app/src/edge` | 73 | `http` 56, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3 |
+| `packages/app/src/adapters` | 50 | `llm` 15, `alignment` 13, `image` 9, `tts` 8, `host-cli` 2, root 3 |
+| `packages/app/src/kernel` | 32 | `runner` 14, `ports` 7, root 7, `db` 3, `config` 1 |
+| `packages/app/src` other | 30 | `host-cli` 9, `updater` 9, root 7, `catalog` 5 |
+| `packages/app/test` | 57 | composed 51, `e2e` 6 |
+| `packages/web/src` | 197 | `project` 52, `play` 46, `routes` 28, `components` 10 (+ `kit` 4), `tutorial` 7, root 7, `help/walk` 5, `schedules` 5 |
+| `packages/site`, `packages/collector`, `packages/extension` | 5 / 1 / 1 | — |
 
-### Glossary pronunciation verification
+Remaining app slices each carry 1–8 colocated test files: `admission`, `article`, `backups`, `batch`, `cancel`, `channels`, `checkpoints`, `control`, `document`, `episodes`, `estimate`, `eta`, `fixes`, `fonts`, `images`, `library`, `loudness`, `model-upkeep`, `notifications`, `onboarding`, `patch-notes`, `project-templates`, `reruns`, `research`, `reviews`, `run-cost`, `schedules`, `shorts`, `studio`, `style-preview`, `subtitles`, `telemetry`, `thumbnail`, `trash`, `tutorials`, `youtube`. Remaining web directories with tests: `autostart`, `calendar`, `channels`, `fixes`, `help`, `language`, `lib`, `library`, `notifications`, `patch-notes`, `studio`, `styles`, `subtitles`, `trash`, `tutorials`, `updates`, `video`, `voices`, `whats-new`, `youtube`.
 
-Scoped source `6eeac3f`, 2026-09-25; the historical broad inventory and stamps are not advanced. Existing app/web Vitest inclusion covers all these colocated and composed tests (`packages/app/vitest.config.ts:6`, `packages/web/vitest.config.ts:10`).
+Directories with no test file of their own:
 
-- Parsing/matching: lists, tables, English IPA, malformed/conflicting aliases, Unicode identities, longest whole terms, exact offsets, quotes, possessives and joining hyphens (`packages/app/src/slices/narration/pronunciation.test.ts:5`).
-- Logical and physical planning: complete-term boundary merging, repeated occurrences, saved-group retention, exact UTF-16 request limits, intact IPA/code points, persistent cues, no repeated sounds and oversized-token refusal (`packages/app/src/slices/narration/pronunciation-chunks.test.ts:27`, `packages/app/src/slices/narration/steering-pronunciation.test.ts:17`).
-- Save/Restore: text/upload overrides survive removed/disabled/invalid glossary data; source/chunking changes invalidate obsolete bindings; forged client metadata is ignored; Restore leaves work held with zero attempts and exact duplicate replay (`packages/app/src/slices/revisions/mutations-pronunciation-groups.test.ts:158`, `packages/app/src/slices/revisions/mutations-narration-source-trust.test.ts:53`).
-- Runtime: off/missing identity, used/unused mapping invalidation, provided-audio bypass, cue reuse, unchanged historical bytes, clean transcripts and exact scripts, caption spelling, pause/cancel and compatible/incompatible late results (`packages/app/src/slices/rebuild/runtime-pronunciation-reuse.test.ts:19`, `packages/app/src/slices/rebuild/runtime-pronunciation-metadata.test.ts:70`, `packages/app/test/revision-pronunciation-authority.test.ts:11`).
-- UI/persistence: labelled keyboard control, new-on/old-missing-off defaults, independent preparation, dormant provider/source choices, draft save/reopen, template/portable/schedule round-trips and six revision-qualified text links (`packages/web/src/play/pronunciation-glossary.test.tsx:135`, `packages/web/src/play/draft-compat.test.tsx:121`, `packages/app/test/preparation-saved-workflows.test.ts:17`, `packages/web/src/project/narration-downloads.test.tsx:47`).
+- `packages/app/src/slices/uploads` (one file, `repo.ts`).
+- `packages/app/src/sample-build` (12 files; maintainer tooling run by `build-sample.mjs`).
+- `packages/app/src/assets`, `packages/web/src/assets` (static assets).
+- `packages/web/src/home` (8 files); its screen is rendered by `packages/web/src/routes/home.test.tsx`.
+- `packages/web/src/onboarding`, `packages/web/src/templates` (3 files each); exercised through route tests such as `packages/web/src/routes/welcome.test.tsx`.
+- `packages/extension/src` (7 files); covered by `packages/extension/test/fill.test.ts`.
 
-Fixtures use temporary SQLite/files, scripted ports, locally generated WAV data, deferred responses and inert browser fetch/event doubles. They do not establish audible live-provider pronunciation or real-browser layout (`packages/app/src/slices/rebuild/runtime-narration.fake.ts:51`, `packages/web/src/test-app.tsx:48`).
+Cross-cutting web suites: `packages/web/src/click-budget.test.tsx:1-6` fails when one of five common tasks exceeds its click budget; `packages/web/src/styles/grid.test.ts` and `tokens.test.ts` enforce the spacing scale and design tokens; `packages/web/src/components/kit/*.test.tsx` cover the shared kit.
 
-Narration tests added 2026-09-24 cover strict cues, exact-source UTF-16 splitting, Off identities, invalidation/reuse, late edits, pause/cancel, durable database reopen, uncertain submissions, partial TTS failure and pending-file cleanup. Composed acceptance covers fresh/0010-upgraded databases, generated entries and six downloads (`packages/app/src/slices/narration/{preparation,steering}.test.ts`, `packages/app/src/slices/rebuild/runtime-{preparation,narration-text}.test.ts`, `packages/app/test/revision-preparation*.test.ts`). Frozen prompts survive portable/template/schedule paths (`packages/app/test/preparation-saved-workflows.test.ts:1`). Mounted components verify slots, refusal, preserved choices and historical URLs; isolated desktop/390px browser checks verify controls and Codex images without paid generation.
+Boundaries of the suite, as facts:
 
-Windows CI includes the pure and composed narration suites. Fake CLI tests validate Codex private-output safety; site tests cover both Docker copy commands (`.github/workflows/ci.yml:42`, `packages/app/src/adapters/image/codex.test.ts:1`, `packages/site/install.test.js:1`). This feature-scoped update leaves the historical inventory checkpoint unchanged.
-
-The inventory is broadest by direct test-file count in rebuild (44), Play UI (32), project UI (32), HTTP routes (30), retained revisions (28), and composed app tests outside e2e (26). Runner, adapters, storage, admission, settings, updater, templates, schedules and telemetry also have colocated suites. These counts describe test distribution, not measured coverage percentages; no coverage provider/threshold is configured in the root or package Vitest configs. `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3`
-
-- Play backend suites cover incomplete draft persistence, version conflicts and exact create/save replay; shared attachment ownership, upload allocation rollback and restart recovery; current template/catalogue/font review identity; readiness and exact Start replay; all-or-nothing batch creation on copy failure; and committed receipts surviving telemetry/cleanup/dispatch failures. `packages/app/src/slices/play-drafts/service.test.ts:16` `packages/app/src/slices/play-drafts/service.test.ts:49` `packages/app/src/slices/play-drafts/service.test.ts:151` `packages/app/src/slices/play-drafts/uploads.test.ts:185` `packages/app/src/slices/play-drafts/review-readiness.test.ts:35` `packages/app/src/slices/play-drafts/start.test.ts:21` `packages/app/src/slices/play-drafts/start.test.ts:148` `packages/app/src/slices/play-drafts/start.test.ts:185`
-- Play mounted suites exercise debounce/acknowledgement races, lost-response retry identity, cross-draft late restores, conflict recovery, removal/replacement/upload races, persistent variants/raw numeric inputs, four-section navigation and exact control focus. Tutorial suites cover durable step IDs, queued transition replay, conflicts and revealing hidden Play controls before measurement; their navigation test asserts no Start request. These are happy-dom interaction assertions, not browser layout measurements. `packages/web/src/play/draft-session.test.tsx:28` `packages/web/src/play/draft-session.test.tsx:86` `packages/web/src/play/draft-recovery.test.tsx:24` `packages/web/src/play/draft-upload-races.test.tsx:41` `packages/web/src/play/review.test.tsx:85` `packages/web/src/play/sections.test.tsx:7` `packages/web/src/play/field-targets.test.tsx:42` `packages/web/src/tutorial/session.test.tsx:115` `packages/web/src/tutorial/session.test.tsx:159` `packages/web/src/tutorial/play-navigation.test.tsx:19` `packages/web/src/tutorial/play-navigation.test.tsx:45`
-- Revision suites cover legacy adoption, Save/Restore idempotency/conflicts, immutable manifests/assets, staged replacements, typed validation, partial/late publication, bundle recovery, historical downloads, and deletion retention. Source-return regressions exercise provided → generated → provided transitions through actual Save and publication, including missing originals and unchanged dormant references. `packages/app/src/slices/revisions/adopt.test.ts:1` `packages/app/src/slices/revisions/mutations.test.ts:1` `packages/app/src/slices/revisions/mutations-projection.test.ts:7` `packages/app/src/slices/revisions/publish.test.ts:1` `packages/app/src/slices/revisions/mutations-source-return.test.ts:24` `packages/app/src/slices/storage/delete-history.test.ts:1`
-- Rebuild suites exercise dependencies, physical-request reuse, bundle completeness, exact snapshot/readiness authority, provider-family selection, provided-content consent, and interrupted execution. Composed tests include edits during delayed responses, changed research outlines, partial/cached article results, accepted async-job recovery, and database reopen. `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts:1` `packages/app/src/slices/rebuild/runtime-dependency-recovery.test.ts:1` `packages/app/src/slices/rebuild/service-thumbnail-readiness.test.ts:1` `packages/app/src/slices/rebuild/service-request-limits.test.ts:17` `packages/app/test/revision-rebuild.test.ts:13` `packages/app/test/revision-research-rebuild.test.ts:1` `packages/app/test/revision-article-recovery.test.ts:1` `packages/app/test/revision-restart.test.ts:1`
-- Project UI suites exercise Save/rebuild separation, preserved edits after refusals, upload races, stable image previews and ordering, narration overrides, captions before final export, stale manual cue correction, and History's actual text payload variants. They render the relevant editor/workspace components; `happy-dom` does not establish visual fidelity in a real browser. `packages/web/src/project/revision-workspace.test.tsx:1` `packages/web/src/project/image-preview.test.tsx:83` `packages/web/src/project/revision-caption-recovery.test.tsx:97` `packages/web/src/project/revision-history.test.tsx:1` `packages/web/src/routes/project-revisions.test.tsx:1` `packages/web/vitest.config.ts:9`
-- Batch/request queues and estimates have dedicated tests for durable order and transitions, concurrency/cancellation, known and unknown costs, and request-based pricing. Character chunking tests cover boundaries, internal spaces, Unicode, oversized sentences, empty input, persisted configuration, and UI input; Windows includes the sentence splitter. `packages/app/src/slices/batch/index.test.ts:1` `packages/app/src/kernel/runner/queue.test.ts:4` `packages/app/src/slices/estimate/index.test.ts:1` `packages/app/src/slices/estimate/requests.test.ts:1` `packages/app/src/slices/narration/chunk.test.ts:147` `packages/web/src/play/chunking.test.tsx:1` `.github/workflows/ci.yml:39`
-- Scheduled-job suites cover timezone occurrence arithmetic, strict input rules, versioned pause/resume/update, transactional one-off claims, duplicate-tick protection, HTTP problem contracts and the Schedules form/action flow. `packages/app/src/slices/schedules/calendar.test.ts` `packages/app/src/slices/schedules/service.test.ts` `packages/app/src/edge/http/schedules.test.ts` `packages/web/src/routes/schedules.test.tsx`
-- Portable-storage tests round-trip settings, libraries, voices, templates and staged bytes, and HTTP tests cover ZIP size/type/refusal contracts plus secret-free diagnostics. The package smoke script packs the current workspace, installs it under a temporary global prefix, and launches both the global bin and npm-exec path against `/api/health`; the direct launch has a 30-second health deadline and the cold npm-exec install has 120 seconds. Windows CI runs it after the build. `packages/app/src/slices/storage/portable.test.ts:1` `packages/app/src/edge/http/storage.test.ts:1` `packages/app/src/edge/http/diagnostics.test.ts:1` `packages/app/scripts/install-smoke.mjs:14` `.github/workflows/ci.yml:33`
-- Subtitle/font suites include cue/timing/style reuse, parsing/rejection of font uploads, local font selection, HTTP contracts, and real FFmpeg rendering. Native export tests additionally check short-clip duration inspection without byte modification and relative render records. `packages/app/src/slices/subtitles/prepare.test.ts:1` `packages/app/src/slices/fonts/sfnt.test.ts:1` `packages/app/src/slices/fonts/catalog.test.ts:23` `packages/app/src/edge/http/fonts.test.ts:1` `packages/app/test/video-render.test.ts:1` `packages/app/src/slices/rebuild/runtime-export-native.test.ts:26`
-- `slices/images` has no colocated `.test.ts` file; its behavior is exercised through `packages/app/test/images-run.test.ts` and revision tests. The historical directory inventory retains its original counts; Docker installation copy is additionally covered by `packages/site/install.test.js:6`. Runtime hosting, real third-party network behavior, and real-browser rendering are outside those structural doubles. `packages/app/test/images-run.test.ts:1` `packages/app/test/revision-rebuild.test.ts:13` `packages/site/main.test.js:1` `packages/collector/src/index.test.ts:8` `packages/web/src/test-app.tsx:18`
-- No separately configured load, chaos, security, or browser accessibility audit project exists. This does not mean security/error/accessibility behaviors lack individual assertions; the configured projects are the four Vitest projects listed above. `vitest.config.ts:6` `packages/app/vitest.config.ts:4` `packages/web/vitest.config.ts:7` `packages/collector/vitest.config.ts:4` `packages/site/vitest.config.ts:4`
-
-## Recorded verification
-
-- Docker project folder, verification on 2026-09-25: at `2d451fd`, the full suite passed **3,740 tests with one existing skip in 464 files**, 37.34 seconds. A rebuilt real rootful Docker rehearsal under host UID 1000 passed migration, rollback, leftover-reader reconciliation, repeat launch and recreation with zero provider attempts; its resources were cleaned. A retained browser fixture was checked at 390px and 1440px for current/history path display and keyboard selection without overflow. Subsequent `5dadabe` verification passed **122 focused tests**, full-workspace lint and typechecking; `a472d51` passed **67 install/state/claims tests**. No real-rootless verification or production update is claimed. Test scope is defined by `packages/app/scripts/docker-projects-smoke.mjs:70`, `packages/app/scripts/docker-projects-smoke.mjs:185`, `packages/app/src/edge/docker-projects/install.test.ts:505`, `packages/app/src/edge/docker-projects/install.test.ts:582`, and `packages/web/src/project/open-folder.tsx:67`. Seven full-diff review rounds repaired sixteen confirmed findings; the last two rounds were dry.
-
-- Glossary pronunciation at `6eeac3f` (2026-09-25): full suite **3,636 passed, one existing skip, 456 files**, 36.69 seconds. Six review rounds repaired twelve confirmed issues; two final independent full-diff rounds were dry. Final source app typecheck, scoped Biome and diff check passed; preceding full workspace typecheck/lint/build passed. Isolated fake providers/sockets only; no production generation, real pronunciation audition or Docker update.
-
-- Video recovery at `4a83abd9a070` (2026-09-25): all **318 tests in 57 rebuild/alignment files** passed, plus workspace typecheck, scoped Biome and release build. New local-export regressions first reproduced stale-preview for plain/prepared narration, then proved persisted TTS metadata, runtime readiness/export snapshot, materialization, exact replay, retained asset IDs and no new provider readiness/calls. New download tests first failed, then covered transient fetch/body/503 recovery, three-attempt exhaustion, canceled backoff and permanent HTTP/checksum/size failure. Two independent review rounds found no actionable issues. These isolated fake-provider/network checks are not a production render, process-restart rehearsal, real model download or native Windows rerun (`packages/app/src/slices/rebuild/service-reuse.test.ts:69`, `packages/app/src/adapters/alignment/cache-retry.test.ts:25`).
-
-- Historical 0.8.1/open-folder checkpoint on 2026-09-10: 1,909 tests passed with one platform skip; lint, type checking and build passed. The preceding 0.8.1 entry records its audit and browser checks at 1440/390/320 pixels. These are dated release records, not a current-source audit/browser rerun. `docs/capstone/changelog.d/2026-09-10-release-081-open-folder.md:9` `docs/capstone/changelog.d/2026-09-10-release-081.md:7`
-- Linux at `29b88494eb404ea36f797929599db6a6e4ac8603`: the latest full unchanged-source rerun passed **2,586 tests**, with **one existing skip**, in **320 files**. The initial full run failed the legacy-plan WAV reuse case by trying to launch its deliberately invalid FFmpeg sentinel. An isolated native-enabled rerun passed all four file cases, then the full rerun passed. The initial failure's cause was not established; a sandbox-only attempt failed with FFmpeg permission errors and is not a product regression result. Execution logs: `/tmp/slopify-r7-full-tests.log:13`, `/tmp/slopify-r7-legacy-wav-native-recheck.log:5`, `/tmp/slopify-r7-full-tests-recheck.log:9`; relevant test: `packages/app/src/slices/video/subtitle-only.test.ts:1`.
-- Native Windows at prior `239418c71e614a63aa9497121d2e9de7ccc7138b`: build passed; media selection passed **98 tests in 19 files** and revision selection passed **470 tests with one skip in 82 files**, totaling **568 passes and one skip**. This verifies that earlier backend/media snapshot; only the web image-preview change followed, and no exact-`29b8849` Windows run is claimed. Execution log: `/tmp/slopify-r6-native.log:101` `/tmp/slopify-r6-native.log:146`.
-
-The fixture suites test bounded local behaviors with injected providers and isolated data. Their passes do not establish every provider response, disk-failure ordering, deployed hosting behavior, or real-browser interaction; evidence for those checks must identify its own environment and source snapshot. `packages/app/test/revision-rebuild.fake.ts:52` `packages/app/test/e2e/editable-projects.test.ts:39` `packages/web/src/test-app.tsx:18` `packages/collector/src/index.test.ts:8`
-
-Durable completion and verification record: [editable-project implementation](changelog.d/2026-09-12-implement-editable-projects.md). Temporary execution logs supplement that record while available.
+- All provider calls are faked or replayed from fixtures; no test calls a paid provider.
+- Media tests use the bundled FFmpeg and real bytes (`packages/app/src/slices/video/export.fake.ts:17`, `packages/app/src/slices/video/figure-card.test.ts:17`); speech-alignment model inference is replaced by the mocked adapter in composed tests and by scripted child processes written by `packages/app/src/adapters/alignment/runner.test.ts:17`.
+- Web and extension tests run under happy-dom; no real-browser, visual or layout test runner is configured.
+- Docker behavior is exercised only by the CI smoke scripts; Vitest Docker-install tests inject a fake `Engine` (`packages/app/src/edge/docker-install/apply.test.ts:35`).
+- No load, fuzz or mutation testing is configured.

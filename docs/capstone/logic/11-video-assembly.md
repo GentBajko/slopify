@@ -14,79 +14,124 @@ depends_on:
 - 05-provided-outputs
 - 08-narration
 - 09-image-generation
-generated_date: '2026-09-12'
-generated_at_commit: 29b88494eb40
+- 17-subtitles
+- 29-video-editing
+- 35-audio-levelling-and-ambient
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: e8c12d7a3b3f
+paths_covered:
+  - ":(top)packages/app/src/slices/video/plan.ts"
+  - ":(top)packages/app/src/slices/video/motion.ts"
+  - ":(top)packages/app/src/slices/video/edit-list.ts"
+  - ":(top)packages/app/src/slices/video/slideshow.ts"
+  - ":(top)packages/app/src/slices/video/ffmpeg.ts"
+  - ":(top)packages/app/src/slices/video/audio-export-args.ts"
+  - ":(top)packages/app/src/slices/video/figure-card.ts"
+  - ":(top)packages/app/src/slices/video/figure-spans.ts"
+  - ":(top)packages/app/src/slices/video/run.ts"
+  - ":(top)packages/app/src/slices/loudness/loudnorm.ts"
+  - ":(top)packages/app/src/slices/loudness/model.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-export.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-export-inputs.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-figure-card.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-visual.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-loudness.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-build.ts"
+  - ":(top)packages/app/src/slices/settings/playback.ts"
+  - ":(top)packages/app/src/slices/admission/rules.ts"
+  - ":(top)packages/web/src/project/body-video.tsx"
 ---
 
 # 11 Video assembly
 
-The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off permits a silent MP4; Video Off with active Audio exports WAV; both Off skip the media stage.
+The final media stage produces an MP4 slideshow (`export:video`) or a combined PCM WAV (`export:wav`), and when Level the volume is on it masters the finished file to a loudness target. Audio Off permits a silent MP4; Video Off with active Audio exports WAV; both Off skip the media stage. Paths below are relative to `packages/app/src/` unless they start with `packages/`. What the edit list's cuts, transitions, Look, chapter cards and clips are belongs to scenario 29; narration levelling, pauses and the ambient bed belong to 35-audio-levelling-and-ambient.md; the whole-narration 9:16 render of a short-mode project belongs to scenario 28.
 
 ## Trigger & preconditions
 
-- Trigger: explicit admission starts revision export work after its complete recipe dependencies are ready. MP4 depends on selected image/audio inputs and, for burn-in, caption files; thumbnail work is independent. WAV depends on selected narration. Running or incomplete dependency bundles do not authorize early export (`slices/rebuild/{recipe-build,recipe-visual,recipe-exports,runtime-store}.ts`).
-- Inputs on the project: body audio and its duration; intro and outro audio with durations when picked (scenario 08); the silence-gap setting, default 3 s (scenario 02); the project's seconds per image (whole seconds 1–600, default 15), zoom (0–50% in steps of 0.5, default 22.5), motion (Zoom in and out, Pan across, Mix of both or Still; default Zoom in and out, which is also what a project saved before the setting reads as) and silence at start and end (0–30 s in steps of 0.5, default 2); the current image set in slideshow order (scenarios 05, 09); format.
-- Actor: the user saves edits separately from explicit rebuild. Rebuild review identifies retained, replaced and local work; Save never begins rendering (`slices/revisions/mutations.ts`, `slices/rebuild/service.ts`).
+- Trigger: explicit admission starts revision export work after its recipe dependencies are ready. `export:video` depends on the image recipes, the narration joins (`audio:provided` or `audio:body:concat`, plus `audio:intro`/`audio:outro` for generated narration with entries), the `level:<segment>` joins while levelling is on, `subtitles:files` for burn-in, `subtitles:timing` for a short-mode project and whatever the edit settings add (`slices/rebuild/recipe-visual.ts:127-203`, `slices/rebuild/recipe-build.ts:66-78`). `export:wav` depends on the narration and, with levelling on, the levelled joins (`slices/rebuild/recipe-exports.ts:72-91`). An unresolved recipe (no image keys, or an uploaded ambient bed not yet in the content) is not runnable (`slices/rebuild/recipe-visual.ts:197-201`).
+- The piece runner skips a piece already `done`, and returns `held` whenever `maySubmit` is false (`slices/rebuild/runtime-export.ts:41-47`, `:150`). The recipe the piece was admitted with must still be in the saved plan with the same fingerprint, not deferred or unresolved (`exportSnapshot`, `slices/rebuild/runtime-export-inputs.ts:30-52`).
+- Project inputs and bounds (`slices/admission/rules.ts:38-51`, checked only where used, `:184-203`):
+
+| Setting | Range | Default |
+|---|---|---|
+| Silence gap between entries and body | 0–30 s | Settings → General value, shipped 3 s (`slices/settings/model.ts:216-217`, `slices/settings/playback.ts:28`) |
+| Edge silence at start and end | 0–30 s, 0.5 s steps (checked unless Audio Off) | 2 s |
+| Seconds per image | whole 1–600 (checked when Video Generate) | 15 |
+| Zoom | 0–50 %, 0.5 steps (checked when Video Generate) | 22.5 |
+| Motion | Zoom in and out, Pan across, Mix of both, Still (`motionStyleLabels`, `:54-59`) | Zoom in and out |
+| Level the volume (model: 35-audio-levelling-and-ambient.md) | video −24…−10 LUFS, audio files −28…−14 LUFS, 0.5 dB steps (`slices/loudness/model.ts:57-61`, `:123-131`) | on, −14 / −18 LUFS (`slices/loudness/model.ts:32-38`) |
+
+- Settings → General (`GET`/`PUT /api/settings`, `packages/app/src/edge/http/settings.ts:78-93`) stores the default silence gap, appearance and the Level-the-volume default as separate key/value rows; an unreadable row falls back to the default and logs `settings.invalid` (`slices/settings/playback.ts:36-90`). A `PUT` without `loudness` keeps the saved value (`packages/app/src/edge/http/settings.ts:60-67`, `:81-83`). A project keeps the values it was started with.
+- The user saves edits separately from rebuild; Save never begins rendering (`slices/revisions/mutations.ts`, `slices/rebuild/service.ts`).
 
 ## Steps
 
-1. When audio is enabled, build the current revision audio timeline: edge silence, enabled intro audio, gap, body audio, gap, enabled outro audio, edge silence; a gap is inserted only where the neighbouring segment exists; gaps and edges are plain silence of their configured lengths, and an edge of 0 adds nothing. Historical removed entry audio remains downloadable but is excluded; supplied whole narration excludes generated intro/outro. Total length = sum of segments, gaps and edges. Audio Off shows each image once for the seconds per image and omits the audio stream entirely.
-2. Edit list: planning turns the project into a versioned JSON edit list, `{ version: 1, width, height, fps, audio, shots }`, and the renderer reads nothing else. `audio` is the timeline of step 1; each shot is `{ source, frames, motion, transition? }` with `source` `{ kind: "image", path }` or `{ kind: "video", path, seconds }`, where motion is `{ kind: "zoom", direction: "in"|"out", percent }`, `{ kind: "pan", from, to, percent }` (points are shares 0–1 of the room the crop leaves: 0 flush left/top, 1 flush right/bottom, 0.5 centred) or `{ kind: "still" }`. Everything turns on the shot's place in the timeline, so the same project always plans the same list and a re-render is identical. The list also carries optional `look`, `cards` and `cardFont` (scenario 29). Each extension is a new optional field or union case, so a list without them is read and rendered exactly as before; a change to what an existing field means bumps the version, and a recorded list of another version or with an unknown kind is refused with a message to re-run the video (`packages/app/src/slices/video/{edit-list,plan,motion}.ts`).
-3. Shot computation (Cuts "Every N seconds", and every project saved before the setting): each shot lasts the seconds per image at 30 fps; the images take turns in slideshow order (1, 2, …, n, 1, 2, …) until the timeline is full, and the last shot is cut to what is left (at least one frame). A timeline shorter than one shot is a single shot. "Follow the narration" lays the cuts on sentence pauses and chapter starts instead (scenario 29).
-4. Motion across the whole timeline, lead-in through tail, a hard cut between shots unless a transition is set (scenario 29), by shot place, not image, so an image that comes round again may move another way (`packages/app/src/slices/video/motion.ts`):
-   - Zoom in and out: odd shots 100% → 100% + zoom (122.5% by default) zooming in, even shots back to 100% zooming out, linear and centred over that shot's own length (a cut last shot zooms over its shorter length). Zoom 0 makes these shots still.
-   - Pan across: a fixed crop of 100% + zoom travels in a straight line over the shot, taking turns left → right, right → left, top → bottom, bottom → top, each along the centre line. A pan needs room, so it uses the zoom or 10%, whichever is more; at Zoom 0 the pans still move.
-   - Mix of both: zoom and pan shots take turns, each keeping its own alternation: zoom in, pan left → right, zoom out, pan right → left, zoom in, pan top → bottom, …
-   - Still: every shot shows the whole covered frame without moving.
-   Zoom ends and pan positions are written into the FFmpeg zoompan expressions as decimal text built from whole thousandths, never float arithmetic; a pan's x/y are `(iw-iw/zoom)*(start±by*on/span)` with the share running only between 0 and 1. A one-frame shot holds where it starts. A still shot skips the 4× prescale (`packages/app/src/slices/video/ffmpeg.ts`).
-5. Rendering: each distinct clip (one still, one motion, one length; a transition, the part of a shot between two transitions, or a clip with a card or an atmosphere is its own clip) is encoded once in its own FFmpeg run from a still pre-scaled to four times the frame; the concat demuxer then joins the clips in slot order from a list file, copying them unless captions are burned in. The prescale also gives a pan quarter-pixel steps on screen, since zoompan moves its crop in whole source pixels. One filtergraph with a chain per slot grew memory with the slot count (16 GB at 200 slots with FFmpeg 7) and a 3-hour video has over 700 slots, so the split keeps memory at one clip and every command line short enough for Windows. The clips' working directory beside the project's files is removed however the render ends (`packages/app/src/slices/video/slideshow.ts`). Transitions, the Look and chapter cards are filters inside those single-clip runs, so the join stays a concat (scenario 29).
-6. Fit every image by scaling to cover the frame and centre-cropping; no letterboxing.
-7. Frame: 16:9 renders 1920×1080, 9:16 renders 1080×1920; 30 fps; mp4 container; codecs are `stack`'s. Progress reported as render percentage (scenario 01).
-8. Subtitle timing, cues and files are separate local recipes within the final stage (scenario 17). Manual cue edits bypass alignment; style changes reuse unchanged timing. Burn-in rendering waits for the complete caption/font bundle (`slices/rebuild/{runtime-subtitles,runtime-store}.ts`).
-9. Publish immutable MP4/WAV and render-parameter assets as one complete bundle, pinned to the admitted revision. For an MP4, `render.json` records the settings planned from (gap, edge, seconds per image, zoom, motion, and `videoEdit` with any warnings when the project has edit settings), totals, output and subtitles beside `editList`, the edit list with project-relative paths; the WAV record keeps its own shape for subtitle-only reuse (`slices/video/reuse-audio.ts`). Current compatible owners receive the result; an incompatible later edit does not acquire older pixels or bytes (`slices/rebuild/{runtime-export,runtime-publication}.ts`, `slices/revisions/publish.ts`).
+1. **Audio timeline** (`revisionAudio`, `slices/rebuild/runtime-export-inputs.ts:53-115`). Audio Off → no timeline. Otherwise the ready, selected `audio_body` (and, for generated narration with an entry picked, `audio_intro`/`audio_outro`) are read; with levelling on and generated narration, the `audio_levelled` output of `level:<segment>` is read instead (`:65-77`). Duration is the output's recorded `durationMs`, else a full-decode probe (`probeDurationMs`, `slices/video/ffmpeg.ts:626`). `audioTimeline` (`slices/video/plan.ts:304-337`) lays out edge, intro, gap, body, gap, outro, edge; a gap only where the neighbouring segment exists, and a gap or edge shorter than the minimum (one frame, 1/30 s, for video; one sample, 1/48000 s, for WAV; `runtime-export-inputs.ts:113`) is left out.
+2. **Speaker levelling**: when a multi-voice run is levelled line by line, the body is replaced by its line-levelled copy in a `lines-` working folder before planning (`slices/rebuild/runtime-export.ts:67-76`); scenario 35.
+3. **Plan** (`planRender`, `slices/video/plan.ts:149-234`) from format, gap, edge, seconds per image, zoom, motion, the three audio segments, the slideshow images, the edit settings (`exportEdit`, scenario 29) and the ambient bed (`exportBed`, `slices/rebuild/runtime-export-bed.ts:13`, scenario 35) (`slices/rebuild/runtime-export.ts:100-119`). Slideshow images are the revision's `imageOrder`, each resolved to its selected ready `image:<key>` output (`slideshowImages`, `:257-273`).
+   - Length: narrated = sum of timeline segments (after the bed's tail, `withTail`, `plan.ts:239-245`); silent = image count × seconds per image (`plan.ts:161-165`). Total frames = max(1, round(seconds × 30)).
+   - Frame: 16:9 → 1920×1080, 9:16 → 1080×1920, 30 fps (`plan.ts:23-28`).
+   - Every-N shots: each shot lasts round(seconds per image × 30) frames, the last cut to what is left; a timeline shorter than one shot is one shot (`everyLengths`, `plan.ts:341-344`). Following the narration is scenario 29.
+   - Images take turns in slideshow order, starting over after the last; motion goes by the shot's place, not the image; a clip in an image's place plays with motion `still` (`shots`, `plan.ts:350-367`).
+   - Motion (`motionFor`, `slices/video/motion.ts:28-57`): Zoom alternates in/out at the zoom rounded to half steps (0 → still); Pan cycles left→right, right→left, top→bottom, bottom→top at max(zoom, 10 %); Mix alternates zoom and pan, each keeping its own alternation; Still never moves.
+   - Figure cards ("Show tables and figures on screen", below) are placed as still shots and the images take turns in the stretches around them, counting on across them (`aroundFigures`, `plan.ts:405-432`).
+   - The edit list is `{ version: 1, width, height, fps, audio, shots }` plus optional `look`, `cards`, `cardFont`, `cardColor` and `bed` (`slices/video/edit-list.ts:128-145`). Each extension is a new optional field or union case; a meaning change bumps `editListVersion` (`edit-list.ts:13-24`). `readEditList` refuses another version or an unparsable list with a re-render instruction (`edit-list.ts:253-266`); it is called only by tests.
+4. **Figure cards** (on when narration is Generate with Describe tables and figures and an LLM, Video Generate and `showFigures`, `usesFigureCards`, `slices/admission/rules.ts:621-629`). Each described block gets a `figure:card:<n>` step (operation `figure-card-v1`) in the video's format, plus 9:16 when a 16:9 project makes Shorts (`slices/rebuild/recipe-describe.ts:121-152`). The step draws one PNG per format with the bundled ffmpeg: solid ground, the article's own uploaded picture fitted for a figure, and the table/code/equation/caption set in ASS in the caption font (or a covering fallback for the language), the brand kit's title colour as accent (`slices/rebuild/runtime-figure-card.ts:35-110`, `slices/video/figure-card.ts:8-37`). Text never goes below 2.4 % of the frame's short side; table rows or code lines that do not fit at that size are left out and counted (`figure-card.ts:60-68`, `:221-240`, `:327-341`). At export each card's describe-step answer is found in the word timing by its first and last four tokens, 75 % of which must match (`passageSpans`, `slices/video/figure-spans.ts:13-47`); a card not found is left out (`figureShots`, `slices/rebuild/runtime-export-edit.ts:220-258`). A card shows from 0.3 s before its description to 0.3 s after; overlapping cards start where the previous ends; a gap under 1 s between cards or at either end of the video is given to the card (`figureFrames`, `plan.ts:142-147`, `:378-400`). The export fingerprint gains `["figure-cards-v1", …]` (`slices/rebuild/recipe-edit.ts:87-91`).
+5. **Render clips** (`renderSlideshow`, `slices/video/slideshow.ts:49-149`). `slideshowClips` names each distinct clip `c<N>.mp4` by a key of source, motion, frames and, for part of a shot, transition or a clip carrying a card or atmosphere, its place (`slices/video/ffmpeg.ts:78-131`). Each clip is one FFmpeg run with a single picture input (`segmentArgs`, `ffmpeg.ts:154-207`): the still's first frame is scaled to cover and centre-cropped (never letterboxed) at 4× the frame, then `zoompan` for `d` frames (`pictureChain`, `ffmpeg.ts:220-269`); a still that does not move skips the 4× prescale (`:250-251`). A video clip is looped, slowed to at most half speed to fill its shot, then looped (`slowdown`, `ffmpeg.ts:271-280`). Zoom ends and pan travel are decimal text from whole thousandths (`zoomRange`/`decimal`, `plan.ts:44-57`; `zoompan`/`travel`, `ffmpeg.ts:463-495`); a pan's x/y are `(iw-iw/zoom)*(start±by*on/span)`; a one-frame shot holds where it starts. Clips encode with libx264 yuv420p (`ffmpeg.ts:448`); clips that will be re-encoded under burned-in captions use CRF 16 (`:133-136`). The clips' `render-` working folder beside the project is removed however the render ends (`slideshow.ts:64`, `:146-148`).
+6. **Master the sound** (Level the volume on and a timeline exists). The export picks its goal with `masterGoal(config, "video")` for an MP4 and `"audioFiles"` for the WAV (`slices/rebuild/runtime-export.ts:160-162`, `slices/loudness/model.ts:74-87`). For an MP4, after all clips are encoded, the narration segments, silences and bed are mixed alone into `mix.wav` in the render folder (`audioMixArgs`, `ffmpeg.ts:369-387`), `masterFile` writes `master.wav` at 44.1 kHz stereo (`slideshow.ts:46`, `:110-120`), and the join's edit list is replaced by one `body` segment playing `master.wav` with no bed (`:121-131`). The two-pass measure-and-gain method (`levelFile`/`masterFile`, `slices/loudness/loudnorm.ts:200-227`), the LUFS targets, true-peak ceilings and encode headroom are 35-audio-levelling-and-ambient.md's.
+7. **Join** (`joinArgs`, `ffmpeg.ts:389-435`): the concat demuxer reads `slides.ffconcat` (`concatList`, `:297-299`); audio segments are brought to 44.1 kHz stereo float and concatenated, silences from `anullsrc` (`audioMix`, `:313-365`); with a bed and no master, the bed is mixed under the narration there (scenario 35). Without burn-in the video stream is copied; with burn-in it is re-encoded through `ass=filename=subtitles.ass:fontsdir=fonts`, after any podcast speaker-panel portraits are overlaid (scenario 34). Audio is AAC; `+faststart`.
+8. **Measure** the finished MP4 (after AAC) or WAV: `masterReport` records `{ target, integrated, truePeak }` rounded to 0.1 (`loudnorm.ts:230-241`, `slideshow.ts:142-144`); the project page shows it as "Mastered to −14 LUFS: measured …, peaks … dBTP" (`masterText`, `slices/loudness/model.ts:224`, `packages/web/src/project/body-video.tsx:150`).
+9. **Progress**: `stage.progress` on stage `video` in tenths of a percent of elapsed render time over the video's length (`slices/rebuild/runtime-export.ts:151-159`); clip frames weigh 4, a copying join 0.05, a burn-in join 1 (`slideshow.ts:40-63`).
+10. **Publish** (`slices/rebuild/runtime-export.ts:225-247`): the sealed `video.mp4` (role `video`) or `audio.wav` (role `audio_export`) with duration and meta `subtitlesMode` (`burn-in`, `files` when both SRT and VTT are ready, else `off`, `:87-92`), edit warnings and `master`; `render.json` (role `render_params`); and the ready caption files re-published as retained outputs. For MP4, `render.json` is the plan (gap, edge, seconds per image, zoom, motion, totals) with `output`, `editList` with project-relative paths, `subtitles`, `speakerPortraits`, `videoEdit` and `warnings` when present (`:139-149`); for WAV it is `{ sampleRate: 48000, channels: 2, codec: "pcm_s16le", gapSeconds, edgeSeconds, totalSeconds, audio, output }` (`:126-138`). Then `stage.completed` for stage `video` is counted (`:248`).
 
 ## Branches
 
-- Video Off with Audio Generate/Provide → decode and combine intro, body and outro with the configured silence gaps and edge silence into `audio.wav`, 48 kHz stereo signed 16-bit PCM. Record the plan in `render.json`; no images are needed and this does not increment the videos counter.
-- Enabled subtitles with WAV → separate SRT/VTT files; burn-in is normalized to files (`slices/admission/rules.ts`, `slices/rebuild/{runtime-export,runtime-subtitles}.ts`).
-- Both Audio and Video Off → the final stage is skipped; the Article download remains available.
-- Intro Off → no intro segment and no leading gap; outro Off → no outro segment and no trailing gap.
+- **Video Off, Audio on → WAV** (`slices/rebuild/runtime-export.ts:164-209`): segments decoded to 48 kHz stereo s16 and concatenated (`audioExportArgs`, `slices/video/audio-export-args.ts:5-43`). With levelling on the mix goes to `<asset>.mix.wav`, is mastered to the audio-files goal at 48 kHz stereo, re-encoded to `pcm_s16le`, measured, and both temporaries are removed in `finally`. No images are read and no edit list is planned.
+- **Level the volume off**, or Audio Off → `masterGoal` undefined: no mix/master pass, the join plays the segments as they are, no `master` meta, no `loudness-v1` fingerprint value (`slices/loudness/model.ts:145-151`, `slices/rebuild/recipe-loudness.ts:64-83`). Uploaded narration has no levelled join but is still mastered (`runtime-export-inputs.ts:57-66`).
+- **Short-mode project** (`mode: "short"`) → `executeShortExport` renders the whole narration through the Shorts renderer, mastered to the video goal (`slices/rebuild/runtime-export.ts:61-62`, `slices/rebuild/runtime-export-short.ts:47`); the export fingerprint adds `["short-v1", fontId, title, timing]` and never carries a bed or edit values (`slices/rebuild/recipe-visual.ts:128-136`, `:177-181`); scenario 28.
+- **Captions**: Off → no caption work and mode `off`; files → SRT/VTT beside the media, MP4 pixels unaffected; burn-in → `captionDirectory` copies the selected `subtitle_ass` and `subtitle_font` into a `render-` folder the join runs in (`slices/rebuild/runtime-export.ts:274-305`). Enabled captions with WAV are files only (`slices/admission/rules.ts:229-231`). Caption timing and files are scenario 17.
+- **Caption or style edits with unchanged narration**: `export:wav` and files-mode `export:video` keep their bytes; `subtitles:files` re-publishes the retained media with updated `subtitlesMode`/`subtitleOmissions` meta (`slices/rebuild/runtime-subtitles.ts:334-355`). Burn-in puts the caption fingerprint into the video's (`slices/rebuild/recipe-visual.ts:163`), so it re-renders.
+- Intro Off → no intro segment and no leading gap; outro Off → no outro segment and no trailing gap. Uploaded whole narration never gets generated intro/outro (`runtime-export-inputs.ts:101-109`).
 - Image aspect equals the frame → no crop; differs → cover and crop.
+- Both Audio and Video Off → no export recipe; the Article download remains.
 
 ## Unhappy paths
 
-- FFmpeg render fails → the renderer's error shown verbatim on the video stage; no automatic encoding retry; no timeout; manual re-render per scenario 12.
-- Subtitle-model preparation happens before decoding/alignment and encoding. Its fetch/body interruptions and HTTP 408/429/5xx have at most three transfer attempts with abortable one- and two-second delays and a five-minute deadline per fetch. Exhaustion names the subtitle model and three attempts, not only `terminated`. Permanent HTTP, verification and disk errors stop without retry; cancellation stops transfer/backoff. Partial attempts stay private and only the pinned length/hash can publish to cache (`packages/app/src/adapters/alignment/cache.ts:34`, `:63`).
-- Caption alignment, font resolution, render or publication failure leaves retained completed revisions/media available. Unregistered prepared assets are discarded; atomic publication does not partially replace a completed media bundle (`slices/rebuild/{runtime-export,runtime-publication}.ts`, `slices/revisions/publish.ts`).
-- Interrupted work follows durable revision recovery and requires explicit rebuild where the outcome is uncertain (scenario 01).
-- Cancel → scenario 13.
+- FFmpeg exits non-zero → "The audio/video export failed (ffmpeg exited with code N: <last 20 stderr lines>)…" with a disk-space and diagnostics instruction (`slices/video/ffmpeg.ts:524-526`, `:668-679`); cannot spawn → reinstall or fix `SLOPIFY_FFMPEG` (`:596-603`). No automatic encoding retry and no timeout; manual re-render per scenario 12.
+- No bundled ffmpeg and no `SLOPIFY_FFMPEG` → boot refuses with a reinstall instruction; PATH is never used (`resolveFfmpeg`, `ffmpeg.ts:27-45`).
+- Loudness measurement prints no JSON → "Slopify couldn't measure the loudness of the narration…" naming Edit project → Pauses and volume (`slices/loudness/loudnorm.ts:136-139`).
+- Levelled join missing while levelling is on → the export names the Narration stage and the setting to turn off (`runtime-export-inputs.ts:78-81`); body missing → "The narration audio isn't finished yet…" (`:95-98`); unreadable or zero duration → regenerate or re-upload (`:88-91`).
+- A slideshow image's output missing → names Images → make it again (`slices/rebuild/runtime-export.ts:267-270`); an empty image list at planning → internal error naming Edit project → Images (`slices/video/plan.ts:150-155`). Burn-in without a ready caption file or font → names Render the video again or choose the font again (`runtime-export.ts:285-288`). WAV export with narration Off → names Edit project (`:57-60`).
+- Cancel/abort → the ffmpeg child is `SIGKILL`ed and the promise rejects "the render was canceled" (`ffmpeg.ts:590-612`); prepared assets, the `render-`, `lines-` and caption folders are discarded in `finally` (`runtime-export.ts:250-254`, `slideshow.ts:146-148`). Cancel semantics: scenario 13.
+- Any render or publication failure leaves the previous completed export available; atomic publication does not partially replace a bundle (`slices/rebuild/runtime-publication.ts`, `slices/revisions/publish.ts`). Interrupted work follows revision recovery (scenario 01).
 
 ## State transitions
 
-- Save creates a revision with retained ready/outdated/missing work states. Explicit rebuild admits pending work; stage standings are projected from current invocation/output state. History remains immutable (`slices/revisions/mutations.ts`, `slices/rebuild/runtime-store.ts`).
+- `revision_work_pieces` for `export:video`/`export:wav`: pending → running → `done` on publication; `held` returns leave it pending; failure marks the stage failed with the error text. A `done` piece is not re-executed (`runtime-export.ts:41-46`). Save creates a revision with retained ready/outdated/missing states; explicit rebuild admits pending work (`slices/revisions/mutations.ts`, `slices/rebuild/runtime-store.ts`). History is immutable.
 
 ## Invariants
 
-- Narrated video length = edge + intro + gaps + body + outro + edge; silent video length = image count × seconds per image.
-- Slideshow images cycle in slideshow order; every image appears at least once when the timeline has room for it (scenario 09).
-- Changing the seconds per image, the zoom or the motion re-renders only the video; Zoom in and out adds nothing to the render fingerprint, so projects saved before the motion setting keep their videos; edit settings at today's behaviour add nothing either (scenario 29); changing the edge silence re-exports the MP4/WAV and redoes caption timing, never narration or images (`slices/rebuild/{recipe-visual,recipe-audio,recipe-exports}.ts`).
-- The thumbnail is never in the video (scenario 09).
-- Rendering reads the admitted revision snapshot; later changed images, narration or burn-in captions require a separately authorized rebuild. Reorder-only image edits reuse image generation and change assembly.
+- Narrated length = edge + intro + gaps + body + outro + edge (plus any bed tail); silent length = image count × seconds per image (`plan.ts:158-165`).
+- The same project plans the same edit list: motion depends only on shot place (`motion.ts:22-27`).
+- Fingerprint stability (`slices/rebuild/recipe-visual.ts:158-187`): `export:video` values are format, gap, image fingerprints, audio fingerprint, burn-in caption fingerprint or null, seconds per image, zoom, the motion style only when not `zoom`, `"slideshow-zoom-v2"`, then only when in use `["video-edit", …]`, `["short-v1", …]`, the bed and `["loudness-v1", levelled joins, LUFS, true-peak ceiling]`. A project without those features keeps its fingerprint and its video. Changing only the volume target re-masters exports; the narration is never re-joined (piece level fixed at −20 LUFS, `slices/loudness/model.ts:50-55`).
+- Seconds per image, zoom and motion re-render only the video, never an image. Edge-silence changes re-export the MP4/WAV and redo caption timing, never narration or images (`slices/rebuild/recipe-exports.ts:55-61`).
+- The thumbnail is never in the video (`slideshowImages` reads `image:<key>` only).
+- Rendering reads the admitted revision snapshot; later changes need a separately authorized rebuild.
+- Every ffmpeg call is an argument array, never a shell string (`ffmpeg.ts:10-12`).
 
 ## Outcomes & side effects
 
-- Success: one MP4 or WAV and its render parameters on the project. The previous finished export stays downloadable until its replacement succeeds.
-- Failure: stage `failed` with the renderer's error.
-- Videos made are counted by scenario 16 telemetry.
+- Success: one MP4 or WAV, its `render.json`, re-published caption files, optional `master` report; the previous export stays downloadable until the replacement publishes.
+- Failure: stage `failed` with the error text.
+- `stage.completed` for stage `video` is counted for both MP4 and WAV exports, and the usage page and collector count every such event as a video made (`slices/telemetry/usage.ts:64-67`, scenario 16).
+- `packages/app/src/slices/video/run.ts:36` (`renderVideo`, the pre-revision stage runner) and its helpers `audio-inputs.ts`, `audio-export.ts`, `write-export.ts` and `slices/subtitles/prepare.ts` are referenced only by tests; the revision recipes above are the live path.
 
 ## Dimensions not in play
 
-- No remote render service.
-- D5 money: nothing charged, except animated images (scenario 29).
-- The renderer introduces no extra duration cap; setup validation limits the image list to 60 entries (`packages/app/src/slices/revisions/schema.ts`).
-- D10 external failure: encoding is local and is not retried automatically. Downloading the free pinned subtitle model is a separate network prerequisite with the bounded recovery above; no requested subtitles are silently omitted.
-- D13 notification: no channel.
-
-## Audio-only subtitle edits
-
-WAV and subtitle file generation have separate recipe identities. Caption text/style edits keep unchanged WAV media; files-mode MP4 retains its pixels, while burn-in requires rendering. Missing required media or render-parameter members schedules local recovery. Complete caption/font bundles must be ready before dependent rendering (`slices/rebuild/{recipe-exports,recipe-visual,recipe-work,runtime-subtitles,runtime-store}.ts`).
+- No remote render service; ffmpeg is the bundled binary or `SLOPIFY_FFMPEG`.
+- D5 money: rendering and mastering charge nothing; animated images do (scenario 29); figure-card descriptions are LLM calls (scenario 08).
+- The renderer adds no duration cap. The revision image order holds at most 240 images (`slices/revisions/schema.ts:48`, `slices/images/scale.ts:41`); provided images at most 60 (`slices/admission/rules.ts:303-306`).
+- D10 external failure: encoding is local and not retried automatically.
+- D13 notification: no channel of its own; run notifications are 39-notifications-and-live-events.md.

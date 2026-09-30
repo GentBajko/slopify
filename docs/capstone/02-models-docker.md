@@ -1,267 +1,333 @@
 ---
-generated_at_commit: a472d513f12c
-generated_date: 2026-09-25
-content_hash: 871c655a48a5
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 8086cd21db9c
 paths_covered:
-  - ':(top)packages/app/src/edge/cli.ts'
-  - ':(top)packages/app/src/edge/docker-projects/activation.ts'
-  - ':(top)packages/app/src/edge/docker-projects/claims.ts'
-  - ':(top)packages/app/src/edge/docker-projects/committed.ts'
-  - ':(top)packages/app/src/edge/docker-projects/engine.ts'
-  - ':(top)packages/app/src/edge/docker-projects/install.ts'
-  - ':(top)packages/app/src/edge/docker-projects/recover.ts'
-  - ':(top)packages/app/src/edge/docker-projects/state.ts'
-  - ':(top)packages/app/src/edge/docker-projects/tree.ts'
-  - ':(top)packages/app/src/edge/docker-projects/volume.ts'
-  - ':(top)packages/app/src/edge/docker.ts'
-  - ':(top)packages/app/src/edge/http/folder-location-schema.ts'
-  - ':(top)packages/app/src/edge/http/folder-location.ts'
-  - ':(top)packages/app/src/edge/http/open-folder.ts'
-  - ':(top)packages/app/src/edge/http/revision-files.ts'
-  - ':(top)packages/app/src/host-cli/install.ts'
-  - ':(top)packages/app/src/host-cli/service.ts'
-  - ':(top)packages/app/src/kernel/db/migrate.ts'
-  - ':(top)packages/app/src/kernel/paths.ts'
-  - ':(top)packages/app/src/main.ts'
-  - ':(top)packages/app/src/slices/revisions/downloads.ts'
-  - ':(top)packages/app/src/slices/storage/downloads.ts'
-  - ':(top)packages/web/src/project/open-folder.tsx'
-  - ':(top)packages/web/src/project/revision-api.ts'
-absorbed_from:
-  - features/2026-09-25-docker-project-folder@2026-09-25
+  - ":(top)packages/app/src/edge/docker-install/*.ts"
+  - ":(top)packages/app/src/edge/docker.ts"
+  - ":(top)packages/app/src/edge/autostart/docker.ts"
+  - ":(top)packages/app/src/edge/autostart/docker-record.ts"
+  - ":(top)packages/app/src/edge/http/folder-location-schema.ts"
+  - ":(top)packages/app/src/edge/http/folder-location.ts"
+  - ":(top)packages/app/src/edge/http/open-folder.ts"
+  - ":(top)packages/app/src/edge/http/revision-files.ts"
+  - ":(top)packages/app/src/edge/http/app.ts"
+  - ":(top)packages/app/src/host-cli/open-folder.ts"
+  - ":(top)packages/app/src/host-cli/service.ts"
+  - ":(top)packages/app/src/kernel/paths.ts"
+  - ":(top)packages/app/src/main.ts"
+  - ":(top)packages/web/src/project/open-folder.tsx"
+  - ":(top)packages/web/src/project/revision-api.ts"
+  - ":(top)compose.yaml"
 ---
 
-# Docker storage models
+# Docker installation models
 
-
-Scope: installation configuration and records, filesystem identity/digests, application paths and folder replies. Executable dependency ports and component props are not persisted entities. Anonymous wire records remain anonymous; their fields are documented below or in `01-architecture-docker.md § Communication`.
+Scope: the `--docker` installer's private records (install, update, activation, login-start, host-CLI consent, adopted 2.5.0 records), the Docker and filesystem views it computes (container, recovery volume, directory identity, tree digest), the options it runs with, the application's path layout, and the folder reply the HTTP API sends. The installer lives in `packages/app/src/edge/docker-install/`; the 2.5.0-era `edge/docker-projects/` launcher (receipt/journal/transaction directories) no longer exists and is only read back through the legacy schemas below.
 
 ## Entities
 
 | Name | Definition site | Storage | Purpose |
-| --- | --- | --- | --- |
-| DockerHostOptions | `packages/app/src/edge/docker.ts:26` | In memory | Inputs to optional host-helper setup. |
-| DockerConfig | `packages/app/src/edge/docker-projects/state.ts:120` | In memory | Resolved host installation configuration. |
-| Container | `packages/app/src/edge/docker-projects/state.ts:32`, `packages/app/src/edge/docker-projects/state.ts:54` | In memory; embedded in journals | Normalized Docker inspection and previous-container state. |
-| Receipt | `packages/app/src/edge/docker-projects/state.ts:55`, `packages/app/src/edge/docker-projects/state.ts:71` | Private `receipt.json`; embedded in journals | Committed installation and transaction authority. |
-| Journal | `packages/app/src/edge/docker-projects/state.ts:86`, `packages/app/src/edge/docker-projects/state.ts:119` | Private installation and transaction `journal.json` files | Durable migration/recovery state. |
-| Identity | `packages/app/src/edge/docker-projects/tree.ts:6` | In memory; structurally embedded in records | Directory device/inode identity. |
-| Digest | `packages/app/src/edge/docker-projects/tree.ts:10` | In memory; structurally embedded in journals and helper replies | Verified tree hash and size counters. |
+|---|---|---|---|
+| Install | `packages/app/src/edge/docker-install/state.ts:52` | `<root>/<name>/install.json` (private JSON) | What the last install/update committed; renders compose `.env`, gates host folder opening. |
+| Update | `packages/app/src/edge/docker-install/state.ts:85` | `<root>/<name>/update.json` (exists only mid-transaction) | Undo record for an interrupted install/update. |
+| LegacyReceipt | `packages/app/src/edge/docker-install/state.ts:88` (`legacyReceiptSchema`, no type alias) | 2.5.0 `receipt.json` (read only) | Adoption input: name, volume, projects path, directory identity. |
+| LegacyJournal | `packages/app/src/edge/docker-install/state.ts:91` (`legacyJournalSchema`, no type alias) | 2.5.0 `journal.json` (read only) | Blocks adoption while a 2.5.0 update is unsettled. |
+| Activation | `packages/app/src/edge/docker-install/activation.ts:9` (`activationSchema`, no type alias) | `<root>/<name>/activation/activation.json`, bind-mounted read-only at `/opt/slopify-install` | Update handshake: candidate token and committed flag. |
+| LoginStart | `packages/app/src/edge/autostart/docker.ts:29` | `<root>/<name>/activation/login-start.json` | Installer's record of whether Docker starts at login. |
+| HostCliConsent | `packages/app/src/edge/docker.ts:72` (inline schema, no type alias) | `<XDG_DATA_HOME>/slopify/host-cli/consent.json` | Remembered consent for the host CLI bridge service. |
+| Container | `packages/app/src/edge/docker-install/engine.ts:8` | In memory (from `docker container inspect`) | The installer's view of one container. |
+| RecoveryVolume | `packages/app/src/edge/docker-install/engine.ts:26` | In memory (from `docker volume inspect`) | A `<volume>-recovery-<uuid>` volume and its labels. |
+| Identity | `packages/app/src/edge/docker-install/tree.ts:6` | In memory; embedded in Install and Update | Directory device/inode pair. |
+| Digest | `packages/app/src/edge/docker-install/tree.ts:10` | In memory; embedded in Update; helper JSON replies | Tree hash with file and byte counts. |
+| DockerCommand | `packages/app/src/edge/docker-install/run.ts:17` | In memory | Parsed `--docker` / `install --docker` / `update --docker` options. |
+| ApplyOptions | `packages/app/src/edge/docker-install/apply.ts:35` | In memory | Resolved inputs to `applyDocker`. |
+| ApplyResult | `packages/app/src/edge/docker-install/apply.ts:69` | In memory | Outcome printed by the installer. |
+| DockerHostOptions | `packages/app/src/edge/docker.ts:26` | In memory | Inputs to the host CLI bridge decision. |
 | Paths | `packages/app/src/kernel/paths.ts:4` | In memory | Application filesystem layout. |
-| FolderReply | `packages/app/src/edge/http/folder-location-schema.ts:3`, `packages/app/src/edge/http/folder-location-schema.ts:13` | HTTP JSON and browser memory | Native open acknowledgement or Docker host-folder location. |
+| FilesLayout | `packages/app/src/kernel/paths.ts:21` | In memory | Where user-visible files go (projects, backups, exports). |
+| FolderReply | `packages/app/src/edge/http/folder-location-schema.ts:10` | HTTP JSON; browser memory | Result of an open-folder request. |
 
 ## Fields and types
 
-Nullable fields are required unless marked otherwise. Schema defaults describe accepted input; parsed records contain the defaulted field. `Identity` and `Digest` name the existing interfaces whose shapes match the corresponding Zod schemas.
+### Install
 
-### DockerHostOptions
-
-Source: `packages/app/src/edge/docker.ts:26`.
+Inferred from `installSchema` (strict) (`packages/app/src/edge/docker-install/state.ts:32`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| root | string | yes | Private helper state root, separate from Docker installation state. |
-| version | string | yes | Installed application version. |
-| image | string | yes | Image reference used for protocol compatibility checking. |
-| disabled | boolean | yes | True returns without helper setup. |
-| accepted | boolean | yes | Explicit helper consent. |
-| interactive | boolean | yes | Whether prompting is available. |
-| prompt | (message: string) => Promise<boolean> | yes | Consent callback. |
-| runner | HostSetupRunner | yes | Command port declared at `packages/app/src/host-cli/install.ts:9`. |
-| env | Readonly<NodeJS.ProcessEnv> | yes | Host environment. |
-| signal | AbortSignal | yes | Setup cancellation/deadline. |
+|---|---|---|---|
+| version | 2 | yes | accepted: 2 |
+| name | string | yes | `identifier`: `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`, 1–128. Container and compose project name. |
+| volume | string | yes | `identifier`; the external data volume. |
+| daemon | string | yes | `docker info` `ID` at install time. |
+| image | string | yes | Image reference, non-empty. |
+| appVersion | string | yes | `^\d+\.\d+\.\d+$`. |
+| user | string | yes | `^\d+:\d+$`; `uid:gid`, or `0:0` under rootless Docker (`packages/app/src/edge/docker-install/engine.ts:249`). |
+| port | number | yes | Integer 0–65535; 0 means compose picks a free port. |
+| projects | string | yes | `absolute`: canonical absolute path, ≤ 4096, no control characters or commas. |
+| projectsIdentity | Identity | yes | Identity of `projects` after the commit. |
+| backups | string | no | `absolute`; present on installs from 3.0 that took the Documents default. |
+| hostCli | boolean | yes | Host CLI bridge share mounted. |
+| token | string | yes | 64 lowercase hex; the committed candidate's token. |
+| recovery | string \| null | yes | Recovery volume made by the committing run, or null. |
 
-### DockerConfig
+### Update
 
-Source and conversion: `packages/app/src/edge/docker-projects/state.ts:120`, `packages/app/src/edge/docker-projects/state.ts:133`.
+Inferred from `updateSchema` (strict) (`packages/app/src/edge/docker-install/state.ts:58`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| home | string | yes | Host home supplied by launcher. |
-| uid | number | yes | Installing host user ID. |
-| gid | number | yes | Installing host group ID. |
-| root | string | yes | `<XDG_DATA_HOME or ~/.local/share>/slopify/docker`. |
-| directory | string | yes | `<root>/<name>`. |
-| name | string | yes | `SLOPIFY_DOCKER_NAME`, default `slopify`; 1–128 characters. |
-| volume | string | yes | `SLOPIFY_DOCKER_VOLUME`, default `slopify-data`; 1–128 characters. |
-| image | string | yes | `SLOPIFY_DOCKER_IMAGE`, default `ghcr.io/gentbajko/slopify:latest`. |
-| port | number | yes | `SLOPIFY_DOCKER_HOST_PORT`, default `6969`; integer 0–65535. |
-| projectsOverride | string \| null | yes | Resolved `SLOPIFY_DOCKER_PROJECTS_DIR`; empty/unset becomes null. Leading `~/` expands against `home`; relative input resolves against cwd. |
-| bridge | string \| null | yes | `SLOPIFY_HOST_CLI_DIR`; empty/unset becomes null. |
+|---|---|---|---|
+| version | 2 | yes | accepted: 2 |
+| id | string | yes | UUID of this run. |
+| phase | "stopping" \| "snapshot" \| "starting" | yes | accepted: stopping, snapshot, starting |
+| image | string | yes | Image being installed; its volume helper does snapshot and restore. |
+| previous | { kind: "none" } \| { kind: "compose"; env: string; activation: string } \| { kind: "legacy"; id: string; name: string; renamed: string; running: boolean; restart: string } | yes | accepted kinds: none, compose, legacy. `compose` keeps the previous `.env` and `activation.json` text; `legacy` keeps the adopted container and its renamed name `<name>-previous-<id>`. |
+| backup | string \| null | yes | `<volume>-recovery-<id>` once a snapshot starts. |
+| backupDigest | Digest \| null | yes | Metadata digest of the snapshot, excluding top-level `projects`. |
+| published | { path: string; identity: Identity } \| null | yes | Project folder this run filled; undo removes it only if the identity still matches. |
+
+### LegacyReceipt
+
+`legacyReceiptSchema` uses `.passthrough()`; only these keys are read (`packages/app/src/edge/docker-install/state.ts:88`).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| name | string | yes | `identifier`. |
+| volume | string | yes | `identifier`. |
+| projects | string | yes | `absolute`; becomes the adoption source folder. |
+| directoryIdentity | Identity | yes | Parsed, not used for adoption decisions. |
+
+### LegacyJournal
+
+`legacyJournalSchema` uses `.passthrough()` (`packages/app/src/edge/docker-install/state.ts:91`).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | string | yes | 2.5.0 transaction id. |
+| name | string | yes | `identifier`. |
+| volume | string | yes | `identifier`. |
+| phase | string | yes | Settled when one of: healthy, committed, restored, rolled-back (`packages/app/src/edge/docker-install/state.ts:100`). |
+| backup | string | yes | 2.5.0 recovery volume name. |
+
+### Activation
+
+Strict object (`packages/app/src/edge/docker-install/activation.ts:9`).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| version | 1 | yes | accepted: 1 |
+| token | string | yes | 64 lowercase hex; equals `SLOPIFY_UPDATE_TOKEN` of the candidate. |
+| committed | boolean | yes | Written false before `compose up`, true after `install.json` is written (`packages/app/src/edge/docker-install/apply.ts:285`, `packages/app/src/edge/docker-install/apply.ts:330`). |
+
+### LoginStart
+
+Inferred from `loginStartSchema` (strict) (`packages/app/src/edge/autostart/docker.ts:13`).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| version | 1 | yes | accepted: 1 |
+| checkedAt | string | yes | ISO time, ≤ 40 characters. |
+| docker | "yes" \| "no" \| "unknown" | yes | accepted: yes, no, unknown |
+| manager | "system" \| "rootless" | yes | accepted: system, rootless. `rootless` when `Install.user` is `0:0`. |
+| wanted | boolean \| null | yes | Answer to "Start Slopify when you log in?", null when not asked. |
+| platform | "linux" \| "darwin" \| "win32" \| "other" | no | accepted: linux, darwin, win32, other. Absent before 3.0.1. |
+| desktop | boolean | no | Docker Desktop detected. Absent before 3.0.1. |
+
+### HostCliConsent
+
+Strict inline schema (`packages/app/src/edge/docker.ts:72`).
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| version | 1 | yes | accepted: 1 |
+| automaticStartup | true | yes | accepted: true |
 
 ### Container
 
-Source: `packages/app/src/edge/docker-projects/state.ts:32`. Nested mount/restart objects have no separately declared type names.
+All fields `readonly`; built by `inspect` (`packages/app/src/edge/docker-install/engine.ts:175`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
+|---|---|---|---|
 | id | string | yes | Docker container ID. |
-| name | string | yes | Inspected name with leading slash removed. |
-| image | string | yes | Inspected image ID. |
-| user | string | yes | Inspected configured user. |
-| running | boolean | yes | Recorded running state. |
-| restart | { Name: string; MaximumRetryCount: number } | yes | Both nested fields required; retry count is an integer. |
-| signature | string \| null | yes | `io.slopify.launcher` label or null. |
-| installation | string \| null | yes | `io.slopify.installation` label or null. |
-| mounts | { type: string; name: string; source: string; destination: string; rw: boolean }[] | yes | Every nested field required; missing Docker mount name becomes `""`. |
-| port | string \| null | yes | First `6969/tcp` binding encoded as `HostIp:HostPort`, or null. |
+| name | string | yes | Inspected name without the leading `/`. |
+| image | string | yes | `Config.Image`. |
+| user | string | yes | `Config.User`. |
+| running | boolean | yes | `State.Running`. |
+| restart | string | yes | Restart policy name, `on-failure:<n>` when a retry count is set, `no` when empty. |
+| project | string \| null | yes | `com.docker.compose.project` label; null for a `docker run` container. |
+| launcher | boolean | yes | `io.slopify.launcher` label present (2.5.0 launcher container). |
+| mounts | { type: string; name: string; source: string; destination: string }[] | yes | Missing mount `Name` becomes `""`. |
+| port | number \| null | yes | Host port of the first `6969/tcp` binding, or null. |
 
-The schema does not enumerate restart-policy strings or mount types. Transaction and reader labels are queried separately rather than stored as fields of `Container` (`packages/app/src/edge/docker-projects/engine.ts:100`, `packages/app/src/edge/docker-projects/recover.ts:66`, `packages/app/src/edge/docker-projects/claims.ts:33`).
+### RecoveryVolume
 
-### Receipt
-
-Source: `packages/app/src/edge/docker-projects/state.ts:55`.
+All fields `readonly` (`packages/app/src/edge/docker-install/engine.ts:26`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| version | 1 | yes | accepted: 1 |
-| installation | string | yes | UUID retained across committed replacements. |
-| daemon | string | yes | Docker daemon ID. |
-| name | string | yes | Installation/container name; validated identifier, maximum 128. |
-| volume | string | yes | Private named volume; validated identifier, maximum 128. |
-| volumeIdentity | string | yes | Serialized volume name/creation time/driver tuple. |
-| projects | string | yes | Canonical absolute host projects path, maximum 4096 characters. |
-| directoryIdentity | Identity | yes | Published directory device/inode. |
-| user | string | yes | Selected container user. |
-| image | string | yes | Resolved image ID. |
-| signature | string | yes | Launcher configuration hash. |
-| transaction | string | yes | UUID of the authoritative transaction directory. |
-
-### Journal
-
-Source: `packages/app/src/edge/docker-projects/state.ts:72`, `packages/app/src/edge/docker-projects/state.ts:86`.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| version | 1 | yes | accepted: 1 |
-| id | string | yes | Transaction UUID. |
-| installation | string | yes | Installation UUID. |
-| daemon | string | yes | Docker daemon ID. |
-| name | string | yes | Validated identifier, maximum 128. |
-| volume | string | yes | Validated identifier, maximum 128. |
-| volumeIdentity | string \| null | yes | Null allowed before a fresh volume exists. |
-| image | string | yes | Resolved image ID. |
-| user | string | yes | Selected container user. |
-| signature | string | yes | Launcher configuration hash. |
-| phase | "prepared" \| "stopping" \| "stopped" \| "snapshot" \| "copying" \| "verified" \| "published" \| "starting" \| "healthy" \| "committed" \| "restored" \| "rolled-back" | yes | accepted: prepared, stopping, stopped, snapshot, copying, verified, published, starting, healthy, committed, restored, rolled-back |
-| previous | Container \| null | yes | Previous container, including original running/restart state. |
-| previousReceipt | Receipt \| null | yes | Previous committed installation record. |
-| sourceBind | string \| null | yes | Original authoritative host projects bind, if any. |
-| sourceIdentity | Identity \| null | yes | Input may omit; parser defaults to null. Required by recovery when `sourceBind` is non-null. |
-| destination | string | yes | Selected host projects path. |
-| destinationBefore | Identity \| null | yes | Existing empty destination identity, or null when absent. |
-| staging | string | yes | Sibling `.slopify-projects-<id>` path. |
-| stagingIdentity | Identity \| null | yes | Identity captured after creating staging. |
-| publishedIdentity | Identity \| null | yes | Identity of the published destination. |
-| sourceDigest | Digest \| null | yes | Source/copy baseline; can hold the empty published digest when the original source was absent. |
-| sourceAbsent | boolean | yes | Input may omit; parser defaults to false. Distinguishes absence from an existing empty tree. |
-| backup | string | yes | `<volume>-recovery-<id>`; validated identifier, maximum 174 characters. |
-| backupDigest | Digest \| null | yes | Metadata-sensitive recovery digest excluding top-level `projects`. |
-| candidate | string \| null | yes | Candidate container ID once known. |
-| token | string | yes | Exactly 64 lowercase hexadecimal characters. |
-
-The backup limit is deliberately larger than the configuration identifier limit: 128 characters for the volume, 10 for `-recovery-`, and 36 for the UUID total 174 (`packages/app/src/edge/docker-projects/state.ts:14`, `packages/app/src/edge/docker-projects/state.ts:110`, `packages/app/src/edge/docker-projects/install.ts:167`).
+|---|---|---|---|
+| name | string | yes | `<volume>-recovery-<uuid>` (`recoveryId` accepts only a UUID suffix, `packages/app/src/edge/docker-install/engine.ts:73`). |
+| transaction | string \| null | yes | `io.slopify.transaction` label. |
+| container | string \| null | yes | `io.slopify.container` label. |
 
 ### Identity
 
-Source: `packages/app/src/edge/docker-projects/tree.ts:6`; matching strict schema: `packages/app/src/edge/docker-projects/state.ts:24`.
+Both fields `readonly`; strict schema twin at `packages/app/src/edge/docker-install/state.ts:17`.
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| dev | string | yes | BigInt filesystem device number converted to string. |
-| ino | string | yes | BigInt inode number converted to string. |
+|---|---|---|---|
+| dev | string | yes | BigInt device number as string. |
+| ino | string | yes | BigInt inode number as string. |
 
 ### Digest
 
-Source: `packages/app/src/edge/docker-projects/tree.ts:10`; matching strict schema: `packages/app/src/edge/docker-projects/state.ts:25`.
+All fields `readonly`; strict schema twin at `packages/app/src/edge/docker-install/state.ts:18`.
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| hash | string | yes | SHA-256 hexadecimal digest; schema requires 64 lowercase hex characters. |
-| files | number | yes | Nonnegative integer count of regular files. |
-| bytes | number | yes | Nonnegative integer total regular-file bytes. |
+|---|---|---|---|
+| hash | string | yes | SHA-256 hex; schema requires 64 lowercase hex. |
+| files | number | yes | Nonnegative integer count of regular files hashed. |
+| bytes | number | yes | Nonnegative integer total bytes hashed. |
+
+### DockerCommand
+
+All fields `readonly`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| mode | "install" \| "update" | yes | accepted: install, update |
+| port | string | no | `--port`; falls back to `SLOPIFY_DOCKER_HOST_PORT`; `""` means any free port. |
+| projectsDir | string | no | `--projects-dir`; falls back to `SLOPIFY_DOCKER_PROJECTS_DIR`; `documents` selects `<Documents>/Slopify/Projects`. |
+| hostCli | string | no | `off` disables the host CLI bridge. |
+| acceptHostCli | boolean | no | Pre-accepts bridge consent. |
+| autostart | boolean | no | `--autostart` / `--no-autostart`; absent asks on a TTY. |
+
+### ApplyOptions
+
+All fields `readonly`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| home | string | yes | Host home directory. |
+| uid | number | yes | Installing user id. |
+| gid | number | yes | Installing group id. |
+| root | string | yes | `dockerRoot`: `<XDG_DATA_HOME or ~/.local/share>/slopify/docker` (`packages/app/src/edge/docker-install/state.ts:103`). |
+| name | string | yes | `SLOPIFY_DOCKER_NAME`, default `slopify`. |
+| volume | string | yes | `SLOPIFY_DOCKER_VOLUME`, default `slopify-data`. |
+| image | string | yes | `SLOPIFY_DOCKER_IMAGE`, default `ghcr.io/gentbajko/slopify:<version>` (`packages/app/src/edge/docker-install/run.ts:99`). |
+| version | string | yes | Installer version; the image must report the same. |
+| port | number \| null | yes | Null keeps the remembered port (6969 on first install); 0 = any free port. |
+| projects | string \| null | yes | Null keeps the remembered folder. |
+| documents | string | no | Documents folder for new-install defaults. |
+| mode | "install" \| "update" | yes | accepted: install, update |
+| composeFile | string | yes | Shipped `compose.yaml` path. |
+| hostCli | { enabled: false } \| { enabled: true; ensure: () => Promise<string> } | yes | `ensure` returns the bridge share folder. |
+| report | (line: string) => void | yes | Progress output. |
+| pollMs | number | no | Busy-poll interval, default 5000. |
+
+### ApplyResult
+
+All fields `readonly`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| url | string | yes | `http://127.0.0.1:<port>`. |
+| projects | string | yes | Host project folder. |
+| backups | string \| null | yes | Separate Backups folder, or null. |
+| changed | boolean | yes | False when the installation already matched. |
+| recovery | string \| null | yes | Recovery volume of this (or the committed) run. |
+| removed | readonly string[] | yes | Old containers / recovery volumes tidied. |
+| problems | readonly string[] | yes | Tidy-up failures (non-fatal). |
+
+### DockerHostOptions
+
+All fields `readonly`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| root | string | yes | `<XDG_DATA_HOME or ~/.local/share>/slopify/host-cli` (`packages/app/src/edge/docker-install/run.ts:74`). |
+| version | string | yes | Installer version. |
+| disabled | boolean | yes | True returns `{ enabled: false }`. |
+| accepted | boolean | yes | Explicit consent flag. |
+| interactive | boolean | yes | stdin is a TTY. |
+| prompt | (message: string) => Promise<boolean> | yes | Consent question. |
+| runner | HostSetupRunner | yes | Command port. |
+| env | Readonly<NodeJS.ProcessEnv> | yes | Host environment. |
+| signal | AbortSignal | yes | Cancel plus 20-minute deadline. |
 
 ### Paths
 
-Source and construction: `packages/app/src/kernel/paths.ts:4`, `packages/app/src/kernel/paths.ts:17`.
+All fields `readonly`; built by `layout(dataDir, files?)` (`packages/app/src/kernel/paths.ts:31`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| dataDir | string | yes | Resolved application data root; `/data` in the image. |
+|---|---|---|---|
+| dataDir | string | yes | Resolved data root; `/data` in the image. |
 | db | string | yes | `<dataDir>/slopify.db`. |
-| projects | string | yes | `<dataDir>/projects`; managed Docker overlays this with the host bind. |
-| staging | string | yes | `<dataDir>/staging`; application upload staging, distinct from host migration staging. |
+| projects | string | yes | `FilesLayout.projects`, else `<dataDir>/projects`. |
+| backups | string | yes | `FilesLayout.backups`, else `<projects>/Backups`. |
+| exports | string \| null | yes | `FilesLayout.exports`; null without a layout. |
+| staging | string | yes | `<dataDir>/staging`. |
 | logs | string | yes | `<dataDir>/logs`. |
-| lock | string | yes | `<dataDir>/.lock`; distinct from the host setup lock. |
+| lock | string | yes | `<dataDir>/.lock`. |
+
+### FilesLayout
+
+All fields `readonly`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| projects | string | yes | In a container: `<dataDir>/projects` (`packages/app/src/edge/docker-install/activation.ts:27`). |
+| backups | string | yes | In a container: `<dataDir>/backups` when `SLOPIFY_DOCKER_BACKUPS_DIR` is set, else `<projects>/Backups`. |
+| exports | string \| null | yes | Null in a container. |
 
 ### FolderReply
 
-Source: `packages/app/src/edge/http/folder-location-schema.ts:3`.
-
-This is a strict discriminated union. `location` and `path` are absent from the `opened: true` branch and required in the `opened: false` branch.
+Union of three strict objects (`packages/app/src/edge/http/folder-location-schema.ts:5`).
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
+|---|---|---|---|
 | opened | true \| false | yes | accepted: true, false |
-| location | "docker-host" | no | Required when `opened` is false; accepted: docker-host |
-| path | string | no | Required when `opened` is false; nonempty host directory path. |
+| location | "docker-host" | no | accepted: docker-host. Required with `opened: false`; optional with `opened: true` (host helper opened it). |
+| path | string | no | Non-empty host folder path; present exactly when `location` is. |
 
 ## Relationships
 
-`DockerConfig.directory` contains the installation’s `receipt.json`, mutable `journal.json`, and UUID transaction directories. Each transaction has its own `journal.json` and `activation.json`. Normal phase saves write the transaction journal before the installation journal (`packages/app/src/edge/docker-projects/install.ts:36`, `packages/app/src/edge/docker-projects/install.ts:137`, `packages/app/src/edge/docker-projects/install.ts:172`).
-
-`Receipt.transaction` selects the authoritative transaction journal. That journal must agree on installation, daemon, name, volume identity, destination, image, user, signature and published directory identity. If a current container exists, its ID must equal `Journal.candidate` and its relevant mounts must match (`packages/app/src/edge/docker-projects/committed.ts:11`).
-
-A `Journal` embeds the previous `Container` and optional `Receipt`, plus directory identities and digests for the source, staging, destination and private backup. `sourceBind` identifies the original project authority; it is not replaced by hidden volume projects during recovery (`packages/app/src/edge/docker-projects/recover.ts:13`, `packages/app/src/edge/docker-projects/install.ts:61`).
-
-The named data volume contains private application state. `/data/projects` is overlaid by the host project directory; `/opt/slopify-install` exposes only the transaction directory read-only. The optional host-helper share has a separate mount and consent record (`packages/app/src/edge/docker-projects/engine.ts:408`, `packages/app/src/edge/docker.ts:62`).
-
-Docker folder replies derive their path from the configured host root plus the verified saved file’s relative parent. Browser requests carry project/output identifiers, never an arbitrary filesystem path (`packages/app/src/edge/http/open-folder.ts:43`, `packages/app/src/edge/http/revision-files.ts:65`, `packages/app/src/edge/http/folder-location.ts:29`).
+- Installation folder `<root>/<name>/` holds `install.json`, `update.json` (transient), `update.lock` (PID file), `.env`, `compose.yaml`, `host-cli-off/` and `activation/` (with `activation.json` and `login-start.json`) (`packages/app/src/edge/docker-install/apply.ts:103`, `packages/app/src/edge/autostart/docker-record.ts:35`).
+- `.env` is rendered from the run's values by `composeEnv` as single-quoted `KEY='value'` lines: `SLOPIFY_NAME`, `SLOPIFY_IMAGE`, `SLOPIFY_USER`, `SLOPIFY_PORT`, `SLOPIFY_VOLUME`, `SLOPIFY_PROJECTS_DIR`, optional `SLOPIFY_BACKUPS_DIR`, `SLOPIFY_HOST_CLI_SHARE`, `SLOPIFY_ACTIVATION_DIR`, `SLOPIFY_UPDATE_TOKEN` (the candidate token), `SLOPIFY_UPDATE_PENDING` (`packages/app/src/edge/docker-install/apply.ts:289`, `packages/app/src/edge/docker-install/apply.ts:567`).
+- `compose.yaml` maps them: external volume `${SLOPIFY_VOLUME}` → `/data`; bind `${SLOPIFY_PROJECTS_DIR}` → `/data/projects`; bind `${SLOPIFY_BACKUPS_DIR:-./backups-off}` → `/data/backups`; read-only bind of the host-CLI share → `/opt/slopify-host`; read-only bind of the activation folder → `/opt/slopify-install`; port `127.0.0.1:${SLOPIFY_PORT-6969}:6969`; container env `SLOPIFY_DOCKER_PROJECTS_DIR`, `SLOPIFY_DOCKER_BACKUPS_DIR`, `SLOPIFY_HOST_CLI_DIR`, `SLOPIFY_DOCKER_INSTALL_STATE=/opt/slopify-install/activation.json` (`compose.yaml:9`).
+- `Install.token` equals the token in the committed `activation.json`; the candidate app reads that file through `dockerActivationCommitted` to decide its update is committed (`packages/app/src/edge/docker-install/activation.ts:17`, `packages/app/src/main.ts:406`).
+- `Update.previous` embeds what rollback restores: the previous `.env`/`activation.json` text (compose) or the adopted container's id, name, renamed name, running state and restart policy (legacy) (`packages/app/src/edge/docker-install/apply.ts:361`).
+- Recovery volumes carry labels `io.slopify.transaction=<Update.id>` and `io.slopify.container=<name>` (`packages/app/src/edge/docker-install/apply.ts:265`). After a commit, tidy-up removes older recovery volumes of the same data volume whose name id equals their transaction label and whose container label is absent or this name, and stopped `<name>-previous-*` containers (`packages/app/src/edge/docker-install/apply.ts:402`).
+- Adoption: with no `install.json`, the 2.5.0 `receipt.json` supplies the source projects folder when no container exists; an existing non-compose container supplies it from its `/data/projects` bind (`packages/app/src/edge/docker-install/apply.ts:464`).
+- The host helper reads every installation's `install.json` and opens a folder only inside `projects` whose identity still equals `projectsIdentity` (`packages/app/src/host-cli/open-folder.ts:57`, `packages/app/src/host-cli/open-folder.ts:100`).
+- Folder replies: `replyForFolder` maps a verified file under `Paths.projects` to `join(hostProjects, dirname(relative))`; browser requests carry only project/output/record identifiers, never a path (`packages/app/src/edge/http/folder-location.ts:12`, `packages/app/src/edge/http/open-folder.ts:10`, `packages/app/src/edge/http/revision-files.ts:60`). `folderLocation` (`container`, `hostProjects`, optional `hostBackups`, optional `openOnHost`) is assembled from `dockerFolderConfiguration` plus the host CLI client (`packages/app/src/edge/http/app.ts:96`, `packages/app/src/main.ts:609`).
 
 ## Boundaries
 
-Environment → `DockerConfig`: `dockerConfig` validates identifiers/port/image, expands the project override and derives private-state locations (`packages/app/src/edge/docker-projects/state.ts:133`). Host CLI arguments become environment overrides before invoking the launcher (`packages/app/src/edge/cli.ts:76`).
-
-Docker inspect JSON → `Container`: `inspect` validates the raw response, normalizes the name and mount fields, selects labels and converts the first application port binding to a string (`packages/app/src/edge/docker-projects/engine.ts:100`). Volume inspection → identity string is `JSON.stringify([Name, CreatedAt, Driver])`; it is not a volume-content hash (`packages/app/src/edge/docker-projects/engine.ts:268`).
-
-Filesystem → `Identity`: `lstat(..., { bigint: true })` rejects a non-directory/symlink and stringifies `dev`/`ino` (`packages/app/src/edge/docker-projects/tree.ts:15`).
-
-Filesystem → `Digest`: sorted traversal hashes relative names, entry kinds and file-content hashes. Metadata mode adds UID/GID/mode and permits symlink metadata; ordinary project mode rejects symlinks and multiply linked files. `omitProjects` skips only the root’s `projects` entry. File identity, size and modification checks detect changes during reads (`packages/app/src/edge/docker-projects/tree.ts:94`).
-
-Helper JSON → source baseline: `{ exists: false }` becomes `null`; `{ exists: true; digest: Digest }` becomes a digest. An empty existing directory still has a digest. After publishing an empty copy of an absent source, `sourceDigest` can be non-null while `sourceAbsent` remains true; retry compares absence separately from hashes (`packages/app/src/edge/docker-projects/volume.ts:9`, `packages/app/src/edge/docker-projects/engine.ts:307`, `packages/app/src/edge/docker-projects/install.ts:191`, `packages/app/src/edge/docker-projects/install.ts:214`).
-
-Records ↔ JSON files: `readState` checks the file, reads JSON and parses the supplied schema; `writeState` serializes with a 64-KiB limit, uses a private atomic write and syncs the containing directory. `privateWrite` creates an exclusive mode-0600 temporary file, syncs it and renames it (`packages/app/src/edge/docker-projects/state.ts:193`, `packages/app/src/host-cli/service.ts:47`, `packages/app/src/host-cli/service.ts:66`).
-
-The activation schema has no declared TypeScript entity alias. Its complete JSON shape is:
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| version | 1 | yes | accepted: 1 |
-| token | string | yes | 64 lowercase hexadecimal characters; matches the candidate token. |
-| committed | boolean | yes | Written false before startup and true after receipt publication. |
-
-Writer: `packages/app/src/edge/docker-projects/install.ts:178`, `packages/app/src/edge/docker-projects/install.ts:260`. Strict parser and constant-time token comparison: `packages/app/src/edge/docker-projects/activation.ts:7`.
-
-Registered storage → folder DTO: current assets resolve through `findDownload`; retained records resolve through revision output/piece registration and project assets. `replyForFolder` either calls the native opener or maps the verified file into a host directory and parses the outgoing union. Browser callers parse it again (`packages/app/src/slices/storage/downloads.ts:74`, `packages/app/src/slices/revisions/downloads.ts:15`, `packages/app/src/edge/http/folder-location.ts:42`, `packages/web/src/project/open-folder.tsx:46`, `packages/web/src/project/revision-api.ts:211`).
+| Boundary | Conversion |
+|---|---|
+| CLI/env → ApplyOptions | `runDockerCommand` validates port text (`^\d{1,5}$`, ≤ 65535), name/volume with `identifier`, expands `~/` and resolves the projects path, checks it with `absolute`, and builds the image reference (`packages/app/src/edge/docker-install/run.ts:28`). |
+| Docker inspect JSON → Container | `inspectSchema` parses the raw array; `inspect` normalizes name, restart policy, labels, mounts and port (`packages/app/src/edge/docker-install/engine.ts:106`, `packages/app/src/edge/docker-install/engine.ts:175`). |
+| Docker context/info → daemon, user | `context` requires a `unix://` endpoint, rejects Docker Desktop and userns-remap, requires `docker compose`, returns `{ daemon: info.ID, user }` (`packages/app/src/edge/docker-install/engine.ts:207`). |
+| Filesystem → Identity | `lstat(path, { bigint: true })`, rejecting non-directories and symlinks (`packages/app/src/edge/docker-install/tree.ts:15`). |
+| Filesystem → Digest | `treeDigest(root, metadata, omitProjects)`: sorted walk hashing JSON lines `[name, kind, …]`; metadata mode adds uid/gid/mode and hashes symlink targets; plain mode rejects symlinks and multiply linked files; `omitProjects` skips the root's `projects`; identity/size/mtime re-checks detect concurrent change (`packages/app/src/edge/docker-install/tree.ts:100`). |
+| Volume helper JSON → Digest | The helper (`volume.js` inside the image, run `--network none --read-only` as root) prints JSON: `projects` → `{ exists: false }` or `{ exists: true, digest }`, parsed with a Zod union into `Digest \| null`; `private`, `snapshot`, `restore` return a Digest used after `JSON.parse` without a schema; `own` returns `{ ok: true }` (`packages/app/src/edge/docker-install/volume.ts:7`, `packages/app/src/edge/docker-install/engine.ts:155`, `packages/app/src/edge/docker-install/engine.ts:308`). |
+| Records ↔ files | `readState` checks the file (regular, not a symlink, one link, owned by uid, no group/other bits), reads it with `privateRead`, parses JSON and the schema, and turns a parse failure into a "damaged" error (`packages/app/src/edge/docker-install/state.ts:135`). `writeState` → `writeText`: 64 KiB limit, `privateWrite` (exclusive mode-0600 temp file, sync, rename), then directory sync (`packages/app/src/edge/docker-install/state.ts:161`, `packages/app/src/host-cli/service.ts:71`). |
+| Container env → FilesLayout / folder config | `dockerFilesLayout` (`packages/app/src/edge/docker-install/activation.ts:27`); `dockerFolderConfiguration` returns `{ container, hostProjects, hostBackups }` (`packages/app/src/edge/docker-install/activation.ts:38`). |
+| Registered file → FolderReply | `POST /:id/open-folder` resolves `findDownload` (for `images.zip`, the first existing image/thumbnail output); `POST /:id/revisions/:revisionId/:recordId/open-folder` resolves `findRevisionDownload`; both call `replyForFolder`, which parses the outgoing union (`packages/app/src/edge/http/open-folder.ts:34`, `packages/app/src/edge/http/revision-files.ts:64`, `packages/app/src/edge/http/folder-location.ts:53`). The web client parses it again with the same schema (`packages/web/src/project/open-folder.tsx:33`, `packages/web/src/project/revision-api.ts:237`). |
 
 ## Validation
 
-State schemas are strict at their declared record boundaries. Names/volumes use `[a-zA-Z0-9][a-zA-Z0-9_.-]*` with a 128-character limit; recovery names permit 174. Recorded paths must be canonical absolute paths, at most 4096 characters, without commas/control characters. UUIDs, digest counters, tokens and phases are validated explicitly (`packages/app/src/edge/docker-projects/state.ts:14`, `packages/app/src/edge/docker-projects/state.ts:55`, `packages/app/src/edge/docker-projects/state.ts:86`).
-
-Private directories must have safe ancestors and be private/user-owned at the leaf. State files must be user-owned, singly linked regular files without group/other permission bits. Files are opened without following symlinks (`packages/app/src/edge/docker-projects/state.ts:170`, `packages/app/src/edge/docker-projects/state.ts:193`, `packages/app/src/host-cli/service.ts:47`).
-
-Project-path checks reject broad roots, overlap with private installation state, protected system trees, symlink/non-directory components and unsafe writable ancestors. Existing source trees must belong to the host user and supply owner read/write permissions, plus directory traversal. Newly copied trees are normalized to directory mode 0700 and file mode 0600; arbitrary existing source files are not recursively re-owned by this step (`packages/app/src/edge/docker-projects/tree.ts:29`, `packages/app/src/edge/docker-projects/tree.ts:151`, `packages/app/src/edge/docker-projects/tree.ts:165`).
-
-Cross-record validation is separate from schema parsing. It checks remembered daemon/volume identity, source identity, receipt/journal agreement, actual committed-container identity/mounts, competing volume claims and overlapping running writers. A matching label alone is insufficient restart authority (`packages/app/src/edge/docker-projects/install.ts:41`, `packages/app/src/edge/docker-projects/committed.ts:21`, `packages/app/src/edge/docker-projects/claims.ts:6`, `packages/app/src/edge/docker-projects/engine.ts:149`).
-
-A recovery volume is created with `io.slopify.transaction=<id>`, `io.slopify.installation=<installation>` and `io.slopify.container=<name>`; launchers before this change set only the transaction label, and cleanup of those relies on the transaction's own journal (`packages/app/src/edge/docker-projects/engine.ts` `recoveryLabels`, `packages/app/src/edge/docker-projects/prune.ts`). Recovery-volume restore requires the matching `io.slopify.transaction` label and a matching private digest before and after restoration. The full snapshot includes original volume projects, but private restoration skips projects; source binds and published copies remain separate (`packages/app/src/edge/docker-projects/engine.ts:184`, `packages/app/src/edge/docker-projects/engine.ts:353`, `packages/app/src/edge/docker-projects/volume.ts:18`).
-
-At runtime, managed folder configuration requires `SLOPIFY_CONTAINER=1`, the fixed activation path, a canonical host path, and `/data/projects` as a real directory/mountpoint in `/proc/self/mountinfo`. This runtime check establishes the mountpoint; host-side receipt/inspection checks establish the expected bind source (`packages/app/src/edge/docker-projects/activation.ts:23`, `packages/app/src/edge/docker-projects/committed.ts:38`).
-
-Folder request IDs are 1–64 characters matching `[0-9A-Za-z_-]+`. Current asset names are at most 64 characters and match lowercase alphanumeric/hyphen names or `images.zip`. Current `images.zip` folder lookup chooses the first existing registered image/thumbnail instead of creating an archive. Docker replies reject paths outside projects and symlinks/nonmatching entry kinds throughout the resolved file path (`packages/app/src/edge/http/open-folder.ts:13`, `packages/app/src/edge/http/open-folder.ts:45`, `packages/app/src/edge/http/revision-files.ts:11`, `packages/app/src/edge/http/folder-location.ts:29`).
+- `identifier` and `absolute` are the shared path/name validators (`packages/app/src/edge/docker-install/state.ts:7`, `packages/app/src/edge/docker-install/state.ts:12`). Every state schema is `.strict()` except the two legacy schemas (`.passthrough()`).
+- `privateDirectory` creates each missing component mode 0700, rejects symlinks and group/other-writable components without the sticky bit, and requires the leaf to be owned by the user with no group/other bits (`packages/app/src/edge/docker-install/state.ts:107`).
+- `safePath` rejects non-canonical paths, `/`, `/home`, `/root`, `/tmp`, `/var`, `/srv`, `/mnt`, `/media`, home, `~/Slopify`, anything overlapping the state root, and anything under `/proc`, `/sys`, `/dev`, `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`, `/var/lib/docker`; each component must be a real directory; the leaf must be user-owned and not group/other-writable; ancestors must not be group/other-writable without the sticky bit (`packages/app/src/edge/docker-install/tree.ts:29`). Projects and Backups may not contain each other, nor may old and new projects folders (`packages/app/src/edge/docker-install/apply.ts:162`).
+- Cross-record checks in `locked`: an `install.json` for another name/volume, a different daemon ID, a current container whose `/data` is not the named volume, a missing remembered projects folder, a non-empty new projects folder, an image reporting a different version, an unsettled 2.5.0 journal, or a container owned by another compose project each stop the run before changes (`packages/app/src/edge/docker-install/apply.ts:113`, `packages/app/src/edge/docker-install/apply.ts:137`, `packages/app/src/edge/docker-install/apply.ts:184`, `packages/app/src/edge/docker-install/apply.ts:474`, `packages/app/src/edge/docker-install/apply.ts:484`).
+- Copies are verified: a host-to-host copy must hash equal to the source digest after `privateTree` (dirs 0700, files 0600, owned by uid:gid); a copy out of the volume must equal the helper's `projects` digest (`packages/app/src/edge/docker-install/apply.ts:500`). Snapshot requires an empty backup volume and equal digests before, copied and after; restore requires the backup's private digest to equal `Update.backupDigest` before and after (`packages/app/src/edge/docker-install/volume.ts:18`, `packages/app/src/edge/docker-install/engine.ts:354`). Data is restored only when the phase reached `starting` (`packages/app/src/edge/docker-install/apply.ts:373`).
+- `composeEnv` rejects any value containing `'`, `\n` or `\r` (`packages/app/src/edge/docker-install/apply.ts:567`). The lock file is exclusive; a stale PID lock is removed once (`packages/app/src/edge/docker-install/apply.ts:579`).
+- Activation: `dockerActivationCommitted` requires a 64-hex token, a valid private `activation.json`, `committed: true` and a `timingSafeEqual` token match (`packages/app/src/edge/docker-install/activation.ts:17`). In the container, `SLOPIFY_DOCKER_INSTALL_STATE` must be `/opt/slopify-install/activation.json` (`packages/app/src/main.ts:229`).
+- Runtime folder configuration requires `SLOPIFY_CONTAINER=1`, the fixed activation path, canonical host paths without commas/control characters, and `/data/projects` as a real directory listed as a mount point in `/proc/self/mountinfo`; `hostBackups` is set only when `/data/backups` is also a mount point (`packages/app/src/edge/docker-install/activation.ts:38`).
+- Folder requests: ids 1–64 matching `^[0-9A-Za-z_-]+$`; asset names ≤ 64 matching `^(?:[a-z0-9-]+|images\.zip)$`; a cross-origin `Origin` header gets 403 (`packages/app/src/edge/http/open-folder.ts:13`, `packages/app/src/edge/http/revision-files.ts:11`). `replyForFolder` rejects paths outside `Paths.projects`, a symlinked or non-directory root, and any symlink or wrong entry kind along the file path (`packages/app/src/edge/http/folder-location.ts:29`).
 
 ## Schema
 
-This scope adds no SQLite table, index, constraint or SQL migration. `Receipt`, `Journal` and activation state are private JSON files; `Container` is Docker metadata; the remaining entities are runtime values or HTTP DTOs. There are no Docker-owned tables lacking a corresponding code model.
-
-Application migrations still run against the private database during candidate boot (`packages/app/src/main.ts:184`, `packages/app/src/kernel/db/migrate.ts:10`). Existing output and revision-asset registrations remain database-owned; Docker changes their filesystem placement through the projects bind, without introducing a database representation of the host root (`packages/app/src/slices/storage/downloads.ts:79`, `packages/app/src/slices/revisions/downloads.ts:25`, `packages/app/src/edge/docker-projects/engine.ts:408`).
+No SQLite table, index or migration belongs to the Docker installer. `Install`, `Update`, Activation, LoginStart and HostCliConsent are private JSON files; `Container` and `RecoveryVolume` are Docker metadata; the rest are runtime values or HTTP DTOs. The application's own migrations run against `/data/slopify.db` inside the candidate container at boot (`packages/app/src/main.ts:253`); output and asset registrations stay in the database while their files sit under the `/data/projects` bind (`02-models.md`).

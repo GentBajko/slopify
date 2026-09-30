@@ -1,1 +1,0 @@
-- Thumbnails take `{{Scene}}` like image prompts: with Images → Scenes from the article on, the same AI call writes each thumbnail a scene (the article's most striking moment, a different one per thumbnail when there are three). Before, `{{Scene}}` in a thumbnail prompt reached the image model as literal text. A thumbnail prompt without it is unchanged.

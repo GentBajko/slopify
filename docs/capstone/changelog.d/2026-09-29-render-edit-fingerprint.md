@@ -1,1 +1,0 @@
-- An edit made while a video renders (a thumbnail redo, say) no longer fails the finished video with "Output fingerprint differs from its authorized recipe": the captions it carries are checked against the current revision too.

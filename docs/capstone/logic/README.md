@@ -1,88 +1,91 @@
 ---
-docker_project_folder_verified_at_commit: a472d513f12c
-glossary_pronunciation_verified_at_commit: 6eeac3fd9043
-host_cli_verified_at_commit: 9bd6517
-generated_at_commit: 4cfe3473f74d
-capstone_version: 5.2.0
-generated_date: '2026-09-13'
-absorbed_from:
-  - features/2026-09-25-docker-project-folder@2026-09-25
-  - features/2026-09-25-glossary-pronunciation@2026-09-25
-  - features/2026-09-25-video-recovery@2026-09-25
-  - features/2026-09-24-research-documents@2026-09-25
-  - features/2026-09-24-host-cli-bridge@2026-09-24
-  - features/2026-09-24-narration-preparation@2026-09-24
-  - features/2026-09-10-editable-projects@2026-09-12
-  - features/2026-09-10-play-redesign-drafts@2026-09-13
-  - features/2026-09-10-review-checkpoints@2026-09-13
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 41416fc429a5
 paths_covered:
-  - :(top)packages/app/src/**
-  - :(top)packages/web/src/**
-content_hash: 72c29c1023b2
+  - ":(top)packages/app/src/slices/**"
+  - ":(top)packages/app/src/edge/**"
+  - ":(top)packages/app/src/main.ts"
+  - ":(top)packages/app/src/kernel/config/**"
 ---
 
 # Business logic index
 
-The logic map follows a run from local setup through reviewed admission, retained revisions, exports, templates and scheduled instantiation. The server wires drafts, templates, schedules, the runner and the update service during boot (`packages/app/src/main.ts:137`, `packages/app/src/main.ts:263`).
+One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation and Home. Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
 
 ## Trigger & preconditions
 
-Use a scenario when changing one of the listed workflows. Article is the only required content output; active optional stages determine the provider, media and checkpoint requirements applied by admission (`packages/app/src/slices/admission/rules.ts:17`, `packages/app/src/slices/play-drafts/start.ts:92`).
+Open the scenario whose capability a change touches; `depends_on` in each file's frontmatter names the scenarios it relies on. Every project mutation route refuses the bundled sample project with 409 `sample-read-only` (`packages/app/src/edge/http/app.ts:292`).
 
 ## Steps
 
 | Scenario | Reference |
 |---|---|
-| 01 Pipeline lifecycle | [01-pipeline-lifecycle.md](01-pipeline-lifecycle.md) |
-| 02 Provider credentials, host CLI readiness and voices | [02-provider-credentials.md](02-provider-credentials.md) |
-| 03 Placeholder substitution | [03-placeholder-substitution.md](03-placeholder-substitution.md) |
+| 01 Pipeline lifecycle: stages, dependency graph, retry tiers, provider queue | [01-pipeline-lifecycle.md](01-pipeline-lifecycle.md) |
+| 02 Provider credentials, key tests, CLI paths and sign-in, system voice | [02-provider-credentials.md](02-provider-credentials.md) |
+| 03 Placeholder substitution and shared keywords | [03-placeholder-substitution.md](03-placeholder-substitution.md) |
 | 04 Run admission | [04-run-admission.md](04-run-admission.md) |
-| 05 Provided outputs | [05-provided-outputs.md](05-provided-outputs.md) |
+| 05 Provided outputs and uploads | [05-provided-outputs.md](05-provided-outputs.md) |
 | 06 Research documents and editorial consolidation | [06-research.md](06-research.md) |
-| 07 Article writing from originals and editorial notes | [07-article-writing.md](07-article-writing.md) |
-| 08 Narration, optional cue preparation, supplied glossary IPA and clean/script downloads | [08-narration.md](08-narration.md) |
-| 09 Image generation | [09-image-generation.md](09-image-generation.md) |
+| 07 Article writing, Article Off | [07-article-writing.md](07-article-writing.md) |
+| 08 Narration: preparation, glossary, aliases, multi-voice script, pauses, levelling, chunk retry | [08-narration.md](08-narration.md) |
+| 09 Image generation, scenes, establishing image, regenerate | [09-image-generation.md](09-image-generation.md) |
 | 10 Thumbnail prompt by LLM | [10-thumbnail-prompt-by-llm.md](10-thumbnail-prompt-by-llm.md) |
-| 11 Video assembly and bounded subtitle-model recovery | [11-video-assembly.md](11-video-assembly.md) |
-| 12 Project edits, retained pronunciation overrides and catalogue-consistent recovery | [12-reruns-and-edits.md](12-reruns-and-edits.md) |
-| 13 Pause, resume and cancel | [13-cancel.md](13-cancel.md) |
-| 14 Storage, downloads and Docker host folders | [14-storage-and-downloads.md](14-storage-and-downloads.md) |
-| 15 Prompt management | [15-prompt-management.md](15-prompt-management.md) |
+| 11 Video assembly and export mastering | [11-video-assembly.md](11-video-assembly.md) |
+| 12 Project edits, reruns, redo | [12-reruns-and-edits.md](12-reruns-and-edits.md) |
+| 13 Pause, resume, retry, soften, cancel | [13-cancel.md](13-cancel.md) |
+| 14 Storage, downloads, files location | [14-storage-and-downloads.md](14-storage-and-downloads.md) |
+| 15 Prompt management and history | [15-prompt-management.md](15-prompt-management.md) |
 | 16 Telemetry | [16-telemetry.md](16-telemetry.md) |
 | 17 Subtitles and fonts | [17-subtitles.md](17-subtitles.md) |
-| 18 Cost review and batch queue | [18-cost-review-batch.md](18-cost-review-batch.md) |
-| 19 Model catalogue and thinking controls | [19-catalogue-thinking.md](19-catalogue-thinking.md) |
-| 20 Local boot, Docker transactions, host helper and recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
-| 21 In-app updater | [21-app-updater.md](21-app-updater.md) |
-| 22 Play drafts and uploads | [22-play-drafts.md](22-play-drafts.md) |
+| 18 Cost estimate, plan limits, batch review | [18-cost-review-batch.md](18-cost-review-batch.md) |
+| 19 Model catalogue, daily sync, retired models, thinking controls | [19-catalogue-thinking.md](19-catalogue-thinking.md) |
+| 20 Boot, CLI install/update, recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
+| 21 In-app and native updater | [21-app-updater.md](21-app-updater.md) |
+| 22 Play drafts | [22-play-drafts.md](22-play-drafts.md) |
 | 23 Review checkpoints | [23-review-checkpoints.md](23-review-checkpoints.md) |
-| 24 Project templates | [24-project-templates.md](24-project-templates.md) |
-| 25 Scheduled jobs | [25-scheduled-jobs.md](25-scheduled-jobs.md) |
-| 26 Document (article as a styled PDF) | [26-document.md](26-document.md) |
-| 27 YouTube description (Video stage step) | [27-youtube-description.md](27-youtube-description.md) |
-| 28 Shorts (Video stage step: vertical clips with word-by-word captions) | [28-shorts.md](28-shorts.md) |
-| 29 Video editing (cuts on sentences, transitions, the Look, chapter cards, clips and animated images) | [29-video-editing.md](29-video-editing.md) |
+| 24 Project templates, next chapter | [24-project-templates.md](24-project-templates.md) |
+| 25 Scheduled jobs, topic generation, held topics | [25-scheduled-jobs.md](25-scheduled-jobs.md) |
+| 26 Document (styled PDF) | [26-document.md](26-document.md) |
+| 27 YouTube description, pinned comment, A/B titles | [27-youtube-description.md](27-youtube-description.md) |
+| 28 Shorts | [28-shorts.md](28-shorts.md) |
+| 29 Video editing: edit list, motion, cards, clips | [29-video-editing.md](29-video-editing.md) |
+| 30 Channels, brand kit, cast | [30-channels-and-cast.md](30-channels-and-cast.md) |
+| 31 Channel memory: episodes, existing videos | [31-channel-memory.md](31-channel-memory.md) |
+| 32 Studio upload prep and extension | [32-studio-upload-prep.md](32-studio-upload-prep.md) |
+| 33 Automatic reviews | [33-automatic-reviews.md](33-automatic-reviews.md) |
+| 34 Speakers and voices | [34-speakers-and-voices.md](34-speakers-and-voices.md) |
+| 35 Audio levelling and ambient bed | [35-audio-levelling-and-ambient.md](35-audio-levelling-and-ambient.md) |
+| 36 Style preview | [36-style-preview.md](36-style-preview.md) |
+| 37 Run cost and ETA | [37-run-cost-and-eta.md](37-run-cost-and-eta.md) |
+| 38 Home attention, fix-its, Mark uploaded | [38-home-attention-and-uploads.md](38-home-attention-and-uploads.md) |
+| 39 Notifications and live events | [39-notifications-and-live-events.md](39-notifications-and-live-events.md) |
+| 40 Trash, export/import, scheduled backups | [40-trash-and-scheduled-backups.md](40-trash-and-scheduled-backups.md) |
+| 41 Onboarding and bundled samples | [41-onboarding-and-sample.md](41-onboarding-and-sample.md) |
+| 42 In-app help, What's new, patch notes | [42-in-app-help.md](42-in-app-help.md) |
+| 43 Start at login | [43-autostart.md](43-autostart.md) |
 
 ## Branches
 
-Play creates projects from durable drafts, Templates creates fresh drafts from immutable template revisions, and Schedules creates fresh drafts and projects from saved template versions on a local cadence (`packages/app/src/slices/play-drafts/start.ts:110`, `packages/app/src/slices/project-templates/service.ts:117`, `packages/app/src/slices/schedules/scheduler.ts:96`).
+Play starts projects from durable drafts (`packages/app/src/slices/play-drafts/start.ts:24`); Templates make fresh drafts (`packages/app/src/slices/project-templates/service.ts:136`); Schedules make drafts and projects from the template as it is at dispatch time, so an edit reaches the next run (`packages/app/src/slices/schedules/scheduler.ts:175`); onboarding makes the quick short (41).
 
 ## Unhappy paths
 
-Typed validation, conflicts and readiness failures preserve the draft or revision for correction. Startup recovery marks interrupted work and recovers checkpoint and schedule state before normal timers resume (`packages/app/src/slices/play-drafts/start.ts:54`, `packages/app/src/main.ts:113`, `packages/app/src/main.ts:267`).
+Validation, conflict and readiness failures leave the draft or revision in place for correction and answer problem+json with a fix sentence (see 03-conventions.md). Interrupted work is recovered at boot (20) and through one-click recovery (13).
 
 ## State transitions
 
-Drafts move through active, starting and started; project work has revision-scoped reservations and attempts; schedules move among active, paused, canceled and completed while keeping run history (`packages/app/src/slices/play-drafts/start.ts:61`, `packages/app/src/slices/schedules/service.ts:110`).
+Drafts: active → starting → started (22). Projects and stages: 01. Checkpoints: 23. Schedules: active, paused, canceled, completed (25). Trashed items: 40.
 
 ## Invariants
 
-Saving setup or project edits does not dispatch provider work. Reviewed Start, rebuild Start, checkpoint approval and scheduler admission are the explicit authorities described by their respective scenarios (`packages/app/src/slices/play-drafts/review.ts:49`, `packages/app/src/slices/play-drafts/start.ts:24`).
+Saving setup or project edits dispatches no provider work; reviewed Start, rebuild Start, recovery, checkpoint approval and scheduler admission are the only authorities that admit work (04, 12, 13, 23, 25).
 
 ## Outcomes & side effects
 
-Successful workflows persist local SQLite state and project assets, then wake the runner. Downloads, history reads, model-catalogue reads and update checks do not themselves submit generation requests (`packages/app/src/main.ts:110`, `packages/app/src/slices/play-drafts/start.ts:136`).
+Successful workflows persist SQLite state and project assets, then wake the runner (01). Downloads, history reads, catalogue reads and update checks submit no generation requests.
 
 ## Dimensions not in play
 
-The mapped product has no account, remote project synchronization or multi-user authorization layer. The default listener is loopback and a non-loopback bind prints a warning that anyone reaching it controls the app and keys (`packages/app/src/kernel/config/index.ts:20`, `packages/app/src/edge/cli.ts:31`).
+No accounts, remote sync or multi-user authorization. The default bind is `127.0.0.1` (`packages/app/src/kernel/config/index.ts:21`); a non-loopback bind prints a warning that anyone reaching the port controls the app and its keys (`packages/app/src/edge/cli.ts:108`).

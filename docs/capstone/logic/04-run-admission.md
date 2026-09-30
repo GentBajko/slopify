@@ -13,62 +13,88 @@ depends_on:
   - 01-pipeline-lifecycle
   - 02-provider-credentials
   - 03-placeholder-substitution
-generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
-capstone_version: 5.2.0
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: f96aa32c4e68
 paths_covered:
-  - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/admission/**
-  - :(top)packages/web/src/play/**
-  - :(top)packages/web/src/routes/play.tsx
-content_hash: 7c9779e384e7
+  - ":(top)packages/app/src/slices/play-drafts/**"
+  - ":(top)packages/app/src/slices/admission/**"
+  - ":(top)packages/app/src/slices/batch/**"
+  - ":(top)packages/app/src/slices/channels/runs.ts"
+  - ":(top)packages/app/src/slices/schedules/scheduler.ts"
+  - ":(top)packages/app/src/edge/http/project-create.ts"
+  - ":(top)packages/app/src/edge/http/planning.ts"
+  - ":(top)packages/app/src/edge/http/drafts.ts"
+  - ":(top)packages/web/src/play/**"
+  - ":(top)packages/web/src/routes/play.tsx"
+  - ":(top)packages/app/src/slices/subtitles/model.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-checkpoints.ts"
+  - ":(top)packages/app/src/kernel/db/migrations/0006-play-drafts.sql"
 ---
 
 # 04 Run admission
 
-Play saves an editable setup before it creates any project. Review resolves that exact saved setup and optional dependency gates; Start explicitly admits one run or a batch. Existing-project Save/Rebuild is a separate workflow.
+Play saves an editable draft before any project exists. The server reviews that exact saved version (rules, templates, channel branding, model/provider readiness, estimate) and stores a UUID-bound review; Start admits exactly the reviewed runs, one project or a sequential batch. Existing-project Save/Rebuild is a separate workflow (12 Reruns and edits).
 
 ## Trigger & preconditions
 
-The local user opens Play and moves freely through Content, Outputs, Style and Review. Opening, editing, autosaving and reviewing do not start generation. Start requires an acknowledged draft, valid current review and ready active inputs (`packages/web/src/routes/play.tsx:36`, `packages/web/src/play/review-state.ts:152`, `packages/app/src/slices/play-drafts/start.ts:23`).
+- Entry points: Play Start `POST /api/drafts/:id/review` then `POST /api/drafts/:id/start` (`packages/app/src/edge/http/drafts.ts:113`, `packages/app/src/edge/http/drafts.ts:125`); a scheduled run, which creates a draft from the template, reviews it and starts it (`packages/app/src/slices/schedules/scheduler.ts:172`); `POST /api/projects` with a whole draft, also used by onboarding's quick short (`createProject`, `packages/app/src/edge/http/project-create.ts:27`); `POST /api/projects/batch` (`packages/app/src/edge/http/planning.ts:85`).
+- Play is one page: Title and keywords, Article, Narration, Images, Video and style, Outputs, Reviews and Channel are folded summary rows opened in place; review, estimate and the Start key sit in the right rail (`packages/web/src/play/setup-rows.ts:13`, `packages/web/src/routes/play.tsx:65`). With Article Off the Narration row is hidden (`packages/web/src/routes/play.tsx:417`).
+- Opening, editing, autosaving and reviewing never start generation. Start requires a valid review of the page's current generation and no pending active upload (`packages/web/src/play/review-state.ts:216`).
+- `POST /api/projects` and the batch endpoint refuse a draft with checkpoints (409): checkpoints need Play's review-and-start (`packages/app/src/edge/http/project-create.ts:30`, `packages/app/src/edge/http/planning.ts:92`).
 
 ## Steps
 
-1. Defaults remain Article/Audio/Images/Video Generate; Research/Thumbnail Off; 16:9; empty title, keywords and generation selections; intro/outro Off; subtitles Off, English, default font and size48. Expected words defaults1500. Incomplete raw values can be saved (`packages/app/src/slices/play-drafts/schema.ts:16`, `packages/app/src/slices/play-drafts/schema.ts:67`).
-2. Content owns title, article prompt or supplied text, shared keyword values, text provider/model/thinking and optional Research. Providing Article normalizes Research Off. Text generation remains required for active LLM thumbnail/entry work even with a supplied article (`packages/web/src/play/content-section.tsx:16`, `packages/app/src/slices/play-drafts/convert.ts`).
-3. Outputs select generated/provided/off media and applicable providers. Article cannot be Off. Images Off normalizes Video Off; Audio Off permits silent MP4; Video Off with Audio enabled produces combined WAV; both off retain individual outputs. Inactive generation selections and supplied media do not impose active admission requirements (`packages/app/src/slices/play-drafts/convert.ts`, `packages/app/src/slices/admission/rules.ts`).
-4. Active validation retains title1–200, keyword values≤200, integer image counts1–20 per prompt and total≤60, expected words1–100000, at most50 runs, and active subtitle font/size16–120 validation. Fonts and media must be available. A retained font upload needs explicit completion/recovery even when captions are turned off (`packages/app/src/slices/play-drafts/review-inputs.ts:39`, `packages/web/src/subtitles/controls.tsx:252`).
-5. Review refreshes provider and model choices, flushes the draft, resolves current template bodies/keywords, calculates catalogue estimates and stores a UUID-bound review. Its Run readiness summary classifies the active LLM, TTS and image requirements and links failed checks back to the field; Start repeats readiness against the catalogue snapshot (`packages/web/src/play/review-state.ts:151`, `packages/web/src/play/review-summary.tsx:147`, `packages/app/src/slices/play-drafts/start.ts:82`).
-6. Start posts draft ID, base version and review ID. The server replays a committed receipt first; otherwise it claims the reviewed draft, checks provider and local readiness, and commits project(s), checkpoint set and receipt transactionally. Supplied bytes are copied before draft references are released (`packages/app/src/slices/play-drafts/start.ts:32`, `packages/app/src/slices/play-drafts/start.ts:92`, `packages/app/src/slices/play-drafts/start.ts:115`).
-7. Confirmed creation clears the active draft selection and opens the created project. A transport-uncertain Start retains the same identity for recovery; it never offers a fresh chargeable submission first (`packages/web/src/play/review-state.ts`, `packages/web/src/play/use-draft-session.ts`).
+1. Fresh draft defaults: Research Off, Article/Audio/Images/Video Generate, Thumbnail Off, Document absent (Off), 16:9, empty title/prompts/keywords, intro/outro "", chunking `whole`, subtitles Off/English/default font/size 48, seconds per image 15, edge silence 2, zoom 22.5 %, motion `zoom`, show figures on, pronunciation glossary/shared glossary/aliases/describe figures on, expected words 1500 (`packages/web/src/play/draft-state.ts:18`, `packages/app/src/slices/admission/rules.ts:45`, `packages/app/src/slices/subtitles/model.ts:34`). Provider rows start with the first-launch defaults when any were found (`withProviderDefaults`, `packages/web/src/play/draft-state.ts:80`). Incomplete raw values are saved.
+2. Browser normalisation mirrors the server: Article not Generate forces Research Off; Images Off forces Video Off; Audio Off forces subtitles Off; Video Off turns burn-in captions into files (`normalizePlayForm`, `packages/web/src/play/draft-state.ts:97`; `normaliseDraft`, `packages/app/src/slices/admission/rules.ts:210`). Server normalisation also trims title and keyword values and drops intro/outro unless Audio is Generate (`packages/app/src/slices/admission/rules.ts:224`).
+3. Review is requested automatically on mount and 800 ms after edits pause, when nothing local blocks it (`packages/web/src/play/start-rail.tsx:68`). The client first refreshes provider/model choices and flushes the draft (`packages/web/src/play/review-state.ts:158`).
+4. Server review (`reviewDraft`, `packages/app/src/slices/play-drafts/review.ts:72`): refuse when a start is pending/finished or the base version differs (`packages/app/src/slices/play-drafts/review.ts:133`); resolve inputs (`resolveReviewInputs`, `packages/app/src/slices/play-drafts/review-inputs.ts:48`): font upload must be finished; expected words integer 1–100000; at most 49 variants (50 videos); apply the channel's brand kit and cast (`packages/app/src/slices/channels/runs.ts:21`, `packages/app/src/slices/channels/runs.ts:37`); pick template bodies; run `admit` per video with variant fields prefixed `Video N:`; check models against a captured catalogue; resolve and hash the subtitle font; compute estimates; reject checkpoints before a stage that is not Generate (Video checkpoint needs video or audio on) (`packages/app/src/slices/play-drafts/review-inputs.ts:188`); build the checkpoint set.
+5. `admit` rules (`packages/app/src/slices/admission/rules.ts:96`): title 1–200 chars; each source must be in `allowedSources` — research/article/audio/images `off|generate|provide`, thumbnail `off|from_prompt|prompt_by_llm|provide`, video/document `off|generate` (`packages/app/src/slices/admission/rules.ts:86`); an LLM choice whenever `llmUses` lists a use (research, article, speaker attribution, narration preparation, LLM intro/outro, LLM thumbnail prompt, YouTube description, shorts) (`packages/app/src/slices/admission/rules.ts:407`); article prompt when Article Generate; TTS provider/model/voice when Audio Generate; 1–20 images per prompt, total ≤ 60 (`packages/app/src/slices/admission/rules.ts:240`); image provider when images, generated thumbnail, shorts or animation need one; thumbnail prompt for generated thumbnails; keyword values required, ≤ 200 chars, single line (`packages/app/src/slices/admission/rules.ts:368`); silence gap 0–30 s; seconds per image 1–600 integer and zoom 0–50 in 0.5 steps only while Video Generate; edge silence 0–30 in 0.5 steps unless Audio Off (`packages/app/src/slices/admission/rules.ts:63`).
+6. Dependent-feature rules: subtitles, YouTube description and shorts need narration (`packages/app/src/slices/admission/rules.ts:159`, `packages/app/src/slices/admission/rules.ts:481`, `packages/app/src/slices/admission/rules.ts:531`); narration preparation needs Inworld TTS-2 (`packages/app/src/slices/admission/rules.ts:438`); Article Off forbids generated narration, the PDF, an LLM thumbnail prompt, captions, YouTube description, shorts and scenes-from-article (`articleOffFields`, `packages/app/src/slices/admission/rules.ts:642`); short mode requires 9:16, Video Generate, narration and images on, thumbnail/document Off and Shorts off (`shortModeFields`, `packages/app/src/slices/admission/short-mode.ts:16`); provided files must be staged and complete (see 05 Provided outputs).
+7. Model readiness: a second resolve after the runtime model check must bind to the same inputs, else `stale-review` (`packages/app/src/slices/play-drafts/review.ts:44`, `packages/app/src/slices/play-drafts/review.ts:67`). The review row is written only while the draft is `active` at the base version; an unchanged fingerprint returns the existing review (`packages/app/src/slices/play-drafts/review.ts:94`, `packages/app/src/slices/play-drafts/review.ts:112`).
+8. Start posts draft ID, base version and review ID (`packages/app/src/slices/play-drafts/start.ts:21`). The server replays a committed receipt first, then claims the draft `active` → `starting` (`packages/app/src/slices/play-drafts/start.ts:32`), rechecks provider readiness against the review's catalogue snapshot (`checkDraftReadiness`, `packages/app/src/slices/play-drafts/readiness.ts:59`), and in one transaction repeats local readiness (models, CLI path unchanged, API key present, voice saved; `packages/app/src/slices/play-drafts/readiness.ts:102`), creates one project or one queue entry and project per run, admits checkpoints, writes the receipt and marks the draft `started` (`packages/app/src/slices/play-drafts/start.ts:127`).
+9. After commit: record the start, release the draft's staged files, pump the queue for a batch or tick each project (`packages/app/src/slices/play-drafts/start.ts:114`). The client clears the draft and navigates to the first created project (`packages/web/src/routes/play.tsx:147`).
 
 ## Branches
 
-- Selected Audio, Images and Video/export checkpoints are persisted with the reviewed Start identity. They hold only that closure until explicit project-page approval; independent work can continue.
-
-- One resolved run uses ordinary independent project scheduling. More than one enters the existing sequential batch queue; this does not serialize the independent stages of a single run.
-- Generated thumbnail/LLM entries can require providers even when the corresponding main article/images sources are supplied or off.
-- Review errors reveal their section/disclosure and focus the correcting control. Untouched fresh fields do not start covered in errors.
-- A saved unavailable option stays visible until explicitly cleared or replaced; no paid provider/model/voice is silently substituted.
-
-These branches are implemented in `packages/web/src/routes/play.tsx:36`, `packages/web/src/play/field-targets.ts`, `packages/web/src/play/pickers.tsx` and `packages/app/src/slices/play-drafts/start.ts:23`.
+- One reviewed run starts directly; more than one enters the batch queue, which runs one project at a time (`packages/app/src/slices/play-drafts/start.ts:148`, `packages/app/src/slices/batch/index.ts:83`). The rail shows "Queue N videos" vs "Start run" (`startLabel`, `packages/web/src/play/review-state.ts:279`).
+- Checkpoints (Audio, Images, Video) are saved `held` with the reviewed start and hold only their closure (`packages/app/src/slices/rebuild/runtime-checkpoints.ts:10`).
+- A scheduled run refuses dispatch with `spend-limit` when any estimate is unknown or the high estimate exceeds the schedule's limit (`packages/app/src/slices/schedules/scheduler.ts:193`).
+- The channel is the one picked on Play, else the template's, else the default; its brand kit fills only values left at default unless "Use the channel's brand kit" is off; the channel language applies either way (`packages/app/src/slices/channels/runs.ts:21`, `packages/app/src/slices/channels/runs.ts:37`).
+- A saved choice missing from the option list stays selectable as "(saved choice)"; nothing is silently substituted (`packages/web/src/play/pickers.tsx:114`).
+- Refused fields open the row that owns them and focus the control; untouched fields show no error until a refusal or touch (`packages/web/src/routes/play.tsx:193`, `packages/web/src/routes/play.tsx:246`).
 
 ## Unhappy paths
 
-Invalid/missing active input returns typed field errors and creates no project. Stale review or failed readiness keeps the setup for correction. Lost Start acknowledgement recovers the original receipt. Save conflicts retain local edits with Reload/Save as new; confirmed Discard uses its exact displayed version. Disk/copy failures clean uncommitted allocations without treating an uncertain committed Start as a new submission (`packages/app/src/slices/play-drafts/start.ts:23`, `packages/web/src/play/review-state.ts`, `packages/web/src/play/use-draft-session.ts`).
+- Invalid or missing active input: typed field errors, no project (`packages/app/src/slices/play-drafts/review-inputs.ts:32`).
+- Edited after review: the client invalidates the review; the server returns `stale-review` for a version, fingerprint or review-ID mismatch (`packages/web/src/routes/play.tsx:118`, `packages/app/src/slices/play-drafts/start.ts:54`).
+- Review's run count differs from the page's video count: the page is saved again and must be reviewed afresh (`packages/web/src/play/review-state.ts:190`).
+- Start transport failure: the button becomes "Check Start result"; recovery reads the draft and adopts its committed start; `pending-start`/`already-started` also recover rather than resubmit (`packages/web/src/play/review-state.ts:249`, `packages/web/src/play/review-state.ts:257`).
+- Readiness fails at Start: the claim is released and fields returned; created runs not matching the reviewed count throw `StartedRunMismatch`, roll back and return `stale-review` (`packages/app/src/slices/play-drafts/start.ts:99`, `packages/app/src/slices/play-drafts/start.ts:166`).
+- A post-commit action failing is logged; the receipt stays authoritative (`packages/app/src/slices/play-drafts/start.ts:175`).
+- Save conflict: status `conflict` offers Reload saved draft or Save as a new draft (`packages/web/src/play/draft-list.tsx:88`).
+- Deleted subtitle font at review: `subtitles.fontId` error (`packages/app/src/slices/play-drafts/review.ts:31`).
 
 ## State transitions
 
-Draft state is active → starting → started. Review exists only for an exact saved version/input identity. A committed Start receipt survives release of draft attachments and is replayed before readiness/consumed-file checks (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql`, `packages/app/src/slices/play-drafts/start-repo.ts:51`).
+Draft: `active` → `starting` → `started` (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:12`); a released claim returns to `active` (`releaseStartClaim`, `packages/app/src/slices/play-drafts/start-repo.ts:149`). A review exists only for an exact saved version and fingerprint. A committed receipt is replayed before any readiness or attachment check (`readStartReceipt`, `packages/app/src/slices/play-drafts/start-repo.ts:51`). Batch queue rows move `queued` → `active` → `finished` (`packages/app/src/slices/batch/index.ts:83`).
 
 ## Invariants
 
-Saving/reviewing does not dispatch providers. Article is required. An MP4 needs images; combined WAV needs audio. One reviewed Start identity yields its original result rather than duplicate projects. This is local admission idempotency, not an exactly-once billing guarantee for external providers.
+- Saving or reviewing never dispatches providers.
+- One reviewed Start identity yields its original result, never duplicate projects (`packages/app/src/slices/play-drafts/start.ts:33`).
+- Start creates exactly the reviewed number of runs or nothing (`packages/app/src/slices/play-drafts/start.ts:166`).
+- An MP4 needs images; captions, description and shorts need narration; a short is vertical.
+- Local admission idempotency is not an exactly-once billing guarantee for external providers.
 
 ## Outcomes & side effects
 
-Drafts and reviews are durable SQLite records. Explicit Start creates project/revision records and owned media, then wakes ordinary execution. Failed editing/review retains the draft. See [draft lifetime and recovery](22-play-drafts.md) and [cost/batch behavior](18-cost-review-batch.md).
+Drafts, reviews and start receipts are SQLite rows; Start creates project, stage, revision and work rows plus copied supplied media, then wakes execution. `POST /api/projects` records a `project.created` telemetry event (`packages/app/src/edge/http/project-create.ts:103`). A scheduled run records its request, estimate and project IDs (`packages/app/src/slices/schedules/scheduler.ts:216`). See 22 Play drafts and 18 Cost review and batch.
 
 ## Dimensions not in play
 
-Play does not edit an existing project or choose a recurring clock. Multiple tabs are writers protected by CAS; recurring admission is configured separately from an immutable template revision on Schedules (`packages/app/src/slices/play-drafts/schema.ts:90`, `packages/app/src/slices/schedules/schema.ts:13`).
+- Editing an existing project: not part of Play (12 Reruns and edits).
+- Recurring clock: configured on Schedules from a template (25 Scheduled jobs).
+- Concurrency across tabs: drafts are CAS-versioned rows; no locking beyond version checks (`packages/app/src/slices/play-drafts/review.ts:147`).
+- Money moved: none at admission; estimates only.

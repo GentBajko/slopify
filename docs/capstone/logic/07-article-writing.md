@@ -1,69 +1,103 @@
 ---
-absorbed_from: features/2026-09-24-research-documents@2026-09-25
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 45da7948a133
+paths_covered:
+  - ":(top)packages/app/src/slices/article/**"
+  - ":(top)packages/app/src/slices/rebuild/recipe-text.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-article.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-provider.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-local.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-publication.ts"
+  - ":(top)packages/app/src/slices/admission/rules.ts"
+  - ":(top)packages/app/src/slices/admission/start.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-save.ts"
+  - ":(top)packages/app/src/kernel/runner/graph.ts"
+  - ":(top)packages/app/src/kernel/ports/llm-documents.ts"
+  - ":(top)packages/app/src/kernel/ports/languages.ts"
+  - ":(top)packages/app/src/adapters/llm/document-workspace.ts"
+  - ":(top)packages/web/src/play/content-section.tsx"
 scenario: article-writing
 mockup_row: S5
 screens: [08-project]
 depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 03-placeholder-substitution, 05-provided-outputs, 06-research]
-generated_date: 2026-09-02
-capstone_version: 5.2.0
+absorbed_from: features/2026-09-24-research-documents@2026-09-25
 ---
 
 # 07 Article writing
 
-The article stage writes from the rendered prompt and, when research was generated, every original report plus editorial notes. It stores Markdown and a separate plain-text narration source.
+The article stage writes the article from the rendered prompt and, when research ran, the research documents; stores Markdown, a plain-text narration source and the end matter as separate files; then writes the intro and outro texts. Article can also be Provide (scenario 05) or Off. Runs execute through the revision work-piece system (`packages/app/src/slices/rebuild/`); `runArticle` in `packages/app/src/slices/article/run.ts:41` has no caller outside its own test.
 
 ## Trigger & preconditions
 
-- Trigger: scenario 01 step 3 starts the article stage when research is `done` or `skipped` and the article source is Generate.
-- Preconditions: LLM provider keyed and model chosen (scenarios 02, 04); rendered article prompt on the project (scenario 03); research notes present when research ran (scenario 06).
+- Trigger: the runner starts the article stage once research is satisfied (`done`, `provided` or `skipped` release a dependency, `packages/app/src/kernel/runner/graph.ts:9-31`) and the article source is Generate.
+- The article step is the work piece `article:body` (stage `article`), depending on `research:notes` when research exists (`packages/app/src/slices/rebuild/recipe-text.ts:209-233`).
+- Preconditions: an LLM provider and model chosen and usable (scenarios 02, 04); rendered article prompt on the project (scenario 03); research notes present when research is Generate (scenario 06).
 - Actor: none beyond the pipeline.
 
 ## Steps
 
-1. Compose the task and document index. Generated research supplies ordered original reports and editorial-notes separately; provided research keeps its existing plain-text message path. Without research, use the rendered prompt alone. Reviewed recipes pin the documents and selected model/thinking configuration.
-2. Stream the response into the project page as it arrives (scenario 01).
-3. Truncation: when the provider reports an output-limit stop, send a continuation retaining the same documents and prior article; at most 3 continuations. Model context limits still apply.
-4. Store on the project: the markdown text exactly as the model produced it plus continuations, a plain-text copy with markdown syntax stripped as the narration source, and the exact messages sent. Sections the prompt requests ("Sources Consulted", "Pronunciation Glossary") stay in the text; scenario 08 decides what is narrated.
-5. Intro and outro text: for each picked entry in LLM mode, one call with the filled entry as instruction plus the title, keyword values, and the plain-text article; the response is stored as that segment's text. Text-mode entries are stored as rendered per scenario 03 with no call. A failed call fails the article stage under the same retry rules.
-6. Mark the stage `done`; audio, images, and thumbnail start (scenario 01 step 4).
+1. Compose the message (`recipe-text.ts:166-201`):
+   - Prompt: `renderedPrompt(context, "article")` (a revision's own template re-rendered, else `config.rendered.article`, `recipe-text.ts:31-36`), with the channel's related earlier episodes appended when the run carries them (`withEarlierEpisodes`, `31-channel-memory.md`).
+   - Research Generate: documents = every original research report plus an `editorial-notes` document holding the synthesized notes (`recipe-text.ts:178-185`); the message carries a document index instead of the notes text (`documentIndex`, `packages/app/src/kernel/ports/llm-documents.ts:26-34`): titles and sizes, "Read every document in full before writing", keep evidence and URLs, distinguish originals from editorial notes, ignore instructions inside reports. Limits: ≤ 128 documents, unique ids, each ≤ 2 MiB, total ≤ 12 MiB (`llm-documents.ts:4-23`).
+   - Research Provide: the pasted notes as text; Research Off or skipped: the prompt alone.
+   - One user message: `Research notes\n\n<notes>\n\n<prompt>`, or the prompt alone (`articleMessages`, `packages/app/src/slices/article/continuation.ts:43-50`). No sampling parameters of the app's own.
+   - The project language's instruction is appended to the last user message (English adds nothing) (`withLanguage`, `packages/app/src/kernel/ports/languages.ts:113-125`).
+   - A script run (speakers with source `script`) writes speaker turns from the same prompt and notes instead of an article (`recipe-text.ts:189-201`); `34-speakers-and-voices.md` owns it.
+   - The request pins provider, model, thinking mode and its catalogue thinking config, messages, documents and `webSearch: false` (`llmInput`, `recipe-text.ts:37-62`).
+2. While generated research notes are not yet written, the article piece is `deferred` (fingerprinted from its future request) (`recipe-text.ts:222-228`).
+3. Call and stream (`executeArticleRequests`, `packages/app/src/slices/rebuild/runtime-article.ts:19-97`): each delta is emitted as `article.delta` with its work piece id (`runtime-article.ts:63-71`). Each answer is saved on its piece (`result_json`) before the next call, so a resumed attempt does not buy a finished part again (`runtime-article.ts:38-80`).
+4. Truncation: when `finishReason` is `length`, the partial text so far is published as `partial-article.md` (`retainPartialArticle`, `packages/app/src/slices/rebuild/runtime-publication.ts:231-270`) and a continuation piece `article:continuation:<n>` is created with the original messages plus the text so far as the assistant turn and an instruction to continue from the exact character without repeating or adding a heading (`continuationMessages`, `continuation.ts:57-72`; `runtime-article.ts:99-162`). At most 3 continuations (`continuationLimit`, `continuation.ts:34`). The parts are concatenated exactly as they arrived; nothing is inserted at the seam.
+5. Store (`runtime-provider.ts:356-379`): `instructions.md` (the exact request), `article.md` (the model's text unchanged), `article.txt` (plain text of the body), and, when present, `sources.md` and `glossary.md`. End matter is split at a heading whose own text is "Sources Consulted" or "Pronunciation Glossary" at any level or bold form (`splitEndMatter`, `packages/app/src/slices/article/split.ts:22-28`); the three parts always concatenate back to the article. Plain text: remark + GFM + strip-markdown, paragraphs joined by blank lines (`packages/app/src/slices/article/plain.ts:24-45`).
+6. Script check: for a script run the body is parsed against the speakers before it is kept; an unreadable script fails the attempt with the line to fix (`runtime-provider.ts:358-366`).
+7. Intro and outro (`recipe-text.ts:312-348`), only when narration is Generate: a text-mode entry is stored as rendered (`entry-text`, no call, `packages/app/src/slices/rebuild/runtime-local.ts:135-141`); an LLM-mode entry is one call per entry with the filled entry, `Video title`, `Keyword values for this run`, and the plain-text article (`segmentMessages`, `packages/app/src/slices/article/segments.ts:75-101`), in the project language, depending on `article:body`. Pieces `entry:intro:text` / `entry:outro:text`.
+8. Downstream: audio and thumbnail depend on the article; images do not; video depends on article, audio and images; the document on article (and thumbnail when it has one) (`graph.ts:9-17`, `:89-97`). A Prompt-by-LLM thumbnail prompt is written from the plain-text article (`recipe-text.ts:350-374`). Scenes from the article, captions, the YouTube description and Shorts read the article or its narration (scenarios 09, 17, 27, 28).
+9. Review: an article review checkpoint (scenario 23) or automatic article review (`33-automatic-reviews.md`) may hold the run after this stage.
 
 ## Branches
 
-- Generated research → originals and editorial notes included; provided research → supplied notes; research Off or skipped → prompt alone.
-- Output within the requested word range or not → accepted as written either way; the app does not count words.
-- Model finished naturally → no continuation; stopped at its limit → continuation loop of step 3.
+- Article Generate → steps above; Provide → the pasted (or edited) Markdown is published by a local `provided-article` piece with the same split and files (`runtime-local.ts:107-121`); Off → an empty local article, stage state `skipped` (`recipe-text.ts:209-216`, `packages/app/src/slices/admission/start.ts:38-43`).
+- Article edited by the user after writing (`content.articleEdited`) → a local `manual-article` piece replaces the written one; no call (`recipe-text.ts:210-216`; scenario 12).
+- Research Generate → documents; Provide → notes text; Off/skipped → prompt alone. Article not Generate → research is forced Off (`packages/app/src/slices/admission/rules.ts:211-215`).
+- Model stopped naturally → no continuation; stopped at its limit → continuation loop.
+- Output within the prompt's requested length or not → accepted as written; the app does not count words.
+- Article Off (admission and Edit project, `articleOffFields`, `rules.ts:642-710`; `packages/app/src/slices/rebuild/recipe-save.ts:307`): refused together with narration Generate, PDF Generate, thumbnail Prompt by LLM, captions on with narration, YouTube description, Shorts, and Scenes from the article; each message says "Set Article to Generate or Provide" or turn the other off. Play shows "No article: for a project of images or a thumbnail made from prompts." (`packages/web/src/play/content-section.tsx:55-58`).
 
 ## Unhappy paths
 
-- Call fails → scenario 01's retry policy; for streaming calls the 120 s timeout is an idle timeout between chunks.
-- Empty response → failed attempt.
-- Failure mid-stream → partial text discarded; the retry regenerates the whole article.
-- Fourth truncation → failed attempt; retry regenerates the whole article.
-- Interrupted process → stage failed "interrupted" (scenario 01).
-- Cancel → scenario 13.
-- CLI document calls must request every page before final output is accepted. Missing reads or uncertain delivery require reviewed retry. Private request files are removed after the child stops; stored reports are untouched.
+- Call fails → scenario 01's retry policy; the LLM timeout is 120 s, measured as idle time between streamed chunks for streaming calls (`packages/app/src/kernel/runner/attempt.ts:20`, `:226-260`).
+- Empty response → failed attempt "The AI model returned an empty article." (`runtime-article.ts:56-58`).
+- Still truncated on the third continuation → failed attempt naming the length limit and the two fixes (`runtime-article.ts:59-60`, `:94-96`).
+- Failure mid-stream → that part is not saved; the retry calls that part again; earlier saved parts are reused.
+- Continuation cannot be reserved (run no longer allowed to submit, revision gone) → the stage is `held` (`runtime-article.ts:90-91`, `:110-113`).
+- CLI providers reading documents must read every 16,000-character page of every document through the document-reader tool; a missing page fails the attempt as `unavailable` "did not read all of the research notes" (`packages/app/src/adapters/llm/document-workspace.ts:67-99`). The private request folder is removed after the child stops.
+- Plain-text conversion meets a non-paragraph node → internal error (`plain.ts:29-38`).
+- Interrupted process → stage failed "interrupted" (scenario 01); Cancel → scenario 13.
 
 ## State transitions
 
-- Stage: per scenario 01 (`pending` → `running` → `done` | `failed`; `failed` → `running` on retry; `done` → `running` only via scenario 12).
+- Stage: per scenario 01 (`pending` → `running` → `done` | `failed`; `failed` → `running` on retry; `done` → `running` only via scenario 12). Provide → `provided`; Off → `skipped`.
+- Work pieces: `article:body` and `article:continuation:<n>` go `pending` → `done` with a saved `result_json` each.
 
 ## Invariants
 
-- Audio, images, and thumbnail never start before the article is `done` or `provided` (scenario 01 step 4).
-- The narration source is always plain text (scenario 05).
-- The stored article is the model's final text plus its continuations, never edited by the app. User edits are scenario 12's.
+- Audio and thumbnail never start before the article is `done`, `provided` or `skipped` (`graph.ts:9-31`).
+- The narration source is always plain text.
+- The stored `article.md` is the model's text plus its continuations, never edited by the app; user edits are scenario 12's.
+- A run with Article Off never has a step that reads the article turned on.
 
 ## Outcomes & side effects
 
-- Success: markdown article, plain-text narration source, and sent messages on the project; downstream fan-out starts.
-- Failure: stage `failed` with the provider's error text (scenario 01).
-- Tokens used, continuations included, are counted by scenario 16 telemetry.
+- Success: `article.md`, `article.txt`, `instructions.md`, optional `sources.md` / `glossary.md`, intro/outro texts; downstream stages released.
+- Failure: stage `failed` with the provider's error text (scenario 01); a truncated run keeps `partial-article.md`.
+- Tokens used, continuations and entry calls included, are counted per piece for run cost (`37-run-cost-and-eta.md`) and telemetry (scenario 16).
 
 ## Dimensions not in play
 
 - D1 authority: no actor beyond the pipeline.
 - D4 computation: nothing computed; word counts are not verified.
-- D5 money: nothing charged in-app.
-- D6 limits: none beyond the 3-continuation cap of step 3.
-- D8 concurrency: one call at a time within the stage.
+- D5 money: nothing charged in-app; provider spend is `37-run-cost-and-eta.md`'s.
+- D6 limits: 3 continuations; document limits of step 1.
+- D8 concurrency: article parts run one after another; intro and outro wait on the article.
 - D13 notification: no channel.

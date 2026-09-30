@@ -1,3 +1,0 @@
-# Leftover waiting copies
-
-- Updating clears the extra waiting copies that saves made before 2.4.0 left behind: for each step the project keeps the row a save would now reuse (the finished result if there is one, otherwise the newest waiting copy), and removes only other waiting copies of exactly that step that never started. Versions that pointed at a removed copy point at the kept waiting one. Finished, running and failed work, admitted work, files and the last row for a step are never removed, and a waiting copy that a saved version still uses beside a finished result is left as it is (database migration 0022).

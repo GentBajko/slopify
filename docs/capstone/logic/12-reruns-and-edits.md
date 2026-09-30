@@ -1,5 +1,43 @@
 ---
-glossary_pronunciation_verified_at_commit: 6eeac3fd9043
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 83dc15757653
+paths_covered:
+  - ":(top)packages/app/src/slices/revisions/**"
+  - ":(top)packages/app/src/slices/rebuild/service.ts"
+  - ":(top)packages/app/src/slices/rebuild/service-readiness.ts"
+  - ":(top)packages/app/src/slices/rebuild/admission-repo.ts"
+  - ":(top)packages/app/src/slices/rebuild/transition-repo.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-materialize.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-actions.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-save.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-validation.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-audio-parts.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-text.ts"
+  - ":(top)packages/app/src/slices/rebuild/preview-plan.ts"
+  - ":(top)packages/app/src/slices/rebuild/model.ts"
+  - ":(top)packages/app/src/slices/rebuild/recovery.ts"
+  - ":(top)packages/app/src/slices/rebuild/recovery-*.ts"
+  - ":(top)packages/app/src/slices/rebuild/review-redo.ts"
+  - ":(top)packages/app/src/slices/rebuild/narration-retry.ts"
+  - ":(top)packages/app/src/slices/rebuild/narration-reuse.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-narration-reuse.ts"
+  - ":(top)packages/app/src/slices/checkpoints/recovery.ts"
+  - ":(top)packages/app/src/slices/channels/rebrand.ts"
+  - ":(top)packages/app/src/slices/project-templates/from-project.ts"
+  - ":(top)packages/app/src/slices/settings/cli-paths.ts"
+  - ":(top)packages/app/src/slices/admission/rules.ts"
+  - ":(top)packages/app/src/edge/http/revisions.ts"
+  - ":(top)packages/app/src/edge/http/actions.ts"
+  - ":(top)packages/web/src/project/revision-workspace.tsx"
+  - ":(top)packages/web/src/project/revision-history.tsx"
+  - ":(top)packages/web/src/project/rebuild-review.tsx"
+  - ":(top)packages/web/src/project/controls.tsx"
+  - ":(top)packages/web/src/project/confirmations.ts"
+  - ":(top)packages/web/src/project/summary.ts"
+  - ":(top)packages/web/src/project/live-writing.tsx"
+  - ":(top)packages/web/src/routes/project.tsx"
 absorbed_from:
 - features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-25-video-recovery@2026-09-25
@@ -20,118 +58,122 @@ depends_on:
 - 09-image-generation
 - 10-thumbnail-prompt-by-llm
 - 11-video-assembly
-generated_date: '2026-09-13'
-generated_at_commit: 4cfe3473f74d
-capstone_version: 5.2.0
-paths_covered:
-  - :(top)packages/app/src/slices/revisions/**
-  - :(top)packages/app/src/slices/rebuild/**
-  - :(top)packages/app/src/slices/checkpoints/**
-  - :(top)packages/app/src/slices/project-templates/**
-  - :(top)packages/web/src/project/**
-content_hash: 889127dea7b9
 ---
 
 # 12 Project edits and retained revisions
 
-## Pronunciation edits and retained audio
-
-Scoped verification: `6eeac3f`, 2026-09-25. Existing missing/off pronunciation settings stay unchanged until explicitly enabled. A used glossary mapping changes exact affected TTS request identity and its dependent outputs; unused mappings do not force compatible requests to repeat. Narration Preparation remains reusable when its source and preparation settings match. Provided whole/chunk audio remains supplied, while text overrides participate in pronunciation (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:187`, `packages/app/src/slices/rebuild/recipe-text.ts:208`).
-
-Overrides targeting merged logical groups retain server-derived source text, offset, body fingerprint and chunking fingerprint. Save strips submitted bindings and derives authority from the base revision; source changes invalidate obsolete bindings instead of retargeting overrides. Removing a mapping or turning pronunciation off does not silently drop an unchanged targeted group. Restore classifies narration script/preparation work as Audio and holds it without admitting new work (`packages/app/src/slices/revisions/mutations.ts:62`, `packages/app/src/slices/revisions/rules.ts:10`, `packages/app/src/slices/rebuild/transition-repo.ts:143`).
-
-Clean transcript descriptors are rebound for the receiving revision when exact IPA-equivalent requests reuse existing or late-completing audio. Historical descriptors and bytes remain immutable; caption identity follows effective clean overridden spelling. Save/Restore never dispatch synthesis (`packages/app/src/slices/rebuild/runtime-narration-reuse.ts`, `packages/app/src/slices/rebuild/narration-reuse.ts`).
-
-An existing project can change its setup, text, media and captions while retaining completed outputs. Saving creates a revision. Rebuilding requires a separate dependency and cost review followed by explicit Start.
-
-Review checkpoints are an additional revision-bound hold. The project page can add or remove a pending Audio, Images or Video/export gate with an explicit Save; approval is a separate exact-fingerprint transaction and never starts a rebuild.
+An existing project changes its setup, text, media and captions while retaining completed outputs. Saving creates an immutable revision and starts nothing. Work is started by a reviewed rebuild (Choose what to remake), by a direct recovery action (Re-run, Regenerate now, Redo), or by Continue the run (scenario 13).
 
 ## Trigger & preconditions
 
-The project page exposes Edit project, revision history and Rebuild affected outputs. Article remains required. Editing does not require idle stages or current provider credentials: readiness is checked when paid work is admitted. A legacy project acquires a baseline revision without generation before entering this flow.
+| Entry point | Route / UI | Code |
+|---|---|---|
+| Prepare baseline | `POST /:id/revisions/prepare` adopts a legacy project's baseline revision without generation | `packages/app/src/edge/http/revisions.ts:89` |
+| History / one revision | `GET /:id/revisions`, `GET /:id/revisions/:revisionId` | `packages/app/src/edge/http/revisions.ts:94`, `:100` |
+| Save | `POST /:id/revisions` from Edit settings → Save | `packages/app/src/edge/http/revisions.ts:123`, `packages/app/src/slices/revisions/mutations.ts:57` |
+| Restore | `POST /:id/revisions/restore` from History → "Restore this revision" | `packages/app/src/edge/http/revisions.ts:135`, `packages/web/src/project/revision-history.tsx:108` |
+| Rebuild preview / Start | `POST /:id/rebuild/preview`, `POST /:id/rebuild`; More → "Choose what to remake…" and the palette's "Remake …" commands | `packages/app/src/edge/http/revisions.ts:147`, `:158`, `packages/web/src/routes/project.tsx:443`, `:277` |
+| Re-run a section | `POST /:id/stages/:kind/rerun`, confirm dialog "Re-run this stage?" | `packages/app/src/edge/http/actions.ts:296`, `packages/web/src/project/confirmations.ts:56` |
+| Save as template | More → "Save as template…"; disabled without a revision or on the sample | `packages/web/src/routes/project.tsx:449`, `packages/app/src/slices/project-templates/from-project.ts:35` |
 
-Save and Restore carry the current base revision and a UUID idempotency key. A stale base returns a recoverable conflict rather than replacing another edit. Repeating an accepted request returns its original receipt even if the project subsequently advanced; the client reloads the actual current head instead of displaying the old receipt as current.
+Editing does not require idle stages or current provider credentials; readiness is checked when paid work is admitted. Save, Restore and Start carry the current base revision and a UUID idempotency key (`packages/app/src/slices/rebuild/model.ts:104`). A key already used by another operation, a rebuild admission, a control receipt or a recovery request is `idempotency-conflict`; a head that moved is `conflict` (`packages/app/src/slices/revisions/mutation-request.ts:37`). Unconditional legacy mutations (`PUT /:id/article`, image delete/regenerate, `PATCH /:id/providers`) answer 409 `revision-required` with "This change is now made from the Edit tab." (`packages/app/src/edge/http/actions.ts:315`).
 
 ## Steps
 
-1. Edit configuration and content locally: title, aspect ratio, source choices, keyword values, project prompt snapshots, providers/models/voice, chunking, entries, silence and subtitles. The saved prompt library is not modified. Unavailable saved model/library choices remain visible until explicitly replaced.
-2. Uploads stage separately. Save binds each ready staged file to an explicit output or narration destination; incomplete uploads and invalid edits stay unsaved with field errors.
-3. Validate the proposed setup, content references and manual caption timeline. Article Generate/Provide is required; Video needs an image. Disabling the last image requires Video Off or a replacement in the same edit. Audio Off allows silent video. Video Off with Audio enabled produces WAV.
-4. Prepare immutable assets, then transactionally create the new revision, clone reusable manifest references, update the project title/format/config and head, and record the receipt. A head changed during preparation is rechecked before commit. Uncommitted files are discarded without deleting referenced history.
-5. Compare dependency fingerprints and physical request identities. Unchanged completed media is shared. Affected outputs are outdated or missing; prior finished files remain available. Supplied ready content is projected immediately, without a provider call.
-6. Saving grants no new work and starts no renderer. Changed work that has not been submitted loses authority. Already submitted work may still be billed and can finish only under its original ownership. Independent unchanged work can continue and attach to the new revision when its inputs still match.
-7. A step the new revision needs is held for Resume. When the project already has a row for exactly that step (same key and fingerprint), Save reserves it instead of making another: a finished one first, so an undo or a restore shows the result it already has, otherwise the held copy nobody started. Repeated saves therefore keep one held row per step, and an outdated output made for exactly the step being asked for reads as ready again (`packages/app/src/slices/rebuild/transition-repo.ts`, `packages/app/src/slices/rebuild/recipe-save.ts`). While the only work left is held, the project page says "Waiting for Resume" on those stages rather than "Waits for the stages above".
-8. After admission, the runner re-plans admitted work on every tick (`packages/app/src/slices/rebuild/runtime-materialize.ts`). A step still waiting on its inputs changes fingerprint each time one lands, for example the joined audio, timing, export and YouTube description as each narration chunk arrives. An untouched waiting row (pending, one unsent piece, no attempt) takes the new fingerprint and input in place. Only a row that has already started something is retired and replaced, so one step keeps one admitted row however many chunks land.
+### Save
+
+1. The edit is parsed; submitted `narrationSources` are stripped and the request hash is computed over the rest (`packages/app/src/slices/revisions/mutations.ts:72`). A repeated accepted key returns its original receipt with `duplicate: true` (`packages/app/src/slices/revisions/mutation-request.ts:47`).
+2. Image prompts or their counts changed: image definitions are replanned, keeping every image an unchanged prompt already has; prompts are refused unless Images is Generate (`packages/app/src/slices/revisions/mutations.ts:264`).
+3. A channel move or brand-kit switch takes the new channel's cast and brand kit; values the person set are kept (`packages/app/src/slices/channels/rebrand.ts:1`, `packages/app/src/slices/revisions/mutations.ts:92`).
+4. Narration bindings are derived server-side from the base revision for overridden, regenerated or uploaded groups (`packages/app/src/slices/revisions/rules.ts:10`).
+5. Validation, all returned as `invalid-edit` with field errors (`packages/app/src/slices/revisions/mutations.ts:94`):
+   - Sources must be allowed values; Images Provide refuses generated images still in the order; Images on with an empty order is refused with "Every image is deleted, so the video has nothing to show…"; Images Off requires Video Off; every image appears exactly once; title 1–200 chars; silence gap, image seconds, zoom and edge silence within limits; Subtitles need Audio (`packages/app/src/slices/rebuild/recipe-save.ts:238`).
+   - Article Off is refused while Narration is Generate or PDF is Generate (`packages/app/src/slices/admission/rules.ts:642`).
+   - Provider/model/voice picked where used, at most `imagesPerVideoMax` images, chunk size 1–1,000,000, and prompts render (`packages/app/src/slices/rebuild/recipe-validation.ts:20`).
+   - Ambient bed and "More images for long videos" values (`packages/app/src/slices/revisions/mutations.ts:241`).
+   - Uploads, template intent, narration intent and asset references (`packages/app/src/slices/revisions/mutations.ts:96`).
+6. Assets are prepared outside the transaction; caption audio is measured (`packages/app/src/slices/revisions/mutations.ts:111`).
+7. One transaction: the receipt check and optional `beforeCommit` rerun; each key in `regenerate` gets a fresh regeneration token; the plan is built; asset references and cues are validated against it; edited cues bind to the timing step's logical fingerprint; deferred intent is preserved; the revision (parent = base, `restoredFromId` null) is inserted; the manifest is cloned; the head advances only if it still equals the base (`packages/app/src/slices/revisions/mutations.ts:114`–`:217`).
+8. Advancing the head rewrites the project's title, format and config and moves the project to the revision's channel when that channel still exists (`packages/app/src/slices/revisions/mutations.ts:316`).
+9. `transitionRevisionWork` carries every reservation whose logical fingerprint is unchanged to the new revision; other unfinished pieces become `draining` when already submitted, else `held`; rows no longer reserved are held or draining the same way (`packages/app/src/slices/rebuild/transition-repo.ts:29`).
+10. For each needed step not carried, a row that already exists for exactly that key and fingerprint is reserved instead of minting one: a done row first, else a held row with no attempt, no submission and no planning context. Otherwise a new `pending`/`held` row is created (`packages/app/src/slices/rebuild/transition-repo.ts:119`, `:178`).
+11. Checkpoint gates carry across (`packages/app/src/slices/checkpoints/recovery.ts:39`); staged uploads are consumed; uncommitted prepared assets are discarded in `finally` (`packages/app/src/slices/revisions/mutations.ts:214`, `:219`, `:228`).
+12. While the only work left is held, pending stages read "Waits until you continue the run" (`packages/web/src/project/summary.ts:76`).
+
+### Reviewed rebuild (Choose what to remake)
+
+13. Preview: the base must be current; the selection is `allAffected` or `selected` work keys (1–10,000) (`packages/app/src/slices/rebuild/model.ts:84`, `packages/app/src/slices/rebuild/service.ts:51`). The preview lists changed inputs, each work item with disposition `reuse`/`generate`/`local`/`review`/`blocked`, retained outputs, provided content needing confirmation, costs with an unknown count, a whole-request notice and warnings (`packages/app/src/slices/rebuild/model.ts:23`). It is stored with an execution snapshot (`packages/app/src/slices/rebuild/service.ts:81`).
+14. Start: a replayed key returns its receipt and re-wakes the runner (`packages/app/src/slices/rebuild/service.ts:107`). The preview must match the base; every provided key must be confirmed exactly and unknown costs acknowledged, else `review-required` / `cost-ack-required` (`:35`, `:122`). Readiness runs outside the lock (`:136`).
+15. Under the project lock, `admitCheckedPreview` rechecks the head, re-plans with the current catalogue and requires the stored review to still cover it (`stale-preview` otherwise), runs local readiness, refuses when a running row for a selected key has a different fingerprint, and admits (`packages/app/src/slices/rebuild/service.ts:166`). Admission clears the pause flag (`packages/app/src/slices/rebuild/admission-repo.ts:186`); the runner is ticked after commit (`packages/app/src/slices/rebuild/service.ts:210`).
+16. The web review drawer shows counts and cost, and lists beside Start what still holds it back (`packages/web/src/project/rebuild-review.tsx:12`). With `autoStart`, a preview needing no consent (nothing blocked, nothing to confirm, no unknown cost) starts at once (`packages/web/src/project/revision-workspace.tsx:375`).
+17. After admission the runner re-plans admitted work on every tick; an untouched waiting row (pending, one unsent piece, no attempt) takes new input fingerprints in place, so one step keeps one admitted row however many narration chunks land (`packages/app/src/slices/rebuild/runtime-materialize.ts:69`, `:122`).
 
 ## Branches
 
-Rebuild affected outputs prepares a preview for the saved revision. The preview identifies changed inputs, affected work, reusable outputs, provided content requiring confirmation, and known/unknown charges. The execution snapshot binds recipes, inputs, request settings, catalogue data and whether selected work requires a new submission. Unknown charges are not displayed as free.
+### Direct recovery: Re-run, Redo, Regenerate now
 
-Start checks the same base, preview identity and acknowledgements again. Changed inputs, expired readiness or a free in-flight join that has become a paid retry require a fresh review. Work that can now be joined without another charge can be reused. Provider readiness runs outside the database transaction, followed by a final atomic recheck before admission.
+- **Re-run a section** (`rerun{stage}`): roots are the stage's generated provider work; Article only when generated and not hand-edited; Audio the TTS and deferred narration requests; Video the local export, subtitle-file and voices-file steps; Document `document:pdf` (`packages/app/src/slices/rebuild/recovery-selection.ts:8`). A revision saving fresh regeneration tokens for the roots is saved first under key `recovery:<key>:save`, then the dependent closure is admitted without a review drawer (`packages/app/src/slices/rebuild/recovery.ts:135`, `:189`). The web offers Re-run only where `canRerunSection` holds (`packages/web/src/project/controls.tsx:6`).
+- **Redo an item** (`redo{item}`): `narration` and `article:body` redo their section; `shorts:<n>` redoes from its prompts; a narration chunk's logical key redoes its TTS requests; any provider key redoes itself (`packages/app/src/slices/rebuild/recovery-selection.ts:47`). Automatic review redos use this path one at a time per verdict (`packages/app/src/slices/rebuild/review-redo.ts:100`); caption-step narration retries re-record one chunk at most `narrationRetryLimit` = 2 times (`packages/app/src/slices/rebuild/narration-retry.ts:13`, `:81`).
+- **Refusals before admit:** running or admitted work in the closure is `running`; an accepted provider job not yet collected is `accepted-job` (`packages/app/src/slices/rebuild/recovery-conflict.ts:15`, `:45`); a Video or Document rerun whose sources still need provider work is `readiness` "Use Continue the run…" (`packages/app/src/slices/rebuild/recovery.ts:227`); nothing generated is `invalid-selection` (`:107`). A refusal after the save returns `intentRevisionId` so the page offers Continue the run (`packages/app/src/edge/http/actions.ts:194`).
+- **Regenerate now** (web): with no unsaved draft, saves a revision marking the chosen work keys and then reviews `selected` those keys with `autoStart`; with an unsaved draft, the marks are added to the draft instead (`packages/web/src/project/revision-workspace.tsx:333`).
+- **Retry** is `rebuild-required` in the legacy action wrapper (`packages/app/src/slices/rebuild/runtime-actions.ts:26`); routed Retry is direct recovery (scenario 13).
 
-Service and transactional rechecks use the same complete planning catalogue. New invocations retain the configured models' execution metadata even when selected local export work reuses upstream narration. This preserves the TTS character limit while rederiving dependencies; it does not broaden pricing/readiness beyond new selected submissions or weaken real stale-input checks. Previously saved contexts and completed outputs are not rewritten (`packages/app/src/slices/rebuild/service.ts:150`, `packages/app/src/slices/rebuild/admission-repo.ts:86`, `:143`).
-
-Host-managed CLI paths are checked by the host helper, not compared with the container's local path settings. Native CLI paths still receive the final change check. Both rebuild and Play admission use `cliPathChanged` in `packages/app/src/slices/settings/cli-paths.ts` (1.4.1 regression correction).
-
-Completed requests and assets within the revision are reused. Retained asynchronous provider jobs can be retrieved without submitting again; their retrieval does not require admitting a replacement job under a changed model or key. An unknown prior submission is reported before an explicit retry because it may already have been billed.
-
-Research document delivery preserves existing planner/chapter fingerprints. Legacy report payloads remain reusable, while changed editorial/article requests need a fresh review. The preview displays full labelled document inputs and includes their content in input-cost counts. Upgrading does not automatically retry failed work or regenerate reports/images.
-
-A duplicate Start returns the same admission and work IDs. Transport failure preserves the client's exact request body and idempotency key. A response lost after acceptance cannot authorize a second chargeable start.
-
-## Edits and affected work
+### Edits and affected work
 
 | Edit | Reuse and invalidation |
 |---|---|
-| Title | Keep media; current downloads use the new revision title and historical downloads retain their own title |
-| Article text | Reuse identical physical narration requests; rebuild changed narration and dependent timing/export; article-dependent entries/thumbnail change, saved literal image prompts stay independent |
-| Narration voice/model/settings | Regenerate requests whose request-relevant settings changed; retain old voice outputs in history |
-| Whole-request narration text | Rebuild the whole request; the preview explains that there are no smaller reusable chunks |
-| Individual narration group | Explicit text override, replacement audio or regeneration affects the selected logical group and dependent assembly; identical other requests remain reusable |
-| Image replace/add/delete/order/prompt | Change visual export and selected image generation only; retain narration and WAV |
-| Intro/outro | Separate text/audio dependencies; body narration remains reusable when unchanged |
-| Subtitle font/size/position/mode | Reuse timing where valid, rewrite required sidecars/burned video, retain unchanged WAV |
-| Manual caption text/start/end | Retain the cue edit as content, rebuild sidecars/burned export without narrating again |
-| Input of provided downstream content | Require review of its continued use or replacement; never silently switch provided content to paid generation |
+| Title | Media kept; current downloads use the new title, historical downloads their own |
+| Article text | Identical physical narration requests reused; changed narration and dependent timing/export rebuilt |
+| Narration voice/model/settings | Requests whose request-relevant settings changed regenerate; old voice outputs stay in history |
+| Individual narration group | Override text, replacement audio or regeneration affects that logical group and dependent assembly |
+| Image replace/add/delete/order/prompt | Visual export and selected image generation only; narration and WAV kept |
+| Subtitle style / manual cues | Timing reused where valid; sidecars and burned export rebuilt without new narration |
+| Provided downstream content | Reuse must be confirmed at Start; never silently switched to paid generation |
 
-Narration reuse compares normalized text plus provider, model, voice, pronunciation and request context. Chunk-boundary changes can invalidate multiple requests. Explicit regeneration adds identity that prevents an older matching result from replacing the requested new output. Usage counts new physical requests, not reused files or local concatenation.
+Narration reuse compares normalized text plus provider, model, voice, pronunciation and request context (`packages/app/src/slices/rebuild/narration-reuse.ts`, `packages/app/src/slices/rebuild/runtime-narration-reuse.ts`). A regeneration token adds identity so an older matching result cannot replace the requested new output (`packages/app/test/revision-rebuild.test.ts:131`). Manual cues must be ordered, non-overlapping, end after start and end within the measured narration duration (`packages/app/src/slices/revisions/rules.ts:62`).
 
-Caption times must be ordered, nonnegative, have end greater than start, and fit the measured narration duration. Invalid numeric drafts remain visible and unsaved. Manual cues bind to their reviewed audio fingerprint; later narration changes mark them outdated rather than silently overwriting them with alignment output.
+### Pronunciation
 
-## History and restore
+A used glossary mapping changes the affected TTS request identity; an unchanged glossary does not force compatible requests to repeat (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:45`, `:196`). The glossary is the project's own plus, when `shareGlossary` is on, the shared one (`packages/app/src/slices/rebuild/recipe-text.ts:441`). Late or replayed cue answers cannot authorize a changed pronunciation, and a carried late TTS result binds to the receiving revision's clean spelling (`packages/app/test/revision-pronunciation-authority.test.ts:11`, `:84`). Review steps run in their item's stage; narration steps classify as Audio (`packages/app/src/slices/rebuild/transition-repo.ts:201`).
 
-Each revision retains its configuration, content and manifest. Shared immutable assets avoid copying unchanged large files. History exposes selected and retained output downloads through revision/record URLs, including image archives and Open folder. Current headed pages also use immutable record URLs; they do not fall back to a mutable file-role URL while the manifest is loading.
+### History and restore
 
-Restore creates a new current revision whose parent is the previous head and whose restored-from ID names the selected historical revision. The historical revision is never rewritten. Retained available assets are reused and missing external files stay visibly unavailable. Restore grants no new provider or render work.
+Restore creates a new head whose parent is the previous head and whose `restoredFromId` names the target; the target's selected outputs and pieces are cloned, never rewritten (`packages/app/src/slices/revisions/restore.ts:24`). Its work transition uses the restored fingerprints with the plan's stages (`:60`). Restore grants no work. History lists each revision's retained outputs and narration/text parts with downloads and previews (`packages/web/src/project/revision-history.tsx:85`).
 
-No automatic history purge occurs here. Explicit project deletion removes that project's history and assets through the existing deletion flow. Storage management is a separate capability.
+### CLI path readiness
+
+Host-managed CLI paths are not compared with the container's path settings; native CLI paths get the final change check in both rebuild and Play readiness (`packages/app/src/slices/settings/cli-paths.ts:50`, `packages/app/src/slices/rebuild/service-readiness.ts:107`).
 
 ## Unhappy paths
 
-- Pause and Cancel carry their own base revision and UUID. An uncertain control response retains that identity even if live events advance the head.
-- Unconditional legacy article/provider/subtitle/rerun/image mutations refuse with a revision-required response. Legacy Resume/Retry refuses with rebuild-required; current unfinished work uses reviewed rebuild admission.
-- Disk or database failure before Save commits leaves the prior head and completed outputs intact. Staged-file consumption and prepared-asset cleanup respect committed ownership.
-- Failed provider work, alignment or encoding retains the last finished export and leaves the desired revision needing work.
-- On restart, saved revisions and retained files survive. Interrupted work is held for explicit reviewed continuation; completion order alone cannot publish an old result as current.
-- Missing retained files remain visible in history and preview. Explicit rebuild can recreate eligible generated work; provided content requires a replacement or appropriate review.
-- Late uploads after removal, replacement, discard or unmount cannot resurrect stale controls. Concurrent uploads merge into the latest draft and Save stays blocked while input work is pending.
-- Live text/audio events are filtered by current work ownership and matching inputs, not just the project ID. An old revision's preview cannot overwrite current content.
-- Checkpoint status and gate choices reconcile revision and gate-set identity across tabs. A selected closure stays held through restart; unchanged approvals carry across immutable revisions while affected inputs invalidate them.
+- Stale base: `conflict` with `currentRevisionId`; the page reloads the actual head (`packages/app/src/slices/revisions/mutation-request.ts:30`).
+- Head moves during the save transaction: "Project head changed during the revision transaction." and nothing commits (`packages/app/src/slices/revisions/mutations.ts:203`).
+- Failure before commit leaves the prior head and outputs intact; prepared assets not referenced are discarded (`packages/app/src/slices/revisions/mutations.ts:228`).
+- Stale preview or changed catalogue at Start: `stale-preview` (`packages/app/src/slices/rebuild/service.ts:182`).
+- Duplicate Start returns the same admission and work ids (`packages/app/src/slices/rebuild/service.ts:107`).
+- An unknown prior narration submission is held and warned about before an explicit retry; a persisted provider job is retrieved after reopening without another submission (`packages/app/test/revision-restart.test.ts:15`, `:151`).
+- Live writing and audio events are keyed by revision and work id, so an old revision's stream cannot overwrite current content (`packages/web/src/project/live-writing.tsx:23`, `packages/app/src/kernel/runner/index.ts:103`).
+- Save as template refuses a stale revision (`conflict`) and a generated-images project holding provided images (`invalid-input`) (`packages/app/src/slices/project-templates/from-project.ts:54`, `:63`).
 
 ## State transitions
 
-A successful Save advances the project head to a new immutable revision and removes authority from affected unsubmitted reservations. Rebuild review creates no work; accepted Start creates or joins revision-bound work. Restore creates another new head that references the selected historical revision's retained records (`packages/app/src/slices/revisions/mutations.ts:47`, `packages/app/src/slices/revisions/restore.ts:1`).
+- Save: head → new revision; affected unsubmitted reservations lose authority (`held`), submitted ones `draining` (`packages/app/src/slices/rebuild/transition-repo.ts:95`).
+- Restore: head → new revision referencing the target's records (`packages/app/src/slices/revisions/restore.ts:58`).
+- Preview: creates no work. Start / direct recovery: creates or joins revision-bound work as `allowed`, clears the pause flag.
+- Forbidden: rewriting any historical revision; advancing the head from a stale base.
 
 ## Invariants
 
-Save and Restore never initiate generation. Accepted work executes under revision/piece authority, and only matching results may attach to the current revision. History is append-only until explicit project deletion. Library edits cannot silently replace a saved project prompt snapshot. Last finished exports remain accessible until successful replacement.
-
-The revision API and mutation rules are implemented in `packages/app/src/edge/http/revisions.ts` and `packages/app/src/slices/revisions/`. Rebuild review/admission and execution are in `packages/app/src/slices/rebuild/`. The project editor and immutable-media client are in `packages/web/src/project/`. Composed race/restart tests are `packages/app/test/revision-*.test.ts`; actual boot, legacy migration, staged MP3, explicit WAV, restore and immutable-download acceptance is `packages/app/test/e2e/editable-projects.test.ts`.
+Save and Restore never initiate generation. Accepted work executes under revision/piece authority, and only matching results attach to the current revision. History is append-only until project deletion. Library edits cannot replace a saved project prompt snapshot. The last finished exports remain accessible until successfully replaced.
 
 ## Outcomes & side effects
 
-Save and Restore persist a revision, manifest references and an idempotent receipt. Rebuild Start persists work/admission state and wakes the runner after commit. Save as template snapshots the displayed current revision into template history without rebuilding the project (`packages/app/src/slices/revisions/mutations.ts:47`, `packages/app/src/slices/project-templates/from-project.ts:25`).
+Save and Restore persist a revision, manifest references and a `revision_mutations` receipt, and emit `project.updated` (`packages/app/src/edge/http/revisions.ts:131`). Start and recovery persist `rebuild_admissions` (and `project_recovery_requests`) and wake the runner after commit. Save as template snapshots the current revision into a new template with the project's channel (`packages/app/src/slices/project-templates/from-project.ts:64`). Tests: `packages/app/test/revision-*.test.ts`, `packages/app/test/direct-recovery*.test.ts`, `packages/app/test/e2e/editable-projects.test.ts`.
 
 ## Dimensions not in play
 
-Revisions do not overwrite history, alter the prompt library or synchronize between installations. Scheduling consumes a saved template version and creates fresh projects; it does not mutate an existing project's revision chain (`packages/app/src/slices/project-templates/from-project.ts:67`, `packages/app/src/slices/schedules/scheduler.ts:96`).
+- D1 authority: one local actor.
+- D5 money: nothing is charged by Save/Restore; charges arise only from admitted work, shown as preview costs.
+- D7 time: no revision expiry and no automatic history purge.
+- D13 notification: no notification is sent by edits; run notices follow scenario 13's rules.
+- D14 effects on others: other projects are untouched; scheduling reads a template's current version and never mutates an existing project's revision chain (`packages/app/src/slices/schedules/scheduler.ts:175`).

@@ -1,63 +1,110 @@
 ---
-host_cli_verified_at_commit: 9bd6517
 absorbed_from:
   - features/2026-09-24-host-cli-bridge@2026-09-24
-generated_at_commit: 7bdb84e3f57e
-capstone_version: 5.2.0
-generated_date: '2026-09-13'
-content_hash: cdabf2573a8d
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: ce22de624756
 paths_covered:
-  - :(top)packages/app/src/catalog/**
-  - :(top)packages/app/src/assets/models.yaml
-  - :(top)packages/app/src/adapters/**
-  - :(top)packages/app/src/edge/http/providers.ts
-  - :(top)packages/web/src/components/catalogue.tsx
+  - ":(top)packages/app/src/catalog/**"
+  - ":(top)packages/app/src/assets/models.yaml"
+  - ":(top)packages/app/src/slices/model-upkeep/**"
+  - ":(top)packages/app/src/slices/settings/models.ts"
+  - ":(top)packages/app/src/edge/http/providers.ts"
+  - ":(top)packages/web/src/components/catalogue.tsx"
+  - ":(top)packages/web/src/components/retired-models.tsx"
+  - ":(top)packages/web/src/components/provider-upkeep-api.ts"
 ---
 
-# Model catalogue reload and thinking controls
+# Model catalogue, automatic check, retired models and thinking controls
 
 ## Trigger & preconditions
 
-- Trigger: settings or planning loads provider models, or the user requests catalogue refresh.
-- Preconditions: bundled `packages/app/src/assets/models.yaml` exists and parses against the catalogue schema.
+- Triggers: boot (store creation and the first automatic check), the hourly due-check timer, Settings → Models **Check now** / **Replace with published file**, the command-palette entry "Check for new models", any model listing (Play, Settings, Edit project), every admission of a draft/project, every provider call, and the **Switch to …** / **Switch all** buttons for retired models (`packages/app/src/main.ts:330`, `packages/app/src/main.ts:686-702`, `packages/web/src/components/catalogue.tsx:112-137`, `packages/app/src/edge/http/providers.ts:107-170`).
+- Preconditions: the bundled `packages/app/src/assets/models.yaml` parses against `catalogueSchema`; `createCatalogueStore` parses it at construction and throws otherwise (`packages/app/src/catalog/store.ts:70-72`). The automatic check runs only when boot option `refreshModels` is on; the CLI sets it unless `SLOPIFY_NO_MODEL_REFRESH` is a non-empty value other than `0`/`false` (`packages/app/src/main.ts:690`, `packages/app/src/edge/cli.ts:96-98`).
 
 ## Steps
 
-1. `createCatalogueStore` seeds `<data-dir>/models.yaml` from the bundled file and keeps parsed state in memory (`packages/app/src/catalog/store.ts:24-35`).
-2. Reads detect local mtime/size changes; invalid or oversized YAML retains the last valid catalogue and sets a warning (`packages/app/src/catalog/store.ts:38-52`).
-3. Refresh fetches the pinned GitHub raw source with a 15-second timeout, bounds the body to 1 MiB, parses it, writes `.previous`, atomically renames `.next`, and updates status (`packages/app/src/catalog/store.ts:54-92`).
-4. `catalogue.models` returns only enabled, non-deprecated models; provider routes expose status and model choices (`packages/app/src/catalog/store.ts:88`, `packages/app/src/edge/http/providers.ts:38`).
-5. YAML entries carry provider/model IDs, search keywords and pricing. Family-specific fields describe LLM context/search/thinking settings, image aspect ratios, TTS request limits/streaming, and per-provider concurrency from one validated schema (`packages/app/src/catalog/schema.ts:5`, `packages/app/src/catalog/schema.ts:25`, `packages/app/src/catalog/schema.ts:48`, `packages/app/src/catalog/schema.ts:58`, `packages/app/src/catalog/schema.ts:69`).
-6. The registry rejects disabled models, unsupported web search/thinking/aspect ratio and oversized new narration requests before invoking the adapter. Retrieval of an already accepted TTS continuation remains allowed (`packages/app/src/catalog/registry.ts:7`, `packages/app/src/catalog/registry.ts:40`, `packages/app/src/catalog/registry.ts:63`, `packages/app/src/catalog/registry.ts:79`).
+1. **Seed.** `createCatalogueStore` creates the data dir (mode 0700) and writes `<data-dir>/models.yaml` from the bundled text with mode 0600 and flag `wx` when absent (`packages/app/src/catalog/store.ts:63-74`).
+2. **Parse rule.** `parseCatalogue` rejects text over 1 MiB, parses YAML with `maxAliasCount: 20` and `uniqueKeys: true`, validates `catalogueSchema`, then drops every row and provider-limit entry whose provider is a local CLI (`claude-code`, `codex`, `gemini`, `codex-image`) (`packages/app/src/catalog/store.ts:50-62`, `packages/app/src/slices/settings/model.ts:33-35`).
+3. **Schema.** `schemaVersion: 1`, `updatedAt` `YYYY-MM-DD`, `providers.<id>.maxConcurrent` integer 1–5, at most 300 `llm`, 200 `image`, 100 `tts` rows. Each row: `provider` (`[a-z0-9-]+`), `id` (1–200 chars), `name`, `enabled` (default true), `deprecated` (default false), `source` URL, `keywords` (default `[]`), strict `pricing` (`inputPerMillionTokens`, `outputPerMillionTokens`, `cachedInputPerMillionTokens`, `perMillionCharacters`, `perImage`, `perMinute`, `note`). LLM rows carry `contextTokens`, `maxOutputTokens`, `webSearch` (default false) and `thinking`, a partial record keyed by `thinkingModes` (`off`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`) whose values are strict `{budget ≥ -1, level, effort}`. Image rows carry `aspectRatios` ⊆ {`16:9`, `9:16`} (min 1) and `resolution`. TTS rows carry `maxCharacters` 2–1,000,000, `streaming`, optional `asyncMaxCharacters`. `superRefine` rejects an unknown provider for the family, a duplicate `provider:id` across families, and a model whose provider has no `providers` limit entry (`packages/app/src/catalog/schema.ts:5-100`, `packages/app/src/kernel/ports/llm.ts:70`).
+4. **Keywords as capabilities.** An image row with keyword `video` is an image-to-video model (price per clip in `perImage`); keyword `reference` marks an image model that accepts an input image (`packages/app/src/catalog/schema.ts:103-115`).
+5. **Read.** `read()` stats the local file; when `mtime:size` differs from the last stamp it re-parses (over 1 MiB throws) and clears the warning (`packages/app/src/catalog/store.ts:81-96`).
+6. **Listing.** `models(provider, family)` returns rows of that provider that are `enabled`, not `deprecated`, and not video models; `videoModelsOf` returns the enabled, non-deprecated video rows for Animate images (`packages/app/src/catalog/store.ts:206-209`, `packages/app/src/catalog/schema.ts:121-128`). `GET /api/providers/:id/models` answers from the catalogue for catalogued providers (with `thinkingModes` = keys of `llm.thinking`, `allowsCustom: false`, the catalogue warning), from `videoModelsOf` with `?video=1`, and from the runtime model cache otherwise (`packages/app/src/edge/http/providers.ts:187-216`).
+7. **Automatic check (`sync`).** Once at boot, then an hourly timer runs it when `syncDue` is true: no `checkedAt` yet, or 24 h since it (`packages/app/src/main.ts:686-702`, `packages/app/src/catalog/store.ts:23`, `packages/app/src/catalog/store.ts:201-204`). Concurrent callers share one in-flight run (`packages/app/src/catalog/store.ts:195-200`). It:
+   1. reads `models-sync.json` (absent/damaged → `{checkedAt: null, known: null}`) (`packages/app/src/catalog/store.ts:134-142`);
+   2. downloads the published catalogue from `raw.githubusercontent.com/GentBajko/slopify/main/packages/app/src/assets/models.yaml` (15 s timeout, `redirect: "error"`, 1 MiB streamed cap) (`packages/app/src/catalog/store.ts:18-19`, `packages/app/src/catalog/store.ts:97-120`, `packages/app/src/catalog/store.ts:167`);
+   3. takes `known` = the saved published-key set, or the bundled catalogue's keys before the first check (`packages/app/src/catalog/store.ts:174-176`);
+   4. merges with `mergeCatalogue` (`packages/app/src/catalog/store.ts:177`);
+   5. downloads OpenRouter's public list (`https://openrouter.ai/api/v1/models`, 16 MiB cap; any failure yields `[]`) and applies it (`packages/app/src/catalog/store.ts:21`, `packages/app/src/catalog/store.ts:147-156`, `packages/app/src/catalog/store.ts:178`);
+   6. serialises with a two-line header, re-parses, and only when the result differs from the local catalogue copies `models.yaml` to `models.yaml.previous`, writes `models.yaml.next` and renames it over `models.yaml` (`packages/app/src/catalog/store.ts:180-189`, `packages/app/src/catalog/store.ts:229-231`);
+   7. writes `models-sync.json` atomically (`.next` + rename) with `checkedAt`, `changes`, `warning: null` and the sorted `known` set (`packages/app/src/catalog/store.ts:143-146`, `packages/app/src/catalog/store.ts:190-192`).
+8. **Merge rule** (`mergeCatalogue`): per family, a published row replaces the local row, except a local `enabled: false` stays false and a TTS row keeps the local `tts.maxCharacters`; a published row absent locally is added (`added`); a row that turns deprecated is reported `retired`; a pricing difference (ignoring `note`, numeric tolerance `1e-9 × max(1,|x|,|y|)`) is reported `priced` with before/after. A local row absent from the published file that was in `known` and not deprecated is kept with `deprecated: true` (`retired`); a never-published local row is kept unchanged. `updatedAt` is the later of the two; provider limits are local overlaid by published (`packages/app/src/catalog/merge.ts:32-44`, `packages/app/src/catalog/merge.ts:54-114`).
+9. **OpenRouter rule** (`applyOpenRouterListing`): an empty listing changes nothing. For each non-deprecated `openrouter` LLM row: an id missing from the listing → `deprecated: true` (`retired`); otherwise prompt/completion per-token prices × 1,000,000 (rounded to 6 decimals) replace `inputPerMillionTokens`/`outputPerMillionTokens`, reported `priced` when different. Negative or non-finite listing prices are ignored. `combineChanges` concatenates added/retired and merges price changes per model keeping the earliest `before` (`packages/app/src/catalog/merge.ts:124-171`, `packages/app/src/catalog/store.ts:261-282`).
+10. **Manual replace (`refresh`).** `POST /api/providers/catalogue/refresh` downloads the published file (same limits), parses it, copies the current file to `.previous`, writes `.next`, renames, and re-reads; it does not merge local edits. Concurrent callers share one run (`packages/app/src/catalog/store.ts:121-133`, `packages/app/src/catalog/store.ts:220-225`, `packages/app/src/edge/http/providers.ts:151-170`).
+11. **Admission gate.** `modelFields(draft, catalogue)` checks each needed slot whose provider is catalogued: text model needed when research/article are generated, thumbnail is `prompt_by_llm`, intro/outro mode is `llm`, or narration preparation, YouTube description or Shorts are on; voice model when audio is generated; image model when images are generated, the thumbnail is `from_prompt`/`prompt_by_llm`, or Shorts are on. Per slot it rejects, in order: model not listed; LLM thinking mode absent from `llm.thinking`; any image `thinking` (field `images.thinking`); research on without `llm.webSearch`; image aspect not in `aspectRatios` for the video format; Shorts without `9:16`. Then establishing-image reference with a keyed image model lacking `reference`, and Animate images with no video models for the image provider or an animate model not offered (`packages/app/src/catalog/validate.ts:13-115`). It runs on project create, planning, Play draft readiness and review inputs (`packages/app/src/edge/http/project-create.ts:66`, `packages/app/src/edge/http/planning.ts:52`, `packages/app/src/slices/play-drafts/readiness.ts:107`, `packages/app/src/slices/play-drafts/review-inputs.ts:143`).
+12. **Runtime model check.** `checkRuntimeModel` returns `missing` for a blank id or an id not in the provider's list, `thinking` when a non-TTS thinking mode is not in the model's `thinkingModes`, `available` otherwise; a list failure returns `manual` for local-CLI LLMs and `missing` for others (`packages/app/src/catalog/runtime-models.ts:7-24`).
+13. **Call gate (`curateRegistry`).** Wraps every registry port (`packages/app/src/main.ts:335`, `packages/app/src/catalog/registry.ts:9-195`):
+    - Keyed LLM: `requireModel` (absent id → first listed model; unknown id → `unsupported`), `webSearch` requested without `llm.webSearch` → `unsupported`, `request.thinking` without an entry in `llm.thinking` → `unsupported`; the entry becomes `thinkingConfig` unless the request carries one (`packages/app/src/catalog/registry.ts:10-23`, `packages/app/src/catalog/registry.ts:94-115`).
+    - Local-CLI LLM: blank model → `unsupported`; the CLI's own model list is read, and a read failure lets the exact id through; an id not listed, a thinking mode not in its `thinkingModes`, or web search on a CLI without `capabilities.webSearch` → `unsupported`; Codex maps thinking to `effort` (`off` → `none`) (`packages/app/src/catalog/registry.ts:28-78`).
+    - Codex image: model must be in the CLI list and thinking in its modes (`packages/app/src/catalog/registry.ts:120-146`).
+    - Keyed image: aspect must be listed, any `thinking` → `unsupported`, a `reference` request needs the `reference` keyword (`packages/app/src/catalog/registry.ts:147-171`).
+    - TTS: the system voice bypasses the catalogue; a request carrying an accepted continuation is passed through; otherwise text longer than `tts.maxCharacters` → `unsupported` (`packages/app/src/catalog/registry.ts:173-192`).
+14. **Uncatalogued model lists.** Local CLIs and `system-voice` are uncatalogued (`packages/app/src/slices/settings/model.ts:71-75`). `createModelCatalog` caches each provider's list for 5 minutes (30 s after a failure), deduplicates in-flight loads, drops blank/duplicate ids, and ignores a result whose generation was invalidated by a key or CLI-path change (`packages/app/src/slices/settings/models.ts:29-112`, `packages/app/src/edge/http/providers.ts:234`). Custom ids are allowed except for `fal`, `replicate`, `codex-image`, `system-voice` (`packages/app/src/slices/settings/models.ts:20-27`).
+15. **Retired-model usage.** `GET /api/providers/catalogue/retired` lists every choice site: every template (its head), active/paused schedules (the template version they run), active drafts, and projects with a stage `pending`/`running`/`failed`/`canceled` (their current revision's config). Slots are `llm`, `audio`, `images`, `animate` (animate only when `videoEdit.animate` is not `off`) (`packages/app/src/slices/model-upkeep/model.ts:4`, `packages/app/src/slices/model-upkeep/usage.ts:23-45`, `packages/app/src/slices/model-upkeep/usage.ts:150-223`). A choice is `retired` when its row is deprecated, `unlisted` when absent or disabled; blank or uncatalogued providers are skipped (`packages/app/src/slices/model-upkeep/usage.ts:49-69`). The suggested replacement is the enabled, non-deprecated row of the same provider and family (video-ness matching the slot) sharing the longest case-insensitive id prefix, catalogue order breaking ties (`packages/app/src/slices/model-upkeep/usage.ts:73-98`).
+16. **Switch one.** `POST /api/providers/catalogue/retired/switch` with `{kind, id, slot, from, to}`: the target must be an active model of `from.provider`; the server never substitutes another. Template → `updateTemplate` saves a new version, then every active/paused schedule on that template's previous version moves to the new version in the same transaction. Schedule → allowed only when it runs its template's head, then switches the template. Draft → `saveDraft` with the draft's base version. Project → refused while a stage runs; a project with no revision has `project.config` updated directly, otherwise `ensureBaseline` + `saveRevision` creates a new revision with only the model changed. The LLM slot keeps its thinking mode only when the new model supports it (`packages/app/src/slices/model-upkeep/switch.ts:39-48`, `packages/app/src/slices/model-upkeep/switch.ts:117-254`, `packages/app/src/edge/http/providers.ts:126-137`).
+17. **Switch all.** `POST /api/providers/catalogue/retired/switch-all` switches, templates first, then schedules, drafts, projects, every usage with a replacement and no `blocked` reason, returning `{switched, failed[]}` (`packages/app/src/slices/model-upkeep/switch.ts:257-278`, `packages/app/src/edge/http/providers.ts:138-142`).
+18. **UI.** Settings → Models polls `GET /api/providers/catalogue` every 30 s and shows the file path, `updatedAt` ("Verified"), last check time with a "N new, N repriced, N retired" summary, and the names of added/retired models; **Check now** and **Replace with published file** are disabled until a path is known; **Switch all** is disabled when nothing is switchable. Template and schedule rows show `RetiredModelRow` with the same one-click switch (`packages/web/src/components/catalogue.tsx:30-233`, `packages/web/src/components/retired-models.tsx:15`).
 
 ## Branches
 
-- Valid local catalogue replaces the current value; failed refresh leaves the prior valid value and returns a visible HTTP error (`packages/app/src/catalog/store.ts:76-92`).
-- API-provider choices come from the YAML catalogue. CLI providers bypass YAML and use installed-CLI discovery; Docker invokes the same readers on the host, retaining exact IDs, names, groups and thinking choices. The existing five-minute app model cache, refresh and stale-response protection remain. No CLI model catalogue is hardcoded into the bridge (`packages/app/src/host-cli/runtime.ts:31`, `packages/app/src/adapters/host-cli/index.ts:81`, `packages/app/src/catalog/registry.ts:26`).
-- Saved model IDs may remain visible in the picker, but disabled/unknown IDs are rejected before new calls (`packages/app/src/catalog/validate.ts:35`).
+- Local file unchanged (`mtime:size` equal) → cached value, no parse (`packages/app/src/catalog/store.ts:84-85`).
+- Local file invalid at check time → the check writes only the warning to `models-sync.json` and never overwrites the file (`packages/app/src/catalog/store.ts:160-164`).
+- Merge result equal to the local catalogue → no file write; the sync status is still recorded (`packages/app/src/catalog/store.ts:182-192`).
+- Provider catalogued vs uncatalogued decides whether admission, listing and calls consult YAML or the runtime list (`packages/app/src/catalog/validate.ts:44`, `packages/app/src/edge/http/providers.ts:196`, `packages/app/src/catalog/registry.ts:28`).
+- Establishing-image check skips local-CLI image providers (Codex CLI always takes a reference) (`packages/app/src/catalog/validate.ts:85-96`).
+- Usage `blocked` reasons: schedule on an older template version; project running; no replacement from the same provider (`packages/app/src/slices/model-upkeep/usage.ts:121-125`, `packages/app/src/slices/model-upkeep/usage.ts:184-187`, `packages/app/src/slices/model-upkeep/usage.ts:217-219`).
+- A switch whose site no longer picks `from` in that slot returns `{ok: true, changed: false}` (`packages/app/src/slices/model-upkeep/switch.ts:54-61`, `packages/app/src/slices/model-upkeep/switch.ts:167`).
 
 ## Unhappy paths
 
-- Network, parse, schema, or size failure does not erase the last valid catalogue (`packages/app/src/catalog/store.ts:48-52,59-70`).
-- Unsupported thinking is rejected by catalogue validation before the provider call (`packages/app/src/catalog/registry.ts:49`); it is not silently converted to “off”.
+- Local `models.yaml` missing, oversized or invalid → last valid catalogue kept, warning "Your models.yaml file is missing or has a mistake…" returned by status and model listings (`packages/app/src/catalog/store.ts:91-94`, `packages/app/src/edge/http/providers.ts:207`).
+- Published download fails during a check → warning "Slopify could not download the latest model list…" stored and returned; the local file is untouched; the boot/hourly caller logs it as `model-catalog.sync` (`packages/app/src/catalog/store.ts:168-173`, `packages/app/src/main.ts:689-697`).
+- OpenRouter unreachable or malformed → treated as an empty listing; nothing retired or repriced from it (`packages/app/src/catalog/store.ts:152-155`, `packages/app/src/catalog/merge.ts:128`).
+- Manual replace fails → HTTP 502 "Slopify could not download the latest model list…"; current list stays (`packages/app/src/edge/http/providers.ts:159-168`).
+- Catalogue not constructed yet → 503 on check/refresh/switch and a warning body on `GET /catalogue` (`packages/app/src/edge/http/providers.ts:108-114`, `packages/app/src/edge/http/providers.ts:127-128`, `packages/app/src/edge/http/providers.ts:143-150`).
+- Unsupported thinking, web search, aspect, reference or oversize narration → provider error `kind: "unsupported"` with the screen and button to fix it; never silently converted (`packages/app/src/catalog/registry.ts:97-110`, `packages/app/src/catalog/registry.ts:152-168`, `packages/app/src/catalog/registry.ts:185-189`).
+- Switch target not active → 409 "… is not an active model of this provider…"; site deleted or changed concurrently → 409 "This changed while you were looking at it…"; template referencing a deleted prompt → 409 naming Library → Templates; project revision save conflict → 409 naming Edit project → Providers (`packages/app/src/slices/model-upkeep/switch.ts:112-131`, `packages/app/src/slices/model-upkeep/switch.ts:175-182`, `packages/app/src/slices/model-upkeep/switch.ts:242-253`, `packages/app/src/edge/http/providers.ts:134-135`).
+- Runtime list load failure for keyed providers → last loaded list or built-in fallback with a warning; for local CLIs → empty list with a warning allowing an exact manual id (`packages/app/src/slices/settings/models.ts:64-83`).
 
 ## State transitions
 
-`bundled/local valid → refreshed valid`; `refresh failure → prior valid + HTTP error`. Model choice is selected ID plus provider/family; thinking is request configuration.
+- Catalogue file: `bundled seed → local valid`; `local valid → merged valid` (check) or `→ published copy` (replace); `invalid local → last valid in memory + warning`; previous text always kept in `models.yaml.previous` before a write (`packages/app/src/catalog/store.ts:126-128`, `packages/app/src/catalog/store.ts:183-185`).
+- Model row: `active → deprecated` (published retirement, disappearance from a known published key, or OpenRouter no longer serving); `enabled: false` is never flipped back to true by a check (`packages/app/src/catalog/merge.ts:87-101`, `packages/app/src/catalog/merge.ts:135-138`). No transition from deprecated back to active except by a published row that is not deprecated replacing it.
+- Sync record: `checkedAt null → ISO time`; `warning` set on failure, cleared on success (`packages/app/src/catalog/store.ts:171`, `packages/app/src/catalog/store.ts:190-191`).
+- Template/draft/project/schedule model choice: `retired|unlisted → replacement id` through a new template version, draft version or project revision (`packages/app/src/slices/model-upkeep/switch.ts:157-254`).
 
 ## Invariants
 
-- Catalogue writes are atomic and bounded.
-- Deprecated or disabled entries are excluded from `catalogue.models`.
-- Thinking choices and adapter-specific mappings come from the selected model's validated catalogue entry; unsupported modes are not silently substituted (`packages/app/src/catalog/registry.ts:48`).
+- Catalogue writes are bounded (1 MiB published, 16 MiB OpenRouter) and atomic (`.next` + rename) (`packages/app/src/catalog/store.ts:51`, `packages/app/src/catalog/store.ts:112`, `packages/app/src/catalog/store.ts:127-128`).
+- Local CLI providers never appear in the YAML-derived catalogue (`packages/app/src/catalog/store.ts:55-60`).
+- A model the user added (never published) is never marked retired; a model the user disabled stays disabled across checks (`packages/app/src/catalog/merge.ts:87`, `packages/app/src/catalog/merge.ts:98-101`).
+- A check never changes a template, schedule, draft or project; only an explicit switch does (`packages/app/src/catalog/merge.ts:3-4`, `packages/app/src/slices/model-upkeep/usage.ts:225-226`).
+- A switch changes exactly the one slot to exactly the named model (`packages/app/src/slices/model-upkeep/switch.ts:32-33`, `packages/app/src/slices/model-upkeep/switch.ts:54-110`).
+- Thinking choices and their provider mappings come from the selected model's validated `llm.thinking` entry or the CLI's reported `thinkingModes`; unsupported modes are rejected, not substituted (`packages/app/src/catalog/registry.ts:53-62`, `packages/app/src/catalog/registry.ts:103-110`).
+- Per-provider concurrency comes from `providers.<id>.maxConcurrent` (default 1) for keyed providers (`packages/app/src/main.ts:884-888`).
 
 ## Outcomes & side effects
 
-Refresh performs one network fetch and local file writes; model listing is read-only. A successful model call records actual provider usage through the stage telemetry path.
+- Check: up to two outbound GETs (GitHub raw, OpenRouter), possible rewrite of `models.yaml` and `models.yaml.previous`, always a rewrite of `models-sync.json`; toast "Model list checked: …" or the warning (`packages/app/src/catalog/store.ts:157-193`, `packages/web/src/components/catalogue.tsx:55-66`).
+- Replace: one outbound GET and a file replacement; toast "Catalogue replaced with the published file." (`packages/web/src/components/catalogue.tsx:67-74`).
+- Switch: a new template version (and moved schedules), a new draft version, or a new project revision / config update; the SPA invalidates retired, templates, schedules, drafts and project queries (`packages/web/src/components/catalogue.tsx:76-85`).
+- Pricing fields feed the usage meters that estimate spend per call (`packages/app/src/main.ts:877`).
 
 ## Dimensions not in play
 
-- No provider generation occurs during catalogue refresh.
-- No credentials are written into the catalogue file.
-
-Descriptive scope: D2/D3 eligibility and input, D4 computation, D6 limits, D7 deadlines, D8 concurrency, D9 lifecycle, D10 recovery, D11 termination, D12 visibility, D14 related records, D15 persistence and D16 invariants are covered above and by the cited implementations. D1 has no multi-user authorization model: the app binds loopback by default. D5 does not implement billing or refunds; the estimate only approximates external provider charges. D13 has no outbound notification channel; failures/status are local UI/API responses. No separate durable audit of estimate views, catalogue edits, or queue-position changes is implemented.
+- D1 Authority: no user model; the app is single-user on loopback by default (`packages/app/src/kernel/config/index.ts:21`).
+- D5 Money: prices are estimates copied from the catalogue/OpenRouter; nothing is charged, refunded or billed here.
+- D13 Notification: no outbound notification; results are toasts, status fields and log lines.
+- D15 Audit: no audit log of catalogue edits or switches beyond `models.yaml.previous`, `models-sync.json` and the app log.
+- No provider generation happens during a check or replace; no credentials are read or written by the catalogue.

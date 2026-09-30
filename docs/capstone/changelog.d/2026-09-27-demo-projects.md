@@ -1,7 +1,0 @@
-# Audiobook and podcast demos, and delivery cues for speakers
-
-- Two more bundled, read-only samples beside The Library of Alexandria: an audiobook of the opening of *The Wind in the Willows* (narrator and two character voices, speaker-tagged captions, MP3 and M4B with chapters, a short) and a two-host podcast on the Antikythera mechanism (speaker panel with painted portraits, name tags, MP3 and M4B, a short). Both are spoken by Inworld stock voices and painted by the Codex CLI.
-- All three are seeded on first launch (an install that already has the first gets the demos once), marked Sample, shown on the first-run screen ("See an audiobook", "Hear a podcast"), copied with Make my own copy with nothing to rebuild, and brought back together by Settings → Backup & storage → Restore samples.
-- Narration Preparation now works for multi-voice runs: each turn of a speaker on Inworld TTS-2 gets delivery cues (Inworld's bracketed directions and non-verbal sounds) suited to who says it, while captions and word timing keep the clean words. Runs without the prompt are unchanged.
-- Fixed: a multi-voice run whose script or speaker split was written by the text model failed to store that step (its recipe carried a field the store refused).
-- `build-sample.mjs --demo <audiobook|podcast>` builds a demo through the real pipeline; `paint.ts --demo` and `voices.ts --demo` make its pictures and voices, and without `--assets` it builds with tones and procedural art for CI.

@@ -1,2 +1,0 @@
-- The thumbnails' scenes are written by a step of their own in the Thumbnail stage (`thumbnail:scenes`), not in the images' scenes call, so changing a project's thumbnail settings no longer marks every image outdated.
-- History → Restore this revision no longer stops with "unknown kind of step" on projects with Scenes from the article, `{{Appearance}}`, shorts, a YouTube description, levelled narration or animated images: the restore takes each step's stage from its plan.

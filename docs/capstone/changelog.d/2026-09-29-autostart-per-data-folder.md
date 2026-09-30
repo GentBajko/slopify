@@ -1,1 +1,0 @@
-- Start Slopify when I log in belongs to one data folder. A second Slopify on the same account (another `--data-dir`, a test copy) now sees the switch off, can't remove the first one's login entry by turning its own switch off, and refuses to take the entry over with a plain message. Before, turning the switch off in any Slopify deleted the one entry every install shares.

@@ -1,3 +1,0 @@
-- The project page's header is one row (back link, title, meta line with the run clock, buttons), and each stage's head puts its summary beside the title; the run clock no longer takes a row of its own.
-- The article shows its narrated body's word and character count beside its title.
-- Live plays the finished narration (the player with its waveform, levelled when Level the volume is on), plays the parts so far while it is spoken, and says its length in hours and minutes.

@@ -1,8 +1,0 @@
-# Narration that reads like speech
-
-- New setting "Describe tables and figures in the narration" (Play → Audio Advanced, Edit project → Providers), on by default for new runs and templates. Tables, figures, Mermaid and ASCII diagrams, equations and code blocks are each described in a short spoken passage by the run's text model instead of being skipped or read cell by cell; "Leave code out" drops code instead.
-- Lists are spoken as sentences ("First, … Then, … Finally, …"), blockquotes as quotes, and footnote markers and bare URLs are no longer spoken.
-- Each description is its own cached step (`narration:describe:<n>`), written in the project language with the Narration Preparation prompt as style guidance; a figure's own picture is shown to Claude Code and Codex when the project has it as an uploaded image.
-- Captions and word timing follow what is spoken; the article, PDF and reading view keep the real table. On multi-voice runs a table inside a turn is described in that turn's voice.
-- Estimates add one text-model call per described block. Projects saved before the setting keep every fingerprint.
-- New setting "Show tables and figures on screen" (Play → Video, Edit project → Video), on by default with describing: every described block is drawn as a card on this computer (the article's own picture for a figure; a grid, monospace code or typeset equation in the brand kit's title font and colour otherwise) and shown in the video exactly while its description is spoken, with the images taking turns around it. Shorts that include a description show the card upright. Cards are listed under Images → From the article and can be made again.

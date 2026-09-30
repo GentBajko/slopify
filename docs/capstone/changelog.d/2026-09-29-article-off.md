@@ -1,1 +1,0 @@
-- Article can be Off, for a project of images or a thumbnail made from prompts (no placeholder text needed). Research goes off with it, and Play refuses what reads the article (generated narration, captions, the YouTube description, shorts, the PDF, an AI-written thumbnail prompt, Scenes from the article), each with the switch to change.

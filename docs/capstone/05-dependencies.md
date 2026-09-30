@@ -1,127 +1,190 @@
 ---
-generated_at_commit: 4cfe3473f74d
-generated_date: 2026-09-13
-capstone_version: 5.2.0
-content_hash: 149e46c2276e
+generated_at_commit: 54f5cb4c1dab
+generated_date: 2026-09-30
+capstone_version: 7.0.1
+content_hash: 283b9c4579c6
 paths_covered:
-  - ":(top)packages/app/src/**"
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/collector/**"
-  - ":(top)packages/site/**"
-  - ":(top)package*.json"
+  - ":(top)package.json"
+  - ":(top)package-lock.json"
   - ":(top)packages/*/package.json"
-  - ":(top)biome.json"
-  - ":(top)tsconfig*.json"
-  - ":(top).github/workflows/**"
+  - ":(top)packages/app/src/adapters/**"
+  - ":(top)packages/app/src/catalog/**"
+  - ":(top)packages/app/src/adapter-registry.ts"
+  - ":(top)packages/app/src/updater/**"
+  - ":(top)packages/app/src/slices/telemetry/**"
+  - ":(top)packages/app/src/slices/notifications/**"
+  - ":(top)packages/collector/wrangler.jsonc"
+  - ":(top)packages/site/wrangler.jsonc"
+  - ":(top)packages/extension/static/manifest.json"
+  - ":(top).github/**"
+  - ":(top)Dockerfile"
 ---
-
-> Rows marked "installed" carry the version resolved and locked in `package-lock.json`; the
-> rest are floors, the versions verified on npm on 2026-09-02.
 
 # Dependencies
 
-Research-document additions (1.5.0): @modelcontextprotocol/sdk 1.30.1 (MIT) supplies the standard stdio reader protocol; strip-json-comments 5.0.3 (MIT) parses Gemini's existing JSONC authentication-selection setting. Both are locked runtime dependencies. No custom MCP protocol or general file-access dependency was added. The remaining inventory retains its prior checkpoint.
-
-Manifest and lockfile snapshot: `f4c4f7b3295a` (2026-09-13).
+Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 entries, last changed in `27597bad` on 2026-09-30); the manifest range follows in brackets where it differs. Rows carrying a date keep the date the pick was researched or verified; the earlier inventory floors were verified on npm on 2026-09-02. One hoisted lockfile serves all five workspaces (`package.json:5`).
 
 ## Runtime and frameworks
 
-| Package | Floor | Licence | Role | Decided |
+### packages/app (`@gentbajko/slopify`, published; `packages/app/package.json:31`)
+
+| Package | Locked | Licence | Role | Import site |
 |---|---|---|---|---|
-| Node.js | 26 (`engines.node >= 26`) | MIT | runtime; LTS from October 2026 | architecture |
-| typescript | 7.0.2 installed | Apache-2.0 | one language everywhere; `latest` resolves to the native (Go) compiler, not 5.x - typecheck-only role, `tsc --noEmit` and `tsc -p tsconfig.build.json` | architecture |
-| hono | 4.13.7 installed | MIT | HTTP API, SSE (`streamSSE`), typed client (`hono/client`) | architecture |
-| @hono/node-server | 2.1.1 installed | MIT | Node adapter for Hono | architecture |
-| @hono/zod-validator | 0.9.1 installed | MIT | request validation at the edge | stack |
-| zod | 4.5.4 installed | MIT | schemas for requests and shadcn forms | stack |
-| react, react-dom | 19.2 | MIT | SPA | architecture |
-| @tanstack/react-router | 1.170 | MIT | typed client-side routing | stack |
-| @tanstack/react-query | 5.102 | MIT | server state, invalidated from SSE via `EventSource` | stack |
-| @js-temporal/polyfill | 0.5.1 installed | ISC | IANA-zone conversion for schedule one-off inputs in browsers without native Temporal | schedule editor |
-| tailwindcss | 4.3 | MIT | styling pipeline required by shadcn/ui | stack; uiux |
-| radix-ui, class-variance-authority, clsx, tailwind-merge | 1.6.7 / 0.7.1 / 2.1.1 / 3.6.0 installed | MIT | primitive exports and class/variant composition for the local component kit | uiux |
-| lucide-react | 1.39 | ISC | icon family | uiux |
-| @fontsource/barlow, @fontsource/barlow-condensed | 5.3 | OFL-1.1 (font licence, accepted) | self-hosted typefaces | stack; uiux |
-| react-markdown | 10 | MIT | article display | stack |
-| remark, strip-markdown | 15.0.1 / 6.0.0 installed | MIT | markdown → plain-text narration source (`logic/05`) | stack |
-| remark-gfm | 4.0.1 installed | MIT | without it remark does not parse tables, so `\| Year \| Event \|` rows survive verbatim into the narration, and footnote markers come back from remark-stringify escaped as `\[^1]` - a backslash the TTS reads aloud. strip-markdown can only remove what the parser produced, so neither is fixable through its options | |
-| fflate | 0.8.3 installed | MIT | image ZIP downloads and versioned portable backup export/import | stack; `packages/app/src/slices/storage/portable.ts:4` |
-| ulid | 3.0.2 installed | MIT | entity IDs | stack |
-| @fastify/busboy | 3.2.2 installed | MIT | streaming `multipart/form-data` parser for staged uploads | ladder rung 4 |
-| yaml | 2.9.0 installed | ISC | bounded model-catalogue parsing before Zod validation | provider catalogue |
-| onnxruntime-node | 1.30.0 exact, installed | MIT | local English acoustic inference on the native CPU runtime in an abortable Node child; no Python/compiler or paid subtitle API | subtitles 0.6; native runtime 2026-09-25 (replaced onnxruntime-web) |
-| jspdf | 4.2.1 exact, installed | MIT | writes the Document stage's PDF (text, fonts, links, images) in-process; nothing in Node or the existing dependencies writes PDF | Document stage 2026-09-25 |
-| ffmpeg-static | 5.3.0 installed | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` override. The package's release tag reads `b6.1.1`, but the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (johnvansickle build), measured - the "6.1.1" this row used to claim was never what shipped | architecture; stack note |
+| Node.js | `engines.node >=26` | MIT | runtime; Docker images build on `node:26-bookworm-slim` | `packages/app/package.json:14`, `Dockerfile:1` |
+| hono | 4.13.7 (^4.13.7) | MIT | HTTP API, SSE | `packages/app/package.json:38` |
+| @hono/node-server | 2.1.1 | MIT | Node adapter for Hono | `packages/app/package.json:33` |
+| @hono/zod-validator | 0.9.1 | MIT | request validation at the edge | `packages/app/package.json:34` |
+| zod | 4.5.4 | MIT | schemas at every boundary (also used by `packages/collector`) | `packages/app/package.json:48` |
+| @fastify/busboy | 3.2.2 | MIT | streaming `multipart/form-data` for uploads and font uploads | `packages/app/src/edge/http/multipart.ts:2`, `packages/app/src/edge/http/fonts.ts:3` |
+| @modelcontextprotocol/sdk | 1.30.1 | MIT | stdio MCP server that exposes project documents to agent CLIs | `packages/app/src/adapters/llm/document-reader.ts:6` |
+| strip-json-comments | 5.0.3 | MIT | reads Gemini CLI's JSONC settings file | `packages/app/src/adapters/llm/gemini-workspace.ts:4` |
+| fflate | 0.8.3 | MIT | ZIP downloads and portable backup export/import | `packages/app/src/slices/storage/portable.ts:19`, `packages/app/src/slices/revisions/downloads.ts:3` |
+| ffmpeg-static | 5.3.0 | GPL-3.0-or-later (binary shipped unlinked, notice in `README.md:107`) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` / `FFMPEG_BIN` override; missing binary re-fetched with the package's own `install.js` into `<data-dir>/bin/`. The package's release tag reads `b6.1.1`; the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (measured) | `packages/app/src/main.ts:7`, `packages/app/src/adapters/ffmpeg.ts:21` |
+| jspdf | 4.2.1 exact | MIT | writes the Document stage's PDF in-process (picked 2026-09-25) | `packages/app/src/slices/document/render.ts:1` |
+| onnxruntime-node | 1.30.0 exact | MIT | native CPU acoustic inference for subtitle alignment in a child process (picked 2026-09-25, replacing onnxruntime-web as the primary runtime) | `packages/app/src/adapters/alignment/worker.ts:189` |
+| onnxruntime-web | 1.30.0 exact | MIT | single-threaded WASM fallback where no native build loads (Intel macOS) | `packages/app/src/adapters/alignment/worker.ts:192` |
+| remark, strip-markdown | 15.0.1 / 6.0.0 | MIT | markdown → plain-text narration source | `packages/app/package.json:42` |
+| remark-gfm | 4.0.1 | MIT | GFM parsing so tables and footnote markers are removed instead of surviving verbatim (remark alone leaves `\| a \| b \|` rows and escapes footnotes as `\[^1]`, which TTS reads aloud) | `packages/app/package.json:43` |
+| ulid | 3.0.2 | MIT | entity IDs | `packages/app/package.json:46` |
+| yaml | 2.9.1 (^2.9.1) | ISC | model catalogue parsing, 1 MiB read limit, Zod-validated | `packages/app/src/catalog/store.ts:3` |
+
+### packages/web (`@slopify/web`, private; bundled into the app by `packages/app/scripts/copy-web.mjs`)
+
+| Package | Locked | Licence | Role | Import site |
+|---|---|---|---|---|
+| react, react-dom | 19.2.8 | MIT | SPA | `packages/web/package.json:24` |
+| @tanstack/react-router | 1.170.39 | MIT | typed client-side routing | `packages/web/package.json:17` |
+| @tanstack/react-query | 5.102.8 | MIT | server state, invalidated from SSE | `packages/web/package.json:16` |
+| hono | 4.13.7 | MIT | typed API client `hc` | `packages/web/src/api.ts:52` |
+| @js-temporal/polyfill | 0.5.1 | ISC | IANA-zone conversion for schedule inputs | `packages/web/src/schedules/time.ts:3` |
+| radix-ui, class-variance-authority, clsx, tailwind-merge | 1.6.7 / 0.7.1 / 2.1.1 / 3.6.0 | MIT / Apache-2.0 / MIT / MIT | primitives and class/variant composition for `components/kit` | `packages/web/package.json:18` |
+| lucide-react | 1.39.0 | ISC | icon family | `packages/web/package.json:21` |
+| @fontsource/barlow, @fontsource/barlow-condensed, @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | self-hosted typefaces | `packages/web/src/main.tsx:8` |
+| react-markdown, remark-gfm | 10.1.0 / 4.0.1 | MIT | article display | `packages/web/package.json:26` |
+| pdfjs-dist | 6.3.289 | Apache-2.0 | renders PDF pages in the browser, loaded lazily with its worker | `packages/web/src/components/pdf-pages.tsx:60` |
+
+### packages/collector (`@slopify/collector`)
+
+| Package | Locked | Licence | Role |
+|---|---|---|---|
+| zod | 4.5.4 | MIT | event payload validation (`packages/collector/package.json:18`) |
+
+`packages/site` and `packages/extension` carry no runtime dependencies (`packages/site/package.json:11`, `packages/extension/package.json:11`).
 
 ## No dependency, by the ladder
 
-| Need | Answered by | Rung |
+| Need | Answered by | Site |
 |---|---|---|
-| Workspaces / package manager | npm workspaces | 4 |
-| SQLite driver | `node:sqlite` `DatabaseSync` (release candidate in Node 24.15 / 25.7, unflagged since 22.13) | 3 |
-| Migrations | ~30 lines running `NNNN-*.sql` in order, recorded in `schema_migrations` | 6 |
-| CLI argument parsing | `node:util` `parseArgs` | 3 |
-| Opening the browser | ~6 lines over `node:child_process` (`open` / `xdg-open` / `start`) | 6 |
-| Logging | hand-rolled JSON lines to `<data-dir>/logs/<date>.jsonl`, console mirror for warn/error | 6 |
-| HTTP client for providers | global `fetch`; ~20-line SSE line parser shared with the CLI adapters' JSONL reading | 3 / 6 |
-| Agent CLI processes | `node:child_process`; shared known-Windows-shim resolution and direct Node execution for JS entries, no shell prompt interpolation (`packages/app/src/kernel/cli-command.ts`) | 3 / 6 |
-| ~~Uploads~~ | ~~Hono `c.req.formData()` and streams~~ - **overturned**: measured on Node 24, a 512 MiB part cost +1586 MiB RSS because undici's `formData()` buffers every part. Uploads here are audio and video with no size cap (`logic/05`), and hand-rolling a multipart parser is barred by standards, so rung 4 failed and `@fastify/busboy` was added. | 4 → 5 |
-| System/custom font catalog | `node:fs` bounded standard-directory scan plus bounded SFNT metadata parsing; TTF/OTF uploads reuse Busboy; TTC faces are extracted for preview (`packages/app/src/slices/fonts/`) | 3 / 4 / 6 |
-| Marketing page | plain HTML, CSS, one script | 4 |
+| Workspaces / package manager | npm workspaces, one hoisted lockfile | `package.json:5` |
+| SQLite driver | `node:sqlite` `DatabaseSync` | `packages/app/src/kernel/db/tx.ts:1` |
+| Migrations | hand-rolled runner over `NNNN-*.sql`, recorded in `schema_migrations` | `packages/app/src/kernel/db/migrate.ts:58` |
+| CLI argument parsing | `node:util` `parseArgs` | `packages/app/src/edge/cli-args.ts:1` |
+| Opening the browser / a folder | `node:child_process` `spawn` | `packages/app/src/edge/open-browser.ts:55`, `packages/app/src/host-cli/open-folder.ts:20` |
+| Logging | JSON lines appended to `<logs>/slopify-<date>.log`, redacted | `packages/app/src/kernel/log.ts:25` |
+| HTTP client for providers | global `fetch`, injected through `RegistryDeps.fetch` | `packages/app/src/adapter-registry.ts:49` |
+| SSE / JSONL stream parsing | `lines` and `sseData` generators | `packages/app/src/adapters/llm/sse-lines.ts:9` |
+| fal.ai queue polling | plain `fetch`; `@fal-ai/client` not used | `packages/app/src/adapters/image/fal.ts:26` |
+| Agent CLI processes | `node:child_process` through the `RunCli` seam, argument arrays only | `packages/app/src/adapters/llm/run-cli.ts` |
+| System/custom font catalog | `node:fs` directory scan plus SFNT metadata parsing; uploads reuse Busboy | `packages/app/src/slices/fonts/` |
+| Uploads | `@fastify/busboy`: Hono `c.req.formData()` was measured on Node 24 at +1586 MiB RSS for a 512 MiB part (undici buffers every part), so the no-dependency rung failed | `packages/app/src/edge/http/multipart.ts:2` |
+| Marketing page | plain HTML, CSS, one module, served as static assets | `packages/site/wrangler.jsonc` |
+
+## Picked but not yet installed
+
+| Pick | Status | Recorded trigger |
+|---|---|---|
+| Google Cloud TTS adapter | deferred; no adapter in `packages/app/src/adapters/tts/` (Gemini speech via the Gemini API is a different adapter, `adapters/tts/gemini.ts`) | a user asks |
+| Azure TTS adapter | deferred; absent | a user asks |
+| Stability image adapter | deferred; absent | a user asks |
+| Google Imagen image adapter | deferred; `discoverGoogleImages` excludes Imagen because it uses a different generation API (`packages/app/src/adapters/image/models.ts:53`) | a user asks |
+| Own per-platform ffmpeg packages | deferred; ffmpeg-static still ships | ffmpeg-static's release cadence becoming a problem |
 
 ## Dev and tooling
 
-| Package | Floor | Licence | Role |
-|---|---|---|---|
-| vite | 8.2 | MIT | builds `packages/web` (stack) |
-| vitest | 4.1.11 installed | MIT | test runner for every package (stack) |
-| @tailwindcss/vite, @vitejs/plugin-react | 4.3.3 / 6.1.1 installed | MIT | Vite transforms for Tailwind and React |
-| @testing-library/dom, @testing-library/user-event | 10.4.1 / 14.6.7 installed | MIT | DOM queries and user interaction drivers used by web tests |
-| @testing-library/react | 16.3 | MIT | component tests (stack) |
-| happy-dom | 20 | MIT | DOM for component tests (stack) |
-| @biomejs/biome | 2.5.11 installed | MIT OR Apache-2.0 | formatter and linter; `noRestrictedImports` patterns enforce kernel → slices → edge |
-| GitHub Actions | hosted | n/a | lint, typecheck, test on Node 26; matching plain `x.y.z` tag → `npm publish --provenance` |
-| @types/node | 26.5.0 installed | MIT | Node 26 type surface for the Node 26 runtime |
-| @types/react, @types/react-dom | 19.2.18 / 19.2.7 installed | MIT | React TypeScript declarations |
-| Dependabot | hosted | n/a | weekly updates; `npm audit` fails CI on high severity |
-| wrangler | 4.128.0 installed | MIT OR Apache-2.0 | deploys `packages/collector` and `packages/site` to Cloudflare |
+| Package | Locked | Licence | Workspace | Role |
+|---|---|---|---|---|
+| typescript | 7.0.2 | Apache-2.0 | root | native (Go) compiler; typecheck (`tsc --noEmit`) and app build (`tsc -p tsconfig.build.json`) (`packages/app/package.json:26`) |
+| @biomejs/biome | 2.5.14 | MIT OR Apache-2.0 | root | formatter and linter; `noRestrictedImports` enforces layer direction (`biome.json:48`) |
+| vitest | 4.1.11 | MIT | root | test runner for every package (`package.json:11`) |
+| @types/node | 26.6.3 (^26.5.0) | MIT | root | Node 26 type surface |
+| vite | 8.3.1 | MIT | web | builds `packages/web` |
+| @tailwindcss/vite, tailwindcss | 4.3.3 | MIT | web | Tailwind pipeline |
+| @vitejs/plugin-react | 6.1.1 | MIT | web | React transform |
+| @testing-library/dom, @testing-library/react, @testing-library/user-event | 10.4.1 / 16.3.3 / 14.6.7 | MIT | web | component tests |
+| happy-dom | 20.13.2 | MIT | web | DOM for component tests |
+| @types/react, @types/react-dom | 19.2.18 / 19.2.7 | MIT | web | React declarations |
+| wrangler | 4.144.0 (^4.143.0) | MIT OR Apache-2.0 | collector, site | local dev, D1 schema, deploys to Cloudflare |
+| esbuild | 0.28.1 | MIT | extension | bundles the browser extension (`packages/extension/scripts/build.mjs:21`); also imported by `packages/app/scripts/ts-resolve.mjs:4`, which reaches it through hoisting (not declared in `packages/app/package.json`) |
+| fflate | 0.8.3 | MIT | extension | zips the extension builds (`packages/extension/scripts/build.mjs:22`) |
+| playwright | 1.63.0 | Apache-2.0 | site | records the walkthrough video (`packages/site/scripts/record-walkthrough.mjs:36`) |
+| ffmpeg-static | 5.3.0 | GPL-3.0-or-later | site | encodes the walkthrough (`packages/site/scripts/record-walkthrough.mjs:35`) |
+| GitHub Actions | hosted | n/a | repo | CI on Node 26 with `npm audit --audit-level=high` (`.github/workflows/ci.yml:24`); tag release runs `npm publish --provenance` via OIDC (`.github/workflows/release.yml:58`) |
+| Dependabot | hosted | n/a | repo | weekly npm (root only, one lockfile) and github-actions updates (`.github/dependabot.yml`) |
+
+Root `overrides` pins `sharp` 0.35.4 inside `miniflare` (`package.json:25`).
 
 ## External services
 
-| Service | Role | Connection setup | Pricing (2026-09-02) | Outage behaviour |
-|---|---|---|---|---|
-| OpenRouter | LLM gateway; web grounding via `plugins: [{id: "web"}]` or `:online` | `packages/app/src/adapters/llm/openrouter.ts`, key from `provider_keys` | per-model token prices set by OpenRouter; user's key | stage fails after the retry policy (`logic/01`) |
-| Claude Code CLI | LLM via local agent; `claude -p --output-format stream-json --allowedTools WebSearch --model <m>` | `adapters/llm/claude-code.ts`; binary on PATH; the CLI's own login | user's Anthropic subscription or key | "not installed" when absent; a failing call ends the attempt |
-| Codex CLI | LLM via local agent in a private temporary workspace with local/account tools disabled; version 0.149.1 or newer | `adapters/llm/codex.ts`, readiness floor at `slices/settings/cli-status.ts:25` | user's OpenAI subscription or key | missing, old or unverifiable versions disable selection |
-| Gemini CLI | LLM through installed CLI/login, explicit `-p` stream-json; no browser authentication; writing tools disabled, research permits only `google_web_search` | `packages/app/src/adapters/llm/{gemini,gemini-workspace}.ts`; optional saved executable path | user's Gemini login/account; no Slopify price assertion | missing/unusable executable disables selection; Google license #3501 is unsupported with no automatic retry; version readiness does not verify account eligibility |
-| ElevenLabs | TTS | `adapters/tts/elevenlabs.ts` | credits: Free 10k, Starter $6 / 30k, Creator $22 / 121k, Pro $99 / 600k; ~1 credit per character | stage fails after retries |
-| OpenAI (audio) | TTS: gpt-4o-mini-tts, tts-1, tts-1-hd (plus gpt-4o-mini-tts-2025-12-15). `voice` also accepts an object `{id}` for a cloned voice, which matters because Slopify's voice list is free text the user types | `adapters/tts/openai.ts` | $0.60 per 1M input characters + $12 per 1M audio tokens; tts-1 $15 / 1M chars; tts-1-hd $30 / 1M chars | stage fails after retries |
-| Cartesia | TTS; `sonic-3.6` on `Cartesia-Version: 2026-03-01` - the previously recorded `sonic-2` is retired (it now aliases to `jolly-totem`) and the recorded `2024-11-13` header stale and *required*, not optional; the error envelope changed with it to `{error_code, title, message, request_id}` | `adapters/tts/cartesia.ts` | Free (~27 min, API included), Pro $5, Startup $49, Scale $299 per month | stage fails after retries |
-| fal.ai | images and thumbnails; REST, no SDK. The frame is spelled per model, not per family: the FLUX endpoints take an `image_size` enum, the Google ones a plain `aspect_ratio`, so each curated entry declares its shape | `adapters/image/fal.ts` | per image, e.g. Flux Kontext Pro $0.04, Seedream V4 $0.03 | stage fails; refusals fail immediately (`logic/09`) |
-| Replicate | images. `Prefer: wait` holds the connection for **at most 60 s** - past that the prediction comes back `starting` and must be polled at `urls.get`, so the adapter sends `Prefer: wait=60` and polls; `output` is a bare string for single-image models and an array for others; both URL providers default to WebP, which the port cannot store, so both requests carry `output_format: "png"` | `adapters/image/replicate.ts` | FLUX Dev $0.025, FLUX Pro $0.04, Schnell $3 / 1000 images | same |
-| OpenAI (images) | Curated GPT Image 2.5 Sunburst, 2.5 Flare and GPT Image 2; aspect-matched sizes; provider default quality | `packages/app/src/adapters/image/openai.ts:45`, `packages/app/src/assets/models.yaml:1` | Output-dependent; estimate unknown | stage fails after retries |
-| Cloudflare Workers + D1 | telemetry collector and its database (`logic/16`) | `packages/collector/src/index.ts`, D1 binding in `wrangler.toml` | Free: 100k requests/day, D1 5M reads / 100k writes per day, 5 GB; Paid from $5/month | events queue locally; site shows dashes |
-| Cloudflare static assets | marketing page hosting | `packages/site/` deployed by wrangler | free tier | page unavailable |
+Every keyed adapter receives only its own key reader, `keyOf(provider)`, read per attempt from the `provider_keys` table through `keyForAttempt` (`packages/app/src/adapter-registry.ts:64`, `packages/app/src/slices/settings/keys.ts:74`). Key checks in Settings call the probes in `packages/app/src/adapters/key-probes.ts`. Pricing columns are prior stack research (2026-09-02); the estimator reads current prices only from `packages/app/src/assets/models.yaml`.
 
-Deferred adapters: Google Cloud TTS, Azure TTS, Stability, Google Imagen; trigger: a user asks. Own per-platform ffmpeg packages: deferred until ffmpeg-static's cadence becomes a problem.
+### Text (LLM)
+
+| Service | Protocol | Connection setup | Pricing (2026-09-02) | Outage behaviour |
+|---|---|---|---|---|
+| OpenRouter | `https://openrouter.ai/api/v1` chat SSE; web grounding via `plugins: [{id: "web"}]` | `packages/app/src/adapters/llm/openrouter.ts:22`, `:91`; registered `adapter-registry.ts:76` | per-model token prices set by OpenRouter; user's key | stage fails after the retry policy |
+| Claude Code CLI | `claude -p --output-format stream-json [--allowedTools …] [--model m]`; the CLI's own login | `packages/app/src/adapters/llm/claude-code.ts:75`; `adapter-registry.ts:80` | user's Anthropic subscription or key | "not installed" when absent; a failing call ends the attempt |
+| Codex CLI | `codex exec --json --skip-git-repo-check --sandbox …` in a private temporary workspace; minimum version 0.149.1 | `packages/app/src/adapters/llm/codex.ts:102`; floor `packages/app/src/slices/settings/cli-status.ts:25` | user's OpenAI subscription or key | missing, old or unverifiable versions disable selection |
+| Gemini CLI | `--output-format stream-json -p`; research permits only `google_web_search` | `packages/app/src/adapters/llm/gemini.ts:36`, `packages/app/src/adapters/llm/gemini-workspace.ts:88` | user's Gemini login; no Slopify price assertion | missing/unusable executable disables selection |
+| Host helper | local HTTP to the host-side helper that runs the three CLIs when Slopify runs in Docker; 64-hex token file in `SLOPIFY_HOST_CLI_DIR`; 16 MB request cap | `packages/app/src/adapters/host-cli/index.ts:36`, `packages/app/src/adapters/host-cli/transport.ts:25`; wired `packages/app/src/main.ts:332` | n/a | "cannot reach its host helper" error with the `--docker` remedy |
+
+### Speech (TTS)
+
+| Service | Protocol | Connection setup | Pricing (2026-09-02) | Outage behaviour |
+|---|---|---|---|---|
+| ElevenLabs | `https://api.elevenlabs.io/v1` | `packages/app/src/adapters/tts/elevenlabs.ts:14`; `adapter-registry.ts:105` | Free 10k credits, Starter $6 / 30k, Creator $22 / 121k, Pro $99 / 600k; ~1 credit per character | stage fails after retries |
+| OpenAI audio | `https://api.openai.com/v1`; gpt-4o-mini-tts (default), gpt-4o-mini-tts-2025-12-15, tts-1, tts-1-hd | `packages/app/src/adapters/tts/openai.ts:12`; `adapter-registry.ts:106` | $0.60 / 1M input chars + $12 / 1M audio tokens; tts-1 $15 / 1M chars; tts-1-hd $30 / 1M chars | stage fails after retries |
+| Cartesia | `https://api.cartesia.ai`, `Cartesia-Version: 2026-03-01` (required); default `sonic-3.5`, offline list sonic-3.6 / 3.5 / 3 | `packages/app/src/adapters/tts/cartesia.ts:14`, `:18`; `adapter-registry.ts:107` | Free (~27 min), Pro $5, Startup $49, Scale $299 per month | stage fails after retries |
+| Inworld | `https://api.inworld.ai/tts/v1/voice` stream, plus long-running `lro/v1alpha` operations for async synthesis | `packages/app/src/adapters/tts/inworld.ts:106`, `packages/app/src/adapters/tts/inworld-async.ts:55`; `adapter-registry.ts:108` | not recorded | stage fails after retries |
+| Gemini API speech | `https://generativelanguage.googleapis.com/v1beta` `generateContent` with AUDIO output; 24 kHz PCM encoded to MP3 by the app's ffmpeg; two-speaker dialogue via `multiSpeakerVoiceConfig` | `packages/app/src/adapters/tts/gemini.ts:25`; `adapter-registry.ts:122` (own key, else the Google image key) | not recorded | stage fails after retries |
+| System voice (local, keyless) | the computer's speech program: `say` (macOS), PowerShell `System.Speech` (Windows), `piper`, `pico2wave`, `espeak-ng` / `espeak`; the Docker image installs `espeak-ng` | `packages/app/src/adapters/tts/system.ts:57`; `adapter-registry.ts:111`; `Dockerfile:39` | free | unavailable with a plain reason when no program is found |
+
+### Images and image-to-video
+
+| Service | Protocol | Connection setup | Pricing (2026-09-02) | Outage behaviour |
+|---|---|---|---|---|
+| fal.ai | images on `https://fal.run` (synchronous); clips on `https://queue.fal.run` then downloaded; FLUX endpoints take `image_size`, Google ones `aspect_ratio`; video models Kling 2.5 turbo pro, Wan 2.5 preview, Seedance v1 pro fast | `packages/app/src/adapters/image/fal.ts:31`, `:103`, `:110`; `adapter-registry.ts:137` | per image, e.g. Flux Kontext Pro $0.04, Seedream V4 $0.03 | stage fails; refusals fail immediately |
+| Replicate | `https://api.replicate.com/v1`; `Prefer: wait=60` then poll `urls.get`; `output_format: "png"`; image-to-video predictions polled the same way | `packages/app/src/adapters/image/replicate.ts:30`, `:93`, `:103`, `:119`; `adapter-registry.ts:140` | FLUX Dev $0.025, FLUX Pro $0.04, Schnell $3 / 1000 images | stage fails; refusals fail immediately |
+| OpenAI images | `https://api.openai.com/v1`; curated models from `models.yaml` | `packages/app/src/adapters/image/openai.ts:17`; `adapter-registry.ts:142` | output-dependent | stage fails after retries |
+| Google images (Gemini API) | `https://generativelanguage.googleapis.com/v1beta` `/interactions` | `packages/app/src/adapters/image/google.ts:16`, `:78`; `adapter-registry.ts:143` | not recorded | stage fails after retries |
+| Codex CLI images | Codex's image tool under the shared Codex login; host helper replaces it in Docker | `packages/app/src/adapters/image/codex.ts:209`; `adapter-registry.ts:146`, `:157` | user's OpenAI plan | plan-limit and login errors surface from the CLI |
+
+Image-to-video clips from fal.ai and Replicate share `downloadVideo`, which rejects anything not an MP4 (`packages/app/src/adapters/image/video.ts:25`).
+
+### Platform and distribution
+
+| Service | Role | Connection setup | Outage behaviour |
+|---|---|---|---|
+| Hugging Face | subtitle alignment weights, fetched on first use and SHA256-checked: English `Xenova/wav2vec2-base-960h` rev `a19f851b…`, 95,286,046 bytes (Apache-2.0); multilingual `NewComer00/wav2vec2-xlsr-multilingual-56-ONNX` rev `2d48b01b…`, q4, 247,576,761 bytes (Apache-2.0) | `packages/app/src/adapters/alignment/cache.ts:32`, `packages/app/src/adapters/alignment/multilingual.ts:9` | subtitles unavailable until the download succeeds; audio and text never leave the computer |
+| GitHub raw | published `models.yaml` catalogue refresh, 1 MiB cap, 15 s timeout, no redirects | `packages/app/src/catalog/store.ts:19`, `:98` | last working catalogue kept, warning shown |
+| OpenRouter public models list | live ids and per-token prices, no key, 16 MiB cap | `packages/app/src/catalog/store.ts:21`, `:150` | same |
+| npm registry | update check of `@gentbajko/slopify` `latest` and update installs | `packages/app/src/updater/registry.ts:10`, `packages/app/src/updater/model.ts:40`, `packages/app/src/updater/worker.ts:34` | "The npm release could not be checked." |
+| Notification URL (user-supplied, e.g. ntfy) | plain-text POST per notice, 5 s timeout, `redirect: "manual"` | `packages/app/src/slices/notifications/send.ts:19` | failure text recorded; URL never repeated |
+| Cloudflare Workers + D1 | telemetry collector at `https://collector.slopify.stream`, D1 binding `DB` | `packages/app/src/slices/telemetry/collector-client.ts:26`; `packages/collector/wrangler.jsonc`; `packages/collector/src/index.ts:26` | events queue locally; site shows dashes |
+| Cloudflare static assets | marketing site at `slopify.stream` | `packages/site/wrangler.jsonc` | page unavailable |
+| YouTube Studio | the extension fills the upload dialog on `https://studio.youtube.com/*` from the local app (loopback host permissions); never publishes | `packages/extension/static/manifest.json:13`, `:19` | n/a |
+| GitHub Container Registry | Docker image `ghcr.io/gentbajko/slopify` | `compose.yaml:11` | n/a |
+
+Pricing columns for Inworld, Gemini speech and Google images: not recorded in this chapter.
 
 ## Governance
 
-- Licence policy: MIT project; MIT / Apache-2.0 / BSD / ISC dependencies only, the OFL font files and the unlinked GPL ffmpeg binary being the two recorded exceptions.
-- Vetting bar for any addition: release within 12 months, more than one maintainer or a trivially replaceable surface, and the ladder rung that failed named in the commit.
-- Lockfile committed; Dependabot weekly; `npm audit` gate.
-- Exit costs: every provider sits behind a port with several adapters; Cloudflare is replaceable by any static host plus any serverless SQL at the cost of a redeploy, the data being aggregates only.
+- Package licence: `@gentbajko/slopify` is Apache-2.0 with a `NOTICE` file (`packages/app/package.json:5`, `packages/app/NOTICE`).
+- Dependency licences in the lockfile's direct set: MIT, Apache-2.0, ISC, MIT OR Apache-2.0, plus OFL-1.1 font packages and the GPL-3.0-or-later ffmpeg binary run unlinked.
+- Ladder rule: stdlib, then platform, then an installed dependency, then minimum code; a new dependency states the rung that failed (`docs/capstone/standards.md:20`, `:112`).
+- Lockfile committed; Dependabot weekly; `npm audit --audit-level=high` gates CI.
 
 ## Local subtitle assets and runtime
 
-The dependency ladder found no acoustic inference capability in Node, browser APIs or the existing dependencies. `onnxruntime-node@1.30.0` supplies native CPU inference. It replaced `onnxruntime-web` (WASM) on 2026-09-25: single-threaded WASM ran 4.8× realtime and multi-threaded WASM crashed, while one native session with 8 intra-op threads ran 37× on the benchmark clip. The package bundles CPU binaries for linux x64/arm64, win32 x64/arm64 and darwin arm64 (about 220 MB unpacked); its postinstall only downloads optional CUDA libraries on linux x64 (about 300 MB from nuget.org), which the CPU path never loads, so `--ignore-scripts` installs work. Intel Macs have no build, so there the worker falls back to `onnxruntime-web` 1.30.0 (single-threaded WebAssembly, kept as a dependency for that); if neither loads it says so and tells the user to reinstall or turn subtitles off. It requires no local compiler or Python (`packages/app/package.json`, `packages/app/SUBTITLES.md`, `packages/app/src/adapters/alignment/worker.ts`).
+`onnxruntime-node@1.30.0` replaced `onnxruntime-web` as the primary runtime on 2026-09-25: single-threaded WASM ran 4.8× realtime and multi-threaded WASM crashed, while one native session with 8 intra-op threads ran 37× on the benchmark clip. The package bundles CPU binaries for linux x64/arm64, win32 x64/arm64 and darwin arm64 (about 220 MB unpacked); its postinstall only downloads optional CUDA libraries on linux x64, which the CPU path never loads, so `--ignore-scripts` installs work (`packages/app/SUBTITLES.md:19`). Intel Macs fall back to `onnxruntime-web/wasm` (`packages/app/src/adapters/alignment/worker.ts:192`). No local compiler or Python is required.
 
-`adapters/alignment/cache.ts` pins the Apache-2.0 Xenova ONNX conversion of `facebook/wav2vec2-base-960h`: revision `a19f851b3d42865797e410752b4c570c871e4825`, quantized model 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`. First enabled use fetches the model from Hugging Face; every downloaded/cached copy is checked before use. Audio/text never leave the computer for alignment.
-
-The subtitle default is static Barlow Regular TTF, separate from the SPA's Fontsource WOFF2 files. The TTF, OFL and pinned source record live in `packages/app/src/assets/fonts/` and ship in `dist/assets/fonts/` via `scripts/copy-assets.mjs`. Font files remain the existing OFL exception to the code-dependency license policy; no font parsing dependency was added.
-
-CLI adapters remain external installed commands; no Gemini SDK or process-launch dependency was added. The three commands share 15-second readiness probes and saved path overrides (`packages/app/src/slices/settings/cli-status.ts:1`). Production model pickers use the curated YAML rather than the old broad discovery lists; adapter discovery functions remain fallback seams for callers without a catalogue (`packages/app/src/edge/http/providers.ts:61`).
-
-`yaml@^2.9.0` (ISC) parses editable catalogue documents. Node and existing dependencies provide no YAML parser; the parser is isolated behind schema validation and a 1 MiB read limit (`packages/app/package.json:29`, `packages/app/src/catalog/store.ts:1`).
-
-Additional services: Inworld TTS-2/Flash stream and async endpoints (`packages/app/src/adapters/tts/inworld.ts:72`, `packages/app/src/adapters/tts/inworld-async.ts:1`); Google image interactions (`packages/app/src/adapters/image/google.ts:70`); GitHub raw catalogue refresh (`packages/app/src/catalog/store.ts:7`); npm registry/update installs (`packages/app/src/updater/registry.ts:9`). Current verified model pricing belongs to `packages/app/src/assets/models.yaml:1`; older dated service prices in this chapter record prior stack research and are not inputs to the estimator.
+The subtitle default font is static Barlow Regular TTF with its OFL and source record in `packages/app/src/assets/fonts/`, copied to `dist/assets/fonts/` by `packages/app/scripts/copy-assets.mjs`; no font-parsing dependency is used.

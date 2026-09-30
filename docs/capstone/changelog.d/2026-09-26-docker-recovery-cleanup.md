@@ -1,5 +1,0 @@
-# Docker updates keep one recovery volume
-
-- The `--docker` launcher snapshots the data volume into `<volume>-recovery-<uuid>` before each update, and until now kept every one. After an update commits and passes its health check it now removes the older recovery volumes of this container and prints each one it removed (`Removed older recovery volume: <name>`). The newest is kept, as before.
-- A volume is removed only when its name is exactly `<volume>-recovery-<uuid>`, its `io.slopify.transaction` label is that uuid, and that update's own record in the container's private folder names this container, data volume, Docker and backup and says the update is over. New recovery volumes also carry `io.slopify.installation` and `io.slopify.container` labels, which must agree. The live data volume, volumes of other containers or installations and recovery-shaped volumes without a record are never touched, and removal is never forced: a volume Docker refuses is kept, with the `docker volume rm` command to remove it later.
-- `07-operations.md` and `02-models-docker.md` describe the rule and the labels.
