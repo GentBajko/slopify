@@ -129,6 +129,9 @@ describe("moving the files", () => {
     const h = home();
     const paths = legacy(h);
     const old = paths.projects;
+    // The clip cache is disposable: a render makes its clips again rather than it being moved.
+    mkdirSync(join(old, ".render-cache", "p1"), { recursive: true });
+    writeFileSync(join(old, ".render-cache", "p1", "clip.mp4"), "clip");
     const files = service(h, paths);
     const before = await files.view();
     expect(before).toMatchObject({
@@ -150,6 +153,7 @@ describe("moving the files", () => {
     // Backups move beside Projects, not into it.
     expect(existsSync(join(root, "Backups", "slopify-backup-2026-09-01T030000Z.tar"))).toBe(true);
     expect(existsSync(join(root, "Projects", "Backups"))).toBe(false);
+    expect(existsSync(join(root, "Projects", ".render-cache"))).toBe(false);
     // The old copy is untouched until the user deletes it.
     expect(readFileSync(join(old, "p1", "video.mp4"), "utf8")).toBe("video bytes");
     expect(readFilesLocation(h.db)).toEqual({ kind: "root", root });

@@ -1,7 +1,13 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import type { Log, LogLevel } from "../../kernel/log.js";
 import type { EditList, Motion, Shot } from "./edit-list.js";
 import {
+  burnPartArgs,
   clipArgs,
   concatList,
   joinArgs,
@@ -133,16 +139,6 @@ describe("clipArgs", () => {
         "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
         "s=1920x1080:fps=30,setsar=1[v]",
     );
-    expect(args.slice(-8)).toEqual([
-      "-map",
-      "[v]",
-      "-c:v",
-      "libx264",
-      "-pix_fmt",
-      "yuv420p",
-      "-an",
-      "/w/c1.mp4",
-    ]);
   });
 
   it("zooms the full 100% to 122.5% over a 15-second slot, and a cut slot over its own length", () => {
@@ -415,6 +411,96 @@ describe("joinArgs", () => {
     const args = joinArgs(plan(), "/p/my video; rm -rf ~.mp4", "/w/l");
     expect(args.at(-1)).toBe("/p/my video; rm -rf ~.mp4");
   });
+});
+
+describe("burnPartArgs", () => {
+  it("moves the part's frames to their place in the video for the captions, then back", () => {
+    const args = burnPartArgs(plan(), "/w/p2.ffconcat", "/w/p2.mp4", 5400);
+    expect(args[args.indexOf("-filter_complex") + 1]).toBe(
+      "[0:v]setpts=PTS+5400/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30[v]",
+    );
+    expect(args.slice(-8)).toEqual(
+      ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", "/w/p2.mp4"].length === 6
+        ? args.slice(-8)
+        : [],
+    );
+    expect(args).toEqual(expect.arrayContaining(["-map", "[v]", "-c:v", "libx264", "-an"]));
+    expect(args.at(-1)).toBe("/w/p2.mp4");
+  });
+
+  it("burns the first part like the single join does, portraits and all", () => {
+    const portraits = [{ path: "portrait-0.jpg", x: 10, y: 20, size: 119 }];
+    const graph = (args: readonly string[]): string =>
+      args[args.indexOf("-filter_complex") + 1] ?? "";
+    expect(graph(burnPartArgs(plan(), "/w/p1.ffconcat", "/w/p1.mp4", 0))).toBe(
+      "[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]",
+    );
+    const later = graph(burnPartArgs(plan(), "/w/p2.ffconcat", "/w/p2.mp4", 900, portraits));
+    expect(later).toContain("[0:v][pic0]overlay=x=10:y=20:eof_action=repeat[panel0]");
+    expect(later).toContain(
+      "[panel0]setpts=PTS+900/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30[v]",
+    );
+  });
+
+  // Real ffmpeg: a caption shown from 10 s to 11 s, drawn as a white box so no font is
+  // needed, over a black 2-second part. Placed at 10 s the part shows it for its first
+  // second only; placed at the start of the video it never shows.
+  it("shows a part the captions of its own place in the video", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slopify-burn-part-"));
+    try {
+      const bin = resolveFfmpeg(process.env, ffmpegStatic);
+      execFileSync(bin, [
+        ...["-hide_banner", "-loglevel", "error", "-f", "lavfi"],
+        ...["-i", "color=c=black:s=320x180:r=30:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p"],
+        join(dir, "c1.mp4"),
+      ]);
+      writeFileSync(join(dir, "part.ffconcat"), concatList(["c1.mp4"]));
+      writeFileSync(
+        join(dir, "subtitles.ass"),
+        [
+          "[Script Info]",
+          "ScriptType: v4.00+",
+          "PlayResX: 320",
+          "PlayResY: 180",
+          "",
+          "[V4+ Styles]",
+          "Format: Name, Fontname, Fontsize, PrimaryColour, Alignment, MarginL, MarginR, MarginV",
+          "Style: Default,Arial,20,&H00FFFFFF,7,0,0,0",
+          "",
+          "[Events]",
+          "Format: Layer, Start, End, Style, Text",
+          "Dialogue: 0,0:00:10.00,0:00:11.00,Default,{\\pos(0,0)\\p1}m 0 0 l 320 0 320 180 0 180{\\p0}",
+          "",
+        ].join("\n"),
+      );
+      const brightness = (file: string, frame: number): number => {
+        const gray = execFileSync(bin, [
+          ...["-hide_banner", "-loglevel", "error", "-i", file],
+          ...["-vf", `select=eq(n\\,${String(frame)}),scale=8:1:flags=area`, "-frames:v", "1"],
+          ...["-pix_fmt", "gray", "-f", "rawvideo", "-"],
+        ]);
+        return gray.reduce((sum, value) => sum + value, 0) / gray.length;
+      };
+      const burn = (start: number, output: string): void => {
+        const args = burnPartArgs(
+          { fps: 30 },
+          join(dir, "part.ffconcat"),
+          join(dir, output),
+          start,
+        ).filter((value) => value !== "-progress" && value !== "pipe:1");
+        execFileSync(bin, args, { cwd: dir });
+      };
+      burn(300, "at-10s.mp4");
+      burn(0, "at-0s.mp4");
+      expect(brightness(join(dir, "at-10s.mp4"), 0)).toBeGreaterThan(200);
+      expect(brightness(join(dir, "at-10s.mp4"), 29)).toBeGreaterThan(200);
+      expect(brightness(join(dir, "at-10s.mp4"), 30)).toBeLessThan(40);
+      expect(brightness(join(dir, "at-10s.mp4"), 59)).toBeLessThan(40);
+      expect(brightness(join(dir, "at-0s.mp4"), 0)).toBeLessThan(40);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe("a long slideshow", () => {

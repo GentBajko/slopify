@@ -6,6 +6,15 @@ export function projectDir(paths: Paths, projectId: string): string {
   return contained(paths.projects, projectId);
 }
 
+// The clips of each project's last render (`slices/video/clip-cache.ts`). Hidden, so
+// reconcile, backups and the user's file browser leave it alone; disposable, so moving the
+// files leaves it behind and a render simply encodes its clips again.
+export const renderCacheFolder = ".render-cache";
+
+export function renderCacheDir(paths: Paths, projectId: string): string {
+  return contained(paths.projects, `${renderCacheFolder}/${projectId}`);
+}
+
 export function outputPath(paths: Paths, projectId: string, relativePath: string): string {
   return contained(projectDir(paths, projectId), relativePath);
 }

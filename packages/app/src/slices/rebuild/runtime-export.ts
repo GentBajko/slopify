@@ -8,7 +8,7 @@ import { masterFile, masterReport } from "../loudness/loudnorm.js";
 import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
-import { outputPath, projectDir } from "../storage/layout.js";
+import { outputPath, projectDir, renderCacheDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
 import { withPaths } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
@@ -216,6 +216,7 @@ export async function executeExportRecipe(
         cwd: directory,
         ...(portraits === undefined ? {} : { portraits: portraits.overlays }),
         scratch: projectDirectory,
+        cache: renderCacheDir(deps.paths, context.work.projectId),
         signal: context.signal,
         log: deps.log,
         onProgress,

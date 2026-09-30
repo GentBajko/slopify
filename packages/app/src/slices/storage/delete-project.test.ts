@@ -15,7 +15,7 @@ import { saveRevision } from "../revisions/mutations.js";
 import { insertRevision } from "../revisions/repo.js";
 import type { DeleteDeps } from "./delete-project.js";
 import { deleteProject } from "./delete-project.js";
-import { projectDir } from "./layout.js";
+import { projectDir, renderCacheDir } from "./layout.js";
 
 vi.mock("node:fs", async (importOriginal) => {
   const fs = await importOriginal<typeof import("node:fs")>();
@@ -74,10 +74,14 @@ describe("deleting a project", () => {
   it("removes its rows and its folder", () => {
     const deps = harness();
     const dir = project(deps, "p1", ["done", "done", "done", "done", "done", "done"]);
+    const cache = renderCacheDir(deps.paths, "p1");
+    mkdirSync(cache, { recursive: true });
+    writeFileSync(join(cache, "clip.mp4"), "clip");
 
     expect(deleteProject(deps, "p1")).toEqual({ ok: true });
 
     expect(existsSync(dir)).toBe(false);
+    expect(existsSync(cache)).toBe(false);
     expect(deps.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
     // ON DELETE CASCADE, with foreign keys on: nothing of the project is left behind.
     expect(deps.db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });

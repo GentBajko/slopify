@@ -4,7 +4,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { stagesOf } from "../admission/repo.js";
-import { projectDir } from "./layout.js";
+import { projectDir, renderCacheDir } from "./layout.js";
 
 // Removing a project for good is refused while it is `running`; otherwise it removes the
 // database rows and the folder. Delete on 07 Projects only moves a project to the trash
@@ -54,6 +54,7 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   const dir = projectDir(deps.paths, projectId);
   try {
     rmSync(dir, { recursive: true, force: true });
+    rmSync(renderCacheDir(deps.paths, projectId), { recursive: true, force: true });
   } catch (error) {
     deps.log.write("warn", "project.delete", {
       projectId,

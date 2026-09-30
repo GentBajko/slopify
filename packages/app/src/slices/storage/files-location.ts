@@ -18,7 +18,7 @@ import type { FilesLayout, Paths } from "../../kernel/paths.js";
 import { repoint } from "../../kernel/paths.js";
 import { readSetting, writeSetting } from "../settings/repo.js";
 import type { BusyProject } from "./backup-export.js";
-import { backupsFolderName } from "./layout.js";
+import { backupsFolderName, renderCacheFolder } from "./layout.js";
 
 // Where the files a user looks at live: project folders, scheduled backups and anything else
 // Slopify saves for them. New installs keep them in <Documents>/Slopify; installs from before
@@ -415,7 +415,8 @@ function sourceFiles(pair: Pair): SourceFile[] {
     }
     for (const entry of entries) {
       const full = join(dir, entry.name);
-      if (dir === pair.from && entry.name === pair.skip) continue;
+      if (dir === pair.from && (entry.name === pair.skip || entry.name === renderCacheFolder))
+        continue;
       if (entry.isDirectory()) walk(full);
       else if (entry.isFile()) {
         const stat = lstatSync(full);

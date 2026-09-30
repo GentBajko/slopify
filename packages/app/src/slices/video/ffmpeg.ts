@@ -57,8 +57,9 @@ export function resolveFfmpeg(
 // join copies them rather than encoding again.
 //
 // A transition is one more clip in the list (`transitions.ts`), and the Look is filters on
-// each clip (`look.ts`), so neither changes how the render runs: still one clip at a time,
-// still a concat join.
+// each clip (`look.ts`), so neither changes how the render runs: still one clip per run,
+// still a concat join. The runs go several at a time (`slideshow.ts`), since zoompan uses
+// one core.
 export interface SlideshowClip {
   // Named by its place in the list: `c1.mp4`, `c2.mp4`, ...
   readonly name: string;
@@ -395,30 +396,8 @@ export function joinArgs(
 ): string[] {
   const mix = audioMix(edit, 1);
   const inputs: string[] = ["-f", "concat", "-i", list, ...mix.inputs];
-  const chains: string[] = [];
-  const overlaid = burnSubtitles && portraits.length > 0;
-  if (burnSubtitles && !overlaid) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+  const chains: string[] = burnSubtitles ? burnIn(inputs, portraits) : [];
   chains.push(...mix.chains);
-  // The portraits go in after every other input and under the captions, so the panel's lit
-  // outline is drawn over them; a video without any is joined exactly as before. A still
-  // image is one frame, which overlay holds to the end (`eof_action=repeat`).
-  if (overlaid) {
-    let first = inputs.filter((value) => value === "-i").length;
-    let source = "[0:v]";
-    const video: string[] = [];
-    portraits.forEach((portrait, at) => {
-      inputs.push("-i", portrait.path);
-      const size = String(portrait.size);
-      video.push(
-        `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase,crop=${size}:${size},setsar=1[pic${String(at)}]`,
-        `${source}[pic${String(at)}]overlay=x=${String(portrait.x)}:y=${String(portrait.y)}:eof_action=repeat[panel${String(at)}]`,
-      );
-      source = `[panel${String(at)}]`;
-      first += 1;
-    });
-    chains.unshift(...video, `${source}ass=filename=subtitles.ass:fontsdir=fonts[v]`);
-  }
-
   return [
     ...progressArgs,
     ...inputs,
@@ -432,6 +411,68 @@ export function joinArgs(
     "+faststart",
     output,
   ];
+}
+
+// One part of a long video's picture with its captions burned in, from frame `start` of the
+// video (`slideshow.ts` encodes the parts side by side, then joins them by copying). The part's
+// frames are moved to their place in the video for the captions and back to zero after them.
+export function burnPartArgs(
+  edit: Pick<EditList, "fps"> & Partial<Pick<EditList, "look">>,
+  list: string,
+  output: string,
+  start: number,
+  portraits: readonly PortraitOverlay[] = [],
+): string[] {
+  const inputs: string[] = ["-f", "concat", "-i", list];
+  const shifted =
+    start === 0
+      ? { before: "", after: "" }
+      : {
+          before: `setpts=PTS+${String(start)}/(${String(edit.fps)}*TB),`,
+          // Moving the timestamps drops the declared rate, and without one the output falls
+          // back to 25 fps and drops frames.
+          after: `,setpts=PTS-STARTPTS,fps=${String(edit.fps)}`,
+        };
+  const chains = burnIn(inputs, portraits, shifted.before, shifted.after);
+  return [
+    ...progressArgs,
+    ...inputs,
+    "-filter_complex",
+    chains.join(";"),
+    "-map",
+    "[v]",
+    ...videoCodec,
+    ...lookEncoding(edit.look),
+    "-an",
+    output,
+  ];
+}
+
+// The captions over the picture in input 0, into `[v]`. The portraits go in after every other
+// input and under the captions, so the panel's lit outline is drawn over them; a video without
+// any is burned exactly as before. A still image is one frame, which overlay holds to the end
+// (`eof_action=repeat`).
+function burnIn(
+  inputs: string[],
+  portraits: readonly PortraitOverlay[],
+  before = "",
+  after = "",
+): string[] {
+  let first = inputs.filter((value) => value === "-i").length;
+  let source = "[0:v]";
+  const video: string[] = [];
+  portraits.forEach((portrait, at) => {
+    inputs.push("-i", portrait.path);
+    const size = String(portrait.size);
+    video.push(
+      `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase,crop=${size}:${size},setsar=1[pic${String(at)}]`,
+      `${source}[pic${String(at)}]overlay=x=${String(portrait.x)}:y=${String(portrait.y)}:eof_action=repeat[panel${String(at)}]`,
+    );
+    source = `[panel${String(at)}]`;
+    first += 1;
+  });
+  video.push(`${source}${before}ass=filename=subtitles.ass:fontsdir=fonts${after}[v]`);
+  return video;
 }
 
 const progressArgs = [

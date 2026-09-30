@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
@@ -8,7 +8,7 @@ import type { EditList } from "./edit-list.js";
 import { resolveFfmpeg } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
-import { renderSlideshow } from "./slideshow.js";
+import { burnParts, renderSlideshow } from "./slideshow.js";
 
 // The two things the renderer is given: the edit list and where to write.
 function plan(over: Partial<PlanInput> = {}): { edit: EditList; output: string } {
@@ -159,4 +159,62 @@ describe("renderSlideshow", () => {
       rmSync(scratch, { recursive: true, force: true });
     }
   }, 30_000);
+
+  // Real ffmpeg, two renders of one slideshow with a clip cache: the second encodes nothing
+  // and plays the very files the first kept.
+  it("reuses the last render's clips", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+    try {
+      const still = join(scratch, "still.ppm");
+      writeFileSync(
+        still,
+        Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 90)]),
+      );
+      const cache = join(scratch, ".render-cache", "p1");
+      const render = (output: string): Promise<unknown> =>
+        renderSlideshow({
+          bin: resolveFfmpeg(process.env, ffmpegStatic),
+          ...plan({ imageSeconds: 1, images: [still, still], body: undefined, output }),
+          burnSubtitles: false,
+          scratch,
+          cache,
+          jobs: 2,
+          signal: new AbortController().signal,
+          log,
+          onProgress: (): void => {},
+        });
+      await render(join(scratch, "one.mp4"));
+      const kept = readdirSync(cache).map((name) => [name, statSync(join(cache, name)).ino]);
+      expect(kept.length).toBeGreaterThan(0);
+      await render(join(scratch, "two.mp4"));
+      expect(readdirSync(cache).map((name) => [name, statSync(join(cache, name)).ino])).toEqual(
+        kept,
+      );
+      expect(statSync(join(scratch, "two.mp4")).size).toBeGreaterThan(0);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+describe("burnParts", () => {
+  const clips = [
+    { name: "c1.mp4", frames: 1800 },
+    { name: "c2.mp4", frames: 900 },
+  ];
+
+  it("cuts the timeline at clips into parts of about equal length", () => {
+    const order = ["c1.mp4", "c2.mp4", "c2.mp4", "c1.mp4", "c2.mp4", "c2.mp4"];
+    expect(burnParts(order, clips, 3)).toEqual([
+      { name: "p1", names: ["c1.mp4", "c2.mp4"], start: 0, frames: 2700 },
+      { name: "p2", names: ["c2.mp4", "c1.mp4"], start: 2700, frames: 2700 },
+      { name: "p3", names: ["c2.mp4", "c2.mp4"], start: 5400, frames: 1800 },
+    ]);
+  });
+
+  it("keeps a video under two minutes in one part, and no part under a minute", () => {
+    expect(burnParts(["c1.mp4", "c2.mp4"], clips, 8)).toHaveLength(1);
+    const parts = burnParts(["c1.mp4", "c1.mp4", "c2.mp4"], clips, 8);
+    expect(parts.map((part) => part.frames)).toEqual([1800, 2700]);
+  });
 });
