@@ -60,6 +60,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
       drawnFrom,
       audio.cards ?? [],
       masterPlan(context, audio.levels, "video"),
+      appearance,
     ),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),

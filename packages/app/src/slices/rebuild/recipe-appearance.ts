@@ -28,7 +28,7 @@ export interface ImageAppearance {
 export const imageAppearanceKey = "images:appearance";
 
 // The prompt bodies a run draws pictures from: the generated images', the thumbnail's when it
-// is drawn from a Library prompt, and the establishing image's.
+// is drawn from a Library prompt, the establishing image's and the shorts' image prompt.
 function pictureBodies(context: RecipeContext): readonly (string | null | undefined)[] {
   const { config, content } = context;
   const images =
@@ -50,6 +50,9 @@ function pictureBodies(context: RecipeContext): readonly (string | null | undefi
       : []),
     ...(config.sources.images === "generate" && config.reference?.source === "prompt"
       ? [content.promptTemplates.referencePrompt ?? config.rendered.referencePrompt]
+      : []),
+    ...(config.shorts?.enabled === true && config.shorts.imagePrompt?.trim()
+      ? [content.promptTemplates.shortsImage ?? config.rendered.shortsImage]
       : []),
   ];
 }

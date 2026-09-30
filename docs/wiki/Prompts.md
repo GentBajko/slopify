@@ -70,7 +70,7 @@ Two keywords never become fields. The project's AI model writes them during the 
 | Keyword | Filled with | Works in | Needs |
 | --- | --- | --- | --- |
 | `{{Scene}}` | This picture's moment from the article: for images, in order from the article's opening to its ending; for thumbnails, its most striking moment, a different one for each of three. | Image and thumbnail prompts | Images → **Scenes from the article** on |
-| `{{Appearance}}` | How the figures look, looked up on the web (most iconic depiction): the ones the picture's scene names, or the video's subject; a thumbnail always gets the subject. | Image, thumbnail and establishing prompts | Nothing: the keyword turns it on |
+| `{{Appearance}}` | How the figures look, looked up on the web (most iconic depiction): the ones the picture's scene names, or the video's subject; a thumbnail or a short always gets the subject. | Image, thumbnail, establishing and shorts image prompts | Nothing: the keyword turns it on |
 
 Put each on a line of its own with a label, for example:
 
@@ -82,7 +82,8 @@ Looks: {{Appearance}}
 
 - An image prompt without `{{Scene}}` still gets its scene, after its first paragraph, while Scenes from the article is on. A thumbnail prompt without it gets none.
 - With Scenes from the article off, a line holding `{{Scene}}` is left out. A `{{Appearance}}` line whose scene names no one is left out too.
-- Each costs one more AI call per video (the looks call searches the web). Neither works in the shorts' image prompts.
+- Each costs one more AI call per video (the looks call searches the web).
+- In the shorts' image prompt (**Shorts → Image prompt**), `{{Appearance}}` gives each short the subject's look and those of the figures its clip names. A `{{Scene}}` line is left out there: each short's images already show what is said at that moment.
 
 See [Play Images](Play-Images#scenes-from-the-article) for how the scenes and looks are chosen.
 

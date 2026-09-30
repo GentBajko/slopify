@@ -558,3 +558,45 @@ describe("Shorts recipes, clip by clip", () => {
     ]);
   });
 });
+
+describe("a shorts image prompt with the keywords Slopify fills", () => {
+  const styled: RunConfig = {
+    ...shorts,
+    shorts: { enabled: true, count: 2, minSeconds: 30, maxSeconds: 60, imagePrompt: "D&D Shorts" },
+    rendered: {
+      ...shorts.rendered,
+      shortsImage: "An engraving.\n\nScene: {{Scene}}\n\nLooks: {{Appearance}}",
+    },
+  };
+  const looks = {
+    subject: { name: "The Keeper", aliases: [], look: "A tall man in a grey coat." },
+    characters: [{ name: "short 1", aliases: [], look: "A figure in red." }],
+  };
+
+  it("looks up the looks, waits for them, then gives each short the subject's and its own", () => {
+    const first = recipesFor(styled);
+    const lookup = key(first, "images:appearance");
+    const pick = key(first, "shorts:pick");
+    const picked = [
+      piece("shorts:pick", pick.fingerprint, { shorts: [clip(1, 10, 45), clip(2, 60, 100)] }),
+    ];
+    const waiting = key(recipesFor(styled, picked), "shorts:1:prompts");
+    expect(waiting.input.kind).toBe("deferred");
+    expect(waiting.dependsOn).toContain("images:appearance");
+    const looked = recipesFor(styled, [
+      ...picked,
+      {
+        ...piece("images:appearance", lookup.fingerprint, { appearance: looks }),
+        stageKind: "images",
+      },
+    ]);
+    const request = key(looked, "shorts:1:prompts").input;
+    const said = request.kind === "llm" ? (request.messages.at(-1)?.content ?? "") : "";
+    // The scene line is the prompts call's own job; the looks are filled in.
+    expect(said).not.toContain("{{Scene}}");
+    expect(said).not.toContain("Scene:");
+    expect(said).toContain(
+      "Looks: The Keeper: A tall man in a grey coat.\nshort 1: A figure in red.",
+    );
+  });
+});

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fingerprint } from "../../kernel/runner/work.js";
 import { usesShorts } from "../admission/rules.js";
+import { withoutScene } from "../images/scenes.js";
 import { effectiveClips, type PickedShorts, pickedShortsOf } from "../shorts/clips.js";
 import {
   defaultShortsImagePrompt,
@@ -10,6 +11,7 @@ import {
 } from "../shorts/model.js";
 import type { ShortPick } from "../shorts/pick.js";
 import { imagePromptMessages } from "../shorts/prompts.js";
+import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { castFor } from "./recipe-cast.js";
 import { type MasterPlan, noMaster } from "./recipe-loudness.js";
 import {
@@ -45,6 +47,8 @@ export function shortsRecipes(
   cards: readonly ResolvedWorkRecipe[] = [],
   // Level the volume: the levelled narration and the master (`recipe-loudness.ts`).
   master: MasterPlan = noMaster,
+  // How the figures look, for a shorts image prompt with `{{Appearance}}` (`recipe-appearance.ts`).
+  appearance?: ImageAppearance,
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -80,8 +84,10 @@ export function shortsRecipes(
   );
   const picked = savedPicked(context, pick);
   const images = config.images ?? { provider: "", model: "" };
+  // A shorts image prompt may name `{{Scene}}` like the video's: the prompts call already writes
+  // each image's moment from what the clip says, so that line is left out here.
   const style = shorts.imagePrompt?.trim()
-    ? renderedPrompt(context, "shortsImage")
+    ? withoutScene(renderedPrompt(context, "shortsImage"))
     : defaultShortsImagePrompt;
   if (picked === undefined)
     return [
@@ -120,6 +126,28 @@ export function shortsRecipes(
     const prefix = `shorts:${String(clip.number)}`;
     const token = clipToken(context, clip);
     const count = shortImageCount(clip.end - clip.start, config.imageSeconds);
+    // The looks of the figures the clip names, and always the subject's: a short stands for
+    // the video. Until they are looked up the clip's prompts wait for them.
+    const looked = withLooks(style, appearance, clip.text, { subjectAlways: true });
+    if (looked === null) {
+      const wait = lookWait(style, appearance);
+      recipes.push(
+        recipe(
+          context,
+          `${prefix}:prompts`,
+          "video",
+          {
+            kind: "deferred",
+            version: 1,
+            operation: "shorts",
+            template: [...wait.template, style, clip.text, count],
+          },
+          [pick.key, ...wait.dependsOn],
+          { token },
+        ),
+      );
+      continue;
+    }
     const prompts = {
       ...recipe(
         context,
@@ -128,7 +156,7 @@ export function shortsRecipes(
         llmInput(
           context,
           imagePromptMessages({
-            style,
+            style: looked,
             videoTitle: config.title,
             shortTitle: clip.title,
             text: clip.text,
