@@ -237,7 +237,9 @@ function routes(deps: ScheduleDeps | undefined) {
             title: titleOf(result.reason === "not-found" ? 404 : 409),
             detail:
               detail[result.reason] ??
-              `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`,
+              (result.detail === undefined
+                ? `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`
+                : `This topic couldn't be prepared: ${result.detail} Fix it in the schedule's template (Library → Templates), then try again.`),
             extensions: { reason: result.reason },
           });
         },

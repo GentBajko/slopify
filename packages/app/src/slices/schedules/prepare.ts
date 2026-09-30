@@ -48,7 +48,7 @@ export function scheduledDocument(
 
 export type PrepareResult =
   | { readonly ok: true; readonly projectId: string; readonly title: string }
-  | { readonly ok: false; readonly reason: string };
+  | { readonly ok: false; readonly reason: string; readonly detail?: string };
 
 export async function prepareTopic(
   deps: ScheduleDeps,
@@ -67,7 +67,15 @@ export async function prepareTopic(
   const draft = createDraft(deps, { id: deps.uuid(), document: held });
   if (!draft.ok) return { ok: false, reason: "conflict" };
   const review = await reviewDraft(deps, { id: draft.value.draft.id, baseVersion: 1 });
-  if (!review.ok) return { ok: false, reason: review.reason };
+  if (!review.ok)
+    return {
+      ok: false,
+      reason: review.reason,
+      // What the setup needs, as Play would say it ("This font was deleted. Choose another font.").
+      ...(review.fields.length === 0
+        ? {}
+        : { detail: review.fields.map((field) => field.message).join(" ") }),
+    };
   const high = review.value.estimates.reduce((sum, estimate) => sum + estimate.high, 0);
   if (
     schedule.spendLimitCents !== null &&
@@ -125,7 +133,11 @@ export function preparedProject(
        WHERE schedule_id=? AND title=? AND ${live} ORDER BY prepared_at DESC LIMIT 1`,
     )
     .get(scheduleId, title);
-  if (typeof prepared?.project_id === "string")
+  // A prepared project canceled since is no video to continue: the day makes a new one.
+  if (
+    typeof prepared?.project_id === "string" &&
+    derive(stagesOf(db, prepared.project_id), projectPaused(db, prepared.project_id)) !== "canceled"
+  )
     return { projectId: prepared.project_id, release: prepared.added_checkpoint === 1 };
   if (!byTitle) return undefined;
   for (const row of db
