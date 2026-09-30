@@ -64,7 +64,13 @@ export async function resolvePlayReview(
       });
   }
   if (fields.length) return reviewRefusal(view, fields);
-  return reviewBinding(before.value) === reviewBinding(after.value)
+  // Did anything change while the font and the models were looked up? Both sides are resolved
+  // without the font: `before` had none yet, and a Before Video checkpoint covers the render
+  // that burns the captions in, so comparing it with `after` always differed and refused every
+  // such review.
+  const unchanged = resolveReviewInputs(deps, parsed.data, null);
+  if (!unchanged.ok) return unchanged;
+  return reviewBinding(before.value) === reviewBinding(unchanged.value)
     ? after
     : reviewRefusal(view, [], "stale-review");
 }

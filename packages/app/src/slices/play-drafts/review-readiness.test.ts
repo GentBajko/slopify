@@ -223,6 +223,26 @@ it.each(["font", "draft", "catalogue", "entry"] as const)(
     }
   },
 );
+it("reviews burned-in captions with a Before Video checkpoint, whose render uses the font", async () => {
+  const h = reviewFixture();
+  try {
+    const base = narrated(h);
+    const document = {
+      ...base,
+      form: {
+        ...base.form,
+        checkpoints: ["video" as const],
+        subtitles: { ...base.form.subtitles, mode: "burn-in" as const },
+      },
+    };
+    const id = randomUUID();
+    must(createDraft(h.deps, { id, document }));
+    const result = await reviewDraft(h.deps, { id, baseVersion: 1 });
+    expect(result).toMatchObject({ ok: true });
+  } finally {
+    h.close();
+  }
+});
 it("blocks unfinished font uploads and reports missing fonts while propagating infrastructure failure", async () => {
   const h = reviewFixture();
   try {
