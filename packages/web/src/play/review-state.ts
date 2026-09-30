@@ -280,7 +280,12 @@ export function startLabel(review: ReviewState, document: PlayDraftDocument): st
   if (review.starting) return "Starting…";
   if (review.uncertain) return "Check Start result";
   const count = review.valid && review.receipt ? review.receipt.runs.length : pageVideos(document);
-  return count > 1 ? `Queue ${count} videos` : "Start run";
+  if (count === 1) return "Start run";
+  return queued(document) ? `Queue ${count} videos` : `Start ${count} videos`;
+}
+// Several videos run one after another unless the page turned Queue off.
+export function queued(document: PlayDraftDocument): boolean {
+  return document.queue !== false;
 }
 
 export function pendingReviewUpload(

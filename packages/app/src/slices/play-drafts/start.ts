@@ -145,11 +145,16 @@ function createReviewedRuns(
     const runs = starting.value.runs;
     const first = runs[0];
     if (!first) throw new Error("Reviewed run list was empty");
-    const queue = runs.length === 1 ? [] : enqueueBatch(captured, input.reviewId, runs, true);
-    const projectIds =
-      runs.length === 1
-        ? [startRun(captured, first.draft, first.rendered, true, first.templates).project.id]
-        : queue.map((e) => e.projectId);
+    // Several videos run one after another (a batch queue) unless the draft asks for them
+    // all at once (Play → Queue off): then each starts as its own run.
+    const view = readDraft(deps, input.draftId);
+    const queued = runs.length > 1 && (!view.ok || view.value.draft.document.queue !== false);
+    const queue = queued ? enqueueBatch(captured, input.reviewId, runs, true) : [];
+    const projectIds = queued
+      ? queue.map((e) => e.projectId)
+      : runs.map(
+          (run) => startRun(captured, run.draft, run.rendered, true, run.templates).project.id,
+        );
     const checkpointSet = admitReviewedCheckpoints(
       captured,
       projectIds,
@@ -163,7 +168,7 @@ function createReviewedRuns(
       replayed: false,
       ...(checkpointSet.length ? { checkpointSet } : {}),
     };
-    if (projectIds.length !== runs.length || queue.length !== (runs.length === 1 ? 0 : runs.length))
+    if (projectIds.length !== runs.length || queue.length !== (queued ? runs.length : 0))
       throw new StartedRunMismatch(
         `Start would create ${projectIds.length} of ${runs.length} reviewed videos (${queue.length} queued).`,
       );

@@ -84,11 +84,16 @@ async function reviewed(
   const review = must(await reviewDraft(h.deps, { id, baseVersion: 1 }));
   return { draftId: id, baseVersion: 1, reviewId: review.id };
 }
-async function audioDocument(h: ReturnType<typeof startFixture>, batch = false) {
+async function audioDocument(
+  h: ReturnType<typeof startFixture>,
+  batch = false,
+  queue: boolean | undefined = undefined,
+) {
   const attachmentId = randomUUID();
   const document = {
     ...h.document,
     variants: batch ? [{ id: randomUUID(), title: "Second", values: {} }] : [],
+    ...(queue === undefined ? {} : { queue }),
     form: {
       ...h.document.form,
       sources: { ...h.document.form.sources, audio: "provide" as const },
@@ -178,6 +183,19 @@ it("rolls back every project, stage, queue and receipt on the second real file c
     expect(created.projectIds).toHaveLength(2);
     expect(created.queue).toHaveLength(2);
     expect(h.events).toHaveLength(2);
+  } finally {
+    h.close();
+  }
+});
+it("starts every video at once when the batch isn't queued", async () => {
+  const h = startFixture();
+  try {
+    const { input } = await audioDocument(h, true, false);
+    const created = must(await startPlayDraft(h.deps, input));
+    expect(created.projectIds).toHaveLength(2);
+    expect(created.queue).toHaveLength(0);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_queue").get()?.n).toBe(0);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM projects").get()?.n).toBe(2);
   } finally {
     h.close();
   }

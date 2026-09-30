@@ -75,7 +75,18 @@ Keywords live in the **Title and keywords** row. Topic keywords (the ones the ti
 3. Each extra video shows as a chip. Its name is a button with a pencil (**Change the keywords of …**): press it to open a side panel where you can change that video's **Title** and keywords. Everything else comes from the setup of the first video.
 4. Press the **x** on a chip to remove that video.
 
-One Start queues at most 50 videos: this setup and 49 more. The Play key reads **Queue N videos**, and the videos run one at a time, in order.
+One Start makes at most 50 videos: this setup and 49 more.
+
+### Queue or all at once
+
+With more than one video, the Start box has a **Queue** switch (on by default):
+
+| Queue | What happens | The Play key reads |
+| --- | --- | --- |
+| **On** | The videos run one after another, in order, each starting when the one before finishes. | **Queue N videos** |
+| **Off** | They all start at once, as separate runs. | **Start N videos** |
+
+All at once finishes sooner while the steps wait on providers (research, narration, images), but the video renders share your computer's processor, so each renders slower, and Claude or Codex plan limits are reached sooner (Slopify waits and goes on when they are).
 
 ### The video queue
 

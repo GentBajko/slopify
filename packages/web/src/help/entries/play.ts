@@ -330,6 +330,11 @@ export const playHelp = {
     body: "Adds images as the narration gets longer, planned from the expected length when the run starts. The extra images are shared among the ticked prompts in order, up to 240 in all; each is one more image call. The line under it shows the count. Turning it on switches Motion from Zoom to Mix of both.",
     tutorial: { page: "Play-Images", anchor: "more-images-for-long-videos" },
   },
+  "play.batch-queue": {
+    title: "Queue",
+    body: "With more than one video on the page: on, they run one after another, each starting when the one before finishes (Calendar → Batch queue shows the order); off, they all start at once. At once finishes sooner when the steps wait on providers, but the video renders share your computer's processor and plan limits are reached sooner. Default: on.",
+    tutorial: { page: "Play-Overview", anchor: "queue-or-all-at-once" },
+  },
   "play.image-scenes": {
     title: "Scenes from the article",
     body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. A thumbnail prompt with {{Scene}} gets a scene too: the article's most striking moment, a different one per thumbnail. Off, a {{Scene}} line is left out. One more AI call per run.",

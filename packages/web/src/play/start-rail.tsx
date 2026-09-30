@@ -7,10 +7,11 @@ import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
+import { Switch } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
 import type { Blocker } from "./admission";
 import { usePlaySession } from "./draft-context";
-import { pageVideos, pendingReviewUpload, startLabel } from "./review-state";
+import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
 import { RunReview } from "./run-review";
 
 // Why the Play key can't start right now, in the order it would be fixed, with the field to
@@ -96,11 +97,19 @@ export function StartRail({
     <>
       {preview}
       <section aria-label="Start" className="flex min-w-0 flex-col gap-4 border-t border-line pt-5">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-ink-2">{count === 1 ? "1 video" : `${String(count)} videos`}</span>
-          <span className="text-small text-ink-3">
-            {count > 1 ? "They run one at a time" : "One run"}
-          </span>
+          {count > 1 ? (
+            <Switch
+              label="Queue"
+              tip="play.batch-queue"
+              checked={queued(document)}
+              disabled={locked}
+              onChange={(next) => session.edit({ ...document, queue: next })}
+            />
+          ) : (
+            <span className="text-small text-ink-3">One run</span>
+          )}
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <SectionHead title="Estimated cost" info="play.estimate" size="small" className="pb-0" />
@@ -144,9 +153,11 @@ export function StartRail({
         <div id="play-start-reason" className="min-h-5 text-center text-small">
           {reason === undefined ? (
             <span className="text-ink-3">
-              {count > 1
-                ? "They run one at a time. Nothing starts until you press it."
-                : "Nothing starts until you press it."}
+              {count === 1
+                ? "Nothing starts until you press it."
+                : queued(document)
+                  ? "They run one after another. Nothing starts until you press it."
+                  : "They all run at once. Nothing starts until you press it."}
             </span>
           ) : reason.field === undefined ? (
             <span

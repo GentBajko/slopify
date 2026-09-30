@@ -235,6 +235,9 @@ export const playDraftDocumentSchema = z
     form: playDraftFormSchema,
     section: z.enum(["content", "outputs", "style", "review"]),
     variants: z.array(z.object({ id, title: text, values }).strict().readonly()).readonly(),
+    // Several videos from one Start: queued (one after another, the default) or all started
+    // together. Absent reads as queued, as every draft saved before the choice was.
+    queue: z.boolean().optional(),
     expectedWords: text,
     previewText: text,
     fontUpload: z.object({ operationId: id, name: text }).strict().readonly().nullable(),
