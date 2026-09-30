@@ -100,15 +100,15 @@ export function RunClock({
   }, [on]);
   if (!on || run === null) return null;
   const working = workDuration(run.workingMs + (run.running ? Math.max(0, now - measuredAt) : 0));
+  // Inline, at the end of the title's meta line: a row of its own cost the page its top.
   return (
-    <p
-      role="timer"
-      aria-label="Run time"
-      className="m-0 flex items-center gap-2 border-b border-line pb-3 text-small text-ink-2"
-    >
-      <TimerIcon aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
-      {run.running ? `Working for ${working}` : `${working} of work so far`}
-    </p>
+    <>
+      <span aria-hidden="true">·</span>
+      <span role="timer" aria-label="Run time" className="inline-flex items-center gap-1">
+        <TimerIcon aria-hidden="true" strokeWidth={1.75} className="size-3.5 shrink-0" />
+        {run.running ? `Working for ${working}` : `${working} of work so far`}
+      </span>
+    </>
   );
 }
 

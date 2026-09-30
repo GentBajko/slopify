@@ -16,6 +16,7 @@ export function SectionHead({
   size = Heading === "h3" ? "small" : "default",
   id,
   status,
+  row = false,
   className,
   children,
 }: {
@@ -35,6 +36,9 @@ export function SectionHead({
   readonly id?: string;
   // A status beside the title: "Needs setup".
   readonly status?: ReactNode;
+  // The meta line beside the title instead of under it, for a section whose height is better
+  // spent on its content (a project's stage).
+  readonly row?: boolean;
   readonly className?: string;
   readonly children?: ReactNode;
 }): ReactElement {
@@ -42,7 +46,12 @@ export function SectionHead({
     <div className={cn("sl-section-head", className)} data-slot="section-head">
       <div className="min-w-0">
         {kicker === undefined ? null : <div className="sl-kicker">{kicker}</div>}
-        <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            row && "flex-wrap items-baseline gap-x-3 gap-y-0",
+          )}
+        >
           <Heading
             id={id}
             className={cn("sl-section-head__title", size === "small" && "text-title-3")}
@@ -51,8 +60,11 @@ export function SectionHead({
           </Heading>
           {info === undefined ? null : <InfoTip id={info} label={infoLabel} />}
           {status}
+          {row && meta !== undefined ? (
+            <p className="sl-section-head__meta m-0 min-w-0">{meta}</p>
+          ) : null}
         </div>
-        {meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}
+        {row || meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}
       </div>
       {children === undefined ? null : (
         <div className="sl-btn-row min-w-0 shrink-0 justify-end max-md:shrink max-md:justify-start">

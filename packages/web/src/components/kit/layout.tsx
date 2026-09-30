@@ -12,6 +12,7 @@ export function PageHeader({
   meta,
   actions,
   display = false,
+  row = false,
   className,
 }: {
   readonly title: ReactNode;
@@ -20,8 +21,27 @@ export function PageHeader({
   readonly actions?: ReactNode;
   // The home greeting: the `display` size, once per screen at most.
   readonly display?: boolean;
+  // One row: the way back, the title, the meta line and the actions side by side, for a
+  // working page whose height is better spent on its content (a project's page). Wraps on a
+  // narrow window.
+  readonly row?: boolean;
   readonly className?: string;
 }): ReactElement {
+  if (row)
+    return (
+      <header
+        className={cn(
+          "sl-page-header-row mb-4 flex flex-wrap items-center gap-x-4 gap-y-2",
+          className,
+        )}
+        data-slot="page-header"
+      >
+        {crumb === undefined ? null : <div className="sl-crumb shrink-0">{crumb}</div>}
+        <h1 className="sl-title-1 min-w-0 break-words">{title}</h1>
+        {meta === undefined ? null : <p className="m-0 min-w-0 text-small text-ink-2">{meta}</p>}
+        {actions === undefined ? null : <div className="sl-btn-row ml-auto">{actions}</div>}
+      </header>
+    );
   return (
     <header
       className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}

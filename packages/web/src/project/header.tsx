@@ -3,7 +3,7 @@ import type { Prompt } from "@app/slices/library/model.js";
 import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, EllipsisIcon, SlidersHorizontalIcon } from "lucide-react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Button, IconButton } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
@@ -30,6 +30,7 @@ export function ProjectHeader({
   onEdit,
   more,
   nextChapter,
+  clock,
 }: {
   readonly project: ProjectSummary;
   // A finished audiobook's "Make the next chapter"; absent hides the button.
@@ -47,6 +48,8 @@ export function ProjectHeader({
   readonly editing: boolean;
   readonly onEdit: () => void;
   readonly more: readonly MoreAction[];
+  // The run clock, at the end of the meta line while a run goes.
+  readonly clock?: ReactNode;
 }): ReactElement {
   const state = statusOf(project.status);
   return (
@@ -58,7 +61,13 @@ export function ProjectHeader({
         </Link>
       }
       title={project.title}
-      meta={subtitle(project, prompts)}
+      row
+      meta={
+        <span className="inline-flex flex-wrap items-center gap-x-1">
+          {subtitle(project, prompts)}
+          {clock}
+        </span>
+      }
       actions={
         <>
           <Status tone={state.tone}>

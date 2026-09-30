@@ -109,6 +109,7 @@ export function StageSection({
     >
       {head ? (
         <SectionHead
+          row
           title={title}
           {...(kicker === undefined ? {} : { kicker })}
           {...(summary === undefined || summary === "" ? {} : { meta: summary })}

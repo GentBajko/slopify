@@ -214,9 +214,14 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
         />
       ) : null}
 
-      <h3 className="m-0 text-title-3 font-semibold text-ink">
-        <InlineProse markdown={title} />
-      </h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="m-0 text-title-3 font-semibold text-ink">
+          <InlineProse markdown={title} />
+        </h3>
+        {parts.body.trim() === "" ? null : (
+          <p className="m-0 text-small text-ink-2 tabular-nums">{textCount(parts.body)}</p>
+        )}
+      </div>
 
       <TabPanel idPrefix={idPrefix} id="article" active={open === "article"}>
         {running ? (
@@ -319,4 +324,19 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
       )}
     </StageBody>
   );
+}
+
+const counted = new Intl.NumberFormat("en");
+
+// "18,281 words · 110,234 characters": the narrated body as read, without its markdown
+// (heading marks, emphasis, links' addresses) or the end matter.
+export function textCount(markdown: string): string {
+  const plain = markdown
+    .replace(/\]\([^)]*\)/g, "]")
+    .replace(/[#*_>`[\]]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+  const words = plain.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+  const characters = plain.replace(/\s*\n\s*/g, " ").length;
+  return `${counted.format(words)} ${words === 1 ? "word" : "words"} · ${counted.format(characters)} characters`;
 }

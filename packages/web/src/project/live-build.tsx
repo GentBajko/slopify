@@ -9,8 +9,11 @@ import { SectionHead } from "@/components/kit/section-head";
 import { peaksKey, readPeaks } from "@/onboarding/api";
 import { frameAspect } from "./body-images.js";
 import { OpenProjectTab } from "./fix-it.js";
+import { LiveAudio } from "./live-audio.js";
 import { LiveWriting } from "./live-writing.js";
 import { useOutputMedia } from "./revision-media.js";
+import { workDuration } from "./run-cost.js";
+import { WaveAudioPlayer } from "./waveform.js";
 
 // Watching the project build: the steps and where each stands, the article as it is written,
 // the images as they land and the narration's waveform growing piece by piece. Everything here
@@ -56,7 +59,12 @@ export function LiveBuild({
           </p>
         )}
         <SectionHead title="Narration" />
-        <Waveform projectId={project.id} revisionId={revisionId} />
+        <LiveNarration
+          projectId={project.id}
+          revisionId={revisionId}
+          audio={stages.find((stage) => stage.kind === "audio")}
+          outputs={outputs}
+        />
         <SectionHead title="Images" />
         {images.length === 0 ? (
           <p className="text-small text-ink-2">The images appear here as each one is drawn.</p>
@@ -94,6 +102,40 @@ function LiveImage({
   );
 }
 
+// Narration in Live: while it is spoken, the waveform growing and the parts so far to play;
+// once it is done, the body narration's own player (the levelled join when Level the volume is
+// on, which is what the video plays).
+function LiveNarration({
+  projectId,
+  revisionId,
+  audio,
+  outputs,
+}: {
+  readonly projectId: string;
+  readonly revisionId: string | null;
+  readonly audio: Stage | undefined;
+  readonly outputs: readonly Output[];
+}): ReactElement {
+  const body =
+    outputs.find((output) => output.role === "audio_levelled" && output.meta.segment === "body") ??
+    outputs.find((output) => output.role === "audio_body");
+  const media = useOutputMedia(audio?.state === "running" ? undefined : body);
+  if (audio?.state === "running")
+    return (
+      <>
+        <Waveform projectId={projectId} revisionId={revisionId} />
+        <LiveAudio projectId={projectId} />
+      </>
+    );
+  if (media !== undefined)
+    return (
+      <div className="mb-6">
+        <WaveAudioPlayer label="Body narration" src={media.url} />
+      </div>
+    );
+  return <Waveform projectId={projectId} revisionId={revisionId} />;
+}
+
 // ceiling: bars drawn; a longer narration is folded into this many so the row stays one line.
 const bars = 240;
 
@@ -122,7 +164,7 @@ function Waveform({
         aria-label={
           folded.length === 0
             ? "No narration yet"
-            : `Narration so far: ${String(Math.round(seconds))} seconds`
+            : `Narration so far: ${workDuration(seconds * 1000)}`
         }
         className="flex h-16 items-center gap-px overflow-hidden rounded-control border border-line bg-raised px-2"
       >
@@ -140,7 +182,7 @@ function Waveform({
           ? peaks.error.message
           : folded.length === 0
             ? "The waveform grows as each part of the narration is spoken."
-            : `${String(Math.round(seconds))} s narrated${peaks.data !== undefined && "complete" in peaks.data && peaks.data.complete ? "" : " so far"}`}
+            : `${workDuration(seconds * 1000)} narrated${peaks.data !== undefined && "complete" in peaks.data && peaks.data.complete ? "" : " so far"}`}
       </p>
     </div>
   );

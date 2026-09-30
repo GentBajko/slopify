@@ -522,14 +522,16 @@ function ProjectWorkspace({
                     onEdit={() => setChosen("settings")}
                     more={more}
                     nextChapter={nextChapter}
+                    clock={
+                      <RunClock
+                        cost={runCost.data}
+                        status={summary.status}
+                        measuredAt={runCost.dataUpdatedAt}
+                      />
+                    }
                   />
                 </div>
                 <StageAnnouncements stages={stages} />
-                <RunClock
-                  cost={runCost.data}
-                  status={summary.status}
-                  measuredAt={runCost.dataUpdatedAt}
-                />
                 <Workspace
                   sections={
                     <Rail label="Project sections">
