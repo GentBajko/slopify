@@ -11,6 +11,7 @@ permissions:
 jobs:
   metadata:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -24,6 +25,7 @@ jobs:
   verify:
     needs: metadata
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       actions: read
       contents: read
@@ -41,6 +43,7 @@ jobs:
   publish:
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # OIDC authenticates npm trusted publishing and signs provenance. Keep it off the
     # dependency-installing verification jobs, which need only read the repository.
     permissions:
@@ -59,9 +62,10 @@ jobs:
 
   # Each architecture builds on its own native runner, side by side, and pushes by digest; the
   # merge job below joins them under the version and latest tags. Under QEMU the arm64 half
-  # alone took most of the release's time.
+  # alone took most of the release's time. The images build beside the npm publish; nothing is
+  # tagged until both have landed (container-merge).
   container:
-    needs: [verify, publish]
+    needs: verify
     strategy:
       fail-fast: true
       matrix:
@@ -73,6 +77,7 @@ jobs:
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
     permissions:
       contents: read
       packages: write
@@ -93,8 +98,6 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/GentBajko/slopify
             org.opencontainers.image.version=${{ github.ref_name }}
-          cache-from: type=gha,scope=${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
       - name: Keep the digest for the merge
         run: |
           mkdir -p "${{ runner.temp }}/digests"
@@ -108,8 +111,9 @@ jobs:
           retention-days: 1
 
   container-merge:
-    needs: container
+    needs: [container, publish]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write

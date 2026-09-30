@@ -18,33 +18,34 @@ try {
   const archive = join(root, `gentbajko-slopify-${packageJson.version}.tgz`);
   await run(npm, [npmCli, "pack", "--workspace", "@gentbajko/slopify", "--pack-destination", root]);
   if (!(await exists(archive))) throw new Error("npm pack did not produce a package archive.");
-  // The two global installs run side by side, each with its own npm cache: sharing one, two
-  // installs at once collided on Windows (one's package.json went missing mid-install). The
-  // starts and checks run side by side too, each with its own data folder and port.
+  // The installs share npm's own cache, which CI restores from the lockfile, and prefer what it
+  // holds, so the package's dependencies come from the runner rather than the registry. They
+  // run one after another: two installs at once into one cache collided on Windows (one's
+  // package.json went missing mid-install). The first fills in whatever the cache lacks.
   const globalPrefix = join(root, "global");
   const skippedPrefix = join(root, "skipped-scripts");
-  await Promise.all([
-    run(npm, [
-      npmCli,
-      "install",
-      "--global",
-      "--cache",
-      join(root, "npm-cache-global"),
-      "--prefix",
-      globalPrefix,
-      archive,
-    ]),
-    run(npm, [
-      npmCli,
-      "install",
-      "--global",
-      "--ignore-scripts",
-      "--cache",
-      join(root, "npm-cache-skipped"),
-      "--prefix",
-      skippedPrefix,
-      archive,
-    ]),
+  await run(npm, [
+    npmCli,
+    "install",
+    "--global",
+    "--prefer-offline",
+    "--no-audit",
+    "--no-fund",
+    "--prefix",
+    globalPrefix,
+    archive,
+  ]);
+  await run(npm, [
+    npmCli,
+    "install",
+    "--global",
+    "--ignore-scripts",
+    "--prefer-offline",
+    "--no-audit",
+    "--no-fund",
+    "--prefix",
+    skippedPrefix,
+    archive,
   ]);
   const viaGlobal = async () => {
     const globalBin = join(
@@ -60,7 +61,16 @@ try {
     );
   };
   const viaNpx = () =>
-    smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
+    smoke(npm, "npx", [
+      npmCli,
+      "exec",
+      "--yes",
+      "--prefer-offline",
+      "--package",
+      archive,
+      "--",
+      "slopify",
+    ]);
   const withScriptsSkipped = async () => {
     const skippedPackage = join(
       skippedPrefix,

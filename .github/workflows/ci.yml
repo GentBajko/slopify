@@ -9,6 +9,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -23,14 +24,15 @@ jobs:
       - run: npm run build
       - run: npm audit --audit-level=high
 
-  # The suite split across four runners by file; the slowest shard sets the time, so an
+  # The suite split across five runners by file; the slowest shard sets the time, so an
   # integration file that grows past a couple of minutes is worth splitting.
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -38,13 +40,14 @@ jobs:
           node-version: '26'
           cache: npm
       - run: npm ci
-      - run: npx vitest run --shard=${{ matrix.shard }}/4
+      - run: npx vitest run --shard=${{ matrix.shard }}/5
 
   # Release pushes only (see `changes`).
   windows:
     needs: changes
     if: needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -67,6 +70,11 @@ jobs:
   # (packages/app/scripts/ci-changes.mjs). A release still can't be tagged without a green run.
   changes:
     runs-on: ubuntu-latest
+    # Reads which earlier runs already passed the slow jobs (ci-changes.mjs).
+    permissions:
+      actions: read
+      contents: read
+    timeout-minutes: 5
     outputs:
       release: ${{ steps.diff.outputs.release }}
       windows: ${{ steps.diff.outputs.windows }}
@@ -77,6 +85,8 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node packages/app/scripts/ci-changes.mjs
 
   # The image's smoke tests in two jobs side by side, each building the image itself (cached):
@@ -86,6 +96,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
