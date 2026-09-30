@@ -72,6 +72,10 @@ export function preparationForGroup(
   aliases: readonly AliasMatch[] = [],
   speaker?: PreparationSpeaker | undefined,
 ): PreparedGroup {
+  // A delivery note for this chunk alone (Edit project → Narration), after the project's prompt.
+  const override = context.content.narrationOverrides[logicalKey];
+  const note = override?.kind === "text" ? override.direction : undefined;
+  const prompt = renderedPrompt(context, "narration");
   const preparation = recipe(
     context,
     `narration:prepare:${segment}:${logicalKey}`,
@@ -80,7 +84,7 @@ export function preparationForGroup(
       ...llmInput(
         context,
         preparationMessages(
-          renderedPrompt(context, "narration"),
+          note === undefined ? prompt : `${prompt}\n\n${note}`,
           source,
           aliases,
           context.config.language,

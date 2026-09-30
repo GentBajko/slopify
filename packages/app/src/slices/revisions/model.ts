@@ -27,7 +27,13 @@ export interface ManualCue {
 }
 export type NarrationOverride =
   | { readonly kind: "asset"; readonly assetId: string }
-  | { readonly kind: "text"; readonly text: string };
+  | {
+      readonly kind: "text";
+      readonly text: string;
+      // A delivery note for this chunk only, added to the narration prep prompt when its cues
+      // are written: another chunk's delivery can change without re-tagging the whole narration.
+      readonly direction?: string | undefined;
+    };
 export interface RevisionContent {
   readonly articleMarkdown?: string | undefined;
   readonly articleEdited?: boolean | undefined;

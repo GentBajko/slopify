@@ -61,7 +61,13 @@ export const revisionContentSchema = z
       workKey,
       z.discriminatedUnion("kind", [
         z.object({ kind: z.literal("asset"), assetId: id }).strict(),
-        z.object({ kind: z.literal("text"), text: z.string().trim().min(1).max(500000) }).strict(),
+        z
+          .object({
+            kind: z.literal("text"),
+            text: z.string().trim().min(1).max(500000),
+            direction: z.string().trim().min(1).max(20000).optional(),
+          })
+          .strict(),
       ]),
     ),
     narrationSources: z

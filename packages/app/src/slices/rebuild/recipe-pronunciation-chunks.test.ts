@@ -232,3 +232,35 @@ it("keeps preparation identity independent of saved source bindings", () => {
   expect(preparationTemplate(after)).toEqual(preparationTemplate(before));
   expect(buildRecipes(after)).toEqual(buildRecipes(before));
 });
+
+it("adds one chunk's delivery note to that chunk's preparation only", () => {
+  const plain = context("First part. Second part.", "Part: /pɑːt/", { mode: "words", words: 2 });
+  const base: RecipeContext = {
+    ...plain,
+    config: {
+      ...plain.config,
+      narrationPrompt: "Prep",
+      rendered: { ...plain.config.rendered, narration: "Write delivery cues." },
+    },
+  };
+  const prep = (value: RecipeContext) =>
+    buildRecipes(value).filter((row) => row.key.startsWith("narration:prepare:body:audio:"));
+  const before = prep(base);
+  expect(before).toHaveLength(2);
+  const [first, second] = before;
+  const key = first?.key.replace("narration:prepare:body:", "") ?? "";
+  const noted = prep({
+    ...base,
+    content: {
+      ...base.content,
+      narrationOverrides: {
+        [key]: { kind: "text", text: "First part.", direction: "Keep one calm feeling." },
+      },
+    },
+  });
+  const said = (row: ResolvedWorkRecipe | undefined) =>
+    row?.input.kind === "llm" ? row.input.messages.map((m) => m.content).join("\n") : "";
+  expect(said(noted[0])).toContain("Keep one calm feeling.");
+  expect(said(noted[1])).not.toContain("Keep one calm feeling.");
+  expect(noted[1]?.fingerprint).toBe(second?.fingerprint);
+});
