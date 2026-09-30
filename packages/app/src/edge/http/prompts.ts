@@ -8,6 +8,7 @@ import {
   setPromptPhotorealistic,
   withPhotorealistic,
 } from "../../slices/library/photorealistic.js";
+import { formerNames } from "../../slices/library/rename.js";
 import { listPrompts, promptById } from "../../slices/library/repo.js";
 import type { LibraryDeps, SaveFailure } from "../../slices/library/save.js";
 import {
@@ -101,7 +102,13 @@ export function promptRoutes(deps: AppDeps) {
         const prompt = promptById(deps.db, c.req.valid("param").id);
         return prompt === undefined
           ? refused(c, { ok: false, reason: "not-found" }, "prompt")
-          : c.json(usedBy(deps.db, { item: "prompt", kind: prompt.kind, name: prompt.name }));
+          : c.json(
+              usedBy(
+                deps.db,
+                { item: "prompt", kind: prompt.kind, name: prompt.name },
+                formerNames(deps.db, "prompt", prompt.id, prompt.name),
+              ),
+            );
       })
       // A project holds its own rendered text, so nothing cascades and a
       // template used by past projects is deleted like any other.

@@ -12,6 +12,7 @@ import { recordVersion, versionOf } from "./history.js";
 import { lintEntry, lintPrompt } from "./lint.js";
 import type { Entry, EntryDraft, Prompt, PromptDraft } from "./model.js";
 import { entryCategories, promptKinds } from "./model.js";
+import { renameReferences } from "./rename.js";
 import {
   entryById,
   insertEntry,
@@ -72,6 +73,13 @@ export function updatePrompt(
     () => {
       const previous = promptById(deps.db, id);
       if (!replacePrompt(deps.db, prompt)) return false;
+      if (previous !== undefined)
+        renameReferences(
+          deps.db,
+          { item: "prompt", kind: previous.kind, name: previous.name },
+          id,
+          prompt.name,
+        );
       recordVersion(deps.db, "prompt", prompt, {
         previous,
         ...(restoredFrom === undefined ? {} : { restoredFrom }),
@@ -133,6 +141,13 @@ export function updateEntry(
     () => {
       const previous = entryById(deps.db, id);
       if (!replaceEntry(deps.db, entry)) return false;
+      if (previous !== undefined)
+        renameReferences(
+          deps.db,
+          { item: "entry", category: previous.category, name: previous.name },
+          id,
+          entry.name,
+        );
       recordVersion(deps.db, "entry", entry, {
         previous,
         ...(restoredFrom === undefined ? {} : { restoredFrom }),

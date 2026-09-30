@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { versionsOrCurrent } from "../../slices/library/history.js";
 import { entryCategories, entryModes } from "../../slices/library/model.js";
+import { formerNames } from "../../slices/library/rename.js";
 import { entryById, listEntries } from "../../slices/library/repo.js";
 import type { LibraryDeps } from "../../slices/library/save.js";
 import { createEntry, removeEntry, restoreEntry, updateEntry } from "../../slices/library/save.js";
@@ -62,7 +63,13 @@ export function entryRoutes(deps: AppDeps) {
       const entry = entryById(deps.db, c.req.valid("param").id);
       return entry === undefined
         ? refused(c, { ok: false, reason: "not-found" }, "entry")
-        : c.json(usedBy(deps.db, { item: "entry", category: entry.category, name: entry.name }));
+        : c.json(
+            usedBy(
+              deps.db,
+              { item: "entry", category: entry.category, name: entry.name },
+              formerNames(deps.db, "entry", entry.id, entry.name),
+            ),
+          );
     })
     .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
       const result = removeEntry(library, c.req.valid("param").id);
