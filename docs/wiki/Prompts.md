@@ -50,7 +50,7 @@ When the body already has text, Slopify asks "Replace this prompt body?" first. 
 
 ## Keywords (slots)
 
-Every `{{keyword}}` in the body becomes one field on Play.
+Every `{{keyword}}` in the body becomes one field on Play, except the two Slopify fills itself (below).
 
 - You type a keyword's value once per video, and it is filled into every prompt, intro and outro that names it.
 - Names are case-sensitive: `{{Topic}}` and `{{topic}}` are two fields.
@@ -62,6 +62,29 @@ Mistakes the editor refuses, with the line and column:
 - a `{{` that is never closed ("Add `}}` after the keyword name"),
 - a keyword with no name,
 - a keyword placed inside another keyword.
+
+### Keywords Slopify fills: {{Scene}} and {{Appearance}}
+
+Two keywords never become fields. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
+
+| Keyword | Filled with | Works in | Needs |
+| --- | --- | --- | --- |
+| `{{Scene}}` | This picture's moment from the article: for images, in order from the article's opening to its ending; for thumbnails, its most striking moment, a different one for each of three. | Image and thumbnail prompts | Images → **Scenes from the article** on |
+| `{{Appearance}}` | How the figures look, looked up on the web (most iconic depiction): the ones the picture's scene names, or the video's subject; a thumbnail always gets the subject. | Image, thumbnail and establishing prompts | Nothing: the keyword turns it on |
+
+Put each on a line of its own with a label, for example:
+
+```
+Scene: {{Scene}}
+
+Looks: {{Appearance}}
+```
+
+- An image prompt without `{{Scene}}` still gets its scene, after its first paragraph, while Scenes from the article is on. A thumbnail prompt without it gets none.
+- With Scenes from the article off, a line holding `{{Scene}}` is left out. A `{{Appearance}}` line whose scene names no one is left out too.
+- Each costs one more AI call per video (the looks call searches the web). Neither works in the shorts' image prompts.
+
+See [Play Images](Play-Images#scenes-from-the-article) for how the scenes and looks are chosen.
 
 ## Mark an image prompt as photorealistic
 
