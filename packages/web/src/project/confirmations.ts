@@ -14,7 +14,13 @@ export type Destructive =
   | { readonly kind: "delete-image"; readonly outputId: string }
   // `now`: a project with saved versions makes the picture at once and leaves the video
   // outdated, instead of rendering the video again.
-  | { readonly kind: "regenerate-image"; readonly outputId: string; readonly now?: boolean }
+  // `thumbnail`: the picture is a thumbnail, which no video shows; only the PDF's cover uses it.
+  | {
+      readonly kind: "regenerate-image";
+      readonly outputId: string;
+      readonly now?: boolean;
+      readonly thumbnail?: boolean;
+    }
   | { readonly kind: "save-article"; readonly markdown: string }
   | { readonly kind: "discard-article" };
 
@@ -68,6 +74,14 @@ export function confirmationFor(action: Destructive): Confirmation {
         dismiss: "Cancel",
       };
     case "regenerate-image":
+      if (action.thumbnail)
+        return {
+          title: "Regenerate this thumbnail?",
+          consequence:
+            "Makes a new thumbnail, one paid image call. The video and shorts are not touched; the PDF's cover follows the first thumbnail. The old one stays in History.",
+          verb: "Regenerate",
+          dismiss: "Cancel",
+        };
       return {
         title: "Regenerate this image?",
         consequence: action.now

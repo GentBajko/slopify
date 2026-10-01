@@ -163,7 +163,12 @@ function ThumbnailVariant({
   const copy =
     change.asking === undefined || output === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: output.id, now: change.now });
+      : confirmationFor({
+          kind: change.asking,
+          outputId: output.id,
+          now: change.now,
+          thumbnail: true,
+        });
   return (
     <>
       <MediaFrame

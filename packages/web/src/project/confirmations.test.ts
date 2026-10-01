@@ -28,6 +28,19 @@ describe("the dialog in front of a destructive action", () => {
     );
   });
 
+  it("tells a thumbnail's redraw leaves the video alone, unlike an image's", () => {
+    const thumbnail = confirmationFor({
+      kind: "regenerate-image",
+      outputId: "o1",
+      thumbnail: true,
+    });
+    expect(thumbnail.title).toBe("Regenerate this thumbnail?");
+    expect(thumbnail.consequence).toContain("The video and shorts are not touched");
+    expect(confirmationFor({ kind: "regenerate-image", outputId: "o1" }).consequence).toContain(
+      "re-renders video",
+    );
+  });
+
   it("names each re-run's dependency consequences and keeps History", () => {
     expect(confirmationFor({ kind: "rerun", stage: "images" }).consequence).toBe(
       "Regenerates generated images and affected video, keeping supplied images and narration; previous outputs stay in History.",
