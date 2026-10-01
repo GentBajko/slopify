@@ -11,7 +11,7 @@ import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import { limitWaitLine } from "@/project/limit-wait";
-import { stageName } from "@/project/summary";
+import { activityText, capitalised, stageName } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery } from "@/queries";
 
@@ -57,10 +57,18 @@ export function elapsed(
 }
 
 // "2 of 8 · about 4 min left": what a running step has counted and its time left, recomputed
-// every second (`slices/eta`); "time left unknown" when there is nothing to go by.
-function runningDetail(stage: Stage, now: number): string | undefined {
+// every second (`slices/eta`); "time left unknown" when there is nothing to go by. A step the
+// server names says what it is doing instead of its count ("Rendering the video (45%)"), as
+// the project page does: the video's last step is the long render, and "50 of 51" sat still
+// through all of it.
+export function runningDetail(stage: Stage, now: number): string | undefined {
   const eta = stageEta(stage, now);
   if (eta === undefined) return undefined;
+  const named = activityText(stage);
+  if (named !== undefined)
+    return eta.basis === "unknown"
+      ? capitalised(named)
+      : `${capitalised(named)} · ${etaLabel(eta)}`;
   const counted =
     stage.progressTotal !== null && stage.progressTotal > 0
       ? `${String(Math.floor(stage.progressCurrent ?? 0))} of ${String(stage.progressTotal)} · `
