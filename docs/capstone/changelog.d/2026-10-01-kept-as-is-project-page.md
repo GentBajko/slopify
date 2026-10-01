@@ -1,0 +1,1 @@
+- The project page reads Keep as is too: `GET /api/projects/:id` carries `setAside`, the header says "Kept as is" and the next-action panel stops asking to continue the run.

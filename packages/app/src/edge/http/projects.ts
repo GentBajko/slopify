@@ -108,7 +108,10 @@ export function projectRoutes(deps: AppDeps) {
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
           resumable: resumable(deps.db, project.id),
-          project: summarise(project),
+          project: {
+            ...summarise(project),
+            ...(setAsideProjects(deps.db).has(project.id) ? { setAside: true } : {}),
+          },
           stages: stagesWithEta(
             deps.db,
             stagesOf(deps.db, project.id),

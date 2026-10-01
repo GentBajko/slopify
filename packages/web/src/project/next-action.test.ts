@@ -303,6 +303,18 @@ describe("the next action", () => {
     ).toBe("stopped");
   });
 
+  it("leaves a run kept as is alone, without asking to continue it", () => {
+    const next = nextActionFor(
+      input({
+        project: { status: "pending", config, setAside: true },
+        resumable: true,
+        uploadReady: false,
+      }),
+    );
+    expect(next?.status).toBe("Kept as is");
+    expect(next?.action).toBeUndefined();
+  });
+
   it("says a queued run waits for its turn, without a button", () => {
     const next = nextActionFor(
       input({

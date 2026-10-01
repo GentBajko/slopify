@@ -67,7 +67,7 @@ export interface LimitWaitLike {
 }
 
 export interface NextActionInput {
-  readonly project: Pick<ProjectSummary, "status" | "config">;
+  readonly project: Pick<ProjectSummary, "status" | "config" | "setAside">;
   readonly stages: readonly Stage[];
   // Unfinished work on the saved revision that nothing will start by itself.
   readonly resumable: boolean;
@@ -304,6 +304,17 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       why: "Pausing lets the current call finish and keeps everything made so far.",
       action: { label: "Pause", intent: { kind: "pause" } },
       ...(running === undefined ? {} : { section: sectionForStage(running.kind) }),
+    };
+
+  // Kept as is on Home's Needs you: what is left was set aside on purpose (a step added after
+  // the project was made, whose run would redo finished work), so nothing asks to continue.
+  if (project.status === "pending" && project.setAside === true)
+    return {
+      situation: "done",
+      tone: "done",
+      status: "Kept as is",
+      title: "Kept as is: what is left won't run.",
+      why: "Everything made is kept. Editing the project brings the rest back to Needs you.",
     };
 
   if (

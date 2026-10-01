@@ -51,7 +51,10 @@ export function ProjectHeader({
   // The run clock, at the end of the meta line while a run goes.
   readonly clock?: ReactNode;
 }): ReactElement {
-  const state = statusOf(project.status);
+  const state =
+    project.status === "pending" && project.setAside === true
+      ? { tone: "done" as const, word: "Kept as is" }
+      : statusOf(project.status);
   return (
     <PageHeader
       crumb={
