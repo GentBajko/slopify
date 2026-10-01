@@ -145,7 +145,7 @@ describe("Prepare upload", () => {
     ).not.toContain("Thumbnail done");
     await user.click(within(drawer).getByRole("button", { name: "Fill in YouTube Studio" }));
     expect(opened).toHaveBeenCalledWith("https://www.youtube.com/upload", "_blank", "noopener");
-    await within(drawer).findByText(/Drop the video file/);
+    await within(drawer).findByText(/puts the video into its upload dialog/);
     expect(chosen).toEqual([{ short: 1 }]);
   });
 

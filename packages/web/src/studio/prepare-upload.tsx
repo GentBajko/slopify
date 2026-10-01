@@ -116,7 +116,7 @@ export function PrepareUploadDrawer({
         text:
           waiting.length > 1
             ? `Added; ${String(waiting.length)} uploads are waiting. Studio is opening: each upload you start there is filled with the next one, in the order under Waiting for Studio. Check everything and publish yourself.`
-            : "Studio is opening. Drop the video file into its upload dialog; the Slopify Studio extension fills in the details. Check everything and publish yourself.",
+            : "Studio is opening. The Slopify Studio extension puts the video into its upload dialog and fills in the details. Check everything and publish yourself.",
         tone: "success",
       });
     },
@@ -337,7 +337,7 @@ export function PrepareUploadDrawer({
           <Callout title="Slopify never publishes.">
             {paired === false
               ? "Copy each step into Studio's upload dialog (Open YouTube Studio), check it and press Publish yourself."
-              : "Fill in YouTube Studio hands this to the Slopify Studio extension after you drop the video in. You check it and press Publish."}
+              : "Fill in YouTube Studio hands this to the Slopify Studio extension, which puts the video into Studio's upload dialog and fills in the details. You check it and press Publish."}
           </Callout>
         </div>
       )}

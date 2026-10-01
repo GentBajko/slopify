@@ -120,7 +120,13 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 1. On a finished project, press **Prepare upload**, pick the video or a short, and press
    **Fill in YouTube Studio** (it is only offered once an extension is paired). Studio's upload
    page opens in a new tab.
-2. Drop the video file into Studio's upload dialog.
+2. Studio's upload dialog opens on Select files, and the extension puts the waiting video in
+   itself (from 3.2.7, with the extension downloaded from that version): it says "Adding the
+   video…", then "Added". Studio uploads it as a private draft, as it does a file dropped in by
+   hand. If it can't (Slopify not running, the dialog changed), it says so: drop the file in
+   yourself, from Open folder in Prepare upload. The video passes through a hidden page of the
+   extension's own (`video-frame.html`), which hands Studio the file in one message, so even a
+   multi-GB video isn't copied through the extension's messages.
 3. When the Details step appears, the extension fills the title, description, thumbnail(s),
    playlist, audience, the AI use answer (Yes or No, with why) and tags, then says what it did.
    **Fill again from Slopify** (bottom right) repeats it.

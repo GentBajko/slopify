@@ -30,6 +30,19 @@ export const uploadDialog: FieldSelectors = {
   selectors: ["ytcp-uploads-dialog", "#dialog.ytcp-uploads-dialog", "tp-yt-paper-dialog#dialog"],
 };
 
+// The upload dialog's first step, "Drag and drop video files to upload" with Select files: its
+// file input, which takes the video. Not inspected on the live page yet (see the header);
+// `ytcp-uploads-file-picker` holds Studio's one video input, named Filedata. Thumbnail inputs
+// take images, so an input for images is never this one.
+export const videoInput: FieldSelectors = {
+  label: "the video file picker",
+  selectors: [
+    "ytcp-uploads-file-picker input[type=file]",
+    'input[type=file][name="Filedata"]',
+    'ytcp-uploads-dialog input[type=file]:not([accept*="image"])',
+  ],
+};
+
 // Title and description are contenteditable `div#textbox`es inside Studio's
 // `ytcp-social-suggestions-textbox`, not inputs.
 export const title: FieldSelectors = {

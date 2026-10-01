@@ -50,15 +50,26 @@ function base64(bytes: ArrayBuffer): string {
   return btoa(binary);
 }
 
-async function payload(): Promise<FillPayload> {
+async function paired(): Promise<Pairing> {
   const current = await pairing();
   if (current === undefined)
     throw new Error(
       "The extension isn't paired with Slopify yet. Open the extension's options, paste the pairing token from Slopify's Settings → YouTube Studio and press Pair.",
     );
+  return current;
+}
+
+// The item waiting next in Slopify, as Slopify sends it.
+async function activePack(): Promise<ActivePack> {
+  const current = await paired();
   const response = await call("/api/studio/ext/pack", current);
   if (!response.ok) throw new Error(await failure(response, "the upload pack"));
-  const { pack, item, waiting } = (await response.json()) as ActivePack;
+  return (await response.json()) as ActivePack;
+}
+
+async function payload(): Promise<FillPayload> {
+  const current = await paired();
+  const { pack, item, waiting } = await activePack();
   const thumbnails = [];
   for (const file of item.thumbnails) {
     const got = await call(`/api/studio/ext/files/${pack.projectId}/${file.asset}`, current);
@@ -120,6 +131,7 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
     if (request.type === "status") return { ok: true, value: (await pairing())?.base ?? null };
     if (request.type === "filled")
       return { ok: true, value: await filled(request.projectId, request.short) };
+    if (request.type === "pack") return { ok: true, value: await activePack() };
     return { ok: true, value: await payload() };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };

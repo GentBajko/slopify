@@ -383,11 +383,16 @@ describe("pairing and CORS", () => {
     });
     expect(thumbnail.status).toBe(200);
     expect(await thumbnail.text()).toBe("two");
-    // Only a pack's thumbnails are served, never another file.
+    // The pack's video too, for Studio's upload dialog; never another file.
     const video = await h.call("/ext/files/p1/video", {
       headers: { authorization: `Bearer ${token}`, origin: extension },
     });
-    expect(video.status).toBe(404);
+    expect(video.status).toBe(200);
+    expect(await video.text()).toBe("mp4");
+    const other = await h.call("/ext/files/p1/youtube-description", {
+      headers: { authorization: `Bearer ${token}`, origin: extension },
+    });
+    expect(other.status).toBe(404);
     // A short is chosen by its number, and waits behind the video until it is filled.
     await h.call("/packs/p1/choose", json({ short: 1 }));
     await h.call("/ext/filled", {

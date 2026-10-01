@@ -1,9 +1,13 @@
 import { browserApi } from "./browser.js";
-import { type FieldResult, fillStudio } from "./fill.js";
-import { type FillPayload, packText, type WorkerAnswer } from "./pack.js";
-import { findField, title, uploadDialog } from "./selectors.js";
+import { type FieldResult, fillStudio, setFiles } from "./fill.js";
+import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
+import { findField, title, uploadDialog, videoInput } from "./selectors.js";
+import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 
-// Runs on studio.youtube.com. When an upload dialog shows its Details step (the person has
+// Runs on studio.youtube.com. When an upload dialog opens on its first step (Select files), it
+// puts in the video file of the item waiting next in Slopify, as if the person had dropped it
+// in: Studio uploads it as a private draft, and nothing is published. When an upload dialog
+// shows its Details step (the person has
 // dropped the video in), it asks the background worker for the next item waiting in Slopify,
 // fills it once, tells Slopify it was filled (so the next upload dialog gets the next item),
 // then offers "Fill again from Slopify". If Studio's dialog lacks a field the item needs, it
@@ -228,8 +232,86 @@ function watch(): void {
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
+// The file input of the dialog whose video was put in, so each dialog gets it once.
+let picked: Element | undefined;
+
+// Hands the waiting item's video to Studio's file input. The bytes come through a hidden frame
+// of the extension's own (`video-frame.ts`), which passes the downloaded File back in one
+// message, since the worker's JSON messages can't carry a video.
+async function addVideo(input: HTMLInputElement): Promise<void> {
+  const answer = (await api.runtime.sendMessage({ type: "pack" })) as WorkerAnswer<ActivePack>;
+  // Nothing waits in Slopify (or it isn't running): the dialog is the person's own upload.
+  if (!answer.ok) return;
+  const { pack, item } = answer.value;
+  if (item.video === null) return;
+  const video = item.video;
+  const size = `${(video.bytes / 1024 ** 3).toFixed(1)} GB`;
+  toast(`Adding ${itemName(item)} (${video.filename}, ${size}) from Slopify…`, "info");
+  const frame = document.createElement("iframe");
+  frame.src = api.runtime.getURL("video-frame.html");
+  frame.hidden = true;
+  const id = crypto.randomUUID();
+  const file = await new Promise<File>((resolve, reject) => {
+    const origin = new URL(frame.src).origin;
+    const listen = (event: MessageEvent): void => {
+      if (event.origin !== origin || event.source !== frame.contentWindow) return;
+      const data = event.data as { type?: unknown } | VideoAnswer;
+      if (data.type === "slopify-video-ready") {
+        frame.contentWindow?.postMessage(
+          {
+            type: "slopify-video",
+            id,
+            projectId: pack.projectId,
+            asset: video.asset,
+            filename: video.filename,
+            contentType: video.contentType,
+          } satisfies VideoRequest,
+          origin,
+        );
+        return;
+      }
+      if (!("id" in data) || data.id !== id) return;
+      window.removeEventListener("message", listen);
+      if (data.type === "slopify-video-file") resolve(data.file);
+      else reject(new Error(data.message));
+    };
+    window.addEventListener("message", listen);
+    document.body.append(frame);
+  }).finally(() => frame.remove());
+  if (!input.isConnected) {
+    toast(
+      "The upload dialog closed before the video arrived, so nothing was added. Open Upload videos again.",
+      "error",
+    );
+    return;
+  }
+  setFiles(input, [file]);
+  toast(
+    `Added ${video.filename}. Studio uploads it as a private draft; the details are filled next. Nothing is published.`,
+    "ok",
+  );
+}
+
 function look(): void {
   const dialog = findField(document, uploadDialog);
+  // The first step: the dialog's file input, before a video is in.
+  const picker = dialog === null ? null : findField(dialog, videoInput);
+  // Only in an open dialog: Studio may keep the dialog in the page while it is closed.
+  if (
+    dialog !== null &&
+    shown(dialog) &&
+    picker instanceof HTMLInputElement &&
+    picker !== picked &&
+    findField(dialog ?? document, title) === null
+  ) {
+    picked = picker;
+    void addVideo(picker).catch((error: unknown) => {
+      toast(
+        `The video couldn't be added: ${error instanceof Error ? error.message : String(error)} Drop it in by hand: Open folder in Slopify's Prepare upload shows it.`,
+        "error",
+      );
+    });
+  }
   const titleBox = dialog === null ? null : findField(dialog, title);
   if (titleBox === null || titleBox === handled || !shown(titleBox)) return;
   handled = titleBox;

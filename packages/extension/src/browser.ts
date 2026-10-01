@@ -15,6 +15,8 @@ export interface ExtensionApi {
       ): void;
     };
     openOptionsPage(): Promise<void>;
+    // The address of one of the extension's own files, for the page that fetches the video.
+    getURL(path: string): string;
   };
   readonly action?: {
     readonly onClicked: { addListener(listener: () => void): void };

@@ -60,6 +60,8 @@ export type WorkerRequest =
   | { readonly type: "pair"; readonly base: string; readonly token: string }
   | { readonly type: "status" }
   | { readonly type: "payload" }
+  // The next waiting item without its thumbnails' bytes: what the file picker step needs.
+  | { readonly type: "pack" }
   // The page filled this item: Slopify takes it out of the queue, so the next upload dialog
   // gets the next one.
   | { readonly type: "filled"; readonly projectId: string; readonly short: number | null };

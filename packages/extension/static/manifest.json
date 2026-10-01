@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slopify Studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fills YouTube Studio's upload dialog from your local Slopify. Never publishes.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -31,5 +31,11 @@
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["video-frame.html"],
+      "matches": ["https://studio.youtube.com/*"]
+    }
+  ]
 }

@@ -340,12 +340,15 @@ export function studioRoutes(deps: AppDeps) {
         )
           return refused(c);
         const { projectId, asset } = c.req.valid("param");
-        // Only the thumbnails of a pack: the extension needs nothing else from the disk.
+        // Only a pack's own files, its videos and thumbnails: the extension puts the video into
+        // Studio's upload dialog and the thumbnails into Details, and needs nothing else.
         const result = uploadPack(deps, projectId);
         const listed =
           result.ok &&
-          result.pack.items.some((item) =>
-            item.thumbnails.some((thumbnail) => thumbnail.asset === asset),
+          result.pack.items.some(
+            (item) =>
+              item.video?.asset === asset ||
+              item.thumbnails.some((thumbnail) => thumbnail.asset === asset),
           );
         const found = listed ? findDownload(deps, projectId, asset) : undefined;
         if (found === undefined || !found.ok)
@@ -353,7 +356,7 @@ export function studioRoutes(deps: AppDeps) {
             status: 404,
             title: titleOf(404),
             detail:
-              "That thumbnail isn't in the project's upload pack any more. Reload the project in Slopify and press Fill in YouTube Studio again.",
+              "That file isn't in the project's upload pack any more. Reload the project in Slopify and press Fill in YouTube Studio again.",
           });
         return c.body(Readable.toWeb(createReadStream(found.download.path)), 200, {
           "content-type": found.download.contentType,
