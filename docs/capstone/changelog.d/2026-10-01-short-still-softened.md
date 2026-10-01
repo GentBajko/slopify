@@ -1,0 +1,1 @@
+- A short's still is drawn from its softened prompt after Soften and retry: `runtime-shorts.ts` asks `softenIfAsked` like the image stage, and clears the request once drawn. 3.2.2 offered the button but drew the original prompt again.

@@ -42,8 +42,10 @@ import { figureShots } from "./runtime-export-edit.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { imageCall } from "./runtime-image.js";
 import { savedCatalogue } from "./runtime-plan.js";
+import { softenIfAsked } from "./runtime-provider.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
 import { wordsSchema } from "./runtime-subtitles.js";
+import { clearSoftening } from "./soften.js";
 import type { WorkPiece } from "./work-records.js";
 
 // The Shorts step's four kinds of work (`recipe-shorts.ts`): the pick, each clip's image
@@ -249,16 +251,15 @@ async function image(
 ): Promise<StageRunResult> {
   const input = piece.input;
   if (input.kind !== "image") throw setupError();
-  const made = await providers
-    .forPiece(piece.id)
-    .image(
-      imageCall(
-        deps,
-        context.work.projectId,
-        input,
-        `Short ${String(clip.number)} image ${String(index)}`,
-      ),
-    );
+  const wrapped = providers.forPiece(piece.id);
+  const label = `Short ${String(clip.number)} image ${String(index)}`;
+  // Soften and retry reworded this still's refused prompt: draw that one instead.
+  const softened = await softenIfAsked(deps, context, wrapped, piece, input.prompt, label);
+  if (softened === "held") return "held";
+  const prompt = softened ?? input.prompt;
+  const made = await wrapped.image(
+    imageCall(deps, context.work.projectId, { ...input, prompt }, label),
+  );
   if (!made.ok) return "held";
   const asset = writeAsset(
     deps,
@@ -270,11 +271,12 @@ async function image(
     short: clip.number,
     sentences: [clip.first, clip.last],
     index,
-    prompt: input.prompt,
+    prompt,
     provider: input.provider,
     model: input.model,
   });
-  await publishResult(deps, context, piece, [output], { prompt: input.prompt }, asset);
+  await publishResult(deps, context, piece, [output], { prompt }, asset);
+  if (softened !== undefined) clearSoftening(deps.db, context.work.projectId, [piece.key]);
   return "done";
 }
 

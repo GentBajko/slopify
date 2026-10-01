@@ -234,7 +234,8 @@ export async function executeProviderRecipe(
 
 // Soften and retry (`soften.ts`): the project's AI model rewords a refused image prompt
 // before the image is drawn again. Undefined when nobody asked, or the project has no model.
-async function softenIfAsked(
+// A short's stills are drawn in `runtime-shorts.ts`, which asks the same way.
+export async function softenIfAsked(
   deps: ProviderExecutionDeps,
   context: StageContext,
   providers: StageProviders,
