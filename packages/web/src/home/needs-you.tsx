@@ -26,6 +26,7 @@ import {
 import { fixOf } from "@/project/fix-it";
 import { stageNames } from "@/project/summary";
 import { keys } from "@/queries";
+import { setAside } from "./api.js";
 import { ProjectThumb } from "./project-thumb.js";
 
 // Home's "Needs you": runs holding for a review, schedules holding suggested topics, and runs
@@ -42,9 +43,9 @@ export function needsYouCount(
 
 // A run the runner stopped for the person: it ran, and now nothing may start (a checkpoint
 // holds the next step, or held work waits for Continue). The same reading the "Waiting for
-// you" notification uses.
+// you" notification uses. One the person chose to keep as is waits for nobody.
 export function isWaiting(project: ProjectListing): boolean {
-  return project.status === "pending" && project.progress > 0;
+  return project.status === "pending" && project.progress > 0 && project.setAside !== true;
 }
 
 function Item({
@@ -152,6 +153,27 @@ export function WaitingItem({
       ]);
     },
   });
+  // "Keep as is": held work the person does not want run (a step added after the project was
+  // made, whose run would redraw what is finished) leaves Needs you until the next edit.
+  const keep = useMutation({
+    mutationFn: (aside: boolean) => setAside(api, project.id, aside),
+    onSuccess: (_, aside) => {
+      notify(
+        aside
+          ? `Kept as is: ${project.title}. It is off Needs you; editing the project brings it back.`
+          : `${project.title} is back on Needs you.`,
+        "success",
+        aside ? { label: "Undo", run: () => keep.mutate(false) } : undefined,
+      );
+    },
+    onError: (error: Error) => {
+      notify(
+        `${project.title} wasn't kept as is: ${error.message} Press Keep as is again.`,
+        "error",
+      );
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: keys.projects }),
+  });
   const label = gate === undefined ? undefined : approveWords[gate.stage];
   useCommand({
     id: `home.approve.${project.id}`,
@@ -180,13 +202,23 @@ export function WaitingItem({
       }
       action={
         gate === undefined || label === undefined ? (
-          <ButtonLink
-            to="/projects/$projectId"
-            params={{ projectId: project.id }}
-            variant={primary ? "primary" : "secondary"}
-          >
-            Open to continue
-          </ButtonLink>
+          <>
+            <ButtonLink
+              to="/projects/$projectId"
+              params={{ projectId: project.id }}
+              variant={primary ? "primary" : "secondary"}
+            >
+              Open to continue
+            </ButtonLink>
+            <Button
+              variant="quiet"
+              disabled={keep.isPending}
+              disabledReason="Saving…"
+              onClick={() => keep.mutate(true)}
+            >
+              Keep as is
+            </Button>
+          </>
         ) : (
           <Button
             variant={primary ? "primary" : "secondary"}

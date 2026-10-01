@@ -17,7 +17,10 @@ import { ProjectThumb } from "./project-thumb.js";
 // upload lays out what Studio asks for, and Mark uploaded takes it off this list.
 export function isReadyToUpload(project: ProjectListing): boolean {
   return (
-    (project.status === "done" || project.status === "partial") &&
+    (project.status === "done" ||
+      project.status === "partial" ||
+      // Kept as is on Needs you: what is left was never going to run.
+      (project.status === "pending" && project.setAside === true)) &&
     project.config.sources.video !== "off" &&
     project.uploadedAt === null
   );

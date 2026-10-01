@@ -340,6 +340,9 @@ export interface ProjectListing extends ProjectSummary {
   // When the person marked the finished video as uploaded (Home, Ready to upload); null
   // while it is not.
   readonly uploadedAt: string | null;
+  // "Keep as is" on Needs you, still about the current revision (`uploads/repo.ts`): the
+  // waiting run is left as it is, off Needs you, until the project's next edit.
+  readonly setAside?: boolean;
   // Stages waiting for a CLI plan's limits to reset (`slices/run-cost/limits.ts`), so the
   // row can say "Waiting for Codex limits (resets at 14:00)". Left out when nothing waits.
   readonly limitWaits?: readonly ListingLimitWait[];

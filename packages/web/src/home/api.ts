@@ -28,6 +28,21 @@ export function weekQuery(api: Api, since: string, channelId: string | null) {
   });
 }
 
+// Needs you's "Keep as is" and its undo: the waiting run is left as it is until the next edit.
+export async function setAside(
+  api: Api,
+  projectId: string,
+  aside: boolean,
+): Promise<{ readonly setAside: boolean }> {
+  return read(
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/set-aside`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ setAside: aside }),
+    }),
+  );
+}
+
 // "Mark uploaded" and its undo.
 export async function markUploaded(
   api: Api,

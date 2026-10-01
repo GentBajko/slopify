@@ -44,6 +44,7 @@ const leftOut = new Set([
   "prompt_softening",
   "narration_retries",
   "prepared_videos",
+  "project_set_aside",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
 ]);

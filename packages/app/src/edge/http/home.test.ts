@@ -4,7 +4,7 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
-import { uploadedProjects } from "../../slices/uploads/repo.js";
+import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
 
@@ -199,5 +199,41 @@ describe("PUT /api/projects/:id/uploaded", () => {
     await put(app, "p1", true);
     db.exec("DELETE FROM projects WHERE id='p1'");
     expect(uploadedProjects(db).size).toBe(0);
+  });
+});
+
+describe("PUT /api/projects/:id/set-aside", () => {
+  const revision = (db: ReturnType<typeof harness>["db"], id: string) => {
+    db.exec(
+      `INSERT INTO project_revisions (id,project_id,config,content,fingerprints,created_at) VALUES ('${id}','p1','{}','{}','{}','x')`,
+    );
+    db.exec(
+      `INSERT INTO project_heads VALUES ('p1','${id}') ON CONFLICT(project_id) DO UPDATE SET revision_id=excluded.revision_id`,
+    );
+  };
+  const keep = (app: ReturnType<typeof harness>["app"], id: string, aside: boolean) =>
+    app.request(`/api/projects/${id}/set-aside`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ setAside: aside }),
+    });
+
+  it("keeps a waiting run as is until its next edit, and undoes it", async () => {
+    const { app, db } = harness();
+    revision(db, "r1");
+    expect((await keep(app, "p1", true)).status).toBe(200);
+    expect(setAsideProjects(db).has("p1")).toBe(true);
+    // An edit makes a new head: the run waits for the person again.
+    revision(db, "r2");
+    expect(setAsideProjects(db).has("p1")).toBe(false);
+    await keep(app, "p1", true);
+    expect(setAsideProjects(db).has("p1")).toBe(true);
+    await keep(app, "p1", false);
+    expect(setAsideProjects(db).has("p1")).toBe(false);
+  });
+
+  it("says a project without a revision no longer exists", async () => {
+    const { app } = harness();
+    expect((await keep(app, "gone", true)).status).toBe(404);
   });
 });

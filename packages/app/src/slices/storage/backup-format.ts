@@ -64,6 +64,8 @@ export const projectTables = [
   // current wait, a lease of this install) and prompt_softening (a pending one-off request).
   // Since 3.0.8, narration_retries is left out too: the tries of a run, not of the project.
   // Since 3.1.0, prepared_videos too: a schedule's hold on this install's next run.
+  // Since 3.2.4, project_set_aside too: a Home card hidden on this install, which a restored
+  // project simply shows again.
   "review_verdicts",
   "provider_usage",
   "plan_limit_readings",

@@ -23,7 +23,7 @@ import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
-import { uploadedProjects } from "../../slices/uploads/repo.js";
+import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 import { createProject } from "./project-create.js";
@@ -76,6 +76,7 @@ export function projectRoutes(deps: AppDeps) {
         const standings = stageStandingsByProject(deps.db);
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
+        const aside = setAsideProjects(deps.db);
         const waits = limitWaitsByProject(deps.db);
         const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
@@ -86,6 +87,7 @@ export function projectRoutes(deps: AppDeps) {
             progress: progressOf(stages),
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
+            ...(aside.has(project.id) ? { setAside: true } : {}),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };
         });

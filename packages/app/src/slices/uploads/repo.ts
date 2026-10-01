@@ -37,3 +37,35 @@ export function uploadedProjects(db: DatabaseSync): ReadonlyMap<string, string> 
       .map((row) => [String(row.project_id), String(row.uploaded_at)] as const),
   );
 }
+
+// "Keep as is": a waiting run the person leaves as it is, until the project's next edit. Set on
+// the current head revision; the listing counts it only while that revision is still the head.
+export function setAside(
+  db: DatabaseSync,
+  projectId: string,
+  aside: boolean,
+  at: string,
+): { readonly ok: true } | { readonly ok: false; readonly reason: "not-found" } {
+  const head = db
+    .prepare("SELECT revision_id FROM project_heads WHERE project_id=?")
+    .get(projectId);
+  if (head === undefined) return { ok: false, reason: "not-found" };
+  if (!aside) db.prepare("DELETE FROM project_set_aside WHERE project_id=?").run(projectId);
+  else
+    db.prepare(
+      "INSERT INTO project_set_aside(project_id,revision_id,set_at) VALUES (?,?,?) ON CONFLICT(project_id) DO UPDATE SET revision_id=excluded.revision_id,set_at=excluded.set_at",
+    ).run(projectId, String(head.revision_id), at);
+  return { ok: true };
+}
+
+export function setAsideProjects(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare(
+        `SELECT s.project_id FROM project_set_aside s
+         JOIN project_heads h ON h.project_id=s.project_id AND h.revision_id=s.revision_id`,
+      )
+      .all()
+      .map((row) => String(row.project_id)),
+  );
+}

@@ -84,6 +84,8 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
     canceled: { tone: "off", word: "Canceled" },
   };
   if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
+  if (project.status === "pending" && project.setAside === true)
+    return { tone: "done", word: "Kept as is" };
   // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
   const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
   return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
