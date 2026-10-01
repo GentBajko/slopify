@@ -1,0 +1,1 @@
+- A project kept as is with its video made offers Prepare upload in its next-action panel, like a finished run.

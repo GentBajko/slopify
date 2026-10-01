@@ -313,6 +313,16 @@ describe("the next action", () => {
     );
     expect(next?.status).toBe("Kept as is");
     expect(next?.action).toBeUndefined();
+    // With its video made, it is ready to upload like a finished run.
+    expect(
+      nextActionFor(
+        input({
+          project: { status: "pending", config, setAside: true },
+          resumable: true,
+          uploadReady: true,
+        }),
+      )?.action?.label,
+    ).toBe("Prepare upload");
   });
 
   it("says a queued run waits for its turn, without a button", () => {
