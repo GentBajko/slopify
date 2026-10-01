@@ -100,6 +100,8 @@ describe("startRun", () => {
     );
     expect(run.project.title).toBe("History: Hypatia");
     expect(run.project.config.title).toBe("History: Hypatia");
+    // Kept for YouTube's other titles, which change only what the keyword holds.
+    expect(run.project.config.titlePattern).toBe("History: {{Topic}}");
   });
   it("names Plain on a new project's document when the draft names no theme", () => {
     const storage = deps();

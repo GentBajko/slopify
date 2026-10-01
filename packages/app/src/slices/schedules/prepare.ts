@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectPaused, stagesOf } from "../admission/repo.js";
+import { render } from "../admission/substitute.js";
 import { changeCheckpoints } from "../checkpoints/change.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
@@ -23,7 +24,10 @@ import { renderedTitle, scheduledValues } from "./topic-list.js";
 type Topic = ScheduleSummary["items"][number];
 
 // The draft a schedule's run starts for one topic: the template as it is now, the topic in its
-// keyword, the schedule's values over the template's, and the title filled from them.
+// keyword, and the schedule's values over the template's. The title keeps its keywords, which
+// the project fills from those values when it starts and keeps as its title pattern (YouTube's
+// other titles change only what the keywords hold); `scheduledTitle` is the filled title. A
+// topic with no keyword to fill is the title itself.
 export function scheduledDocument(
   deps: ScheduleDeps,
   schedule: ScheduleSummary,
@@ -35,15 +39,23 @@ export function scheduledDocument(
     id: schedule.templateId,
     version: template.version,
   });
+  const values = scheduledValues(document.form, schedule, topic);
+  const filled = renderedTitle(document.form, schedule, topic);
   return {
     ...document,
     form: {
       ...document.form,
-      title: renderedTitle(document.form, schedule, topic),
-      values: scheduledValues(document.form, schedule, topic),
+      title:
+        render(document.form.title, values).trim() === filled.trim() ? document.form.title : filled,
+      values,
     },
     variants: [],
   };
+}
+
+// The title a scheduled draft's project gets, as `admission/start.ts` fills it.
+export function scheduledTitle(document: PlayDraftDocument): string {
+  return render(document.form.title, document.form.values).trim() || document.form.title;
 }
 
 export type PrepareResult =
@@ -60,7 +72,7 @@ export async function prepareTopic(
   if (topic === undefined) return { ok: false, reason: "not-found" };
   const document = scheduledDocument(deps, schedule, topic);
   if (document === undefined) return { ok: false, reason: "missing-template" };
-  const title = document.form.title;
+  const title = scheduledTitle(document);
   if (preparedProject(deps.db, schedule.id, title) !== undefined)
     return { ok: false, reason: "already-prepared" };
   const { document: held, added } = heldBeforeVideo(document);
@@ -183,9 +195,8 @@ export function preparedTopics(
   return schedule.items.flatMap((topic) => {
     const document = scheduledDocument(deps, schedule, topic);
     if (document === undefined) return [];
-    const found = preparedProject(deps.db, scheduleId, document.form.title);
-    return found === undefined
-      ? []
-      : [{ title: document.form.title, topic: topic.title, projectId: found.projectId }];
+    const title = scheduledTitle(document);
+    const found = preparedProject(deps.db, scheduleId, title);
+    return found === undefined ? [] : [{ title, topic: topic.title, projectId: found.projectId }];
   });
 }

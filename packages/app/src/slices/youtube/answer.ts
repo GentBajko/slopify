@@ -12,6 +12,7 @@ import {
   titleMaxCharacters,
 } from "./model.js";
 import { parseTimestamp, youtubeTimestamp } from "./timestamps.js";
+import { keepsShape, type TitleShape, titleShapeRule } from "./titles.js";
 
 // The model answers in JSON and Slopify writes the description itself, so the layout YouTube
 // needs (summary, blank line, one chapter per line, blank line, hashtags last) never depends
@@ -21,6 +22,8 @@ export interface DescriptionBrief {
   // The Description prompt with this run's keyword values substituted in, or the built-in one.
   readonly instruction: string;
   readonly title: string;
+  // The title's pattern, when it was made from one with keywords (`titles.ts`).
+  readonly shape?: TitleShape | undefined;
   readonly durationSeconds: number;
   // `transcriptText`: one timed passage per line.
   readonly transcript: string;
@@ -62,6 +65,7 @@ export function descriptionMessages(brief: DescriptionBrief): readonly Message[]
         "- The summary is plain text without chapters, hashtags or links.",
         `- The pinned comment is plain text without links, at most ${String(pinnedCommentMaxCharacters)} characters.`,
         `- Titles are exactly ${String(alternativeTitles)} other titles for this video, for YouTube's title A/B test beside the video's own title: each at most ${String(titleMaxCharacters)} characters, one line, different from the video title and from each other.`,
+        ...(brief.shape === undefined ? [] : [titleShapeRule(brief.shape)]),
         "",
         "The pinned comment is what the channel pins under the video, unless the instructions below say otherwise: one or two short sentences, at most 200 characters, in the same voice as the summary. Ask one question a viewer can answer from their own experience of the subject, and invite a suggestion for the next video.",
         "The other titles try different angles on the same video (a question, a stake, a surprising fact) while staying true to it and in the video title's language and tone.",
@@ -105,6 +109,8 @@ export function checkDescriptionAnswer(
   durationSeconds: number,
   // The video's own title, which the other titles must differ from.
   title = "",
+  // Its pattern, whose fixed wording the other titles keep.
+  shape?: TitleShape,
 ): CheckedAnswer {
   const parsed = answerSchema.safeParse(jsonOf(text));
   if (!parsed.success)
@@ -129,7 +135,7 @@ export function checkDescriptionAnswer(
       ok: false,
       reason: `The AI model's pinned comment is ${String(pinnedComment.length)} characters, over the ${String(pinnedCommentMaxCharacters)} Slopify allows. ${fix}`,
     };
-  const titles = checkTitles(parsed.data.titles, title);
+  const titles = checkTitles(parsed.data.titles, title, shape);
   if (!titles.ok) return titles;
   const value = {
     titles: titles.value,
@@ -239,6 +245,7 @@ function checkChapters(
 function checkTitles(
   raw: readonly string[],
   title: string,
+  shape: TitleShape | undefined,
 ): { readonly ok: true; readonly value: readonly string[] } | { ok: false; reason: string } {
   const broke = (rule: string) => ({
     ok: false as const,
@@ -254,6 +261,9 @@ function checkTitles(
     return broke(`"${long.slice(0, 40)}…" is over ${String(titleMaxCharacters)} characters`);
   const odd = titles.find((one) => /[<>]/.test(one));
   if (odd !== undefined) return broke(`"${odd}" contains < or >`);
+  const reshaped = shape === undefined ? undefined : titles.find((one) => !keepsShape(shape, one));
+  if (shape !== undefined && reshaped !== undefined)
+    return broke(`"${reshaped}" changes the title pattern "${shape.pattern}" outside its keywords`);
   const seen = new Set([title.trim().toLowerCase()]);
   for (const one of titles) {
     if (seen.has(one.toLowerCase())) return broke(`"${one}" repeats a title`);

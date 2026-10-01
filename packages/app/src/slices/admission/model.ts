@@ -272,6 +272,9 @@ export interface TitleStyle {
 // holds.
 export interface RunConfig extends RunDraft {
   readonly rendered: Readonly<Record<string, string>>;
+  // The title as written with its keywords ("{{Topic}} | D&D Lore To Sleep To"), kept when
+  // `title` was filled from it: YouTube's other titles change only what the keywords hold.
+  readonly titlePattern?: string | undefined;
 }
 
 export interface Project {

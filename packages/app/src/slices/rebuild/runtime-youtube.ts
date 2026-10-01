@@ -11,6 +11,7 @@ import {
   tagsText,
 } from "../youtube/answer.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
+import { keepsShape, titleShape } from "../youtube/titles.js";
 import { transcriptPassages, transcriptText } from "../youtube/transcript.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
@@ -78,10 +79,14 @@ export async function executeYoutubeRecipe(
   const saved = Array.isArray(input.values) ? input.values[4] : undefined;
   const instruction =
     typeof saved === "string" && saved.trim() !== "" ? saved : defaultDescriptionPrompt;
+  // A title renamed away from its pattern in Edit project has nothing fixed any more.
+  const pattern = titleShape(config.titlePattern, config.values);
+  const shape = pattern !== undefined && keepsShape(pattern, config.title) ? pattern : undefined;
   const messages = withLanguage(
     descriptionMessages({
       instruction,
       title: config.title,
+      shape,
       durationSeconds,
       transcript: transcriptText(passages),
     }),
@@ -104,7 +109,7 @@ export async function executeYoutubeRecipe(
     webSearch: false,
     previewLabel: piece.key,
     check: (value) => {
-      const checked = checkDescriptionAnswer(value.text, durationSeconds, config.title);
+      const checked = checkDescriptionAnswer(value.text, durationSeconds, config.title, shape);
       return checked.ok ? undefined : checked.reason;
     },
   });

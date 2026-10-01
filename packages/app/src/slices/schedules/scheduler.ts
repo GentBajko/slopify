@@ -4,7 +4,7 @@ import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ClaimedScheduleRun, ScheduleDeps } from "./model.js";
-import { continuePrepared, preparedProject, scheduledDocument } from "./prepare.js";
+import { continuePrepared, preparedProject, scheduledDocument, scheduledTitle } from "./prepare.js";
 import {
   activeRun,
   dueSchedules,
@@ -180,7 +180,7 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
     const prepared = preparedProject(
       deps.db,
       claimed.schedule.id,
-      fresh.form.title,
+      scheduledTitle(fresh),
       topic !== undefined,
     );
     if (prepared !== undefined) {

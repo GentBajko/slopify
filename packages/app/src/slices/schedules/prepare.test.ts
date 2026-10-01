@@ -3,7 +3,14 @@ import { expect, it } from "vitest";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
-import { heldBeforeVideo, preparedTopics, prepareTopic } from "./prepare.js";
+import {
+  heldBeforeVideo,
+  preparedTopics,
+  prepareTopic,
+  scheduledDocument,
+  scheduledTitle,
+} from "./prepare.js";
+import { scheduleById } from "./repo.js";
 import { createScheduleRunner } from "./scheduler.js";
 import { createSchedule } from "./service.js";
 
@@ -107,4 +114,35 @@ it("holds a video-making setup before its video, and leaves one the template alr
   } finally {
     h.close();
   }
+});
+
+it("keeps the title's keywords in a scheduled draft, so its project keeps the pattern", () => {
+  const h = startFixture();
+  const templateId = randomUUID();
+  const document = { ...h.document, form: { ...h.document.form, title: "{{Topic}} | Lore" } };
+  if (!createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok)
+    throw new Error("Expected the template.");
+  const deps = { ...h.deps, template: (id: string) => templateById(h.deps.db, id) };
+  const scheduleId = randomUUID();
+  const created = createSchedule(deps, {
+    id: scheduleId,
+    name: "Lore",
+    templateId,
+    templateVersion: 1,
+    cadence: { kind: "daily", time: "00:01" },
+    timezone: "UTC",
+    missedPolicy: "skip",
+    overlapPolicy: "skip",
+    spendLimitCents: null,
+    topicKeyword: "Topic",
+    items: [{ title: "Tiamat", values: {} }],
+  });
+  if (!created.ok) throw new Error(JSON.stringify(created));
+  const schedule = scheduleById(h.deps.db, scheduleId);
+  if (schedule === undefined) throw new Error("Expected the schedule.");
+  const fresh = scheduledDocument(deps, schedule, schedule.items[0]);
+  if (fresh === undefined) throw new Error("Expected the draft.");
+  expect(fresh.form.title).toBe("{{Topic}} | Lore");
+  expect(fresh.form.values.Topic).toBe("Tiamat");
+  expect(scheduledTitle(fresh)).toBe("Tiamat | Lore");
 });

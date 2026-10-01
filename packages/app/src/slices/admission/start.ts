@@ -26,7 +26,7 @@ import {
 } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
 import { usesPronunciationGlossary, usesReference } from "./rules.js";
-import { render } from "./substitute.js";
+import { detectSlots, render } from "./substitute.js";
 
 export interface StartedRun {
   readonly project: Project;
@@ -72,6 +72,9 @@ export function startRun(
   const config: RunConfig = {
     ...fresh,
     title,
+    ...(title !== draft.title && detectSlots(draft.title).names.length > 0
+      ? { titlePattern: draft.title }
+      : {}),
     // A new project always names its document theme: a config without one reads as the
     // DiceMaster of older projects (see documentThemeOf), which no new project should get.
     ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
