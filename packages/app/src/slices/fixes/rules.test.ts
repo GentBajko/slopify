@@ -76,6 +76,15 @@ describe("fixFor", () => {
     );
   });
 
+  it("offers to soften a short's still, which the Video stage draws", () => {
+    expect(
+      fixFor({ stage: "video", kind: "refusal", reason: `Short 4 image 6: ${refused("Codex")}` }),
+    ).toMatchObject({ soften: true });
+    expect(fixFor({ stage: "video", kind: "refusal", reason: refused("fal.ai") })).toMatchObject({
+      soften: false,
+    });
+  });
+
   it("offers another model when the chosen one was retired", () => {
     for (const reason of [
       'OpenRouter rejected the request (error 404: "No endpoints found: the model gpt-3 is no longer available")',

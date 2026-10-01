@@ -23,6 +23,22 @@ export function refusedKeys(db: DatabaseSync, projectId: string, stage: StageKin
     .map((row) => String(row.work_key));
 }
 
+// A short's still (`shorts:N:image:M`) is drawn in the Video stage, beside steps that draw
+// nothing; only those stills can be softened there.
+const shortStill = /^shorts:\d+:image:\d+$/;
+
+// The refused steps Soften and retry can reword: every refused image of Images or Thumbnail,
+// and the refused short stills of Video.
+export function softenableKeys(db: DatabaseSync, projectId: string, stage: StageKind): string[] {
+  return softenable(stage, refusedKeys(db, projectId, stage));
+}
+
+export function softenable(stage: StageKind, refused: readonly string[]): string[] {
+  if (stage === "images" || stage === "thumbnail") return [...refused];
+  if (stage === "video") return refused.filter((key) => shortStill.test(key));
+  return [];
+}
+
 export function requestSoftening(
   db: DatabaseSync,
   projectId: string,

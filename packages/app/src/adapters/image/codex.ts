@@ -193,6 +193,10 @@ export function codexImageArgs(req: CodexImageRequest, directory: string): strin
   ];
 }
 
+// How a blocked image shows: the tool's error on stderr, or the agent's reply.
+const blocked =
+  /moderation_blocked|rejected by the safety system|safety (?:filter|system)|content polic|refus/i;
+
 const failure = z.object({ error: z.object({ message: z.string() }) });
 const turnUsage = z.object({
   usage: z
@@ -279,6 +283,8 @@ export function codexImage(deps: {
         }
         let completed = false;
         let unavailable = false;
+        // What the agent said last: when its image tool is blocked it draws nothing and says why.
+        let said = "";
         for await (const line of lines(bounded(run.stdout, maxEventBytes), req.signal)) {
           if (line.trim() === "") continue;
           const event = cliEvent(binary, line);
@@ -337,6 +343,7 @@ export function codexImage(deps: {
             });
           } else if (event.type === "item.completed") {
             const { item: value } = cliShaped(binary, item, event.value);
+            if (value.type === "agent_message" && value.text) said = value.text;
             if (
               value.type === "agent_message" &&
               /image.generation.*unavailable|cannot generate images|no image tool/i.test(
@@ -370,6 +377,16 @@ export function codexImage(deps: {
           throw providerError({
             kind: "unsupported",
             message: `The Codex CLI cannot make images. ${cannotDraw}`,
+          });
+        // The image tool's safety system refused every picture, so the run ended without one.
+        if (
+          threadId !== undefined &&
+          codexImageCount(env, threadId) === 0 &&
+          (blocked.test(run.stderr()) || blocked.test(said))
+        )
+          throw providerError({
+            kind: "refusal",
+            message: refusedImage("The Codex CLI", redact(said.trim())),
           });
         const image = codexGeneratedImage(env, threadId, startedAt);
         const limits = await readingOf(before, deps.readLimits);

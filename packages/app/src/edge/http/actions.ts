@@ -16,7 +16,7 @@ import {
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import { type RecoveryRequest, recoveryResultSchema } from "../../slices/rebuild/recovery-model.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
-import { clearSoftening, refusedKeys, requestSoftening } from "../../slices/rebuild/soften.js";
+import { clearSoftening, requestSoftening, softenableKeys } from "../../slices/rebuild/soften.js";
 import type { RerunDeps } from "../../slices/reruns/index.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -273,8 +273,7 @@ export function actionRoutes(deps: AppDeps) {
         zValidator("json", revisionControlSchema, onInvalid),
         async (c) => {
           const { id, kind } = c.req.valid("param");
-          const keys =
-            kind === "images" || kind === "thumbnail" ? refusedKeys(deps.db, id, kind) : [];
+          const keys = softenableKeys(deps.db, id, kind);
           if (keys.length === 0)
             return problem(c, {
               status: 409,

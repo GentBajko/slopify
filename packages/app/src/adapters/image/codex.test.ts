@@ -334,6 +334,30 @@ it("requires a completed turn and cleans up refused or failed calls", async () =
   expect(fake.calls[0] && existsSync(fake.calls[0].directory)).toBe(false);
 });
 
+it("reports a picture the image tool's safety system blocked as a refusal, not a lost file", async () => {
+  const home = mkdtempSync(join(tmpdir(), "slopify-codex-output-test-"));
+  homes.push(home);
+  const said =
+    "The image tool rejected the dagger-above-wrist pose under its self-harm safety filter, so no image was produced.";
+  const fake = fakeRun(
+    () => {},
+    `${[
+      JSON.stringify({ type: "thread.started", thread_id: randomUUID() }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "i", type: "agent_message", text: said },
+      }),
+      JSON.stringify({ type: "turn.completed" }),
+    ].join("\n")}\n`,
+  );
+  const error: unknown = await codexImage({ run: fake.run, env: { CODEX_HOME: home } })
+    .generate(request())
+    .catch((e: unknown) => e);
+  expect(isProviderError(error) && error.fault.kind).toBe("refusal");
+  expect(String(error)).toContain("refused to make this image");
+  expect(String(error)).toContain("self-harm safety filter");
+});
+
 it("does not scan an unrelated filename even if Codex wrote it", async () => {
   const fake = fakeRun((dir) => writeFileSync(join(dir, "other.png"), png));
   const error: unknown = await codexImage({ run: fake.run })

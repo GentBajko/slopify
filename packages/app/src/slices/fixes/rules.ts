@@ -52,6 +52,8 @@ const keyTrouble = /did not accept the API key|API key is saved|invalid api key|
 
 // Stages whose failed call draws an image from a prompt, which Soften and retry can reword.
 const drawn: readonly StageKind[] = ["images", "thumbnail"];
+// A short's still is drawn in the Video stage; its failure names it ("Short 4 image 6: …").
+const shortStill = /^Short \d+ image \d+:/;
 
 export function fixFor(step: FailedStep): Fix | undefined {
   const reason = step.reason ?? "";
@@ -65,7 +67,7 @@ export function fixFor(step: FailedStep): Fix | undefined {
     };
   if (diskFull.test(reason)) return { kind: "free-space", label: "Free space" };
   if (step.kind === "refusal" || refusedWords.test(reason))
-    return drawn.includes(step.stage)
+    return drawn.includes(step.stage) || (step.stage === "video" && shortStill.test(reason))
       ? { kind: "refused", label: "Soften and retry", soften: true }
       : { kind: "refused", label: "Edit the prompt", soften: false };
   if (retiredModel.test(reason)) return { kind: "switch-model", label: "Switch model" };
