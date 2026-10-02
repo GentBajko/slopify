@@ -6,6 +6,7 @@ import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult } from "../../kernel/runner/work.js";
 import type { EntryMode, ProviderChoice, RunConfig } from "../admission/model.js";
+import { subjectOf } from "../admission/model.js";
 import type { EntryCategory } from "../library/model.js";
 import type { Tokens } from "../telemetry/model.js";
 import { noTokens, plusUsage } from "../telemetry/model.js";
@@ -84,7 +85,7 @@ export function segmentMessages(
       content: [
         body,
         "",
-        `Video title: ${config.title}`,
+        `Video title: ${subjectOf(config)}`,
         "",
         "Keyword values for this run:",
         "",

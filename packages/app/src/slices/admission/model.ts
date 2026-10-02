@@ -275,9 +275,9 @@ export interface RunConfig extends RunDraft {
   // The title as written with its keywords ("{{Topic}} | D&D Lore To Sleep To"), kept when
   // `title` was filled from it: YouTube's other titles change only what the keywords hold.
   readonly titlePattern?: string | undefined;
-  // The title the project's pictures, scenes, looks and shorts were made about, kept when the
-  // title is first renamed (`subjectOf`): a new name changes what is shown with it (YouTube's
-  // text, the PDF, the files' tags), not the article's pictures.
+  // The title the project was made about, kept when the title is first renamed (`subjectOf`):
+  // a rename is a new name only, and no step runs again for it. Write again (YouTube's text) or
+  // re-running a step uses the new name.
   readonly subjectTitle?: string | undefined;
 }
 

@@ -1,3 +1,4 @@
+import { subjectOf } from "../admission/model.js";
 import { usesYoutubeDescription } from "../admission/rules.js";
 import {
   type RecipeContext,
@@ -36,7 +37,7 @@ export function youtubeRecipes(
           // Blank means the built-in prompt; the step fills it in, so a new built-in wording
           // ships as a new operation version rather than a silent change here.
           config.descriptionPrompt?.trim() ? renderedPrompt(context, "description") : "",
-          config.title,
+          subjectOf(config),
           // The project language, only when it is not English, so English keeps its fingerprint.
           ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
         ],

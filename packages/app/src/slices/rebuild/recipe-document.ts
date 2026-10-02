@@ -1,5 +1,5 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import { sourceOf } from "../admission/model.js";
+import { sourceOf, subjectOf } from "../admission/model.js";
 import { resolvedDocumentTheme } from "../document/theme.js";
 import {
   type RecipeContext,
@@ -37,7 +37,7 @@ export function documentRecipes(
         operation: "render-document",
         values: [
           renderer,
-          config.title,
+          subjectOf(config),
           JSON.parse(JSON.stringify(theme)) as FingerprintValue,
           resourceIdentity(context, text.article),
           notes === undefined ? null : resourceIdentity(context, notes),

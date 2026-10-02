@@ -1,5 +1,6 @@
 import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
+import { subjectOf } from "../admission/model.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { usesShortMode } from "../admission/short-mode.js";
 import { reviewsNarration } from "../reviews/rules.js";
@@ -105,7 +106,7 @@ export function exportRecipes(
             audio.mediaFingerprint,
             resourceIdentity(context, timing),
             (audio.sections ?? []).map((section) => [section.title, section.firstTurn]),
-            config.title,
+            subjectOf(config),
             ...master.values,
             ...lines.values,
             // The book's title and chapter become the files' album and track tags; a project

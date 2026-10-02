@@ -292,3 +292,11 @@ it("keeps the scenes when the project is renamed, as its subject stays what it w
       .fingerprint,
   ).not.toBe(before);
 });
+
+it("changes no step at all when the project is only renamed", () => {
+  const before = plan().map((one) => [one.key, one.fingerprint]);
+  const renamed = { ...scened, title: "A new name", subjectTitle: scened.title };
+  expect(plan([], undefined, withScenes, renamed).map((one) => [one.key, one.fingerprint])).toEqual(
+    before,
+  );
+});

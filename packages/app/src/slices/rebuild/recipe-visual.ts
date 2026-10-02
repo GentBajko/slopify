@@ -177,7 +177,7 @@ export function visualRecipes(
             // Only for a short, so every long video keeps its fingerprint: the word-by-word
             // captions are drawn from the word timing in the caption font, under the title.
             ...(short
-              ? [["short-v1", config.subtitles?.fontId ?? "default", config.title, timing]]
+              ? [["short-v1", config.subtitles?.fontId ?? "default", subjectOf(config), timing]]
               : []),
             // Only while the video has an ambient bed, so every video without one keeps the
             // fingerprint it always had.
@@ -298,7 +298,7 @@ export function thumbnailRecipes(
           kind: "provided",
           version: 1,
           assetId: content.provided.thumbnail ?? null,
-          semantic: [config.title, config.format],
+          semantic: [subjectOf(config), config.format],
         },
         [],
         { unresolved: content.provided.thumbnail === undefined },
