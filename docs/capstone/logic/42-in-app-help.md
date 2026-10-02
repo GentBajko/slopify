@@ -10,10 +10,10 @@ depends_on:
 - 14-storage-and-downloads
 - 16-telemetry
 - 21-app-updater
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 10991e04309d
+content_hash: 3ca6e2698766
 paths_covered:
   - ":(top)packages/app/src/slices/tutorials/**"
   - ":(top)packages/app/src/slices/patch-notes/**"
@@ -42,7 +42,7 @@ Four read-mostly help surfaces ship inside the release: Help → Tutorials (the 
 
 ## Trigger & preconditions
 
-- Tutorials: the book icon "Tutorials" in the shell (`packages/web/src/components/shell.tsx:128-142`), Ctrl+K "Open tutorials" (`packages/web/src/components/shell.tsx:261-269`), one search-only palette command "Open tutorial: <title>" per page (`packages/web/src/tutorials/commands.tsx:10-35`, mounted `packages/web/src/components/shell.tsx:366`), an info tip's Learn more link (`packages/web/src/components/kit/info-tip.tsx:57-84`), or the address `/help`, `/help/tutorials` (both redirect to `/help/tutorials/Home`) and `/help/tutorials/$page[#anchor][?q=]` (`packages/web/src/router.tsx:368-397`).
+- Tutorials: the book icon "Tutorials" in the shell (`packages/web/src/components/shell.tsx:128-142`), Ctrl+K "Open tutorials" (`packages/web/src/components/shell.tsx:261-269`), one search-only palette command "Open tutorial: <title>" per page (`packages/web/src/tutorials/commands.tsx:10-35`, mounted `packages/web/src/components/shell.tsx:366`), an info tip's Learn more link (`packages/web/src/components/kit/info-tip.tsx:57-84`), or the address `/help`, `/help/tutorials` (both redirect to `/help/tutorials/Home`) and `/help/tutorials/$page[#anchor][?q=]` (`packages/web/src/router.tsx:375-404`).
 - The build must carry the pages: `scripts/copy-assets.mjs` copies `docs/wiki/` to `dist/tutorials/` and `docs/patch-notes/` to `dist/patch-notes/` (`packages/app/scripts/copy-assets.mjs:14-24`). At runtime the server looks for `dist/tutorials/Home.md`, then the repository's `docs/wiki/Home.md` (source runs, tests) (`packages/app/src/slices/tutorials/library.ts:47-52`); patch notes look for `index.json` the same way (`packages/app/src/slices/patch-notes/library.ts:30-35`). `AppDeps.tutorialsDir` / `patchNotesDir` override both (`packages/app/src/edge/http/app.ts:138-141`).
 - What's new tour and patch-notes popup: both are mounted in the shell on every route (`packages/web/src/components/shell.tsx:518-519`) and query the server only after the first-run usage-stats notice reports `seen` (`packages/web/src/whats-new/tour.tsx:145-147`, `packages/web/src/patch-notes/popup.tsx:24-36`). "Update vs. fresh install" relies on the telemetry `machine` row, written once when that notice is dismissed with the running `appVersion` (`packages/app/src/slices/telemetry/machine.ts:17-36`; see `16-telemetry.md`).
 - Settings → Patch notes and Ctrl+K "Show patch notes" (`packages/web/src/patch-notes/popup.tsx:84-96`) open the full list at any time.
@@ -58,7 +58,7 @@ Four read-mostly help surfaces ship inside the release: Help → Tutorials (the 
 4. **Render.** The page's own leading `# Title` is split off and shown as the page header; the header meta is the page's sidebar group or "Guides to every screen of Slopify, for the version you are running."; wiki links `](Page)`, `](Page#anchor)`, `](#anchor)` to pages this version has become `/help/tutorials/<Page>#<anchor>`, others are left untouched (`packages/web/src/routes/tutorials.tsx:58-68`, `packages/web/src/routes/tutorials.tsx:109-125`, `packages/web/src/tutorials/links.ts:14-38`). A click on an in-app tutorial link navigates inside the app; an `http(s):` link opens a new tab with `noopener,noreferrer` (`packages/web/src/routes/tutorials.tsx:86-105`). The footer is printed with its links flattened to text (`packages/web/src/routes/tutorials.tsx:169-173`).
 5. **Scroll to section.** After render the heading whose GitHub anchor equals the URL hash is scrolled into view, counting the split-off title first as GitHub does; no match or no hash scrolls to the top (`packages/web/src/routes/tutorials.tsx:71-81`, `packages/web/src/tutorials/links.ts:57-74`). Anchors: heading text with link targets, code ticks, emphasis and HTML dropped, lower-cased, characters other than letters/numbers/marks/space/`_`/`-` removed, spaces → `-`, repeats suffixed `-1`, `-2`; `#` lines inside fenced code are ignored (`packages/app/src/slices/tutorials/anchors.ts:9-60`).
 6. **Search.** The nav search box debounces 200 ms, then `GET /api/tutorials/search?q=` (query cut to 200 chars) (`packages/web/src/routes/tutorials.tsx:196-201`, `packages/app/src/edge/http/tutorials.ts:40-47`). `searchTutorials`: lower-case, split on whitespace, first 8 terms; each page is cut into sections (text above the first heading, then one per heading) with Markdown reduced to plain words (`packages/app/src/slices/tutorials/library.ts:131-162`, `packages/app/src/slices/tutorials/library.ts:179-186`). A section is a hit only when every term is in its heading, its text or the page title, and at least one term is in its own heading or text. Score per term: heading +6, page title +3, text +1; +10 when the heading equals the whole query; order by score desc, then page/section order; at most 30 hits (`packages/app/src/slices/tutorials/library.ts:187-232`). Snippet: ~60 chars before and ~120 after the first matching term, trimmed to whole words with `…`; no match → first 177 chars + `…` when over 180 (`packages/app/src/slices/tutorials/library.ts:164-174`).
-7. **Open a hit.** Enter opens the first hit; a hit link opens `/help/tutorials/<page>?q=<query>#<anchor>`, and the reading view marks the query words until changed (`packages/web/src/routes/tutorials.tsx:132-139`, `packages/web/src/routes/tutorials.tsx:221-227`, `packages/web/src/routes/tutorials.tsx:51-55`, `packages/web/src/router.tsx:368-374`).
+7. **Open a hit.** Enter opens the first hit; a hit link opens `/help/tutorials/<page>?q=<query>#<anchor>`, and the reading view marks the query words until changed (`packages/web/src/routes/tutorials.tsx:132-139`, `packages/web/src/routes/tutorials.tsx:221-227`, `packages/web/src/routes/tutorials.tsx:51-55`, `packages/web/src/router.tsx:375-381`).
 
 ### Info tips
 
@@ -115,7 +115,7 @@ Four read-mostly help surfaces ship inside the release: Help → Tutorials (the 
 - Tutorials and patch notes are read-only release content; no route writes them (`packages/app/src/slices/tutorials/library.ts:7-10`, `packages/app/src/slices/patch-notes/library.ts:7-10`).
 - At most one announcement overlay at a time: the tour and popup wait for the first-run notice and the interactive tutorial; the popup also waits for the tour (`packages/web/src/whats-new/tour.tsx:146-171`, `packages/web/src/patch-notes/popup.tsx:17-47`).
 - The tour is at most once per major and the popup at most once per version, per install (the seen keys live in the database, not the browser) (`packages/app/src/slices/settings/whats-new.ts:6-9`, `packages/app/src/slices/patch-notes/seen.ts:7-11`).
-- Both seen keys stay out of backups and exports (`packages/app/src/slices/storage/portable.ts:480-493`).
+- Both seen keys stay out of backups and exports (`packages/app/src/slices/storage/portable.ts:483-496`).
 - Only ids matching the page/note patterns are ever joined into a file path (`packages/app/src/slices/tutorials/library.ts:97`, `packages/app/src/edge/http/tutorials.ts:52`, `packages/app/src/slices/patch-notes/library.ts:71`).
 
 ## Outcomes & side effects

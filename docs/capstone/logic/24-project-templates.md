@@ -1,9 +1,9 @@
 ---
 absorbed_from: features/2026-09-10-project-templates@2026-09-13
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 662b764c117c
+content_hash: 67d99c3c8e93
 paths_covered:
   - ":(top)packages/app/src/slices/project-templates/**"
   - ":(top)packages/app/src/edge/http/project-templates.ts"
@@ -38,7 +38,7 @@ per chapter (`packages/app/src/slices/project-templates/next-chapter.ts:13-17`).
 |---|---|---|
 | Save template (from a Play draft) | Play's Save as template dialog (`packages/web/src/play/save-template-dialog.tsx:62-95`); Library → Templates "Save a setup" (`packages/web/src/routes/templates.tsx:111-135`) | `POST /` (`packages/app/src/edge/http/project-templates.ts:100`) |
 | Save as template (from a project) | project page dialog (`packages/web/src/project/save-template.tsx:43-60`) | `POST /from-project/:projectId` (`project-templates.ts:63-78`) |
-| Make the next chapter | project header button, shown only on an audiobook whose status is `done` or `partial` (`packages/web/src/project/header.tsx:79-87,115-120`) | `POST /next-chapter/:projectId` (`project-templates.ts:80-99`) |
+| Make the next chapter | project header button, shown only on an audiobook whose status is `done` or `partial` (`packages/web/src/project/header.tsx:82-90,118-123`) | `POST /next-chapter/:projectId` (`project-templates.ts:80-99`) |
 | Edit, rename, restore an older version | Library → Templates row actions and History drawer (`packages/web/src/templates/api.ts:93-136`, `packages/web/src/templates/row-parts.tsx:21-40,64-100`) | `PUT /:id` (`project-templates.ts:121-132`) |
 | Duplicate | Library → Templates, saved as "`<name>` copy" (`routes/templates.tsx:177-196`) | `POST /` |
 | Delete (to trash) | Library → Templates (`routes/templates.tsx:197-210`) | `DELETE /:id` (`project-templates.ts:133-144`) |
@@ -157,7 +157,7 @@ saves an older version's document as a new head version (`row-parts.tsx:64-100`)
 ### Make the next chapter
 
 1. The web generates one draft id per press series and reuses it until Play opens the draft
-   (`packages/web/src/routes/project.tsx:838-878`).
+   (`packages/web/src/routes/project.tsx:822-862`).
 2. `makeNextChapter` (`next-chapter.ts:40-110`), one transaction:
    - A draft with this id already exists → return it (`next-chapter.ts:50-54`).
    - Project or its current revision missing → `not-found` (`next-chapter.ts:55-67`).
@@ -189,7 +189,7 @@ no template row, no instantiation receipt and no `templateSource` are written
 | Book on a template | removed; only Make the next chapter sets it | `from-project.ts:239-241` |
 | Book on the listening files | when `voices.book` is set, the MP3 and M4B carry the book title as album and the chapter as track | `packages/app/src/slices/voices/audio-files.ts:45-57`; `packages/app/src/slices/rebuild/runtime-voices.ts:88`. Making the MP3/M4B (`voices.audioFiles`): `34-speakers-and-voices.md` |
 | Book validation at Review | empty book title or chapter outside 1-9999 → field errors `voices.book.title` / `voices.book.chapter` | `voices/model.ts:240-254` |
-| Button visibility | Make the next chapter only on audiobook projects with status `done` or `partial` | `header.tsx:115-120` |
+| Button visibility | Make the next chapter only on audiobook projects with status `done` or `partial` | `header.tsx:118-123` |
 | Delete | refused while a non-trashed schedule names the template | `service.ts:122-127` |
 | Loudness | copied as `enabled: true` when the project has targets; absent leaves Settings' default | `from-project.ts:245-255` |
 
@@ -216,7 +216,7 @@ HTTP mapping for template routes: `not-found` 404; `conflict` and `referenced-by
 | Next chapter, bad id / missing project | 404 with message | `next-chapter.ts:42-47,61-67` |
 | Next chapter on a non-audiobook | 400 `not-an-audiobook` | `next-chapter.ts:69-75`; `project-templates.ts:90-91` |
 | Next chapter draft create fails | 409 "Press Make the next chapter again…" | `next-chapter.ts:97-103` |
-| Next chapter made but Play's open draft unsaved | client message; draft id kept for the retry | `routes/project.tsx:864-869` |
+| Next chapter made but Play's open draft unsaved | client message; draft id kept for the retry | `routes/project.tsx:848-853` |
 | Next chapter pressed twice | second press returns the first draft | `next-chapter.ts:50-54` |
 | Concurrent writes | each service call runs in `transact`; update's head move is conditional on `head_version` | `service.ts:45,81,106` |
 
@@ -263,7 +263,7 @@ renames a clashing template with `freeName` and saves that as a new version
   channel (`channels/service.ts:125-132`).
 - Apply: one `play_drafts` row, its attachments set to `reattach`, one instantiation receipt.
 - Next chapter: one `play_drafts` row with title "`<book>` · Chapter N"; the project page
-  subtitle shows the book label for projects in a book (`header.tsx:161-163`).
+  subtitle shows the book label for projects in a book (`header.tsx:164-166`).
 - Other writers of templates: schedules run a template version (`25-scheduled-jobs.md`); the
   retired-model switch saves templates through `updateTemplate`
   (`packages/app/src/slices/model-upkeep/switch.ts:168`, `19-catalogue-thinking.md`); starter packs

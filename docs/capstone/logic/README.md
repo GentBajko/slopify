@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 41416fc429a5
+content_hash: d42303df0b0c
 paths_covered:
   - ":(top)packages/app/src/slices/**"
   - ":(top)packages/app/src/edge/**"
@@ -12,7 +12,7 @@ paths_covered:
 
 # Business logic index
 
-One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation and Home. Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
+One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation, the Studio extension's work in YouTube Studio, and Home. Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
 
 ## Trigger & preconditions
 
@@ -53,22 +53,23 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 | 29 Video editing: edit list, motion, cards, clips | [29-video-editing.md](29-video-editing.md) |
 | 30 Channels, brand kit, cast | [30-channels-and-cast.md](30-channels-and-cast.md) |
 | 31 Channel memory: episodes, existing videos | [31-channel-memory.md](31-channel-memory.md) |
-| 32 Studio upload prep and extension | [32-studio-upload-prep.md](32-studio-upload-prep.md) |
+| 32 Studio upload prep: pack, upload pick, extension fill, popup, upload confirmation, links | [32-studio-upload-prep.md](32-studio-upload-prep.md) |
 | 33 Automatic reviews | [33-automatic-reviews.md](33-automatic-reviews.md) |
 | 34 Speakers and voices | [34-speakers-and-voices.md](34-speakers-and-voices.md) |
 | 35 Audio levelling and ambient bed | [35-audio-levelling-and-ambient.md](35-audio-levelling-and-ambient.md) |
 | 36 Style preview | [36-style-preview.md](36-style-preview.md) |
 | 37 Run cost and ETA | [37-run-cost-and-eta.md](37-run-cost-and-eta.md) |
-| 38 Home attention, fix-its, Mark uploaded | [38-home-attention-and-uploads.md](38-home-attention-and-uploads.md) |
+| 38 Home attention, fix-its, Keep as is, Mark uploaded | [38-home-attention-and-uploads.md](38-home-attention-and-uploads.md) |
 | 39 Notifications and live events | [39-notifications-and-live-events.md](39-notifications-and-live-events.md) |
 | 40 Trash, export/import, scheduled backups | [40-trash-and-scheduled-backups.md](40-trash-and-scheduled-backups.md) |
 | 41 Onboarding and bundled samples | [41-onboarding-and-sample.md](41-onboarding-and-sample.md) |
 | 42 In-app help, What's new, patch notes | [42-in-app-help.md](42-in-app-help.md) |
 | 43 Start at login | [43-autostart.md](43-autostart.md) |
+| 44 Studio autopilot: posting plan, Details touches, pinned comment, A/B tests on request, Studio numbers | [44-studio-autopilot.md](44-studio-autopilot.md) |
 
 ## Branches
 
-Play starts projects from durable drafts (`packages/app/src/slices/play-drafts/start.ts:24`); Templates make fresh drafts (`packages/app/src/slices/project-templates/service.ts:136`); Schedules make drafts and projects from the template as it is at dispatch time, so an edit reaches the next run (`packages/app/src/slices/schedules/scheduler.ts:175`); onboarding makes the quick short (41).
+Play starts projects from durable drafts (`packages/app/src/slices/play-drafts/start.ts:24`); Templates make fresh drafts (`packages/app/src/slices/project-templates/service.ts:136`); Schedules make drafts and projects from the template as it is at dispatch time, so an edit reaches the next run (`packages/app/src/slices/schedules/scheduler.ts:174`); onboarding makes the quick short (41).
 
 ## Unhappy paths
 

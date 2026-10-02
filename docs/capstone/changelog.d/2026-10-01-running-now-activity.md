@@ -1,1 +1,0 @@
-- Home's Running now card shows a running step's named activity with its percentage ("Rendering the video (45%)"), as the project page does, instead of a step count that stands still through the long render.

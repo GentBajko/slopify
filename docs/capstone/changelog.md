@@ -5,6 +5,141 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-10-02 - map: all
+key: map/all@e9226a34aa8a
+
+- 01-architecture.md, 01-architecture-research/recovery/narration/docker.md: regenerated (covered paths changed); Studio extension ↔ app section rewritten (16 `/ext/*` routes, worker messages, alarm, comment script); narration/docker brace globs expanded to one glob per file.
+- 02-models.md, 02-models-research/narration.md: regenerated (covered paths changed); Studio entities (PostingPlan, YoutubeVideo, VideoStats, AbResult…) and the 0043–0047 tables added.
+- 03-conventions.md, 04-data-flow.md, 04-data-flow-research.md, 05-dependencies.md, 06-testing.md, 07-operations.md, 08-glossary.md: regenerated (covered paths changed); Chrome Web Store job and secrets (names only), 13 glossary terms.
+- logic/01, 03, 04, 05, 07, 08, 09, 11, 12, 13, 14, 15, 17, 18, 20, 22–28, 32, 34, 35, 37, 38, 40, 41, 42, 43, README: regenerated (covered paths changed); kept subject on rename, Queue switch, Prepare ahead, Keep as is, render cache.
+- logic/44-studio-autopilot.md: created (logic coverage gap): posting plan and slots, finish and comment tasks, A/B on request, stats sweep, A/B results.
+- uiux/screens/01–04, 06–09, 13–15, 20, 23: regenerated (covered paths changed); Video section holds Shorts and YouTube; Posting plan; popup.
+- uiux/screens/24-ab-results.md: created (design coverage gap).
+- Index refreshed: rows for logic/44 and uiux/screens/24.
+- Skipped as current: 02-models-docker, logic/02, 06, 10, 16, 19, 21, 29–31, 33, 36, 39, uiux/screens/05, 10–12, 16–19, 21, 22.
+- Left alone (interview-derived, never regenerated): mockup/*, uiux/README.md, uiux/01–03; they read stale by globs.
+- Found while mapping and fixed before release: captions not served to the extension, "Not scheduled" not sticking, Studio settings missing from backups, a comment that could be posted twice, the dead A/B queue state.
+
+## 2026-10-02 - note: upload-pick
+
+- Prepare upload picks the upload's title and thumbnail (`studio/pick.ts`, kept in settings as `studio.uploadPick.<projectId>`): the pack's video item carries the picked ones as `title` and `thumbnails[0]`, the others after them, and `pickable` with the project's own order; `PUT /api/studio/packs/:projectId/pick` saves it.
+
+## 2026-10-02 - note: studio-autopilot
+
+- Studio autopilot (3.3.0, migration 0047): a weekly posting plan (`studio/plan.ts`, setting `studio.postingPlan`) assigns each prepared project the next free row (`upload_slots`) and each short the first occurrence of its slot after its video; pack items carry `scheduleAt`, `captions`, `endScreenVideoId`, `relatedVideoId` and `pinnedComment`. A confirmed upload queues finish and opt-in comment tasks on `youtube_videos` (`/ext/tasks`, `/ext/task-result`); the extension reads Studio numbers and A/B results daily (`video_stats`, `ab_results`, `/ext/stats`). A/B tests start only on request (`#slopify-ab` hash, never Set test); Library → A/B results copies prompt notes. The project rail folds Shorts and YouTube into Video. The extension (1.0.0) ships to the Chrome Web Store from the release workflow (`scripts/publish-chrome.mjs`).
+
+## 2026-10-02 - note: rename-runs-nothing
+
+- A rename runs nothing: the YouTube description, the PDF, the audio files' tags, a short-mode render and the intro/outro writer (`segmentMessages`) read `subjectOf(config)` too, so no step's fingerprint changes with the title.
+
+## 2026-10-02 - note: rename-keeps-subject
+
+- Renaming a project no longer redoes its pictures: the first rename keeps the old title as `subjectTitle` (`revisions/subject.ts`), and the steps that use the title only as context (image and thumbnail scenes, appearance, cast, the shorts' pick and pictures, an LLM-written thumbnail prompt) use `subjectOf(config)`. The YouTube text, the PDF and the audio files' tags follow the new title.
+
+## 2026-10-02 - note: extension-popup
+
+- The extension's toolbar popup (0.4.0, `popup.html`) lists finished projects not marked uploaded (`GET /api/studio/ext/ready`), each with its video and shorts and whether they are on YouTube; a click puts that upload first in the fill queue (`POST /api/studio/ext/upload`, `fillNow`) and opens Studio's upload page. An upload is on YouTube only once Studio confirms it (`upload_state`, migration 0046: `filled` from the Details, `done` from `POST /api/studio/ext/video/done` when Studio's "Video scheduled/published/saved" window shows); its A/B test is queued then.
+
+## 2026-10-02 - note: backfill-links
+
+- The extension sends Studio's Content list rows (title, video id) to `POST /api/studio/ext/backfill`, which records the uploads whose title matches exactly and whose video isn't known yet (`studio/backfill.ts`). Once the long video's link is known, the shorts' "Watch the full video" line uses it when the project sets none (the pack and the Shorts part).
+
+## 2026-10-02 - note: ab-tests-after-publishing
+
+- A/B tests wait for their videos to be public: `youtube_videos` (migration 0045) keeps the YouTube video each upload became (read by the extension from Studio's upload dialog, or pasted under the project's YouTube → On YouTube) and its A/B test state. The extension (0.3.0) fills an upload with thumbnail 1 only (`abTestLater`), records the video, and every 15 minutes starts each waiting test whose video oEmbed answers as public, on its Details page in a background tab (`startAbTest`, the one path that presses Set test). A/B Testing also tests the other titles (Title and thumbnail / Title only). Write again is on the pinned comment's and other titles' heads too.
+
+## 2026-10-01 - note: thumbnail-regenerate-copy
+
+- Regenerating a thumbnail asks with its own sentence: the video and shorts are not touched (no video recipe depends on a thumbnail; only the PDF cover follows the first one). It used the image dialog's "re-renders video when enabled".
+
+## 2026-10-01 - note: short-still-softened
+
+- A short's still is drawn from its softened prompt after Soften and retry: `runtime-shorts.ts` asks `softenIfAsked` like the image stage, and clears the request once drawn. 3.2.2 offered the button but drew the original prompt again.
+
+## 2026-10-01 - note: short-still-refusal
+
+- The Codex image adapter reports a run that drew nothing because the image tool's safety system blocked it as a refusal (with Codex's reason), and Soften and retry covers refused short stills (`shorts:N:image:M`) in the Video stage (`softenableKeys`, `fixes/rules.ts`).
+
+## 2026-10-01 - note: running-now-activity
+
+- Home's Running now card shows a running step's named activity with its percentage ("Rendering the video (45%)"), as the project page does, instead of a step count that stands still through the long render.
+
+## 2026-10-01 - note: kept-as-is-upload
+
+- A project kept as is with its video made offers Prepare upload in its next-action panel, like a finished run.
+
+## 2026-10-01 - note: kept-as-is-project-page
+
+- The project page reads Keep as is too: `GET /api/projects/:id` carries `setAside`, the header says "Kept as is" and the next-action panel stops asking to continue the run.
+
+## 2026-10-01 - note: keep-as-is
+
+- Home's Needs you has **Keep as is** on a run waiting on held work: it leaves Needs you without running anything, until the project's next edit (`project_set_aside`, migration 0044, set on the head revision; the listing's `setAside`). Projects shows it as "Kept as is", and Ready to upload counts it as finished. Left out of backups on purpose.
+
+## 2026-10-01 - note: extension-adds-video
+
+- The Slopify Studio extension (0.2.0) puts the waiting item's video into Studio's upload dialog on its Select files step, through a hidden extension page (`video-frame.html`) that fetches it with the pairing token and hands the File to the Studio page in one postMessage. `/api/studio/ext/files` now serves a pack's video as well as its thumbnails, and nothing else.
+
+## 2026-10-01 - note: ab-titles-keep-pattern
+
+- A project whose title was filled from a pattern with keywords keeps the pattern (`titlePattern`), from Play and from schedules (a scheduled draft now keeps its title's keywords; `scheduledTitle` is the filled title). YouTube's two other A/B titles then change only what the keywords hold, and an answer that changes the fixed wording is asked again (`youtube/titles.ts`). A title without keywords, or renamed away from its pattern, keeps free other titles.
+
+## 2026-09-30 - note: shorts-appearance
+
+- The shorts' image prompt (Shorts → Image prompt) takes `{{Appearance}}`: each short gets the subject's researched look and those of the figures its clip names, so shorts draw figures like the video does. A `{{Scene}}` line there is left out, since each short's images already show what is said.
+
+## 2026-09-30 - note: review-video-checkpoint-font
+
+- Play → Review no longer refuses a setup with burned-in captions and a Before Video checkpoint ("Something changed since you reviewed this video"): the font the render uses made the two checks it compares differ every time.
+
+## 2026-09-30 - note: prepare-scheduled
+
+- Calendar → a queued run → **Prepare**: the schedule's video is made ahead of its day (everything but the video, held at a Before Video checkpoint), and on the day the schedule continues the project of the same title instead of making another. Table `prepared_videos` (migration 0043) records which hold is the preparation's own.
+
+## 2026-09-30 - note: narration-retry-waits
+
+- A narration chunk the captions caught garbled is recorded again even when another step of the project is still running (its PDF, say): the retry waits for that step instead of giving up and leaving the video failed.
+
+## 2026-09-30 - groom: 2026-09-30-slopify-mcp
+key: groom/2026-09-30-slopify-mcp@Q20
+
+- `features/2026-09-30-slopify-mcp/spec.md`: new spec — built-in MCP server for operating the pipeline, Library and setup, reviewing and fixing failures.
+- Decision: in-process Streamable HTTP `/mcp` on the Hono server; tools call slices directly.
+- Rejected: stdio subcommand proxying `/api`; shipping both transports.
+- Decision: always on, no token, Origin check only; rejected Settings toggle + bearer token.
+- Decision: tool parity with the web UI including permanent deletes; excluded API keys, backups, updater, host-CLI/Docker setup.
+- Decision: new External agent reviewer; waits, auto-passes after a fixed 2 h with a notification; rejected indefinite wait and CLI fallback.
+- Decision: agent may fix failures with recovery actions, project edits and output edits; rejected narrower scopes.
+- Decision: spending follows the UI's estimate and acknowledgement; rejected per-action cap and daily budget.
+- Decision: MCP actions marked "by agent"; Settings → Agents (MCP) section.
+- Pushback recorded: user first chose one bundled spec over a four-way split; accepted with a spike gate, later voided when posting was dropped.
+- Dropped: scheduled YouTube posting through an agent's browser (project upload times, schedule publish rule, Studio Schedule) — removed from scope entirely.
+- Left open: the "Failed / Try the video again" card during an automatic narration-chunk re-record (outside this feature).
+
+## 2026-09-30 - note: faster-render
+
+- Rendering a video is several times faster: the picture clips are made several at a time (up to eight, by the computer's cores and memory), a long video's burned-in captions are drawn in parts side by side, the sound is levelled and encoded while the picture renders, and the clips of a project's last render are kept, so rendering again after an edit makes only the clips that changed. The kept clips live in a hidden `.render-cache` folder under Projects (at most 30 GB for all projects, less when the disk runs short) and go with their project.
+
+## 2026-09-30 - note: chunk-direction
+
+- A narration chunk's text override can carry its own delivery note (`direction`), added to the narration prep prompt for that chunk only, so one chunk can be re-tagged without re-tagging the whole narration.
+
+## 2026-09-30 - note: batch-queue-switch
+
+- Play → Start box: with more than one video, a **Queue** switch (on by default). On, they run one after another as before; off, they all start at once as separate runs, and the Play key reads **Start N videos**.
+
+## 2026-09-30 - map: all
+key: map/all@bee3234acb33
+
+- logic/15-prompt-management.md: regenerated (covered paths changed); new step 8 rename propagation (`renameReferences` rewrites live template head revisions and active Play drafts in the save's transaction); Used by gains former names, head-version schedules, Script/Review field rules; later steps renumbered 10-14; pointers into `save.ts`, `prompts.ts`, `entries.ts` moved.
+- 01-architecture.md: regenerated (covered paths changed); library slice row names rename propagation; `createPrompt`, `promptRoutes`, `entryRoutes` line pointers moved.
+- 03-conventions.md: regenerated (covered paths changed); app non-test source count 642 → 643 (`slices/library/rename.ts`).
+- 04-data-flow.md: regenerated (covered paths changed); Templates state row records the in-place rename rewrite of head revisions and active `play_drafts`.
+- 07-operations.md: regenerated (covered paths changed); package version 3.0.13 → 3.0.14.
+- 01-architecture-docker.md, 02-models.md, 05-dependencies.md, 06-testing.md, 08-glossary.md, logic/20-boot-cli-recovery.md, logic/README.md: restamped; covered paths changed (version bump, used-by/rename code, used-by tests) with no drift in their content.
+- mockup/ and uiux/ interview-derived files: left stale, out of this refresh's scope.
+- 00-index.md: re-verified, unchanged.
+
 ## 2026-09-30 - thumbnail-scenes-own-step
 - The thumbnails' scenes are written by a step of their own in the Thumbnail stage (`thumbnail:scenes`), not in the images' scenes call, so changing a project's thumbnail settings no longer marks every image outdated.
 - History → Restore this revision no longer stops with "unknown kind of step" on projects with Scenes from the article, `{{Appearance}}`, shorts, a YouTube description, levelled narration or animated images: the restore takes each step's stage from its plan.

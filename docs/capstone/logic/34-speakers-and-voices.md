@@ -10,10 +10,10 @@ depends_on:
 - 17-subtitles
 - 18-cost-review-batch
 - 24-project-templates
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: c4d5d515fbb7
+content_hash: f167bf38ba82
 paths_covered:
   - ":(top)packages/app/src/slices/voices/**"
   - ":(top)packages/app/src/slices/settings/voices.ts"
@@ -62,7 +62,7 @@ The saved voice library (Settings → Voices: add, remove, languages, "Imitates 
     - Caption name tags "Name: " when `nameTags` is on (`packages/app/src/slices/subtitles/captions.ts:93`, `:104`); word-to-speaker attribution matches each timed word's first token within a 60-token lookahead, an unmatched word keeping the previous speaker (`attributeWords`, `packages/app/src/slices/voices/timing.ts:22`); a hand-edited cue takes the speaker with most overlap, else the nearest word's (`cueSpeaker`, `timing.ts:55`). Caption timing itself is `17-subtitles.md`.
     - Podcast and interview draw a speaker panel with the captions: one row of square tiles at 11% of the short side, gap 30% of a tile, 5% from the top (`panelTiles`, `packages/app/src/slices/voices/panel.ts:51`); consecutive cues of one speaker with gaps under 1.5 s form one lit run (`speakerRuns`, `panel.ts:23`); the lit speaker gets a coloured outline and a lower-third name at 74% height (`panel.ts:93`–`:106`). A tile shows initials (first+last word initials, or the first two letters of one word, `panel.ts:35`) unless the speaker has a portrait. The Play/Edit notice says the panel needs captions burned in (`speakers-editor.tsx:237`).
     - Portraits: bytes read from the cast image store, only PNG or JPEG; others fall back to initials (`panelPortraits`, `packages/app/src/slices/voices/portraits.ts:22`). They are written beside the caption file as `portrait-<n>.png|jpg` at the 1920×1080 or 1080×1920 tile positions (`writePortraits`, `portraits.ts:52`; called at `packages/app/src/slices/rebuild/runtime-export.ts:86`).
-12. **Listening files** (`audioFiles` on). Planned as `voices:files`, operation `audio-files-v1`, after caption timing (`packages/app/src/slices/rebuild/recipe-exports.ts:94`). `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:25`) reads word timing, computes chapters from the script sections (first chapter from 0, a section starting at or before the previous point replaces its title, one chapter titled after the project when none is heard, `audioChapters`, `packages/app/src/slices/voices/audio-files.ts:16`), writes FFMETADATA with album/track when the project is a book chapter (`ffmetadata`, `audio-files.ts:49`), then encodes `narration.mp3` (libmp3lame 128k, ID3v2.3) and `audiobook.m4b` (AAC 96k, faststart) from the same 44.1 kHz stereo timeline (`audioFileArgs`, `audio-files.ts:75`; `runtime-voices.ts:79`, `:116`). Mastering of these files is `35-audio-levelling-and-ambient.md`.
+12. **Listening files** (`audioFiles` on). Planned as `voices:files`, operation `audio-files-v1`, after caption timing (`packages/app/src/slices/rebuild/recipe-exports.ts:95`). `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:25`) reads word timing, computes chapters from the script sections (first chapter from 0, a section starting at or before the previous point replaces its title, one chapter titled after the project when none is heard, `audioChapters`, `packages/app/src/slices/voices/audio-files.ts:16`), writes FFMETADATA with album/track when the project is a book chapter (`ffmetadata`, `audio-files.ts:49`), then encodes `narration.mp3` (libmp3lame 128k, ID3v2.3) and `audiobook.m4b` (AAC 96k, faststart) from the same 44.1 kHz stereo timeline (`audioFileArgs`, `audio-files.ts:75`; `runtime-voices.ts:79`, `:116`). The files' fingerprint carries the project's kept subject (`subjectOf`, `packages/app/src/slices/admission/model.ts:285`) rather than its current title, so renaming a project does not remake them (`recipe-exports.ts:109`). Mastering of these files is `35-audio-levelling-and-ambient.md`.
 
 ## Branches
 
@@ -70,8 +70,8 @@ The saved voice library (Settings → Voices: add, remove, languages, "Imitates 
 - **Cast member voice** (`castVoiceSchema`, `packages/app/src/slices/channels/schema.ts:106`): provider ≤100, model ≤200, voice ≤200 (all trimmed, non-empty), pace from the same steps, pronunciations ≤20,000; `null` removes the voice, absent keeps it; `host` is a boolean column added by `0041-cast-hosts.sql` (`packages/app/src/kernel/db/migrations/0041-cast-hosts.sql:3`).
 - **Hosts** are members with `host === true` and a voice, in cast order, cast with role host (`castHosts`, `cast.ts:12`). Other formats ignore hosts (`model.ts:118`).
 - **System voice** (`packages/app/src/adapters/tts/system.ts:16`). Engines, best first: `say` (macOS), `sapi` (Windows), `piper`, `pico2wave`, `espeak-ng`, `espeak` (`packages/app/src/kernel/ports/system-speech.ts:6`). Detection is cached per probe/platform/container/Piper voice path for 60 s (`system-speech.ts:237`, `:243`). The default voice is "Samantha", else the first `en-US`, else the first English, else the first voice (`defaultSpeechVoice`, `system-speech.ts:219`); a request with voice id `""` or `default` uses it (`system.ts:121`). Text reaches the program through a file, stdin (Piper) or a single argument (Pico), and Windows input through environment variables, never a shell string (`system.ts:35`, `:47`).
-- **Real-person disclosure.** The Studio upload pack names every flagged saved voice matching the project's narration voice, or any speaker's voice in a multi-voice run, when audio is Generate (`realPersonVoicesOf`, `packages/app/src/slices/studio/pack.ts:230`); the AI disclosure then answers YouTube's first use case (`packages/app/src/slices/studio/disclosure.ts:76`).
-- **Book.** With `book` set, the MP3/M4B carry the book as album and the chapter as track, and the files' fingerprint gains `["book-v1", title, chapter]` (`recipe-exports.ts:111`). Making the next chapter is `24-project-templates.md`.
+- **Real-person disclosure.** The Studio upload pack names every flagged saved voice matching the project's narration voice, or any speaker's voice in a multi-voice run, when audio is Generate (`realPersonVoicesOf`, `packages/app/src/slices/studio/pack.ts:283`); the AI disclosure then answers YouTube's first use case (`packages/app/src/slices/studio/disclosure.ts:76`).
+- **Book.** With `book` set, the MP3/M4B carry the book as album and the chapter as track, and the files' fingerprint gains `["book-v1", title, chapter]` (`recipe-exports.ts:112`). Making the next chapter is `24-project-templates.md`.
 
 ## Unhappy paths
 

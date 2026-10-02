@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 38f70397b111
+content_hash: 9cff327620ba
 paths_covered:
   - ":(top)packages/web/src/routes/settings.tsx"
   - ":(top)packages/web/src/routes/settings-about.tsx"
@@ -23,6 +23,8 @@ paths_covered:
   - ":(top)packages/web/src/notifications/settings-panel.tsx"
   - ":(top)packages/web/src/youtube/channel-links.tsx"
   - ":(top)packages/web/src/studio/settings-panel.tsx"
+  - ":(top)packages/web/src/studio/posting-plan.tsx"
+  - ":(top)packages/app/src/slices/studio/plan.ts"
   - ":(top)packages/web/src/studio/extension-install.tsx"
   - ":(top)packages/web/src/onboarding/sample-settings.tsx"
   - ":(top)packages/web/src/trash/trash-settings.tsx"
@@ -35,7 +37,7 @@ paths_covered:
 
 ## Mode & job
 
-Operate surface for everything install-wide: login autostart, provider keys and command-line tools, voices, the model catalogue, narration pacing, appearance and loudness, notifications, the old channel-links pointer, the YouTube Studio pack and extension, files/export/import/disk space, daily backups, the trash, usage, patch notes and About. Route `/settings?section=<id>&note=<id>`; `settingsSectionOf` falls back to `providers`, and `note` is kept only for `patch-notes` and a safe id pattern (`packages/web/src/router.tsx:341`, `:355`, `packages/web/src/routes/settings.tsx:174`). Picking a section replaces the URL; opening a patch note pushes history so Back works (`packages/web/src/router.tsx:408`). `/usage` redirects to `?section=usage` (`packages/web/src/router.tsx:400`). The usage section has its own chapter (`09-usage.md`).
+Operate surface for everything install-wide: login autostart, provider keys and command-line tools, voices, the model catalogue, narration pacing, appearance and loudness, notifications, the old channel-links pointer, the YouTube Studio pack and extension, files/export/import/disk space, daily backups, the trash, usage, patch notes and About. Route `/settings?section=<id>&note=<id>`; `settingsSectionOf` falls back to `providers`, and `note` is kept only for `patch-notes` and a safe id pattern (`packages/web/src/router.tsx:348`, `:362`, `packages/web/src/routes/settings.tsx:174`). Picking a section replaces the URL; opening a patch note pushes history so Back works (`packages/web/src/router.tsx:415`). `/usage` redirects to `?section=usage` (`packages/web/src/router.tsx:407`). The usage section has its own chapter (`09-usage.md`).
 
 ## Composition
 
@@ -54,7 +56,7 @@ Operate surface for everything install-wide: login autostart, provider keys and 
 | playback | Playback & appearance | How narration is paced and how Slopify looks. | `Playback` | `packages/web/src/routes/settings.tsx:675` |
 | notifications | Notifications | When a run finishes, fails, waits for you, or a review needs a decision. | `NotificationSettings` | `packages/web/src/notifications/settings-panel.tsx:29` |
 | channel-links | Channel links | The links a YouTube description's {{Name}} placeholders fill from. | `ChannelLinksSettings` | `packages/web/src/youtube/channel-links.tsx:83` |
-| studio | YouTube Studio | The playlist upload packs name, and the Studio extension's pairing. | `StudioSettings` | `packages/web/src/studio/settings-panel.tsx:19` |
+| studio | YouTube Studio | The playlist upload packs name, and the Studio extension's pairing. (The posting plan is in this section though the meta does not name it.) | `StudioSettings` | `packages/web/src/studio/settings-panel.tsx:20` |
 | storage | Backup & storage | Export everything, import a backup, and see what uses disk space. | `FilesFolder`, `StorageTools`, `SampleSettings` | `packages/web/src/routes/settings.tsx:306` |
 | backups | Backups | A daily copy of everything, in a folder you choose. | `BackupSettings` | `packages/web/src/routes/settings-backups.tsx:60` |
 | trash | Trash | Deleted projects, prompts, templates and schedules, kept for 30 days. | `TrashSettings` | `packages/web/src/trash/trash-settings.tsx:50` |
@@ -102,10 +104,11 @@ Two-column grid from `md` (`packages/web/src/routes/settings.tsx:736`): `Field` 
 
 ### YouTube Studio
 
-`SectionHead` "Upload pack and extension" (InfoTip) over (`packages/web/src/studio/settings-panel.tsx:19`):
+`SectionHead` "Upload pack and extension" (InfoTip) over, in order, Playlists, Posting plan, pairing and install (`packages/web/src/studio/settings-panel.tsx:20-36`):
 
-- `Field` "Playlists": a channel `Select` ("Every channel (default)" plus each channel), one row per playlist (name input, "On by default" checkbox, quiet "Remove"), secondary "Add playlist" (max 20), primary "Save playlists"; help text changes for the default list, a channel still using the default, and a channel's own list (`packages/web/src/studio/settings-panel.tsx:76`, `:100`, `:144`).
-- "Extension pairing token" (InfoTip): the token in a select-all `code`, quiet "Copy" and "New pairing token", and a help line "No extension is paired. …" or "Paired with the extension at <origin>. A new token unpairs it." (`packages/web/src/studio/settings-panel.tsx:210`).
+- `Field` "Playlists": a channel `Select` ("Every channel (default)" plus each channel), one row per playlist (name input, "On by default" checkbox, quiet "Remove"), secondary "Add playlist" (max 20), primary "Save playlists"; help text changes for the default list, a channel still using the default, and a channel's own list (`packages/web/src/studio/settings-panel.tsx:83`, `:107`, `:151`).
+- `section[aria-label="Posting plan"]`, h3 "Posting plan" (`packages/web/src/studio/posting-plan.tsx:51-199`): a line that each finished project takes the next free row when its upload is prepared, each short goes out the first time its day and hour come round after its own video, and the extension types the times into Studio while the user presses Schedule; then a horizontally scrolling table with columns Video (row name, bold), Long video, Short 1…N (N = the most shorts any row has) and a remove column. Each cell is a day `Select` (Sun–Sat, 72 px) beside a `time` input (96 px), accessible names "<row>, long video: day" / "…: time"; each row ends with an icon button "Remove row <name>" (trash) (`packages/web/src/studio/posting-plan.tsx:23-49`, `packages/web/src/studio/posting-plan.tsx:89-147`). Below: quiet "Add a row" (plus icon; names the row with the next letter and copies the last row's times; disabled at 14 rows), "Times are in" with a time-zone `Select` (the plan's zone plus America/New_York, America/Los_Angeles, Europe/London, UTC), and a primary "Save posting plan" enabled only with unsaved edits; then a `Switch` "Post and pin each video's comment once it is public (the extension posts it in your name)" that saves on toggle (`packages/web/src/studio/posting-plan.tsx:149-196`). The unsaved plan is component state only. With nothing saved the plan reads as three rows A, B, C (long videos Sun, Tue, Thu 20:00, five shorts each) in the computer's time zone (`packages/app/src/slices/studio/plan.ts:32-71`).
+- "Extension pairing token" (InfoTip): the token in a select-all `code`, quiet "Copy" and "New pairing token", and a help line "No extension is paired. …" or "Paired with the extension at <origin>. A new token unpairs it." (`packages/web/src/studio/settings-panel.tsx:217`).
 - h3 "Install the Studio extension": `Segmented` "Browser" (Chrome, Edge, Brave / Firefox), `FileLink` "Download for Chrome|Firefox" (a zip served by Slopify), and three numbered install steps ending with pairing (`packages/web/src/studio/extension-install.tsx:24`).
 
 ### Backup & storage
@@ -152,8 +155,9 @@ Three blocks in order (`packages/web/src/routes/settings.tsx:306`):
 | Playback | appearance / loudness | written to the settings cache before the request and rolled back if refused; loudness out of range shows the dB/% range sentence | `packages/web/src/routes/settings.tsx:688`, `packages/web/src/video/loudness-controls.tsx:75` |
 | Notifications | permission | switch disabled while the prompt is open; refusal, dismissal or blocked site storage each give a sentence naming the browser setting to change; test that can't show says to set a Notification URL instead | `packages/web/src/notifications/settings-panel.tsx:54`, `:24` |
 | Notifications | URL | input disabled until the saved value loads; rule problem, save or test errors as one alert line; toasts "Notification URL saved." / "removed." / "Test notification sent. …" | `packages/web/src/notifications/settings-panel.tsx:180`, `:164`, `:173` |
-| YouTube Studio | playlists | "A playlist name is longer than YouTube allows (<n> characters). Shorten it." or `"<name>" is listed twice. Remove one.`; Save playlists disabled until edited and valid; toast "Playlists saved." | `packages/web/src/studio/settings-panel.tsx:171`, `:155` |
-| YouTube Studio | pairing | token shows "…" while loading; copy toasts; "New pairing token made. Pair the extension again with it." | `packages/web/src/studio/settings-panel.tsx:198`, `:194` |
+| YouTube Studio | playlists | "A playlist name is longer than YouTube allows (<n> characters). Shorten it." or `"<name>" is listed twice. Remove one.`; Save playlists disabled until edited and valid; toast "Playlists saved." | `packages/web/src/studio/settings-panel.tsx:178`, `:162` |
+| YouTube Studio | posting plan | "Loading the posting plan…" until it loads; toasts "Saved the posting plan." / "The posting plan wasn't saved: <message>"; the comment switch is disabled while saving and toasts "Not saved: <message>" on failure | `packages/web/src/studio/posting-plan.tsx:62-78` |
+| YouTube Studio | pairing | token shows "…" while loading; copy toasts; "New pairing token made. Pair the extension again with it." | `packages/web/src/studio/settings-panel.tsx:205`, `:201` |
 | Backup & storage | files | "Loading…" / "Where your files are is unavailable. Reload the page to try again."; move progress "Copying|Checking the copy of your files to <target>: <n> of <n> files (…). Keep Slopify running until it finishes." with a `Meter`, polled every second; failed/interrupted `Callout` (danger / waiting) with "Continue moving"; done `Callout` "Your files are now in <target>" naming the old folder still holding a copy | `packages/web/src/routes/settings-files.tsx:59`, `:179`, `:192`, `:212` |
 | Backup & storage | export | "Preparing the backup…"; "Downloading <size> (<n> projects). Your browser's downloads show its progress; keep Slopify running until it finishes." with "Dismiss"; a not-ready answer shows the server's reason | `packages/web/src/routes/settings.tsx:365`, `:520` |
 | Backup & storage | import | size check before upload (empty file; legacy .zip over 100 MB); "Uploading the backup: <sent> of <total>" with a `Meter`; "Checking and importing the backup… large projects can take a minute."; failure sentence names the accepted files; success toast "Backup imported." and the `ImportResult` list (h3 "Imported the backup from <date>", per-kind added / renamed "(imported)" / already here, paused schedules, settings, fonts, usage, provider-keys reminder, skipped projects with reasons, "Dismiss") | `packages/web/src/routes/settings.tsx:396`, `:537`, `:344`, `:615` |

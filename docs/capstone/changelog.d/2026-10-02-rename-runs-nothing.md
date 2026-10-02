@@ -1,1 +1,0 @@
-- A rename runs nothing: the YouTube description, the PDF, the audio files' tags, a short-mode render and the intro/outro writer (`segmentMessages`) read `subjectOf(config)` too, so no step's fingerprint changes with the title.

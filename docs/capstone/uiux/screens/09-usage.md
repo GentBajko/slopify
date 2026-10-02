@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 77dbb06689a4
+content_hash: f889c39e3382
 paths_covered:
   - ":(top)packages/web/src/routes/usage.tsx"
   - ":(top)packages/web/src/routes/settings.tsx"
@@ -15,7 +15,7 @@ paths_covered:
 
 ## Mode & job
 
-Read surface for this install's own totals: videos, audio hours, images, tokens and projects, plus tokens by stage and provider/model. It is the Usage section of Settings at `/settings?section=usage`; the old `/usage` address redirects there (`packages/web/src/routes/settings.tsx:155`, `:311`, `packages/web/src/router.tsx:400`). All numbers come from `GET /api/usage` via `usageQuery`, computed from the local event log without contacting the collector, so the section reads the same offline (`packages/web/src/routes/usage.tsx:9`, `packages/web/src/queries.ts:97`).
+Read surface for this install's own totals: videos, audio hours, images, tokens and projects, plus tokens by stage and provider/model. It is the Usage section of Settings at `/settings?section=usage`; the old `/usage` address redirects there (`packages/web/src/routes/settings.tsx:155`, `:311`, `packages/web/src/router.tsx:407`). All numbers come from `GET /api/usage` via `usageQuery`, computed from the local event log without contacting the collector, so the section reads the same offline (`packages/web/src/routes/usage.tsx:9`, `packages/web/src/queries.ts:97`).
 
 ## Composition
 

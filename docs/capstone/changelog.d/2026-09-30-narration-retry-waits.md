@@ -1,1 +1,0 @@
-- A narration chunk the captions caught garbled is recorded again even when another step of the project is still running (its PDF, say): the retry waits for that step instead of giving up and leaving the video failed.

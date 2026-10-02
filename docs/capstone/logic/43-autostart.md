@@ -9,10 +9,10 @@ depends_on:
 - 20-boot-cli-recovery
 - 21-app-updater
 - 41-onboarding-and-sample
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 2fb95a29dd89
+content_hash: 3132b1c584b0
 paths_covered:
   - ":(top)packages/app/src/edge/autostart/**"
   - ":(top)packages/app/src/edge/http/autostart.ts"
@@ -128,7 +128,7 @@ paths_covered:
 - No administrator rights and no systemd unit are used on native installs (`packages/app/src/edge/autostart/native.ts:76-77`).
 - Slopify never changes Docker's or Docker Desktop's settings (`packages/app/src/edge/autostart/docker.ts:52-55`, `packages/app/src/edge/autostart/docker.ts:111-115`).
 - The question is asked at most until answered once, on any of the first-run screen, reminder, Settings or terminal (`packages/app/src/edge/autostart/model.ts:28-30`, `packages/app/src/edge/autostart/prompt.ts:61-62`).
-- `autostart.answered` is not a portable setting, so backups and exports leave it behind (`packages/app/src/slices/storage/portable.ts:514`, `packages/app/src/slices/storage/portable.ts:520-530`).
+- `autostart.answered` is not a portable setting, so backups and exports leave it behind (`packages/app/src/slices/storage/portable.ts:524`, `packages/app/src/slices/storage/portable.ts:530-545`).
 
 ## Outcomes & side effects
 

@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: fb1a343ad24c
+content_hash: 4d8177668445
 paths_covered:
   - ":(top)packages/app/src/slices/play-drafts/**"
   - ":(top)packages/app/src/slices/storage/staging-refs.ts"
@@ -28,10 +28,10 @@ absorbed_from:
 
 ## Trigger & preconditions
 
-- The local user edits Play, opens a saved draft from the Drafts popover, applies a template, or a schedule occurrence creates a draft (`packages/web/src/play/use-draft-session.ts:161`, `packages/web/src/play/draft-list.tsx:134`, `packages/app/src/slices/project-templates/service.ts:136`, `packages/app/src/slices/schedules/scheduler.ts:188`).
+- The local user edits Play, opens a saved draft from the Drafts popover, applies a template, or a schedule occurrence creates a draft (`packages/web/src/play/use-draft-session.ts:161`, `packages/web/src/play/draft-list.tsx:134`, `packages/app/src/slices/project-templates/service.ts:136`, `packages/app/src/slices/schedules/scheduler.ts:193`).
 - HTTP surface under `/drafts` (`packages/app/src/edge/http/app.ts:180`): list `GET /`, create `POST /`, read `GET /:id`, save `PUT /:id`, fork `POST /:id/fork`, discard `DELETE /:id`, review `POST /:id/review`, start `POST /:id/start` (`packages/app/src/edge/http/drafts.ts:56`, `:57`, `:65`, `:69`, `:81`, `:94`, `:113`, `:125`); attachment upload `PUT` and file read `GET /:id/attachments/:attachmentId/file` (`packages/app/src/edge/http/draft-files.ts:29`, `:49`).
-- A draft document is `schemaVersion: 1` with `form`, `section` (`content|outputs|style|review`), `variants`, `expectedWords`, `previewText`, `fontUpload`, optional `librarySnapshot`, `templateSource` and `channelId` (`packages/app/src/slices/play-drafts/schema.ts:224`). Every number on the form is stored as raw text (`packages/app/src/slices/play-drafts/schema.ts:172`).
-- Saving an incomplete setup is allowed; generation requires a separately persisted review and an explicit Start (`packages/app/src/slices/play-drafts/review.ts:72`, `packages/app/src/slices/play-drafts/start.ts:24`).
+- A draft document is `schemaVersion: 1` with `form`, `section` (`content|outputs|style|review`), `variants`, `expectedWords`, `previewText`, `fontUpload`, optional `queue`, `librarySnapshot`, `templateSource` and `channelId` (`packages/app/src/slices/play-drafts/schema.ts:224`). `queue` is the several-videos choice: absent or `true` runs them one after another, `false` starts them all at once (`schema.ts:238-240`). Every number on the form is stored as raw text (`packages/app/src/slices/play-drafts/schema.ts:172`).
+- Saving an incomplete setup is allowed; generation requires a separately persisted review and an explicit Start (`packages/app/src/slices/play-drafts/review.ts:78`, `packages/app/src/slices/play-drafts/start.ts:24`).
 
 ## Steps
 
@@ -41,7 +41,7 @@ absorbed_from:
 4. **Upload.** The client adds the reference, flushes the save, then streams bytes (`packages/web/src/play/use-draft-uploads.ts:83`, `:117`, `:153`). The server accepts bytes only for an `active` draft whose attachment row is `pending` with no staged file; allocation binds `staged_file_id` in one guarded `UPDATE` and the row becomes `ready` on completion (`packages/app/src/slices/play-drafts/uploads.ts:28`, `:44`, `:61`). The `reference` kind is staged as an Images upload (`packages/app/src/slices/play-drafts/uploads.ts:40`).
 5. **Browser storage.** `localStorage` key `slopify.play-draft` holds only the selected draft ID; no form text or media bytes are kept in the browser (`packages/web/src/play/draft-restore.ts:6`). On mount the remembered ID is opened (`packages/web/src/play/use-draft-session.ts:348`). Opening a draft refetches providers, prompts, entries, settings, voices and fonts (`packages/web/src/play/draft-restore.ts:23`).
 6. **Drafts list.** Lists `active` and `starting` drafts newest-edited first with title, "Last edited" time and a `readable` flag (`packages/app/src/slices/play-drafts/repo.ts:44`, `packages/app/src/slices/play-drafts/service.ts:148`, `packages/web/src/play/draft-list.tsx:134`).
-7. **Review.** `POST /:id/review` refuses a pending/started draft or a `baseVersion` mismatch (`packages/app/src/slices/play-drafts/review.ts:133`), then resolves inputs (`packages/app/src/slices/play-drafts/review-inputs.ts:48`):
+7. **Review.** `POST /:id/review` refuses a pending/started draft or a `baseVersion` mismatch (`packages/app/src/slices/play-drafts/review.ts:139`), then resolves inputs (`packages/app/src/slices/play-drafts/review-inputs.ts:48`):
    - `fontUpload` non-null → field error "Wait for the font upload to finish or choose another font." (`review-inputs.ts:62`).
    - `expectedWords` must be an integer 1–100000 (`review-inputs.ts:67`).
    - At most 49 variants (50 videos counting the base) (`review-inputs.ts:75`).
@@ -50,16 +50,16 @@ absorbed_from:
    - A subtitle font must still exist; its bytes are SHA-256 hashed into the fingerprint (`packages/app/src/slices/play-drafts/review.ts:31`, `review-inputs.ts:176`).
    - Checkpoints are refused on a stage not generated (Video/export needs Video or Audio on) (`review-inputs.ts:188`).
    - Runtime model availability and thinking support are checked per selected model (`packages/app/src/slices/play-drafts/review.ts:47`).
-   - Inputs are resolved twice around the async checks; a changed binding is `stale-review` (`packages/app/src/slices/play-drafts/review.ts:67`).
-   The review, the captured catalogue, the attachment identities and the resolved font are written to `review_json` for this exact version (`packages/app/src/slices/play-drafts/review.ts:100`, `:112`). A second review of the same version and fingerprint returns the stored review (`packages/app/src/slices/play-drafts/review.ts:94`).
+   - Inputs are resolved before the async font and model checks and once more after them, both times without the font (a Before Video checkpoint covers the caption burn-in, so a font-bound comparison always differed); a changed binding is `stale-review` (`packages/app/src/slices/play-drafts/review.ts:67-75`).
+   The review, the captured catalogue, the attachment identities and the resolved font are written to `review_json` for this exact version (`packages/app/src/slices/play-drafts/review.ts:106`, `:118`). A second review of the same version and fingerprint returns the stored review (`packages/app/src/slices/play-drafts/review.ts:100`).
 8. **Start.** `POST /:id/start` with `draftId`, `baseVersion`, `reviewId` (`packages/app/src/slices/play-drafts/start.ts:21`):
    - A receipt with that `reviewId` replays its result (`replayed: true`) when draft, version and request hash match; otherwise `conflict` (`packages/app/src/slices/play-drafts/start-repo.ts:66`).
    - The draft moves `active → starting` with `start_id = reviewId` (`packages/app/src/slices/play-drafts/start.ts:61`).
    - `requireStartingIdentity` re-resolves inputs with the stored font and compares every stored field and fingerprint; any drift is `stale-review` (`packages/app/src/slices/play-drafts/start-repo.ts:80`).
    - Readiness uses the catalogue captured at review: provider usable, runtime model present, no changed CLI path, API key present for keyed providers, audio voice among saved voices (`packages/app/src/slices/play-drafts/readiness.ts:59`, `:102`).
-   - In one transaction: one run → `startRun`; several → `enqueueBatch` with one queue entry and project per run; checkpoints admitted; receipt inserted; draft `started`; all its attachment rows deleted (`packages/app/src/slices/play-drafts/start.ts:127`, `packages/app/src/slices/play-drafts/start-repo.ts:140`). A count mismatch throws `StartedRunMismatch`, rolls back, releases the claim and returns `stale-review` (`packages/app/src/slices/play-drafts/start.ts:166`, `:99`).
-   - After commit: telemetry `recordStarted`, old staged files released, then `pumpQueue` (batch) or `runner.tick` per project; each post-commit failure only logs `play.start.after-commit` (`packages/app/src/slices/play-drafts/start.ts:114`, `:175`).
-9. **Client Start.** Start requires a valid review whose run count equals the page's videos and no pending upload on an active source (`packages/web/src/play/review-state.ts:216`, `:286`). A review whose run count differs from the page re-saves the page and asks for Refresh review (`packages/web/src/play/review-state.ts:189`). The button reads `Start run`, `Queue N videos`, `Starting…` or `Check Start result` (`packages/web/src/play/review-state.ts:279`). A confirmed start clears the draft selection and invalidates `projects`, `staging` and `play-drafts` (`packages/web/src/play/use-draft-session.ts:320`).
+   - In one transaction: one run → `startRun`; several with `queue` not `false` → `enqueueBatch` with one queue entry and project per run; several with `queue: false` → `startRun` per run, no queue entries (the draft is read again for the flag; an unreadable draft counts as queued); checkpoints admitted; receipt inserted; draft `started`; all its attachment rows deleted (`packages/app/src/slices/play-drafts/start.ts:127`, `start.ts:148-157`, `packages/app/src/slices/play-drafts/start-repo.ts:140`). A count mismatch throws `StartedRunMismatch`, rolls back, releases the claim and returns `stale-review` (`packages/app/src/slices/play-drafts/start.ts:171`, `:99`).
+   - After commit: telemetry `recordStarted`, old staged files released, then `pumpQueue` (batch) or `runner.tick` per project; each post-commit failure only logs `play.start.after-commit` (`packages/app/src/slices/play-drafts/start.ts:114`, `:180`).
+9. **Client Start.** Start requires a valid review whose run count equals the page's videos and no pending upload on an active source (`packages/web/src/play/review-state.ts:216`, `:291`). A review whose run count differs from the page re-saves the page and asks for Refresh review (`packages/web/src/play/review-state.ts:189`). With several videos the Start rail shows a Queue switch (on by default, disabled while a Start is pending or uncertain, `start-rail.tsx:68`) instead of "One run", and the hint reads "They run one after another…" or "They all run at once…" (`packages/web/src/play/start-rail.tsx:100-112`, `:155-160`). The button reads `Start run`, `Queue N videos` (queue on), `Start N videos` (queue off), `Starting…` or `Check Start result` (`packages/web/src/play/review-state.ts:279`). A confirmed start clears the draft selection and invalidates `projects`, `staging` and `play-drafts` (`packages/web/src/play/use-draft-session.ts:320`).
 10. **Discard.** Confirm dialog "Discard <title>?" with "The draft is removed. This cannot be undone." (`packages/web/src/play/draft-list.tsx:168`). The client waits for a running save, then sends `DELETE` with the displayed version (`packages/web/src/play/use-draft-session.ts:230`). The server refuses `starting` and a version mismatch, deletes the row (attachments cascade) and releases staged files (`packages/app/src/slices/play-drafts/service.ts:277`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:20`). Success or `not-found` clears local state only when the same draft is still selected (`packages/web/src/play/use-draft-session.ts:241`).
 
 ## Branches
@@ -99,14 +99,14 @@ HTTP status mapping: `not-found` 404, `invalid-edit`/`readiness` 400, all others
 
 - No provider call during editing, autosave or review; provider work begins only after Start commits (`packages/app/src/slices/play-drafts/start.ts:114`).
 - A save never overwrites a newer version: every write is `WHERE version=? AND state='active'` (`packages/app/src/slices/play-drafts/service.ts:193`).
-- Start creates exactly the reviewed number of projects or nothing (`packages/app/src/slices/play-drafts/start.ts:166`).
+- Start creates exactly the reviewed number of projects or nothing (`packages/app/src/slices/play-drafts/start.ts:171`).
 - A staged file is deleted only when no attachment row references it and it is not mid-copy, and never inside an open transaction (`packages/app/src/slices/storage/staging-refs.ts:14`).
 - One receipt per `reviewId`; `play_start_receipts` is unique on `(draft_id, draft_version)` (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:28`).
 
 ## Outcomes & side effects
 
 - Durable rows: `play_drafts`, `play_draft_attachments`, `play_start_receipts`, staged files (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`).
-- Start creates projects (or batch queue entries), checkpoint rows and a receipt, then wakes the runner (`packages/app/src/slices/play-drafts/start.ts:148`).
+- Start creates projects (and batch queue entries when queued), checkpoint rows and a receipt, then wakes the runner: `pumpQueue` when anything was queued, else `runner.tick` per project (`packages/app/src/slices/play-drafts/start.ts:145-178`, `:117-120`).
 - Backups carry `active` drafts and their attachments; import skips a draft whose ID or attachment/staged file already exists (`packages/app/src/slices/storage/backup-export.ts:384`, `packages/app/src/slices/storage/backup-import.ts:637`, `:873`).
 - Tutorial progress is a versioned settings write; step `play-start` leads here and skipping generation continues at `home`; the tutorial never starts a run (`packages/app/src/slices/settings/tutorial.ts:57`, `packages/web/src/tutorial/model.ts:82`, `:118`).
 
@@ -117,4 +117,4 @@ HTTP status mapping: `not-found` 404, `invalid-edit`/`readiness` 400, all others
 - D7 Time: drafts never expire; no automatic cleanup of drafts.
 - D6 Limits: no storage quota on staged uploads; the only caps are 50 videos per review and 1–100000 expected words.
 - D13 Notification: no notification is sent for draft events.
-- D14 Effects on others: template edits do not alter drafts already applied from an older revision; scheduled runs create their own drafts (`packages/app/src/slices/schedules/scheduler.ts:188`).
+- D14 Effects on others: template edits do not alter drafts already applied from an older revision; a Library rename rewrites the old name in every `active` draft (scenario 15, `packages/app/src/slices/library/rename.ts:84-92`); scheduled runs create their own drafts (`packages/app/src/slices/schedules/scheduler.ts:193`).

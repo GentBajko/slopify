@@ -1,1 +1,0 @@
-- A narration chunk's text override can carry its own delivery note (`direction`), added to the narration prep prompt for that chunk only, so one chunk can be re-tagged without re-tagging the whole narration.

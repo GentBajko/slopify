@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: b612630c0e76
+content_hash: 60d3ee5c2abb
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/app/scripts/copy-*.mjs"
@@ -36,12 +36,12 @@ Repo-wide chapter for the npm-workspaces monorepo (`package.json:4`): `packages/
 
 Modules outside the tiers: `catalog/` (model catalogue store and curated registry wrapper, `packages/app/src/catalog/store.ts:63`, `packages/app/src/catalog/registry.ts:9`; it imports `slices/settings/model.js` at `packages/app/src/catalog/registry.ts:5` and has no Biome override), `updater/` (self-update service, `packages/app/src/updater/service.ts`), `host-cli/` (host helper server, install and status, `packages/app/src/host-cli/server.ts`), `sample-build/` (a script that builds the bundled sample with the pipeline, `packages/app/src/sample-build/generate.ts:93`).
 
-The runner in `kernel/runner` imports only kernel modules; stage behaviour arrives as `RunnerDeps.runs` (`packages/app/src/kernel/runner/index.ts:55`), which `wireRunner` fills from `slices/rebuild` (`packages/app/src/main.ts:945`). Nineteen slices import `kernel/runner/*` directly: article, batch, cancel, checkpoints, control, episodes, images, narration, play-drafts, rebuild, reruns, research, revisions, run-cost, schedules, settings, subtitles, thumbnail and video.
+The runner in `kernel/runner` imports only kernel modules; stage behaviour arrives as `RunnerDeps.runs` (`packages/app/src/kernel/runner/index.ts:55`), which `wireRunner` fills from `slices/rebuild` (`packages/app/src/main.ts:945`). Twenty-one slices import `kernel/runner/*` directly (type-only imports counted): admission, article, batch, cancel, checkpoints, control, episodes, images, narration, play-drafts, rebuild, reruns, research, revisions, run-cost, schedules, settings, storage, subtitles, thumbnail and video. `storage` imports only `derive` from `kernel/runner/graph.js` (`packages/app/src/slices/storage/delete-project.ts:5`), and `admission` only the `StageProgress` type (`packages/app/src/slices/admission/repo.ts:4`).
 
 The other packages sit beside the app:
 
 - `packages/web` imports app source through the `@app/*` alias. `tsconfig.json` maps it to `../app/dist/*` for declarations (`packages/web/tsconfig.json:14`), and Vite rewrites it to `../app/src/*.ts` (`packages/web/aliases.ts:13`). Most imports are `import type`. Value imports are pure schema, rule and model modules, for example `slices/admission/substitute.js`, `slices/library/lint.js`, `slices/play-drafts/schema.js`, `slices/fixes/rules.js` and `edge/events/preview-cache.js` (`packages/web/src/event-mux.ts:2`).
-- `packages/extension` imports nothing from the app. It keeps a copy of the upload-pack types (`packages/extension/src/pack.ts:1`) that mirrors `packages/app/src/slices/studio/model.ts:20`.
+- `packages/extension` imports nothing from the app. It keeps a copy of the upload-pack types (`packages/extension/src/pack.ts:1`) that mirrors `packages/app/src/slices/studio/model.ts:20`; the copy marks the fields an older app may omit as optional (`titles`, `alteredContent`, `playlists`, and the 3.3.0 fields `scheduleAt`, `captions`, `endScreenVideoId`, `relatedVideoId`, `pinnedComment`, `packages/extension/src/pack.ts:19`, `:33`-`:39`).
 - `packages/site` and `packages/collector` import nothing from the other packages. The collector keeps its own Zod model (`packages/collector/src/model.ts`).
 
 ## Module boundaries
@@ -52,7 +52,7 @@ The other packages sit beside the app:
 | --- | --- |
 | `kernel/runner` | `createRunner` (`packages/app/src/kernel/runner/index.ts:83`) returns `Runner {tick, settled, abortProject, hasInflight?, abortAll, checkpoints?}` (`:64`). `StageContext` and `StageRun` are at `:44` and `:53`. `stageProviders` (`packages/app/src/kernel/runner/providers.ts:116`) wraps `StageProviders` (`:86`) so every LLM, TTS, image and animate call goes through `attempt` (`packages/app/src/kernel/runner/attempt.ts:73`). `createProviderQueue` is one app-wide queue of at most five calls, with lower per-provider limits (`packages/app/src/kernel/runner/queue.ts:10`). `standaloneLlm` and `standaloneImage` (`packages/app/src/kernel/runner/standalone.ts:43`, `:93`) serve provider calls that belong to no project. |
 | `kernel/ports` | `Registry {llm, tts, image, list}` (`packages/app/src/kernel/ports/registry.ts:17`). `ImagePort` has an optional `animate` for image-to-video (`packages/app/src/kernel/ports/image.ts:57`). There are also LLM, TTS, subtitle, host-cli, key-probe, plan-limit, system-speech, language and narration-alias ports (`packages/app/src/kernel/ports/`). |
-| `kernel/db` | `openDb` (`packages/app/src/kernel/db/index.ts:8`) and `migrate` (`packages/app/src/kernel/db/migrate.ts:16`) over `node:sqlite`. There are 35 migrations in `packages/app/src/kernel/db/migrations/`, the newest being `0042-narration-retries.sql`. |
+| `kernel/db` | `openDb` (`packages/app/src/kernel/db/index.ts:8`) and `migrate` (`packages/app/src/kernel/db/migrate.ts:16`) over `node:sqlite`. There are 40 migration files in `packages/app/src/kernel/db/migrations/` (numbered up to 0047), the newest being `0047-studio-autopilot.sql`. |
 | `kernel/events` | The `ProjectEvent` union (`packages/app/src/kernel/events.ts:107`). It sits in the kernel so the runner and slices can produce events without importing `edge`. |
 | `kernel/pipeline` | `stageKinds` is `research, article, audio, images, thumbnail, video, document` (`packages/app/src/kernel/pipeline.ts:11`). |
 | `kernel/config` | `configFrom` (`packages/app/src/kernel/config/index.ts:23`). The default port is 6969 (`:20`). |
@@ -87,10 +87,10 @@ Every slice is a folder of plain modules with no `index` barrel requirement. Edg
 | episodes | Channel episode memory, which summarises finished projects | `createEpisodeMemoryWatcher` `packages/app/src/slices/episodes/summarize.ts:201`; `withEarlierEpisodes` `related.ts:93` | channel-memory |
 | estimate | Cost estimate before Start | `estimateRun` `packages/app/src/slices/estimate/index.ts:73` | planning, auditions |
 | eta | Time left on a running step | `stageEta` `packages/app/src/slices/eta/model.ts:32`; `stagesWithEta` `view.ts:8` | projects |
-| fixes | Maps a named failure to its fix-it action; pure and shared with web | `fixFor` `packages/app/src/slices/fixes/rules.ts:56` | none (web only) |
+| fixes | Maps a named failure to its fix-it action; pure and shared with web | `fixFor` `packages/app/src/slices/fixes/rules.ts:58` | none (web only) |
 | fonts | Font catalogue, upload, SFNT metadata | `resolveFont` `packages/app/src/slices/fonts/catalog.ts:28`; `uploadFont` `upload.ts:33` | fonts, planning, project-create |
 | images | Image stage: scenes, appearance, scaling | `runImages` `packages/app/src/slices/images/run.ts:54` | none |
-| library | Prompt and entry library: save, history, lint, used-by | `createPrompt` `packages/app/src/slices/library/save.ts:41`; `lintPrompt` `lint.ts:11` | prompts, entries, planning, project-create |
+| library | Prompt and entry library: save, history, lint, used-by, rename propagation into templates and Play drafts | `createPrompt` `packages/app/src/slices/library/save.ts:42`; `lintPrompt` `lint.ts:11` | prompts, entries, planning, project-create |
 | loudness | Loudness normalising and mastering | `normalizeFile` `packages/app/src/slices/loudness/loudnorm.ts:154`; `masterFile` `:219` | onboarding |
 | model-upkeep | Retired-model detection and switching | `switchRetiredModel` `packages/app/src/slices/model-upkeep/switch.ts:117`; `retiredModelUsage` `usage.ts:227` | providers |
 | narration | Narration planning, chunking, pronunciation, aliases, peaks | `runNarration` `packages/app/src/slices/narration/run.ts:71`; `planNarration` `plan.ts:55` | narration-peaks, pronunciations |
@@ -103,30 +103,30 @@ Every slice is a folder of plain modules with no `index` barrel requirement. Edg
 | reruns | Retry, re-run, and marking downstream stages stale | `retryStage` `packages/app/src/slices/reruns/index.ts:70`; `redoPlan` `cascade.ts:44` | actions |
 | research | Research stage: planner, sub-agents, synthesis | `runResearch` `packages/app/src/slices/research/run.ts:50` | none; see `01-architecture-research.md` |
 | reviews | Automatic review verdicts and outcomes | `parseVerdict` `packages/app/src/slices/reviews/verdict.ts:63`; `reviewOutcome` `outcome.ts:22` | reviews |
-| revisions | Immutable revisions: save, restore, publish outputs, views, downloads | `saveRevision` `packages/app/src/slices/revisions/mutations.ts:57`; `restoreRevision` `restore.ts:24`; `getRevisionView` `view.ts:7` | revisions, revision-files, actions, audio-preview, narration-peaks, projects, reviews |
+| revisions | Immutable revisions: save, restore, publish outputs, views, downloads; a rename keeps the project's subject (`keptSubject` `subject.ts:7`, called at `mutations.ts:93`) | `saveRevision` `packages/app/src/slices/revisions/mutations.ts:58`; `restoreRevision` `restore.ts:24`; `getRevisionView` `view.ts:7` | revisions, revision-files, actions, audio-preview, narration-peaks, projects, reviews |
 | run-cost | Usage metering, pricing, CLI plan-limit gate | `createUsageMeter` `packages/app/src/slices/run-cost/meter.ts:27`; `createLimitGate` `limits.ts:29` | run-cost, home, projects |
-| schedules | Schedules, calendar, topic generation, scheduler | `createScheduleRunner` `packages/app/src/slices/schedules/scheduler.ts:36`; `nextOccurrence` `calendar.ts:29` | schedules (and calendar) |
+| schedules | Schedules, calendar, topic generation, scheduler, topics prepared ahead of their day (`prepared_videos`) | `createScheduleRunner` `packages/app/src/slices/schedules/scheduler.ts:35`; `nextOccurrence` `calendar.ts:29`; `prepareTopic` `prepare.ts:65`; `continuePrepared` `prepare.ts:170` | schedules (and calendar) |
 | settings | Keys, CLI paths and status, health, models, readiness, tutorial session | `providerStatuses` `packages/app/src/slices/settings/readiness.ts:23`; `checkProviderHealth` `health.ts:89` | settings, providers, diagnostics, onboarding, tutorial, whats-new, actions |
 | shorts | Vertical shorts: clip picks, captions, render | `renderShort` `packages/app/src/slices/shorts/render.ts:241`; `checkPicks` `pick.ts:216` | none |
 | storage | Staging, assets, backup export/import, reconcile, files location, project deletion | `reconcileStorage` `packages/app/src/slices/storage/reconcile.ts:14`; `createFilesService` `files-location.ts:183`; `importBackup` `backup-import.ts:159` | storage, storage-files, staging, files, open-folder, studio and others |
-| studio | Upload pack, fill queue, pairing and AI disclosure for the Studio extension | `uploadPack` `packages/app/src/slices/studio/pack.ts:57`; `enqueueFill` `queue.ts:64` | studio |
+| studio | Upload pack, fill queue, pairing and AI disclosure for the Studio extension; posting plan and upload slots, title/thumbnail pick, the YouTube videos uploads became with their A/B, finish and comment task states, Studio numbers and A/B results, Content-list backfill | `uploadPack` `packages/app/src/slices/studio/pack.ts:61`; `packItem` `pack.ts:305`; `enqueueFill` `queue.ts:64`; `fillNow` `queue.ts:94`; `readPlan` `plan.ts:61`; `assignedSlot` `plan.ts:200`; `freeSlots` `plan.ts:219`; `writeUploadPick` `pick.ts:35`; `recordVideo` `videos.ts:69`; `confirmUpload` `videos.ts:90`; `waitingTasks` `videos.ts:144`; `saveStats` `stats.ts:42`; `abResults` `stats.ts:107`; `backfillVideos` `backfill.ts:18` | studio, projects (`longVideoStats`, `packages/app/src/edge/http/projects.ts:81`) |
 | style-preview | Cached rendered caption and look previews | `createStylePreviews` `packages/app/src/slices/style-preview/service.ts:49` | style-preview |
 | subtitles | Cues and SRT/VTT/ASS files | `prepareSubtitles` `packages/app/src/slices/subtitles/prepare.ts:71` | none |
 | telemetry | Local counters and the collector flush | `record` `packages/app/src/slices/telemetry/record.ts:42`; `createFlusher` `flush.ts:78` | telemetry, usage, project-create |
 | thumbnail | Thumbnail stage: LLM-written prompt, then image | `runThumbnail` `packages/app/src/slices/thumbnail/run.ts:58` | none |
 | trash | Settings → Trash with 30-day retention | `trashProject` `packages/app/src/slices/trash/service.ts:73`; `createTrashPurge` `:313` | trash, projects |
 | tutorials | Bundled tutorial pages and search | `loadTutorials` `packages/app/src/slices/tutorials/library.ts:83`; `searchTutorials` `:179` | tutorials |
-| uploads | Mark uploaded | `markUploaded` `packages/app/src/slices/uploads/repo.ts:10` | home |
-| video | Video render: FFmpeg plan, ambient bed, edits, cards | `renderVideo` `packages/app/src/slices/video/run.ts:36`; `planRender` `plan.ts:149` | none |
+| uploads | Mark uploaded; Needs you's "Keep as is" (`project_set_aside`) | `markUploaded` `packages/app/src/slices/uploads/repo.ts:10`; `uploadedProjects` `:32`; `setAside` `:43`; `setAsideProjects` `:61` | home, projects, studio |
+| video | Video render: FFmpeg plan, ambient bed, edits, cards; clips rendered in parallel and reused across renders | `renderVideo` `packages/app/src/slices/video/run.ts:36`; `planRender` `plan.ts:149`; `renderJobs` / `inPool` `pool.ts:12`, `:33`; `reuseClip` / `keepClip` / `pruneClips` `clip-cache.ts:59`, `:67`, `:78` | none |
 | voices | Voices, cast voicing, languages, audition lines | `withCastVoices` `packages/app/src/slices/voices/cast.ts:66` | auditions |
-| youtube | YouTube description, chapters, tags and hand edits | `assembleDescription` `packages/app/src/slices/youtube/answer.ts:158`; `composeDescription` `edits.ts:85` | youtube-edits, settings |
+| youtube | YouTube description, chapters, tags and hand edits; A/B title shape (only the title pattern's keywords change) | `assembleDescription` `packages/app/src/slices/youtube/answer.ts:164`; `composeDescription` `edits.ts:85`; `titleShape` / `keepsShape` `titles.ts:15`, `:38` | youtube-edits, settings |
 
 `rebuild` is the hub slice: it imports 26 other slices. Every one of the seven stage IDs executes through `runRevisionInvocation` (`packages/app/src/main.ts:945`). Recipe kinds and runtime dispatch are in `01-architecture-recovery.md` and `01-architecture-narration.md`.
 
 ### Web, extension, site, collector
 
-- The web public surface is its route tree (`packages/web/src/router.tsx:603`). Only files under `packages/web/src/components/kit/` may write raw button, link-as-button and hit-area markup; `packages/web/src/kit-rules.test.ts:1` checks this.
-- In the extension, only the background worker talks to Slopify. The content script receives a `FillPayload` with thumbnails already base64-encoded and never calls Slopify itself (`packages/extension/src/pack.ts:44`).
+- The web public surface is its route tree (`packages/web/src/router.tsx:610`). Only files under `packages/web/src/components/kit/` may write raw button, link-as-button and hit-area markup; `packages/web/src/kit-rules.test.ts:1` checks this.
+- In the extension, the background worker makes every Slopify call except one: the hidden `video-frame.html` page fetches the upload's video file from `/api/studio/ext/files/...` with the pairing token and hands the `File` to the Studio page by `postMessage` (`packages/extension/src/video-frame.ts:36`, `:67`). The content scripts receive a `FillPayload` with thumbnails (and captions) already base64-encoded and never call Slopify themselves (`packages/extension/src/pack.ts:56`).
 - The site is static assets with no server side (`packages/site/wrangler.jsonc:4`).
 - The collector reads the D1 binding `DB` only (`packages/collector/wrangler.jsonc:24`).
 
@@ -142,9 +142,12 @@ Every slice is a folder of plain modules with no `index` barrel requirement. Edg
 | Host CLI helper | `packages/app/src/edge/host-cli.ts:50` starts `startHostServer` on a Unix socket (`packages/app/src/host-cli/server.ts:20`). It runs on the Docker host. `01-architecture-docker.md` covers it. |
 | Sample build script | `packages/app/src/sample-build/generate.ts:93` (`main`). |
 | Browser SPA | `packages/web/src/main.tsx:24` (`start`), mounted on `#root` (`packages/web/index.html:11`). |
-| Extension background worker | `packages/extension/src/background.ts:129` (`runtime.onMessage`). The manifest declares it as `background.service_worker` (`packages/extension/static/manifest.json:15`). |
-| Extension content script | `packages/extension/src/content.ts` on `https://studio.youtube.com/*` (`packages/extension/static/manifest.json:19`). A `MutationObserver` watches for the upload dialog (`packages/extension/src/content.ts:217`). |
-| Extension options page | `packages/extension/src/options.ts:1`, loaded by `static/options.html` (`packages/extension/static/manifest.json:25`). |
+| Extension background worker | `packages/extension/src/background.ts:386` (`runtime.onMessage`). The manifest declares it as `background.service_worker` (`packages/extension/static/manifest.json:19`). An `alarms` alarm `slopify-ab-tests` fires every 15 minutes and on browser start runs `checkTasks` (`packages/extension/src/background.ts:408`-`:418`, `:155`). |
+| Extension Studio content script | `packages/extension/src/content.ts` on `https://studio.youtube.com/*` (`packages/extension/static/manifest.json:23`). On load it reads the URL hash: `#slopify-ab=<mode>` runs `runAb`, `#slopify-finish` runs `runFinish`, `#slopify-stats=1|2|3` runs `runStats`/`runAbRead`; otherwise a `MutationObserver` watches for the upload dialog and Studio's Content list (`packages/extension/src/content.ts:585`-`:597`, `:432`). |
+| Extension watch-page content script | `packages/extension/src/comment.ts` on `https://www.youtube.com/watch*` (`packages/extension/static/manifest.json:28`); acts only on a `#slopify-comment&p=<project>&s=<short>` hash (`packages/extension/src/comment.ts:101`). |
+| Extension toolbar popup | `packages/extension/src/popup.ts:194` (`start`), loaded by `static/popup.html` as `action.default_popup` (`packages/extension/static/manifest.json:43`). |
+| Extension video frame | `packages/extension/src/video-frame.ts:86` posts `slopify-video-ready` to its Studio parent; `static/video-frame.html` is web-accessible to `https://studio.youtube.com/*` only (`packages/extension/static/manifest.json:45`). |
+| Extension options page | `packages/extension/src/options.ts:1`, loaded by `static/options.html` (`packages/extension/static/manifest.json:34`). |
 | Collector Worker | `export default { fetch }` at `packages/collector/src/index.ts:21`, deployed on `collector.slopify.stream` (`packages/collector/wrangler.jsonc:14`). |
 | Public site | Static `packages/site/public/` on `slopify.stream` (`packages/site/wrangler.jsonc:9`). The module `main.js` starts at `packages/site/public/main.js:247`. |
 
@@ -174,17 +177,17 @@ Except where a row says otherwise, requests and responses are JSON, and refusals
 | `/api/drafts` | `draftRoutes` `drafts.ts:50`, file routes `draft-files.ts:27` | GET → `{drafts:DraftSummary[]}`; POST `{id,document:PlayDraftDocument}` → `DraftView`; GET/PUT/DELETE `/:id`; POST `/:id/fork`, `/:id/review` → `PlayReview`, `/:id/start` → `PlayStartResult`; PUT/GET `/:id/attachments/:attachmentId/file` (multipart in, image bytes out). The browser validates both directions with shared Zod schemas (`packages/web/src/play/draft-api.ts`). |
 | `/api/diagnostics` | `diagnosticsRoutes` `diagnostics.ts:10` | GET → no-store JSON download: versions, secret-free readiness, catalogue status |
 | `/api/project-templates` | `projectTemplateRoutes` `project-templates.ts:52` | CRUD, POST `/from-project/:projectId`, POST `/:id/instantiate` → `DraftView` |
-| `/api/schedules`, `/api/calendar` | `scheduleRoutes` `schedules.ts:89`, `calendarRoutes` `schedules.ts:311` | CRUD with `ScheduleSummary`; pause, resume, cancel; topic generate, held, approve, reject, move, transfer; GET `/api/calendar?from&to` → upcoming runs |
+| `/api/schedules`, `/api/calendar` | `scheduleRoutes` `schedules.ts:90`, `calendarRoutes` `schedules.ts:349` | CRUD with `ScheduleSummary`; pause, resume, cancel; topic generate, held, approve, reject, move, transfer; GET `/:id/prepared` → `{prepared:{title,topic,projectId}[]}` (`:211`); POST `/:id/topics/prepare` `{topic}` → 201 `{projectId,title}`, or 404/409 problem with `reason` `not-found`, `already-prepared`, `missing-template`, `spend-limit` or a start refusal (`:216`); GET `/api/calendar?from&to` → upcoming runs |
 | `/api/channels` | `channelRoutes` `channels.ts:38`, `channelMemoryRoutes` `channel-memory.ts:37` | Channel CRUD; AI disclosure; cast members and cast pictures (raw bytes in, 201; generate → 202); GET `/pictures/:sha256` → image bytes; PUT `/templates/:templateId`; episode memory; existing videos (POST takes a YouTube Studio export) |
-| `/api/projects` | `planningRoutes` `planning.ts:33`, `projectRoutes` `projects.ts:41`, `checkpointRoutes` `checkpoints.ts:41`, `reviewRoutes` `reviews.ts:26`, `revisionRoutes` `revisions.ts:86`, `revisionFolderRoutes` `revision-files.ts:60`, `openFolderRoutes` `open-folder.ts:10`, `audioPreviewRoutes` `audio-preview.ts:19`, `narrationPeakRoutes` `narration-peaks.ts:32`, `runCostRoutes` `run-cost.ts:17`, `uploadedRoutes` `home.ts:33`, `actionRoutes` `actions.ts:46`, `subtitleRoutes` `subtitles.ts:15`, `youtubeEditRoutes` `youtube-edits.ts:33` | POST `/` `RunDraft` → 201 `{project,stages}`; GET `/` → `{projects}`; GET/DELETE `/:id` (DELETE moves the project to Trash); `/estimate` → `{estimates:CostEstimate[]}`; `/batch` and `/queue` → `{queue:QueueEntry[]}`; revisions prepare/list/view/save/restore → `RevisionView`; `/rebuild/preview` → `RebuildPreview`, `/rebuild` → 202 `RebuildAdmission`; pause, cancel, resume, retry, re-run, soften with `{baseRevisionId,idempotencyKey}`; checkpoints GET/PATCH/approve; reviews list, overrule, redo; `/audio-preview/:previewId` → growing `audio/mpeg`; `/narration/peaks` → `NarrationPeaks`; `/run-cost`; PUT `/uploaded` → `{uploadedAt}`; YouTube edits and `/:id/channel-links`. Retired mutations (provider PATCH, article PUT, image DELETE, subtitles PATCH) return 409 `reason:"revision-required"`. |
+| `/api/projects` | `planningRoutes` `planning.ts:33`, `projectRoutes` `projects.ts:42`, `checkpointRoutes` `checkpoints.ts:41`, `reviewRoutes` `reviews.ts:26`, `revisionRoutes` `revisions.ts:86`, `revisionFolderRoutes` `revision-files.ts:60`, `openFolderRoutes` `open-folder.ts:10`, `audioPreviewRoutes` `audio-preview.ts:19`, `narrationPeakRoutes` `narration-peaks.ts:32`, `runCostRoutes` `run-cost.ts:17`, `uploadedRoutes` `home.ts:33`, `actionRoutes` `actions.ts:46`, `subtitleRoutes` `subtitles.ts:15`, `youtubeEditRoutes` `youtube-edits.ts:33` | POST `/` `RunDraft` → 201 `{project,stages}`; GET `/` → `{projects}`; GET/DELETE `/:id` (DELETE moves the project to Trash); `/estimate` → `{estimates:CostEstimate[]}`; `/batch` and `/queue` → `{queue:QueueEntry[]}`; revisions prepare/list/view/save/restore → `RevisionView`; `/rebuild/preview` → `RebuildPreview`, `/rebuild` → 202 `RebuildAdmission`; pause, cancel, resume, retry, re-run, soften with `{baseRevisionId,idempotencyKey}`; checkpoints GET/PATCH/approve; reviews list, overrule, redo; `/audio-preview/:previewId` → growing `audio/mpeg`; `/narration/peaks` → `NarrationPeaks`; `/run-cost`; PUT `/:id/set-aside` `{setAside:boolean}` → `{setAside}` (`home.ts:38`); PUT `/:id/uploaded` `{uploaded:boolean}` → `{uploadedAt}` (`home.ts:58`); the list rows add `setAside?`, `views?` and `ctr?` (`projects.ts:92`-`:98`); YouTube edits and `/:id/channel-links`. Retired mutations (provider PATCH, article PUT, image DELETE, subtitles PATCH) return 409 `reason:"revision-required"`. |
 | `/api/home` | `homeRoutes` `home.ts:16` | GET `/week?since&channel` → week's videos, spend, CLI plan windows |
 | `/api/update` | `updateRoutes` `update.ts:6` | GET, POST, DELETE → `UpdateInfo`; GET `/ready` and POST `/activate` with the `X-Slopify-Update-Token` header |
-| `/api/fonts`, `/api/prompts`, `/api/entries`, `/api/document-themes` | `fontsRoutes` `fonts.ts:25`, `promptRoutes` `prompts.ts:44`, `entryRoutes` `entries.ts:32`, `documentThemeRoutes` `document-themes.ts:32` | Library CRUD; history, restore, used-by; font multipart upload and `/:id/file` bytes; document theme POST `/preview` |
+| `/api/fonts`, `/api/prompts`, `/api/entries`, `/api/document-themes` | `fontsRoutes` `fonts.ts:25`, `promptRoutes` `prompts.ts:45`, `entryRoutes` `entries.ts:33`, `documentThemeRoutes` `document-themes.ts:32` | Library CRUD; history, restore, used-by; font multipart upload and `/:id/file` bytes; document theme POST `/preview` |
 | `/api/pronunciations`, `/api/auditions` | `pronunciationRoutes` `pronunciations.ts:17`, `auditionRoutes` `auditions.ts:38` | Shared glossary and `/aliases`; audition `/quote` → `{estimate}`, POST speaks a confirmed line |
 | `/api/telemetry`, `/api/usage` | `telemetryRoutes` `telemetry.ts:8`, `usageRoutes` `usage.ts:13` | Notice GET/POST → `{seen,appVersion}`; usage GET → `Usage` |
 | `/api/settings/autostart` | `autostartRoutes` `autostart.ts:12` | GET, PUT, POST `/answer`: start-with-computer state |
 | `/api/settings` | `settingsRoutes` `settings.ts:71` | GET/PUT `AppSettings`; `/channel-links`; `/notifications` and `/notifications/test`; `/voices` CRUD |
-| `/api/studio` | `studioRoutes` `studio.ts:82` | Same-origin: `/settings`, `/settings/playlists`, `/settings/pairing`, `/packs/:projectId` (+ `/real-footage`, `/playlists`, `/choose`), `/queue`, `/queue/remove`, GET `/extension/:file` → `application/zip` (`chrome.zip` or `firefox.zip`). Cross-origin, paired extension only: see the extension table below. |
+| `/api/studio` | `studioRoutes` `studio.ts:159` | Slopify page (writes refused with 403 from another origin by `samePage`, `:168`): GET `/settings` → `{playlists, channelPlaylists, pairing, autoComment}` (`:216`); PUT `/settings/auto-comment` `{on}` → `{autoComment}` (`:228`); GET/PUT `/plan` `PostingPlan` → `{plan, free:Slot[]}` (`:239`, `:243`); PUT `/settings/playlists`; POST `/settings/pairing`; GET `/packs/:projectId` → `UploadPack` + `slotChoices` (also assigns the plan's next free slot, `:279`); PUT `/packs/:projectId/slot` `{slot:{row,longAt}\|null}` → pack + `slotChoices`, 409 when taken (`:287`); PUT `/packs/:projectId/real-footage`, `/pick` `{title,thumbnail}` (0-9), `/playlists` → `UploadPack` (`:318`, `:334`, `:349`); POST `/packs/:projectId/choose` `{short?}` → `{chosen, queue:FillQueueItem[]}` (`:363`); GET `/stats/:projectId` → `{stats:VideoStats[]}` (`:385`); GET `/ab-results` → `{results}` (`:388`); GET `/videos/:projectId` → `{videos:YoutubeVideo[]}`; PUT `/videos/:projectId` `{short?, link}` (empty link forgets) → `{videos}` (`:390`, `:396`); GET `/queue`, POST `/queue/remove`; GET `/extension/:file` → `application/zip` (`chrome.zip` or `firefox.zip`, `:434`). Cross-origin, paired extension only: see the extension table below. |
 | `/api/style-preview` | `stylePreviewRoutes` `style-preview.ts:16` | POST settings → where the preview is; GET `/:file` → MP4 with byte ranges |
 | `/api/tutorial` | `tutorialRoutes` `tutorial.ts:13` | GET, PUT `{baseVersion,mutationId,session}`, DELETE |
 | `/api/whats-new`, `/api/patch-notes` | `whatsNewRoutes` `whats-new.ts:7`, `patchNotesRoutes` `patch-notes.ts:20` | GET and POST `/seen`; GET `/:id` → one patch note |
@@ -217,15 +220,31 @@ Senders: the runner and slices emit through `hub.emit` and `hub.emitGlobal`. `ev
 
 ### Studio extension ↔ app
 
+Every `/ext/*` call carries `authorization: Bearer <pairing token>`; `studioRequestAllowed` checks the token and the paired origin (`packages/app/src/slices/studio/settings.ts:271`), and a refusal is a 401 problem (`packages/app/src/edge/http/studio.ts:191`). Send sites are in `packages/extension/src/background.ts` unless noted; receive sites in `packages/app/src/edge/http/studio.ts`.
+
 | Channel | Payload out → in | Send / receive |
 | --- | --- | --- |
-| `POST /api/studio/ext/pair`, header `authorization: Bearer <pairing token>` | no body → `{paired:true,origin}`; the extension origin is stored as the paired origin | `packages/extension/src/background.ts:104` / `packages/app/src/edge/http/studio.ts:262` |
-| `GET /api/studio/ext/pack`, bearer | → `ActivePack {pack:{projectId,projectTitle}, item:PackItem, waiting}` | `packages/extension/src/background.ts:59` / `packages/app/src/edge/http/studio.ts:283` |
-| `GET /api/studio/ext/files/:projectId/:asset`, bearer | → thumbnail bytes (only thumbnails from a pack) | `packages/extension/src/background.ts:64` / `packages/app/src/edge/http/studio.ts:332` |
-| `POST /api/studio/ext/filled`, bearer | `{projectId, short:number\|null}` → `{waiting:number}` | `packages/extension/src/background.ts:81` / `packages/app/src/edge/http/studio.ts:318` |
-| `runtime.sendMessage` inside the extension | `WorkerRequest` = `{type:"pair",base,token}` \| `{type:"status"}` \| `{type:"payload"}` \| `{type:"filled",projectId,short}` → `WorkerAnswer {ok:true,value}\|{ok:false,message}`; `payload` answers `FillPayload {projectId,waiting?,item,thumbnails:{filename,contentType,base64}[]}` | senders `packages/extension/src/content.ts:135`, `:181`, `packages/extension/src/options.ts:18`, `:29` / receiver `packages/extension/src/background.ts:129`; types `packages/extension/src/pack.ts:44`, `:58`, `:83` |
+| `POST /ext/pair` | no body → `{paired:true,origin}`; the extension origin is stored as the paired origin | `:270` / `:462` |
+| `GET /ext/pack` | → `{pack:UploadPack, item:PackItem, waiting}` for the first fill-queue entry that still resolves (gone entries are dropped); 404 when none. The extension reads it as `ActivePack` (`packages/extension/src/pack.ts:47`). | `:73` / `:483` |
+| `GET /ext/files/:projectId/:asset` | → file bytes, served only when the asset is a pack item's `video`, one of its `thumbnails` or its `captions` (`studio.ts:752`-`:761`) | thumbnails `:85`, captions `:234` (a non-OK answer leaves `captions` unset), video `packages/extension/src/video-frame.ts:36` / `:737` |
+| `POST /ext/filled` | `{projectId, short:number\|null}` → `{waiting:number}` | `:247` / `:518` |
+| `POST /ext/video` | `{projectId, short?, videoId}` (11-char id) → `{recorded:true}`; row `upload_state='filled'` | `:293` / `:693` |
+| `POST /ext/video/done` | same body → `{confirmed:true}`; `confirmUpload` sets `upload_state='done'`, then `finish_state='waiting'` when the item has `relatedVideoId`, `endScreenVideoId` or `captions`, and `comment_state='waiting'` for the long video with a `pinnedComment` when setting `studio.autoComment` is `on` | `:302` / `:710` |
+| `POST /ext/backfill` | `{videos:{title≤200, videoId}[]≤200}` (rows of Studio's Content list) → `{found:number}` | `:363` / `:534` |
+| `GET /ext/ready` | → `{projects: ReadyProject[]}`: done/partial (or set-aside pending) projects not marked uploaded, each item `{kind, short, title, ready, uploaded, started, videoId?, scheduleAt?}` (`packages/extension/src/pack.ts:132`) | `:367` / `:546` |
+| `POST /ext/upload` | `{projectId, short?}` → `{url}` (`studioUploadUrl`, `packages/app/src/slices/studio/model.ts:18`); the item goes first in the fill queue (`fillNow`) | `:372` / `:585` |
+| `POST /ext/upload-all` | `{projectId}` → `{url, count}`; every rendered short not `done` is queued in order | `:311` / `:602` |
+| `GET /ext/packs/:projectId` | → `UploadPack` | `:225` / `:621` |
+| `GET /ext/tasks` | → `{finish: WaitingTask[], comments: WaitingTask[]}`, `WaitingTask {projectId, short, videoId, item:PackItem}` (`packages/extension/src/pack.ts:153`) | `:157` / `:629` |
+| `POST /ext/task-result` | `{task:"finish"\|"comment", projectId, short?, ok, message≤2000}` → `{ok:true}`; sets `finish_state`/`comment_state` to `done` or `failed` with the message | `:322` / `:645` |
+| `GET /ext/known-videos` | → `{videos:{projectId, short, videoId}[]}` for every `done` video | `:201` / `:653` |
+| `POST /ext/stats` | `{projectId, short?, videoId, impressions?, ctr? (0-100), views?, averageViewSeconds?, watchHours?, abVariants?≤3}` → `{ok:true}`; writes `video_stats`, and `ab_results` when more than one variant | `:337` / `:664` |
+| YouTube oEmbed `GET https://www.youtube.com/oembed?url=…` | no auth; an OK answer means the video is public | `:136` / YouTube |
+| `runtime.sendMessage` inside the extension | `WorkerRequest` (`packages/extension/src/pack.ts:71`): `pair`, `status`, `payload`, `pack`, `filled`, `video`, `video-done`, `backfill`, `ready`, `upload`, `upload-all`, `item`, `task-result`, `stats` → `WorkerAnswer {ok:true,value}\|{ok:false,message}` (`:179`); `payload` and `item` answer `FillPayload {projectId, waiting?, item, captions?, thumbnails:{filename,contentType,base64}[]}` (`:56`) | senders `packages/extension/src/content.ts:140`, `:191`, `:228`, `:238`, `:250`, `:291`, `:325`, `:374`, `:398`, `:453`, `:521`; `packages/extension/src/popup.ts:169`, `:182`, `:195`, `:205`; `packages/extension/src/comment.ts:105`, `:111`; `packages/extension/src/options.ts:18`, `:30` / receiver `background.ts:386` (dispatch `:282`); a `task-result`, or a `stats` with `last`, closes the sender's tab (`:393`-`:397`) |
+| `window.postMessage` Studio page ↔ `video-frame.html` | `slopify-video-ready` → `VideoRequest {type:"slopify-video", id, projectId, asset, filename, contentType}` → `VideoAnswer` `slopify-video-file {id, file:File}` or `slopify-video-error {id, message}` | `packages/extension/src/content.ts:468`-`:486` / `packages/extension/src/video-frame.ts:15`, `:24`, `:67` |
+| Background-opened tabs | `https://studio.youtube.com/video/<id>/edit#slopify-finish&p=&s=` (`:176`), `https://www.youtube.com/watch?v=<id>#slopify-comment&p=&s=` (`:183`), `…/analytics/tab-reach_viewers/…#slopify-stats=1&p=&s=` (`:217`); the popup opens `…/edit#slopify-ab=<both\|titles\|thumbnails>&p=&s=0` (`packages/extension/src/popup.ts:151`) | parsed at `packages/extension/src/content.ts:585`-`:597`, `packages/extension/src/comment.ts:102` |
 
-`PackItem` is `{kind:"video"|"short", short?, video:PackFile|null, title, description, tags, thumbnails:PackFile[], audience:"not_made_for_kids", alteredContent?, playlists?, playlist, chapterNotice?}` (`packages/extension/src/pack.ts:13`, mirroring `packages/app/src/slices/studio/model.ts:37`). CORS on `/ext/*` echoes only the paired extension origin and never `*` (`packages/app/src/edge/http/studio.ts:104`). Pairing accepts only a loopback base URL (`packages/extension/src/background.ts:98`). Host permissions are `http://127.0.0.1/*` and `http://localhost/*` (`packages/extension/static/manifest.json:13`). The content script fills the Studio dialog and does not publish (`packages/extension/src/content.ts:174`).
+`PackItem` (app side `packages/app/src/slices/studio/model.ts:37`) is `{kind:"video"|"short", short?, video:PackFile|null, title, titles, description, tags, thumbnails:PackFile[], audience:"not_made_for_kids", alteredContent, playlists, playlist, pickable?, scheduleAt?, captions?, endScreenVideoId?, relatedVideoId?, pinnedComment?, chapterNotice?}`; the extension's copy is `packages/extension/src/pack.ts:13`. CORS on `/ext/*` echoes only the paired extension origin (or any extension origin on `/ext/pair`) and never `*` (`allowOrigin`, `packages/app/src/edge/http/studio.ts:179`). Pairing accepts only a loopback base URL (`packages/extension/src/background.ts:264`). Host permissions are `http://127.0.0.1/*`, `http://localhost/*` and `https://www.youtube.com/oembed*`; permissions are `storage`, `clipboardWrite` and `alarms` (`packages/extension/static/manifest.json:12`-`:17`). The Studio content script fills the dialog, types the posting plan's time into the Visibility step (`fillSchedule`, `packages/extension/src/studio-pages.ts:58`), and never presses Next, Save or Publish (`packages/extension/src/content.ts:17`, `:183`); the Details, Analytics and A/B pages never press Schedule, Publish or Set test (`packages/extension/src/studio-pages.ts:9`).
 
 ### Telemetry and site
 
@@ -273,41 +292,41 @@ Shutdown (`packages/app/src/main.ts:752`) runs in this order:
 The build composes packages in this order (`package.json:12`):
 
 1. `@slopify/web` builds with `vite build`.
-2. `@slopify/extension` builds with esbuild into `dist/chrome`, `dist/firefox` and two zips (`packages/extension/scripts/build.mjs:46`, `:70`).
+2. `@slopify/extension` builds six esbuild entry points (`background`, `comment`, `content`, `options`, `popup`, `video-frame`) into `dist/chrome`, `dist/firefox` and two zips (`packages/extension/scripts/build.mjs:46`, `:73`). `packages/extension/scripts/publish-chrome.mjs` uploads the Chrome zip to the Chrome Web Store from the release workflow and stops without failing when its environment variables are absent (`packages/extension/scripts/publish-chrome.mjs:1`-`:11`).
 3. The app builds with `tsc`, then copies migrations, assets, `web/dist` → `app/dist/web` (`packages/app/scripts/copy-web.mjs`) and the extension zips → `app/dist/extension` (`packages/app/scripts/copy-extension.mjs:6`).
 
 The site and collector deploy separately with `wrangler deploy` (`package.json:16`).
 
-Browser composition: `start` (`packages/web/src/main.tsx:24`) builds the version watch, the API client (`createApi` over `watchingFetch`, with XHR uploads) and the event mux. It then renders `QueryClientProvider` → `AppProvider` → `RouterProvider` (`:40`). The root route renders `Shell` (`packages/web/src/router.tsx:38`), which nests `FormDraftsProvider` → `PlayDraftProvider` → `TutorialProvider` → `CommandPaletteProvider` → `CurrentChannelProvider` (`packages/web/src/components/shell.tsx:166`) around the route outlet (`:495`).
+Browser composition: `start` (`packages/web/src/main.tsx:24`) builds the version watch, the API client (`createApi` over `watchingFetch`, with XHR uploads) and the event mux. It then renders `QueryClientProvider` → `AppProvider` → `RouterProvider` (`:40`). The root route renders `Shell` (`packages/web/src/router.tsx:39`), which nests `FormDraftsProvider` → `PlayDraftProvider` → `TutorialProvider` → `CommandPaletteProvider` → `CurrentChannelProvider` (`packages/web/src/components/shell.tsx:166`) around the route outlet (`:495`).
 
 ## Frontend
 
-**Rendering model.** The web app is one client-rendered React 19 SPA built with Vite. It has no SSR and no second HTML entry (`packages/web/index.html:12`, `packages/web/vite.config.ts:13`). Hono serves `dist/web` as static files and falls back to `index.html` for client routes (`packages/app/src/edge/http/app.ts:314`). In development, Vite proxies `/api` and `/files` to `http://127.0.0.1:6969` as an unbuffered stream so SSE works (`packages/web/vite.config.ts:18`). The public site (`packages/site/public/index.html`, `channel.html`) is hand-written static HTML with one module script (`packages/site/public/index.html:43`). The extension options page is static HTML (`packages/extension/static/options.html`).
+**Rendering model.** The web app is one client-rendered React 19 SPA built with Vite. It has no SSR and no second HTML entry (`packages/web/index.html:12`, `packages/web/vite.config.ts:13`). Hono serves `dist/web` as static files and falls back to `index.html` for client routes (`packages/app/src/edge/http/app.ts:314`). In development, Vite proxies `/api` and `/files` to `http://127.0.0.1:6969` as an unbuffered stream so SSE works (`packages/web/vite.config.ts:18`). The public site (`packages/site/public/index.html`, `channel.html`) is hand-written static HTML with one module script (`packages/site/public/index.html:43`). The extension options page and toolbar popup are static HTML (`packages/extension/static/options.html`, `packages/extension/static/popup.html`).
 
-**Routes.** The route tree is built with TanStack Router (`packages/web/src/router.tsx:603`):
+**Routes.** The route tree is built with TanStack Router (`packages/web/src/router.tsx:610`):
 
 | Path | Component | Notes |
 | --- | --- | --- |
-| `/` | `HomeRoute` | `router.tsx:62` |
-| `/projects` | `ProjectsRoute` | search `show` filter, `:68` |
-| `/projects/$projectId` | `ProjectRoute` | keyed by project id; opens drafts through the Play session, `:250`, `:429` |
-| `/welcome` | `WelcomeRoute` | `:85` |
-| `/play` | `PlayRoute` | `:91` |
-| `/prompts`, `/entries`, `/templates`, `/document-themes`, `/narration-aliases` | children of the pathless `_library` layout (`LibraryLayout`) | `kind` and `category` are validated search params; `:99`, `:256`, `:279`, `:153`, `:310`, `:304` |
-| `/prompts/new`, `/prompts/$promptId`, `/entries/new`, `/entries/$entryId`, `/document-themes/new`, `/document-themes/$themeId` | editor routes | `:263`, `:273`, `:288`, `:298`, `:321`, `:329` |
-| `/library` | redirect → `/prompts?kind=article` | `:105` |
-| `/channels`, `/channels/$channelId` | `ChannelsRoute`, `ChannelRoute` | channel tab in search, `:114`, `:124` |
-| `/calendar` | `CalendarRoute` | validated tab search, `:175` |
-| `/schedules`, `/schedules/$scheduleId` | redirect → `/calendar?tab=schedules` | `:182`, `:190` |
-| `/settings` | `SettingsRoute` | `section` and `note` search, `:355` |
-| `/usage` | redirect → `/settings?section=usage` | `:400` |
-| `/help`, `/help/tutorials` | redirect → `/help/tutorials/Home` | `:384`, `:391` |
-| `/help/tutorials/$page` | `TutorialsRoute` | `:368` |
-| `/design` | lazy `DesignRoute`, only when `import.meta.env.DEV` | `:590`, `:599` |
+| `/` | `HomeRoute` | `router.tsx:63` |
+| `/projects` | `ProjectsRoute` | search `show` filter, `:69` |
+| `/projects/$projectId` | `ProjectRoute` | keyed by project id; opens drafts through the Play session, `:251`, `:436`. Shorts and YouTube render inside the Video section, and a `shorts` or `youtube` section id opens `video` (`packages/web/src/routes/project.tsx:401`) |
+| `/welcome` | `WelcomeRoute` | `:86` |
+| `/play` | `PlayRoute` | `:92` |
+| `/prompts`, `/entries`, `/templates`, `/document-themes`, `/narration-aliases`, `/ab-results` | children of the pathless `_library` layout (`LibraryLayout`); `/ab-results` is `AbResultsRoute`, listing finished A/B tests from `GET /api/studio/ab-results` (`packages/web/src/routes/ab-results.tsx:5`), linked as Library → A/B results (`packages/web/src/routes/library.tsx:20`) | `kind` and `category` are validated search params; `:100`, `:257`, `:280`, `:154`, `:317`, `:305`, `:311` |
+| `/prompts/new`, `/prompts/$promptId`, `/entries/new`, `/entries/$entryId`, `/document-themes/new`, `/document-themes/$themeId` | editor routes | `:264`, `:274`, `:289`, `:299`, `:328`, `:336` |
+| `/library` | redirect → `/prompts?kind=article` | `:106` |
+| `/channels`, `/channels/$channelId` | `ChannelsRoute`, `ChannelRoute` | channel tab in search, `:115`, `:125` |
+| `/calendar` | `CalendarRoute` | validated tab search, `:176` |
+| `/schedules`, `/schedules/$scheduleId` | redirect → `/calendar?tab=schedules` | `:183`, `:191` |
+| `/settings` | `SettingsRoute` | `section` and `note` search, `:362`; Settings → YouTube Studio holds the posting plan editor `PostingPlanSettings` (`packages/web/src/studio/settings-panel.tsx:31`, `packages/web/src/studio/posting-plan.tsx:52`) |
+| `/usage` | redirect → `/settings?section=usage` | `:407` |
+| `/help`, `/help/tutorials` | redirect → `/help/tutorials/Home` | `:391`, `:398` |
+| `/help/tutorials/$page` | `TutorialsRoute` | `:375` |
+| `/design` | lazy `DesignRoute`, only when `import.meta.env.DEV` | `:597`, `:606` |
 
 The shell rail has the destinations Home, Projects, Calendar, Channels, Library and Settings (`packages/web/src/components/shell.tsx:70`), plus the New project key to `/play` (`:413`) and a phone bottom bar (`:499`).
 
-**Component kit.** `packages/web/src/components/kit/` holds the design-system components. 186 non-test files import from it; 20 still import the older Radix/shadcn wrappers in `packages/web/src/components/ui/` (`packages/web/components.json:1`). The rules for using the kit are in `docs/capstone/standards.md:83` and `docs/design-system.md`.
+**Component kit.** `packages/web/src/components/kit/` holds the design-system components. 189 non-test files import from it; 20 still import the older Radix/shadcn wrappers in `packages/web/src/components/ui/` (`packages/web/components.json:1`). The rules for using the kit are in `docs/capstone/standards.md:83` and `docs/design-system.md`.
 
 | File | Exports |
 | --- | --- |
@@ -351,7 +370,7 @@ There is no barrel file; components are imported by file.
 
 **API client seam.**
 
-- `createApi` (`packages/web/src/api.ts:197`) wraps `hc<AppType>` at `${origin}/api` (`:200`) and adds `xhrUpload` for multipart uploads with progress (`:220`).
+- `createApi` (`packages/web/src/api.ts:200`) wraps `hc<AppType>` at `${origin}/api` (`:203`) and adds `xhrUpload` for multipart uploads with progress (`:223`). The Studio client calls (posting plan, stats, A/B results, project videos) are in the same file (`:535`-`:659`).
 - `watchingFetch` reads `X-Slopify-Version` to prompt a reload on a version change (`packages/web/src/version.ts:53`).
 - `http.ts` turns problem JSON into plain errors and `SaveResult` (`packages/web/src/http.ts:24`, `:41`).
 - Feature API modules sit beside their screens and validate responses with shared Zod schemas imported through `@app`, for example `packages/web/src/play/draft-api.ts`.

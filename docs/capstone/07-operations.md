@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: d6e2acd13d1e
+content_hash: 50c66fdc7bfe
 paths_covered:
   - ":(top)package.json"
   - ":(top)Dockerfile"
@@ -68,7 +68,7 @@ paths_covered:
 
 # Operations
 
-The published package is `@gentbajko/slopify` 3.0.13, bin `slopify` → `dist/edge/cli.js`, Node `>=26` (`packages/app/package.json:3`, `packages/app/package.json:14`, `packages/app/package.json:17`). The workspace holds five packages: `app`, `web`, `extension`, `collector`, `site` (`package.json:5`, `packages/`).
+The published package is `@gentbajko/slopify` 3.3.0, bin `slopify` → `dist/edge/cli.js`, Node `>=26` (`packages/app/package.json:3`, `packages/app/package.json:14`, `packages/app/package.json:17`). The workspace holds five packages: `app`, `web`, `extension`, `collector`, `site` (`package.json:5`, `packages/`).
 
 ## Processes
 
@@ -196,6 +196,10 @@ Values of names matching `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, `*_KEY` are shown 
 | SLOPIFY_SPEECH_VOICE / _OUT / _TEXT | set on the Windows System.Speech PowerShell child | `packages/app/src/adapters/tts/system.ts:65` | internal |
 | npm_config_update_notifier | `false` on the update installer child | `packages/app/src/updater/worker.ts:139` | internal |
 | SLOPIFY_SMOKE_IMAGE / SLOPIFY_SMOKE_KEEP / SLOPIFY_DOCKER_FIXTURE_OUT | `slopify:smoke` / unset (failed smoke material removed unless `1`) / unset | `packages/app/scripts/container-smoke.sh:12`, `packages/app/scripts/docker-install-smoke.mjs:249`, `packages/app/scripts/docker-install-smoke.mjs:136` | scripts only |
+| GH_TOKEN | `<redacted>`; set to the workflow's `github.token` in the CI `changes` job | `packages/app/scripts/ci-changes.mjs:67`, `.github/workflows/ci.yml:88-89` | script header `packages/app/scripts/ci-changes.mjs:4-9` |
+| GITHUB_REPOSITORY | set by GitHub Actions; unset locally (the script then compares with the last release tag) | `packages/app/scripts/ci-changes.mjs:66` | script header |
+| CWS_SERVICE_ACCOUNT_JSON | `<redacted>`; repository secret passed to the release `chrome-web-store` job | `packages/extension/scripts/publish-chrome.mjs:19`, `.github/workflows/release.yml:82` | script header `packages/extension/scripts/publish-chrome.mjs:5-11` |
+| CWS_PUBLISHER_ID / CWS_EXTENSION_ID | unset; repository secrets passed to the same job (all three unset → the upload is skipped with exit 0) | `packages/extension/scripts/publish-chrome.mjs:20-26`, `.github/workflows/release.yml:83-84` | script header |
 | SLOPIFY_APP_DIR, SAMPLE_RECORD, SAMPLE_SCRATCH, FFMPEG | sample-archive build only | `packages/app/src/sample-build/generate.ts:584`, `packages/app/scripts/build-sample.mjs:53` | script header |
 | DB | Cloudflare D1 binding `slopify-collector` | `packages/collector/src/index.ts`, `packages/collector/wrangler.jsonc:22` | `docs/development.md:49` |
 
@@ -217,6 +221,7 @@ Provider API keys are SQLite settings rows, not environment configuration (`pack
 | `bin/ffmpeg-static-<v>-<platform>-<arch>/` | Recovered ffmpeg | `packages/app/src/adapters/ffmpeg.ts:42` |
 | `updates/<version>/`, `updates/current.json`, `updates/npm-cache/`, `updates/before-<v>-<ms>.db`, `updates/plan-<uuid>.json` | Managed native updates; older installs and backups pruned after commit | `packages/app/src/updater/plan.ts:39`, `packages/app/src/updater/plan.ts:125`, `packages/app/src/updater/plan.ts:154`, `packages/app/src/updater/worker.ts:25` |
 | `autostart/start-slopify.{sh,cmd}` | Login launcher | `packages/app/src/edge/autostart/native.ts:80` |
+| `<projects>/.render-cache/<projectId>/` | Clips of the project's last video render, reused when their key matches; all caches together capped at 30 GiB with a free-space floor; skipped when the files location moves | `packages/app/src/slices/storage/layout.ts:12-16`, `packages/app/src/slices/video/clip-cache.ts:16-31`, `packages/app/src/slices/storage/files-location.ts:418` |
 | `imports/`, `cache/style-preview/` | Backup import workspace; style preview cache | `packages/app/src/slices/storage/backup-import.ts:169`, `packages/app/src/slices/style-preview/service.ts:16` |
 | `home/` (Docker only) | Container `HOME` | `Dockerfile:22` |
 
@@ -226,7 +231,7 @@ User-visible files: a fresh native install with the default data dir stores `fil
 
 | Item | Details | Source |
 |---|---|---|
-| Image | `ghcr.io/gentbajko/slopify:<version>` and `:latest`, linux/amd64 + linux/arm64. Two-stage `node:26-bookworm-slim`; `fonts-dejavu-core`, `espeak-ng`, verified ffmpeg-static, English caption model from `docker/subtitle-model/`; label `io.slopify.host-cli-protocol=1`; `USER node`, `VOLUME /data`, `EXPOSE 6969` | `Dockerfile:1`, `Dockerfile:19`, `Dockerfile:39`, `Dockerfile:51`, `Dockerfile:56`, `.github/workflows/release.yml:69` |
+| Image | `ghcr.io/gentbajko/slopify:<version>` and `:latest`, linux/amd64 + linux/arm64. Two-stage `node:26-bookworm-slim`; `fonts-dejavu-core`, `espeak-ng`, verified ffmpeg-static, English caption model from `docker/subtitle-model/`; label `io.slopify.host-cli-protocol=1`; `USER node`, `VOLUME /data`, `EXPOSE 6969` | `Dockerfile:1`, `Dockerfile:19`, `Dockerfile:39`, `Dockerfile:51`, `Dockerfile:56`, `.github/workflows/release.yml:96-101` |
 | Image healthcheck | `GET /api/health`, interval 30 s, timeout 5 s, start period 90 s | `Dockerfile:59` |
 | Compose service `slopify` | No profiles. `restart: unless-stopped`; `127.0.0.1:${SLOPIFY_PORT-6969}:6969`; healthcheck `/api/health` 30 s / 5 s / start 120 s / start interval 2 s | `compose.yaml:10`, `compose.yaml:15`, `compose.yaml:19`, `compose.yaml:57` |
 | Volumes | external named volume `${SLOPIFY_VOLUME:-slopify-data}` → `/data`; bind projects → `/data/projects`; bind backups → `/data/backups`; read-only bind helper share → `/opt/slopify-host`; read-only bind activation → `/opt/slopify-install` | `compose.yaml:20`, `compose.yaml:68` |
@@ -251,17 +256,17 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 
 | Action | Exact command | Source |
 |---|---|---|
-| Install | `npm install` (CI: `npm ci`) | `docs/development.md:7`, `.github/workflows/ci.yml:18` |
+| Install | `npm install` (CI: `npm ci`) | `docs/development.md:7`, `.github/workflows/ci.yml:19` |
 | Pre-commit hook | `git config core.hooksPath .githooks` once; hook runs `npx --no-install biome check --staged --no-errors-on-unmatched` | `docs/development.md:8`, `.githooks/pre-commit:4` |
 | Lint / format check | `npm run lint` → `biome check .` | `package.json:9` |
 | Type check | `npm run typecheck` (workspaces; web first emits app declarations) | `package.json:10`, `packages/web/package.json:9` |
-| Tests | `npm test` → `vitest run`; CI shards `npx vitest run --shard=N/4` | `package.json:11`, `.github/workflows/ci.yml:41` |
+| Tests | `npm test` → `vitest run`; CI shards `npx vitest run --shard=N/5` | `package.json:11`, `.github/workflows/ci.yml:43` |
 | Build | `npm run build` → web (`vite build`), extension, then app (`tsc -p tsconfig.build.json` + copy migrations, assets, web, extension) | `package.json:12`, `packages/app/package.json:26` |
 | Migrations | No standalone command; boot runs `migrate` over `dist/.../migrations/*.sql` (35 files, `0001`–`0042`) sorted by name, each in a transaction; a DB newer than the app is refused | `packages/app/src/main.ts:253`, `packages/app/src/kernel/db/migrate.ts:17`, `packages/app/src/kernel/db/migrate.ts:26` |
 | Packed-install smoke | `node packages/app/scripts/install-smoke.mjs` (after build): `npm pack`, global installs, starts bin and npm-exec forms until `/api/health` | `packages/app/scripts/install-smoke.mjs:19` |
-| Image smoke | `docker build -t slopify:smoke .` then `bash packages/app/scripts/container-smoke.sh` and `node packages/app/scripts/host-cli-smoke.mjs` | `.github/workflows/ci.yml:101` |
-| Docker-install smoke | `node packages/app/scripts/docker-install-smoke.mjs` (alias `npm run smoke:docker-install --workspace @gentbajko/slopify`) | `packages/app/package.json:29`, `.github/workflows/ci.yml:107` |
-| Audit | `npm audit --audit-level=high` | `.github/workflows/ci.yml:24` |
+| Image smoke | `docker build -t slopify:smoke .` then `bash packages/app/scripts/container-smoke.sh` and `node packages/app/scripts/host-cli-smoke.mjs` | `.github/workflows/ci.yml:112-116` |
+| Docker-install smoke | `node packages/app/scripts/docker-install-smoke.mjs` (alias `npm run smoke:docker-install --workspace @gentbajko/slopify`) | `packages/app/package.json:29`, `.github/workflows/ci.yml:118` |
+| Audit | `npm audit --audit-level=high` | `.github/workflows/ci.yml:25` |
 | Sample archives | `node packages/app/scripts/build-sample.mjs [--short \| --demo <id>] [--assets <dir>] [out.tar]` (needs ffmpeg, `magick`) | `packages/app/scripts/build-sample.mjs:9` |
 | Multilingual alignment check | `node packages/app/scripts/validate-multilingual-alignment.mjs --audio … --text … --language …` | `packages/app/scripts/validate-multilingual-alignment.mjs:7` |
 | Collector schema | `npm run schema:local` / `npm run schema:remote` (`--workspace @slopify/collector`) | `packages/collector/package.json:9`, `packages/collector/package.json:12` |
@@ -272,8 +277,8 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 ## Release process
 
 1. Draft notes: `node scripts/patch-notes.mjs <version> [--force]` writes `docs/patch-notes/<version>.md` from `docs/capstone/changelog.d/*.md` fragments not in the previous `x.y.z` tag and prepends the version to `docs/patch-notes/index.json` (`scripts/patch-notes.mjs:5`). The build copies `docs/patch-notes/` to `dist/patch-notes/` and `docs/wiki/` to `dist/tutorials/`; `.dockerignore` keeps both (`packages/app/scripts/copy-assets.mjs:15`, `.dockerignore:10`).
-2. Push main. CI (`ci.yml`, every branch push and PR) runs lint, typecheck, build, audit and four test shards on Node 26. The Windows job (install smoke plus Windows-specific tests) and the container matrix (`image`, `docker-install`) run only when `ci-changes.mjs` reports the app version untagged and relevant changes since the last release (`.github/workflows/ci.yml:10`, `.github/workflows/ci.yml:44`, `.github/workflows/ci.yml:68`, `packages/app/scripts/ci-changes.mjs:1`).
-3. Tag the passing commit with plain `x.y.z`. `release.yml` checks tag = `packages/app/package.json` version, requires a successful `ci.yml` run on main for that SHA, publishes `npm publish --provenance --access public --workspace @gentbajko/slopify` via OIDC, then builds per-arch images pushed by digest and merges them under `:<version>` and `:latest` (`.github/workflows/release.yml:20`, `.github/workflows/release.yml:35`, `.github/workflows/release.yml:58`, `.github/workflows/release.yml:131`).
+2. Push main. CI (`ci.yml`, every branch push and PR) runs lint, typecheck, build, audit and five test shards on Node 26. The Windows job (install smoke plus Windows-specific tests) and the container matrix (`image`, `docker-install`) run only when `ci-changes.mjs` reports the app version untagged and relevant changes since that job last passed on main (read through the GitHub API with `GH_TOKEN`), or since the last release tag when no such run is found (`.github/workflows/ci.yml:10`, `.github/workflows/ci.yml:46`, `.github/workflows/ci.yml:71`, `packages/app/scripts/ci-changes.mjs:1-9`).
+3. Tag the passing commit with plain `x.y.z`. `release.yml` checks tag = `packages/app/package.json` version, requires a successful `ci.yml` run on main for that SHA, then, side by side, publishes `npm publish --provenance --access public --workspace @gentbajko/slopify` via OIDC, builds and uploads the extension to the Chrome Web Store (`chrome-web-store` job), and builds per-arch images pushed by digest; `container-merge` waits for the images and the npm publish, then tags `:<version>` and `:latest` (`.github/workflows/release.yml:21`, `.github/workflows/release.yml:36-42`, `.github/workflows/release.yml:61`, `.github/workflows/release.yml:66-84`, `.github/workflows/release.yml:136-137`, `.github/workflows/release.yml:158-159`).
 4. Cloudflare deploys are manual (`npm run deploy`); first-time collector setup is `wrangler login`, `wrangler d1 create slopify-collector`, remote schema, deploy (`docs/development.md:47`).
 
 ## Native updates
@@ -297,4 +302,4 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 
 ## Extension packaging
 
-`@slopify/extension` 0.1.0 (private) builds with `node scripts/build.mjs`: esbuild bundles `background`, `content`, `options` as IIFE for `chrome120` and `firefox128`, copies `options.html`, icons and manifest, and zips `dist/slopify-studio-chrome.zip` and `dist/slopify-studio-firefox.zip`; Firefox's manifest swaps the service worker for `background.scripts` and adds gecko id `studio@slopify.local` (`packages/extension/package.json:8`, `packages/extension/scripts/build.mjs:28`, `packages/extension/scripts/build.mjs:45`, `packages/extension/scripts/build.mjs:70`). The MV3 manifest requests `storage`, `clipboardWrite`, hosts `http://127.0.0.1/*` and `http://localhost/*`, and injects `content.js` into `https://studio.youtube.com/*` (`packages/extension/static/manifest.json`). The app build copies both zips into `dist/extension/` and fails if they are missing; the running app serves them at `GET /api/studio/extension/{chrome,firefox}.zip`, 404 with a rebuild instruction when absent (`packages/app/scripts/copy-extension.mjs:6`, `packages/app/src/edge/http/studio.ts:72`, `packages/app/src/edge/http/studio.ts:234`). No workflow or script publishes it to a browser store; `release.yml` has no extension job (`.github/workflows/release.yml:11`).
+`@slopify/extension` 1.0.0 (private; manifest `version` 1.0.0) builds with `node scripts/build.mjs`: esbuild bundles `background`, `comment`, `content`, `options`, `popup`, `video-frame` as IIFE for `chrome120` and `firefox128`, copies `options.html`, `popup.html`, `video-frame.html`, icons and manifest, and zips `dist/slopify-studio-chrome.zip` and `dist/slopify-studio-firefox.zip`; Firefox's manifest swaps the service worker for `background.scripts` and adds gecko id `studio@slopify.local` (`packages/extension/package.json:3`, `packages/extension/package.json:8`, `packages/extension/scripts/build.mjs:28`, `packages/extension/scripts/build.mjs:45-62`, `packages/extension/scripts/build.mjs:73`). The MV3 manifest requests `storage`, `clipboardWrite`, `alarms`, hosts `http://127.0.0.1/*`, `http://localhost/*` and `https://www.youtube.com/oembed*`, injects `content.js` into `https://studio.youtube.com/*` and `comment.js` into `https://www.youtube.com/watch*`, opens `popup.html` from the toolbar and exposes `video-frame.html` to Studio (`packages/extension/static/manifest.json:4`, `:12-30`, `:37-50`). The worker's `slopify-ab-tests` alarm runs every 15 min (`packages/extension/src/background.ts:408-418`). The app build copies both zips into `dist/extension/` and fails if they are missing; the running app serves them at `GET /api/studio/extension/{chrome,firefox}.zip`, 404 with a rebuild instruction when absent (`packages/app/scripts/copy-extension.mjs:6`, `packages/app/src/edge/http/studio.ts:147`, `packages/app/src/edge/http/studio.ts:434`). On a release tag the `chrome-web-store` job builds the extension workspace and runs `packages/extension/scripts/publish-chrome.mjs`, which signs a service-account JWT, uploads the Chrome zip to the Chrome Web Store API v2 and submits it for review; missing secrets skip it, and a version the store already has counts as nothing new (`.github/workflows/release.yml:67-85`, `packages/extension/scripts/publish-chrome.mjs:23-26`, `:59-71`, `:74-82`). No Firefox store upload exists.

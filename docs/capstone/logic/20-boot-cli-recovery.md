@@ -2,10 +2,10 @@
 absorbed_from:
   - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 42d651a56dc6
+content_hash: e5cf110a9243
 paths_covered:
   - ":(top)packages/app/src/edge/cli.ts"
   - ":(top)packages/app/src/edge/cli-args.ts"
@@ -32,7 +32,7 @@ paths_covered:
 
 ## Trigger & preconditions
 
-- Triggers: running the `slopify` binary (`npx @gentbajko/slopify`, a global install, or the autostart login entry), `slopify --docker` / `install --docker` / `update`, SIGINT/SIGTERM, saving a CLI executable path in Settings, and invoking a CLI-backed provider (`packages/app/package.json:15-17`, `packages/app/src/edge/cli.ts:11-133`).
+- Triggers: running the `slopify` binary (`npx @gentbajko/slopify`, a global install, or the autostart login entry), `slopify --docker` / `install --docker` / `update`, SIGINT/SIGTERM, saving a CLI executable path in Settings, and invoking a CLI-backed provider (`packages/app/package.json:16-18`, `packages/app/src/edge/cli.ts:11-133`).
 - Preconditions: Node `>=26`; a writable data directory (default `~/.slopify`); for FFmpeg either `SLOPIFY_FFMPEG`/`FFMPEG_BIN`, the bundled `ffmpeg-static` binary, or a cached/downloadable copy (`packages/app/package.json:13-15`, `packages/app/src/kernel/config/index.ts:23-41`, `packages/app/src/adapters/ffmpeg.ts:21-60`).
 
 ## Steps
@@ -62,7 +62,7 @@ paths_covered:
 9. **CLI executable path.** `PUT /api/providers/:id/path` accepts an absolute path without control characters (≤ 4096) or blank (reset to PATH lookup). A non-blank path must be a file, executable (readable for `.js/.mjs/.cjs` and on Windows), and answer the version probe (15 s timeout); Codex must report ≥ 0.149.1. Saves per installation are serialized; `codex-image` shares Codex's path. The stored path is read on every invocation. In Docker the endpoint refuses (the host bridge finds the tools) (`packages/app/src/slices/settings/cli-paths.ts:11-140`, `packages/app/src/slices/settings/cli-status.ts:20-90`).
 10. **Command resolution.** `cliCommand` runs `.js/.mjs/.cjs` entries through Node; on Windows it resolves PATH with `.exe/.com/.cmd/.bat`, and turns a recognized npm/`%dp0%` Node shim (≤ 64 KiB) into Node + script; other batch files are refused. Arguments are an argv array; no shell is used (`packages/app/src/kernel/cli-command.ts:9-59`).
 11. **Diagnostics.** `GET /api/diagnostics` downloads `slopify-diagnostics.json`: app version, schema version, platform, Node major, provider id/family/name/readiness/CLI path, project count and catalogue status (`packages/app/src/edge/http/diagnostics.ts:10-41`).
-12. **Install smoke.** `scripts/install-smoke.mjs` packs the package and, in parallel, starts it via a global install (Windows through `ComSpec` `call`), via `npm exec --yes --package <tgz> -- slopify`, and via an `--ignore-scripts` install (which must fetch FFmpeg itself, then start again with an unreachable `FFMPEG_BINARIES_URL`), each with its own data dir and port and a 210 s health deadline (`packages/app/scripts/install-smoke.mjs:16-107`, `packages/app/scripts/install-smoke.mjs:106-172`).
+12. **Install smoke.** `scripts/install-smoke.mjs` packs the package, then runs two global installs one after another into npm's shared cache with `--prefer-offline --no-audit --no-fund` (one plain, one `--ignore-scripts`; run in sequence because two installs into one cache collided on Windows). It then starts, in parallel, the global install (Windows through `ComSpec` `call`, followed by `slopify update` against the running app, which must answer "already the newest version"), `npm exec --yes --prefer-offline --package <tgz> -- slopify`, and the `--ignore-scripts` install (which must fetch FFmpeg itself, then start again with an unreachable `FFMPEG_BINARIES_URL`), each with its own data dir and port and a 210 s health deadline (`packages/app/scripts/install-smoke.mjs:16-108`, `packages/app/scripts/install-smoke.mjs:115-152`, `packages/app/scripts/install-smoke.mjs:167-181`).
 
 ## Branches
 

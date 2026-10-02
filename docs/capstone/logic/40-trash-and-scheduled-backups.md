@@ -2,10 +2,10 @@
 scenario: trash-and-scheduled-backups
 screens: [01-projects, 08-settings]
 depends_on: [01-pipeline-lifecycle, 13-cancel, 14-storage-and-downloads, 15-prompt-management, 21-app-updater, 22-play-drafts, 24-project-templates, 25-scheduled-jobs]
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 5f9d776840a3
+content_hash: f5fb20ded3f1
 paths_covered:
   - ":(top)packages/app/src/slices/trash/**"
   - ":(top)packages/app/src/slices/backups/**"
@@ -32,7 +32,7 @@ Three ways the install keeps what the user made: a 30-day trash that every delet
 
 | Trigger | Where | Precondition |
 |---|---|---|
-| Delete a project | Projects row delete, confirm "Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash." (`packages/web/src/routes/projects.tsx:304-307`) → `DELETE /api/projects/:id` (`packages/app/src/edge/http/projects.ts:123-140`) | Project exists and is not already trashed; not busy (in-flight call or derived state `running`) (`packages/app/src/slices/trash/service.ts:73-87`, `packages/app/src/slices/storage/delete-project.ts:35-42`) |
+| Delete a project | Projects row delete, confirm "Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash." (`packages/web/src/routes/projects.tsx:306-309`) → `DELETE /api/projects/:id` (`packages/app/src/edge/http/projects.ts:136-153`) | Project exists and is not already trashed; not busy (in-flight call or derived state `running`) (`packages/app/src/slices/trash/service.ts:73-87`, `packages/app/src/slices/storage/delete-project.ts:35-42`) |
 | Delete a prompt / intro-outro | Library delete → `trashPrompt` / entries equivalent (`packages/app/src/slices/library/repo.ts:68-78`, `:132`) | Row live (`deleted_at IS NULL`) |
 | Delete a template | Templates delete (`packages/app/src/slices/project-templates/service.ts:112-135`) | Base version matches; no live schedule names it, else `referenced-by-schedule` (`service.ts:122-127`) |
 | Delete a schedule | Schedules delete (`packages/app/src/slices/schedules/service.ts:170-188`) | Status `completed` or `canceled`, else `cancel-required`; version matches (`service.ts:179-181`) |
@@ -60,7 +60,7 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
    - template: clears `deleted_at`; a taken name inserts a new revision `head_version + 1` with the free name (max 200) and moves the head (`service.ts:166-211`).
    - schedule: refused `template-gone` when its template row no longer exists, `template-in-trash` when the template is trashed; otherwise `deleted_at = NULL`, `status = 'paused'`, `next_run_at = NULL`, `version + 1` (`service.ts:213-232`). The screen adds "The schedule is paused. Press Resume on Schedules to run it again." (`packages/web/src/trash/trash-settings.tsx:74-75`).
 6. **Delete now** (confirm dialog "Delete "…" for good?", "Delete for good" / "Keep it") (`trash-settings.tsx:138-157`):
-   - project: must be in `project_trash`; runs `deleteProject` under the per-project control lock: refused while busy, removes the folder (`rmSync` recursive), then the `projects` row, whose children cascade (`packages/app/src/edge/http/trash.ts:69-74`, `packages/app/src/slices/storage/delete-project.ts:44-70`).
+   - project: must be in `project_trash`; runs `deleteProject` under the per-project control lock: refused while busy, removes the folder and the project's render cache folder (`rmSync` recursive), then the `projects` row, whose children cascade (`packages/app/src/edge/http/trash.ts:69-74`, `packages/app/src/slices/storage/delete-project.ts:44-71`).
    - prompt / entry: deletes the trashed row and its History versions (`service.ts:249-259`).
    - template: deletes the trashed row; revisions cascade (`service.ts:260-267`).
    - schedule: sets `purged_at`; the row and its runs stay as the history Schedules lists under Deleted (`service.ts:268-276`).
@@ -70,8 +70,8 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 
 8. `GET /export/summary` answers `{ready:true, projects, files, bytes}` or `{ready:false, detail, busy}`; the client asks it first because a download link cannot show a refusal (`packages/app/src/edge/http/storage.ts:88-105`, `packages/web/src/routes/settings.tsx:362-393`).
 9. `planBackup`: `busyProjects` = every project with a `running` stage, a `running` revision work row, a `queued` queue row, or an in-flight call; any → `BackupBusyError` (`packages/app/src/slices/storage/backup-export.ts:88-111`). Otherwise one read transaction snapshots the migration version, the library part, usage (`telemetry_events` except `install`) and one part per project (`backup-export.ts:112-127`).
-10. **Project part**: rows of every `projectTables` table, parents first — including `project_trash`, excluding the queue, `plan_limit_waits`, `plan_limit_waiters`, `prompt_softening` and `narration_retries` (`packages/app/src/slices/storage/backup-format.ts:36-71`, `backup-export.ts:270-303`); files = every plain file under the project folder (no symlinks, only safe relative paths) (`backup-export.ts:305-328`).
-11. **Library part**: `exportableSettings` (known portable keys only; local-only keys such as the notification URL, Studio pairing, tutorial/what's-new/patch-notes seen-state and `first-run.done` are dropped, unknown keys are skipped) (`packages/app/src/slices/storage/portable.ts:475-535`); every row of prompts, entries (trashed ones included), voices, document themes, narration aliases, templates and revisions, schedules with runs and topics, library versions, channels, cast, episode memories, channel videos, standalone usage; every `image_blobs` picture as a file; active Play drafts only, their attachments, and their staged uploads when complete on disk (else the attachment is written `reattach`); template instantiations of those drafts; uploaded fonts (`backup-export.ts:330-440`).
+10. **Project part**: rows of every `projectTables` table, parents first — including `project_trash`, including the Studio tables `youtube_videos`, `upload_slots`, `video_stats` and `ab_results`; excluding the queue, `plan_limit_waits`, `plan_limit_waiters`, `prompt_softening`, `narration_retries`, `prepared_videos` and `project_set_aside` (`packages/app/src/slices/storage/backup-format.ts:38-80`, `backup-export.ts:270-303`); files = every plain file under the project folder (no symlinks, only safe relative paths) (`backup-export.ts:305-328`).
+11. **Library part**: `exportableSettings` (known portable keys only; local-only keys such as the notification URL, Studio pairing, tutorial/what's-new/patch-notes seen-state and `first-run.done` are dropped, unknown keys are skipped) (`packages/app/src/slices/storage/portable.ts:478-545`); every row of prompts, entries (trashed ones included), voices, document themes, narration aliases, templates and revisions, schedules with runs and topics, library versions, channels, cast, episode memories, channel videos, standalone usage; every `image_blobs` picture as a file; active Play drafts only, their attachments, and their staged uploads when complete on disk (else the attachment is written `reattach`); template instantiations of those drafts; uploaded fonts (`backup-export.ts:330-440`).
 12. The manifest records `format "slopify-backup"`, `schemaVersion 2`, app version (≤ 40 chars), database version, a new `backupId`, `createdAt`, per-project bytes, file count and bytes; the exact archive length is computed before the first byte and sent as `content-length`; the file name is `slopify-backup-YYYY-MM-DD.tar` (`backup-export.ts:156-193`, `backup-format.ts:20-21`, `packages/app/src/edge/http/storage.ts:133-137`).
 13. Member order: `manifest.json`, `data/library.json`, `data/usage.json`, `data/projects/<id>.json`…, `files/…`, `checksums.json` (`backup-format.ts:4-13`). `streamBackup` reads files 1 MiB at a time with `O_NOFOLLOW`, hashes each with SHA-256 as it streams, and writes the checksum list last (`backup-export.ts:196-245`). The HTTP body pulls one chunk per read, so a slow download reads files no faster than it sends (`storage.ts:115-132`).
 
@@ -79,7 +79,7 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 
 14. `PUT /import` dispatches on content type: `application/x-tar` → `importBackup` over the streamed body; `application/zip` → legacy `importPortable`, whole-in-memory, ≤ 100 MB; anything else 415 (`packages/app/src/edge/http/storage.ts:139-175`).
 15. `importBackup` marks the database as importing, removes any leftover `<dataDir>/imports/`, and creates `imports/<id>` mode `0700` (`packages/app/src/slices/storage/backup-import.ts:159-172`).
-16. Members are read in order; each JSON part is size-capped (manifest 4 MiB, others 256 MiB) and zod-checked. A manifest with a newer `schemaVersion` or `databaseVersion` than this build is refused 422 "made by a newer Slopify"; a project listed twice is damaged (`backup-import.ts:185-222`, `:262-286`, `backup-format.ts:106-110`).
+16. Members are read in order; each JSON part is size-capped (manifest 4 MiB, others 256 MiB) and zod-checked. A manifest with a newer `schemaVersion` or `databaseVersion` than this build is refused 422 "made by a newer Slopify"; a project listed twice is damaged (`backup-import.ts:185-222`, `:262-286`, `backup-format.ts:115-119`).
 17. Once manifest, library, usage and every project part are in, `prepare` loads them into a scratch database at the backup's schema, migrates it forward, checks it with the app's own readers, decides which projects and drafts come in, assigns every expected file a waiting place under `imports/<id>/` (or none when skipped), and checks free space: refused 409 when `needed + 64 MiB > free` on the data dir (`backup-import.ts:339-427`, `:665-674`).
 18. Every further member must be expected, the right size, and unreceived; after the stream every expected file must be present and match `checksums.json`, and the list may name nothing extra (`backup-import.ts:223-243`).
 19. `commit` runs in one transaction with `defer_foreign_keys`, moving waiting files into place inside it and moving them back if it throws (`backup-import.ts:680-695`, `:984-994`). Merge rules (`backup-import.ts:66-83`):
@@ -110,7 +110,7 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 - **Kind of item deleted.** Only these five kinds use the trash (`packages/app/src/slices/trash/model.ts:13`). Other deletes (voices, document themes, narration aliases, channels, cast, drafts) do not pass through it: not implemented for them in `slices/trash/`.
 - **Restoring a schedule whose template is trashed**: 409 "Restore the template first (it is listed here), then restore the schedule." (`packages/app/src/edge/http/trash.ts:34-35`). **Template removed for good**: 409, the schedule can only be deleted now (`trash.ts:36-37`, `packages/app/src/slices/trash/service.ts:260-262`).
 - **Restoring a project** that was queued: the batch queue sees it again in its place (`packages/app/src/slices/batch/index.ts:20-26`); unfinished work continues on the runner tick (`trash.ts:64-66`).
-- **Import file type**: `.tar` full backup vs legacy `.zip` (settings/library only) (`packages/app/src/edge/http/storage.ts:139-175`); the client refuses an empty file or a `.zip` over 100 MB before uploading (`packages/web/src/routes/settings.tsx:396-409`). `exportPortable` still exists but no route calls it (`packages/app/src/slices/storage/portable.ts:192`).
+- **Import file type**: `.tar` full backup vs legacy `.zip` (settings/library only) (`packages/app/src/edge/http/storage.ts:139-175`); the client refuses an empty file or a `.zip` over 100 MB before uploading (`packages/web/src/routes/settings.tsx:396-409`). `exportPortable` still exists but no route calls it (`packages/app/src/slices/storage/portable.ts:195`).
 - **Backup trigger**: `scheduled`, `catch-up` or `manual`; failure text for automatic ones says "It tries again within the hour, or press Back up now", manual says "Press Back up now to try again" (`packages/app/src/slices/backups/service.ts:352-354`).
 - **Folder location**: `null` resolves to `defaultBackupsDir(paths)`, so moving the projects folder moves backups with it (`packages/app/src/slices/backups/folder.ts:12-14`, `packages/app/src/slices/backups/model.ts:31`).
 
@@ -118,11 +118,11 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 
 | Case | Behaviour | Source |
 |---|---|---|
-| Trash a running project | 409 "This project is still running. Use Cancel run on the project page first, then delete it." | `packages/app/src/edge/http/projects.ts:129-139` |
-| Trash an unknown or already-trashed project | 404 "This project no longer exists…" | `projects.ts:130-138`, `packages/app/src/slices/trash/service.ts:80` |
+| Trash a running project | 409 "This project is still running. Use Cancel run on the project page first, then delete it." | `packages/app/src/edge/http/projects.ts:142-152` |
+| Trash an unknown or already-trashed project | 404 "This project no longer exists…" | `projects.ts:143-151`, `packages/app/src/slices/trash/service.ts:80` |
 | Restore / Delete now an item no longer in the trash (double press, second tab) | 404 "This item is no longer in the trash: it was restored or removed for good. Reload Settings → Trash…" | `packages/app/src/edge/http/trash.ts:28-29` |
 | Delete now a project that is busy | 409 running | `trash.ts:30-31`, `packages/app/src/slices/storage/delete-project.ts:48-50` |
-| Project folder the OS will not remove | 500 "Close any program using files in the project folder, then press Delete now again." with the OS message; rows stay, item stays in the trash | `trash.ts:32-33`, `delete-project.ts:52-63` |
+| Project folder the OS will not remove | 500 "Close any program using files in the project folder, then press Delete now again." with the OS message; rows stay, item stays in the trash | `trash.ts:32-33`, `delete-project.ts:52-64` |
 | Purge meets a refusal | logged `warn trash.purge`, item kept for the next pass | `packages/app/src/slices/trash/service.ts:294-302` |
 | Purge throws | logged `error trash.purge`; timer continues | `packages/app/src/main.ts:721-726` |
 | Export while busy | summary `ready:false` with names; direct download 409 "Slopify can't export while projects are being made (…)" | `packages/app/src/slices/storage/backup-export.ts:60-67`, `packages/app/src/edge/http/storage.ts:98-114` |
@@ -143,7 +143,7 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 **Gaps and edge cases the code leaves as they are:**
 
 - `busyProjects` does not filter `project_trash`: a trashed project that still has a `queued` queue row blocks Export everything and scheduled backups until it is restored or removed (`packages/app/src/slices/storage/backup-export.ts:88-105`, `packages/app/src/slices/trash/service.ts:69-72`).
-- A backup carries `project_trash` rows and trashed library rows with their original `deleted_at`; after import they sit in this install's trash and the purge counts 30 days from the original deletion (`packages/app/src/slices/storage/backup-format.ts:70`, `packages/app/src/slices/storage/backup-import.ts:1001-1003`, `packages/app/src/slices/trash/service.ts:289-293`).
+- A backup carries `project_trash` rows and trashed library rows with their original `deleted_at`; after import they sit in this install's trash and the purge counts 30 days from the original deletion (`packages/app/src/slices/storage/backup-format.ts:79`, `packages/app/src/slices/storage/backup-import.ts:1001-1003`, `packages/app/src/slices/trash/service.ts:289-293`).
 - Import and a backup being written are not mutually excluded: `importBackup` guards only against another import (`backup-import.ts:85`, `:163-168`).
 - The purge's "once a day" is per process: `last` lives in memory, so every start purges once (`packages/app/src/slices/trash/service.ts:313-323`, `packages/app/src/main.ts:728`).
 - `checkSpace` for a scheduled backup is skipped silently when `statfs` fails (`packages/app/src/slices/backups/service.ts:300-307`).
@@ -154,7 +154,7 @@ Actor: the single local user; the purge and the backup tick run with no actor. `
 |---|---|---|
 | Project | live → trashed | `project_trash` row inserted; refused while busy (`packages/app/src/slices/trash/service.ts:73-87`) |
 | Project | trashed → live | row deleted (`service.ts:117-126`) |
-| Project | trashed → gone | Delete now / purge / Restore samples (scenario 41): folder removed, then rows (`packages/app/src/slices/storage/delete-project.ts:44-70`) |
+| Project | trashed → gone | Delete now / purge / Restore samples (scenario 41): folder removed, then rows (`packages/app/src/slices/storage/delete-project.ts:44-71`) |
 | Prompt, entry, template | live ↔ trashed → gone | `deleted_at` set / cleared / row deleted (`service.ts:128-211`, `:249-267`) |
 | Schedule | `completed`/`canceled` → trashed → `paused` (restore) or purged | `service.ts:213-232`, `:268-276`; restore never returns it to `active` |
 | Backup status `lastResult` | null → `waiting` / `succeeded` / `failed`, per slot | `packages/app/src/slices/backups/model.ts:53-66`, `packages/app/src/slices/backups/service.ts:118-151` |
@@ -166,7 +166,7 @@ Forbidden: trashing a busy project; restoring a schedule straight to `active`; a
 ## Invariants
 
 - Trashing frees no disk space and deletes no file; only Delete now, the purge and Restore samples remove a project folder (`packages/app/src/slices/trash/service.ts:73-87`, `packages/app/src/slices/storage/delete-project.ts:9-12`).
-- A project folder is removed before its rows, so rows never outlive into a state where files are orphaned under no project (`delete-project.ts:52-68`).
+- A project folder is removed before its rows, so rows never outlive into a state where files are orphaned under no project (`delete-project.ts:52-69`).
 - A restored item never takes a name a live item holds (`service.ts:140-149`, `:180-189`, `:325-333`).
 - A trashed project claims no work, appears in no list and is skipped by the batch queue (`packages/app/src/main.ts:917-921`, `packages/app/src/slices/admission/repo.ts:65-70`, `packages/app/src/slices/batch/index.ts:20-26`).
 - Export and scheduled backups never copy a project while any project is busy (`packages/app/src/slices/storage/backup-export.ts:109-111`).
@@ -174,7 +174,7 @@ Forbidden: trashing a busy project; restoring a schedule straight to `active`; a
 - Pruning and the leftover sweep touch only names matching the feature's exact patterns — never an Export everything download or a renamed file (`files.ts:6-10`, `:120-139`).
 - At most one scheduled backup per daily slot is counted, and a backup and an update never overlap (`packages/app/src/slices/backups/schedule.ts:47-49`, `packages/app/src/slices/backups/service.ts:36-37`, `:255-257`).
 - An import only adds: existing projects, library items and settings are never replaced; a failed import leaves the install as it was (`packages/app/src/slices/storage/backup-import.ts:66-83`).
-- Provider keys, the telemetry machine id, logs, the model cache, updates and staging leftovers are never in a backup (`packages/app/src/slices/storage/backup-format.ts:15-18`).
+- Provider keys, the telemetry machine id, logs, the model cache, updates and staging leftovers are never in a backup (`packages/app/src/slices/storage/backup-format.ts:15-18`); nor is the projects root's hidden `.render-cache` of last-render clips (`packages/app/src/slices/storage/layout.ts:9-12`).
 
 ## Outcomes & side effects
 

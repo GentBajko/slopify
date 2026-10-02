@@ -1,1 +1,0 @@
-- The Codex image adapter reports a run that drew nothing because the image tool's safety system blocked it as a refusal (with Codex's reason), and Soften and retry covers refused short stills (`shorts:N:image:M`) in the Video stage (`softenableKeys`, `fixes/rules.ts`).

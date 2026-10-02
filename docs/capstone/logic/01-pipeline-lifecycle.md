@@ -8,10 +8,10 @@ screens:
   - 06-play
   - 08-project
 depends_on: []
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 2ce9a4304f01
+content_hash: 0bd3282cd084
 paths_covered:
   - ":(top)packages/app/src/kernel/pipeline.ts"
   - ":(top)packages/app/src/kernel/runner/**"
@@ -26,6 +26,8 @@ paths_covered:
   - ":(top)packages/app/src/kernel/db/migrations/0005-revision-work.sql"
   - ":(top)packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql"
   - ":(top)packages/app/src/kernel/config/index.ts"
+  - ":(top)packages/app/src/slices/admission/model.ts"
+  - ":(top)packages/app/src/slices/play-drafts/start.ts"
 ---
 
 # 01 Pipeline lifecycle
@@ -35,8 +37,8 @@ A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumb
 ## Trigger & preconditions
 
 - Admission creates the project, its seven stages and the baseline revision in one transaction, then admits the baseline's work (`startRun`, `packages/app/src/slices/admission/start.ts:47`; `admitInitialRevision`, `packages/app/src/slices/rebuild/runtime-admission.ts:32`). Callers: reviewed Play Start, the batch queue, a scheduled run and `POST /api/projects` (see 04 Run admission).
-- Each stage's initial state follows its source: `provide` → `provided`, `off` → `skipped`, anything else → `pending`. Exception: `video` Off with audio not Off starts `pending`, because the Video stage then exports the combined WAV (`packages/app/src/slices/admission/start.ts:38`, `packages/app/src/slices/admission/start.ts:99`).
-- A saved edit creates another revision without generation; only a reviewed rebuild admits changed or missing work (`saveRevision`, `packages/app/src/slices/revisions/mutations.ts:57`; `startRebuild`, `packages/app/src/slices/rebuild/service.ts:84`).
+- Each stage's initial state follows its source: `provide` → `provided`, `off` → `skipped`, anything else → `pending`. Exception: `video` Off with audio not Off starts `pending`, because the Video stage then exports the combined WAV (`packages/app/src/slices/admission/start.ts:38`, `packages/app/src/slices/admission/start.ts:102`).
+- A saved edit creates another revision without generation; only a reviewed rebuild admits changed or missing work (`saveRevision`, `packages/app/src/slices/revisions/mutations.ts:58`; `startRebuild`, `packages/app/src/slices/rebuild/service.ts:84`).
 
 ## Steps
 
@@ -48,7 +50,7 @@ A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumb
 6. Provider calls go through `stageProviders`: a CLI plan-allowance wait sits outside the queue (`packages/app/src/kernel/runner/providers.ts:137`), then one app-wide FIFO queue admits at most 5 concurrent calls and at most `min(5, providerLimit)` per provider; waiting starts no attempt or idle timer (`createProviderQueue`, `packages/app/src/kernel/runner/queue.ts:12`). `maySubmit` re-checks authority before every physical request or retry: work and piece still `allowed`, and a reservation still owned by the current head's fingerprints (`packages/app/src/kernel/runner/work-authority.ts:31`, `packages/app/src/kernel/runner/work-authority.ts:49`).
 7. `attempt` makes up to 4 attempts (waits 2 s, 8 s, 30 s); timeouts are 120 s for llm/tts, 300 s for image, 900 s for video (image-to-video) (`packages/app/src/kernel/runner/attempt.ts:14`, `packages/app/src/kernel/runner/attempt.ts:19`).
 8. Results publish as immutable bytes to the originating revision; a compatible current reservation may select them (`commitRevisionOutputs`, `packages/app/src/slices/revisions/publish.ts:28`; `publicationAuthority`, `packages/app/src/slices/revisions/publication-rules.ts:13`).
-9. Export builds MP4, silent MP4, combined WAV or nothing from the selected image order and active narration/caption timeline (`exportSnapshot`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:30`; `slideshowImages`, `packages/app/src/slices/rebuild/runtime-export.ts:257`).
+9. Export builds MP4, silent MP4, combined WAV or nothing from the selected image order and active narration/caption timeline (`exportSnapshot`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:30`; `slideshowImages`, `packages/app/src/slices/rebuild/runtime-export.ts:258`).
 
 ## Branches
 
@@ -56,7 +58,8 @@ A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumb
 - Saving during active work retains matching reservations and revokes affected future dispatch; submitted work settles to its origin revision (`transitionRevisionWork`, `packages/app/src/slices/rebuild/transition-repo.ts:29`).
 - A reviewed retry reuses complete compatible requests and retained files; an accepted asynchronous continuation is fetched on the same piece, not resubmitted (`bindNarrationReuse`, `packages/app/src/slices/rebuild/runtime-narration-reuse.ts:13`; `requiresNewSubmission`, `packages/app/src/slices/rebuild/preview-retained.ts:113`).
 - Review checkpoints (Audio, Images, Video/export) hold only their dependency closure; independent work stays eligible (`admitReviewedCheckpoints`, `packages/app/src/slices/rebuild/runtime-checkpoints.ts:10`; `packages/app/src/slices/checkpoints/schema.ts:5`).
-- A batch runs one project at a time: `pumpQueue` finishes entries whose status is `done`/`partial`/`failed`/`canceled`, stops at a paused one or one with calls in flight, and ticks the first remaining entry (`packages/app/src/slices/batch/index.ts:83`).
+- A batch runs one project at a time: `pumpQueue` finishes entries whose status is `done`/`partial`/`failed`/`canceled`, stops at a paused one or one with calls in flight, and ticks the first remaining entry (`packages/app/src/slices/batch/index.ts:83`). Several videos from one reviewed Start go through that queue unless the draft turned Queue off, in which case each is started as its own run and they go side by side (`createReviewedRuns`, `packages/app/src/slices/play-drafts/start.ts:150-157`; scenario 04).
+- A rename runs nothing: on the first save that changes the title, `keptSubject` stores the title the project was made with as `config.subjectTitle`, and no later edit drops it (`packages/app/src/slices/revisions/subject.ts:7-11`, called from `saveRevision`, `packages/app/src/slices/revisions/mutations.ts:93`). Every recipe fingerprint that takes the title reads `subjectOf(config)` = `subjectTitle ?? title` (`packages/app/src/slices/admission/model.ts:285-290`), so no planned work changes; a step that runs again for another reason uses the new name (scenario 12).
 
 ## Unhappy paths
 

@@ -10,10 +10,10 @@ depends_on:
 - 10-thumbnail-prompt-by-llm
 - 12-reruns-and-edits
 - 14-storage-and-downloads
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 1d6971f134a6
+content_hash: 61f20a6218b2
 paths_covered:
   - ":(top)packages/app/src/slices/document/**"
   - ":(top)packages/app/src/assets/document/**"
@@ -24,6 +24,7 @@ paths_covered:
   - ":(top)packages/app/src/kernel/db/migrations/0016-document-themes.sql"
   - ":(top)packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql"
   - ":(top)packages/web/src/project/body-document.tsx"
+  - ":(top)packages/app/src/slices/revisions/subject.ts"
 ---
 
 # 26 Document
@@ -34,7 +35,7 @@ An optional stage, kind `document`, that lays the project's article out as a PDF
 
 - The stage's source is Generate or Off: on Play's Document rail (`packages/web/src/play/stage-rails.tsx:439`) and in Edit project → Inputs, Stages group, as "Document source" with a "Document theme" picker disabled while it is Off (`packages/web/src/project/revision-form.tsx:54`, `revision-form.tsx:346-352`). `StageSources.document` is optional; a config, draft, template or backup without it reads through `sourceOf` (`packages/app/src/slices/admission/model.ts:19-23`). Projects made before the stage have a `document` stage row that is `skipped` with source `off` (`packages/app/src/kernel/db/migrations/0014-document-stage.sql`).
 - Article Off refuses Document Generate: "The PDF is made from the article, and Article is Off. Set Article to Generate or Provide, or set PDF to Off." (`packages/app/src/slices/admission/rules.ts:642`, `rules.ts:664`).
-- The theme is the project setting `document: { theme, custom? }` (`packages/app/src/slices/document/model.ts:37-40`). The one built-in is `plain` (`model.ts:6`), the default for new projects and drafts (`model.ts:19`, `model.ts:52-54`). A project that starts with Document Generate and no theme is saved with `{ theme: "plain" }` (`packages/app/src/slices/admission/start.ts:75-78`). A saved config with no `document` setting reads as the retired `"dicemaster"` (`documentThemeOf`, `model.ts:46-48`), which still parses and draws with the frozen `legacyDiceMasterTheme` values (`packages/app/src/slices/document/legacy-dicemaster.ts`, `theme.ts:289-291`); it is never offered in a picker (`model.ts:9-12`).
+- The theme is the project setting `document: { theme, custom? }` (`packages/app/src/slices/document/model.ts:37-40`). The one built-in is `plain` (`model.ts:6`), the default for new projects and drafts (`model.ts:19`, `model.ts:52-54`). A project that starts with Document Generate and no theme is saved with `{ theme: "plain" }` (`packages/app/src/slices/admission/start.ts:78-81`). A saved config with no `document` setting reads as the retired `"dicemaster"` (`documentThemeOf`, `model.ts:46-48`), which still parses and draws with the frozen `legacyDiceMasterTheme` values (`packages/app/src/slices/document/legacy-dicemaster.ts`, `theme.ts:289-291`); it is never offered in a picker (`model.ts:9-12`).
 - `custom` is a copy of a Library → Documents theme's values; when set, `theme` is ignored (`model.ts:26-40`, `theme.ts:294-299`).
 - No provider, key or model: Play's estimate lists a local row "Document — Laid out locally from the article; no API fee." (`packages/app/src/slices/estimate/index.ts:408-409`).
 - Stage dependencies: `document: ["article", "thumbnail"]`, with `thumbnail` optional (`packages/app/src/kernel/runner/graph.ts:16`, `graph.ts:24-26`); with the thumbnail Off it waits for the article only (`graph.ts:95`). It never waits for narration, images or the video.
@@ -42,7 +43,7 @@ An optional stage, kind `document`, that lays the project's article out as a PDF
 ## Steps
 
 1. Planning adds one work item when `sourceOf(config.sources, "document") === "generate"`: key `document:pdf`, stage `document`, kind `local`, operation `render-document`, version 1 (`packages/app/src/slices/rebuild/recipe-document.ts:19-37`).
-2. Its fingerprint values are the renderer version `"document-v1"`, `config.title`, the whole resolved theme as JSON, and the resource identities of the article, the research notes (or `null`) and `thumbnail:image` (or `null`) (`recipe-document.ts:14`, `recipe-document.ts:38-45`). It depends on the article's key plus `research:notes` and `thumbnail:image` when those are planned (`recipe-document.ts:47-50`).
+2. Its fingerprint values are the renderer version `"document-v1"`, the project's kept subject `subjectOf(config)` (`subjectTitle`, else `title`; `packages/app/src/slices/admission/model.ts:285-290`), the whole resolved theme as JSON, and the resource identities of the article, the research notes (or `null`) and `thumbnail:image` (or `null`) (`recipe-document.ts:14`, `recipe-document.ts:38-45`). The page itself draws the current `config.title` (`packages/app/src/slices/rebuild/runtime-document.ts:61-62`), so after a rename the PDF keeps the title it was rendered with until something else in the fingerprint changes. It depends on the article's key plus `research:notes` and `thumbnail:image` when those are planned (`recipe-document.ts:47-50`).
 3. The runner claims it when its dependencies are ready. A thumbnail that failed or was canceled for good releases it: `optionalDeps` plus `gaveUp` in the readiness check, fingerprint unchanged (`packages/app/src/slices/rebuild/runtime-store.ts:124-131`).
 4. `executeDocumentRecipe` returns `done` when the piece is already done, `held` when `maySubmit` refuses, and checks that the queued recipe still matches the current plan (`packages/app/src/slices/rebuild/runtime-document.ts:17-30`, `runtime-document.ts:91-111`).
 5. Inputs: the article is `view.articleMarkdown` when the article was edited or is not Generate, otherwise the selected `article_md` output of `article:body` (`runtime-document.ts:39-42`). The cover is the selected ready `thumbnail:image` file when the thumbnail source is not Off (`runtime-document.ts:47-60`). Research notes are the selected `notes` output unless research is Off (`runtime-document.ts:64`).
@@ -50,7 +51,7 @@ An optional stage, kind `document`, that lays the project's article out as a PDF
 7. Word count: every heading and run text, split on whitespace (`render.ts:54-60`). The page format is the theme's `a4` or `letter`, unit mm (`render.ts:61-66`).
 8. Pages: title page (brand, tagline, title, cover, date and word count per `titlePage` flags), contents to `contents.depth` with clickable page links, body, Sources page, closing page, then the running header and footer; contents pages are reserved for the listed headings plus the Sources and closing pages before the body is written, then filled (`render.ts:77-96`, `pages.ts:26-163`). A Sources entry is drawn in the text colour; each `http(s)` address inside it is drawn in the heading colour and links to itself; an entry with no address in its words links as a whole to its `href` (`pages.ts:165-224`).
 9. Fonts: bundled Cinzel (Regular, Medium, Bold, Black) and Literata (Regular, SemiBold as bold, Italic, SemiBoldItalic), SIL OFL 1.1, plus the PDF standard `times`, `helvetica`, `courier`; the parchment texture is `background.jpg` (`packages/app/src/slices/document/fonts.ts:5-22`, `theme.ts:25-27`). They are read from `assets/document/` on every render (`fonts.ts:39-52`). A face asks for any of `normal|medium|bold|black|italic|bolditalic`; Cinzel maps italic→normal and bolditalic→bold, the others map medium→normal and black→bold (`fonts.ts:68-90`).
-10. The bytes are written as `document.pdf` and published as output role `document_pdf` of the originating revision, with payload `{pages, words, cover}` (`runtime-document.ts:78-86`, `packages/app/src/slices/storage/layout.ts:81-82`).
+10. The bytes are written as `document.pdf` and published as output role `document_pdf` of the originating revision, with payload `{pages, words, cover}` (`runtime-document.ts:78-86`, `packages/app/src/slices/storage/layout.ts:90-91`).
 
 ## Branches
 
@@ -75,7 +76,7 @@ An optional stage, kind `document`, that lays the project's article out as a PDF
 ## State transitions
 
 - Document stage: `skipped` when Off; otherwise pending → running → done or failed, as scenario 01.
-- An article edit re-runs `audio` and `document` roots (`packages/app/src/slices/reruns/cascade.ts:57-64`). A change to the article, research notes, thumbnail identity, title or resolved theme changes the fingerprint, so only `document:pdf` is remade (`recipe-document.ts:38-45`). Images, narration, subtitles and video settings are not in the fingerprint.
+- An article edit re-runs `audio` and `document` roots (`packages/app/src/slices/reruns/cascade.ts:57-64`). A change to the article, research notes, thumbnail identity, kept subject or resolved theme changes the fingerprint, so only `document:pdf` is remade (`recipe-document.ts:38-45`). A project rename alone changes none of them: the first rename keeps the old title as `subjectTitle` (`packages/app/src/slices/revisions/subject.ts:4-11`). Images, narration, subtitles and video settings are not in the fingerprint.
 - A document rendered without a cover because the thumbnail gave up reads outdated once a thumbnail is made (`runtime-store.ts:124-127`).
 
 ## Invariants

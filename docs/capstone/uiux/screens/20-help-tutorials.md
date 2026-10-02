@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 60f36108d9d9
+content_hash: 9e2abbfbcab7
 paths_covered:
   - ":(top)packages/web/src/routes/tutorials.tsx"
   - ":(top)packages/web/src/tutorials/**"
@@ -17,7 +17,7 @@ paths_covered:
 
 ## Mode & job
 
-Read mode. The in-app reader for the GitHub wiki's pages, which ship inside the build (`docs/wiki/` copied to `dist/tutorials/`), so they read offline and describe the running version (`packages/app/src/slices/tutorials/library.ts:7-10`, `packages/app/src/slices/tutorials/library.ts:45-52`). Route `/help/tutorials/$page` with `?q=` (the words a search result was opened with, trimmed and cut to 200 characters) and the section in the hash (`packages/web/src/router.tsx:362-381`). `/help` and `/help/tutorials` redirect to page `Home` (`packages/web/src/router.tsx:383-396`). The same surface answers every info button: `InfoTip` popovers carry the short help text and, when the entry names a tutorial section, a "Learn more" link into this reader (`packages/web/src/components/kit/info-tip.tsx:9-13`, `packages/web/src/help/entry.ts:1-17`).
+Read mode. The in-app reader for the GitHub wiki's pages, which ship inside the build (`docs/wiki/` copied to `dist/tutorials/`), so they read offline and describe the running version (`packages/app/src/slices/tutorials/library.ts:7-10`, `packages/app/src/slices/tutorials/library.ts:45-52`). Route `/help/tutorials/$page` with `?q=` (the words a search result was opened with, trimmed and cut to 200 characters) and the section in the hash (`packages/web/src/router.tsx:369-388`). `/help` and `/help/tutorials` redirect to page `Home` (`packages/web/src/router.tsx:390-403`). The same surface answers every info button: `InfoTip` popovers carry the short help text and, when the entry names a tutorial section, a "Learn more" link into this reader (`packages/web/src/components/kit/info-tip.tsx:9-13`, `packages/web/src/help/entry.ts:1-17`).
 
 Data: three endpoints under `/api/tutorials` — the index (home, groups from `_Sidebar.md`, every page, footer from `_Footer.md`), `/search?q=`, and `/:page` returning `text/markdown` (`packages/app/src/edge/http/tutorials.ts:19-63`, `packages/app/src/edge/http/app.ts:220`). The book is read once per process and kept (`packages/app/src/edge/http/tutorials.ts:23-31`). All three web queries have `staleTime: Infinity`; the search query is disabled for a blank query (`packages/web/src/tutorials/api.ts:10-40`). The current wiki holds 49 pages under 10 sidebar groups (`docs/wiki/`, `docs/wiki/_Sidebar.md`).
 

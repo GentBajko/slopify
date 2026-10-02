@@ -2,10 +2,10 @@
 scenario: run-cost-and-eta
 screens: [01-projects, 03-project, 13-schedules]
 depends_on: [01-pipeline-lifecycle, 13-cancel, 18-cost-review-batch, 19-catalogue-thinking, 20-boot-cli-recovery]
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 43f766bacea4
+content_hash: 03f80fef9597
 paths_covered:
   - ":(top)packages/app/src/slices/run-cost/**"
   - ":(top)packages/app/src/slices/eta/**"
@@ -32,8 +32,8 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 - Reads (no authority check, local API):
   - `GET /api/projects/:id/run-cost` → `runCostOf` (`packages/app/src/edge/http/run-cost.ts:17-27`; mount `packages/app/src/edge/http/app.ts:196`).
   - `GET /api/home/week?since=<ISO>&channelId=<id?>` → `weekSummary` (`packages/app/src/edge/http/home.ts:9-20`; mount `app.ts:198`). The browser sends Monday 00:00 of the viewer's time zone (`packages/web/src/home/api.ts:10-25`).
-  - `GET /api/projects/:id` attaches ETA fields to running stages via `stagesWithEta` (`packages/app/src/edge/http/projects.ts:110-115`).
-  - `GET /api/projects` and the calendar agenda attach `limitWaits` per project via `limitWaitsByProject` (`projects.ts:79-91`, `packages/app/src/slices/schedules/agenda.ts:189`).
+  - `GET /api/projects/:id` attaches ETA fields to running stages via `stagesWithEta` (`packages/app/src/edge/http/projects.ts:123-128`).
+  - `GET /api/projects` and the calendar agenda attach `limitWaits` per project via `limitWaitsByProject` (`projects.ts:82-101`, `packages/app/src/slices/schedules/agenda.ts:195`).
 
 ## Steps
 
@@ -60,7 +60,7 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 
 10. Before each gated call, `ready(account)` reads `plan_limit_waits.retry_at`; none → proceed; past → delete the row and proceed (`limits.ts:71-83`).
 11. Future → register the waiter (`plan_limit_waiters` INSERT OR IGNORE, keyed project+stage+account; an in-memory count so parallel calls of one stage show one wait) and emit `project.updated` on first insert, then sleep until `retry_at` and loop (`limits.ts:42-51`, `:84-92`; emit `main.ts:882`). The wait happens outside the provider queue, holding no slot (`providers.ts:138-139`).
-12. A call failing with `fault.planLimit` (Claude Code, Codex text and image, Gemini adapters: `packages/app/src/adapters/llm/claude-code.ts:274-283`, `packages/app/src/adapters/llm/codex.ts:271-272`, `packages/app/src/adapters/image/codex.ts:316-317`, `packages/app/src/adapters/llm/gemini.ts:160`) is not retried by the attempt loop (`packages/app/src/kernel/runner/attempt.ts:139-147`); `exhausted(hit)` stores the wait and the call loops back to `ready` with a fresh attempt set (`providers.ts:143-152`).
+12. A call failing with `fault.planLimit` (Claude Code, Codex text and image, Gemini adapters: `packages/app/src/adapters/llm/claude-code.ts:274-283`, `packages/app/src/adapters/llm/codex.ts:271-272`, `packages/app/src/adapters/image/codex.ts:322-323`, `packages/app/src/adapters/llm/gemini.ts:160`) is not retried by the attempt loop (`packages/app/src/kernel/runner/attempt.ts:139-147`); `exhausted(hit)` stores the wait and the call loops back to `ready` with a fresh attempt set (`providers.ts:143-152`).
 13. `exhausted` sets `retry_at` = stated reset + 2 min (`resetMarginMs`) when the reset is in the future, else now + 30 min (`recheckMs`); the upsert only moves `retry_at` later, never earlier (`limits.ts:15-17`, `:94-112`). An info log line records the wait (`:117-119`).
 14. On a completed sleep the last waiter of the key deletes its `plan_limit_waiters` row and emits `project.updated` (`limits.ts:55-68`).
 
@@ -82,11 +82,11 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 
 ### Time left (`packages/app/src/slices/eta/`)
 
-25. `stagesWithEta` reads history only when a stage is running (`packages/app/src/slices/eta/view.ts:14-15`) and adds `typicalSeconds` (rounded), `etaBasis`, `etaSeconds` (`view.ts:16-32`; fields `packages/app/src/slices/admission/model.ts:316-320`).
+25. `stagesWithEta` reads history only when a stage is running (`packages/app/src/slices/eta/view.ts:14-15`) and adds `typicalSeconds` (rounded), `etaBasis`, `etaSeconds` (`view.ts:16-32`; fields `packages/app/src/slices/admission/model.ts:331-335`).
 26. `readStageHistory`: up to 400 most recent `done` stages with start and finish; seconds = finish − start (>0); `units` = `progress_total` when >0 (`packages/app/src/slices/eta/history.ts:8`, `:31-50`). The step's model key is `provider/model` of `llm` (research, article), `audio` (audio), `images` (images, thumbnail), none for other stages (`packages/app/src/slices/eta/model.ts:75-87`).
 27. `typicalSeconds`: pool = same kind and model if at least 2 samples (`ownModelMinimum`), else same kind; with a known unit count and counted samples, median(seconds / units) × units; else median seconds; no samples → undefined (`history.ts:11`, `:52-62`, `:75-81`).
 28. `stageEta` (`model.ts:32-47`): not running → none. Progress counted (`current > 0`, `total > 0`) → `progress`, seconds = spent / current × (total − current), 0 when complete. Else typical known and positive → `history` with typical − spent, or `overdue` once spent ≥ typical. Else `unknown`.
-29. The browser recomputes `stageEta` every second on the project page and Home's Running now from the stage rows' `typicalSeconds` (`packages/web/src/project/run-aside.tsx:70-75`, `packages/web/src/home/running-now.tsx:59-69`). `etaLabel`: "time left unknown", "taking longer than usual", "finishing up" (≤0 s), "under a minute left", "about N min left", "about H h [M min] left" (`model.ts:51-64`).
+29. The browser recomputes `stageEta` every second on the project page and Home's Running now from the stage rows' `typicalSeconds` (`packages/web/src/project/run-aside.tsx:70-75`, `packages/web/src/home/running-now.tsx:59-77`). Running now's line is "<count> of <total> · <eta>"; a stage reporting a named activity shows that instead ("Rendering the video (45%) · <eta>", or the activity alone while the basis is unknown) (`runningDetail`, `running-now.tsx:64`; `activityText`, `packages/web/src/project/summary.ts:105`). `etaLabel`: "time left unknown", "taking longer than usual", "finishing up" (≤0 s), "under a minute left", "about N min left", "about H h [M min] left" (`model.ts:51-64`).
 
 ### Home "This week" (`weekSummary`, `packages/app/src/slices/run-cost/week.ts:65-103`)
 
@@ -143,7 +143,7 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 
 - Rows in `provider_usage`, `plan_limit_readings`, `standalone_usage`; `plan_limit_waits`/`plan_limit_waiters` rows while waiting.
 - `project.updated` hub events when a stage starts or ends a wait (`limits.ts:23-24`, `main.ts:882`).
-- Backups carry `provider_usage`, `plan_limit_readings` and `standalone_usage`; `plan_limit_waits` and `plan_limit_waiters` are left out (`packages/app/src/slices/storage/backup-format.ts:63-68`, `:100`; `packages/app/src/slices/storage/backup-export.ts:368`).
+- Backups carry `provider_usage`, `plan_limit_readings` and `standalone_usage`; `plan_limit_waits` and `plan_limit_waiters` are left out (`packages/app/src/slices/storage/backup-format.ts:69-77`, `:109`; `packages/app/src/slices/storage/backup-export.ts:368`).
 - Log lines: `plan-limits` info/warn/error, `usage.record` warn.
 
 ## Dimensions not in play
@@ -153,5 +153,5 @@ What a run's provider calls actually cost (recorded as each call lands), the wai
 - D5 Money: amounts are recorded in USD (`panel.ts:79`) and nothing is charged, refunded or capped here; spend ceilings are in `18-cost-review-batch.md`.
 - D6 Limits: no Slopify-side spend limit on a running project; the only limit is the CLI plan allowance the CLI itself reports.
 - D12 Visibility: data never leaves the machine and is independent of the telemetry notice (`meter.ts:24-26`).
-- D13 Notification: no user notification on a plan-limit wait beyond the page refresh event and the "Waiting for … limits" lines (`packages/web/src/home/running-now.tsx:90-91`).
+- D13 Notification: no user notification on a plan-limit wait beyond the page refresh event and the "Waiting for … limits" lines (`packages/web/src/home/running-now.tsx:98-99`).
 - D15 Record and audit: retention of usage rows is the project's lifetime (cascade); `standalone_usage` has no link to its schedule or channel and survives their deletion (`0040-standalone-usage.sql:4-5`).

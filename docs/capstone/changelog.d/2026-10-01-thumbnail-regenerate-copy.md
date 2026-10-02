@@ -1,1 +1,0 @@
-- Regenerating a thumbnail asks with its own sentence: the video and shorts are not touched (no video recipe depends on a thumbnail; only the PDF cover follows the first one). It used the image dialog's "re-renders video when enabled".

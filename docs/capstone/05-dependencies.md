@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 283b9c4579c6
+content_hash: 512f5333c77b
 paths_covered:
   - ":(top)package.json"
   - ":(top)package-lock.json"
@@ -16,13 +16,14 @@ paths_covered:
   - ":(top)packages/collector/wrangler.jsonc"
   - ":(top)packages/site/wrangler.jsonc"
   - ":(top)packages/extension/static/manifest.json"
+  - ":(top)packages/extension/scripts/**"
   - ":(top).github/**"
   - ":(top)Dockerfile"
 ---
 
 # Dependencies
 
-Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 entries, last changed in `27597bad` on 2026-09-30); the manifest range follows in brackets where it differs. Rows carrying a date keep the date the pick was researched or verified; the earlier inventory floors were verified on npm on 2026-09-02. One hoisted lockfile serves all five workspaces (`package.json:5`).
+Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 entries, last changed in `89ed947b` on 2026-10-02); the manifest range follows in brackets where it differs. Rows carrying a date keep the date the pick was researched or verified; the earlier inventory floors were verified on npm on 2026-09-02. One hoisted lockfile serves all five workspaces (`package.json:5`).
 
 ## Runtime and frameworks
 
@@ -55,7 +56,7 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | react, react-dom | 19.2.8 | MIT | SPA | `packages/web/package.json:24` |
 | @tanstack/react-router | 1.170.39 | MIT | typed client-side routing | `packages/web/package.json:17` |
 | @tanstack/react-query | 5.102.8 | MIT | server state, invalidated from SSE | `packages/web/package.json:16` |
-| hono | 4.13.7 | MIT | typed API client `hc` | `packages/web/src/api.ts:52` |
+| hono | 4.13.7 | MIT | typed API client `hc` | `packages/web/src/api.ts:55` |
 | @js-temporal/polyfill | 0.5.1 | ISC | IANA-zone conversion for schedule inputs | `packages/web/src/schedules/time.ts:3` |
 | radix-ui, class-variance-authority, clsx, tailwind-merge | 1.6.7 / 0.7.1 / 2.1.1 / 3.6.0 | MIT / Apache-2.0 / MIT / MIT | primitives and class/variant composition for `components/kit` | `packages/web/package.json:18` |
 | lucide-react | 1.39.0 | ISC | icon family | `packages/web/package.json:21` |
@@ -69,7 +70,7 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 |---|---|---|---|
 | zod | 4.5.4 | MIT | event payload validation (`packages/collector/package.json:18`) |
 
-`packages/site` and `packages/extension` carry no runtime dependencies (`packages/site/package.json:11`, `packages/extension/package.json:11`).
+`packages/site` and `packages/extension` carry no runtime dependencies (`packages/site/package.json:11`, `packages/extension/package.json:11`). The extension's Chrome Web Store upload script uses only `node:crypto`, `node:fs` and global `fetch` (`packages/extension/scripts/publish-chrome.mjs:14-16`).
 
 ## No dependency, by the ladder
 
@@ -114,11 +115,11 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | happy-dom | 20.13.2 | MIT | web | DOM for component tests |
 | @types/react, @types/react-dom | 19.2.18 / 19.2.7 | MIT | web | React declarations |
 | wrangler | 4.144.0 (^4.143.0) | MIT OR Apache-2.0 | collector, site | local dev, D1 schema, deploys to Cloudflare |
-| esbuild | 0.28.1 | MIT | extension | bundles the browser extension (`packages/extension/scripts/build.mjs:21`); also imported by `packages/app/scripts/ts-resolve.mjs:4`, which reaches it through hoisting (not declared in `packages/app/package.json`) |
+| esbuild | 0.28.1 | MIT | extension | bundles the browser extension's six entry points (`background`, `comment`, `content`, `options`, `popup`, `video-frame`) (`packages/extension/scripts/build.mjs:21`, `:46-48`); also imported by `packages/app/scripts/ts-resolve.mjs:4`, which reaches it through hoisting (not declared in `packages/app/package.json`) |
 | fflate | 0.8.3 | MIT | extension | zips the extension builds (`packages/extension/scripts/build.mjs:22`) |
 | playwright | 1.63.0 | Apache-2.0 | site | records the walkthrough video (`packages/site/scripts/record-walkthrough.mjs:36`) |
 | ffmpeg-static | 5.3.0 | GPL-3.0-or-later | site | encodes the walkthrough (`packages/site/scripts/record-walkthrough.mjs:35`) |
-| GitHub Actions | hosted | n/a | repo | CI on Node 26 with `npm audit --audit-level=high` (`.github/workflows/ci.yml:24`); tag release runs `npm publish --provenance` via OIDC (`.github/workflows/release.yml:58`) |
+| GitHub Actions | hosted | n/a | repo | CI on Node 26 with `npm audit --audit-level=high` (`.github/workflows/ci.yml:25`); tag release runs `npm publish --provenance` via OIDC (`.github/workflows/release.yml:61`) and uploads the extension to the Chrome Web Store (`.github/workflows/release.yml:66-83`) |
 | Dependabot | hosted | n/a | repo | weekly npm (root only, one lockfile) and github-actions updates (`.github/dependabot.yml`) |
 
 Root `overrides` pins `sharp` 0.35.4 inside `miniflare` (`package.json:25`).
@@ -156,7 +157,7 @@ Every keyed adapter receives only its own key reader, `keyOf(provider)`, read pe
 | Replicate | `https://api.replicate.com/v1`; `Prefer: wait=60` then poll `urls.get`; `output_format: "png"`; image-to-video predictions polled the same way | `packages/app/src/adapters/image/replicate.ts:30`, `:93`, `:103`, `:119`; `adapter-registry.ts:140` | FLUX Dev $0.025, FLUX Pro $0.04, Schnell $3 / 1000 images | stage fails; refusals fail immediately |
 | OpenAI images | `https://api.openai.com/v1`; curated models from `models.yaml` | `packages/app/src/adapters/image/openai.ts:17`; `adapter-registry.ts:142` | output-dependent | stage fails after retries |
 | Google images (Gemini API) | `https://generativelanguage.googleapis.com/v1beta` `/interactions` | `packages/app/src/adapters/image/google.ts:16`, `:78`; `adapter-registry.ts:143` | not recorded | stage fails after retries |
-| Codex CLI images | Codex's image tool under the shared Codex login; host helper replaces it in Docker | `packages/app/src/adapters/image/codex.ts:209`; `adapter-registry.ts:146`, `:157` | user's OpenAI plan | plan-limit and login errors surface from the CLI |
+| Codex CLI images | Codex's image tool under the shared Codex login; host helper replaces it in Docker | `packages/app/src/adapters/image/codex.ts:213`; `adapter-registry.ts:146`, `:157` | user's OpenAI plan | plan-limit and login errors surface from the CLI; a run with no image whose stderr or last agent message matches the safety-block pattern is a `refusal` (`packages/app/src/adapters/image/codex.ts:197-198`, `:381-390`) |
 
 Image-to-video clips from fal.ai and Replicate share `downloadVideo`, which rejects anything not an MP4 (`packages/app/src/adapters/image/video.ts:25`).
 
@@ -171,7 +172,9 @@ Image-to-video clips from fal.ai and Replicate share `downloadVideo`, which reje
 | Notification URL (user-supplied, e.g. ntfy) | plain-text POST per notice, 5 s timeout, `redirect: "manual"` | `packages/app/src/slices/notifications/send.ts:19` | failure text recorded; URL never repeated |
 | Cloudflare Workers + D1 | telemetry collector at `https://collector.slopify.stream`, D1 binding `DB` | `packages/app/src/slices/telemetry/collector-client.ts:26`; `packages/collector/wrangler.jsonc`; `packages/collector/src/index.ts:26` | events queue locally; site shows dashes |
 | Cloudflare static assets | marketing site at `slopify.stream` | `packages/site/wrangler.jsonc` | page unavailable |
-| YouTube Studio | the extension fills the upload dialog on `https://studio.youtube.com/*` from the local app (loopback host permissions); never publishes | `packages/extension/static/manifest.json:13`, `:19` | n/a |
+| YouTube Studio | the extension's content script on `https://studio.youtube.com/*` fills the upload dialog, sets the schedule time, makes the Details touches and reads Analytics; a second script on `https://www.youtube.com/watch*` posts and pins the comment; it reaches only the local app (loopback host permissions); never presses Publish | `packages/extension/static/manifest.json:13-30`, `packages/extension/src/studio-pages.ts:4-10`, `packages/extension/src/comment.ts:4-8` | each page reports what it could not do |
+| YouTube oEmbed | `https://www.youtube.com/oembed` answers whether a video is public before a finish or comment task opens; no key | `packages/extension/src/background.ts:134-143`, `packages/extension/static/manifest.json:16` | a failed check counts as not public; the 15 min alarm retries |
+| Chrome Web Store API v2 | release upload and submit of `slopify-studio-chrome.zip`: service-account JWT exchanged at `oauth2.googleapis.com/token`, then `chromewebstore.googleapis.com` `:upload` and `:publish`; secrets `CWS_SERVICE_ACCOUNT_JSON`, `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID` | `packages/extension/scripts/publish-chrome.mjs:18-26`, `:41`, `:59`, `:74`; `.github/workflows/release.yml:80-83` | missing secrets skip with exit 0; a version the store already has is "nothing new"; other refusals fail the job |
 | GitHub Container Registry | Docker image `ghcr.io/gentbajko/slopify` | `compose.yaml:11` | n/a |
 
 Pricing columns for Inworld, Gemini speech and Google images: not recorded in this chapter.

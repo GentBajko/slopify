@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 33cbb4341dcb
+content_hash: a9c5ff651ebc
 paths_covered:
   - ":(top)packages/web/src/routes/templates.tsx"
   - ":(top)packages/web/src/routes/library.tsx"
@@ -16,13 +16,13 @@ paths_covered:
 
 ## Mode & job
 
-Operate surface, the Library's Templates tab at `/templates`, for saved Play setups ("project templates"): list and filter them by channel, see a template's keywords, rename, duplicate, apply one to Play as a fresh draft, browse and restore its versions, delete it, save a Play draft as a new template, and add a starter pack (`packages/web/src/routes/templates.tsx:39-53`). Applying creates a draft and opens Play on it; it never starts generation (`templates.tsx:136-175`, `packages/web/src/router.tsx:229-248`). The route sits under the pathless Library layout (`router.tsx:97-103`, `router.tsx:153-157`).
+Operate surface, the Library's Templates tab at `/templates`, for saved Play setups ("project templates"): list and filter them by channel, see a template's keywords, rename, duplicate, apply one to Play as a fresh draft, browse and restore its versions, delete it, save a Play draft as a new template, and add a starter pack (`packages/web/src/routes/templates.tsx:39-53`). Applying creates a draft and opens Play on it; it never starts generation (`templates.tsx:136-175`, `packages/web/src/router.tsx:230-249`). The route sits under the pathless Library layout (`router.tsx:98-104`, `router.tsx:154-158`).
 
 ## Composition
 
-**Library frame.** Kit `PageHeader` "Library" with meta "Prompts, intros and outros, templates, document themes and narration aliases", then `TabLinks` Prompts / Intros & Outros / Templates / Documents / Aliases (`packages/web/src/routes/library.tsx:14-34`).
+**Library frame.** Kit `PageHeader` "Library" with meta "Prompts, intros and outros, templates, document themes, narration aliases and A/B results", then `TabLinks` Prompts / Intros & Outros / Templates / Documents / Aliases / A/B results (`packages/web/src/routes/library.tsx:14-35`).
 
-**Toolbar** (`LibraryToolbar`, filters left, actions right, action wraps under on a phone) (`templates.tsx:241-280`, `library.tsx:110-114`): a "Show templates of" `Select` (All channels + each channel) with InfoTip; a line "Reuse a Play setup and its checkpoint choices. Use in Play creates a fresh draft to review." with InfoTip; secondary "Add pack" (opens the starter-pack `PacksDrawer` "Add a starter pack") and primary "Save a setup", each with an InfoTip (`templates.tsx:234-257`, `packages/web/src/onboarding/packs-drawer.tsx:35-37`).
+**Toolbar** (`LibraryToolbar`, filters left, actions right, action wraps under on a phone) (`templates.tsx:241-280`, `library.tsx:111-115`): a "Show templates of" `Select` (All channels + each channel) with InfoTip; a line "Reuse a Play setup and its checkpoint choices. Use in Play creates a fresh draft to review." with InfoTip; secondary "Add pack" (opens the starter-pack `PacksDrawer` "Add a starter pack") and primary "Save a setup", each with an InfoTip (`templates.tsx:234-257`, `packages/web/src/onboarding/packs-drawer.tsx:35-37`).
 
 **Status row**: a kit `StatusSlot`, "Reload templates" when the list failed, and quiet "Refresh templates" (`templates.tsx:281-296`).
 
@@ -43,7 +43,7 @@ The detail column is `TemplateDetail`: "Pick a template to see the keywords it f
 
 **Delete confirm.** Kit `ConfirmDialog` "Delete <name>?", consequence "Moves it to the trash for 30 days (Settings → Trash). Existing projects and drafts keep their setup.", confirm "Delete template" (`templates.tsx:496-509`).
 
-**Other entry points that create templates.** The project page's "Save as template" dialog saves the displayed revision ("Save this revision’s setup for a fresh Play draft. This does not rebuild the project.") (`packages/web/src/project/save-template.tsx:12-92`, `packages/web/src/routes/project.tsx:261`, `routes/project.tsx:450`). Play's start rail has a quiet "Save as template" opening `SaveTemplateDialog` (`packages/web/src/play/start-rail.tsx:196-197`, `packages/web/src/play/save-template-dialog.tsx:37-109`).
+**Other entry points that create templates.** The project page's "Save as template" dialog saves the displayed revision ("Save this revision’s setup for a fresh Play draft. This does not rebuild the project.") (`packages/web/src/project/save-template.tsx:12-92`, `packages/web/src/routes/project.tsx:261`, `routes/project.tsx:451`). Play's start rail has a quiet "Save as template" opening `SaveTemplateDialog` (`packages/web/src/play/start-rail.tsx:207-208`, `packages/web/src/play/save-template-dialog.tsx:37-109`).
 
 ## States
 
@@ -53,7 +53,7 @@ The detail column is `TemplateDetail`: "Pick a template to see the keywords it f
 | Load error | Query fails | Error in `StatusSlot` + "Reload templates" | `templates.tsx:227-228`, `templates.tsx:283-287` |
 | Empty | Zero templates | `EmptyState` "No templates yet": "Use Save a setup to keep a Play draft for reuse." | `templates.tsx:297-301` |
 | Filtered empty | Channel filter hides all | "No templates in this channel." | `templates.tsx:302-304` |
-| Play busy | A Play start is starting, uncertain or just created | Warning `StatusSlot` "A run is still starting in Play. Wait for it to finish (or press Check Start result there), then apply a template."; Use in Play disabled with a title reason | `templates.tsx:222-226`, `templates.tsx:360-367`, `router.tsx:233-235` |
+| Play busy | A Play start is starting, uncertain or just created | Warning `StatusSlot` "A run is still starting in Play. Wait for it to finish (or press Check Start result there), then apply a template."; Use in Play disabled with a title reason | `templates.tsx:222-226`, `templates.tsx:360-367`, `router.tsx:234-236` |
 | Working | Any action in flight | Duplicate and Use in Play disabled "Working on the last press"; Refresh disabled | `templates.tsx:97-110`, `templates.tsx:291`, `templates.tsx:353-366` |
 | Action error | Save/apply/duplicate/delete throws | Message in `StatusSlot` (in the confirm's consequence while deleting) | `templates.tsx:104-106`, `templates.tsx:219-221`, `templates.tsx:499-501` |
 | Apply refused | Play draft not flushed | "Save or discard the draft open in Play first, then apply the template again." | `templates.tsx:137-141` |
@@ -62,7 +62,7 @@ The detail column is `TemplateDetail`: "Pick a template to see the keywords it f
 | Saved / duplicated / deleted | Success | Toasts "Template saved.", "Duplicated as <name>.", "Template moved to the trash. Restore it in Settings → Trash within 30 days." | `templates.tsx:133`, `templates.tsx:193`, `templates.tsx:206-209` |
 | Save drawer | Drafts loading / none / failed | Field help "Loading saved drafts…" / "No saved drafts yet."; danger callout "The saved drafts couldn't be loaded." + "Reload drafts" | `templates.tsx:427-463` |
 | Save disabled | No draft picked or empty name or working | "Save template" disabled | `templates.tsx:398` |
-| Keywords | Reading / failed / none | "Reading the keywords…"; alert "The keywords of <name> didn't load. … Press Keywords again."; "No keywords: the prompts and the title name none." | `keywords.tsx:25-54` |
+| Keywords | Reading / failed / none | "Reading the keywords…"; alert "The keywords of <name> didn't load. … Press Keywords again."; "No keywords: the prompts and the title name none." | `packages/web/src/templates/keywords.tsx:25-54` |
 | History | Versions loading / one failed / only one | "Loading…" meta, "Loading the versions…"; alert "A version couldn't be read: … Close History and open it again."; "This is the only version so far." | `row-parts.tsx:105-118`, `row-parts.tsx:130`, `row-parts.tsx:160-167` |
 | Restore | Pending / failed / done | Restore disabled "Restoring"; `StatusSlot` "The version wasn't restored: …"; toast "Restored version N of <name> as version M." and the drawer closes | `row-parts.tsx:92-104`, `row-parts.tsx:135-156` |
 
@@ -70,11 +70,11 @@ Idempotence: saving reuses one request ID per (draft, draft version, name, chann
 
 ## Motion
 
-Drawers use the kit `Drawer` entrance; no other authored animation. Applying navigates to `/play` only after the draft is created, the drafts query invalidated, the Play session has opened the draft and the page is still current (`templates.tsx:163-170`, `router.tsx:236-246`).
+Drawers use the kit `Drawer` entrance; no other authored animation. Applying navigates to `/play` only after the draft is created, the drafts query invalidated, the Play session has opened the draft and the page is still current (`templates.tsx:163-170`, `router.tsx:237-247`).
 
 ## Copy
 
-Labels: Templates, Show templates of, All channels, Add pack, Save a setup, Save template, Refresh templates, Edit, Duplicate, Use in Play, History, Delete template, Restore, Current (`templates.tsx:245-400`, `row-parts.tsx:127-145`). Duplicates are named "<name> copy" (`templates.tsx:176-190`). Command palette: "Save a setup as a template", plus the Library-wide "Open templates" (`templates.tsx:212-218`, `library.tsx:89-97`).
+Labels: Templates, Show templates of, All channels, Add pack, Save a setup, Save template, Refresh templates, Edit, Duplicate, Use in Play, History, Delete template, Restore, Current (`templates.tsx:245-400`, `row-parts.tsx:127-145`). Duplicates are named "<name> copy" (`templates.tsx:176-190`). Command palette: "Save a setup as a template", plus the Library-wide "Open templates" (`templates.tsx:212-218`, `library.tsx:90-98`).
 
 ## Not in play
 

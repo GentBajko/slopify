@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: d198df689663
+content_hash: 45d9ddb65481
 paths_covered:
   - ":(top)packages/app/src/slices/rebuild/service*.ts"
   - ":(top)packages/app/src/slices/rebuild/preview-plan.ts"
@@ -70,10 +70,10 @@ Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebui
 | `POST /api/projects/:id/rebuild` → `startRebuild` (202) | `packages/app/src/edge/http/revisions.ts:159` |
 | `POST /api/projects/:id/resume` → `recoverProject({ kind: "resume" })` | `packages/app/src/edge/http/actions.ts:244` |
 | `POST /api/projects/:id/stages/:kind/retry` | `packages/app/src/edge/http/actions.ts:259` |
-| `POST /api/projects/:id/stages/:kind/soften` (marks refused prompts, then retry) | `packages/app/src/edge/http/actions.ts:271` |
-| `POST /api/projects/:id/stages/:kind/rerun` | `packages/app/src/edge/http/actions.ts:296` |
+| `POST /api/projects/:id/stages/:kind/soften` (marks the stage's `softenableKeys` - refused Images/Thumbnail prompts, or refused short stills `shorts:N:image:M` of Video - then retry; 409 when none) | `packages/app/src/edge/http/actions.ts:271`, `:276`; `packages/app/src/slices/rebuild/soften.ts:32`, `:36` |
+| `POST /api/projects/:id/stages/:kind/rerun` | `packages/app/src/edge/http/actions.ts:295` |
 | `POST /api/projects/:id/reviews/:verdictId/redo` → `{ kind: "redo", item }` | `packages/app/src/edge/http/reviews.ts:88` |
-| In-process callers of `recoverProject` | restart resume (`packages/app/src/main.ts:492`), review redos (`packages/app/src/slices/rebuild/review-redo.ts:115`), narration retries (`packages/app/src/slices/rebuild/narration-retry.ts:126`) |
+| In-process callers of `recoverProject` | restart resume (`packages/app/src/main.ts:492`), review redos (`packages/app/src/slices/rebuild/review-redo.ts:115`), narration retries (`packages/app/src/slices/rebuild/narration-retry.ts:126`; a `running` refusal leaves the retry pending until the project's running step finishes and `onFinished` kicks it again, `:143`) |
 | Subtitle alignment | `alignSubtitles` (`packages/app/src/adapters/alignment/index.ts:12`), called from `executeSubtitleRecipe` (`packages/app/src/slices/rebuild/runtime-subtitles.ts:73`, `:116`) |
 | Startup model prefetch | `packages/app/src/main.ts:736` |
 

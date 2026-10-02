@@ -1,1 +1,0 @@
-- Play → Review no longer refuses a setup with burned-in captions and a Before Video checkpoint ("Something changed since you reviewed this video"): the font the render uses made the two checks it compares differ every time.

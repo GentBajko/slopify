@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: bfd70094ed10
+content_hash: fc5be7bc4331
 paths_covered:
   - ":(top)packages/web/src/routes/entry-editor.tsx"
   - ":(top)packages/web/src/library/editor-frame.tsx"
@@ -21,7 +21,7 @@ paths_covered:
 
 ## Mode & job
 
-Operate surface for creating, duplicating, editing and deleting one intro/outro entry. Routes: `/entries/new?category=&from=` (new, or a copy of `from`) and `/entries/$entryId` (edit), both top-level routes outside the Library tabs (`packages/web/src/router.tsx:288`, `:298`). Saving, deleting and Cancel all return to `/entries?category=<draft category>` (`packages/web/src/router.tsx:581`). The shell's Library nav item stays lit (`packages/web/src/components/shell.tsx:111`). Every Save rule is the shared `draftProblems` lint, which runs the server's own `lintEntry` (`packages/web/src/lib/draft-lint.ts:3`, `:39`).
+Operate surface for creating, duplicating, editing and deleting one intro/outro entry. Routes: `/entries/new?category=&from=` (new, or a copy of `from`) and `/entries/$entryId` (edit), both top-level routes outside the Library tabs (`packages/web/src/router.tsx:289`, `:299`). Saving, deleting and Cancel all return to `/entries?category=<draft category>` (`packages/web/src/router.tsx:588`). The shell's Library nav item stays lit (`packages/web/src/components/shell.tsx:111`). Every Save rule is the shared `draftProblems` lint, which runs the server's own `lintEntry` (`packages/web/src/lib/draft-lint.ts:3`, `:39`).
 
 ## Composition
 

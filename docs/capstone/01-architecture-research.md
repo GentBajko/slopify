@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: bf372ff0ca95
+content_hash: 0c625f14a6e4
 paths_covered:
   - ":(top)packages/app/src/slices/research/**"
   - ":(top)packages/app/src/slices/rebuild/recipe-text.ts"
@@ -50,10 +50,10 @@ Dependency direction: slices build `LlmDocument[]` values and hand them to the w
 | Module | Public surface | Boundary |
 |---|---|---|
 | `kernel/ports/llm-documents.ts` | `llmDocumentsSchema` (at most 128 documents, IDs `^[a-z][a-z0-9-]{0,63}$`, each ≤ 2 MiB, total ≤ 12 MiB, unique IDs) (`:4`); `LlmDocument` (`:24`); `documentIndex` (`:26`); `documentMessages` (`:36`) | Shared contract for slices, adapters and the host bridge schema (`packages/app/src/kernel/ports/host-cli.ts:76`) |
-| `slices/research/documents.ts` | `researchDocuments(findings)` gives stable IDs `research-1..N`, title = chapter title, content = unchanged sub-agent notes (`:4`) | Used by synthesis and by the rebuild recipes (`packages/app/src/slices/research/synthesis.ts:31`, `packages/app/src/slices/rebuild/recipe-text.ts:15`) |
+| `slices/research/documents.ts` | `researchDocuments(findings)` gives stable IDs `research-1..N`, title = chapter title, content = unchanged sub-agent notes (`:4`) | Used by synthesis and by the rebuild recipes (`packages/app/src/slices/research/synthesis.ts:31`, `packages/app/src/slices/rebuild/recipe-text.ts:16`) |
 | `slices/research/synthesis.ts` | `synthesisMessages` puts the document index, not the report bodies, into the prompt (`:17`, `:31`); `sourcedAnswer` requires a trailing Sources list (`:59`) | Pure message builders |
-| `slices/rebuild/recipe-text.ts` | `llmInput(context, messages, webSearch, documents)` stores `documents` on the recipe input only when non-empty (`:37`, `:60`). The `research:notes` recipe carries `researchDocuments(findings)` (`:137`-`:146`). Article and continuation recipes carry the originals plus `{ id: "editorial-notes" }` when research is Generate, and the prompt receives `documentIndex(documents)` in place of the notes (`:178`-`:187`, `:230`, `:250`) | Recipes are frozen into the rebuild execution snapshot; `recipeInputSchema` accepts `documents` (`packages/app/src/slices/rebuild/recipe-input-schema.ts:38`) |
-| `slices/rebuild/runtime-provider.ts` | `executeProviderRecipe` passes `input.documents` to the wrapped call (`:43`, `:70`). A `research:chapter:N` answer is written as asset `research-N.md` (`:424`-`:431`); `research:notes` publishes `notes.md` and `instructions.md` (`:392`-`:399`) | Answers are checked by `sourcedAnswer` for notes and chapters (`:287`) |
+| `slices/rebuild/recipe-text.ts` | `llmInput(context, messages, webSearch, documents)` stores `documents` on the recipe input only when non-empty (`:38`, `:61`). The `research:notes` recipe carries `researchDocuments(findings)` (`:138`-`:147`). Article and continuation recipes carry the originals plus `{ id: "editorial-notes" }` when research is Generate, and the prompt receives `documentIndex(documents)` in place of the notes (`:179`-`:188`, `:231`, `:251`) | Recipes are frozen into the rebuild execution snapshot; `recipeInputSchema` accepts `documents` (`packages/app/src/slices/rebuild/recipe-input-schema.ts:38`) |
+| `slices/rebuild/runtime-provider.ts` | `executeProviderRecipe` passes `input.documents` to the wrapped call (`:43`, `:70`). A `research:chapter:N` answer is written as asset `research-N.md` (`:425`-`:432`); `research:notes` publishes `notes.md` and `instructions.md` (`:393`-`:400`) | Answers are checked by `sourcedAnswer` for notes and chapters (`:288`) |
 | `slices/rebuild/runtime-article.ts` | Article body and each continuation send `input.documents` (`:51`) | — |
 | `slices/research/run.ts` | `runResearch` (`:50`) plans, researches chapters in parallel and synthesises with `documents: researchDocuments(findings)` (`:118`) | Referenced only by `packages/app/src/slices/research/run.test.ts`; the live path is the rebuild recipes above |
 | `adapters/llm/document-workspace.ts` | `documentWorkspace(documents)` (`:18`) writes `<id>.md`, `manifest.json` (id, title, sha256), `index.md` and `mcp.json` with mode 0600 into a `slopify-documents-*` temp dir (`:28`-`:61`); returns `instructions`, `verifyRead()` and `remove()` (`:62`-`:85`). Server name `slopify_research`, tool `read_document` (`:14`-`:16`) | Invalid input throws `providerError({ kind: "unsupported" })` before any provider runs (`:21`) |

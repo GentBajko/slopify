@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 2d6880e4df66
+content_hash: 3619588adb60
 paths_covered:
   - ":(top)packages/app/src/slices/control/**"
   - ":(top)packages/app/src/slices/cancel/**"
@@ -27,6 +27,9 @@ paths_covered:
   - ":(top)packages/web/src/project/confirmations.ts"
   - ":(top)packages/web/src/project/summary.ts"
   - ":(top)packages/web/src/routes/project.tsx"
+  - ":(top)packages/app/src/slices/uploads/repo.ts"
+  - ":(top)packages/app/src/edge/http/projects.ts"
+  - ":(top)packages/web/src/project/header.tsx"
 absorbed_from:
   - features/2026-09-09-pausable-optional-runs@2026-09-10
   - features/2026-09-24-host-cli-bridge@2026-09-24
@@ -45,8 +48,8 @@ Stopping a running project: what is aborted, what survives, and how the run cont
 | Control | Where the page offers it | Server precondition |
 |---|---|---|
 | Pause | Right-rail next action "Pause" while the project reads running (`packages/web/src/project/next-action.ts:297`); command palette "Pause the run" (`packages/web/src/routes/project.tsx:225`) | Any unfinished stage; a project whose stages are all satisfied returns ok with no change (`packages/app/src/slices/control/index.ts:127`) |
-| Continue the run (Resume) | Next action while paused (`packages/web/src/project/next-action.ts:164`) or stopped: `resumable`, canceled, or failed with no retryable failed stage (`:310`); palette title flips to "Continue the run" while paused (`packages/web/src/routes/project.tsx:226`) | A current revision the request's `baseRevisionId` names (`packages/app/src/slices/rebuild/recovery.ts:91`) |
-| Cancel | More menu "Cancel the run…", enabled only while the project status is `running` and no action is pending (`packages/web/src/routes/project.tsx:455`); confirm dialog "Cancel this run?" / "Cancel run" / "Keep running" (`packages/web/src/project/confirmations.ts:49`) | A running stage, a paused flag, admitted pending head work, or calls still draining; otherwise a no-op (`packages/app/src/slices/cancel/index.ts:96`) |
+| Continue the run (Resume) | Next action while paused (`packages/web/src/project/next-action.ts:164`) or stopped: `resumable`, canceled, or failed with no retryable failed stage (`:331`); palette title flips to "Continue the run" while paused (`packages/web/src/routes/project.tsx:226`) | A current revision the request's `baseRevisionId` names (`packages/app/src/slices/rebuild/recovery.ts:91`) |
+| Cancel | More menu "Cancel the run…", enabled only while the project status is `running` and no action is pending (`packages/web/src/routes/project.tsx:456`); confirm dialog "Cancel this run?" / "Cancel run" / "Keep running" (`packages/web/src/project/confirmations.ts:55`) | A running stage, a paused flag, admitted pending head work, or calls still draining; otherwise a no-op (`packages/app/src/slices/cancel/index.ts:96`) |
 | Retry / Soften | Next action on a failed stage with no scheduled retry (`packages/web/src/project/next-action.ts:182`) | Same as Resume, scoped to the stage (`packages/app/src/slices/rebuild/recovery-selection.ts:94`) |
 
 Every control body carries `{ baseRevisionId, idempotencyKey }`, a revision id of 1–64 chars and a UUID (`packages/app/src/slices/control/revision-control-schema.ts:3`). The web client mints one identity per project+action+stage, reuses it after a transport fault even when live events move the head, and drops it once the server answers (`packages/web/src/project/use-actions.ts:86`, `:101`). Before pause/cancel the edge adopts a baseline revision for a legacy project; a project with a head and no valid body is refused `revision-required` (`packages/app/src/edge/http/actions.ts:215`).
@@ -60,7 +63,7 @@ Actor: the single local user.
 1. `pauseProject` serializes on the per-project control queue shared by every project mutation (`packages/app/src/slices/control/lock.ts:7`, `packages/app/src/slices/control/index.ts:107`).
 2. `checkRevisionControl` runs in one transaction: a key already stored for another operation or hash is `idempotency-conflict`; a stored final response is replayed; a stored `{pending:true}` continues only while the head still equals the base; a key used by a revision mutation, rebuild admission or recovery request is `idempotency-conflict`; a head that moved is `conflict`; otherwise a `project_control_receipts` row is inserted as `{pending:true}` (`packages/app/src/slices/control/revision-control.ts:25`).
 3. A project already paused with nothing running and nothing in flight returns ok (`packages/app/src/slices/control/index.ts:129`).
-4. The pause flag (`project_controls.paused=1`) is committed before any abort (`packages/app/src/slices/control/index.ts:131`), then `runner.abortProject(id, "pause")` aborts every in-flight controller of the project with the `paused by user` reason and waits for all of them to settle (`packages/app/src/kernel/runner/index.ts:337`, `:80`).
+4. The pause flag (`project_controls.paused=1`) is committed before any abort (`packages/app/src/slices/control/index.ts:131`), then `runner.abortProject(id, "pause")` aborts every in-flight controller of the project with the `paused by user` reason and waits for all of them to settle (`packages/app/src/kernel/runner/index.ts:337`, `:81`).
 5. A stage whose call rejects under the pause reason concludes `pending` with no failure reason; any other abort concludes `canceled` "canceled by user" (`packages/app/src/kernel/runner/index.ts:217`).
 6. Every stage that was running before the pause and now reads `running` or `canceled` is written `pending` (`packages/app/src/slices/control/index.ts:135`). The receipt is updated with the final response (`packages/app/src/slices/control/revision-control.ts:96`).
 7. While paused the runner claims nothing for the project (`packages/app/src/kernel/runner/index.ts:202`), timed retries are not woken (`packages/app/src/kernel/runner/work-authority.ts:108`), and a stage row cannot move to `running` (`packages/app/src/slices/admission/repo.ts:144`).
@@ -73,7 +76,7 @@ Actor: the single local user.
 11. A preview is planned and stored like a reviewed rebuild (scenario 12). Provided content or manual captions that would be replaced end `review-required`; any `blocked` work ends `readiness` with each row's reason (`packages/app/src/slices/rebuild/recovery.ts:210`, `:220`). Unknown prices do not block: they add the warning "Some generation prices are unknown; actual usage is recorded." (`:337`).
 12. Provider readiness is checked outside the lock; a load failure yields a `readiness` refusal "Check provider readiness and try Resume." (`packages/app/src/slices/rebuild/recovery.ts:271`). Inside the lock and one transaction the authority stamp, the head and a credentials stamp (hash of `provider_keys.credential_generation` for providers that will submit) are rechecked; changed credentials end `readiness` "Provider credentials changed. Try Resume again." (`:37`, `:305`).
 13. `admitCheckedPreview` admits the work under the admit key `recovery:<key>:admit` (`packages/app/src/slices/rebuild/recovery.ts:320`, `packages/app/src/slices/rebuild/recovery-repo.ts:26`). Admission clears the pause flag in the same transaction (`packages/app/src/slices/rebuild/admission-repo.ts:186`). After commit the project is announced and the runner ticked (`packages/app/src/slices/rebuild/recovery.ts:345`). The HTTP answer is 202 with the admission and warnings (`packages/app/src/edge/http/actions.ts:157`).
-14. Soften first records a softening request for the stage's steps whose last attempt a content filter refused (images or thumbnail only), then runs Retry; a non-202 answer clears the request. With nothing refused the answer is 409 `nothing-refused` (`packages/app/src/edge/http/actions.ts:276`, `packages/app/src/slices/rebuild/soften.ts:11`).
+14. Soften first records a softening request for the stage's softenable steps whose last attempt a content filter refused: every refused image of Images or Thumbnail, and in Video only the refused short stills `shorts:N:image:M` (`softenableKeys`, `packages/app/src/slices/rebuild/soften.ts:26-40`, over `refusedKeys`, `:11`), then runs Retry; a non-202 answer clears the request. With nothing softenable the answer is 409 `nothing-refused` (`packages/app/src/edge/http/actions.ts:276-292`).
 
 ### Cancel
 
@@ -86,6 +89,7 @@ Actor: the single local user.
 
 ## Branches
 
+- **Kept as is.** A `pending` project that Home's Needs you set aside ("Keep as is", still about its current revision, `setAsideProjects`, `packages/app/src/slices/uploads/repo.ts:61`; served as `setAside` on the project and listing, `packages/app/src/edge/http/projects.ts:92`, `:121`) offers no Continue the run: the next action reads "Kept as is" with Prepare upload when the upload is ready, else no action, and is checked before the stopped/resumable branch; the header status reads "Kept as is" (`packages/web/src/project/next-action.ts:309-328`, `packages/web/src/project/header.tsx:54-57`). Editing the project ends the set-aside (scenario 38).
 - **Resume after cancel.** Canceled work rows stay canceled; Continue the run (or a stage's Retry) plans a new admission that reuses every stored piece and asset and submits only what is missing (`packages/app/test/direct-recovery.test.ts:22`).
 - **Legacy stage-level resume.** `resumeProject` in `packages/app/src/slices/control/index.ts:145` (refuses `rebuild-required` for a revision project with canceled stages or with neither checkpoints nor admitted work) is not routed by the edge; only its unit test calls it. `changeProviders` (`:194`) is likewise unrouted: `PATCH /:id/providers` answers 409 `revision-required` (`packages/app/src/edge/http/actions.ts:249`).
 - **Stage stored at the instant of cancel.** The stage stays `done`; the `canceled` list is read back after the transaction, not assumed from what was running (`packages/app/src/slices/cancel/index.ts:181`).
@@ -96,7 +100,7 @@ Actor: the single local user.
 
 ## Unhappy paths
 
-- Refusals map to 404 `no-project`, 409 `revision-required`/`conflict`/`idempotency-conflict`/`rebuild-required`, each with a sentence naming the fix (`packages/app/src/edge/http/actions.ts:94`). Recovery refusals map to 404/400/409 with sentences such as "Wait for this section to finish, or Pause the project, before re-running it." (`:141`). The page shows a project-level refusal in the right rail with Dismiss (`packages/web/src/routes/project.tsx:463`).
+- Refusals map to 404 `no-project`, 409 `revision-required`/`conflict`/`idempotency-conflict`/`rebuild-required`, each with a sentence naming the fix (`packages/app/src/edge/http/actions.ts:94`). Recovery refusals map to 404/400/409 with sentences such as "Wait for this section to finish, or Pause the project, before re-running it." (`:141`). The page shows a project-level refusal in the right rail with Dismiss (`packages/web/src/routes/project.tsx:464`).
 - Recovery before the rebuild service is wired answers 503 "Resume and retry are not ready yet because Slopify is still starting." (`packages/app/src/edge/http/actions.ts:147`).
 - A late response from an aborted call rejects into the aborted branch and is not logged as a fault (`packages/app/src/kernel/runner/index.ts:217`).
 - A final row write that failed during unwinding is covered by the cancel sweep and by pause's post-abort rewrite (`packages/app/src/slices/cancel/index.ts:125`, `packages/app/src/slices/control/index.ts:134`).
@@ -129,7 +133,7 @@ Forbidden: pause/cancel changing a `done` stage or deleting a stored piece or as
 ## Outcomes & side effects
 
 - Pause: project status `paused`; the rail reads "The run is paused." with the still-to-make list and Continue the run (`packages/web/src/project/next-action.ts:164`). Pending stages read "Waits until you continue the run" (`packages/web/src/project/summary.ts:76`). The running rail explains Pause as "Pausing lets the current call finish and keeps everything made so far." (`packages/web/src/project/next-action.ts:304`) while the server aborts in-flight calls (step 4).
-- Cancel: project status `canceled`, header status "Canceled", stage rows "Canceled by user" (`packages/web/src/project/summary.ts:87`); rail "The run stopped before it finished." with Continue the run (`packages/web/src/project/next-action.ts:315`). Kept outputs remain downloadable (scenario 14).
+- Cancel: project status `canceled`, header status "Canceled", stage rows "Canceled by user" (`packages/web/src/project/summary.ts:87`); rail "The run stopped before it finished." with Continue the run (`packages/web/src/project/next-action.ts:336`). Kept outputs remain downloadable (scenario 14).
 - Telemetry: usage is recorded only for calls that completed; a canceled then resumed run counts only the calls the resumed run made (`packages/app/src/kernel/runner/providers.ts:159`, `packages/app/test/cancel.test.ts:260`).
 - Notifications: a transition into `paused` or `canceled` produces no run notice (`packages/app/src/slices/notifications/rules.ts:10`).
 - Records: `project_control_receipts` row per pause/cancel request; `project_recovery_requests` row per resume/retry/soften; schedule occurrences settled on cancel.

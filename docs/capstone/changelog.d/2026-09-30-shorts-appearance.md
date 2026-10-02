@@ -1,1 +1,0 @@
-- The shorts' image prompt (Shorts → Image prompt) takes `{{Appearance}}`: each short gets the subject's researched look and those of the figures its clip names, so shorts draw figures like the video does. A `{{Scene}}` line there is left out, since each short's images already show what is said.

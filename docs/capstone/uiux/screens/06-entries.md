@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 81bf4d445fb5
+content_hash: 7cb247ec0134
 paths_covered:
   - ":(top)packages/web/src/routes/entries.tsx"
   - ":(top)packages/web/src/routes/library.tsx"
@@ -15,17 +15,17 @@ paths_covered:
 
 ## Mode & job
 
-Operate surface: the Library's Intros & Outros tab at `/entries?category=intro|outro`, for finding, renaming, previewing, handing to Play, duplicating and deleting saved intro/outro entries. `entriesRoute` is a child of `libraryRoute` and validates `category` through `categoryOf`, which falls back to `intro` (`packages/web/src/router.tsx:279`, `packages/web/src/lib/entry-options.ts:58`). The category switch replaces the URL (`replace: true`) rather than pushing history (`packages/web/src/router.tsx:525`). The shell's Library nav item stays lit for `/entries` (`packages/web/src/components/shell.tsx:111`).
+Operate surface: the Library's Intros & Outros tab at `/entries?category=intro|outro`, for finding, renaming, previewing, handing to Play, duplicating and deleting saved intro/outro entries. `entriesRoute` is a child of `libraryRoute` and validates `category` through `categoryOf`, which falls back to `intro` (`packages/web/src/router.tsx:280`, `packages/web/src/lib/entry-options.ts:58`). The category switch replaces the URL (`replace: true`) rather than pushing history (`packages/web/src/router.tsx:532`). The shell's Library nav item stays lit for `/entries` (`packages/web/src/components/shell.tsx:111`).
 
 ## Composition
 
-Top to bottom, inside `LibraryLayout` (`packages/web/src/routes/library.tsx:22`):
+Top to bottom, inside `LibraryLayout` (`packages/web/src/routes/library.tsx:23`):
 
 | Region | What renders | Source |
 |---|---|---|
-| Page header | kit `PageHeader` titled "Library", meta "Prompts, intros and outros, templates, document themes and narration aliases" | `packages/web/src/routes/library.tsx:25` |
-| Tabs | kit `TabLinks` "Library sections": Prompts, Intros & Outros, Templates, Documents, Aliases | `packages/web/src/routes/library.tsx:14`, `:29` |
-| Toolbar | `LibraryToolbar`: filters left, one action right (wraps under on a phone) | `packages/web/src/routes/library.tsx:112` |
+| Page header | kit `PageHeader` titled "Library", meta "Prompts, intros and outros, templates, document themes, narration aliases and A/B results" | `packages/web/src/routes/library.tsx:26` |
+| Tabs | kit `TabLinks` "Library sections": Prompts, Intros & Outros, Templates, Documents, Aliases, A/B results | `packages/web/src/routes/library.tsx:14`, `:30` |
+| Toolbar | `LibraryToolbar`: filters left, one action right (wraps under on a phone) | `packages/web/src/routes/library.tsx:113` |
 | Toolbar filters | kit `Input type="search"` "Search intros and outros" (width `sm:w-64`, keyboard shortcut from `useSearchShortcut`), then kit `Segmented` "Entry category" with Intros / Outros and an InfoTip `library.entry.category` | `packages/web/src/routes/entries.tsx:89`, `:99` |
 | Toolbar action | primary `ButtonLink` "New intro or outro" → `/entries/new?category=<current>` | `packages/web/src/routes/entries.tsx:84` |
 | Body | kit `ListDetail` with `libraryListDetail` (two equal columns from 1180 px; one column at phone width) | `packages/web/src/routes/entries.tsx:123`, `packages/web/src/library/list-states.tsx:7`, `packages/web/src/styles/shell.css:719` |
@@ -45,7 +45,7 @@ Detail column: `LibraryItemDetail` for the selected row, or the first listed row
 
 Overlays: `HistoryDrawer` (kit `Drawer` "History of <name>": Compare section, Versions list with "Current" or "Restore" per version, a `StatusSlot`) (`packages/web/src/library/history-drawer.tsx:84`); kit `ConfirmDialog` for Delete (`packages/web/src/routes/entries.tsx:222`).
 
-Ctrl+K commands registered on every Library tab: "New intro or outro" (starts on the tab's category), "Open intros and outros", plus the other Library new/open commands (`packages/web/src/routes/library.tsx:39`).
+Ctrl+K commands registered on every Library tab: "New intro or outro" (starts on the tab's category), "Open intros and outros", plus the other Library new/open commands (`packages/web/src/routes/library.tsx:40`).
 
 ## States
 
@@ -59,7 +59,7 @@ Ctrl+K commands registered on every Library tab: "New intro or outro" (starts on
 | Renaming | pencil pressed | inline `Input` "New name for <name>" with "Save name" (primary, "Saving…" while pending) and "Cancel"; Enter saves, Escape cancels; empty name says "Write a name first, or press Cancel to keep the old one." | `packages/web/src/library/inline-name.tsx:109`, `:56` |
 | Rename refused | server rejects the name | `role="alert"` line "The name wasn't saved. <server field messages>" | `packages/web/src/library/inline-name.tsx:12`, `:141` |
 | Rename saved | save ok | success toast `Renamed “<old>” to “<new>”.` with an Undo action | `packages/web/src/library/inline-name.tsx:72` |
-| Use in Play blocked | Play is starting a run from its draft | "Use in Play" disabled, `title` "Play is starting a run from its draft. Wait for it to start, then try again." | `packages/web/src/router.tsx:473`, `packages/web/src/library/row-actions.tsx:42` |
+| Use in Play blocked | Play is starting a run from its draft | "Use in Play" disabled, `title` "Play is starting a run from its draft. Wait for it to start, then try again." | `packages/web/src/router.tsx:480`, `packages/web/src/library/row-actions.tsx:42` |
 | Used by / history unreadable | per-section query error | danger text "What uses it couldn't be read: …" / "The history couldn't be read: …" | `packages/web/src/library/item-detail.tsx:81`, `:163` |
 | Unused / single version | no templates, schedules or projects; one version | "Nothing uses it yet." / "Only one version so far." | `packages/web/src/library/item-detail.tsx:90`, `:169` |
 | Delete confirm | trash icon | `ConfirmDialog` `Delete "<name>"?`, consequence "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.", confirm "Delete intro" / "Delete outro", pending while the request runs | `packages/web/src/routes/entries.tsx:222` |

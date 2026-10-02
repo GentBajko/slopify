@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: bf01e683dffc
+content_hash: c27465b37d72
 paths_covered:
   - ":(top)packages/app/src/slices/admission/substitute.ts"
   - ":(top)packages/app/src/slices/admission/rules.ts"
@@ -19,6 +19,9 @@ paths_covered:
   - ":(top)packages/web/src/play/admission.ts"
   - ":(top)packages/web/src/components/keyword-list.tsx"
   - ":(top)packages/web/src/schedules/topic-queue.tsx"
+  - ":(top)packages/app/src/slices/admission/model.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-shorts.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-appearance.ts"
 scenario: placeholder-substitution
 mockup_row: S1
 screens: [05-prompt-editor, 06-play, 08-project]
@@ -49,12 +52,12 @@ How `{{keywords}}` in prompt bodies, entries and the project title become fields
 4. Show fields (`KeywordList`, `packages/web/src/components/keyword-list.tsx:34-108`): one input per keyword, max length `valueMax` (200) by default; under each a line "Feeds <place> · <place>" naming every place it is used, or "Not used by any picked prompt"; a keyword the title names adds "left empty in templates" (`keyword-list.tsx:21-29`). Play, Edit project, templates and schedules draw this one list; without an `onChange` it is read-only (saved template).
 5. Validate on admission (`checkValues`, `packages/app/src/slices/admission/rules.ts:368-391`): values are trimmed first (`normaliseDraft`, `rules.ts:219-224`); each required name must have a non-empty value, ≤ 200 characters (`valueMax`, `rules.ts:36`; exactly 200 is valid), with no line break. Each violation is a `values.<name>` field error; scenario 04 turns it into a blocked Play.
 6. Render at run start (`render`, `substitute.ts:94-103`; `renderPicked`, `slots.ts:185-194`): in every picked body replace each `{{name}}` with its trimmed value in one pass; a value's own `{{…}}` is inserted literally and never expanded; a name with no value is left as written. Lookups are prototype-free, so names like `constructor` or `__proto__` are ordinary (`substitute.ts:96-100`, `rules.ts:219-222`).
-7. Title: the project title is rendered with the same values, trimmed; if that is empty the unrendered title is kept (`packages/app/src/slices/admission/start.ts:65-67`).
-8. Record on the project: `config.values` (the trimmed values) and `config.rendered`, keyed by the draft field that picked each body: `article`, `narration`, `intro`, `outro`, `description`, `shorts`, `shortsImage`, `referencePrompt`, `imagePrompts.<n>`, `thumbnailPrompt`, and each review prompt key (`slots.ts:23-29`, `start.ts:70-80`).
-9. Re-render on rebuild: a revision that carries its own prompt template for a key renders it again with `config.values`; otherwise the stored `config.rendered[key]` is used (`renderedPrompt`, `packages/app/src/slices/rebuild/recipe-text.ts:31-36`). Scenario 12 owns revisions.
+7. Title: the project title is rendered with the same values, trimmed; if that is empty the unrendered title is kept (`packages/app/src/slices/admission/start.ts:65-67`). When rendering changed the title and the draft title names a keyword, the unrendered title is kept as `config.titlePattern` (`start.ts:74-76`; `packages/app/src/slices/admission/model.ts:275-277`), which YouTube's Write again uses to keep the other titles' fixed words (scenario 12). A later rename in Edit project keeps the title the project was made with as `config.subjectTitle`; the title-reading recipes read `subjectOf(config)` (`model.ts:285-290`), so a rename re-renders nothing (scenario 12).
+8. Record on the project: `config.values` (the trimmed values) and `config.rendered`, keyed by the draft field that picked each body: `article`, `narration`, `intro`, `outro`, `description`, `shorts`, `shortsImage`, `referencePrompt`, `imagePrompts.<n>`, `thumbnailPrompt`, and each review prompt key (`slots.ts:23-29`, `start.ts:70-83`).
+9. Re-render on rebuild: a revision that carries its own prompt template for a key renders it again with `config.values`; otherwise the stored `config.rendered[key]` is used (`renderedPrompt`, `packages/app/src/slices/rebuild/recipe-text.ts:32-37`). Scenario 12 owns revisions.
 10. `{{Scene}}` and `{{Appearance}}` (scenario 09 owns the calls that produce them):
-    - Scene: with Scenes from the article on, each image's scene replaces `{{Scene}}`, or, when the prompt has none, is inserted as a `Scene: …` line after the prompt's first paragraph (`withScene`, `packages/app/src/slices/images/scenes.ts:14-22`). With it off, any line holding `{{Scene}}` is removed (`withoutScene`, `scenes.ts:24-34`; applied in `packages/app/src/slices/rebuild/recipe-visual.ts:73-74`).
-    - Appearance: `{{Appearance}}` becomes the looks of the subject and up to 3 characters the image's scene names (the subject always for a thumbnail); when that text is empty, the lines holding it are removed (`packages/app/src/slices/images/appearance.ts:83-115`).
+    - Scene: with Scenes from the article on, each image's scene replaces `{{Scene}}`, or, when the prompt has none, is inserted as a `Scene: …` line after the prompt's first paragraph (`withScene`, `packages/app/src/slices/images/scenes.ts:14-22`). With it off, any line holding `{{Scene}}` is removed (`withoutScene`, `scenes.ts:24-34`; applied in `packages/app/src/slices/rebuild/recipe-visual.ts:73-74`). In the Shorts image prompt the `{{Scene}}` line is always removed, because the per-clip prompts call already writes each still's moment (`packages/app/src/slices/rebuild/recipe-shorts.ts:88-92`).
+    - Appearance: `{{Appearance}}` becomes the looks of the subject and up to 3 characters the image's scene names (the subject always for a thumbnail and for a short's stills, which take the clip's text as their scene, `packages/app/src/slices/rebuild/recipe-shorts.ts:132`); when that text is empty, the lines holding it are removed (`packages/app/src/slices/images/appearance.ts:83-115`). The Shorts image prompt counts among the bodies whose `{{Appearance}}` turns the looks lookup on (`pictureBodies`, `packages/app/src/slices/rebuild/recipe-appearance.ts:55-57`).
 11. Templates and schedules: saving a template empties the values of keywords the title names (the per-video topic) and keeps the rest (`templateValues`, `packages/app/src/slices/project-templates/one-off.ts:8-23`). A schedule has a topic keyword and "every run" values (each value ≤ 10000 chars, keyword names trimmed, ≤ 200, `packages/app/src/slices/schedules/schema.ts:11-19`); a run's values are layered template values → every-run values → the topic's own values → topic title in the topic keyword; without a topic keyword the topic is the whole title (`scheduledValues` / `renderedTitle`, `packages/app/src/slices/schedules/topic-list.ts:29-61`). The schedule's list labels fields "<name> (every run)" and adds "Unless a topic sets its own." to columns a topic list provides (`packages/web/src/schedules/topic-queue.tsx:349-364`). Scenario 25 owns schedules.
 
 ## Branches

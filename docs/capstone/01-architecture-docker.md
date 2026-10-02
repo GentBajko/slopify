@@ -1,25 +1,41 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 207f25293be3
+content_hash: d2a54fd82b6c
 paths_covered:
   - ":(top)Dockerfile"
   - ":(top)compose.yaml"
   - ":(top)biome.json"
   - ":(top)packages/app/package.json"
   - ":(top)packages/app/scripts/copy-assets.mjs"
-  - ":(top)packages/app/src/edge/{cli,cli-args,docker,host-cli}.ts"
+  - ":(top)packages/app/src/edge/cli.ts"
+  - ":(top)packages/app/src/edge/cli-args.ts"
+  - ":(top)packages/app/src/edge/docker.ts"
+  - ":(top)packages/app/src/edge/host-cli.ts"
   - ":(top)packages/app/src/edge/docker-install/**"
-  - ":(top)packages/app/src/edge/autostart/{docker,docker-record,index,model,service}.ts"
-  - ":(top)packages/app/src/edge/http/{app,autostart,folder-location,folder-location-schema,open-folder,revision-files,update}.ts"
+  - ":(top)packages/app/src/edge/autostart/docker.ts"
+  - ":(top)packages/app/src/edge/autostart/docker-record.ts"
+  - ":(top)packages/app/src/edge/autostart/index.ts"
+  - ":(top)packages/app/src/edge/autostart/model.ts"
+  - ":(top)packages/app/src/edge/autostart/service.ts"
+  - ":(top)packages/app/src/edge/http/app.ts"
+  - ":(top)packages/app/src/edge/http/autostart.ts"
+  - ":(top)packages/app/src/edge/http/folder-location.ts"
+  - ":(top)packages/app/src/edge/http/folder-location-schema.ts"
+  - ":(top)packages/app/src/edge/http/open-folder.ts"
+  - ":(top)packages/app/src/edge/http/revision-files.ts"
+  - ":(top)packages/app/src/edge/http/update.ts"
   - ":(top)packages/app/src/host-cli/open-folder.ts"
   - ":(top)packages/app/src/adapters/host-cli/index.ts"
-  - ":(top)packages/app/src/updater/{candidate,service}.ts"
-  - ":(top)packages/app/src/slices/storage/{files-location,reconcile}.ts"
+  - ":(top)packages/app/src/updater/candidate.ts"
+  - ":(top)packages/app/src/updater/service.ts"
+  - ":(top)packages/app/src/slices/storage/files-location.ts"
+  - ":(top)packages/app/src/slices/storage/reconcile.ts"
   - ":(top)packages/app/src/slices/backups/folder.ts"
   - ":(top)packages/app/src/main.ts"
-  - ":(top)packages/web/src/project/{open-folder.tsx,revision-api.ts}"
+  - ":(top)packages/web/src/project/open-folder.tsx"
+  - ":(top)packages/web/src/project/revision-api.ts"
   - ":(top)packages/web/src/autostart/**"
   - ":(top)packages/web/src/main.tsx"
   - ":(top)packages/web/vite.config.ts"
@@ -165,7 +181,7 @@ Any failure runs `rollback`: stop the compose candidate (or remove a non-legacy 
 
 At boot the container requires `SLOPIFY_DOCKER_INSTALL_STATE` to be exactly `/opt/slopify-install/activation.json` inside a container (`packages/app/src/main.ts:229`). A pending candidate (`SLOPIFY_UPDATE_PENDING=1` and a valid token) defers storage reconciliation and sample seeding (`packages/app/src/main.ts:239`, `:282`, `:580`). `watchActivation` polls `updater.activate` every 250 ms; the committed check is `dockerActivationCommitted` (timing-safe token compare against the private marker); after 120 s uncommitted the candidate shuts itself down; on commit, deferred reconciliation runs (`packages/app/src/updater/candidate.ts:3`, `packages/app/src/main.ts:406`, `:411`, `:803`, `packages/app/src/edge/docker-install/activation.ts:17`).
 
-Files layout in a container: projects `/data/projects`; backups `/data/backups` when `SLOPIFY_DOCKER_BACKUPS_DIR` is set, else `/data/projects/<backupsFolderName>`; no exports folder (`packages/app/src/edge/docker-install/activation.ts:27`, `packages/app/src/main.ts:257`). `dockerFolderConfiguration` returns host paths only when the projects bind is a real mount at `/data/projects` (per `/proc/self/mountinfo`) and the paths are absolute, normalized and comma-free (`packages/app/src/edge/docker-install/activation.ts:38`). The files service reports the host folder and refuses to move it from inside the container, pointing at `npx @gentbajko/slopify@latest update --docker --projects-dir documents` (`packages/app/src/slices/storage/files-location.ts:180`, `:332`). The host projects folder is application-managed storage subject to reconciliation (`packages/app/src/slices/storage/reconcile.ts:14`).
+Files layout in a container: projects `/data/projects`; backups `/data/backups` when `SLOPIFY_DOCKER_BACKUPS_DIR` is set, else `/data/projects/<backupsFolderName>`; no exports folder (`packages/app/src/edge/docker-install/activation.ts:27`, `packages/app/src/main.ts:257`). `dockerFolderConfiguration` returns host paths only when the projects bind is a real mount at `/data/projects` (per `/proc/self/mountinfo`) and the paths are absolute, normalized and comma-free (`packages/app/src/edge/docker-install/activation.ts:38`). The files service reports the host folder and refuses to move it from inside the container, pointing at `npx @gentbajko/slopify@latest update --docker --projects-dir documents` (`packages/app/src/slices/storage/files-location.ts:180`, `:332`). A files move leaves out the `.render-cache` folder (`renderCacheFolder`, the video clip caches) at the top of the projects folder (`packages/app/src/slices/storage/files-location.ts:418`, `packages/app/src/slices/storage/layout.ts:12`). The host projects folder is application-managed storage subject to reconciliation (`packages/app/src/slices/storage/reconcile.ts:14`).
 
 ### Start at login
 

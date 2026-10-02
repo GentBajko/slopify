@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 318a9627abe8
+content_hash: 96417c8c541a
 paths_covered:
   - ":(top)package.json"
   - ":(top)vitest.config.ts"
@@ -36,16 +36,16 @@ One runner: Vitest (`vitest` `^4.1.11`, `package.json:23`). `npm test` runs `vit
 
 | Project (`name`) | Config | Include | Environment | Test files |
 | --- | --- | --- | --- | ---: |
-| `app` | `packages/app/vitest.config.ts:5` | `src/**/*.test.ts`, `test/**/*.test.ts` | node | 564 (507 in `src`, 57 in `test`) |
-| `web` | `packages/web/vitest.config.ts:8` | `src/**/*.test.ts`, `src/**/*.test.tsx` | `happy-dom` | 197 |
-| `extension` | `packages/extension/vitest.config.ts:5` | `test/**/*.test.ts` | `happy-dom` | 1 |
+| `app` | `packages/app/vitest.config.ts:5` | `src/**/*.test.ts`, `test/**/*.test.ts` | node | 574 (517 in `src`, 57 in `test`) |
+| `web` | `packages/web/vitest.config.ts:8` | `src/**/*.test.ts`, `src/**/*.test.tsx` | `happy-dom` | 200 |
+| `extension` | `packages/extension/vitest.config.ts:5` | `test/**/*.test.ts` | `happy-dom` | 3 |
 | `collector` | `packages/collector/vitest.config.ts:5` | `src/**/*.test.ts` | node | 1 |
 | `site` | `packages/site/vitest.config.ts:5` | `*.test.js` (package root only) | node | 5 |
 
-Total: 768 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
+Total: 783 tracked `*.test.*` files, every one matched by an include rule above; no `*.spec.*` files exist.
 
 - `vitest.tmpdir.ts:8-16`: global setup points `TMPDIR` at one `slopify-vitest-*` directory per run, inherited by workers, and removes it on teardown; fixtures create their data directories under `os.tmpdir()` and do not clean them individually.
-- `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. 40 test files set their own per-test timeout (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
+- `packages/app/vitest.config.ts:11`: on `win32` only, `testTimeout` and `hookTimeout` are 30 000 ms; Linux keeps Vitest's 5 s default. 48 test files pass their own timeout (an `{ timeout }` option or a trailing numeric argument) (for example `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts`).
 - `packages/web/vitest.config.ts:6` resolves the same aliases as the web build (`packages/web/aliases.ts:13-17`): `@/` to `packages/web/src`, and `@app/*.js` to the app package's TypeScript source.
 - Web test libraries: `@testing-library/dom`, `@testing-library/react`, `@testing-library/user-event`, `happy-dom` (`packages/web/package.json:32-38`). No other package declares test-only libraries.
 - No coverage provider or threshold is configured in any Vitest config or `package.json`.
@@ -56,7 +56,7 @@ Total: 768 tracked `*.test.*` files, every one matched by an include rule above;
 - Unit and slice tests sit beside the file they test, one test file per concern, often split by behavior with a suffix (`packages/app/src/slices/rebuild/runtime-export.test.ts`, `runtime-export-entries.test.ts`).
 - `packages/app/test/*.test.ts` (51 files): composed tests that wire several slices, the runner and real SQLite together (`revision-rebuild.test.ts`, `revision-shorts.test.ts`, `backup-round-trip.test.ts`, `host-cli-e2e.test.ts`, `docker-launcher.test.ts`).
 - `packages/app/test/e2e/*.test.ts` (6 files: `document`, `editable-projects`, `optional-outputs`, `play-drafts`, `review-checkpoints`, `skeleton`): boot the production app through `boot` from `packages/app/src/main.ts` on `127.0.0.1` port 0 and drive it over HTTP (`packages/app/test/e2e/skeleton.test.ts:9`, `packages/app/test/e2e/skeleton.test.ts:135`). Request helpers and zod response schemas live in sibling `*.http.ts` files (`packages/app/test/e2e/editable-projects.http.ts:15`).
-- Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`).
+- Extension tests live in `packages/extension/test/`, not beside `packages/extension/src/` (`packages/extension/vitest.config.ts:7`): `fill.test.ts`, `studio-pages.test.ts`, `video-picker.test.ts`.
 - Site tests sit at the package root and read the static pages, tokens and walkthrough steps (`packages/site/pages.test.js:11`, `packages/site/walkthrough.test.js:7`).
 
 ### Running targeted tests
@@ -71,23 +71,23 @@ npx vitest run --project web                                # one project (names
 npm test                                                    # the whole suite
 ```
 
-Filters used in CI take the same form (`.github/workflows/ci.yml:61-62`). Web tests import `@app/*` from source, so they need no app build; `npm run typecheck --workspace @slopify/web` builds the app's declarations first (`packages/web/package.json:9`).
+Filters used in CI take the same form (`.github/workflows/ci.yml:64-65`). Web tests import `@app/*` from source, so they need no app build; `npm run typecheck --workspace @slopify/web` builds the app's declarations first (`packages/web/package.json:9`).
 
 ### CI (`.github/workflows/ci.yml`)
 
-Triggers: pushes to any branch and pull requests; tags do not trigger CI (`.github/workflows/ci.yml:3-7`). All jobs use Node 26 (`.github/workflows/ci.yml:16`).
+Triggers: pushes to any branch and pull requests; tags do not trigger CI (`.github/workflows/ci.yml:3-7`). All jobs use Node 26 (`.github/workflows/ci.yml:17`) and carry a `timeout-minutes` cap (`check` 10, `test` 10, `windows` 20, `changes` 5, `container` 20; `.github/workflows/ci.yml:12`, `:31`, `:50`, `:77`, `:99`).
 
 | Job | Runs | When | Site |
 | --- | --- | --- | --- |
-| `check` | `npm ci`, `npm run lint` (Biome), `npm run typecheck`, `npm run build`, `npm audit --audit-level=high` | every push/PR | `.github/workflows/ci.yml:10-24` |
-| `test` | `npx vitest run --shard=N/4` on four parallel runners, `fail-fast: false` | every push/PR | `.github/workflows/ci.yml:28-41` |
-| `changes` | `node packages/app/scripts/ci-changes.mjs` with full history and tags | every push/PR | `.github/workflows/ci.yml:68-80` |
-| `windows` | build, `install-smoke.mjs`, one focused Vitest selection (FFmpeg, boot, CLI discovery/spawn, CLI paths/status, files/folders, assets, fonts, `e2e/skeleton`), then `video-render.test.ts -t "real subtitle export"` | `changes.windows == 'true'` | `.github/workflows/ci.yml:44-62` |
-| `container` (matrix `image`, `docker-install`) | `npm ci --ignore-scripts`, build, `docker build -t slopify:smoke .`; `image` runs `container-smoke.sh` then `host-cli-smoke.mjs`; `docker-install` runs `docker-install-smoke.mjs` | `changes.docker == 'true'` | `.github/workflows/ci.yml:85-107` |
+| `check` | `npm ci`, `npm run lint` (Biome), `npm run typecheck`, `npm run build`, `npm audit --audit-level=high` | every push/PR | `.github/workflows/ci.yml:10-25` |
+| `test` | `npx vitest run --shard=N/5` on five parallel runners, `fail-fast: false` | every push/PR | `.github/workflows/ci.yml:29-43` |
+| `changes` | `node packages/app/scripts/ci-changes.mjs` with full history and tags, `actions: read` permission and `GH_TOKEN` | every push/PR | `.github/workflows/ci.yml:71-90` |
+| `windows` | build, `install-smoke.mjs`, one focused Vitest selection (FFmpeg, boot, CLI discovery/spawn, CLI paths/status, files/folders, assets, fonts, `e2e/skeleton`), then `video-render.test.ts -t "real subtitle export"` | `changes.windows == 'true'` | `.github/workflows/ci.yml:46-65` |
+| `container` (matrix `image`, `docker-install`) | `npm ci --ignore-scripts`, build, `docker build -t slopify:smoke .`; `image` runs `container-smoke.sh` then `host-cli-smoke.mjs`; `docker-install` runs `docker-install-smoke.mjs` | `changes.docker == 'true'` | `.github/workflows/ci.yml:95-118` |
 
-`ci-changes.mjs` sets `release` when `packages/app/package.json`'s version has no tag yet (`packages/app/scripts/ci-changes.mjs:21-22`). `windows` and `docker` are true only on such release pushes and only when files matching their path sets changed since the last reachable release tag (`packages/app/scripts/ci-changes.mjs:64-79`); a `package.json`/`package-lock.json` diff that only changes workspace versions does not count (`packages/app/scripts/ci-changes.mjs:33-57`). With no prior tag, everything runs (`packages/app/scripts/ci-changes.mjs:59-62`).
+`ci-changes.mjs` sets `release` when `packages/app/package.json`'s version has no tag yet (`packages/app/scripts/ci-changes.mjs:25`). `windows` and `docker` are true only on such release pushes and only when files matching their path sets changed since that job last passed: `lastPassed` reads the GitHub Actions API for the newest successful `ci.yml` run on `main` since the last release tag whose jobs of that name all succeeded, and falls back to the last reachable release tag when none is found or the API is unreadable (`packages/app/scripts/ci-changes.mjs:65-93`, `:99-120`). A `package.json`/`package-lock.json` diff that only changes workspace versions does not count (`packages/app/scripts/ci-changes.mjs:36-59`). With no prior tag, everything runs (`packages/app/scripts/ci-changes.mjs:28-33`, `:95-96`).
 
-Release (`.github/workflows/release.yml`), on `*.*.*` tags: `metadata` requires the tag to equal the app package version (`.github/workflows/release.yml:19-20`); `verify` requires a successful `ci.yml` run on `main` for the tagged SHA and runs no tests itself (`.github/workflows/release.yml:24-39`); then npm publish with provenance and a two-architecture GHCR image (`.github/workflows/release.yml:41-135`).
+Release (`.github/workflows/release.yml`), on `*.*.*` tags: `metadata` requires the tag to equal the app package version (`.github/workflows/release.yml:21`); `verify` requires a successful `ci.yml` run on `main` for the tagged SHA and runs no tests itself (`.github/workflows/release.yml:25-42`); then, in parallel after `verify`, npm publish with provenance, a Chrome Web Store upload of the extension, and a two-architecture GHCR image whose `container-merge` waits for both the images and the npm publish (`.github/workflows/release.yml:43-61`, `:66-83`, `:90-162`).
 
 No pre-commit hook tooling (husky, lefthook, simple-git-hooks) is configured. Dependabot updates npm (root manifest only) and GitHub Actions weekly (`.github/dependabot.yml:9-16`).
 
@@ -97,7 +97,7 @@ These are not Vitest suites; each is run as a plain `node`/`bash` command.
 
 | Script | What it proves | Run by |
 | --- | --- | --- |
-| `packages/app/scripts/install-smoke.mjs` | `npm pack` of `@gentbajko/slopify` (`:19`), global installs (with and without install scripts) and `npm exec` (`:63`) each start and answer `/api/health` within 210 s (`:108`, `:165`) | CI `windows` |
+| `packages/app/scripts/install-smoke.mjs` | `npm pack` of `@gentbajko/slopify` (`:19`), two global installs (with and without install scripts) run one after another over npm's shared cache (`:21-48`), then they and `npm exec` (`:66`) each start and answer `/api/health` within 210 s (`:118`, `:175`) | CI `windows` |
 | `packages/app/scripts/container-smoke.sh` | on throwaway names (`:2`): image FFmpeg comes from the image (`:46`), bare image stays healthy (`:56`), compose install on a free port (`:68`), same-settings rerun is a no-op (`:90`), changed settings recreate with snapshot (`:94`), only the newest recovery volume is kept (`:102`), `update` no-op and recreate-from-volume (`:108`) | CI `container/image` |
 | `packages/app/scripts/host-cli-smoke.mjs` | Linux only (`:13`); installs the host helper under a disposable prefix with fake `claude`/`codex`/`gemini` CLIs under a test `HOME` and checks the container reaches them; image from `SLOPIFY_SMOKE_IMAGE` (default `slopify:smoke`, `:18`); 15-minute limit (`:23`) | CI `container/image` |
 | `packages/app/scripts/docker-install-smoke.mjs` | adopts an older `docker run` installation with the packaged install command, rolls a failing image back, reuses the data volume by name (`:1-3`); seeds data by running `packages/app/test/docker-projects-fixture.test.ts` with `SLOPIFY_DOCKER_FIXTURE_OUT` (`:131-138`); `SLOPIFY_SMOKE_KEEP=1` retains resources after failure (`:249`). Alias `npm run smoke:docker-install --workspace @gentbajko/slopify` (`packages/app/package.json:29`) | CI `container/docker-install` |
@@ -109,7 +109,7 @@ These are not Vitest suites; each is run as a plain `node`/`bash` command.
 
 ## Doubles
 
-Provider ports are replaced by structural fakes that implement the real port interfaces; `vi.mock` module replacement appears in 17 files, limited to a few seams listed at the end.
+Provider ports are replaced by structural fakes that implement the real port interfaces; `vi.mock` module replacement appears in 18 files, limited to a few seams listed at the end.
 
 **Provider fakes** (`packages/app/src/adapters/fake/`):
 
@@ -155,10 +155,10 @@ Provider ports are replaced by structural fakes that implement the real port int
 **Other packages:**
 
 - Collector: `d1()` implements the Worker's `CollectorDb` port over in-memory `node:sqlite` with `schema.sql`, and tests call `worker.fetch` directly (`packages/collector/src/index.test.ts:8-13`).
-- Extension: `fill.test.ts` loads a captured YouTube Studio upload page (`packages/extension/test/fixtures/studio-upload.html`) under happy-dom (`packages/extension/test/fill.test.ts:15`).
+- Extension: `fill.test.ts` loads a captured YouTube Studio upload page (`packages/extension/test/fixtures/studio-upload.html`) under happy-dom (`packages/extension/test/fill.test.ts:16`); `studio-pages.test.ts` and `video-picker.test.ts` test the Studio-page helpers and the file picker.
 - Site: tests read `packages/site` HTML/CSS/JS and walkthrough steps from disk (`packages/site/tokens.test.js:1`, `packages/site/walkthrough.test.js:7`).
 
-**`vi.mock` seams:** the alignment adapter in composed video tests (`packages/app/test/revision-shorts.test.ts:31`, `revision-video-edit.test.ts:32`, `revision-youtube.test.ts:10`); FFmpeg and font discovery in rebuild runtime tests (`packages/app/src/slices/rebuild/runtime-export.test.ts:12-20`, `packages/app/src/slices/fonts/catalog.test.ts:13`); batch dispatch (`packages/app/src/slices/play-drafts/start-run-count.test.ts:9`); `node:fs` (`packages/app/src/slices/revisions/download-permissions.test.ts:8`); `StylePreview` and tutorial context in web route tests (`packages/web/src/click-budget.test.tsx:23-24`, `packages/web/src/routes/play.test.tsx:22-24`).
+**`vi.mock` seams:** the alignment adapter in composed video tests (`packages/app/test/revision-shorts.test.ts:31`, `revision-video-edit.test.ts:32`, `revision-youtube.test.ts:10`); FFmpeg and font discovery in rebuild runtime tests (`packages/app/src/slices/rebuild/runtime-export.test.ts:12-20`, `packages/app/src/slices/fonts/catalog.test.ts:13`); batch dispatch (`packages/app/src/slices/play-drafts/start-run-count.test.ts:9`); recovery in the narration-retry wait test (`packages/app/src/slices/rebuild/narration-retry-wait.test.ts:11`); `node:fs` (`packages/app/src/slices/revisions/download-permissions.test.ts:8`, `packages/app/src/slices/storage/delete-project.test.ts:20`); `StylePreview` and tutorial context in web route tests (`packages/web/src/click-budget.test.tsx:23-24`, `packages/web/src/routes/play.test.tsx:22-24`).
 
 ## Coverage shape
 
@@ -166,27 +166,26 @@ File counts by directory (tracked `*.test.*` files, not instrumented coverage).
 
 | Area | Test files | Heaviest directories |
 | --- | ---: | --- |
-| `packages/app/src/slices` | 322 | `rebuild` 90, `revisions` 34, `storage` 17, `narration` 15, `play-drafts` 15, `video` 15, `settings` 11, `voices` 10 |
+| `packages/app/src/slices` | 332 | `rebuild` 92, `revisions` 35, `storage` 17, `video` 17, `narration` 15, `play-drafts` 15, `settings` 11, `voices` 10, `schedules` 9 |
 | `packages/app/src/edge` | 73 | `http` 56, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3 |
 | `packages/app/src/adapters` | 50 | `llm` 15, `alignment` 13, `image` 9, `tts` 8, `host-cli` 2, root 3 |
 | `packages/app/src/kernel` | 32 | `runner` 14, `ports` 7, root 7, `db` 3, `config` 1 |
 | `packages/app/src` other | 30 | `host-cli` 9, `updater` 9, root 7, `catalog` 5 |
 | `packages/app/test` | 57 | composed 51, `e2e` 6 |
-| `packages/web/src` | 197 | `project` 52, `play` 46, `routes` 28, `components` 10 (+ `kit` 4), `tutorial` 7, root 7, `help/walk` 5, `schedules` 5 |
-| `packages/site`, `packages/collector`, `packages/extension` | 5 / 1 / 1 | — |
+| `packages/web/src` | 200 | `project` 52, `play` 47, `routes` 28, `components` 10 (+ `kit` 4), `tutorial` 7, root 7, `help` 7 (`help/walk` 5), `schedules` 5 |
+| `packages/site`, `packages/collector`, `packages/extension` | 5 / 1 / 3 | — |
 
-Remaining app slices each carry 1–8 colocated test files: `admission`, `article`, `backups`, `batch`, `cancel`, `channels`, `checkpoints`, `control`, `document`, `episodes`, `estimate`, `eta`, `fixes`, `fonts`, `images`, `library`, `loudness`, `model-upkeep`, `notifications`, `onboarding`, `patch-notes`, `project-templates`, `reruns`, `research`, `reviews`, `run-cost`, `schedules`, `shorts`, `studio`, `style-preview`, `subtitles`, `telemetry`, `thumbnail`, `trash`, `tutorials`, `youtube`. Remaining web directories with tests: `autostart`, `calendar`, `channels`, `fixes`, `help`, `language`, `lib`, `library`, `notifications`, `patch-notes`, `studio`, `styles`, `subtitles`, `trash`, `tutorials`, `updates`, `video`, `voices`, `whats-new`, `youtube`.
+Remaining app slices each carry 1–8 colocated test files: `admission`, `article`, `backups`, `batch`, `cancel`, `channels`, `checkpoints`, `control`, `document`, `episodes`, `estimate`, `eta`, `fixes`, `fonts`, `images`, `library`, `loudness`, `model-upkeep`, `notifications`, `onboarding`, `patch-notes`, `project-templates`, `reruns`, `research`, `reviews`, `run-cost`, `shorts`, `studio`, `style-preview`, `subtitles`, `telemetry`, `thumbnail`, `trash`, `tutorials`, `youtube`. Remaining web directories with tests: `autostart`, `calendar`, `channels`, `fixes`, `home`, `language`, `lib`, `library`, `notifications`, `patch-notes`, `studio`, `styles`, `subtitles`, `trash`, `tutorials`, `updates`, `video`, `voices`, `whats-new`, `youtube`.
 
 Directories with no test file of their own:
 
 - `packages/app/src/slices/uploads` (one file, `repo.ts`).
 - `packages/app/src/sample-build` (12 files; maintainer tooling run by `build-sample.mjs`).
 - `packages/app/src/assets`, `packages/web/src/assets` (static assets).
-- `packages/web/src/home` (8 files); its screen is rendered by `packages/web/src/routes/home.test.tsx`.
 - `packages/web/src/onboarding`, `packages/web/src/templates` (3 files each); exercised through route tests such as `packages/web/src/routes/welcome.test.tsx`.
-- `packages/extension/src` (7 files); covered by `packages/extension/test/fill.test.ts`.
+- `packages/extension/src` (11 files); covered by the three suites in `packages/extension/test/`.
 
-Cross-cutting web suites: `packages/web/src/click-budget.test.tsx:1-6` fails when one of five common tasks exceeds its click budget; `packages/web/src/styles/grid.test.ts` and `tokens.test.ts` enforce the spacing scale and design tokens; `packages/web/src/components/kit/*.test.tsx` cover the shared kit.
+Cross-cutting web suites: `packages/web/src/click-budget.test.tsx:15-20` fails when one of five common tasks exceeds its click budget; `packages/web/src/styles/grid.test.ts` and `tokens.test.ts` enforce the spacing scale and design tokens; `packages/web/src/components/kit/*.test.tsx` cover the shared kit.
 
 Boundaries of the suite, as facts:
 

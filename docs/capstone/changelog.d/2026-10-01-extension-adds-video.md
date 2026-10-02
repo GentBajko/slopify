@@ -1,1 +1,0 @@
-- The Slopify Studio extension (0.2.0) puts the waiting item's video into Studio's upload dialog on its Select files step, through a hidden extension page (`video-frame.html`) that fetches it with the pairing token and hands the File to the Studio page in one postMessage. `/api/studio/ext/files` now serves a pack's video as well as its thumbnails, and nothing else.

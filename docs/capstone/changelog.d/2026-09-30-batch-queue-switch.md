@@ -1,1 +1,0 @@
-- Play → Start box: with more than one video, a **Queue** switch (on by default). On, they run one after another as before; off, they all start at once as separate runs, and the Play key reads **Start N videos**.

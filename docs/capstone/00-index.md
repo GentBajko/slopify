@@ -18,14 +18,14 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | Admission | `packages/app/src/slices/admission/start.ts:47` |
 | Play drafts | `packages/app/src/slices/play-drafts/start.ts:24` |
 | Schedules | `packages/app/src/slices/schedules/scheduler.ts:36` |
-| Studio upload pack | `packages/app/src/slices/studio/pack.ts:57` |
+| Studio upload pack | `packages/app/src/slices/studio/pack.ts:61` |
 | Other slices (45 total) | `packages/app/src/slices/` (table in [01-architecture.md](01-architecture.md)) |
 | Docker install and host helper | `packages/app/src/edge/docker-install/`, `packages/app/src/edge/host-cli.ts:50` |
 | Updater | `packages/app/src/updater/install.ts:18`, `packages/app/src/edge/update-worker.ts:5` |
 | Alignment worker | `packages/app/src/adapters/alignment/worker.ts:17` |
 | Sample build | `packages/app/src/sample-build/generate.ts:93` |
 | Web SPA, router, shell, API client | `packages/web/src/main.tsx:24`, `packages/web/src/router.tsx:603`, `packages/web/src/components/shell.tsx:166`, `packages/web/src/api.ts:197` |
-| Studio extension | `packages/extension/src/background.ts:129`, `packages/extension/src/content.ts:217`, `packages/extension/scripts/build.mjs:46` |
+| Studio extension | `packages/extension/src/background.ts:386`, `packages/extension/src/content.ts:217`, `packages/extension/scripts/build.mjs:46` |
 | Telemetry collector | `packages/collector/src/index.ts:21` |
 | Marketing site | `packages/site/public/main.js:247` |
 
@@ -93,6 +93,7 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | logic | [logic/41-onboarding-and-sample.md](logic/41-onboarding-and-sample.md) |
 | logic | [logic/42-in-app-help.md](logic/42-in-app-help.md) |
 | logic | [logic/43-autostart.md](logic/43-autostart.md) |
+| logic | [logic/44-studio-autopilot.md](logic/44-studio-autopilot.md) |
 
 ## Companion docs
 
@@ -136,6 +137,7 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | [uiux/screens/21-command-palette.md](uiux/screens/21-command-palette.md) | Observed: Ctrl+K palette and shortcuts |
 | [uiux/screens/22-announcements.md](uiux/screens/22-announcements.md) | Observed: What's new tour, patch notes, reminders, run notifications |
 | [uiux/screens/23-studio-upload.md](uiux/screens/23-studio-upload.md) | Observed: Prepare upload drawer and extension UI |
+| [uiux/screens/24-ab-results.md](uiux/screens/24-ab-results.md) | Observed: Library → A/B results |
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions (newest 100) |
 | [changelog-2026.md](changelog-2026.md) | Rotated 2026 ledger entries |

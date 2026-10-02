@@ -10,10 +10,10 @@ depends_on:
   - 01-pipeline-lifecycle
   - 04-run-admission
   - 12-reruns-and-edits
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: c5a7f8c35022
+content_hash: 87f10924b719
 paths_covered:
   - ":(top)packages/app/src/slices/checkpoints/**"
   - ":(top)packages/app/src/slices/rebuild/runtime-checkpoints.ts"
@@ -60,11 +60,11 @@ A review checkpoint holds one stage and every stage that transitively depends on
 
 ## Branches
 
-- **Where approval happens**: the gate's card on the project page, the project's next action in the right rail, and Home → Needs you (`packages/web/src/project/checkpoint-panel.tsx:252`, `packages/web/src/project/next-action.ts:48`, `packages/web/src/home/needs-you.tsx:123`). Home approves only a `held`/`pending-review` gate whose fingerprint equals its current fingerprint (`packages/web/src/home/needs-you.tsx:118`).
+- **Where approval happens**: the gate's card on the project page, the project's next action in the right rail, and Home → Needs you (`packages/web/src/project/checkpoint-panel.tsx:252`, `packages/web/src/project/next-action.ts:48`, `packages/web/src/home/needs-you.tsx:124`). Home approves only a `held`/`pending-review` gate whose fingerprint equals its current fingerprint (`packages/web/src/home/needs-you.tsx:119`). A waiting run with no such gate shows Open to continue and Keep as is instead; Keep as is (`PUT /api/projects/:id/set-aside`) takes the run off Needs you until the project's next revision (scenario 38; `packages/web/src/home/needs-you.tsx:156-176`, `:202-221`, `:47-49`, `packages/app/src/slices/uploads/repo.ts:43-71`).
 - **Adding a gate on an existing project**: anchors on the stage's work row in the head revision; when the head has none (all work carried from an older origin revision) a synthetic `done`/`held` work row is created from the carried `recipe_context` (`packages/app/src/slices/checkpoints/change.ts:270`, `:311`). A resolved closure with no work keys is `conflict` (`packages/app/src/slices/checkpoints/change.ts:302`).
 - **Removing a gate** deletes its row; the route wakes the runner when anything was removed (`packages/app/src/slices/checkpoints/change.ts:333`, `packages/app/src/edge/http/checkpoints.ts:107`).
 - **Submitted-work test** for a change: a `done` row from another revision is ignored; a `done` row with no submitted or done piece and no reservation in this revision is ignored; otherwise any non-`pending` state or a submitted/running/done piece counts as started (`packages/app/src/slices/checkpoints/change.ts:241`).
-- **Project edit or restore** creates a new revision and `carryCheckpointGates` copies each gate to it with a new `done`/`held` anchor: when the closure fingerprint over current inputs is unchanged the state and approval carry over; otherwise the old gate becomes `invalidated` and the new one is `held` with no approval (`packages/app/src/slices/checkpoints/recovery.ts:39`, `packages/app/src/slices/revisions/mutations.ts:214`, `packages/app/src/slices/revisions/restore.ts:73`).
+- **Project edit or restore** creates a new revision and `carryCheckpointGates` copies each gate to it with a new `done`/`held` anchor: when the closure fingerprint over current inputs is unchanged the state and approval carry over; otherwise the old gate becomes `invalidated` and the new one is `held` with no approval (`packages/app/src/slices/checkpoints/recovery.ts:39`, `packages/app/src/slices/revisions/mutations.ts:215`, `packages/app/src/slices/revisions/restore.ts:73`). A save keeps the project's subject (`keptSubject`, `packages/app/src/slices/revisions/mutations.ts:93`, `packages/app/src/slices/revisions/subject.ts:4-11`), so a rename alone leaves every step fingerprint, and with it each gate, unchanged.
 - **Already-complete stage** with dependent closure work still `pending`/`running` can still be approved (`packages/app/src/slices/checkpoints/change.ts:156`).
 - **Multiple tabs** on the Checkpoints tab: the choices form compares the loaded revision and gate-set identity and refuses to save a changed set until **Reload checkpoint choices** (`packages/web/src/project/checkpoint-choices.tsx:49`, `:75`).
 
@@ -104,7 +104,7 @@ A review checkpoint holds one stage and every stage that transitively depends on
 - Rows in `review_checkpoints` and `review_checkpoint_approvals`, cascading with their revision (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:2`).
 - Approval emits `project.updated` and wakes one runner tick (`packages/app/src/edge/http/checkpoints.ts:46`).
 - A run stopped at a gate reads as `pending` after `running`, which sends the "Waiting for you: <title>" notification (`packages/app/src/slices/notifications/rules.ts:13`, `:111`).
-- The calendar marks a project `review` while a head-revision gate is `held`/`pending-review` without approval (`packages/app/src/slices/schedules/agenda.ts:135`).
+- The calendar marks a project `review` while a head-revision gate is `held`/`pending-review` without approval (`packages/app/src/slices/schedules/agenda.ts:141`).
 - Problem details carry no credentials or input text (`packages/app/src/edge/http/checkpoints.ts:26`).
 
 ## Dimensions not in play

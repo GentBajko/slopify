@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 23abea6fc527
+content_hash: 1b23006ff047
 paths_covered:
   - ":(top)packages/app/src/slices/images/**"
   - ":(top)packages/app/src/slices/rebuild/recipe-visual.ts"
@@ -45,6 +45,10 @@ paths_covered:
   - ":(top)packages/web/src/play/image-scale.tsx"
   - ":(top)packages/web/src/play/image-scenes.tsx"
   - ":(top)packages/web/src/play/reference-image.tsx"
+  - ":(top)packages/app/src/slices/rebuild/recipe-shorts.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-shorts.ts"
+  - ":(top)packages/web/src/project/confirmations.ts"
+  - ":(top)packages/web/src/project/body-thumbnail.tsx"
 absorbed_from:
   - features/2026-09-24-research-documents@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
@@ -73,7 +77,7 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
 
 ## Trigger & preconditions
 
-- Trigger: Start on Play admits the run (scenario 04); every image recipe becomes revision work whose `dependsOn` decides when it may run (`packages/app/src/slices/rebuild/recipe-build.ts:28-85`, `packages/app/src/slices/rebuild/dependencies.ts:23-62`). A plain image waits for nothing, or only for the establishing image. An image drawn from a scene waits for `images:scenes`. An image whose prompt has `{{Appearance}}` waits for `images:appearance`. Both of those wait for the article (`packages/app/src/slices/rebuild/recipe-scenes.ts:102-115`, `packages/app/src/slices/rebuild/recipe-appearance.ts:67-80`).
+- Trigger: Start on Play admits the run (scenario 04); every image recipe becomes revision work whose `dependsOn` decides when it may run (`packages/app/src/slices/rebuild/recipe-build.ts:28-86`, `packages/app/src/slices/rebuild/dependencies.ts:23-62`). A plain image waits for nothing, or only for the establishing image. An image drawn from a scene waits for `images:scenes`. An image whose prompt has `{{Appearance}}` waits for `images:appearance`. Both of those wait for the article (`packages/app/src/slices/rebuild/recipe-scenes.ts:102-115`, `packages/app/src/slices/rebuild/recipe-appearance.ts:71-84`).
 - Preconditions checked at admission (`packages/app/src/slices/admission/rules.ts:240-275`):
   - At least one image prompt is ticked.
   - Each Number is a whole number from 1 to `numberPerPromptMax` = 20 (`rules.ts:37`).
@@ -108,11 +112,11 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
    - Where the scene goes (`scenes.ts:16-22`): if the body has `{{Scene}}`, the scene fills it. Otherwise it is inserted as a `Scene: …` line after the first paragraph.
    - With the switch off, any line holding `{{Scene}}` is removed (`scenes.ts:26-34`, `recipe-visual.ts:68-74`).
    - A `from_prompt` thumbnail whose prompt has `{{Scene}}` gets its own `thumbnail:scenes` step in the Thumbnail stage (`recipe-scenes.ts:36-74`). It writes one scene per thumbnail, each the most click-worthy moment from anywhere in the article (`scenes.ts:95-139`).
-4. **Looks (`{{Appearance}}`)**. The step `images:appearance` runs when any image, `from_prompt` thumbnail or establishing prompt body contains `{{Appearance}}` (`recipe-appearance.ts:32-85`):
-   - One web-searching LLM call (`llmInput(..., true)`, `recipe-appearance.ts:78`) returns `{subject, characters[]}` with names, aliases and a 2-4 sentence look each (`packages/app/src/slices/images/appearance.ts:27-52`).
+4. **Looks (`{{Appearance}}`)**. The step `images:appearance` runs when any image, `from_prompt` thumbnail, establishing prompt or (Shorts on) Shorts image prompt body contains `{{Appearance}}` (`recipe-appearance.ts:31-60`, `:62-93`). Its request names the project's kept subject (`subjectOf`, `recipe-appearance.ts:68`), so a rename does not redo it:
+   - One web-searching LLM call (`llmInput(..., true)`, `recipe-appearance.ts:82`) returns `{subject, characters[]}` with names, aliases and a 2-4 sentence look each (`packages/app/src/slices/images/appearance.ts:27-52`).
    - The answer must name a subject with a look (`appearance.ts:54-81`).
    - Each picture gets the subject's look plus up to 3 characters its scene names as whole words (`appearance.ts:84-104`).
-   - The subject is included only when the scene names it. A thumbnail always includes the subject (`recipe-visual.ts:327-331`).
+   - The subject is included only when the scene names it. A thumbnail always includes the subject (`recipe-visual.ts:327-331`), and so does each short's still, whose scene is the clip's text; until the looks exist a short's prompts recipe is `deferred` and waits for them (`packages/app/src/slices/rebuild/recipe-shorts.ts:130-151`; Shorts are scenario 28).
    - A picture naming nobody drops its `{{Appearance}}` line (`appearance.ts:107-115`).
 5. **Establishing image** (`RunDraft.reference`, `model.ts:126-141`). It is active only while Images is Generate (`rules.ts:497-499`). It is one Images-stage step with key `reference:image`:
    - It is drawn from its Library image prompt with keywords filled, or it is the uploaded file (`packages/app/src/slices/rebuild/recipe-reference.ts:38-100`).
@@ -120,7 +124,7 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
    - It is never in the slideshow and never in the thumbnail slot (`packages/web/src/project/body-images.tsx:30-33`).
 6. **Cast pictures**. The channel's cast is frozen on the run (`RunDraft.cast`, `model.ts:231-233`; cast editing is scenario 30).
    - An image request names the members its prompt mentions, at most `castMembersPerImage` = 4, in order of first mention (`packages/app/src/slices/rebuild/recipe-cast.ts:9-31`).
-   - The establishing image and the thumbnails also count members the title mentions (`recipe-reference.ts:93-95`, `recipe-visual.ts:363-364`).
+   - The establishing image and the thumbnails also count members the project's kept subject mentions (`subjectOf`: the title the project was made with, unchanged by a rename; `recipe-reference.ts:93-95`, `recipe-visual.ts:363-364`, `packages/app/src/slices/admission/model.ts:285-290`).
    - Without a mention the request carries no `cast` field, so its fingerprint is unchanged (`recipe-reference.ts:120-124`).
 7. **Build each image request.** For each `imageOrder` key, the recipe `image:<key>` is `{kind: "image", provider, model, thinking?, aspect: format, prompt, reference?, cast?}` (`recipe-visual.ts:106-125`, `recipe-reference.ts:26-36`):
    - While scenes or looks are pending, it is a `deferred` recipe (`operation: "image-scene"`) whose template names what it waits for (`recipe-visual.ts:80-104,212-258`).
@@ -147,9 +151,9 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
    - Thumbnail artwork is never a slideshow input.
 12. **Regenerate** on the project page (`packages/web/src/project/output-change.ts:23-101`):
    - Asks first. For a project with revisions it saves a revision whose `regenerate` lists the image's work key, then starts review of only those keys (`packages/web/src/project/revision-workspace.tsx:333-360`).
-   - The save gives each listed key a new `regenerationTokens` entry (`packages/app/src/slices/revisions/mutations.ts:121-123`), which changes that recipe's work fingerprint (`recipe-model.ts:225-234`).
+   - The save gives each listed key a new `regenerationTokens` entry (`packages/app/src/slices/revisions/mutations.ts:122-124`), which changes that recipe's work fingerprint (`recipe-model.ts:225-234`).
    - With unsaved Edit project changes open, the keys are added to that draft and Edit project opens instead (`revision-workspace.tsx:339-344`).
-   - It applies to a slideshow image, any generated thumbnail variant, or a generated establishing image. Regenerating the establishing image warns that N images become outdated (`body-images.tsx:336-391`).
+   - It applies to a slideshow image, any generated thumbnail variant, or a generated establishing image. A thumbnail variant's confirmation reads "Regenerate this thumbnail?" and says the video and shorts are not touched and the PDF's cover follows the first thumbnail (`packages/web/src/project/confirmations.ts:77-84`, `packages/web/src/project/body-thumbnail.tsx:166-171`). Regenerating the establishing image warns that N images become outdated (`body-images.tsx:336-391`).
    - **Regenerate all** saves one revision listing every slideshow image key (`output-change.ts:103-140`). It confirms first: "Makes N new images now, one paid image call each. The video keeps the current ones until you remake it" (`body-images.tsx:119-140`).
    - The palette commands "Regenerate image N" and "Regenerate on-screen card N" take the slideshow number shown on the frame (`packages/web/src/project/regenerate-by-number.tsx:17-80`).
    - Delete of a slideshow image opens Edit project with the image removed from the draft (`output-change.ts:62-78`).
@@ -160,16 +164,16 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
   - Model "Codex default" is `codex-imagegen`: no `-m`, no effort (`packages/app/src/adapters/image/codex.ts:37`). A chosen Codex model passes `-m` and `model_reasoning_effort` (`codex.ts:189`).
   - `view_image` is enabled only when the agent reviews its work: a chosen model or effort, or a reference to look at. Shell and skills are always disabled (`codex.ts:44-73,150-163`).
   - References are copied into the job folder and named for `referenced_image_paths` (`codex.ts:103,131`).
-  - The result is the newest PNG under `CODEX_HOME/generated_images/<thread.started id>`, validated for identity and at most 32 MiB (`packages/app/src/adapters/image/codex-output.ts:18,32,79-98`). A second `thread.started` fails (`codex.ts:289-300`).
-  - One Codex image may run 30 minutes (`agentImageTimeoutMs`, `packages/app/src/kernel/ports/image.ts:68-70`). Its live panel reports how many images the thread has drawn so far (`codex.ts:248-251`, `codex-output.ts:55-75`).
+  - The result is the newest PNG under `CODEX_HOME/generated_images/<thread.started id>`, validated for identity and at most 32 MiB (`packages/app/src/adapters/image/codex-output.ts:18,32,79-98`). A second `thread.started` fails (`codex.ts:295-306`).
+  - One Codex image may run 30 minutes (`agentImageTimeoutMs`, `packages/app/src/kernel/ports/image.ts:68-70`). Its live panel reports how many images the thread has drawn so far (`codex.ts:252-255`, `codex-output.ts:55-75`).
   - Four Codex images run at once; other local CLIs run three (`localCliConcurrency`, `packages/app/src/slices/settings/model.ts:39-41`).
 - **Keyed providers' concurrency** is `maxConcurrent` from the catalogue: 3 each for fal, replicate, openai-image and google-image (`packages/app/src/assets/models.yaml:19-26`). The default is 1, capped at 5 (`packages/app/src/main.ts:884-888`, `packages/app/src/catalog/schema.ts:78`).
 - **Scenes on, image not generated.** Provided rows and rows with an empty prompt take no scene (`recipe-scenes.ts:84-97`). With no generated row, there is no scenes step.
 - **Thumbnail source.** Off → no recipe. Provide → provided recipe (scenario 05). `from_prompt` → step 11. `prompt_by_llm` → the prompt comes from scenario 10's text recipe, then step 11 (`recipe-visual.ts:290-311`).
 - **Mixed generated and provided rows** are allowed under Images Generate. Choosing Provide while generated rows remain returns the field error "Replace or remove generated images before choosing Provide." (`packages/app/src/slices/rebuild/recipe-save.ts:249-256`).
-- **Changing prompts or Numbers in Edit project** re-plans definitions with `replanImagePrompts`. Every definition an unchanged prompt already has is kept, so its fingerprint and image stay (`packages/app/src/slices/revisions/image-plan.ts:1-10`, `mutations.ts:263-310`). Changing prompts while Images is not Generate is refused (`mutations.ts:287-297`).
+- **Changing prompts or Numbers in Edit project** re-plans definitions with `replanImagePrompts`. Every definition an unchanged prompt already has is kept, so its fingerprint and image stay (`packages/app/src/slices/revisions/image-plan.ts:1-10`, `mutations.ts:264-311`). Changing prompts while Images is not Generate is refused (`mutations.ts:288-298`).
 - **Deleting the last image** (legacy action path) sets Images and Video to Off and turns burn-in captions into files (`runtime-actions.ts:71-80`).
-- **Old HTTP routes.** `DELETE /projects/:id/images/:outputId` and `POST /projects/:id/images/:outputId/regenerate` answer 409 `revision-required` (`packages/app/src/edge/http/actions.ts:306-323`).
+- **Old HTTP routes.** `DELETE /projects/:id/images/:outputId` and `POST /projects/:id/images/:outputId/regenerate` answer 409 `revision-required` (`packages/app/src/edge/http/actions.ts:305-322`).
 - **Estimate.** It shows planned images, "N images for about M minutes of narration" when scaled. It adds one "Image scenes" LLM request when scenes are on, and one image when the establishing image comes from a prompt (`packages/app/src/slices/estimate/index.ts:270-297`).
 
 ## Unhappy paths
@@ -177,9 +181,9 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
 - **Call fails.** Scenario 01's two-tier retry applies:
   - Quick in-call retries run under a 300 s image timeout (`packages/app/src/kernel/runner/attempt.ts:16-24`), or the provider's own `timeoutMs` (Codex 30 min, `attempt.ts:69`).
   - After those, `rate_limit`/`timeout`/`dropped` wait about 2, 4, 8 and 16 minutes (`packages/app/src/kernel/runner/retry-policy.ts:12-17`).
-- **Content-policy refusal** is terminal with no retries (`attempt.ts:26-35`). The step shows Soften and retry: the project's LLM rewords the refused prompt inside the image step, then it is drawn again (`packages/app/src/slices/rebuild/soften.ts:5-24`, `packages/app/src/slices/rebuild/runtime-provider.ts:235-261`). Soften is scenario 12's control.
-- **Scenes answer wrong** (not an array, wrong count, an empty scene): the step fails with "The AI model wrote N image scenes for M images. Use Try again; …" or a sibling sentence (`scenes.ts:141-164`, `runtime-provider.ts:268-277,305-320`).
-- **Looks answer without a subject look** fails the same way (`appearance.ts:54-71`, `runtime-provider.ts:279-283,321-332`).
+- **Content-policy refusal** is terminal with no retries (`attempt.ts:26-35`). The step shows Soften and retry: the project's LLM rewords the refused prompt inside the image step, then it is drawn again (`packages/app/src/slices/rebuild/soften.ts:5-24`, `packages/app/src/slices/rebuild/runtime-provider.ts:235-263`). The softenable steps are every refused image of Images or Thumbnail and, in the Video stage, only refused short stills (`shorts:N:image:M`) (`softenableKeys`, `soften.ts:26-40`; route `packages/app/src/edge/http/actions.ts:268-283`); a short's still is softened the same way in `packages/app/src/slices/rebuild/runtime-shorts.ts:254-275`. Soften is scenario 12's control.
+- **Scenes answer wrong** (not an array, wrong count, an empty scene): the step fails with "The AI model wrote N image scenes for M images. Use Try again; …" or a sibling sentence (`scenes.ts:141-164`, `runtime-provider.ts:269-278,306-321`).
+- **Looks answer without a subject look** fails the same way (`appearance.ts:54-71`, `runtime-provider.ts:280-284,322-333`).
 - **Establishing image missing or unreadable** at call time: "The establishing image this image is drawn from is missing. Use Regenerate on the establishing image …" (`runtime-image.ts:38-56`). A non-PNG/JPEG upload asks for a PNG or JPEG (`runtime-image.ts:57-61`).
 - **Cast picture not in the database** (a backup from another install): the error names the member and points to Channels → Cast, then start again from Play (`runtime-image.ts:75-81`).
 - **Replicate with an establishing image** is refused by the adapter (`packages/app/src/adapters/image/replicate.ts:81-86`). Admission refuses a catalogue model without `reference` (`validate.ts:85-96`).
@@ -187,6 +191,7 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
   - Missing or expired login is terminal `missing_key`.
   - Helper, protocol or truncated-response failure is terminal `unavailable` (`attempt.ts:29-35`, `adapters/host-cli/index.ts:219-232`).
   - A missing, stale or unsafe artifact fails without replay (`codex-output.ts:79-98`).
+  - A run that drew no image for its thread while stderr or the agent's last message matches `moderation_blocked`, "rejected by the safety system", "safety filter/system", "content polic…" or "refus…" is a terminal `refusal` quoting the agent's message, so Soften and retry is offered (`codex.ts:196-198`, `:286-287`, `:346`, `:381-390`).
 - **One image exhausts its retries.** Its work fails. Sibling images that finished stay published, and Try again runs only work whose fingerprint has no retained result (`dependencies.ts:27-47`).
 - **Concurrent edits while regenerating.** Regenerate and Regenerate all are disabled while work is running ("Wait until the work on this project is done", `body-images.tsx:119-127`). They are also disabled while an action is pending (`output-change.ts:92-96`).
 - **Palette number out of range** gets a toast naming the valid range (`regenerate-by-number.tsx:34-46`).

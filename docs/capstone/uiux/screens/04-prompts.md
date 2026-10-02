@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: e9226a34aa8a
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: bfdd75443be1
+content_hash: 33049148a289
 paths_covered:
   - ":(top)packages/web/src/routes/prompts.tsx"
   - ":(top)packages/web/src/routes/library.tsx"
@@ -13,16 +13,16 @@ paths_covered:
 # Prompts
 
 ## Mode & job
-Operate surface, the Library's Prompts tab at `/prompts?kind=<kind>`: every saved prompt of one kind beside the selected one's text, keywords, what uses it and its latest change, with rename, edit, duplicate, Use in Play, history and delete on each row (`packages/web/src/routes/prompts.tsx:24-27`). The kind comes from the URL through `kindOf`, defaulting to `article`; switching it replaces the URL entry (`packages/web/src/router.tsx:256-261`, `packages/web/src/router.tsx:448-461`, `packages/web/src/lib/prompt-kinds.ts:30-32`). `/library` redirects here with `kind=article` (`packages/web/src/router.tsx:105-111`). The rail's Library item points at `/prompts` and lights for every Library path (`packages/web/src/components/shell.tsx:104-112`).
+Operate surface, the Library's Prompts tab at `/prompts?kind=<kind>`: every saved prompt of one kind beside the selected one's text, keywords, what uses it and its latest change, with rename, edit, duplicate, Use in Play, history and delete on each row (`packages/web/src/routes/prompts.tsx:24-27`). The kind comes from the URL through `kindOf`, defaulting to `article`; switching it replaces the URL entry (`packages/web/src/router.tsx:257-262`, `packages/web/src/router.tsx:455-468`, `packages/web/src/lib/prompt-kinds.ts:30-32`). `/library` redirects here with `kind=article` (`packages/web/src/router.tsx:106-112`). The rail's Library item points at `/prompts` and lights for every Library path (`packages/web/src/components/shell.tsx:104-112`).
 
 Kinds, in order: Article, Image, Thumbnail, Narration Preparation, YouTube Description, Shorts, Review, Script (speakers) (`packages/app/src/slices/library/model.ts:12-21`, `packages/web/src/lib/prompt-kinds.ts:7-26`).
 
 ## Composition
 | Region | What renders | Kit / tokens |
 |---|---|---|
-| Library header | `PageHeader` "Library", meta "Prompts, intros and outros, templates, document themes and narration aliases" (`packages/web/src/routes/library.tsx:25-28`) | `PageHeader` (`packages/web/src/components/kit/layout.tsx:9`) |
-| Library tabs | `TabLinks` "Library sections": Prompts, Intros & Outros, Templates, Documents, Aliases (`packages/web/src/routes/library.tsx:14-20`, `packages/web/src/routes/library.tsx:29`) | `TabLinks` (`packages/web/src/components/kit/tabs.tsx:95`) |
-| Toolbar | `LibraryToolbar`: search `Input` ("Search prompts", `/` focuses it, full width on phones, 16rem from `sm`), `Select` "Prompt kind" with InfoTip `library.prompt.kind`; primary ButtonLink "New prompt" to `/prompts/new?kind=<kind>` at the right, wrapping under the filters on a phone (`packages/web/src/routes/prompts.tsx:78-102`, `packages/web/src/routes/prompts.tsx:245-251`, `packages/web/src/routes/library.tsx:110-130`) | `Input`, `Select` (`packages/web/src/components/kit/field.tsx:109-141`), `InfoTip` |
+| Library header | `PageHeader` "Library", meta "Prompts, intros and outros, templates, document themes, narration aliases and A/B results" (`packages/web/src/routes/library.tsx:26-29`) | `PageHeader` (`packages/web/src/components/kit/layout.tsx:9`) |
+| Library tabs | `TabLinks` "Library sections": Prompts, Intros & Outros, Templates, Documents, Aliases, A/B results (`packages/web/src/routes/library.tsx:14-21`, `packages/web/src/routes/library.tsx:30`) | `TabLinks` (`packages/web/src/components/kit/tabs.tsx:95`) |
+| Toolbar | `LibraryToolbar`: search `Input` ("Search prompts", `/` focuses it, full width on phones, 16rem from `sm`), `Select` "Prompt kind" with InfoTip `library.prompt.kind`; primary ButtonLink "New prompt" to `/prompts/new?kind=<kind>` at the right, wrapping under the filters on a phone (`packages/web/src/routes/prompts.tsx:78-102`, `packages/web/src/routes/prompts.tsx:245-251`, `packages/web/src/routes/library.tsx:111-131`) | `Input`, `Select` (`packages/web/src/components/kit/field.tsx:109-141`), `InfoTip` |
 | List and detail | `ListDetail`: list column beside the detail; two equal columns from 1180px (`libraryListDetail`), the kit default `minmax(280px,380px) 1fr` below that, one column under 768px (`packages/web/src/routes/prompts.tsx:121-205`, `packages/web/src/library/list-states.tsx:5-8`, `packages/web/src/styles/shell.css:719-724`, `packages/web/src/styles/shell.css:981-984`) | `ListDetail` (`packages/web/src/components/kit/layout.tsx:98`) |
 | Rows | `List label="Prompts"`; each `ListRow` (actions beside the title from `2xl`, under it below) has an `InlineName` title, meta `<Kind> · <n> keyword(s) · updated <date>`, and `LibraryRowActions` (`packages/web/src/routes/prompts.tsx:127-178`, `packages/web/src/routes/prompts.tsx:241-243`) | `List`, `ListRow` (`packages/web/src/components/kit/list-row.tsx:13-77`) |
 | Detail | `LibraryItemDetail` for the selected prompt (the first listed when none is picked) (`packages/web/src/routes/prompts.tsx:74`, `packages/web/src/routes/prompts.tsx:181-204`) | see below |
@@ -32,7 +32,7 @@ Kinds, in order: Article, Image, Thumbnail, Narration Preparation, YouTube Descr
 **Row actions (`LibraryRowActions`)**, all visible, in this order (`packages/web/src/library/row-actions.tsx:6-63`, `packages/web/src/routes/prompts.tsx:142-174`):
 1. Edit: quiet small ButtonLink to `/prompts/$promptId`.
 2. Duplicate: quiet small ButtonLink to `/prompts/new?kind=<kind>&from=<id>`; the editor opens the copy named `<name> copy`.
-3. Use in Play: quiet small button; picks the prompt in the open Play draft and opens Play on its field. Disabled with the title "Play is starting a run from its draft. Wait for it to start, then try again." while Play is starting a run (`packages/web/src/router.tsx:463-484`).
+3. Use in Play: quiet small button; picks the prompt in the open Play draft and opens Play on its field. Disabled with the title "Play is starting a run from its draft. Wait for it to start, then try again." while Play is starting a run (`packages/web/src/router.tsx:470-491`).
 4. History: icon button (history icon) opening the `HistoryDrawer`.
 5. Delete: icon button (trash icon) opening the confirm dialog.
 
@@ -45,7 +45,7 @@ Kinds, in order: Article, Image, Thumbnail, Narration Preparation, YouTube Descr
 
 **History drawer (`HistoryDrawer`)**: a non-modal right-hand `Drawer` titled `History of <name>`, up to 1080px wide; "Compare" with two `Select`s (Older, Newer; option text `Version <n> (current) · <when>`) over `DiffColumns`, a rename note `Renamed from "<a>" to "<b>".` when the names differ; "Versions" list with "Current" on the latest and a small "Restore" on each older one; a `StatusSlot` reporting `Restored version <n> as a new version.` or the error. Escape or the close button returns focus to the opener (`packages/web/src/library/history-drawer.tsx:46-185`, `packages/web/src/components/kit/drawer.tsx:5-57`).
 
-Ctrl+K on every Library tab: "New prompt" (starts on the tab's kind), "New intro or outro", "New document theme", "Open prompts", "Open intros and outros", "Open templates", "Open document themes" (`packages/web/src/routes/library.tsx:36-108`); and "Search prompts" on this tab (`packages/web/src/routes/prompts.tsx:44`).
+Ctrl+K on every Library tab: "New prompt" (starts on the tab's kind), "New intro or outro", "New document theme", "Open prompts", "Open intros and outros", "Open templates", "Open document themes" (`packages/web/src/routes/library.tsx:37-109`); and "Search prompts" on this tab (`packages/web/src/routes/prompts.tsx:44`).
 
 ## States
 | State | Trigger | Rendered |
@@ -72,7 +72,7 @@ The prompts query does not poll; it refreshes on invalidation after delete, rena
 - The drawer has no entry animation in `packages/web/src/components/kit/drawer.tsx`.
 
 ## Copy
-- Library header, tab names and toolbar labels as listed in Composition (`packages/web/src/routes/library.tsx:14-28`, `packages/web/src/routes/prompts.tsx:82-100`).
+- Library header, tab names and toolbar labels as listed in Composition (`packages/web/src/routes/library.tsx:14-29`, `packages/web/src/routes/prompts.tsx:82-100`).
 - Accessible names carry the prompt name: `Edit <name>`, `Duplicate <name>`, `Use <name> in Play`, `History of <name>`, `Delete <name>`, `Rename <name>`, `Actions for <name>`, `Compare versions of <name>` (`packages/web/src/routes/prompts.tsx:148`, `packages/web/src/routes/prompts.tsx:161`, `packages/web/src/library/row-actions.tsx:36-58`, `packages/web/src/library/inline-name.tsx:99`, `packages/web/src/library/item-detail.tsx:159`).
 - Kind help: "What the prompt is for, which decides where Play offers it." followed by one clause per kind (`packages/web/src/help/entries/library.ts:8-12`).
 - Errors say what failed, the reason, and the next press ("Try again", "press Save name again") (`packages/web/src/library/list-states.tsx:40-44`, `packages/web/src/library/inline-name.tsx:46`).
