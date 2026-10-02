@@ -1,5 +1,5 @@
 ---
-generated_at_commit: 14480f26c13e
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
 content_hash: 63f53972ccb2
@@ -41,7 +41,7 @@ Layout: `.sl-cal-week` is a seven-column grid on `--color-surface` with `--radiu
 3. In each, a `ul` of entries, each ruled below (`--color-line`): a bold "<Sun 5 Oct, 20:00>" (the long video's release), the series in small ink-3 when it has one, and the project title as a link to the project (`releases-view.tsx:282-296`).
    - **Project entry**: a responsive grid (`minmax(220px, 1fr)` columns) of item cells, the long video first, then each short (`releases-view.tsx:300-318`). A cell (`ItemCell`, `:141-179`): kicker "Long video" / "Short N", the short's title truncated with a `title` tooltip, a quiet small button showing its release ("Set a time" when it has none; aria-label "<label>: move from <time | no time>"), and a kit `Badge` for its state.
    - **Editing a time** (`TimeEditor`, `:84-139`): one cell at a time swaps its button for a `datetime-local` input (200 px, "<label>: release", the current time in the browser's zone), small primary "Save" (disabled while empty or saving), for the long video a quiet "Not scheduled", and quiet "Cancel". Save sends the instant; Not scheduled sends `null` (`PUT /api/studio/releases/:projectId`, `api.ts:560-570`).
-   - **Free time** (`FreeTime`, `:181-234`): a time of the posting plan no release holds. With finished projects of the line's series (any, when the line takes any series) waiting for a time: a `Select` (260 px, "Project for <time>") starting at "Free · pick a finished project", and a small primary "Put it here" (disabled until one is picked) that gives that project this long-video time and line. Without: small ink-3 text "Free · no finished project[ of <series>] waits for a time".
+   - **Free time** (`FreeTime`, `:181-234`): a time of the posting plan no release holds. With finished projects of the line's series (any, when the line takes any series) waiting for a time, offered only once their video is made (the server's `candidates`, `packages/app/src/slices/studio/calendar.ts:143-150`): a `Select` (260 px, "Project for <time>") starting at "Free · pick a finished project", and a small primary "Put it here" (disabled until one is picked) that gives that project this long-video time and line. Without: small ink-3 text "Free · no finished project[ of <series>] waits for a time".
 
 Badges (`look`, `releases-view.tsx:36-56`):
 

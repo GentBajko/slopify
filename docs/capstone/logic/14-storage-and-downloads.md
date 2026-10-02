@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 14480f26c13e
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: a560decb5004
+content_hash: b90189151292
 scenario: storage-and-downloads
 mockup_row: S14
 screens:

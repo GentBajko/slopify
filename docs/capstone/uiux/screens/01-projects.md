@@ -1,5 +1,5 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
 content_hash: e0334aa0552a
@@ -68,7 +68,7 @@ After delete or upload marking settles, the projects query is invalidated (`pack
 - The running `Status` lamp pulses (`sl-pulse`, 1200ms, infinite); reduced motion stops it (`packages/web/src/styles/kit.css:396-422`).
 - The confirm dialog enters with `dialog-in` (200ms ease-out), off under reduced motion (`packages/web/src/styles/index.css:89`, `packages/web/src/components/ui/dialog.tsx:39`).
 - Toasts enter with `sl-enter` (200ms) (`packages/web/src/components/kit/toast.tsx:91`, `packages/web/src/styles/shell.css:165-172`).
-- The Meter fill has no transition (`packages/web/src/styles/kit.css:1182-1196`).
+- The Meter fill has no transition (`packages/web/src/styles/kit.css:1185-1199`).
 
 ## Copy
 - Titles and labels: "Projects", "New project", "Search projects", "Show", "At a glance", "Video queue", "Open calendar", "Mark uploaded", "Uploaded", "Undo", "Sample" (`packages/web/src/routes/projects.tsx:182-399`).

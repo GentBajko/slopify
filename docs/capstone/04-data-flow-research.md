@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: f03001a483df
+content_hash: 9451d5a23261
 paths_covered:
   - ":(top)packages/app/src/slices/research/**"
   - ":(top)packages/app/src/slices/article/**"

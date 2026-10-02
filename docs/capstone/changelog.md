@@ -6,6 +6,28 @@ capstone_version: 5.2.0
 # Changelog
 
 ## 2026-10-02 - map: all
+key: map/all@8e5bc8b8156d
+
+- 41 chapters, scenarios and screens regenerated or restamped (covered paths changed): square format (formats, thumbnailAspect, migration 0049, per-provider square sizes, 1080x1080 frames), release candidates need a made video, the stats sweep retry and Read Studio numbers now, the extension's task kept out of Studio's address (1.1.2).
+- Left stale on purpose: 05-dependencies and 06-testing (another session's site/walkthrough changes), logic/10 (interview-derived; its "16:9 or 9:16" predates square), and screens/logic last changed before this range.
+
+## 2026-10-02 - note: studio-task-hash
+
+- Studio pages the extension opens keep their task out of the address: `early.ts` (document_start) moves a `#slopify-…` hash into the tab's sessionStorage (`slopify.task`) and removes it before Studio's router rewrites it into a path ("Oops, something went wrong"); `content.ts` `hashParams` reads it from there (extension 1.1.2).
+
+## 2026-10-02 - note: stats-sweep-retry
+
+- The extension's stats sweep records itself only when it has videos to read (else the next 15-minute check retries), and the popup's "Read Studio numbers now" runs it at once (`stats-now`; extension 1.1.1).
+
+## 2026-10-02 - note: square-format
+
+- Square projects (3.5.0, migration 0049 rebuilds `projects` to widen the format CHECK): `formats` gains "1:1" (`kernel/pipeline.ts`), the catalog lists "1:1" for every image and clip model, fal asks `square_hd`/"1:1" and OpenAI 1024x1024; video, captions, figure cards and the style preview frame 1080x1080 (360x360 preview); `thumbnailAspect` keeps a square project's thumbnail 16:9; shorts stay 9:16. The web format picker offers Square; the player has `square`.
+
+## 2026-10-02 - note: release-candidates-video
+
+- Calendar → Releases candidates are only finished projects whose upload pack has its video (`slices/studio/calendar.ts`).
+
+## 2026-10-02 - map: all
 key: map/all@14480f26c13e
 
 - 01-architecture.md, 02-models.md, 04-data-flow.md, 08-glossary.md: regenerated (covered paths changed); release calendar (`releases` replaces `upload_slots`), lead hours, series, checks.

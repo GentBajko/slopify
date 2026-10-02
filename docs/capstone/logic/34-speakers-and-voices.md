@@ -10,10 +10,10 @@ depends_on:
 - 17-subtitles
 - 18-cost-review-batch
 - 24-project-templates
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: f167bf38ba82
+content_hash: 22bbc4a58045
 paths_covered:
   - ":(top)packages/app/src/slices/voices/**"
   - ":(top)packages/app/src/slices/settings/voices.ts"
@@ -61,7 +61,7 @@ The saved voice library (Settings → Voices: add, remove, languages, "Imitates 
     - Colour per speaker by list position from six values, wrapping at the seventh (`packages/app/src/slices/voices/palette.ts:4`, `:13`).
     - Caption name tags "Name: " when `nameTags` is on (`packages/app/src/slices/subtitles/captions.ts:93`, `:104`); word-to-speaker attribution matches each timed word's first token within a 60-token lookahead, an unmatched word keeping the previous speaker (`attributeWords`, `packages/app/src/slices/voices/timing.ts:22`); a hand-edited cue takes the speaker with most overlap, else the nearest word's (`cueSpeaker`, `timing.ts:55`). Caption timing itself is `17-subtitles.md`.
     - Podcast and interview draw a speaker panel with the captions: one row of square tiles at 11% of the short side, gap 30% of a tile, 5% from the top (`panelTiles`, `packages/app/src/slices/voices/panel.ts:51`); consecutive cues of one speaker with gaps under 1.5 s form one lit run (`speakerRuns`, `panel.ts:23`); the lit speaker gets a coloured outline and a lower-third name at 74% height (`panel.ts:93`–`:106`). A tile shows initials (first+last word initials, or the first two letters of one word, `panel.ts:35`) unless the speaker has a portrait. The Play/Edit notice says the panel needs captions burned in (`speakers-editor.tsx:237`).
-    - Portraits: bytes read from the cast image store, only PNG or JPEG; others fall back to initials (`panelPortraits`, `packages/app/src/slices/voices/portraits.ts:22`). They are written beside the caption file as `portrait-<n>.png|jpg` at the 1920×1080 or 1080×1920 tile positions (`writePortraits`, `portraits.ts:52`; called at `packages/app/src/slices/rebuild/runtime-export.ts:86`).
+    - Portraits: bytes read from the cast image store, only PNG or JPEG; others fall back to initials (`panelPortraits`, `packages/app/src/slices/voices/portraits.ts:23`). They are written beside the caption file as `portrait-<n>.png|jpg` at the tile positions of the caption file's frame, `subtitleFrame(format)`: 1920×1080, 1080×1920 or 1080×1080 (`writePortraits`, `portraits.ts:53`, `:67`; `packages/app/src/slices/subtitles/layout.ts:4-10`; called at `packages/app/src/slices/rebuild/runtime-export.ts:86`).
 12. **Listening files** (`audioFiles` on). Planned as `voices:files`, operation `audio-files-v1`, after caption timing (`packages/app/src/slices/rebuild/recipe-exports.ts:95`). `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:25`) reads word timing, computes chapters from the script sections (first chapter from 0, a section starting at or before the previous point replaces its title, one chapter titled after the project when none is heard, `audioChapters`, `packages/app/src/slices/voices/audio-files.ts:16`), writes FFMETADATA with album/track when the project is a book chapter (`ffmetadata`, `audio-files.ts:49`), then encodes `narration.mp3` (libmp3lame 128k, ID3v2.3) and `audiobook.m4b` (AAC 96k, faststart) from the same 44.1 kHz stereo timeline (`audioFileArgs`, `audio-files.ts:75`; `runtime-voices.ts:79`, `:116`). The files' fingerprint carries the project's kept subject (`subjectOf`, `packages/app/src/slices/admission/model.ts:285`) rather than its current title, so renaming a project does not remake them (`recipe-exports.ts:109`). Mastering of these files is `35-audio-levelling-and-ambient.md`.
 
 ## Branches
@@ -81,7 +81,7 @@ The saved voice library (Settings → Voices: add, remove, languages, "Imitates 
 - **Audition**: body not confirmed or invalid → `400` from the validator (`auditions.ts:32`); no audition wired → `500` "Voice auditions aren't available in this build…" (`auditions.ts:57`); attempt held (`ok: false`) → `409` "The audition was held back…" (`auditions.ts:69`); provider error → `502` "The audition couldn't be spoken: <message>" (`auditions.ts:80`). Retry classification is the attempt wrapper's (`08-narration.md`, Unhappy paths). A client disconnect aborts through the request signal (`auditions.ts:67`).
 - **System voice missing**: an engine no longer installed or no engine found fails with a fix naming Edit project → Providers or Settings → Providers (`system.ts:95`–`:97`); a voice not installed fails `unsupported` naming Settings → Voices (`system.ts:124`).
 - **Cast member deleted or voiceless** at run start: the speaker keeps what was saved in the draft (`cast.ts:74`).
-- **Portrait missing or not PNG/JPEG** (for example a backup from another install): initials tile (`portraits.ts:11`).
+- **Portrait missing or not PNG/JPEG** (for example a backup from another install): initials tile (`portraits.ts:12`).
 - **Listening files**: missing word timing → "The narration's word timing, which the chapter markers come from, is missing…" (`runtime-voices.ts:57`); no narration audio → message pointing to turn Audio files off under Speakers (`runtime-voices.ts:67`).
 - **Language mismatch** is a warning only (`languages.ts:28`).
 
@@ -98,7 +98,7 @@ The saved voice library (Settings → Voices: add, remove, languages, "Imitates 
 - An audition is never spoken without `confirmed: true` and never writes attempt rows, project work or outputs (`auditions.ts:34`, `audition.ts:9`).
 - A cast speaker's voice is the member's voice as of the run's start; a started project never follows later cast edits (`runs.ts:147`–`:150`).
 - Speaker ids are stable across renames (`model.ts:38`).
-- Portraits add fingerprint values only when a panel speaker has one, so captions without portraits keep their fingerprints (`portraitValues`, `portraits.ts:43`).
+- Portraits add fingerprint values only when a panel speaker has one, so captions without portraits keep their fingerprints (`portraitValues`, `portraits.ts:44`).
 
 ## Outcomes & side effects
 

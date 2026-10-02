@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 14480f26c13e
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 7859106991d1
+content_hash: a823f3e53e87
 paths_covered:
   - ":(top)packages/app/src/slices/**"
   - ":(top)packages/app/src/edge/**"

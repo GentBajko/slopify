@@ -1,10 +1,10 @@
 ---
 absorbed_from:
   - features/2026-09-24-host-cli-bridge@2026-09-24
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: d83482c1175e
+generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: ce22de624756
+content_hash: 42e94f1eebc0
 paths_covered:
   - ":(top)packages/app/src/catalog/**"
   - ":(top)packages/app/src/assets/models.yaml"
@@ -27,7 +27,7 @@ paths_covered:
 
 1. **Seed.** `createCatalogueStore` creates the data dir (mode 0700) and writes `<data-dir>/models.yaml` from the bundled text with mode 0600 and flag `wx` when absent (`packages/app/src/catalog/store.ts:63-74`).
 2. **Parse rule.** `parseCatalogue` rejects text over 1 MiB, parses YAML with `maxAliasCount: 20` and `uniqueKeys: true`, validates `catalogueSchema`, then drops every row and provider-limit entry whose provider is a local CLI (`claude-code`, `codex`, `gemini`, `codex-image`) (`packages/app/src/catalog/store.ts:50-62`, `packages/app/src/slices/settings/model.ts:33-35`).
-3. **Schema.** `schemaVersion: 1`, `updatedAt` `YYYY-MM-DD`, `providers.<id>.maxConcurrent` integer 1–5, at most 300 `llm`, 200 `image`, 100 `tts` rows. Each row: `provider` (`[a-z0-9-]+`), `id` (1–200 chars), `name`, `enabled` (default true), `deprecated` (default false), `source` URL, `keywords` (default `[]`), strict `pricing` (`inputPerMillionTokens`, `outputPerMillionTokens`, `cachedInputPerMillionTokens`, `perMillionCharacters`, `perImage`, `perMinute`, `note`). LLM rows carry `contextTokens`, `maxOutputTokens`, `webSearch` (default false) and `thinking`, a partial record keyed by `thinkingModes` (`off`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`) whose values are strict `{budget ≥ -1, level, effort}`. Image rows carry `aspectRatios` ⊆ {`16:9`, `9:16`} (min 1) and `resolution`. TTS rows carry `maxCharacters` 2–1,000,000, `streaming`, optional `asyncMaxCharacters`. `superRefine` rejects an unknown provider for the family, a duplicate `provider:id` across families, and a model whose provider has no `providers` limit entry (`packages/app/src/catalog/schema.ts:5-100`, `packages/app/src/kernel/ports/llm.ts:70`).
+3. **Schema.** `schemaVersion: 1`, `updatedAt` `YYYY-MM-DD`, `providers.<id>.maxConcurrent` integer 1–5, at most 300 `llm`, 200 `image`, 100 `tts` rows. Each row: `provider` (`[a-z0-9-]+`), `id` (1–200 chars), `name`, `enabled` (default true), `deprecated` (default false), `source` URL, `keywords` (default `[]`), strict `pricing` (`inputPerMillionTokens`, `outputPerMillionTokens`, `cachedInputPerMillionTokens`, `perMillionCharacters`, `perImage`, `perMinute`, `note`). LLM rows carry `contextTokens`, `maxOutputTokens`, `webSearch` (default false) and `thinking`, a partial record keyed by `thinkingModes` (`off`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`) whose values are strict `{budget ≥ -1, level, effort}`. Image rows carry `aspectRatios` ⊆ {`16:9`, `9:16`, `1:1`} (min 1; every bundled image and image-to-video row lists all three, `packages/app/src/assets/models.yaml`, `packages/app/src/catalog/schema.ts:55`) and `resolution`. TTS rows carry `maxCharacters` 2–1,000,000, `streaming`, optional `asyncMaxCharacters`. `superRefine` rejects an unknown provider for the family, a duplicate `provider:id` across families, and a model whose provider has no `providers` limit entry (`packages/app/src/catalog/schema.ts:5-100`, `packages/app/src/kernel/ports/llm.ts:70`).
 4. **Keywords as capabilities.** An image row with keyword `video` is an image-to-video model (price per clip in `perImage`); keyword `reference` marks an image model that accepts an input image (`packages/app/src/catalog/schema.ts:103-115`).
 5. **Read.** `read()` stats the local file; when `mtime:size` differs from the last stamp it re-parses (over 1 MiB throws) and clears the warning (`packages/app/src/catalog/store.ts:81-96`).
 6. **Listing.** `models(provider, family)` returns rows of that provider that are `enabled`, not `deprecated`, and not video models; `videoModelsOf` returns the enabled, non-deprecated video rows for Animate images (`packages/app/src/catalog/store.ts:206-209`, `packages/app/src/catalog/schema.ts:121-128`). `GET /api/providers/:id/models` answers from the catalogue for catalogued providers (with `thinkingModes` = keys of `llm.thinking`, `allowsCustom: false`, the catalogue warning), from `videoModelsOf` with `?video=1`, and from the runtime model cache otherwise (`packages/app/src/edge/http/providers.ts:187-216`).

@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 197d223705ba
+content_hash: a34ee1b6bfb7
 paths_covered:
   - ":(top)packages/app/src/slices/research/**"
   - ":(top)packages/app/src/kernel/ports/llm-documents.ts"

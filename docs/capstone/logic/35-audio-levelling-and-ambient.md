@@ -9,10 +9,10 @@ depends_on:
 - 11-video-assembly
 - 12-reruns-and-edits
 - 28-shorts
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: b820731bcf16
+content_hash: 3b71af6187d5
 paths_covered:
   - ":(top)packages/app/src/slices/loudness/**"
   - ":(top)packages/app/src/slices/video/ambient-*.ts"
@@ -72,15 +72,15 @@ paths_covered:
    - Audio-only WAV (video Off): concat to WAV, master at 48 kHz stereo, re-encode to 16-bit PCM (`runtime-export.ts:163`–`:202`); target `audioFiles`.
    - Shorts: target `video` (`packages/app/src/slices/rebuild/runtime-shorts.ts:341`, `packages/app/src/slices/rebuild/runtime-export-short.ts:47`).
    - MP3/M4B listening files: mixed once, mastered at 44.1 kHz stereo, both encoded from the master (`packages/app/src/slices/rebuild/runtime-voices.ts:93`–`:114`); target `audioFiles`.
-   Each writes the measured `MasterReport` shown as "Mastered to −14 LUFS: measured …, peaks … dBTP" (`masterText`, `model.ts:224`; `packages/web/src/project/body-video.tsx:150`).
+   Each writes the measured `MasterReport` shown as "Mastered to −14 LUFS: measured …, peaks … dBTP" (`masterText`, `model.ts:224`; `packages/web/src/project/body-video.tsx:157`).
 9. **What an export plays** (`revisionAudio`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:53`): with levelling on and audio Generate, the selected ready `audio_levelled` output of `level:<segment>` for body/intro/outro; otherwise the plain `audio_body`/`audio_intro`/`audio_outro`. Word timing, description and the shorts' pick read the plain joins (`runtime-export-inputs.ts:57`). A multi-voice body is additionally levelled line by line during the export when `linesLevelled` (voices + loudness + Generate, `packages/app/src/slices/rebuild/recipe-lines.ts:9`; used at `runtime-export.ts:67`); rules in `08-narration.md`.
 10. **Ambient bed settings** (`AmbientBedSettings`, `ambient-bed.ts:17`): source `rain`, `fire`, `wind` or `upload` (labels Rain, Fireplace, Wind, My own file, `ambient-bed.ts:35`); `levelDb` whole dB −40 to −6 (default −18); `fadeInSeconds` 0–30 in 0.5 steps (default 3); `tailSeconds` 0–30 in 0.5 steps (default 6) (`ambient-bed.ts:43`–`:51`, `ambientBedProblems` `:73`). A channel brand kit holds built-in sources only (`channelAmbientBedSchema`, `packages/app/src/slices/video/ambient-bed-schema.ts:14`; `packages/app/src/slices/channels/schema.ts:40`).
 11. **Channel default.** A run using its channel's brand kit whose form never touched Ambient sound takes the channel's bed; "None" keeps none; `useBrandKit === false` skips the brand kit (`packages/app/src/slices/channels/runs.ts:49`, `:68`–`:71`).
 12. **Uploaded bed file.** Staged on Play as `provided.ambientBed` (audio kind, `convert.ts:323`); at start it is copied into the project as an asset (`attachAmbientBed`, `packages/app/src/slices/admission/start.ts:215`) and named by the first revision's `content.ambientBed` (`start.ts:135`). Edit project offers `upload` only while the project already has one; a new file is chosen on Play (`edit-sound-and-scale.tsx:37`, `:53`).
-13. **Plan.** With a bed and narration, the audio timeline is extended with `withTail`: the trailing edge silence is raised to `tailSeconds` when shorter, or an edge segment of `tailSeconds` is appended (`packages/app/src/slices/video/plan.ts:159`, `:239`). The edit list's `bed` records source, `levelDb`, `fadeInSeconds`, `fadeOutAt` = end of the last spoken segment, `fadeOutSeconds` = `tailSeconds` (`plan.ts:218`–`:227`, `:248`; `packages/app/src/slices/video/edit-list.ts:114`).
+13. **Plan.** With a bed and narration, the audio timeline is extended with `withTail`: the trailing edge silence is raised to `tailSeconds` when shorter, or an edge segment of `tailSeconds` is appended (`packages/app/src/slices/video/plan.ts:160`, `:240`). The edit list's `bed` records source, `levelDb`, `fadeInSeconds`, `fadeOutAt` = end of the last spoken segment, `fadeOutSeconds` = `tailSeconds` (`plan.ts:219`–`:228`, `:249`; `packages/app/src/slices/video/edit-list.ts:114`).
 14. **Bed source at export** (`exportBed`, `packages/app/src/slices/rebuild/runtime-export-bed.ts:13`): a built-in bed becomes `{ kind: "noise", preset }`; an upload is looked up in `project_assets`, probed for duration, and becomes `{ kind: "file", path }`.
 15. **Mix** (`bedInputs`/`bedChains`, `packages/app/src/slices/video/ambient-mix.ts:49`, `:65`; wired at `ffmpeg.ts:344`–`:364`). Built-in beds are ffmpeg `anoisesrc` with fixed seeds: rain pink noise band-passed 600–9,000 Hz; wind brown noise 60–500 Hz with 0.15 Hz tremolo, −1 dB; fire brown noise 80–800 Hz with 6 Hz tremolo, −3 dB, plus velvet crackle 1,500–6,000 Hz at −22 dB (`ambient-mix.ts:28`–`:46`). An uploaded file is looped (`-stream_loop -1`) and trimmed to the video (`ambient-mix.ts:50`). Layers are mixed without normalisation, set to `levelDb`, faded in over `fadeInSeconds` (none at 0) and faded out from `fadeOutAt` over max(0.25 s, tail) (`ambient-mix.ts:80`–`:87`). The narration is split into voice and key; the bed is ducked by `sidechaincompress=threshold=0.02:ratio=8:attack=40:release=900:makeup=1` keyed by the voice, then mixed with the voice by `amix … normalize=0`, the narration at full level (`ambient-mix.ts:21`, `:88`–`:91`). The bed goes into the master when levelling is on (step 8).
-16. **Fingerprint.** The long video's render adds `["ambient-bed-v1", source, levelDb, fadeInSeconds, tailSeconds, uploadAssetId|null]` only when a bed is used; shorts never add it (`ambientBedValues`, `packages/app/src/slices/rebuild/recipe-visual.ts:136`, `:263`).
+16. **Fingerprint.** The long video's render adds `["ambient-bed-v1", source, levelDb, fadeInSeconds, tailSeconds, uploadAssetId|null]` only when a bed is used; shorts never add it (`ambientBedValues`, `packages/app/src/slices/rebuild/recipe-visual.ts:137`, `:264`).
 
 ## Branches
 
@@ -89,7 +89,7 @@ paths_covered:
 - **Short-only run**: no bed (`ambient-bed.ts:65`); the Shorts renderer's music is its own (`28-shorts.md`).
 - **Video Off**: no bed; the audio-only WAV stays narration alone (`ambient-bed.ts:5`, `:66`).
 - **Bed set with Video or Audio Off**: the draft keeps the form but checks and applies nothing (`convert.ts:193`–`:198`, `rules.ts:573`).
-- **Tail vs edge silence**: the tail plays over the silence already after the narration; the video grows only by `tailSeconds − edgeSeconds` when positive (`plan.ts:243`). `ambientTailExtension` computes the same number (`ambient-bed.ts:112`) and has no caller in `packages/app/src` or `packages/web/src`.
+- **Tail vs edge silence**: the tail plays over the silence already after the narration; the video grows only by `tailSeconds − edgeSeconds` when positive (`plan.ts:244`). `ambientTailExtension` computes the same number (`ambient-bed.ts:112`) and has no caller in `packages/app/src` or `packages/web/src`.
 - **Scheduled runs** refuse a template whose ambient bed is an uploaded file (`unsupported-media`, `packages/app/src/slices/schedules/service.ts:237`).
 - **Pauses**: sentence/paragraph pause minimums live beside Level the volume in Play and Edit project (`EditPauses`, `edit-sound-and-scale.tsx:113`); their rules are `08-narration.md` (Sentence pauses). Pauses are applied to the levelled copies when levelling is on (`08-narration.md`).
 - **Silence gap** (Settings → Playback, whole seconds 0–30, default 3, `playback.ts:28`, `packages/app/src/slices/admission/rules.ts:41`, `settings/model.ts:217`) spaces intro/body/outro in the timeline; its use is `11-video-assembly.md`.
@@ -102,13 +102,13 @@ paths_covered:
 - **Piece too quiet or short**: kept as is and counted as skipped in the report (`packages/app/src/slices/loudness/level-pieces.ts:30`); a silent master input is only resampled (`loudnorm.ts:78`).
 - **Bed problems** at admission name "under Video and style → Ambient sound" (`ambientBedFields`, `rules.ts:568`): bad source/level/fade/tail; upload file missing or not audio ("…is missing, so it can't be added to the project…"); still uploading ("…is still uploading, so the run can't start yet…") (`rules.ts:580`–`:592`). Edit project names "Edit project → Inputs → Ambient sound" (`packages/app/src/slices/revisions/mutations.ts:242`); the channel page names "Brand kit → Ambient sound" (`channels/schema.ts:40`).
 - **Foreign bed asset** in a revision edit: refused unless an earlier revision of the same project names it ("This ambient sound file does not belong to this project…") (`packages/app/src/slices/revisions/mutation-assets.ts:200`).
-- **Bed file gone or unreadable at render**: "The ambient sound's audio file is no longer in the project.", "…couldn't be read as audio (…)", "…holds no sound." each followed by the fix to pick another file or a built-in bed on Play (`runtime-export-bed.ts:28`–`:52`). An uploaded source without an attached asset leaves the render unresolved (`recipe-visual.ts:200`).
+- **Bed file gone or unreadable at render**: "The ambient sound's audio file is no longer in the project.", "…couldn't be read as audio (…)", "…holds no sound." each followed by the fix to pick another file or a built-in bed on Play (`runtime-export-bed.ts:28`–`:52`). An uploaded source without an attached asset leaves the render unresolved (`recipe-visual.ts:201`).
 - **Attach failure at start** throws "the ambient sound's audio file could not be attached: <reason>" (`start.ts:227`).
 - **Cancellation**: every ffmpeg pass takes the stage signal; piece levelling checks it between pieces (`level-pieces.ts:26`). Temporary mix/master files are removed in `finally` (`runtime-export.ts:204`, `slideshow.ts:246`).
 
 ## State transitions
 
-`config.loudness` and `config.ambientBed` are absent ↔ set on drafts and revisions; a change is a revision edit (`12-reruns-and-edits.md`). Turning levelling on plans only `level:*` steps and the exports that play them; no TTS piece is made again (`edit-sound-and-scale.tsx:74`, `recipe-loudness.ts:16`). Changing only the volumes re-masters exports; the pieces stay at −20 LUFS (`model.ts:50`). Changing the bed re-renders only the long video (`recipe-visual.ts:263`). The Settings default affects new runs only.
+`config.loudness` and `config.ambientBed` are absent ↔ set on drafts and revisions; a change is a revision edit (`12-reruns-and-edits.md`). Turning levelling on plans only `level:*` steps and the exports that play them; no TTS piece is made again (`edit-sound-and-scale.tsx:74`, `recipe-loudness.ts:16`). Changing only the volumes re-masters exports; the pieces stay at −20 LUFS (`model.ts:50`). Changing the bed re-renders only the long video (`recipe-visual.ts:264`). The Settings default affects new runs only.
 
 ## Invariants
 

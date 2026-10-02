@@ -25,7 +25,7 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | Alignment worker | `packages/app/src/adapters/alignment/worker.ts:17` |
 | Sample build | `packages/app/src/sample-build/generate.ts:93` |
 | Web SPA, router, shell, API client | `packages/web/src/main.tsx:24`, `packages/web/src/router.tsx:603`, `packages/web/src/components/shell.tsx:166`, `packages/web/src/api.ts:197` |
-| Studio extension | `packages/extension/src/background.ts:386`, `packages/extension/src/content.ts:217`, `packages/extension/scripts/build.mjs:46` |
+| Studio extension | `packages/extension/src/background.ts:393`, `packages/extension/src/content.ts:217`, `packages/extension/scripts/build.mjs:46` |
 | Telemetry collector | `packages/collector/src/index.ts:21` |
 | Marketing site | `packages/site/public/main.js:247` |
 

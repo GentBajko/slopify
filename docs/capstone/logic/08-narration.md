@@ -14,10 +14,10 @@ depends_on:
 - 02-provider-credentials
 - 05-provided-outputs
 - 07-article-writing
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: b4bf2fa1d611
+content_hash: fb420f1a400d
 paths_covered:
   - ":(top)packages/app/src/slices/narration/**"
   - ":(top)packages/app/src/slices/voices/model.ts"
@@ -117,7 +117,7 @@ Narration turns the article (or a multi-voice script) into audio: optional block
 - **Provider failures**: four in-call attempts (backoff 2 s, 8 s, 30 s; 120 s timeout for TTS) (`packages/app/src/kernel/runner/attempt.ts:14`, `:19`); refusal/unsupported/auth/missing key/unavailable stop at once (`attempt.ts:29`); rate limit, timeout and dropped connection then wait up to four persisted times (~2, 4, 8, 16 min ±25%), and a Retry-After above one hour is reported instead (`packages/app/src/kernel/runner/retry-policy.ts:13`–`:52`). Completed pieces stay for reuse.
 - **Over-limit saved request** after a catalogue limit drop: readiness refuses "This saved physical request exceeds the current model limit. Regenerate this narration group to plan new parts." (`service-readiness.ts:129`).
 - **Missing piece at join**: "One narration chunk has no saved audio, so the narration can't be joined together. Regenerate the missing chunk in Edit project → Narration, then Try again." (`runtime-local.ts:179`).
-- **Automatic chunk retry**: when caption alignment finds audio that does not match a chunk made by a voice (not uploaded, not hand-edited captions, not a `:turn:` key), the chunk is recorded again through Redo with a new regeneration token, at most `narrationRetryLimit` = 2 times per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`, `:29`, `:120`; `runtime-subtitles.ts:406`). A deterministic idempotency key per try prevents a second recording after a restart (`narration-retry.ts:169`). When the Redo is refused because another step of the project is still running (its PDF, say), the retry is left `pending` and only logged; the next finished work kicks it again (`narration-retry.ts:143-151`). Retries are kicked after each finished work and at boot (`packages/app/src/main.ts:365`, `:490`). After the second try the message asks the person to reword the sentence at the given time.
+- **Automatic chunk retry**: when caption alignment finds audio that does not match a chunk made by a voice (not uploaded, not hand-edited captions, not a `:turn:` key), the chunk is recorded again through Redo with a new regeneration token, at most `narrationRetryLimit` = 2 times per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`, `:29`, `:120`; `runtime-subtitles.ts:404`). A deterministic idempotency key per try prevents a second recording after a restart (`narration-retry.ts:169`). When the Redo is refused because another step of the project is still running (its PDF, say), the retry is left `pending` and only logged; the next finished work kicks it again (`narration-retry.ts:143-151`). Retries are kicked after each finished work and at boot (`packages/app/src/main.ts:365`, `:490`). After the second try the message asks the person to reword the sentence at the given time.
 - **Levelling**: a piece too short or quiet to measure keeps its level and is counted as skipped (`level-pieces.ts:30`). Line levelling throws if the word timing is missing (`runtime-lines.ts:32`).
 - **Empty narration**: an empty body leaves the join unresolved (`recipe-audio.ts:200`); an empty preparation source is refused (above). Concurrency of two edits: an old completion publishes only to its originating revision (scenario 12).
 
@@ -140,4 +140,4 @@ Success writes one asset per physical request, joined `audio_body`/`audio_intro`
 
 ## Dimensions not in play
 
-No voice cloning in narration; no transcription of supplied audio into text; no translation of the article (the project language only selects IPA rules, list connectives and preparation wording, `pronunciation.ts:76`, `blocks.ts:54`, `preparation.ts:96`). Sentence segmentation is fixed to `Intl.Segmenter("en")` for every language (`chunk.ts:86`). Automatic chunk retry does not cover multi-voice turns (`runtime-subtitles.ts:406`). Service readiness checks only `config.audio`'s saved voice, not each speaker's (`service-readiness.ts:114`).
+No voice cloning in narration; no transcription of supplied audio into text; no translation of the article (the project language only selects IPA rules, list connectives and preparation wording, `pronunciation.ts:76`, `blocks.ts:54`, `preparation.ts:96`). Sentence segmentation is fixed to `Intl.Segmenter("en")` for every language (`chunk.ts:86`). Automatic chunk retry does not cover multi-voice turns (`runtime-subtitles.ts:404`). Service readiness checks only `config.audio`'s saved voice, not each speaker's (`service-readiness.ts:114`).

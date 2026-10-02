@@ -14,10 +14,10 @@ depends_on:
 - 28-shorts
 - 29-video-editing
 - 38-home-attention-and-uploads
-generated_at_commit: 14480f26c13e
+generated_at_commit: 8e5bc8b8156d
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 0ba34547cbef
+content_hash: ea9ba0f3d3bd
 paths_covered:
   - ":(top)packages/app/src/slices/studio/**"
   - ":(top)packages/app/src/edge/http/studio.ts"
@@ -36,9 +36,9 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 - Slopify never uploads through YouTube's API and never presses Publish or Schedule; it builds an upload pack that the person copies into YouTube Studio or that the Slopify Studio browser extension puts into Studio's upload dialog (`slices/studio/model.ts:1-5`).
 - Entry points in the web app: the Prepare upload drawer on the project page (`packages/web/src/routes/project.tsx:713`), Home's Ready list (`packages/web/src/home/ready.tsx:74`) and the calendar (`packages/web/src/routes/calendar.tsx:672`). The `PrepareUpload` button is disabled until a finished video exists, "Available once the video has been made" (`packages/web/src/studio/prepare-upload.tsx:47-75`).
-- Entry point in the extension: the toolbar popup "Ready to upload" (`packages/extension/src/popup.ts:211-227`), which asks the paired Slopify for `GET /ext/ready`.
+- Entry point in the extension: the toolbar popup "Ready to upload" (`packages/extension/src/popup.ts:227-243`), which asks the paired Slopify for `GET /ext/ready`.
 - Settings → YouTube Studio holds the playlists per channel, the posting plan (44), and the pairing token (`packages/web/src/studio/settings-panel.tsx:20-46`, `packages/web/src/routes/settings.tsx:136`, `:305`).
-- The extension (Manifest V3, "Slopify Studio" 1.1.0; permissions `storage`, `clipboardWrite`, `alarms`; host permissions `http://127.0.0.1/*`, `http://localhost/*`, `https://www.youtube.com/oembed*`; content script `content.js` on `https://studio.youtube.com/*` and `comment.js` on `https://www.youtube.com/watch*`; popup `popup.html`; `video-frame.html` web-accessible to Studio only) (`packages/extension/static/manifest.json:12-50`) must be installed from the zips the app serves and paired before Fill in YouTube Studio is enabled (`packages/web/src/studio/prepare-upload.tsx:225-252`).
+- The extension (Manifest V3, "Slopify Studio" 1.1.2; permissions `storage`, `clipboardWrite`, `alarms`; host permissions `http://127.0.0.1/*`, `http://localhost/*`, `https://www.youtube.com/oembed*`; content script `content.js` on `https://studio.youtube.com/*` and `comment.js` on `https://www.youtube.com/watch*`; popup `popup.html`; `video-frame.html` web-accessible to Studio only) (`packages/extension/static/manifest.json:12-50`) must be installed from the zips the app serves and paired before Fill in YouTube Studio is enabled (`packages/web/src/studio/prepare-upload.tsx:225-252`).
 
 ## Steps
 
@@ -78,14 +78,14 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 1. Token: `studioPairing` reads `studio.pairing`, creating one (24 random bytes, base64url) with `origin`/`pairedAt` null on first read or when the row is damaged (`slices/studio/settings.ts:197-226`).
 2. New pairing token (`POST /settings/pairing`, `edge/http/studio.ts:376-380`): `resetStudioPairing` deletes every `studio.fillQueue.*` row and writes a fresh unpaired token (`slices/studio/settings.ts:214-226`).
-3. Extension options page: address + token → background `pair` (`packages/extension/src/options.ts:27-44`). The address must match `^http://(127\.0\.0\.1|localhost)(:\d+)?$` after trimming trailing slashes (`packages/extension/src/background.ts:283-288`); it POSTs `/api/studio/ext/pair` with `Authorization: Bearer <token>` and on success stores `base` and `token` in `storage.local` (`:289-300`).
+3. Extension options page: address + token → background `pair` (`packages/extension/src/options.ts:27-44`). The address must match `^http://(127\.0\.0\.1|localhost)(:\d+)?$` after trimming trailing slashes (`packages/extension/src/background.ts:287-292`); it POSTs `/api/studio/ext/pair` with `Authorization: Bearer <token>` and on success stores `base` and `token` in `storage.local` (`:293-304`).
 4. Server (`POST /ext/pair`, `edge/http/studio.ts:567-587`; `pairStudioExtension`, `slices/studio/settings.ts:254-266`): token compared with `timingSafeEqual` (`:235-240`); origin must match `^(chrome-extension|moz-extension)://[a-z0-9-]{1,64}$` (`:229-233`); then `origin` and `pairedAt` are saved.
 
 ### Choosing what the next upload dialog gets
 
 - **Drawer** Fill in YouTube Studio (`packages/web/src/studio/prepare-upload.tsx:235-252`): opens `https://www.youtube.com/upload` (`slices/studio/model.ts:18`) in a new tab inside the click, then `POST /packs/:projectId/choose` with the item's `short`. Choose (`edge/http/studio.ts:467-487`): 404 when the pack has no such short; else `enqueueFill` (`slices/studio/queue.ts:64-80`) appends `{ projectId, short, at }` to `studio.fillQueue.<first 16 hex of sha256(token)>` (`:31-34`); an entry already waiting keeps its place; the list keeps the newest 50 (`fillQueueMax`, `:16`).
-- **Popup** (`packages/extension/src/popup.ts:47-144`): `GET /ext/ready` (`edge/http/studio.ts:650-685`) lists projects with no upload mark whose derived state is `done`, `partial`, or `pending` and kept as is (38), whose video is rendered; each item carries `ready`, `uploaded` (`upload_state = 'done'`), `started` (`filled`), its `videoId`, `scheduleAt` and `uploadBy` = `scheduleAt` minus the lead hours (`edge/http/studio.ts:671-679`; 44). Projects are listed by the earliest `uploadBy` of their items not on YouTube (`packages/extension/src/popup.ts:55-62`). A project row reads "N · by <time>", "N late" (that time passed), "N to upload" (no time) or "all on YouTube" (`:63-75`); an item reads "✓ on YouTube", "not rendered", or "Upload"/"Upload again" followed by " · by <time>" or " · late" (`:114-125`). Clicking an item → `POST /ext/upload` (`edge/http/studio.ts:688-702`): 404 when the item is gone; otherwise `fillNow` puts it first in the queue (`slices/studio/queue.ts:94-104`) and the worker opens the returned Studio URL in an active tab (`packages/extension/src/background.ts:392-400`).
-- **Upload all N shorts** (popup row when more than one rendered short is not on YouTube, `packages/extension/src/popup.ts:100-112`) → `POST /ext/upload-all` (`edge/http/studio.ts:705-722`): every rendered short whose upload is not `done` is put first in reverse order, so short 1 ends up first; the worker stores `uploadAllUntil` = now + 3 h and opens Studio (`packages/extension/src/background.ts:331-341`).
+- **Popup** (`packages/extension/src/popup.ts:63-160`): `GET /ext/ready` (`edge/http/studio.ts:650-685`) lists projects with no upload mark whose derived state is `done`, `partial`, or `pending` and kept as is (38), whose video is rendered; each item carries `ready`, `uploaded` (`upload_state = 'done'`), `started` (`filled`), its `videoId`, `scheduleAt` and `uploadBy` = `scheduleAt` minus the lead hours (`edge/http/studio.ts:671-679`; 44). Projects are listed by the earliest `uploadBy` of their items not on YouTube (`packages/extension/src/popup.ts:71-78`). A project row reads "N · by <time>", "N late" (that time passed), "N to upload" (no time) or "all on YouTube" (`:79-91`); an item reads "✓ on YouTube", "not rendered", or "Upload"/"Upload again" followed by " · by <time>" or " · late" (`:130-141`). Clicking an item → `POST /ext/upload` (`edge/http/studio.ts:688-702`): 404 when the item is gone; otherwise `fillNow` puts it first in the queue (`slices/studio/queue.ts:94-104`) and the worker opens the returned Studio URL in an active tab (`packages/extension/src/background.ts:399-407`).
+- **Upload all N shorts** (popup row when more than one rendered short is not on YouTube, `packages/extension/src/popup.ts:116-128`) → `POST /ext/upload-all` (`edge/http/studio.ts:705-722`): every rendered short whose upload is not `done` is put first in reverse order, so short 1 ends up first; the worker stores `uploadAllUntil` = now + 3 h and opens Studio (`packages/extension/src/background.ts:335-345`).
 - `GET /packs/:projectId`, `/ext/ready`, `/ext/upload` and `/ext/upload-all` first give a project whose long video is not confirmed on YouTube and whose video is rendered its release times from the posting plan (`planned`, `edge/http/studio.ts:210-226`; rules in 44). `GET /releases`, `PUT /releases/:projectId` and `PUT /packs/:projectId/slot` do the same.
 
 ### The upload dialog (`packages/extension/src/content.ts`)
@@ -117,7 +117,7 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 ## Branches
 
-- Unpaired (pairing `origin` null) → the drawer shows the install callout, "Open YouTube Studio" link and a disabled Fill button; paired → Fill enabled (`packages/web/src/studio/prepare-upload.tsx:225-252`, `:265-275`). The popup without a pairing shows "Pair the extension with Slopify first." and a Pair button (`packages/extension/src/popup.ts:212-221`).
+- Unpaired (pairing `origin` null) → the drawer shows the install callout, "Open YouTube Studio" link and a disabled Fill button; paired → Fill enabled (`packages/web/src/studio/prepare-upload.tsx:225-252`, `:265-275`). The popup without a pairing shows "Pair the extension with Slopify first." and a Pair button (`packages/extension/src/popup.ts:228-237`).
 - More than one item → a Video / Short N switch (`packages/web/src/studio/prepare-upload.tsx:276-288`).
 - Thumbnails on the upload: none → no thumbnail step; one or more → only the chosen one, in the single slot (`packages/extension/src/fill.ts:195-208`). A/B Testing is never touched during the upload.
 - A file input appears with nothing waiting in Slopify → the dialog is the person's own upload and is not touched (`packages/extension/src/content.ts:495-500`).
@@ -125,7 +125,7 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 - An item from an older app without `alteredContent` → AI use left to the person; without `playlists` → the single `playlist` is ticked (`packages/extension/src/pack.ts:43-45`).
 - Request with no `Origin` header → judged on the token alone; with one → it must equal the paired origin (`slices/studio/settings.ts:268-280`).
 - CORS headers are sent only to an extension origin: on `/ext/pair` to any extension origin, elsewhere only to the paired one; never `*` (`edge/http/studio.ts:190-201`, `:559-566`).
-- A popup item already confirmed on YouTube is not clickable for upload; the long video with a known id opens the A/B choices instead (`packages/extension/src/popup.ts:117-132`; 44).
+- A popup item already confirmed on YouTube is not clickable for upload; the long video with a known id opens the A/B choices instead (`packages/extension/src/popup.ts:133-148`; 44).
 
 ## Unhappy paths
 
@@ -136,15 +136,15 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 - A file not in the pack (or no longer in it) → 404 "That file isn't in the project's upload pack any more…" (`edge/http/studio.ts:875-881`).
 - Extension zips absent → 404 naming `npm run build` (`edge/http/studio.ts:544-550`).
 - Queue entries older than 24 h (`fillQueueMs`) or malformed are dropped on read; a damaged row reads as empty (`slices/studio/queue.ts:14`, `:42-58`).
-- Extension: not paired → "The extension isn't paired with Slopify yet…"; Slopify unreachable → "Couldn't reach Slopify at <base>…"; other non-OK → the problem `detail` or a status sentence (`packages/extension/src/background.ts:31-51`, `:61-68`). `filled` unreachable → a sentence telling the person to remove the item under Waiting for Studio, since the next dialog may be filled with it again (`:273-277`).
+- Extension: not paired → "The extension isn't paired with Slopify yet…"; Slopify unreachable → "Couldn't reach Slopify at <base>…"; other non-OK → the problem `detail` or a status sentence (`packages/extension/src/background.ts:31-51`, `:61-68`). `filled` unreachable → a sentence telling the person to remove the item under Waiting for Studio, since the next dialog may be filled with it again (`:277-281`).
 - Video file could not be fetched → error toast "The video couldn't be added: … Drop it in by hand: Open folder in Slopify's Prepare upload shows it."; the dialog closed before it arrived → "…nothing was added. Open Upload videos again." (`packages/extension/src/content.ts:535-541`, `:599-604`).
-- Studio's dialog changed (a needed field missing) → nothing filled, the whole pack text (`packText`, `packages/extension/src/pack.ts:168-184`) put on the clipboard, error toast naming the missing fields and suggesting updating the extension (`packages/extension/src/content.ts:154-163`).
+- Studio's dialog changed (a needed field missing) → nothing filled, the whole pack text (`packText`, `packages/extension/src/pack.ts:170-186`) put on the clipboard, error toast naming the missing fields and suggesting updating the extension (`packages/extension/src/content.ts:154-163`).
 - Clipboard refused → the text is shown selected in a textarea to copy with the keyboard (`packages/extension/src/content.ts:71-92`).
 - A click that would press Next, Back, Done, Save, Schedule, Publish or Set test throws `RefusedClick` and the field fails with "Slopify's filler stopped before pressing one of Studio's … buttons" (`packages/extension/src/selectors.ts:261-275`, `packages/extension/src/fill.ts:615-630`).
 - A playlist Studio does not list, or a tick that does not hold → that field fails with the names copied (`packages/extension/src/fill.ts:525`, `:532`). Tags Studio did not turn into chips → fails with the line copied (`:568`).
 - Schedule not set (Visibility, Schedule, date or time field missing, or Studio did not keep the typed value) → error toast ending "Set the schedule by hand: <date>, <time>." (`packages/extension/src/studio-pages.ts:60-100`).
 - No video link in the dialog within 60 s → info toast to paste the link in On YouTube; nothing is recorded (`packages/extension/src/content.ts:216-222`).
-- Upload cancelled or left as a draft → the row stays `filled`; the popup offers "Upload again" and On YouTube says "Filled in Studio, but not scheduled or published yet…" (`packages/extension/src/popup.ts:123`, `packages/web/src/project/on-youtube.tsx:50-51`).
+- Upload cancelled or left as a draft → the row stays `filled`; the popup offers "Upload again" and On YouTube says "Filled in Studio, but not scheduled or published yet…" (`packages/extension/src/popup.ts:139`, `packages/web/src/project/on-youtube.tsx:50-51`).
 - `/ext/video` or `/ext/video/done` failing → error toast; the row keeps its earlier state (`content.ts:232-245`).
 - Pasted link that is not a YouTube video link → 400 "That isn't a YouTube video link…" (`edge/http/studio.ts:513-520`).
 - Deleting a project or channel does not remove its `studio.projectPlaylists` entry, `studio.realFootage` id, `studio.uploadPick.<projectId>` row or `studio.playlist.<channelId>` row: nothing outside `slices/studio/` and the backup code reads those keys (`slices/storage/portable.ts:48-53`). `youtube_videos` rows cascade with the project (`packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:6-7`).
@@ -161,8 +161,8 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 - In the upload dialog nothing in Slopify or the extension presses Next, Back, Done, Save, Schedule, Publish or Set test; the person presses Schedule or Publish (`packages/extension/src/fill.ts:36-43`, `:576-589`, `packages/extension/src/selectors.ts:261-275`, `packages/extension/src/content.ts:8-17`). The Details-page presses after a confirmed upload are 44's.
 - An upload counts as on YouTube (`done`) only after Studio shows its scheduled/published/saved confirmation, a link is pasted, or the Content list names it; a filled but unconfirmed upload stays `filled` (`packages/extension/src/content.ts:236-237`, `slices/studio/videos.ts:16-18`).
-- No upload sets the project's upload mark (`project_uploads`); only Mark uploaded does (38). The popup keeps listing a project whose items are all on YouTube ("all on YouTube") until it is marked (`finishedProjects`, `edge/http/studio.ts:236-247`; `packages/extension/src/popup.ts:63-75`).
-- The Studio page never calls Slopify; the worker and the extension's own video frame carry the token (`packages/extension/src/background.ts:11-12`, `packages/extension/src/video-frame.ts:28-39`). The worker sends Slopify the filled item, the video ids, the Content list rows, task results and Studio's numbers (`background.ts:303-401`); its header comment ("it never sends Slopify anything but the token") predates those calls.
+- No upload sets the project's upload mark (`project_uploads`); only Mark uploaded does (38). The popup keeps listing a project whose items are all on YouTube ("all on YouTube") until it is marked (`finishedProjects`, `edge/http/studio.ts:236-247`; `packages/extension/src/popup.ts:79-91`).
+- The Studio page never calls Slopify; the worker and the extension's own video frame carry the token (`packages/extension/src/background.ts:11-12`, `packages/extension/src/video-frame.ts:28-39`). The worker sends Slopify the filled item, the video ids, the Content list rows, task results and Studio's numbers (`background.ts:307-408`); its header comment ("it never sends Slopify anything but the token") predates those calls.
 - A dialog is either filled field by field or not touched at all when a needed field is missing (`packages/extension/src/fill.ts:36-41`).
 - The pack generates nothing; it only reads current outputs and rows (`slices/studio/pack.ts:59-61`).
 - The pairing token and fill queues never travel in a backup; playlists, project playlist choices and real-footage ids do; `studio.uploadPick.*`, `studio.postingPlan`, `studio.autoComment` and `studio.leadHours` do too, each checked against its schema (`slices/storage/portable.ts:478-524`, `:533-545`). `youtube_videos` rows travel with their project (`slices/storage/backup-format.ts:63-64`).
@@ -173,7 +173,7 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 - Success: Studio's upload dialog gets the video file, title, description, the chosen thumbnail, playlists, audience, AI use, tags and the planned schedule; the item leaves the queue; the upload is recorded `filled`, then `done` when Studio confirms it. The person presses Schedule or Publish.
 - Settings rows written: `studio.playlist`, `studio.playlist.<channelId>`, `studio.projectPlaylists`, `studio.realFootage`, `studio.pairing`, `studio.fillQueue.<hash>`, `studio.uploadPick.<projectId>` (`slices/studio/settings.ts:10-11`, `:117`, `:167`, `:212`, `slices/studio/pick.ts:21`). Tables: `youtube_videos` (`packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:6`), `releases` (44).
-- Extension `storage.local`: `base`, `token`, `uploadAllUntil` (`packages/extension/src/background.ts:299`, `:338`); `studioChannel` and the checks tab are 44's.
+- Extension `storage.local`: `base`, `token`, `uploadAllUntil` (`packages/extension/src/background.ts:303`, `:342`); `studioChannel` and the checks tab are 44's.
 - Marking a video as uploaded is a separate action (`PUT /api/projects/:id/uploaded`, 38).
 
 ## Dimensions not in play

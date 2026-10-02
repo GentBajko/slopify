@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: 8e5bc8b8156d
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 95eaea90148d
+content_hash: 40103f2a0f66
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/app/test/**"
@@ -29,7 +29,7 @@ paths_covered:
 
 - Functions over plain data everywhere. Across `packages/{app,web,collector,extension}/src` there are 16 `class` declarations. 13 are `Error` subclasses such as `BackupImportRefused` (`packages/app/src/slices/storage/backup-import.ts:87`) and `StylePreviewError` (`packages/app/src/slices/style-preview/render.ts:34`). The other three are small stateful helpers, `CommandRegistry` (`packages/web/src/components/kit/command-palette.tsx:55`), `ByteReader` (`packages/app/src/slices/storage/tar.ts:229`) and `Walker` (`packages/app/src/slices/narration/blocks.ts:122`).
 - Services are factory functions that close over a deps object. There are 44 exported `create*` factories and 8 exported `open*` functions in non-test app source (openers such as `openDb` and `openLog`, plus the `openAi*`/`openRouter*` adapter factories), for example `createScheduleRunner` (`packages/app/src/slices/schedules/scheduler.ts:35`), `createApp` (`packages/app/src/edge/http/app.ts:226`) and `openLog` (`packages/app/src/kernel/log.ts:25`).
-- Finite sets are `as const` arrays with a derived union type. No `enum` declaration occurs in any package. Examples: `stageKinds`, `stageStates`, `projectStates` and `formats` (`packages/app/src/kernel/pipeline.ts:6-46`), `providerErrorKinds` (`packages/app/src/kernel/ports/model.ts:43`), `reviewModes` (`packages/app/src/slices/reviews/model.ts:13`) and `trashKinds` (`packages/app/src/slices/trash/model.ts:13`).
+- Finite sets are `as const` arrays with a derived union type. No `enum` declaration occurs in any package. Examples: `stageKinds`, `stageStates`, `projectStates` and `formats` (`packages/app/src/kernel/pipeline.ts:6-52`), `providerErrorKinds` (`packages/app/src/kernel/ports/model.ts:43`), `reviewModes` (`packages/app/src/slices/reviews/model.ts:13`) and `trashKinds` (`packages/app/src/slices/trash/model.ts:13`).
 - The app is organised as vertical slices under `packages/app/src/slices/`, 45 directories: admission, article, backups, batch, cancel, channels, checkpoints, control, document, episodes, estimate, eta, fixes, fonts, images, library, loudness, model-upkeep, narration, notifications, onboarding, patch-notes, play-drafts, project-templates, rebuild, reruns, research, reviews, revisions, run-cost, schedules, settings, shorts, storage, studio, style-preview, subtitles, telemetry, thumbnail, trash, tutorials, uploads, video, voices and youtube. They sit on `kernel/` (ports, runner, db, log, pipeline vocabulary) and under `edge/` (HTTP, CLI, events). Provider implementations live in `adapters/`, and `main.ts` is the composition root.
 - Pure rule modules are split from I/O. `reruns/cascade.ts` reads no row or file (`packages/app/src/slices/reruns/cascade.ts:9-11`), and `fixes/rules.ts` and `notifications/rules.ts` are pure so that the web bundle can import them (`packages/app/src/slices/fixes/rules.ts:4-6`, `packages/app/src/slices/notifications/rules.ts:3-5`). A module the browser also imports opens with a `Browser-safe:` comment (`packages/app/src/slices/reviews/model.ts:4`, `packages/app/src/slices/studio/model.ts:5`). The web package imports such modules through `@app/*` in 229 non-test files (`packages/web/tsconfig.json:15`).
 - The web package is React function components (367 exported PascalCase functions in non-test `.tsx`). It uses TanStack Query for server state (121 files use `useQuery`/`useMutation`) and TanStack Router (`packages/web/src/router.tsx`, `packages/web/src/main.tsx:10-11`).

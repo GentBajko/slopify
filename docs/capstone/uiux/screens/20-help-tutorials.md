@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 9e2abbfbcab7
+content_hash: d356a31272e4
 paths_covered:
   - ":(top)packages/web/src/routes/tutorials.tsx"
   - ":(top)packages/web/src/tutorials/**"
@@ -48,9 +48,9 @@ Search ranking (server): up to 8 words; a section matches when every word is in 
 
 **Main column.** A click-routing wrapper around kit `ReadingView` with `label="Tutorial"`, `what="tutorial"`, `anchorPrefix="tutorial-"`, controlled `query` seeded from `?q=` (`packages/web/src/routes/tutorials.tsx:51-55`, `packages/web/src/routes/tutorials.tsx:156-168`). `ReadingView` renders (`packages/web/src/components/kit/reading-view.tsx:202-451`):
 
-- A "Contents" TOC (`sl-toc`) of the top two heading levels, nested; the current entry follows scroll via `IntersectionObserver` and gets `accent-tint` (`packages/web/src/components/kit/reading-view.tsx:263-279`, `packages/web/src/components/kit/reading-view.tsx:355-374`, `packages/web/src/styles/kit.css:1354-1375`).
+- A "Contents" TOC (`sl-toc`) of the top two heading levels, nested; the current entry follows scroll via `IntersectionObserver` and gets `accent-tint` (`packages/web/src/components/kit/reading-view.tsx:263-279`, `packages/web/src/components/kit/reading-view.tsx:355-374`, `packages/web/src/styles/kit.css:1357-1378`).
 - A tools row: search input "Search the tutorial", a live match count, Previous/Next match icon buttons, and quiet "Copy all" (`packages/web/src/components/kit/reading-view.tsx:376-431`). Enter steps forward, Shift+Enter back (`packages/web/src/components/kit/reading-view.tsx:396-400`).
-- Each section: `h2`/`h3` with a quiet small "Copy section" button, then GFM Markdown via `react-markdown` + `remark-gfm`; hits are wrapped in `mark.sl-hit` (`waiting-tint`, 1px `waiting` outline; 2px on the stepped-to hit) (`packages/web/src/components/kit/reading-view.tsx:317-345`, `packages/web/src/styles/kit.css:1376-1381`, `packages/web/src/styles/shell.css:406-408`). Links in the body are `accent-ink` (`packages/web/src/styles/shell.css:403-405`).
+- Each section: `h2`/`h3` with a quiet small "Copy section" button, then GFM Markdown via `react-markdown` + `remark-gfm`; hits are wrapped in `mark.sl-hit` (`waiting-tint`, 1px `waiting` outline; 2px on the stepped-to hit) (`packages/web/src/components/kit/reading-view.tsx:317-345`, `packages/web/src/styles/kit.css:1379-1384`, `packages/web/src/styles/shell.css:406-408`). Links in the body are `accent-ink` (`packages/web/src/styles/shell.css:403-405`).
 - Under the page, when `_Footer.md` is non-empty: a `border-t` small `ink-3` paragraph with Markdown links reduced to their text (`packages/web/src/routes/tutorials.tsx:169-173`).
 
 **Links.** Wiki-style `](Page)`, `](Page#anchor)` and `](#anchor)` are rewritten to `/help/tutorials/<Page>#<anchor>` only when the page exists in this version; others are left unchanged (`packages/web/src/tutorials/links.ts:12-28`). A plain left click on an in-app tutorial link navigates inside the app; an `http(s)` link opens a new tab with `noopener,noreferrer`; modified clicks pass through (`packages/web/src/routes/tutorials.tsx:85-105`).

@@ -1,6 +1,6 @@
 ---
-generated_at_commit: 54f5cb4c1dab
-generated_date: 2026-09-30
+generated_at_commit: d83482c1175e
+generated_date: 2026-10-02
 capstone_version: 7.0.1
 content_hash: 5348fa474ed3
 paths_covered:
@@ -28,10 +28,10 @@ Operate mode, app-wide overlay. Ctrl+K (Cmd+K on a Mac) opens a search-or-run pa
 | Kit `IconButton` "Search or run a command" | Phone top bar (<768px) | `packages/web/src/components/shell.tsx:456-458` |
 | Ctrl/Cmd+K (no Alt) | Anywhere; toggles open/closed, even from a text field | `packages/web/src/components/kit/command-palette.tsx:374-378` |
 
-**Palette.** A Radix `Dialog` portal: `sl-overlay` scrim (fixed, `z-70`, `--color-scrim`) and content `sl-overlay-content sl-palette sl-enter`, fixed 72px from the top, centred, `min(640px, 100% − 32px)` wide, `radius-media`, `raised` background, `shadow-dialog`, 1px `line` border; sr-only title "Command palette" (`packages/web/src/components/kit/command-palette.tsx:497-514`, `packages/web/src/styles/shell.css:149-176`, `packages/web/src/styles/kit.css:1253-1260`). Inside (`packages/web/src/components/kit/command-palette.tsx:579-648`):
+**Palette.** A Radix `Dialog` portal: `sl-overlay` scrim (fixed, `z-70`, `--color-scrim`) and content `sl-overlay-content sl-palette sl-enter`, fixed 72px from the top, centred, `min(640px, 100% − 32px)` wide, `radius-media`, `raised` background, `shadow-dialog`, 1px `line` border; sr-only title "Command palette" (`packages/web/src/components/kit/command-palette.tsx:497-514`, `packages/web/src/styles/shell.css:149-176`, `packages/web/src/styles/kit.css:1256-1263`). Inside (`packages/web/src/components/kit/command-palette.tsx:579-648`):
 
-1. Input row `sl-palette__input`: 52px tall, 17px text, bottom rule; `SearchIcon` 18px, autofocused `role="combobox"` input with placeholder and label "Search or run a command", `Esc` key cap on the right (`packages/web/src/styles/kit.css:1261-1270`, `packages/web/src/styles/shell.css:177-195`).
-2. `role="listbox"` "Commands", scrolling up to `min(420px, 100vh − 240px)` (`packages/web/src/styles/shell.css:196-200`). Per group a `role="group"` with an `sl-kicker` heading; each option is a 40px row: optional icon (16px `ink-2`), truncated title, `sl-palette__meta` context (13px `ink-3`, pushed right), and `ShortcutKeys` caps; the active option has `accent-tint` (`packages/web/src/styles/kit.css:1271-1290`, `packages/web/src/styles/shell.css:201-213`).
+1. Input row `sl-palette__input`: 52px tall, 17px text, bottom rule; `SearchIcon` 18px, autofocused `role="combobox"` input with placeholder and label "Search or run a command", `Esc` key cap on the right (`packages/web/src/styles/kit.css:1264-1273`, `packages/web/src/styles/shell.css:177-195`).
+2. `role="listbox"` "Commands", scrolling up to `min(420px, 100vh − 240px)` (`packages/web/src/styles/shell.css:196-200`). Per group a `role="group"` with an `sl-kicker` heading; each option is a 40px row: optional icon (16px `ink-2`), truncated title, `sl-palette__meta` context (13px `ink-3`, pushed right), and `ShortcutKeys` caps; the active option has `accent-tint` (`packages/web/src/styles/kit.css:1274-1293`, `packages/web/src/styles/shell.css:201-213`).
 
 Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active command and closes; mouse move sets the active row, click runs it (`packages/web/src/components/kit/command-palette.tsx:560-577`, `packages/web/src/components/kit/command-palette.tsx:628-631`). The active option scrolls into view (`packages/web/src/components/kit/command-palette.tsx:545-549`).
 
@@ -60,7 +60,7 @@ Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active comman
 
 Binding rules: a sequence is two plain keys pressed within 1500ms; letters without Ctrl are ignored while focus is in a text field, select, textarea or contenteditable, but Ctrl chords still fire; nothing fires while the palette or any open dialog/alertdialog is up; when two commands share a key, the one with a context wins, then the latest registered (`packages/web/src/components/kit/command-palette.tsx:315-343`, `packages/web/src/components/kit/command-palette.tsx:379-418`). Buttons that do the same thing carry `aria-keyshortcuts` from `ariaKeyShortcuts` (Ctrl chords as `Control+X Meta+X`; sequences get none) (`packages/web/src/components/kit/command-palette.tsx:297-306`, `packages/web/src/components/shell.tsx:413`).
 
-**Shortcuts sheet.** Kit `Dialog` "Keyboard shortcuts", description "Ctrl works as Cmd on a Mac. Keys without Ctrl wait while you type in a field. A screen's own shortcuts are listed while it is open." Body: a two-column `dl` (`text-small`), Ctrl+K and Esc first, then every registered command with a shortcut, one row per key combination, sorted by group then title; keys render as `sl-kbd` caps with "then" between sequence keys (`packages/web/src/components/kit/command-palette.tsx:433-495`, `packages/web/src/styles/kit.css:1291-1302`).
+**Shortcuts sheet.** Kit `Dialog` "Keyboard shortcuts", description "Ctrl works as Cmd on a Mac. Keys without Ctrl wait while you type in a field. A screen's own shortcuts are listed while it is open." Body: a two-column `dl` (`text-small`), Ctrl+K and Esc first, then every registered command with a shortcut, one row per key combination, sorted by group then title; keys render as `sl-kbd` caps with "then" between sequence keys (`packages/web/src/components/kit/command-palette.tsx:433-495`, `packages/web/src/styles/kit.css:1294-1305`).
 
 **Always-registered commands** (mounted by the shell):
 
@@ -108,7 +108,7 @@ The dev-only design gallery registers two "Design gallery" commands (`packages/w
 
 - Palette content enters with `sl-enter` (`enter`: fade and 4px rise, 200ms ease-out), none under reduced motion (`packages/web/src/styles/shell.css:165-172`, `packages/web/src/styles/index.css:205-206`).
 - The shortcuts sheet uses the kit `Dialog`'s entrance (`packages/web/src/components/kit/dialog.tsx:13-50`).
-- The active option has no transition; it changes background immediately (`packages/web/src/styles/kit.css:1283-1285`).
+- The active option has no transition; it changes background immediately (`packages/web/src/styles/kit.css:1286-1288`).
 
 ## Copy
 

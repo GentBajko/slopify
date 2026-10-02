@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 45d9ddb65481
+content_hash: 90822441e2be
 paths_covered:
   - ":(top)packages/app/src/slices/rebuild/service*.ts"
   - ":(top)packages/app/src/slices/rebuild/preview-plan.ts"
@@ -43,7 +43,7 @@ Scope: how a rebuild or recovery action (Resume, Retry, Soften, Rerun, review Re
 | slices/rebuild | `service.ts`, `service-readiness.ts`, `preview-plan.ts`, `admission-repo.ts`, `runtime-plan.ts`, `recovery.ts`, `recovery-repo.ts`, `recovery-selection.ts`, `recovery-conflict.ts`, `recovery-model.ts` under `packages/app/src/slices/rebuild/` | kernel, other slices (`control`, `revisions`, `settings`, `admission`); never edge or adapters (`biome.json:70`) |
 | adapters/alignment | `packages/app/src/adapters/alignment/index.ts`, `cache.ts`, `prefetch.ts`, `lock.ts` | kernel/ports only (`biome.json:99`); `SubtitleAligner` port from `packages/app/src/kernel/ports/subtitles.ts` |
 
-Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebuild` → `admitCheckedPreview` → `admitPreview` (SQLite transaction) → `runner.tick`. The rebuild runtime reaches the aligner only through the injected `alignSubtitles` dependency (`packages/app/src/slices/rebuild/runtime-subtitles.ts:99`).
+Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebuild` → `admitCheckedPreview` → `admitPreview` (SQLite transaction) → `runner.tick`. The rebuild runtime reaches the aligner only through the injected `alignSubtitles` dependency (`packages/app/src/slices/rebuild/runtime-subtitles.ts:100`).
 
 ## Module boundaries
 
@@ -74,7 +74,7 @@ Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebui
 | `POST /api/projects/:id/stages/:kind/rerun` | `packages/app/src/edge/http/actions.ts:295` |
 | `POST /api/projects/:id/reviews/:verdictId/redo` → `{ kind: "redo", item }` | `packages/app/src/edge/http/reviews.ts:88` |
 | In-process callers of `recoverProject` | restart resume (`packages/app/src/main.ts:492`), review redos (`packages/app/src/slices/rebuild/review-redo.ts:115`), narration retries (`packages/app/src/slices/rebuild/narration-retry.ts:126`; a `running` refusal leaves the retry pending until the project's running step finishes and `onFinished` kicks it again, `:143`) |
-| Subtitle alignment | `alignSubtitles` (`packages/app/src/adapters/alignment/index.ts:12`), called from `executeSubtitleRecipe` (`packages/app/src/slices/rebuild/runtime-subtitles.ts:73`, `:116`) |
+| Subtitle alignment | `alignSubtitles` (`packages/app/src/adapters/alignment/index.ts:12`), called from `executeSubtitleRecipe` (`packages/app/src/slices/rebuild/runtime-subtitles.ts:74`, `:117`) |
 | Startup model prefetch | `packages/app/src/main.ts:736` |
 
 ## Communication

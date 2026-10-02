@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 83204da76e50
+content_hash: 2c8739b5a890
 paths_covered:
   - ":(top)packages/app/src/slices/narration/**"
   - ":(top)packages/app/src/slices/voices/**"
@@ -163,7 +163,7 @@ With Level the volume on, each join gets a sibling `level:<segment>` recipe (`le
 | Provider pieces (`tts`, `llm` preparation/description) | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:43`). |
 | Local pieces (`concat-narration`, `concat-turns-v1`, `level-narration-v1`, `narration-files-v1`, `figure-card-v1`) | `executeLocalRecipe` (`packages/app/src/slices/rebuild/runtime-local.ts:38`, dispatch at `:94`–`:102`). |
 | Listening files (`voices:files`) | `executeVoicesRecipe` (`packages/app/src/slices/rebuild/runtime-voices.ts:25`). |
-| Caption-triggered narration retry | `requestNarrationRetry` from the subtitle step (`packages/app/src/slices/rebuild/runtime-subtitles.ts:392`); at most `narrationRetryLimit = 2` per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`); coordinator created at `packages/app/src/main.ts:365`. A `running` refusal (another step of the project still going) leaves the retry pending; `onFinished` kicks it again (`packages/app/src/slices/rebuild/narration-retry.ts:143`). |
+| Caption-triggered narration retry | `requestNarrationRetry` from the subtitle step (`packages/app/src/slices/rebuild/runtime-subtitles.ts:390`); at most `narrationRetryLimit = 2` per chunk (`packages/app/src/slices/rebuild/narration-retry.ts:13`); coordinator created at `packages/app/src/main.ts:365`. A `running` refusal (another step of the project still going) leaves the retry pending; `onFinished` kicks it again (`packages/app/src/slices/rebuild/narration-retry.ts:143`). |
 | Voice audition | `auditionVoice` wired at `packages/app/src/main.ts:629`. |
 
 | Work keys | Operation |

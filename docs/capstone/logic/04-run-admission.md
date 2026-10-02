@@ -13,10 +13,10 @@ depends_on:
   - 01-pipeline-lifecycle
   - 02-provider-credentials
   - 03-placeholder-substitution
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 915408ec404c
+content_hash: 315abec08507
 paths_covered:
   - ":(top)packages/app/src/slices/play-drafts/**"
   - ":(top)packages/app/src/slices/admission/**"

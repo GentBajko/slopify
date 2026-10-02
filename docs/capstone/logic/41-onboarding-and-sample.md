@@ -2,10 +2,10 @@
 scenario: onboarding-and-sample
 screens: [01-projects, 03-project, 08-settings, 11-first-run-tutorial]
 depends_on: [02-provider-credentials, 04-run-admission, 12-reruns-and-edits, 15-prompt-management, 22-play-drafts, 24-project-templates, 28-shorts, 40-trash-and-scheduled-backups]
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: ce0c1bdf9348
+content_hash: d073c7b889c5
 paths_covered:
   - ":(top)packages/app/src/slices/onboarding/**"
   - ":(top)packages/app/src/sample-build/**"

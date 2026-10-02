@@ -11,10 +11,10 @@ depends_on:
 absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 2dd94da8e389
+content_hash: b0f700903e38
 paths_covered:
   - ":(top)packages/app/src/slices/admission/**"
   - ":(top)packages/app/src/slices/play-drafts/**"

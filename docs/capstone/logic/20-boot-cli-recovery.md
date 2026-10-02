@@ -2,10 +2,10 @@
 absorbed_from:
   - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: e5cf110a9243
+content_hash: a5573c2767c1
 paths_covered:
   - ":(top)packages/app/src/edge/cli.ts"
   - ":(top)packages/app/src/edge/cli-args.ts"

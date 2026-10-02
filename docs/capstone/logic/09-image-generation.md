@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 1b23006ff047
+content_hash: 681b97b5a702
 paths_covered:
   - ":(top)packages/app/src/slices/images/**"
   - ":(top)packages/app/src/slices/rebuild/recipe-visual.ts"
@@ -110,44 +110,44 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
    - The prompt is written in the project language (`withLanguage`, `recipe-scenes.ts:98-101`).
    - The answer must be a JSON array of exactly the requested count of non-empty strings (`scenes.ts:141-164`). The count is read back from the `Pictures:`/`Thumbnails:` lines of the saved request (`scenes.ts:86-93`).
    - Where the scene goes (`scenes.ts:16-22`): if the body has `{{Scene}}`, the scene fills it. Otherwise it is inserted as a `Scene: …` line after the first paragraph.
-   - With the switch off, any line holding `{{Scene}}` is removed (`scenes.ts:26-34`, `recipe-visual.ts:68-74`).
+   - With the switch off, any line holding `{{Scene}}` is removed (`scenes.ts:26-34`, `recipe-visual.ts:69-75`).
    - A `from_prompt` thumbnail whose prompt has `{{Scene}}` gets its own `thumbnail:scenes` step in the Thumbnail stage (`recipe-scenes.ts:36-74`). It writes one scene per thumbnail, each the most click-worthy moment from anywhere in the article (`scenes.ts:95-139`).
 4. **Looks (`{{Appearance}}`)**. The step `images:appearance` runs when any image, `from_prompt` thumbnail, establishing prompt or (Shorts on) Shorts image prompt body contains `{{Appearance}}` (`recipe-appearance.ts:31-60`, `:62-93`). Its request names the project's kept subject (`subjectOf`, `recipe-appearance.ts:68`), so a rename does not redo it:
    - One web-searching LLM call (`llmInput(..., true)`, `recipe-appearance.ts:82`) returns `{subject, characters[]}` with names, aliases and a 2-4 sentence look each (`packages/app/src/slices/images/appearance.ts:27-52`).
    - The answer must name a subject with a look (`appearance.ts:54-81`).
    - Each picture gets the subject's look plus up to 3 characters its scene names as whole words (`appearance.ts:84-104`).
-   - The subject is included only when the scene names it. A thumbnail always includes the subject (`recipe-visual.ts:327-331`), and so does each short's still, whose scene is the clip's text; until the looks exist a short's prompts recipe is `deferred` and waits for them (`packages/app/src/slices/rebuild/recipe-shorts.ts:130-151`; Shorts are scenario 28).
+   - The subject is included only when the scene names it. A thumbnail always includes the subject (`recipe-visual.ts:328-332`), and so does each short's still, whose scene is the clip's text; until the looks exist a short's prompts recipe is `deferred` and waits for them (`packages/app/src/slices/rebuild/recipe-shorts.ts:130-151`; Shorts are scenario 28).
    - A picture naming nobody drops its `{{Appearance}}` line (`appearance.ts:107-115`).
 5. **Establishing image** (`RunDraft.reference`, `model.ts:126-141`). It is active only while Images is Generate (`rules.ts:497-499`). It is one Images-stage step with key `reference:image`:
    - It is drawn from its Library image prompt with keywords filled, or it is the uploaded file (`packages/app/src/slices/rebuild/recipe-reference.ts:38-100`).
-   - Every generated slideshow image and every short's image carry `reference: {fingerprint, assetId}` and depend on it (`recipe-visual.ts:116-122`, `recipe-reference.ts:104-117`). The thumbnail does too, unless `reference.thumbnail` is false; this applies only to a `from_prompt`/`prompt_by_llm` thumbnail (`rules.ts:502-507`, `recipe-build.ts:43-49`).
+   - Every generated slideshow image and every short's image carry `reference: {fingerprint, assetId}` and depend on it (`recipe-visual.ts:117-123`, `recipe-reference.ts:104-117`). The thumbnail does too, unless `reference.thumbnail` is false; this applies only to a `from_prompt`/`prompt_by_llm` thumbnail (`rules.ts:502-507`, `recipe-build.ts:43-49`).
    - It is never in the slideshow and never in the thumbnail slot (`packages/web/src/project/body-images.tsx:30-33`).
 6. **Cast pictures**. The channel's cast is frozen on the run (`RunDraft.cast`, `model.ts:231-233`; cast editing is scenario 30).
    - An image request names the members its prompt mentions, at most `castMembersPerImage` = 4, in order of first mention (`packages/app/src/slices/rebuild/recipe-cast.ts:9-31`).
-   - The establishing image and the thumbnails also count members the project's kept subject mentions (`subjectOf`: the title the project was made with, unchanged by a rename; `recipe-reference.ts:93-95`, `recipe-visual.ts:363-364`, `packages/app/src/slices/admission/model.ts:285-290`).
+   - The establishing image and the thumbnails also count members the project's kept subject mentions (`subjectOf`: the title the project was made with, unchanged by a rename; `recipe-reference.ts:93-95`, `recipe-visual.ts:364-365`, `packages/app/src/slices/admission/model.ts:285-290`).
    - Without a mention the request carries no `cast` field, so its fingerprint is unchanged (`recipe-reference.ts:120-124`).
-7. **Build each image request.** For each `imageOrder` key, the recipe `image:<key>` is `{kind: "image", provider, model, thinking?, aspect: format, prompt, reference?, cast?}` (`recipe-visual.ts:106-125`, `recipe-reference.ts:26-36`):
-   - While scenes or looks are pending, it is a `deferred` recipe (`operation: "image-scene"`) whose template names what it waits for (`recipe-visual.ts:80-104,212-258`).
+7. **Build each image request.** For each `imageOrder` key, the recipe `image:<key>` is `{kind: "image", provider, model, thinking?, aspect: format, prompt, reference?, cast?}` (`recipe-visual.ts:107-126`, `recipe-reference.ts:26-36`):
+   - While scenes or looks are pending, it is a `deferred` recipe (`operation: "image-scene"`) whose template names what it waits for (`recipe-visual.ts:81-105,213-259`).
    - `thinking` is added only when set, so older fingerprints are unchanged.
 8. **Call the provider.** `imageCall` loads the extra images the request carries (`packages/app/src/slices/rebuild/runtime-image.ts:12-30`):
    - The establishing image comes from `project_assets` and must be PNG or JPEG (`runtime-image.ts:32-63`).
    - Cast pictures are read by SHA-256 from the channel image blobs (`runtime-image.ts:67-84`).
-   - The provider is asked for its closest size to 16:9 or 9:16; the renderer fits any remainder (`packages/app/src/kernel/ports/image.ts:4-23`).
+   - `aspect` is the project's format, `16:9`, `9:16` or `1:1` (`formats`, `packages/app/src/kernel/pipeline.ts:6`). The provider is asked for its closest size; the renderer fits any remainder (`packages/app/src/kernel/ports/image.ts:4-23`).
    - Provider behaviour, per adapter:
 
      | Provider | Size | Input images |
      |---|---|---|
-     | OpenAI (`openai.ts:27-67,97-130`) | `sizeFor` | Uses `/images/edits` with repeated `image[]` parts when pictures are attached. |
+     | OpenAI (`openai.ts:27-69,99-132`) | `sizeFor`: 1536x1024, 1024x1536, 1024x1024 for 16:9, 9:16, 1:1; `gpt-image-2*` models 1536x864, 864x1536, 1024x1024 (`openai.ts:30-43`) | Uses `/images/edits` with repeated `image[]` parts when pictures are attached. |
      | Google (`google.ts:87-105`) | `aspect_ratio`, plus `image_size: "2K"` on high-resolution models | Inline image parts. |
-     | fal.ai (`fal.ts:45-86`) | `image_size` or `aspect_ratio`, per model | `/edit` twins. |
+     | fal.ai (`fal.ts:45-86`) | `image_size` (`landscape_16_9`, `portrait_16_9`, `square_hd`) or `aspect_ratio` (`16:9`, `9:16`, `1:1`), per model (`fal.ts:54-57`) | `/edit` twins. |
      | Replicate (`replicate.ts:81-97`) | – | Refuses an establishing image; describes the cast in words. |
 
    - The note that introduces attached references, and the wording for cast members that did not fit, is `withReferences` (`packages/app/src/adapters/image/reference.ts:35-62`).
 9. **Publish.** Each returned image becomes an immutable project asset in a revision output (role `image`, `reference` or `thumbnail`). The piece's fingerprint binds prompt, provider/model, aspect, thinking, reference fingerprint, cast and regeneration token (`packages/app/src/slices/rebuild/recipe-model.ts:225-240`).
-10. **Order.** Slideshow order is `content.imageOrder`, a list of stable keys. Reordering changes only the render recipe, whose values list every image fingerprint in order (`recipe-visual.ts:149-173`).
+10. **Order.** Slideshow order is `content.imageOrder`, a list of stable keys. Reordering changes only the render recipe, whose values list every image fingerprint in order (`recipe-visual.ts:150-174`).
 11. **Thumbnail from a prompt.** There are `thumbnailCountOf(config)` variants, 1 or 3 (`packages/app/src/slices/admission/model.ts:117-124`):
-   - Each is one image request with key `thumbnailKey(n)` (`recipe-visual.ts:279-374`).
-   - Variants 2 and 3 append a fixed composition instruction to the same prompt (`recipe-visual.ts:379-387`).
+   - Each is one image request with key `thumbnailKey(n)` (`recipe-visual.ts:280-375`). Its aspect is `thumbnailAspect(format)`: the project's format, except that a `1:1` project's thumbnail is drawn `16:9` (`recipe-visual.ts:361`, `packages/app/src/kernel/pipeline.ts:11-13`).
+   - Variants 2 and 3 append a fixed composition instruction to the same prompt (`recipe-visual.ts:380-388`).
    - Thumbnail artwork is never a slideshow input.
 12. **Regenerate** on the project page (`packages/web/src/project/output-change.ts:23-101`):
    - Asks first. For a project with revisions it saves a revision whose `regenerate` lists the image's work key, then starts review of only those keys (`packages/web/src/project/revision-workspace.tsx:333-360`).
@@ -169,7 +169,7 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
   - Four Codex images run at once; other local CLIs run three (`localCliConcurrency`, `packages/app/src/slices/settings/model.ts:39-41`).
 - **Keyed providers' concurrency** is `maxConcurrent` from the catalogue: 3 each for fal, replicate, openai-image and google-image (`packages/app/src/assets/models.yaml:19-26`). The default is 1, capped at 5 (`packages/app/src/main.ts:884-888`, `packages/app/src/catalog/schema.ts:78`).
 - **Scenes on, image not generated.** Provided rows and rows with an empty prompt take no scene (`recipe-scenes.ts:84-97`). With no generated row, there is no scenes step.
-- **Thumbnail source.** Off → no recipe. Provide → provided recipe (scenario 05). `from_prompt` → step 11. `prompt_by_llm` → the prompt comes from scenario 10's text recipe, then step 11 (`recipe-visual.ts:290-311`).
+- **Thumbnail source.** Off → no recipe. Provide → provided recipe (scenario 05). `from_prompt` → step 11. `prompt_by_llm` → the prompt comes from scenario 10's text recipe, then step 11 (`recipe-visual.ts:291-312`).
 - **Mixed generated and provided rows** are allowed under Images Generate. Choosing Provide while generated rows remain returns the field error "Replace or remove generated images before choosing Provide." (`packages/app/src/slices/rebuild/recipe-save.ts:249-256`).
 - **Changing prompts or Numbers in Edit project** re-plans definitions with `replanImagePrompts`. Every definition an unchanged prompt already has is kept, so its fingerprint and image stay (`packages/app/src/slices/revisions/image-plan.ts:1-10`, `mutations.ts:264-311`). Changing prompts while Images is not Generate is refused (`mutations.ts:288-298`).
 - **Deleting the last image** (legacy action path) sets Images and Video to Off and turns burn-in captions into files (`runtime-actions.ts:71-80`).
@@ -205,13 +205,13 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
   - Fingerprint unchanged → `ready`.
   - Fingerprint changed → `outdated`; a provided source changed → `review`.
   - A result whose fingerprint matches again (undo) returns to `ready`.
-- The recipe for a deferred image turns into an `image` request once its scenes or looks exist (`recipe-visual.ts:209-259`).
+- The recipe for a deferred image turns into an `image` request once its scenes or looks exist (`recipe-visual.ts:210-260`).
 
 ## Invariants
 
 - Slideshow order is `imageOrder`, never arrival order.
-- The establishing image and the thumbnails are never slideshow images (`recipe-visual.ts:41-126`, `body-images.tsx:30-33`).
-- A request with no cast mention, no thinking, no reference and no scene has the same fingerprint it had before those features existed (`recipe-visual.ts:97-98`, `recipe-reference.ts:24-36,120-124`, `recipe-cast.ts:4-6`).
+- The establishing image and the thumbnails are never slideshow images (`recipe-visual.ts:42-127`, `body-images.tsx:30-33`).
+- A request with no cast mention, no thinking, no reference and no scene has the same fingerprint it had before those features existed (`recipe-visual.ts:98-99`, `recipe-reference.ts:24-36,120-124`, `recipe-cast.ts:4-6`).
 - A scaled count is planned once; a retry or rebuild never re-plans it (`scale.ts:15-16`, `adopt-content.ts:90-92`).
 - A revision holds at most 60 images, or 240 when scaled (`recipe-validation.ts:63-68`, `packages/app/src/slices/revisions/schema.ts:48`).
 - Regenerating the establishing image or re-writing the scenes marks every image drawn from it outdated; they keep their current version until remade (`body-images.tsx:389-391`).

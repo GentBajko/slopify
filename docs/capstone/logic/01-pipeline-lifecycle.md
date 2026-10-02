@@ -8,10 +8,10 @@ screens:
   - 06-play
   - 08-project
 depends_on: []
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 0bd3282cd084
+content_hash: 4301082fcac9
 paths_covered:
   - ":(top)packages/app/src/kernel/pipeline.ts"
   - ":(top)packages/app/src/kernel/runner/**"
@@ -32,7 +32,7 @@ paths_covered:
 
 # 01 Pipeline lifecycle
 
-A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumbnail`, `video`, `document`; `packages/app/src/kernel/pipeline.ts:11`), immutable revisions, revision-scoped desired work (`revision_work`, its pieces and reservations) and retained output manifests. Stage rows and the project state are projections of that work; dispatch authority lives only in `revision_work` (`packages/app/src/kernel/runner/work-authority.ts:21`, `packages/app/src/kernel/runner/work-authority.ts:31`).
+A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumbnail`, `video`, `document`; `packages/app/src/kernel/pipeline.ts:17`), immutable revisions, revision-scoped desired work (`revision_work`, its pieces and reservations) and retained output manifests. Stage rows and the project state are projections of that work; dispatch authority lives only in `revision_work` (`packages/app/src/kernel/runner/work-authority.ts:21`, `packages/app/src/kernel/runner/work-authority.ts:31`).
 
 ## Trigger & preconditions
 
@@ -72,7 +72,7 @@ A project has seven stage rows (`research`, `article`, `audio`, `images`, `thumb
 
 ## State transitions
 
-- Stage states: `pending`, `running`, `done`, `failed`, `canceled`, `provided`, `skipped` (`packages/app/src/kernel/pipeline.ts:22`).
+- Stage states: `pending`, `running`, `done`, `failed`, `canceled`, `provided`, `skipped` (`packages/app/src/kernel/pipeline.ts:28`).
 - Project state is derived by `derive`: persisted pause → `paused`; any running stage or pending stage with `retry_at` → `running`; any canceled → `canceled`; any failed → `partial` if the first asked-for headline stage (video, else audio, else article) is `done`, otherwise `failed`; all satisfied → `done`; else `pending` (`packages/app/src/kernel/runner/graph.ts:52`, `packages/app/src/kernel/runner/graph.ts:57`). A supplied headline does not count as made (`packages/app/src/kernel/runner/graph.ts:83`).
 - `revision_work.state`: `pending` → `running` (claim) → `done`/`failed`, or back to `pending` with `retry_at` (defer); `dispatch_state` is `held`, `allowed` or `draining`; finishing to `pending` resets dispatch to `held` (`packages/app/src/kernel/db/migrations/0005-revision-work.sql:14`, `packages/app/src/kernel/runner/work-authority.ts:59`).
 - Checkpoint states: `configured`, `pending-review`, `held`, `released`, `satisfied`, `invalidated`, `canceled` (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:9`).

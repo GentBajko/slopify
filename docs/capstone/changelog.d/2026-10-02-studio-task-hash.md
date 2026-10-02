@@ -1,1 +1,0 @@
-- Studio pages the extension opens keep their task out of the address: `early.ts` (document_start) moves a `#slopify-…` hash into the tab's sessionStorage (`slopify.task`) and removes it before Studio's router rewrites it into a path ("Oops, something went wrong"); `content.ts` `hashParams` reads it from there (extension 1.1.2).

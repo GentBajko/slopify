@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 14480f26c13e
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 1df493942ef4
+content_hash: e3cc0ff8fc41
 paths_covered:
   - ":(top)packages/app/src/kernel/db/**"
   - ":(top)packages/app/src/kernel/ports/*.ts"
@@ -25,7 +25,7 @@ paths_covered:
 
 # Models
 
-One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 41 SQL files numbered up to 0048 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
+One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 42 SQL files numbered up to 0049 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
 
 Companion chapters own three areas in depth and are not repeated here: narration text preparation, glossary and pronunciation types in `02-models-narration.md`; research documents and the reader model in `02-models-research.md`; the Docker host, container and project-folder types in `02-models-docker.md`. `slices/narration/` and `slices/research/` types are listed there only.
 
@@ -487,8 +487,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Aggregates | `packages/collector/src/model.ts:34` | Collector D1 `aggregates` | Collector totals the marketing page reads |
 | FillPayload | `packages/extension/src/pack.ts:56` | Extension message | Item, thumbnail bytes and captions bytes handed to a Studio page |
 | WorkerRequest | `packages/extension/src/pack.ts:71` | Extension message | Message to the extension's background worker |
-| ReadyProject | `packages/extension/src/pack.ts:138` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
-| WaitingTask | `packages/extension/src/pack.ts:160` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
+| ReadyProject | `packages/extension/src/pack.ts:140` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
+| WaitingTask | `packages/extension/src/pack.ts:162` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
 
 ## Fields and types
 
@@ -582,7 +582,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | narrationAliases | `readonly NarrationAlias[]` | no |  |
 | checkpoints | `readonly CheckpointStage[]` | no |  |
 | title | `string` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | sources | `StageSources` | yes |  |
 | llm | `ProviderChoice` | no |  |
 | audio | `VoiceChoice` | no |  |
@@ -645,7 +645,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | narrationAliases | `readonly NarrationAlias[]` | no |  |
 | checkpoints | `readonly CheckpointStage[]` | no |  |
 | title | `string` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | sources | `StageSources` | yes |  |
 | llm | `ProviderChoice` | no |  |
 | audio | `VoiceChoice` | no |  |
@@ -695,7 +695,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 |---|---|---|---|
 | id | `string` | yes |  |
 | title | `string` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | config | `RunConfig` | yes |  |
 | createdAt | `string` | yes |  |
 | updatedAt | `string` | yes |  |
@@ -740,7 +740,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | setAside | `boolean` | no | "Keep as is" on Needs you, while `project_set_aside` names the current head revision (`packages/app/src/slices/admission/model.ts:341`) |
 | id | `string` | yes |  |
 | title | `string` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | config | `RunConfig` | yes |  |
 | createdAt | `string` | yes |  |
 | updatedAt | `string` | yes |  |
@@ -760,7 +760,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | setAside | `boolean` | no |  |
 | id | `string` | yes |  |
 | title | `string` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | config | `RunConfig` | yes |  |
 | createdAt | `string` | yes |  |
 | updatedAt | `string` | yes |  |
@@ -1179,7 +1179,7 @@ Union of 9 object variants; a field present in only some variants is `Required: 
 | prompt | `string` | no |  |
 | index | `number` | no |  |
 | short | `number` | no |  |
-| format | `"16:9" \| "9:16"` | no | accepted: 16:9, 9:16 |
+| format | `"16:9" \| "9:16" \| "1:1"` | no | accepted: 16:9, 9:16, 1:1 |
 | sentences | `readonly [number, number]` | no |  |
 | warnings | `readonly string[]` | no |  |
 | provider | `string` | no |  |
@@ -1701,7 +1701,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | turn | `number` | no | only when kind is tts |
 | dialogue | `readonly DialogueLine[]` | no | only when kind is tts |
 | prompt | `string` | no | only when kind is image |
-| aspect | `RunConfig["format"]` | no | accepted: 16:9, 9:16; only when kind is image |
+| aspect | `RunConfig["format"]` | no | accepted: 16:9, 9:16, 1:1; only when kind is image |
 | animate | `{ readonly image: string; readonly seconds: number }` | no | only when kind is image |
 | reference | `\| { readonly fingerprint: string; readonly assetId: string \| null }` | no | only when kind is image |
 | cast | `readonly CastInput[]` | no | only when kind is image |
@@ -2074,7 +2074,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | title | `string` | yes |  |
-| format | `"16:9" \| "9:16"` | yes | accepted: 16:9, 9:16 |
+| format | `"16:9" \| "9:16" \| "1:1"` | yes | accepted: 16:9, 9:16, 1:1 |
 | sources | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:36` |
 | llm | `{ provider: string; model: string; thinking?: "off" \| "low" \| "medium" \| "high" \| "xhigh" \| "max" \| "ultra" \| undefined; }` | yes |  |
 | audio | `object (inline)` | yes | inline shape at `packages/app/src/slices/play-drafts/schema.ts:52` |
@@ -2914,7 +2914,7 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | keywords | `string[]` | yes |  |
 | pricing | `object` | yes |  |
 | llm | `object (inline)` | no | not in every variant; inline shape at `packages/app/src/catalog/schema.ts:30` |
-| image | `{ aspectRatios: ("16:9" \| "9:16")[]; resolution?: string \| undefined; }` | no | not in every variant |
+| image | `{ aspectRatios: ("16:9" \| "9:16" \| "1:1")[]; resolution?: string \| undefined; }` | no | not in every variant |
 | tts | `{ maxCharacters: number; streaming: boolean; asyncMaxCharacters?: number \| undefined; }` | no | not in every variant |
 
 Union of 3 object variants; a field present in only some variants is `Required: no`.
@@ -2955,7 +2955,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 |---|---|---|---|
 | model | `string` | yes |  |
 | prompt | `string` | yes |  |
-| aspect | `"16:9" \| "9:16"` | yes | accepted: 16:9, 9:16 |
+| aspect | `"16:9" \| "9:16" \| "1:1"` | yes | accepted: 16:9, 9:16, 1:1 |
 | thinking | `"off" \| "low" \| "medium" \| "high" \| "xhigh" \| "max" \| "ultra"` | no | accepted: off, low, medium, high, xhigh, max, ultra |
 | reference | `{ mime: "image/png" \| "image/jpeg"; base64: string; }` | no |  |
 | cast | `{ name: string; description: string; images: { mime: "image/png" \| "image/jpeg"; base64: string; }[]; }[]` | no |  |
@@ -2998,7 +2998,7 @@ Source: `packages/app/src/kernel/ports/host-cli.ts:26`, `packages/app/src/kernel
 |---|---|---|---|
 | model | `string` | yes |  |
 | prompt | `string` | yes |  |
-| aspect | `Format` | yes | accepted: 16:9, 9:16 |
+| aspect | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | signal | `AbortSignal` | yes |  |
 | thinking | `ThinkingMode` | no | accepted: off, low, medium, high, xhigh, max, ultra |
 | reference | `GeneratedImage` | no |  |
@@ -3028,7 +3028,7 @@ Source: `packages/app/src/kernel/ports/host-cli.ts:26`, `packages/app/src/kernel
 | model | `string` | yes |  |
 | prompt | `string` | yes |  |
 | image | `GeneratedImage` | yes |  |
-| aspect | `Format` | yes | accepted: 16:9, 9:16 |
+| aspect | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | seconds | `number` | yes |  |
 | signal | `AbortSignal` | yes |  |
 
@@ -3509,7 +3509,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| format | `"16:9" \| "9:16"` | yes | accepted: 16:9, 9:16 |
+| format | `"16:9" \| "9:16" \| "1:1"` | yes | accepted: 16:9, 9:16, 1:1 |
 | subtitles | `{ mode: "off" \| "files" \| "burn-in"; fontId: string; fontSize: number; position: "top" \| "bottom" \| "upper-middle" \| "center" \| "lower-middle"; }` | yes |  |
 | videoEdit | `object` | no |  |
 | previewText | `string` | no |  |
@@ -3522,7 +3522,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | version | `2` | yes |  |
-| format | `Format` | yes | accepted: 16:9, 9:16 |
+| format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
 | captions | `{ readonly fontId: string; readonly fontSize: number; readonly position: SubtitleConfig["position"]; readonly text: string; } \| null` | yes |  |
 | look | `Look` | yes |  |
 | transition | `{ readonly kind: TransitionStyle; readonly seconds: number } \| null` | yes |  |
@@ -3975,7 +3975,7 @@ Absent (`scheduleOf` answers undefined) when the project has no short-0 row or i
 | from | `string` | yes | ISO, 24 h before now |
 | until | `string` | yes | ISO, `weeks` after now |
 | entries | `readonly CalendarEntry[]` | yes | Sorted by `at` |
-| candidates | `readonly { id: string; title: string; series: string }[]` | yes | Finished projects with no short-0 release row, or one set to not scheduled (`packages/app/src/slices/studio/calendar.ts:132-147`) |
+| candidates | `readonly { id: string; title: string; series: string }[]` | yes | Finished projects with no short-0 release row, or one set to not scheduled, whose upload pack's first item has a rendered video (`packages/app/src/slices/studio/calendar.ts:132-150`) |
 
 ### CalendarEntry
 
@@ -5392,22 +5392,22 @@ The extension's `PackItem` copy (`packages/extension/src/pack.ts:13`) marks `tit
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| type | `"pair" \| "status" \| "payload" \| "pack" \| "filled" \| "video" \| "backfill" \| "ready" \| "upload" \| "video-done" \| "item" \| "upload-all" \| "task-result" \| "stats"` | yes | accepted: pair, status, payload, pack, filled, video, backfill, ready, upload, video-done, item, upload-all, task-result, stats |
+| type | `"pair" \| "status" \| "payload" \| "pack" \| "filled" \| "video" \| "backfill" \| "ready" \| "stats-now" \| "upload" \| "video-done" \| "item" \| "upload-all" \| "task-result" \| "stats"` | yes | accepted: pair, status, payload, pack, filled, video, backfill, ready, stats-now, upload, video-done, item, upload-all, task-result, stats |
 | base | `string` | no | only when type is pair |
 | token | `string` | no | only when type is pair |
 | projectId | `string` | no | filled, video, upload, video-done, item, upload-all, task-result, stats |
 | short | `number \| null` | no | filled, video, upload, video-done, item, task-result, stats |
 | videoId | `string` | no | video, video-done, stats |
 | videos | `readonly { readonly title: string; readonly videoId: string; readonly checks?: string }[]` | no | only when type is backfill |
-| close | `boolean` | no | only when type is backfill; the worker closes the sending tab (`packages/extension/src/background.ts:415`) |
+| close | `boolean` | no | only when type is backfill; the worker closes the sending tab (`packages/extension/src/background.ts:422`) |
 | task | `"finish" \| "comment"` | no | only when type is task-result |
 | ok | `boolean` | no | only when type is task-result |
 | message | `string` | no | only when type is task-result |
-| metrics | `Readonly<Record<string, number>>` | no | only when type is stats; Studio metric ids such as `VIDEO_THUMBNAIL_IMPRESSIONS`, mapped to the `/ext/stats` body by the worker (`packages/extension/src/background.ts:356`) |
+| metrics | `Readonly<Record<string, number>>` | no | only when type is stats; Studio metric ids such as `VIDEO_THUMBNAIL_IMPRESSIONS`, mapped to the `/ext/stats` body by the worker (`packages/extension/src/background.ts:360`) |
 | abVariants | `readonly { title: string \| null; thumbnail: number \| null; share: number \| null; winner: boolean }[]` | no | only when type is stats |
 | last | `boolean` | no | only when type is stats |
 
-Union of 14 object variants; a field present in only some variants is `Required: no`.
+Union of 15 object variants; a field present in only some variants is `Required: no`.
 
 ### ReadyProject
 
@@ -5526,10 +5526,10 @@ DDL below is the text SQLite holds after every migration runs in filename order 
 ### projects
 
 ```sql
-CREATE TABLE projects (id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) <= 200), format TEXT NOT NULL CHECK(format IN ('16:9','9:16')), config TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE "projects" (id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) <= 200), format TEXT NOT NULL CHECK(format IN ('16:9','9:16','1:1')), config TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0001-init.sql:1`. Code model: Project via `projectRow` (`packages/app/src/slices/admission/repo.ts:11`); `config` parsed by `runConfigSchema` (`packages/app/src/slices/admission/repo.ts:235`).
+Migrations: `packages/app/src/kernel/db/migrations/0001-init.sql:1`, `packages/app/src/kernel/db/migrations/0049-square-format.sql:6`, which rebuilds the table to widen the `format` CHECK with `1:1`, copying every row and running with foreign-key enforcement off (`-- foreign-keys: off`, `:1`). Code model: Project via `projectRow` (`packages/app/src/slices/admission/repo.ts:11`); `config` parsed by `runConfigSchema` (`packages/app/src/slices/admission/repo.ts:235`).
 
 ### stages
 

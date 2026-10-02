@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: c6ee8e973cd3
+content_hash: 3e487448cc2e
 paths_covered:
   - ":(top)packages/web/src/routes/project.tsx"
   - ":(top)packages/web/src/project/**"
@@ -95,16 +95,16 @@ The section has no frame head; the body draws three sub-sections separated by `R
 - Establishing image (when configured): kicker "Reference · not in the video", title, meta "Every image follows it for the look, palette and style", "Make the establishing image again" (prompt-made only), a `MediaFrame` ≤360 px with Download, a note "Making it again marks N images outdated. …", a lightbox, and a confirm "Make the establishing image again?" / "Make it again" / "Keep this one" (`project/body-images.tsx:332-445`).
 - Thumbnails (companion): head "Thumbnail" ("The picture YouTube shows before the video plays") or "Thumbnails" ("3 variants for YouTube's Test & compare") with a secondary Download menu, Open folder and `SectionMore`; one frame (≤480 px, ≤280 px for 9:16) or a grid of A/B/C; each frame has a review badge, Regenerate and Download on hover/focus (forced visible when flagged), "Making the thumbnail" / "Being made" / "Not made" meta; a palette command per variant (`project/body-thumbnail.tsx:24-247`); Regenerate confirms with "Regenerate this thumbnail?", "Makes a new thumbnail, one paid image call. The video and shorts are not touched; the PDF's cover follows the first thumbnail. The old one stays in History.", "Regenerate" / "Cancel" (`project/body-thumbnail.tsx:163-171`, `project/confirmations.ts:77-84`).
 - Slideshow images: `SectionHead` "Images" with meta "N in the video · reviewed · N redone after review · N flagged", "Regenerate all" (confirm "Regenerate all N images?", "Regenerate them" / "Keep them"), primary "Download all" (`images.zip`) + Open folder, `SectionMore` (`project/body-images.tsx:116-145`). Groups by prompt name ("<name> × N" kicker when more than one), capped at 12 with "Show all N images" / "Show fewer" (`project/body-images.tsx:449-485`); "From the article" group for figure cards (`project/body-images.tsx:191-211`). Placeholders "Drawing the next image" / "Waiting its turn" while running (`project/body-images.tsx:159-171`).
-- Each tile (`MediaFrame`, landscape or portrait): prompt title, "#N" meta, badges "Outdated" and the review chip, actions Overrule/Redo (flagged), Regenerate, Download, Delete (destructive, not for cards); video clips play as muted video frames; press opens the `Lightbox` with Regenerate and Download on its bar (`project/body-images.tsx:487-589`, `project/body-images.tsx:225-246`, `project/body-images.tsx:265-309`).
+- Each tile (`MediaFrame`, landscape, portrait or square, following the project's format through `frameAspect`, `project/body-images.tsx:36-38`): prompt title, "#N" meta, badges "Outdated" and the review chip, actions Overrule/Redo (flagged), Regenerate, Download, Delete (destructive, not for cards); video clips play as muted video frames; press opens the `Lightbox` with Regenerate and Download on its bar (`project/body-images.tsx:487-589`, `project/body-images.tsx:225-246`, `project/body-images.tsx:265-309`).
 - Regenerate on a revisioned project saves a version with the image marked and starts only it ("Makes a new image now, one paid image call. …"); Delete opens Settings → Images with the image removed from the draft (`project/output-change.ts:28-101`, `project/confirmations.ts:69-92`). "Regenerate image N" / "Regenerate on-screen card N" palette commands and cross-screen intents confirm the same way (`project/regenerate-by-number.tsx:21-121`).
 
 ### Video / Audio export (`project/body-video.tsx`)
 
 - One `StageSection` "Video" (or "Audio export") holds, in order, the video body, then `ShortsBlock` when shorts are on or shorts outputs exist, then `YoutubeBlock` when the description is on or written; there is no separate Shorts or YouTube section (`routes/project.tsx:333-339`, `routes/project.tsx:615-641`). Its head carries a secondary "Prepare upload" when the upload is ready and Prepare upload is not already the next action; it opens `PrepareUploadDrawer` (`routes/project.tsx:621-631`, `packages/web/src/studio/prepare-upload.tsx:104`).
 - Running line: "Preparing subtitles · N%", "Exporting combined audio", the server's activity, "Rendering" or "Rendering · N%" (`project/body-video.tsx:89-101`).
-- Kit `Player` (max 1100 px; 360 px portrait) with the first thumbnail as poster, YouTube chapters as track marks, and VTT captions when subtitles are files; or a `WaveAudioPlayer` "Combined narration" for an audio export. Empty: "No render has landed yet." / "No combined audio export has landed yet." (`project/body-video.tsx:103-127`, `project/body-video.tsx:217-248`).
-- `StageFiles`: Video (.mp4) / Audio (.wav), Subtitles (.srt/.vtt), YouTube description/tags (.txt), Audio with chapters (.mp3), Audiobook with chapters (.m4b), "Short N (.mp4)" (`project/body-video.tsx:129-143`). `MetaLine`: duration · format or "WAV · stereo · 48 kHz" · master loudness (`project/body-video.tsx:144-155`).
-- "Render notes" list of render warnings; a `role="note"` for languages without word timing; a disclosure "Subtitles recovered after missing narration (N)" listing timestamped passages (`project/body-video.tsx:157-194`). "Open the project folder" palette command (`project/body-video.tsx:55-82`).
+- Kit `Player` (max 1100 px; 360 px portrait for 9:16; 640 px with `square` for 1:1, drawn 1:1 by `.sl-player--square`, `packages/web/src/styles/kit.css:615-617`) with the first thumbnail as poster, YouTube chapters as track marks, and VTT captions when subtitles are files; or a `WaveAudioPlayer` "Combined narration" for an audio export. Empty: "No render has landed yet." / "No combined audio export has landed yet." (`project/body-video.tsx:103-134`, `project/body-video.tsx:224-255`).
+- `StageFiles`: Video (.mp4) / Audio (.wav), Subtitles (.srt/.vtt), YouTube description/tags (.txt), Audio with chapters (.mp3), Audiobook with chapters (.m4b), "Short N (.mp4)" (`project/body-video.tsx:136-150`). `MetaLine`: duration · format or "WAV · stereo · 48 kHz" · master loudness (`project/body-video.tsx:151-162`).
+- "Render notes" list of render warnings; a `role="note"` for languages without word timing; a disclosure "Subtitles recovered after missing narration (N)" listing timestamped passages (`project/body-video.tsx:164-201`). "Open the project folder" palette command (`project/body-video.tsx:55-82`).
 
 ### Shorts part of the Video section (`project/body-shorts.tsx`)
 
@@ -192,7 +192,7 @@ The section has no frame head; the body draws three sub-sections separated by `R
 
 - Live data: `useLiveProject` subscribes to the project's event stream, patches project state, appends streamed article text and live-writing previews, invalidates narration peaks per piece, and folds bursts into one refetch every 200 ms (`project/use-live.ts:17-94`). Live audio previews poll every second (`project/live-audio.tsx:26-33`).
 - `LiveWriting` auto-scrolls to the end while "Follow output" is on (`project/live-writing.tsx:57-61`). The run clock ticks each second; step ETAs recompute each render (`project/run-cost.tsx:95-102`, `project/run-aside.tsx:69-75`).
-- The running `Lamp` pulses (1200 ms, off under reduced motion); `Meter` fills change without a transition; no other authored motion on this page (`packages/web/src/styles/kit.css:396-423`, `packages/web/src/styles/kit.css:1182-1196`).
+- The running `Lamp` pulses (1200 ms, off under reduced motion); `Meter` fills change without a transition; no other authored motion on this page (`packages/web/src/styles/kit.css:396-423`, `packages/web/src/styles/kit.css:1185-1199`).
 
 ## Copy
 
