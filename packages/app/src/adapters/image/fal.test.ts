@@ -48,7 +48,11 @@ function answering(name: string, status = 200, headers: Record<string, string> =
   return () => new Response(fixture(name), { status, headers });
 }
 
-function generate(fetcher: FalImageDeps["fetch"], aspect: "16:9" | "9:16" = "16:9", which = model) {
+function generate(
+  fetcher: FalImageDeps["fetch"],
+  aspect: "16:9" | "9:16" | "1:1" = "16:9",
+  which = model,
+) {
   return falImage({ fetch: fetcher, key: () => key }).generate({
     model: which,
     prompt,
