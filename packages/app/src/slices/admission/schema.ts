@@ -217,4 +217,5 @@ export const runDraftSchema = z.object({
 export const runConfigSchema = runDraftSchema.extend({
   rendered: z.record(z.string(), z.string()),
   titlePattern: z.string().optional(),
+  subjectTitle: z.string().optional(),
 });

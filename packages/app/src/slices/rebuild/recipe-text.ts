@@ -3,6 +3,7 @@ import { withLanguage } from "../../kernel/ports/languages.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { documentIndex, type LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
+import { subjectOf } from "../admission/model.js";
 import { usesPronunciationGlossary } from "../admission/rules.js";
 import { render } from "../admission/substitute.js";
 import { articleMessages, continuationMessages } from "../article/continuation.js";
@@ -351,7 +352,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     const prompt = renderedPrompt(context, "thumbnailPrompt");
     const messages = thumbnailMessages({
       instruction: prompt,
-      title: config.title,
+      title: subjectOf(config),
       values: config.values,
       format: config.format,
       article: articleText ?? "",

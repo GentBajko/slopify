@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { withLanguage } from "../../kernel/ports/languages.js";
-import { thumbnailCountOf } from "../admission/model.js";
+import { subjectOf, thumbnailCountOf } from "../admission/model.js";
 import { pictureKind, sceneMessages, usesScene } from "../images/scenes.js";
 import {
   type RecipeContext,
@@ -45,7 +45,7 @@ export function thumbnailScenes(
   const count = thumbnailCountOf(config);
   const messages = withLanguage(
     sceneMessages({
-      title: config.title,
+      title: subjectOf(config),
       article: text.articleText ?? "",
       pictures: [],
       thumbnails: count,
@@ -96,7 +96,7 @@ export function imageScenes(
   }
   if (keys.length === 0) return undefined;
   const messages = withLanguage(
-    sceneMessages({ title: config.title, article: text.articleText ?? "", pictures }),
+    sceneMessages({ title: subjectOf(config), article: text.articleText ?? "", pictures }),
     config.language,
   );
   const value = recipe(

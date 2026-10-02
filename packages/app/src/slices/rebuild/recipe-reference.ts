@@ -1,4 +1,4 @@
-import { type RunConfig, referenceKey } from "../admission/model.js";
+import { type RunConfig, referenceKey, subjectOf } from "../admission/model.js";
 import { usesReference } from "../admission/rules.js";
 import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { type CastInput, castFor } from "./recipe-cast.js";
@@ -92,7 +92,7 @@ export function referenceRecipe(
       prompt,
       // The establishing image sets the look for the whole video, so it is drawn with every
       // member the title mentions as well as the ones its own brief does.
-      ...castField(castFor(config, config.title, prompt)),
+      ...castField(castFor(config, subjectOf(config), prompt)),
     },
     [],
     { unresolved: prompt.trim() === "" },

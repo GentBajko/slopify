@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { fingerprint } from "../../kernel/runner/work.js";
+import { subjectOf } from "../admission/model.js";
 import { usesShorts } from "../admission/rules.js";
 import { withoutScene } from "../images/scenes.js";
 import { effectiveClips, type PickedShorts, pickedShortsOf } from "../shorts/clips.js";
@@ -73,7 +74,7 @@ export function shortsRecipes(
         shorts.count,
         shorts.minSeconds,
         shorts.maxSeconds,
-        config.title,
+        subjectOf(config),
         // The project language, only when it is not English, so English keeps its fingerprint.
         ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
       ],
@@ -157,7 +158,7 @@ export function shortsRecipes(
           context,
           imagePromptMessages({
             style: looked,
-            videoTitle: config.title,
+            videoTitle: subjectOf(config),
             shortTitle: clip.title,
             text: clip.text,
             count,

@@ -43,6 +43,7 @@ import { cloneManifest, ensureRevisionStages, projectSelected } from "./projecti
 import { insertAsset, insertRevision } from "./repo.js";
 import { bindNarrationSources, validateNarrationIntent, validateTemplateIntent } from "./rules.js";
 import { revisionEditSchema } from "./schema.js";
+import { keptSubject } from "./subject.js";
 
 export { bindUpload } from "./mutation-assets.js";
 export { restoreRevision } from "./restore.js";
@@ -89,7 +90,7 @@ export async function saveRevision(
     };
   const edit = bindNarrationSources(
     base,
-    rebrandedEdit(deps.db, base.revision.config, replanned.edit),
+    keptSubject(base.revision.config, rebrandedEdit(deps.db, base.revision.config, replanned.edit)),
   );
   const fields = [
     ...settingProblems(edit),

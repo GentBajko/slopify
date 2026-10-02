@@ -1,5 +1,5 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
+import { type RunConfig, subjectOf, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
 import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import { withoutScene, withScene } from "../images/scenes.js";
@@ -361,7 +361,7 @@ export function thumbnailRecipes(
             prompt: thumbnailVariantPrompt(prompt, variant),
             ...(reference === undefined ? {} : { reference: reference.input }),
             // The thumbnail stands for the whole video, like the establishing image.
-            ...castField(castFor(config, config.title, prompt)),
+            ...castField(castFor(config, subjectOf(config), prompt)),
           },
       [
         ...(promptRecipe === undefined ? [] : [promptRecipe.key]),

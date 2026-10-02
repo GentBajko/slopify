@@ -1,5 +1,6 @@
 import { withLanguage } from "../../kernel/ports/languages.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
+import { subjectOf } from "../admission/model.js";
 import {
   type Appearance,
   appearanceFor,
@@ -64,7 +65,7 @@ export function imageAppearance(
   const { config } = context;
   if (!pictureBodies(context).some(usesAppearance)) return undefined;
   const messages = withLanguage(
-    appearanceMessages({ title: config.title, article: text.articleText ?? "" }),
+    appearanceMessages({ title: subjectOf(config), article: text.articleText ?? "" }),
     config.language,
   );
   const value = recipe(

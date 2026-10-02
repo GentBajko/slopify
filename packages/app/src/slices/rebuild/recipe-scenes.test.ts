@@ -281,3 +281,14 @@ it("gives the subject's look to images without scenes, and asks nothing without 
   );
   expect(plan().some((value) => value.key === "images:appearance")).toBe(false);
 });
+
+it("keeps the scenes when the project is renamed, as its subject stays what it was", () => {
+  const before = find(plan(), "images:scenes").fingerprint;
+  const renamed = { ...scened, title: "A new name", subjectTitle: scened.title };
+  expect(find(plan([], undefined, withScenes, renamed), "images:scenes").fingerprint).toBe(before);
+  // Without the kept subject, the new name would be a new request.
+  expect(
+    find(plan([], undefined, withScenes, { ...scened, title: "A new name" }), "images:scenes")
+      .fingerprint,
+  ).not.toBe(before);
+});
