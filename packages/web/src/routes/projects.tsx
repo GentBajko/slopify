@@ -347,7 +347,12 @@ function ProjectRow({
       }
       meta={
         <span className="flex flex-col gap-1">
-          <span>{`${madeOf(project)} · started ${startedAt(project.createdAt)}`}</span>
+          <span>
+            {`${madeOf(project)} · started ${startedAt(project.createdAt)}`}
+            {project.views === undefined
+              ? ""
+              : ` · ${project.views.toLocaleString()} views${project.ctr === undefined ? "" : ` · ${String(project.ctr)}% CTR`}`}
+          </span>
           {running ? (
             <Meter
               value={project.progress}

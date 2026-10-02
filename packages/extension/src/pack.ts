@@ -30,6 +30,13 @@ export interface PackItem {
   readonly playlists?: readonly string[] | undefined;
   readonly playlist: string | null;
   readonly chapterNotice?: string | undefined;
+  // From 3.3.0: when it goes out (ISO, typed into Studio's schedule), the long video's captions,
+  // its end screen's video, a short's related video, and the comment to pin.
+  readonly scheduleAt?: string | undefined;
+  readonly captions?: PackFile | undefined;
+  readonly endScreenVideoId?: string | undefined;
+  readonly relatedVideoId?: string | undefined;
+  readonly pinnedComment?: string | undefined;
 }
 
 // The playlists to tick, from either kind of Slopify.
@@ -50,6 +57,8 @@ export interface FillPayload {
   readonly projectId: string;
   readonly waiting?: number | undefined;
   readonly item: PackItem;
+  // The captions file's bytes, for the Details-page touches.
+  readonly captions?: { readonly filename: string; readonly base64: string } | undefined;
   readonly thumbnails: readonly {
     readonly filename: string;
     readonly contentType: string;
@@ -90,15 +99,33 @@ export type WorkerRequest =
       readonly short: number | null;
       readonly videoId: string;
     }
-  // A Details page the worker opened for an A/B test asks for it, then says how it went.
-  | { readonly type: "ab-test"; readonly videoId: string }
+  // A Studio page opened for one upload (A/B test, Details touches) asks for its item.
+  | { readonly type: "item"; readonly projectId: string; readonly short: number | null }
+  // The popup's Upload all Shorts.
+  | { readonly type: "upload-all"; readonly projectId: string }
+  // A Details-page touch or a pinned comment, done or not; the worker closes its tab.
   | {
-      readonly type: "ab-result";
+      readonly type: "task-result";
+      readonly task: "finish" | "comment";
+      readonly projectId: string;
+      readonly short: number | null;
+      readonly ok: boolean;
+      readonly message: string;
+    }
+  // A video's numbers read from its Analytics; `last` closes the tab and opens the next.
+  | {
+      readonly type: "stats";
       readonly projectId: string;
       readonly short: number | null;
       readonly videoId: string;
-      readonly ok: boolean;
-      readonly message: string;
+      readonly metrics: Readonly<Record<string, number>>;
+      readonly abVariants?: readonly {
+        readonly title: string | null;
+        readonly thumbnail: number | null;
+        readonly share: number | null;
+        readonly winner: boolean;
+      }[];
+      readonly last: boolean;
     };
 
 // A finished project not marked uploaded, as the popup lists it.
@@ -116,11 +143,14 @@ export interface ReadyProject {
     // Filled in Studio but not confirmed: cancelled, or left as a draft. Absent from an older
     // Slopify.
     readonly started?: boolean;
+    // When it goes out (ISO), from the posting plan; and its YouTube video once known.
+    readonly scheduleAt?: string;
+    readonly videoId?: string;
   }[];
 }
 
-// An A/B test waiting for its video to be public, as Slopify lists it.
-export interface WaitingAbTest {
+// An upload with something waiting on YouTube's side, as Slopify lists it.
+export interface WaitingTask {
   readonly projectId: string;
   readonly short: number | null;
   readonly videoId: string;

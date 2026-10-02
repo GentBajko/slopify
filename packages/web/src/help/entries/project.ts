@@ -288,9 +288,14 @@ export const projectHelp = {
     body: "Turn this on when the video clips you uploaded are filmed footage, not made by AI. The AI use answer then checks them: laying a Look atmosphere such as fog over real footage makes it Yes, while colour, vignette or grain count as minor edits and keep it No. It is saved with the project and changes nothing in the video.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "ai-use-disclosure" },
   },
+  "project.upload.slot": {
+    title: "Posting plan slot",
+    body: "When this project's video goes out, from the posting plan (Settings → YouTube Studio → Posting plan). It takes the next free slot when you prepare its upload; each short goes out the first time its own day and hour come round after the video. Choose another free slot here, or Not scheduled to set the date in Studio yourself. The Slopify Studio extension types the time into Studio's Visibility step; you press Schedule.",
+    tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
+  },
   "project.upload.steps": {
     title: "Upload steps",
-    body: "Everything YouTube Studio asks for, in the order it asks: file, title, description, thumbnail, playlist, audience, AI use and tags. Copy puts each value on the clipboard. The tick box beside each step is only a note to yourself, remembered in this browser; it changes nothing in the project.",
+    body: "Everything YouTube Studio asks for, in the order it asks: file, title, description, thumbnail, playlist, audience, AI use, tags and the schedule. Copy puts each value on the clipboard. The tick box beside each step is only a note to yourself, remembered in this browser; it changes nothing in the project.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
   },
   "project.upload.fill-studio": {

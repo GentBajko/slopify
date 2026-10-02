@@ -1,7 +1,8 @@
 import { browserApi } from "./browser.js";
-import { type FieldResult, fillStudio, setFiles, startAbTest } from "./fill.js";
+import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
+import { fillSchedule, finishDetails, readAbResult, readMetrics } from "./studio-pages.js";
 import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 
 // Runs on studio.youtube.com. When an upload dialog opens on its first step (Select files), it
@@ -234,15 +235,26 @@ async function recordVideo(current: FillPayload): Promise<void> {
   }
   // On YouTube only once Studio says so: a cancelled upload, or one closed as a draft, is not.
   if (!(await confirmed())) return;
-  const done = (await api.runtime.sendMessage({ type: "video-done", ...upload })) as WorkerAnswer<{
-    abTest?: boolean;
-  }>;
-  if (!done.ok) toast(done.message, "error");
-  else if (done.value.abTest === true)
-    toast(
-      "Its A/B test (titles and thumbnails) starts by itself once the video is public. Keep Chrome open around that time; otherwise it starts the next time Chrome opens.",
-      "info",
-    );
+  const done = (await api.runtime.sendMessage({
+    type: "video-done",
+    ...upload,
+  })) as WorkerAnswer<unknown>;
+  if (!done.ok) {
+    toast(done.message, "error");
+    return;
+  }
+  // Upload all Shorts: while more wait, the next upload dialog opens by itself.
+  const stored = await api.storage.local.get(["uploadAllUntil"]);
+  const until = typeof stored.uploadAllUntil === "number" ? stored.uploadAllUntil : 0;
+  if (Date.now() > until) return;
+  const next = (await api.runtime.sendMessage({ type: "pack" })) as WorkerAnswer<unknown>;
+  if (!next.ok) {
+    await api.storage.local.set({ uploadAllUntil: 0 });
+    toast("All the shorts are uploaded.", "ok");
+    return;
+  }
+  toast("Opening the next upload…", "info");
+  setTimeout(() => location.assign("https://www.youtube.com/upload"), 2500);
 }
 
 // Waits for Studio's "Video scheduled" / "Video published" window after the person presses
@@ -269,29 +281,128 @@ async function confirmed(): Promise<boolean> {
   return false;
 }
 
-// A video's Details page the worker opened for its A/B test (`#slopify-ab`): sets the test,
-// says how it went, and the worker closes the tab.
-async function runAbTest(videoId: string): Promise<void> {
+// A Studio page opened for one upload: the hash says what to do there and for which upload
+// ("#slopify-ab=both&p=<project>&s=<short>", "#slopify-finish&…", "#slopify-stats=1&…").
+function hashParams(): URLSearchParams {
+  return new URLSearchParams(location.hash.replace(/^#/, ""));
+}
+
+async function itemFor(projectId: string, short: number | null): Promise<FillPayload | undefined> {
   const answer = (await api.runtime.sendMessage({
-    type: "ab-test",
-    videoId,
+    type: "item",
+    projectId,
+    short,
   })) as WorkerAnswer<FillPayload>;
-  if (!answer.ok) {
-    toast(answer.message, "error");
-    return;
-  }
-  const { projectId, item, thumbnails } = answer.value;
-  // The Details editor renders a moment after the page.
+  if (answer.ok) return answer.value;
+  toast(answer.message, "error");
+  return undefined;
+}
+
+async function editorReady(): Promise<void> {
   for (let waited = 0; waited < 30_000 && findField(document, title) === null; waited += 500)
     await new Promise((done) => setTimeout(done, 500));
-  const result = await startAbTest(document, item, thumbnails.map(file), { timeoutMs: 8000 });
+}
+
+// A/B test, from Slopify or the popup: A/B Testing set up, left open for the person.
+async function runAb(mode: AbMode, projectId: string, short: number | null): Promise<void> {
+  const payload = await itemFor(projectId, short);
+  if (payload === undefined) return;
+  await editorReady();
+  const result = await openAbTest(document, payload.item, payload.thumbnails.map(file), mode, {
+    timeoutMs: 8000,
+  });
+  toast(
+    result.ok ? `${result.message} Then press Save on the video.` : result.message,
+    result.ok ? "ok" : "error",
+    result.copy,
+  );
+}
+
+// The Details touches after a confirmed upload; reports, and the worker closes the tab.
+async function runFinish(projectId: string, short: number | null): Promise<void> {
+  const payload = await itemFor(projectId, short);
+  const report = (ok: boolean, message: string) =>
+    api.runtime.sendMessage({ type: "task-result", task: "finish", projectId, short, ok, message });
+  if (payload === undefined) {
+    await report(false, "Slopify didn't send the upload's details.");
+    return;
+  }
+  const captions =
+    payload.captions === undefined
+      ? undefined
+      : file({
+          filename: payload.captions.filename,
+          contentType: "application/x-subrip",
+          base64: payload.captions.base64,
+        });
+  const result = await finishDetails(payload.item, short === null ? captions : undefined);
+  await report(result.ok, result.message);
+}
+
+// Analytics: Reach, then Engagement (the page moves itself there), then report.
+async function runStats(step: string, projectId: string, short: number | null): Promise<void> {
+  const videoId = /\/video\/([A-Za-z0-9_-]{11})\//.exec(location.pathname)?.[1];
+  if (videoId === undefined) return;
+  const metrics = await readMetrics();
+  const key = `slopify.stats.${videoId}`;
+  if (step === "1") {
+    sessionStorage.setItem(key, JSON.stringify(metrics));
+    location.assign(
+      `https://studio.youtube.com/video/${videoId}/analytics/tab-interest_viewers/period-default#slopify-stats=2&${hashParams()
+        .toString()
+        .replace(/^slopify-stats=1&?/, "")}`,
+    );
+    return;
+  }
+  let reach: Record<string, number> = {};
+  try {
+    reach = JSON.parse(sessionStorage.getItem(key) ?? "{}") as Record<string, number>;
+  } catch {
+    // Read again tomorrow.
+  }
+  const all = { ...reach, ...metrics };
+  // A long video's A/B result is on its Details page: the page moves itself there once more.
+  if (step === "2" && short === null) {
+    sessionStorage.setItem(key, JSON.stringify(all));
+    location.assign(
+      `https://studio.youtube.com/video/${videoId}/edit#slopify-stats=3&${hashParams()
+        .toString()
+        .replace(/^slopify-stats=2&?/, "")}`,
+    );
+    return;
+  }
   await api.runtime.sendMessage({
-    type: "ab-result",
+    type: "stats",
     projectId,
-    short: item.kind === "short" ? (item.short ?? null) : null,
+    short,
     videoId,
-    ok: result.ok,
-    message: result.message,
+    metrics: all,
+    last: true,
+  });
+}
+
+// The last step for a long video: its A/B result, if Studio has one, with its numbers.
+async function runAbRead(projectId: string): Promise<void> {
+  const videoId = /\/video\/([A-Za-z0-9_-]{11})\//.exec(location.pathname)?.[1];
+  if (videoId === undefined) return;
+  let metrics: Record<string, number> = {};
+  try {
+    metrics = JSON.parse(sessionStorage.getItem(`slopify.stats.${videoId}`) ?? "{}") as Record<
+      string,
+      number
+    >;
+  } catch {
+    // Read again tomorrow.
+  }
+  const abVariants = await readAbResult().catch(() => undefined);
+  await api.runtime.sendMessage({
+    type: "stats",
+    projectId,
+    short: null,
+    videoId,
+    metrics,
+    ...(abVariants === undefined ? {} : { abVariants }),
+    last: true,
   });
 }
 
@@ -435,8 +546,26 @@ function look(): void {
   if (titleBox === null || titleBox === handled || !shown(titleBox)) return;
   handled = titleBox;
   observer.disconnect();
+  // The Visibility step comes after the person presses Next: its schedule is typed in once.
+  let scheduled = false;
   const closed = setInterval(() => {
-    if (shown(titleBox)) return;
+    const at = payload?.item.scheduleAt;
+    const visibility = dialog?.querySelector("ytcp-video-visibility-select");
+    if (
+      !scheduled &&
+      at !== undefined &&
+      dialog !== null &&
+      visibility !== null &&
+      visibility !== undefined &&
+      shown(visibility)
+    ) {
+      scheduled = true;
+      void fillSchedule(dialog, new Date(at)).then((step) =>
+        toast(step.message, step.ok ? "ok" : "error"),
+      );
+    }
+    // Open while the dialog shows, whichever step it is on.
+    if (shown(titleBox) || (dialog !== null && shown(dialog))) return;
     clearInterval(closed);
     handled = undefined;
     againRow?.remove();
@@ -452,8 +581,16 @@ function look(): void {
   void fill(true);
 }
 
-const abVideo = /^\/video\/([A-Za-z0-9_-]{11})\/edit/.exec(location.pathname)?.[1];
-if (location.hash === "#slopify-ab" && abVideo !== undefined) void runAbTest(abVideo);
+const params = hashParams();
+const projectId = params.get("p");
+const short = Number(params.get("s") ?? "0") || null;
+const ab = params.get("slopify-ab");
+if (projectId !== null && (ab === "titles" || ab === "thumbnails" || ab === "both"))
+  void runAb(ab, projectId, short);
+else if (projectId !== null && params.has("slopify-finish")) void runFinish(projectId, short);
+else if (projectId !== null && params.get("slopify-stats") === "3") void runAbRead(projectId);
+else if (projectId !== null && params.has("slopify-stats"))
+  void runStats(params.get("slopify-stats") ?? "1", projectId, short);
 else {
   watch();
   look();

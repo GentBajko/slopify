@@ -111,6 +111,7 @@ describe("Prepare upload", () => {
       "Audience done",
       "AI use (under Show more) done",
       "Tags (under Show more) done",
+      "Schedule (Visibility) done",
     ]);
     // Select all ticks every step and clears them again.
     await user.click(all);

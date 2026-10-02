@@ -45,6 +45,8 @@ import type {
   StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
+import type { PostingPlan, Slot } from "@app/slices/studio/plan.js";
+import type { AbResult, VideoStats } from "@app/slices/studio/stats.js";
 import type { YoutubeVideo } from "@app/slices/studio/videos.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import type { DescriptionField } from "@app/slices/youtube/edits.js";
@@ -475,6 +477,8 @@ export interface StudioSettingsBody {
   // By channel id; a channel missing here uses `playlists`.
   readonly channelPlaylists: Readonly<Record<string, readonly StudioPlaylist[]>>;
   readonly pairing: StudioPairingView;
+  // Post and pin each video's comment once it is public.
+  readonly autoComment?: boolean;
 }
 
 export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> {
@@ -522,6 +526,57 @@ export async function saveUploadPick(
   );
 }
 
+export interface PlanBody {
+  readonly plan: PostingPlan;
+  // The coming free slots of the plan.
+  readonly free: readonly Slot[];
+}
+
+export async function readPostingPlan(api: Api): Promise<PlanBody> {
+  return read<PlanBody>(await api.client.studio.plan.$get());
+}
+
+export async function savePostingPlan(api: Api, plan: PostingPlan): Promise<PlanBody> {
+  return detailed<PlanBody>(await api.client.studio.plan.$put({ json: plan }));
+}
+
+export async function saveAutoComment(api: Api, on: boolean): Promise<void> {
+  await detailed<unknown>(await api.client.studio.settings["auto-comment"].$put({ json: { on } }));
+}
+
+// Prepare upload's slot: another free slot of the plan, or none.
+export async function saveUploadSlot(
+  api: Api,
+  projectId: string,
+  slot: Slot | null,
+): Promise<UploadPack & { readonly slotChoices: readonly Slot[] }> {
+  return detailed<UploadPack & { readonly slotChoices: readonly Slot[] }>(
+    await api.client.studio.packs[":projectId"].slot.$put({
+      param: { projectId },
+      json: { slot: slot === null ? null : { row: slot.row, longAt: slot.longAt } },
+    }),
+  );
+}
+
+export async function readProjectStats(
+  api: Api,
+  projectId: string,
+): Promise<readonly VideoStats[]> {
+  const answer = await read<{ stats: readonly VideoStats[] }>(
+    await api.client.studio.stats[":projectId"].$get({ param: { projectId } }),
+  );
+  return answer.stats;
+}
+
+export async function readAbResults(
+  api: Api,
+): Promise<readonly (AbResult & { readonly projectTitle: string })[]> {
+  const answer = await read<{ results: readonly (AbResult & { readonly projectTitle: string })[] }>(
+    await api.client.studio["ab-results"].$get(),
+  );
+  return answer.results;
+}
+
 // Where Settings' and Prepare upload's Download fetch the extension from.
 export function studioExtensionUrl(api: Api, browser: StudioExtensionBrowser): string {
   return `${api.origin}/api/studio/extension/${browser}.zip`;
@@ -549,8 +604,11 @@ export async function newStudioPairing(api: Api): Promise<{ readonly pairing: St
   return detailed(await api.client.studio.settings.pairing.$post());
 }
 
-export async function readUploadPack(api: Api, projectId: string): Promise<UploadPack> {
-  return detailed<UploadPack>(
+export async function readUploadPack(
+  api: Api,
+  projectId: string,
+): Promise<UploadPack & { readonly slotChoices?: readonly Slot[] }> {
+  return detailed<UploadPack & { readonly slotChoices?: readonly Slot[] }>(
     await api.client.studio.packs[":projectId"].$get({ param: { projectId } }),
   );
 }
@@ -608,21 +666,6 @@ export async function saveProjectVideo(
     await api.client.studio.videos[":projectId"].$put({
       param: { projectId },
       json: { short, link },
-    }),
-  );
-  return answer.videos;
-}
-
-export async function setProjectAbTest(
-  api: Api,
-  projectId: string,
-  short: number | null,
-  start: boolean,
-): Promise<readonly YoutubeVideo[]> {
-  const answer = await detailed<{ videos: readonly YoutubeVideo[] }>(
-    await api.client.studio.videos[":projectId"]["ab-test"].$post({
-      param: { projectId },
-      json: { short, start },
     }),
   );
   return answer.videos;

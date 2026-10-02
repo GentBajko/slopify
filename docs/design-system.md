@@ -180,7 +180,7 @@ background), so on a long page the rail's column never ends at the first screen,
 
 A Workspace (`routes/project.tsx`). The title row carries the way back to Projects, the state
 word, Edit settings and a More menu (Choose what to remake…, Save as template…, Cancel the
-run…). The left rail lists the sections (Article, Narration, Images, Video, Shorts, YouTube,
+run…). The left rail lists the sections (Article, Narration, Images, Video (with its shorts and YouTube details),
 PDF when the run makes one, Cost, Live), each stage with its lamp and "3 outdated" when it has
 outdated outputs, then the views that replace the main column (Settings, Checkpoints with
 "1 held", History). The right rail has the next action, the run's steps with their times and

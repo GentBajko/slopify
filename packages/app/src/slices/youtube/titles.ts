@@ -1,6 +1,6 @@
-// A title made from a pattern with keywords ("{{Topic}} | D&D Lore To Sleep To") keeps its
+// A title made from a pattern with keywords ("{{Topic}} | Stories To Sleep To") keeps its
 // fixed wording in YouTube's title A/B test: the other titles change only what the keywords
-// stand for ("Tiamat, the Five-Headed Dragon Queen | D&D Lore To Sleep To"). A title without
+// stand for ("The Lighthouse Keeper | Stories To Sleep To"). A title without
 // keywords has nothing fixed, and its other titles are free.
 
 const slot = /\{\{([^{}\n]*)\}\}/g;

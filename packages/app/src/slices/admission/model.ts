@@ -272,7 +272,7 @@ export interface TitleStyle {
 // holds.
 export interface RunConfig extends RunDraft {
   readonly rendered: Readonly<Record<string, string>>;
-  // The title as written with its keywords ("{{Topic}} | D&D Lore To Sleep To"), kept when
+  // The title as written with its keywords ("{{Topic}} | Stories To Sleep To"), kept when
   // `title` was filled from it: YouTube's other titles change only what the keywords hold.
   readonly titlePattern?: string | undefined;
   // The title the project was made about, kept when the title is first renamed (`subjectOf`):
@@ -355,6 +355,9 @@ export interface ProjectListing extends ProjectSummary {
   // When the person marked the finished video as uploaded (Home, Ready to upload); null
   // while it is not.
   readonly uploadedAt: string | null;
+  // The long video's numbers from Studio (views, CTR in percent), once the extension read them.
+  readonly views?: number;
+  readonly ctr?: number;
   // Stages waiting for a CLI plan's limits to reset (`slices/run-cost/limits.ts`), so the
   // row can say "Waiting for Codex limits (resets at 14:00)". Left out when nothing waits.
   readonly limitWaits?: readonly ListingLimitWait[];

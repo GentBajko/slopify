@@ -13,6 +13,7 @@ import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
 import { pickInPlay } from "@/play/pick-in-play";
+import { AbResultsRoute } from "@/routes/ab-results";
 import { CalendarRoute, type CalendarTab, calendarTabOf } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab, channelTabOf } from "@/routes/channel";
 import { ChannelsRoute } from "@/routes/channels";
@@ -305,6 +306,12 @@ const narrationAliasesRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "narration-aliases",
   component: NarrationAliasesRoute,
+});
+
+const abResultsRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "ab-results",
+  component: AbResultsRoute,
 });
 
 const documentThemesRoute = createRoute({
@@ -611,6 +618,7 @@ const routeTree = rootRoute.addChildren({
     templatesRoute,
     documentThemesRoute,
     narrationAliasesRoute,
+    abResultsRoute,
   }),
   schedulesRoute,
   scheduleRoute,

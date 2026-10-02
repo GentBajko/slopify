@@ -66,31 +66,115 @@ function showProjects(projects: readonly ReadyProject[]): void {
   main.replaceChildren(list);
 }
 
+// "Sun 5 Oct, 20:00", the plan's time for an upload, in this browser's time zone.
+function when(iso: string | undefined): string | undefined {
+  if (iso === undefined) return undefined;
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 function showItems(project: ReadyProject, projects: readonly ReadyProject[]): void {
   heading.textContent = project.title;
   back.hidden = false;
   back.onclick = () => showProjects(projects);
   const list = document.createElement("ul");
+  const shortsLeft = project.items.filter(
+    (item) => item.kind === "short" && item.ready && !item.uploaded,
+  ).length;
+  if (shortsLeft > 1)
+    list.append(
+      row(
+        `Upload all ${String(shortsLeft)} shorts`,
+        "one after another",
+        () => void uploadAll(project.projectId),
+        false,
+        true,
+      ),
+    );
   for (const item of project.items) {
     const name = item.kind === "video" ? "Video" : `Short ${String(item.short)}`;
+    const time = when(item.scheduleAt);
     const meta = item.uploaded
-      ? "✓ on YouTube"
+      ? item.kind === "video" && item.videoId !== undefined
+        ? "A/B test…"
+        : "✓ on YouTube"
       : !item.ready
         ? "not rendered"
-        : item.started === true
-          ? "Upload again"
-          : "Upload";
+        : `${item.started === true ? "Upload again" : "Upload"}${time === undefined ? "" : ` · ${time}`}`;
+    const videoId = item.videoId;
+    const run =
+      item.uploaded && item.kind === "video" && videoId !== undefined
+        ? () => showAbChoices(project, projects, videoId)
+        : item.ready && !item.uploaded
+          ? () => void upload(project.projectId, item.short)
+          : undefined;
     list.append(
       row(
         `${name} · ${item.title}`,
         meta,
-        item.ready ? () => void upload(project.projectId, item.short) : undefined,
-        item.uploaded,
-        item.ready && !item.uploaded,
+        run,
+        item.uploaded && item.kind !== "video",
+        !item.uploaded && item.ready,
       ),
     );
   }
   main.replaceChildren(list);
+}
+
+// A/B test on the uploaded video: Studio opens it with A/B Testing set up for the chosen part;
+// the person presses Set test and Save there.
+function showAbChoices(
+  project: ReadyProject,
+  projects: readonly ReadyProject[],
+  videoId: string,
+): void {
+  heading.textContent = "A/B test";
+  back.hidden = false;
+  back.onclick = () => showItems(project, projects);
+  const list = document.createElement("ul");
+  for (const [mode, label] of [
+    ["both", "Titles and thumbnails"],
+    ["titles", "Titles"],
+    ["thumbnails", "Thumbnails"],
+  ] as const)
+    list.append(
+      row(
+        label,
+        "Open in Studio",
+        () => {
+          void api.tabs?.create({
+            url: `https://studio.youtube.com/video/${videoId}/edit#slopify-ab=${mode}&p=${encodeURIComponent(project.projectId)}&s=0`,
+            active: true,
+          });
+          window.close();
+        },
+        false,
+        true,
+      ),
+    );
+  const hint = document.createElement("p");
+  hint.className = "note";
+  hint.textContent =
+    "Studio opens with A/B Testing filled in. Check it, press Set test, then Save.";
+  main.replaceChildren(list, hint);
+}
+
+async function uploadAll(projectId: string): Promise<void> {
+  note("Opening YouTube Studio…");
+  const answer = (await api.runtime.sendMessage({
+    type: "upload-all",
+    projectId,
+  })) as WorkerAnswer<number>;
+  if (!answer.ok) {
+    note(answer.message, true);
+    return;
+  }
+  window.close();
 }
 
 async function upload(projectId: string, short: number | null): Promise<void> {

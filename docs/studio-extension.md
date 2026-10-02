@@ -13,8 +13,8 @@ the order Studio's upload dialog asks for them:
 2. Title.
 3. Description, with the chapters and hashtags (turn on YouTube description in Edit project →
    Prompts to have one written).
-4. Thumbnail: the first goes under Thumbnail; with three thumbnails, all three go into
-   Studio's A/B Testing (the button beside the title, which replaced Test & compare).
+4. Thumbnail: the picked one goes under Thumbnail. The others are for an A/B test you start
+   later from On YouTube (Studio tests only public videos).
 5. Playlist: set it in Settings → YouTube Studio → Playlist, once as the default (Every
    channel) and, if you like, per channel; a channel without its own uses the default.
 6. Audience: "No, it's not made for kids".
@@ -80,12 +80,23 @@ One (the default) keeps a project's thumbnail and its fingerprints exactly as be
 ## The Slopify Studio extension
 
 `packages/extension` is a small Manifest V3 extension for Chrome/Chromium and Firefox. It has no
-remote code: everything it runs is in the zip. It isn't in any extension store; it ships inside
-Slopify.
+remote code: everything it runs is in the zip. It is the bridge between Slopify and YouTube:
+Slopify decides and keeps the state (what to upload, when, which A/B test), and the extension
+does it in YouTube Studio in your own signed-in browser and reports back.
 
 ### Install
 
-Open **Settings → YouTube Studio → Install the Studio extension** (Prepare upload shows the same
+From 3.3.0 (extension 1.0.0) the Chrome extension is in the Chrome Web Store as an unlisted
+item, so installed copies update by themselves. The release workflow's `chrome-web-store` job
+uploads each new version's zip and submits it for review
+(`packages/extension/scripts/publish-chrome.mjs`, Chrome Web Store API v2, with a service
+account). It needs the repository secrets `CWS_SERVICE_ACCOUNT_JSON`, `CWS_PUBLISHER_ID` and
+`CWS_EXTENSION_ID`; without them the job says so and skips. A version the store already has is
+"nothing new to publish", not a failure, so bump `packages/extension/static/manifest.json` and
+`package.json` when the extension changes. The privacy policy is
+[extension-privacy.md](extension-privacy.md).
+
+To load it by hand instead, open **Settings → YouTube Studio → Install the Studio extension** (Prepare upload shows the same
 steps while no extension is paired). Pick the browser, press **Download**, and follow the three
 steps:
 
@@ -133,36 +144,84 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 4. Check everything, go through Studio's remaining steps, and schedule or publish yourself.
    The extension never presses Next, Save, Schedule or Publish on an upload.
 
-### The toolbar popup (from 3.2.10, extension 0.4.0)
+### Posting plan and schedule (from 3.3.0)
+
+**Settings → YouTube Studio → Posting plan** is the week as a table: one row per long video
+(A, B, C…), each with the long video's day and time and its shorts' days and times, in one time
+zone. It is kept as `studio.postingPlan` (`slices/studio/plan.ts`).
+
+- When a finished project's upload is prepared (Prepare upload, or the extension asking for it)
+  and the project has no slot yet, it takes the **next free row**: the next long-video time
+  that comes round, among rows no other project holds (`upload_slots`).
+- **Each short goes out the first time its day and hour come round after its own video**, so
+  nothing needs "next week": a short planned for Sunday after a Friday video goes out that
+  Sunday, one planned for Wednesday the Wednesday after.
+- Prepare upload shows the slot with a picker to choose another free one (`PUT
+  /api/studio/packs/:id/slot`). The slot is freed once the long video is recorded on YouTube.
+- Each pack item carries `scheduleAt`. In the upload dialog's Visibility step the extension
+  opens Schedule and types the date and time into Studio's date and time boxes (Studio reads
+  them in the browser's time zone). You press **Schedule**.
+
+### The toolbar popup (from 3.2.10; Upload all from 3.3.0)
 
 Clicking the extension's icon lists the finished projects not marked uploaded in Slopify. A
-project opens to its video and shorts, with a ✓ on those on YouTube. Clicking one puts it
-first in line and opens Studio's upload page, where the extension adds the file and fills the
-details. **Pairing** (top right) opens the pairing page.
+project opens to its video and shorts, each with its planned time, and a ✓ on those on YouTube.
+Clicking one puts it first in line and opens Studio's upload page, where the extension adds the
+file and fills the details. **Upload all N shorts** queues every short not yet on YouTube: once
+Studio confirms one upload, the next upload page opens by itself (for up to 3 hours).
+**Pairing** (top right) opens the pairing page.
 
 An upload counts as on YouTube only once Studio shows "Video scheduled", "Video published" or
 "Video saved" after you press Schedule, Publish or Save. One cancelled, or closed as a draft,
-stays offered ("Upload again"), and its A/B test isn't queued.
+stays offered ("Upload again").
 
-### A/B tests after publishing (from 3.2.8, extension 0.3.0)
+### After the upload (from 3.3.0)
 
-Studio tests titles and thumbnails only on public videos, and a scheduled video is private
-until its time. So the upload gets only thumbnail 1, and the A/B test waits:
+Once Studio confirms an upload, Slopify queues its finishing touches. Every 15 minutes, and when
+Chrome starts, the extension asks for them (`GET /api/studio/ext/tasks`) and opens the video's
+Details page in a background tab:
+
+- **Captions**: the project's subtitles file goes in through Subtitles → Upload file → With
+  timing.
+- **End screen** (long video): a Video element pointing at the previous episode (the project's
+  "Previous video" link, else the long video uploaded before it).
+- **Related video** (shorts): the project's long video, once it is public (checked with YouTube's
+  public oEmbed, no sign-in).
+
+It presses only the editors' own Save/Done and the Details page's Save, reports each result
+(`POST /ext/task-result`) and closes the tab. On YouTube (project → Video) shows what's waiting,
+done or failed, and why.
+
+**Pinned comment** (off by default; Settings → YouTube Studio → Post and pin each video's
+comment): once the video is public, the extension opens its watch page, posts the project's
+pinned comment in your name and pins it.
+
+### A/B testing on demand (from 3.3.0)
+
+By default an upload gets one title and thumbnail 1, the ones picked in Prepare upload. An A/B
+test starts only when you ask: **A/B test** on On YouTube (project → Video), or the popup's
+choices on an uploaded long video (Titles and thumbnails, Titles, Thumbnails). Either opens the
+video's Details page with a `#slopify-ab=` hash; the extension presses A/B Testing, picks the
+mode and fills the titles and thumbnails. You check them and press **Set test** and **Save**
+yourself; the extension never presses them.
+
+### Numbers from Studio (from 3.3.0)
+
+Once a day the extension opens each recorded video's Analytics in a background tab and reads
+impressions, click-through rate, views, average view duration and watch hours (`POST
+/ext/stats`, kept in `video_stats`). The Projects list shows each project's views and CTR, and On
+YouTube shows each video's. A finished A/B test's result is read too (`ab_results`):
+**Library → A/B results** lists them, winner first, and **Copy as prompt notes** puts a summary
+on the clipboard for the Library prompts that write titles and thumbnails. Nothing changes a
+prompt by itself.
+
+### Links
 
 - After filling the Details, the extension reads the new video's link from the dialog and tells
-  Slopify, which keeps it (project → YouTube → On YouTube). An upload with other titles or two or
-  three thumbnails gets its test queued.
-- Every 15 minutes, and when Chrome starts, the extension asks Slopify for the waiting tests and
-  checks each video with YouTube's public oEmbed (it answers only for a public video, no
-  sign-in). A public one's Details page opens in a background tab; the extension presses
-  A/B Testing, picks Title and thumbnail (or Title only, or Thumbnail only), fills the titles and
-  thumbnails, presses **Set test** (and Save, if Studio then enables it), reports to Slopify and
-  closes the tab. This is the only place it presses Set test, and only for a test queued in
-  Slopify; if anything isn't found it presses nothing and On YouTube shows why.
-- Chrome has to be open and signed in to Studio; a test whose time passed while Chrome was
-  closed starts the next time it opens.
-- On YouTube also takes a pasted link for an upload made by hand, and **Start A/B test** queues a
-  test for any recorded video after the fact.
+  Slopify, which keeps it (project → Video → On YouTube). On YouTube also takes a pasted link
+  for an upload made by hand.
+- Opening Studio's Content page matches its videos and shorts to your projects by title, so
+  uploads made by hand get their links too.
 
 **Several uploads in a row.** Each Fill in YouTube Studio adds the item to **Waiting for
 Studio**, which Prepare upload lists (oldest first, from every project, each with Remove). Each
@@ -205,14 +264,8 @@ How it fills each field, following Studio's own components:
   draws them only once the list shows). It ticks the row whose name is the playlist's, unless
   it is already ticked, and closes the list with its **Done**, or Escape if Done isn't there.
   It never presses the list's **Save**.
-- **Two or three thumbnails** are handled last, after every other field. The extension presses
-  Studio's **A/B Testing** button beside the title with a full mouse press, since a plain
-  script click doesn't open it. It then waits up to 3 seconds for the dialog, picks **Thumbnail
-  only** and puts thumbnails 1, 2 and 3 into its Thumbnail 1, 2 and 3 slots. It leaves the
-  dialog open, never presses **Set test**, and asks you to check the pictures and press Set test
-  yourself. Closing the dialog drops the pictures. If the button isn't there, the dialog doesn't
-  open, or the dialog has no picture slots, the extension sets the first picture as the
-  thumbnail and tells you to add the others in A/B Testing by hand.
+- **Thumbnail**: the upload gets thumbnail 1 (the picked one). Other titles and thumbnails wait
+  for an A/B test you start (above).
 
 ### How it talks to Slopify
 
@@ -221,8 +274,9 @@ The extension's background worker is the only part that talks to Slopify, and on
 (`chrome-extension://…` or `moz-extension://…`); Slopify stores that origin, and from then on
 the `/api/studio/ext/*` routes answer only requests with the token, and send CORS headers only
 for that origin — never `*`, never a web page's. They serve the first waiting item's pack and
-its thumbnails, and take the extension's word that it filled an item (`POST /ext/filled`),
-nothing else.
+its thumbnails, the finishing-touch and stats queues, and take the extension's reports (filled,
+uploaded, task results, numbers), nothing else. The only other address the extension calls is
+YouTube's public oEmbed.
 
 ### Selectors and the live page
 
@@ -271,6 +325,11 @@ render at the right moment. The upload dialog around the fields and its footer b
 selectors stay behind the checked ones as fallbacks.
 
 Still unverified:
+
+- **The 3.3.0 flows on a live page**: the schedule's date and time boxes, Upload all's next
+  upload, the captions upload, the end screen and related-video pickers, posting and pinning the
+  comment, the Analytics metric tabs and reading a finished A/B test. Their selectors come from a
+  read-only look at Studio on 2026-10-02 (`studio-pages.ts`); none of them was saved then.
 
 - **Whether the upload dialog behaves like the Details editor**: the ids match, but the upload
   dialog itself wasn't inspected. The A/B Testing button may only appear once the upload is

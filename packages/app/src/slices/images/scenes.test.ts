@@ -21,12 +21,12 @@ it("describes each picture by its composition, or its name when it has none", ()
   expect(pictureKind("Style: x\n\nComposition: wide establishing shot.\n\nMore.", "Wide")).toBe(
     "wide establishing shot.",
   );
-  expect(pictureKind("Just a prompt", "D&D Action Scene")).toBe("D&D Action Scene");
+  expect(pictureKind("Just a prompt", "Action Scene")).toBe("Action Scene");
 });
 
 it("asks for one scene per picture, in order, and reads the count back from the request", () => {
   const messages = sceneMessages({
-    title: "Tiamat",
+    title: "Lighthouse",
     article: "The article.",
     pictures: ["wide shot", "close portrait", "battle"],
   });

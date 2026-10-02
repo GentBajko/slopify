@@ -62,6 +62,10 @@ export const projectTables = [
   "project_uploads",
   // Since 3.2.8: the YouTube video each upload became, and its A/B test.
   "youtube_videos",
+  // Since 3.3.0: each project's posting-plan slot, Studio's numbers and its A/B results.
+  "upload_slots",
+  "video_stats",
+  "ab_results",
   // Since 2.5.0. Left out on purpose: plan_limit_waits and plan_limit_waiters (an account's
   // current wait, a lease of this install) and prompt_softening (a pending one-off request).
   // Since 3.0.8, narration_retries is left out too: the tries of a run, not of the project.

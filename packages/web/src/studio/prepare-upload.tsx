@@ -6,6 +6,7 @@ import {
   studioUploadUrl,
   tagsLine,
 } from "@app/slices/studio/model.js";
+import type { Slot } from "@app/slices/studio/plan.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -18,13 +19,15 @@ import {
   saveProjectPlaylists,
   saveRealFootage,
   saveUploadPick,
+  saveUploadSlot,
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
@@ -80,7 +83,19 @@ const stepLabels: Readonly<Record<StudioStep, string>> = {
   audience: "Audience",
   altered: "AI use (under Show more)",
   tags: "Tags (under Show more)",
+  schedule: "Schedule (Visibility)",
 };
+
+// "Sun 5 Oct, 20:00" in this browser's time zone, as Studio's schedule shows it to you.
+function slotTime(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
 
 function itemKey(item: PackItem): string {
   return item.kind === "video" ? "video" : `short-${String(item.short)}`;
@@ -157,6 +172,18 @@ export function PrepareUploadDrawer({
     onError: (error) =>
       setStatus({
         text: `Couldn't save the playlists: ${error.message} Tick the playlist again.`,
+        tone: "error",
+      }),
+  });
+  const slot = useMutation({
+    mutationFn: (next: Slot | null) => saveUploadSlot(api, projectId, next),
+    onSuccess: (saved) => {
+      client.setQueryData(packKey, saved);
+      setStatus({ text: "Saved when this project goes out.", tone: "success" });
+    },
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't change the slot: ${error.message} Choose it again.`,
         tone: "error",
       }),
   });
@@ -311,6 +338,43 @@ export function PrepareUploadDrawer({
               }
               copy={copy}
               onPick={(next) => pick.mutate(next)}
+              slotPicker={
+                item.kind !== "video" ? undefined : (
+                  <span className="flex items-center gap-1" {...helpScope}>
+                    <Select
+                      aria-label="Posting plan slot"
+                      value={
+                        pack.data.schedule === undefined
+                          ? ""
+                          : `${pack.data.schedule.row}|${pack.data.schedule.longAt}`
+                      }
+                      disabled={slot.isPending}
+                      onChange={(event) => {
+                        const [row, longAt] = event.currentTarget.value.split("|");
+                        slot.mutate(
+                          row === undefined || longAt === undefined ? null : { row, longAt },
+                        );
+                      }}
+                      options={[
+                        { value: "", label: "Not scheduled (set it in Studio yourself)" },
+                        ...(pack.data.schedule === undefined
+                          ? []
+                          : [
+                              {
+                                value: `${pack.data.schedule.row}|${pack.data.schedule.longAt}`,
+                                label: `${pack.data.schedule.row} · ${slotTime(pack.data.schedule.longAt)}`,
+                              },
+                            ]),
+                        ...(pack.data.slotChoices ?? []).map((one) => ({
+                          value: `${one.row}|${one.longAt}`,
+                          label: `${one.row} · ${slotTime(one.longAt)}`,
+                        })),
+                      ]}
+                    />
+                    <InfoTip id="project.upload.slot" />
+                  </span>
+                )
+              }
               picking={pick.isPending}
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
@@ -394,6 +458,7 @@ function Steps({
   copy,
   onPick,
   picking,
+  slotPicker,
   doneKey,
 }: {
   readonly projectId: string;
@@ -406,6 +471,8 @@ function Steps({
   // Which title and thumbnail the upload carries (indexes in the project's own order).
   readonly onPick: (pick: { readonly title: number; readonly thumbnail: number }) => void;
   readonly picking: boolean;
+  // The posting plan's slot for the video (the shorts follow it).
+  readonly slotPicker?: ReactNode;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
 }) {
@@ -547,6 +614,19 @@ function Steps({
                 </>
               ),
             };
+      case "schedule":
+        return {
+          value: (
+            <span className="flex flex-col gap-1">
+              {slotPicker}
+              <span className="text-ink-2">
+                {item.scheduleAt === undefined
+                  ? "Not scheduled: Slopify has no slot for it. Set the date in Studio's Visibility step."
+                  : `${slotTime(item.scheduleAt)}, your time. The extension types it into Studio's Visibility step; you press Schedule.`}
+              </span>
+            </span>
+          ),
+        };
       case "playlist":
         return {
           value:

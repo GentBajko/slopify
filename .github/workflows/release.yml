@@ -60,6 +60,29 @@ jobs:
       - run: npm run build
       - run: npm publish --provenance --access public --workspace @gentbajko/slopify
 
+  # The Slopify Studio extension goes to the Chrome Web Store too, so installed copies update
+  # by themselves once Google approves it. Skipped while the store secrets aren't set; a version
+  # the store already has is "nothing new" (packages/extension/scripts/publish-chrome.mjs).
+  chrome-web-store:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace @slopify/extension
+      - run: node packages/extension/scripts/publish-chrome.mjs
+        env:
+          CWS_SERVICE_ACCOUNT_JSON: ${{ secrets.CWS_SERVICE_ACCOUNT_JSON }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+
   # Each architecture builds on its own native runner, side by side, and pushes by digest; the
   # merge job below joins them under the version and latest tags. Under QEMU the arm64 half
   # alone took most of the release's time. The images build beside the npm publish; nothing is

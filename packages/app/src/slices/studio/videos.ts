@@ -4,6 +4,9 @@ import type { DatabaseSync } from "node:sqlite";
 // (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
 
 export type AbState = "none" | "waiting" | "started" | "failed";
+export type TaskState = "none" | "waiting" | "done" | "failed";
+const taskState = (value: unknown): TaskState =>
+  value === "waiting" || value === "done" || value === "failed" ? value : "none";
 
 export interface YoutubeVideo {
   readonly projectId: string;
@@ -14,6 +17,12 @@ export interface YoutubeVideo {
   // said it was scheduled or published, or its link was pasted.
   readonly uploadState: "filled" | "done";
   readonly abState: AbState;
+  // The Details page touches after a confirmed upload (a short's related video, the long
+  // video's end screen and captions), and the pinned comment once it is public.
+  readonly finishState: TaskState;
+  readonly finishMessage: string | null;
+  readonly commentState: TaskState;
+  readonly commentMessage: string | null;
   // Why it failed, or what the extension said when it started.
   readonly abMessage: string | null;
   readonly abAt: string | null;
@@ -45,6 +54,10 @@ function rowOf(row: Record<string, unknown>): YoutubeVideo {
     recordedAt: String(row.recorded_at),
     uploadState: row.upload_state === "filled" ? "filled" : "done",
     abState: String(row.ab_state) as AbState,
+    finishState: taskState(row.finish_state),
+    finishMessage: typeof row.finish_message === "string" ? row.finish_message : null,
+    commentState: taskState(row.comment_state),
+    commentMessage: typeof row.comment_message === "string" ? row.comment_message : null,
     abMessage: typeof row.ab_message === "string" ? row.ab_message : null,
     abAt: typeof row.ab_at === "string" ? row.ab_at : null,
   };
@@ -137,4 +150,52 @@ export function waitingAbTests(db: DatabaseSync): readonly YoutubeVideo[] {
     .prepare("SELECT * FROM youtube_videos WHERE ab_state='waiting' ORDER BY recorded_at")
     .all()
     .map(rowOf);
+}
+
+export function setTaskState(
+  db: DatabaseSync,
+  task: "finish" | "comment",
+  projectId: string,
+  short: number | null,
+  state: TaskState,
+  message: string | null,
+): void {
+  const column = task === "finish" ? "finish" : "comment";
+  db.prepare(
+    `UPDATE youtube_videos SET ${column}_state=?, ${column}_message=? WHERE project_id=? AND short=?`,
+  ).run(state, message, projectId, slot(short));
+}
+
+export function waitingTasks(
+  db: DatabaseSync,
+  task: "finish" | "comment",
+): readonly YoutubeVideo[] {
+  const column = task === "finish" ? "finish_state" : "comment_state";
+  return db
+    .prepare(`SELECT * FROM youtube_videos WHERE ${column}='waiting' ORDER BY recorded_at`)
+    .all()
+    .map(rowOf);
+}
+
+// Every video on YouTube, for the numbers the extension reads from Studio.
+export function doneVideos(db: DatabaseSync): readonly YoutubeVideo[] {
+  return db
+    .prepare("SELECT * FROM youtube_videos WHERE upload_state='done' ORDER BY recorded_at DESC")
+    .all()
+    .map(rowOf);
+}
+
+// The long video uploaded last before this project's, for its end screen ("the previous
+// episode"), when the project names none.
+export function previousLongVideo(db: DatabaseSync, projectId: string): string | undefined {
+  const own = db
+    .prepare("SELECT recorded_at FROM youtube_videos WHERE project_id=? AND short=0")
+    .get(projectId);
+  const row = db
+    .prepare(
+      `SELECT video_id FROM youtube_videos WHERE short=0 AND project_id<>? AND upload_state='done'
+       AND (? IS NULL OR recorded_at < ?) ORDER BY recorded_at DESC LIMIT 1`,
+    )
+    .get(projectId, own?.recorded_at ?? null, own?.recorded_at ?? null);
+  return typeof row?.video_id === "string" ? row.video_id : undefined;
 }

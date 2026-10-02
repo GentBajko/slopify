@@ -3,7 +3,7 @@ import type {
   ActivePack,
   FillPayload,
   PackItem,
-  WaitingAbTest,
+  WaitingTask,
   WorkerAnswer,
   WorkerRequest,
 } from "./pack.js";
@@ -115,16 +115,20 @@ async function post(path: string, body: unknown, what: string): Promise<unknown>
   return response.json();
 }
 
-// ---- A/B tests that wait for their videos to be public ----------------------------------
-// Studio tests only public videos, and a scheduled one is private until its time. Every 15
-// minutes (and when the browser starts) the worker asks Slopify for the waiting tests, checks
-// each video with YouTube's public oEmbed (which answers only for a public or unlisted video,
-// with no sign-in), and opens a public one's Details page in a background tab, where the
-// Studio page script sets the test and reports back; the tab is then closed.
+// ---- YouTube-side tasks ------------------------------------------------------------------
+// Slopify keeps what waits on YouTube's side; the worker carries it out. Every 15 minutes (and
+// when the browser starts) it asks Slopify for the waiting tasks and opens each one's page in a
+// background tab, where the page script does it and reports back; the tab is then closed:
+// - a confirmed upload's Details touches (a short's related video once the long video is public,
+//   the long video's end screen and captions);
+// - a pinned comment, once the video is public (YouTube's public oEmbed answers only for a
+//   public or unlisted video, with no sign-in);
+// - once a day, each known video's Analytics, for its numbers.
 
-const opened = "abOpened";
-// A tab opened for a test is not opened again for this long, in case its page never reports.
+const opened = "tasksOpened";
+// A tab opened for a task is not opened again for this long, in case its page never reports.
 const retryMs = 30 * 60 * 1000;
+const statsEveryMs = 24 * 60 * 60 * 1000;
 
 async function isPublic(videoId: string): Promise<boolean> {
   try {
@@ -137,39 +141,100 @@ async function isPublic(videoId: string): Promise<boolean> {
   }
 }
 
-async function waitingTests(): Promise<readonly WaitingAbTest[]> {
+async function getJson<T>(path: string, what: string): Promise<T> {
   const current = await paired();
-  const response = await call("/api/studio/ext/ab-tests", current);
-  if (!response.ok) throw new Error(await failure(response, "the waiting A/B tests"));
-  return ((await response.json()) as { tests: readonly WaitingAbTest[] }).tests;
+  const response = await call(path, current);
+  if (!response.ok) throw new Error(await failure(response, what));
+  return (await response.json()) as T;
 }
 
-async function checkAbTests(): Promise<void> {
+const query = (projectId: string, short: number | null) =>
+  `p=${encodeURIComponent(projectId)}&s=${String(short ?? 0)}`;
+
+async function checkTasks(): Promise<void> {
   if (api.tabs === undefined || (await pairing()) === undefined) return;
-  const tests = await waitingTests().catch(() => []);
+  const tasks = await getJson<{ finish: readonly WaitingTask[]; comments: readonly WaitingTask[] }>(
+    "/api/studio/ext/tasks",
+    "the waiting tasks",
+  ).catch(() => ({ finish: [], comments: [] }));
   const stored = await api.storage.local.get([opened]);
   const times = (stored[opened] ?? {}) as Record<string, number>;
   const now = Date.now();
-  for (const test of tests) {
-    if (now - (times[test.videoId] ?? 0) < retryMs) continue;
-    if (!(await isPublic(test.videoId))) continue;
-    times[test.videoId] = now;
+  const open = async (key: string, url: string) => {
+    if (now - (times[key] ?? 0) < retryMs) return;
+    times[key] = now;
     await api.storage.local.set({ [opened]: times });
-    await api.tabs.create({
-      url: `https://studio.youtube.com/video/${test.videoId}/edit#slopify-ab`,
-      active: false,
-    });
+    await api.tabs?.create({ url, active: false });
+  };
+  for (const task of tasks.finish) {
+    // A short's related video can only be a public video.
+    if (task.item.relatedVideoId !== undefined && !(await isPublic(task.item.relatedVideoId)))
+      continue;
+    await open(
+      `finish:${task.videoId}`,
+      `https://studio.youtube.com/video/${task.videoId}/edit#slopify-finish&${query(task.projectId, task.short)}`,
+    );
   }
+  for (const task of tasks.comments) {
+    if (!(await isPublic(task.videoId))) continue;
+    await open(
+      `comment:${task.videoId}`,
+      `https://www.youtube.com/watch?v=${task.videoId}#slopify-comment&${query(task.projectId, task.short)}`,
+    );
+  }
+  await sweepStats();
 }
 
-// The Details page asks for its test: the item and its thumbnails' bytes.
-async function abTest(videoId: string): Promise<FillPayload> {
+// Once a day: each known video's Analytics, one tab after another (the Reach tab, then the page
+// moves itself to Engagement, then reports and the worker opens the next).
+const statsKey = "statsSweep";
+interface StatsSweep {
+  readonly at: number;
+  readonly left: readonly { projectId: string; short: number | null; videoId: string }[];
+}
+
+async function sweepStats(force = false): Promise<void> {
+  const stored = await api.storage.local.get([statsKey]);
+  const sweep = stored[statsKey] as StatsSweep | undefined;
+  if (!force && sweep !== undefined && Date.now() - sweep.at < statsEveryMs) return;
+  const { videos } = await getJson<{
+    videos: readonly { projectId: string; short: number | null; videoId: string }[];
+  }>("/api/studio/ext/known-videos", "the videos on YouTube").catch(() => ({ videos: [] }));
+  await api.storage.local.set({
+    [statsKey]: { at: Date.now(), left: videos } satisfies StatsSweep,
+  });
+  await nextStats();
+}
+
+async function nextStats(): Promise<void> {
+  const stored = await api.storage.local.get([statsKey]);
+  const sweep = stored[statsKey] as StatsSweep | undefined;
+  const next = sweep?.left[0];
+  if (sweep === undefined || next === undefined) return;
+  await api.storage.local.set({ [statsKey]: { ...sweep, left: sweep.left.slice(1) } });
+  await api.tabs?.create({
+    url: `https://studio.youtube.com/video/${next.videoId}/analytics/tab-reach_viewers/period-default#slopify-stats=1&${query(next.projectId, next.short)}`,
+    active: false,
+  });
+}
+
+// A page opened for one upload asks for it: the item, its thumbnails' and captions' bytes.
+async function itemOf(projectId: string, short: number | null): Promise<FillPayload> {
   const current = await paired();
-  const test = (await waitingTests()).find((one) => one.videoId === videoId);
-  if (test === undefined)
-    throw new Error("This video's A/B test is no longer waiting in Slopify, so nothing was set.");
-  const thumbnails = await thumbnailsOf(current, test.projectId, test.item);
-  return { projectId: test.projectId, item: test.item, thumbnails };
+  const pack = await getJson<{ items: readonly PackItem[] }>(
+    `/api/studio/ext/packs/${encodeURIComponent(projectId)}`,
+    "the upload",
+  );
+  const item = pack.items.find((one) => (one.short ?? null) === short);
+  if (item === undefined) throw new Error("That upload isn't in the project any more.");
+  const thumbnails = await thumbnailsOf(current, projectId, item);
+  let captions: FillPayload["captions"];
+  if (item.captions !== undefined) {
+    const got = await call(`/api/studio/ext/files/${projectId}/${item.captions.asset}`, current);
+    if (got.ok)
+      captions = { filename: item.captions.filename, base64: base64(await got.arrayBuffer()) };
+  }
+  return { projectId, item, thumbnails, ...(captions === undefined ? {} : { captions }) };
 }
 
 // Tells Slopify the page filled this item, so it leaves the queue; answers how many still wait.
@@ -239,7 +304,58 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
           "the finished upload",
         ),
       };
-    if (request.type === "ab-test") return { ok: true, value: await abTest(request.videoId) };
+    if (request.type === "item")
+      return { ok: true, value: await itemOf(request.projectId, request.short) };
+    if (request.type === "upload-all") {
+      const { url, count } = (await post(
+        "/api/studio/ext/upload-all",
+        { projectId: request.projectId },
+        "the shorts",
+      )) as { url: string; count: number };
+      // The upload dialogs take them one after another until they are done.
+      await api.storage.local.set({ uploadAllUntil: Date.now() + 3 * 60 * 60 * 1000 });
+      await api.tabs?.create({ url, active: true });
+      return { ok: true, value: count };
+    }
+    if (request.type === "task-result") {
+      await post(
+        "/api/studio/ext/task-result",
+        {
+          task: request.task,
+          projectId: request.projectId,
+          short: request.short,
+          ok: request.ok,
+          message: request.message,
+        },
+        "the task's result",
+      );
+      return { ok: true, value: true };
+    }
+    if (request.type === "stats") {
+      const m = request.metrics;
+      await post(
+        "/api/studio/ext/stats",
+        {
+          projectId: request.projectId,
+          short: request.short,
+          videoId: request.videoId,
+          ...(m.VIDEO_THUMBNAIL_IMPRESSIONS === undefined
+            ? {}
+            : { impressions: m.VIDEO_THUMBNAIL_IMPRESSIONS }),
+          ...(m.VIDEO_THUMBNAIL_IMPRESSIONS_VTR === undefined
+            ? {}
+            : { ctr: m.VIDEO_THUMBNAIL_IMPRESSIONS_VTR }),
+          ...(m.EXTERNAL_VIEWS === undefined ? {} : { views: m.EXTERNAL_VIEWS }),
+          ...(m.AVERAGE_WATCH_TIME === undefined
+            ? {}
+            : { averageViewSeconds: m.AVERAGE_WATCH_TIME }),
+          ...(m.EXTERNAL_WATCH_TIME === undefined ? {} : { watchHours: m.EXTERNAL_WATCH_TIME }),
+          ...(request.abVariants === undefined ? {} : { abVariants: request.abVariants }),
+        },
+        "the video's numbers",
+      );
+      return { ok: true, value: true };
+    }
     if (request.type === "backfill")
       return {
         ok: true,
@@ -260,19 +376,6 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
       await api.tabs?.create({ url, active: true });
       return { ok: true, value: url };
     }
-    if (request.type === "ab-result") {
-      await post(
-        "/api/studio/ext/ab-tests/result",
-        {
-          projectId: request.projectId,
-          short: request.short,
-          ok: request.ok,
-          message: request.message,
-        },
-        "the A/B test's result",
-      );
-      return { ok: true, value: true };
-    }
     return { ok: true, value: await payload() };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
@@ -285,7 +388,12 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     respond(reply);
     // The test's tab did its work: close it.
     const tab = sender.tab?.id;
-    if (request.type === "ab-result" && tab !== undefined) void api.tabs?.remove(tab);
+    if (tab === undefined) return;
+    if (request.type === "task-result") void api.tabs?.remove(tab);
+    if (request.type === "stats" && request.last) {
+      void api.tabs?.remove(tab);
+      void nextStats();
+    }
   });
   // The answer comes later.
   return true;
@@ -297,7 +405,7 @@ api.action?.onClicked.addListener(() => {
 });
 
 api.alarms?.onAlarm.addListener((alarm) => {
-  if (alarm.name === "slopify-ab-tests") void checkAbTests();
+  if (alarm.name === "slopify-ab-tests") void checkTasks();
 });
 const schedule = (): void => {
   api.alarms?.create("slopify-ab-tests", { periodInMinutes: 15, delayInMinutes: 1 });
@@ -305,5 +413,5 @@ const schedule = (): void => {
 api.runtime.onInstalled.addListener(schedule);
 api.runtime.onStartup.addListener(() => {
   schedule();
-  void checkAbTests();
+  void checkTasks();
 });

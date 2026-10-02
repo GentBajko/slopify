@@ -17,7 +17,8 @@ import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
 import { videoEditOf } from "../video/edit-settings.js";
 import { usesVoices } from "../voices/model.js";
-import { effectiveDescription } from "../youtube/edits-repo.js";
+import { effectiveDescription, readDescriptionEdits } from "../youtube/edits-repo.js";
+import { linkKey, previousVideoLink } from "../youtube/placeholders.js";
 import { aiDisclosureOf } from "./disclosure.js";
 import {
   type PackFile,
@@ -27,8 +28,9 @@ import {
   type UploadPack,
 } from "./model.js";
 import { picked, readUploadPick } from "./pick.js";
+import { readPlan, scheduleOf } from "./plan.js";
 import { projectPlaylists, readRealFootage } from "./settings.js";
-import { videoOf } from "./videos.js";
+import { previousLongVideo, videoIdOf, videoOf } from "./videos.js";
 
 export interface PackDeps {
   readonly db: DatabaseSync;
@@ -120,6 +122,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
           description: written,
           tags: writtenTags ?? "",
           titles: text(outputs.find((output) => output.role === "youtube_titles")),
+          pinnedComment: text(outputs.find((output) => output.role === "youtube_pinned_comment")),
           // The last chapter is checked against the video's own length when it is known.
           durationSeconds:
             video?.durationMs === null || video?.durationMs === undefined
@@ -167,6 +170,23 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   ];
   const allThumbnails = thumbnails.map(file);
   const pick = readUploadPick(deps.db, projectId);
+  // When each upload goes out, from the posting plan's slot (`plan.ts`), once the project has
+  // one: the long video at the slot, each short at its own time after it.
+  const plan = readPlan(deps.db);
+  const slotRow = deps.db
+    .prepare("SELECT row_name, long_at FROM upload_slots WHERE project_id=?")
+    .get(projectId);
+  const schedule =
+    slotRow === undefined
+      ? undefined
+      : scheduleOf(plan, { row: String(slotRow.row_name), longAt: String(slotRow.long_at) });
+  // The long video's captions, its end screen's video (the project's Previous video, else the
+  // long video uploaded before it) and the comment to pin; a short's related video is the
+  // long video, once it is on YouTube.
+  const captions = outputs.find((output) => output.role === "subtitles_srt");
+  const previous = edited === undefined ? undefined : readPreviousVideo(deps.db, projectId);
+  const endScreenVideoId = previous ?? previousLongVideo(deps.db, projectId);
+  const pinnedComment = edited?.pinnedComment.trim() ?? "";
   const arranged = picked(allTitles, allThumbnails, pick);
   const items: PackItem[] = [
     {
@@ -188,6 +208,10 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       playlists,
       playlist,
       ...(edited?.chapterNotice === undefined ? {} : { chapterNotice: edited.chapterNotice }),
+      ...(schedule === undefined ? {} : { scheduleAt: schedule.longAt }),
+      ...(captions === undefined ? {} : { captions: file(captions) }),
+      ...(endScreenVideoId === undefined ? {} : { endScreenVideoId }),
+      ...(pinnedComment === "" ? {} : { pinnedComment }),
     },
   ];
 
@@ -234,6 +258,10 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       alteredContent: disclosure("short"),
       playlists,
       playlist,
+      ...(schedule?.shortsAt[clip.number - 1] === undefined
+        ? {}
+        : { scheduleAt: schedule.shortsAt[clip.number - 1] }),
+      ...(longVideo?.uploadState === "done" ? { relatedVideoId: longVideo.videoId } : {}),
     });
   }
   return {
@@ -242,6 +270,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       projectId,
       projectTitle: project.title,
       items,
+      ...(schedule === undefined ? {} : { schedule }),
       missing,
       playlistChoices,
       ...(uploadedClips > 0 ? { footage: { clips: uploadedClips, real: realFootage } } : {}),
@@ -302,4 +331,12 @@ function available(deps: PackDeps, projectId: string, output: Output): boolean {
       throwIfNoEntry: false,
     })?.isFile() === true
   );
+}
+
+// The project's Previous video link (YouTube section), as a video id.
+function readPreviousVideo(db: PackDeps["db"], projectId: string): string | undefined {
+  const link = readDescriptionEdits(db, projectId).links.find(
+    (one) => linkKey(one.name) === linkKey(previousVideoLink),
+  )?.url;
+  return link === undefined ? undefined : videoIdOf(link);
 }

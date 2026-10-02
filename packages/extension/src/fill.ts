@@ -63,7 +63,7 @@ export interface FieldResult {
 }
 
 export interface FillOptions {
-  // The A/B test starts later, once the video is public (`startAbTest`): the upload gets only
+  // The A/B test is set up later, on its own (`openAbTest`): the upload gets only
   // the first thumbnail, in its slot.
   readonly abTestLater?: boolean;
   // Waits between looks for a field that appears after a click; a test passes one that
@@ -338,7 +338,7 @@ async function fillAbTest(
   title: string,
   waits: Waits,
   // On the upload, a test that can't be filled leaves thumbnail 1 in the single slot; on a
-  // published video (`startAbTest`) nothing is touched.
+  // published video (`openAbTest`) nothing is touched.
   slotFallback: boolean,
 ): Promise<FieldResult> {
   const testsPictures = files.length > 1;
@@ -430,64 +430,32 @@ async function fillAbTest(
   };
 }
 
-// A published video's A/B test, on its Details page in a tab the extension opened for it:
-// fills A/B Testing as on the upload, then presses Set test, and Save when Studio then asks for
-// it. Only this path presses them, and only for a test the person queued in Slopify. When
-// anything isn't found it presses nothing and says why.
-export async function startAbTest(
+// A/B test, asked for in Slopify or the extension popup: on the video's Details page, sets up
+// A/B Testing for the titles, the thumbnails or both and leaves it open. The person checks it
+// and presses Set test, then Save; the extension presses neither. When anything isn't found it
+// says what to do by hand.
+export type AbMode = "titles" | "thumbnails" | "both";
+
+export async function openAbTest(
   root: Document,
   item: PackItem,
   thumbnails: readonly File[],
+  mode: AbMode,
   options: FillOptions = {},
 ): Promise<FieldResult> {
   const waits = waitsFor(root, options);
-  const filled = await fillAbTest(root, thumbnails, item.titles ?? [], item.title, waits, false);
-  if (!filled.ok) return filled;
-  const dialog = findShown(root, abTestDialog);
-  const setTest =
-    dialog === undefined
-      ? undefined
-      : [...dialog.querySelectorAll("ytcp-button, button")].find(
-          (one) => (one.textContent ?? "").trim().toLowerCase() === "set test",
-        );
-  if (setTest === undefined)
+  const titles = mode === "thumbnails" ? [] : (item.titles ?? []);
+  const pictures = mode === "titles" ? [] : thumbnails;
+  if (titles.length === 0 && pictures.length < 2)
     return {
-      field: filled.field,
-      ok: false,
-      message: `${filled.message} Slopify couldn't find Set test, so press it yourself.`,
-    };
-  const settled = waits.until(
-    () => (setTest.closest("[disabled], [aria-disabled=true]") === null ? true : null),
-    waits.abDialogMs,
-  );
-  if ((await settled) === null)
-    return {
-      field: filled.field,
+      field: "titles",
       ok: false,
       message:
-        "Studio's Set test stayed greyed out after the titles and thumbnails went in, so the test wasn't set. Open A/B Testing on the video and check what Studio asks for.",
+        mode === "titles"
+          ? "This video has no other titles to test. Write some in Slopify (Video → YouTube → Other titles), then try again."
+          : "This video has only one thumbnail, and A/B Testing needs two or three. Make more in Slopify (Images → Thumbnail), then try again.",
     };
-  pressAnyway(setTest);
-  const closed = await waits.until(
-    () => (findShown(root, abTestDialog) === undefined ? true : null),
-    waits.rowsMs,
-  );
-  if (closed === null)
-    return {
-      field: filled.field,
-      ok: false,
-      message:
-        "Slopify pressed Set test, but A/B Testing stayed open. Check the video's A/B Testing in Studio.",
-    };
-  // A Details page keeps edits until Save; press it only when Studio enabled it for the test.
-  const save = root.querySelector("ytcp-button#save");
-  if (
-    save !== null &&
-    !save.hasAttribute("disabled") &&
-    save.getAttribute("aria-disabled") !== "true"
-  )
-    pressAnyway(save);
-  return { field: filled.field, ok: true, message: "A/B test set." };
+  return fillAbTest(root, pictures, titles, item.title, waits, false);
 }
 
 // Opens the Playlists list, waits for its rows (an iron-list, which renders them only once the
@@ -617,7 +585,13 @@ export function press(element: Element): void {
   pressAnyway(element);
 }
 
-// `press` without the refusal: only `startAbTest` uses it, for Set test and Save.
+// `press` without the refusal, for the Details-page touches after an upload (`finish.ts`): the
+// end screen editor's Save and the Details page's Save, which save what the extension just set
+// (a related video, an end screen, captions) and nothing else. Never Set test or Publish.
+export function pressToSave(element: Element): void {
+  pressAnyway(element);
+}
+
 function pressAnyway(element: Element): void {
   const view = viewOf(element.ownerDocument);
   const box = element.getBoundingClientRect();

@@ -21,7 +21,7 @@ describe("the Library layout", () => {
       within(tabs)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Prompts", "Intros & Outros", "Templates", "Documents", "Aliases"]);
+    ).toEqual(["Prompts", "Intros & Outros", "Templates", "Documents", "Aliases", "A/B results"]);
   });
 
   it("registers the Library's frequent actions in the command palette", async () => {

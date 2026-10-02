@@ -135,7 +135,7 @@ it("keeps the title's keywords in a scheduled draft, so its project keeps the pa
     overlapPolicy: "skip",
     spendLimitCents: null,
     topicKeyword: "Topic",
-    items: [{ title: "Tiamat", values: {} }],
+    items: [{ title: "Lighthouse", values: {} }],
   });
   if (!created.ok) throw new Error(JSON.stringify(created));
   const schedule = scheduleById(h.deps.db, scheduleId);
@@ -143,6 +143,6 @@ it("keeps the title's keywords in a scheduled draft, so its project keeps the pa
   const fresh = scheduledDocument(deps, schedule, schedule.items[0]);
   if (fresh === undefined) throw new Error("Expected the draft.");
   expect(fresh.form.title).toBe("{{Topic}} | Lore");
-  expect(fresh.form.values.Topic).toBe("Tiamat");
-  expect(scheduledTitle(fresh)).toBe("Tiamat | Lore");
+  expect(fresh.form.values.Topic).toBe("Lighthouse");
+  expect(scheduledTitle(fresh)).toBe("Lighthouse | Lore");
 });

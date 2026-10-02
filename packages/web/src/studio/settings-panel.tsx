@@ -11,17 +11,24 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { ExtensionInstall } from "./extension-install";
+import { PostingPlanSettings } from "./posting-plan";
 
 export const studioSettingsKey = ["studio", "settings"] as const;
 
 // Settings → YouTube Studio: the playlists each channel's upload packs offer, the pairing token
 // the Slopify Studio browser extension needs before it may read a pack, and how to install it.
 export function StudioSettings() {
+  const { api } = useApp();
+  const settings = useQuery({
+    queryKey: studioSettingsKey,
+    queryFn: () => readStudioSettings(api),
+  });
   return (
     <div>
       <SectionHead title="Upload pack and extension" info="settings.studio.extension" />
       <div className="flex flex-col gap-8">
         <Playlists />
+        <PostingPlanSettings autoComment={settings.data?.autoComment ?? false} />
         <Pairing />
         <section aria-label="Install the Studio extension">
           <SectionHead as="h3" title="Install the Studio extension" className="mb-3" />

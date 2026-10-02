@@ -5,10 +5,10 @@ import {
   click,
   type FieldResult,
   fillStudio,
+  openAbTest,
   press,
   RefusedClick,
   setEditableText,
-  startAbTest,
 } from "../src/fill.js";
 import { type PackItem, packText } from "../src/pack.js";
 import * as selectors from "../src/selectors.js";
@@ -384,32 +384,33 @@ describe("filling Studio's upload dialog", () => {
     );
   });
 
-  it("on a published video, sets the A/B test and presses Set test, nothing else", async () => {
+  it("sets up A/B Testing on a published video for the chosen part, and presses nothing", async () => {
     const titled = { ...item, titles: ["Fox Flight | Tales", "The Cliff Fox | Tales"] };
-    const setTest = [
-      ...document.querySelectorAll("ytcp-creator-experiment-create-dialog ytcp-button"),
-    ].find((one) => one.textContent?.trim() === "Set test");
-    // Studio closes A/B Testing once the test is set.
-    setTest?.addEventListener("click", () => {
-      const dialog = paperDialog("ytcp-creator-experiment-create-dialog");
-      if (dialog !== null) dialog.style.display = "none";
-    });
-    const result = await startAbTest(document, titled, [png("one.png"), png("two.png")], noWait);
-    expect(result).toMatchObject({ ok: true, message: "A/B test set." });
-    expect(pressed).toEqual(["Set test"]);
-    expect(
-      abInputs()
-        .map((input) => input.files?.[0]?.name)
-        .slice(0, 2),
-    ).toEqual(["one.png", "two.png"]);
+    const both = await openAbTest(
+      document,
+      titled,
+      [png("one.png"), png("two.png")],
+      "both",
+      noWait,
+    );
+    expect(both.message).toContain("A/B Testing (Title and thumbnail)");
+    expect(pressed).toEqual([]);
+    expect(shown("ytcp-creator-experiment-create-dialog")).toBe(true);
   });
 
-  it("on a published video, presses nothing when A/B Testing can't be filled", async () => {
-    document.querySelector("ytcp-creator-experiment-create-dialog")?.remove();
-    const result = await startAbTest(document, { ...item, titles: ["Other"] }, [], noWait);
-    expect(result.ok).toBe(false);
+  it("tests only the titles when asked, and says when there is nothing to test", async () => {
+    const titled = { ...item, titles: ["Fox Flight | Tales"] };
+    const titles = await openAbTest(
+      document,
+      titled,
+      [png("one.png"), png("two.png")],
+      "titles",
+      noWait,
+    );
+    expect(titles.message).toContain("A/B Testing (Title only)");
+    const none = await openAbTest(document, item, [png("one.png")], "thumbnails", noWait);
+    expect(none.ok).toBe(false);
     expect(pressed).toEqual([]);
-    expect(mainThumbnail()?.files?.length ?? 0).toBe(0);
   });
 
   it("leaves the A/B test for later on the upload: only the first thumbnail goes in", async () => {

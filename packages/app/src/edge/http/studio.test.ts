@@ -732,38 +732,45 @@ describe("YouTube videos and their A/B tests", () => {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
-  it("holds an upload's A/B test until the extension says its video went public and started it", async () => {
+  it("keeps an upload's link once Studio confirms it, and queues its Details touches", async () => {
     const h = harness();
     finished(h.output);
+    h.output("subtitles_srt", "captions.srt", "1\n00:00:00,000 --> 00:00:02,000\nA fox.\n");
     const token = await paired(h);
-    // The upload dialog showed the new video's link; nothing waits until Studio confirms it.
+    // The upload dialog showed the new video's link: filled, not on YouTube yet.
     const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
     await h.call("/ext/video", ext(token, upload));
-    expect(await (await h.call("/ext/ab-tests", ext(token))).json()).toEqual({ tests: [] });
     expect(await (await h.call("/videos/p1")).json()).toMatchObject({
-      videos: [{ uploadState: "filled" }],
+      videos: [{ uploadState: "filled", finishState: "none" }],
     });
-    // "Video scheduled": three thumbnails, so a test waits.
-    const confirmed = await h.call("/ext/video/done", ext(token, upload));
-    expect(await confirmed.json()).toEqual({ abTest: true });
-    const waiting = (await (await h.call("/ext/ab-tests", ext(token))).json()) as {
-      tests: { videoId: string; item: { thumbnails: unknown[] } }[];
+    // "Video scheduled": on YouTube, and its captions wait for the Details page.
+    expect(await (await h.call("/ext/video/done", ext(token, upload))).json()).toEqual({
+      confirmed: true,
+    });
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ uploadState: "done", finishState: "waiting" }],
+    });
+    const tasks = (await (await h.call("/ext/tasks", ext(token))).json()) as {
+      finish: { videoId: string }[];
     };
-    expect(waiting.tests.map((test) => test.videoId)).toEqual(["lKS3FAjekpI"]);
-    expect(waiting.tests[0]?.item.thumbnails).toHaveLength(3);
+    expect(tasks.finish.map((one) => one.videoId)).toEqual(["lKS3FAjekpI"]);
     await h.call(
-      "/ext/ab-tests/result",
-      ext(token, { projectId: "p1", short: null, ok: true, message: "Test set." }),
+      "/ext/task-result",
+      ext(token, {
+        task: "finish",
+        projectId: "p1",
+        short: null,
+        ok: true,
+        message: "Captions uploaded.",
+      }),
     );
-    expect(await (await h.call("/ext/ab-tests", ext(token))).json()).toEqual({ tests: [] });
     expect(await (await h.call("/videos/p1")).json()).toMatchObject({
-      videos: [{ videoId: "lKS3FAjekpI", abState: "started", abMessage: "Test set." }],
+      videos: [{ finishState: "done", finishMessage: "Captions uploaded." }],
     });
-    // Without the pairing token nothing is answered.
-    expect((await h.call("/ext/ab-tests")).status).toBe(401);
+    expect((await h.call("/ext/tasks")).status).toBe(401);
   });
 
-  it("takes a pasted link and starts an A/B test after the fact", async () => {
+  it("takes a pasted link for an upload made by hand", async () => {
     const h = harness();
     finished(h.output);
     const put = (link: string) =>
@@ -773,13 +780,10 @@ describe("YouTube videos and their A/B tests", () => {
         body: JSON.stringify({ short: null, link }),
       });
     expect((await put("not a link")).status).toBe(400);
-    expect((await put("https://youtu.be/6tRcYUoxyQo")).status).toBe(200);
-    const started = await h.call("/videos/p1/ab-test", json({ short: null, start: true }));
-    expect(await started.json()).toMatchObject({
-      videos: [{ videoId: "6tRcYUoxyQo", abState: "waiting" }],
+    expect(await (await put("https://youtu.be/6tRcYUoxyQo")).json()).toMatchObject({
+      videos: [{ videoId: "6tRcYUoxyQo", uploadState: "done" }],
     });
-    // A short without its video recorded can't be tested yet.
-    expect((await h.call("/videos/p1/ab-test", json({ short: 1, start: true }))).status).toBe(409);
+    expect(await (await put("")).json()).toEqual({ videos: [] });
   });
 });
 
@@ -881,4 +885,84 @@ it("fills in links from Studio's Content list by title, never over a known one",
   expect(after.items.find((item) => item.kind === "short")?.description).toContain(
     "Watch the full video: https://youtu.be/aaaaaaaaaaa",
   );
+});
+
+describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
+  const extHeaders = (token: string) => ({
+    authorization: `Bearer ${token}`,
+    origin: extension,
+    "content-type": "application/json",
+  });
+
+  it("gives a finished project the plan's next free slot, with its shorts' times after it", async () => {
+    const h = harness();
+    finished(h.output);
+    const pack = (await (await h.call("/packs/p1")).json()) as {
+      schedule?: { row: string; longAt: string; shortsAt: string[] };
+      slotChoices: { row: string; longAt: string }[];
+      items: { kind: string; scheduleAt?: string }[];
+    };
+    expect(pack.schedule?.row).toBeDefined();
+    expect(pack.items[0]?.scheduleAt).toBe(pack.schedule?.longAt);
+    // The shorts go out after their video.
+    for (const at of pack.schedule?.shortsAt ?? [])
+      expect(Date.parse(at)).toBeGreaterThan(Date.parse(pack.schedule?.longAt ?? ""));
+    // The taken slot isn't offered again; another one can be chosen.
+    expect(pack.slotChoices.some((one) => one.longAt === pack.schedule?.longAt)).toBe(false);
+    const other = pack.slotChoices[0];
+    if (other === undefined) throw new Error("no free slot");
+    const moved = await h.call("/packs/p1/slot", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: other }),
+    });
+    expect(((await moved.json()) as { schedule?: { longAt: string } }).schedule?.longAt).toBe(
+      other.longAt,
+    );
+  });
+
+  it("queues every short for Upload all Shorts, short 1 first", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const all = await h.call("/ext/upload-all", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ projectId: "p1" }),
+    });
+    const body = (await all.json()) as { count: number };
+    expect(body.count).toBeGreaterThan(0);
+    expect(await (await h.call("/ext/pack", { headers: extHeaders(token) })).json()).toMatchObject({
+      item: { kind: "short", short: 1 },
+    });
+  });
+
+  it("keeps Studio's numbers and an A/B result for the project and the Library", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    await h.call("/ext/stats", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({
+        projectId: "p1",
+        short: null,
+        videoId: "lKS3FAjekpI",
+        impressions: 493,
+        ctr: 2.2,
+        views: 66,
+        averageViewSeconds: 1939,
+        abVariants: [
+          { title: "A", thumbnail: null, share: 60, winner: true },
+          { title: "B", thumbnail: null, share: 40, winner: false },
+        ],
+      }),
+    });
+    expect(await (await h.call("/stats/p1")).json()).toMatchObject({
+      stats: [{ views: 66, ctr: 2.2, impressions: 493, averageViewSeconds: 1939 }],
+    });
+    expect(await (await h.call("/ab-results")).json()).toMatchObject({
+      results: [{ projectId: "p1", variants: [{ title: "A", winner: true }, { title: "B" }] }],
+    });
+  });
 });

@@ -355,8 +355,6 @@ function ProjectWorkspace({
           },
         ]
       : []),
-    ...(shortsShown ? [{ id: "shorts" as const, label: "Shorts" }] : []),
-    ...(youtubeShown ? [{ id: "youtube" as const, label: "YouTube" }] : []),
     ...(on(documentStage)
       ? [{ id: "document" as const, label: "PDF", tone: toneOf([documentStage]) }]
       : []),
@@ -399,10 +397,13 @@ function ProjectWorkspace({
       : situation === "done" && outputs.some((output) => output.role === "youtube_description")
         ? "youtube"
         : sectionForStage(suggestedStage(stages));
+  // Shorts and YouTube are parts of the Video section: a link or action naming them opens it.
+  const folded = (id: SectionId | undefined): SectionId | undefined =>
+    id === "shorts" || id === "youtube" ? "video" : id;
   const selected: SectionId =
-    chosen !== undefined && all.some((item) => item.id === chosen)
-      ? chosen
-      : (all.find((item) => item.id === suggested)?.id ?? railItems[0]?.id ?? "cost");
+    chosen !== undefined && all.some((item) => item.id === folded(chosen))
+      ? (folded(chosen) ?? "video")
+      : (all.find((item) => item.id === folded(suggested))?.id ?? railItems[0]?.id ?? "cost");
   const busyFor = (...kinds: readonly (Stage | undefined)[]): boolean =>
     revisionId === null
       ? summary.status === "running" || summary.status === "paused" || inFlight || actions.pending
@@ -617,44 +618,27 @@ function ProjectWorkspace({
                     stages={[videoStage].filter(isStage)}
                     active={selected === "video"}
                     {...sectionProps}
+                    // Prepare upload is the next action once the video is done; before that (an
+                    // outdated output waiting, say) it is here, where the upload is prepared.
+                    {...(uploadReady && next.next?.action?.intent.kind !== "prepare-upload"
+                      ? {
+                          extra: (
+                            <Button variant="secondary" onClick={() => setUploadOpen(true)}>
+                              Prepare upload
+                            </Button>
+                          ),
+                        }
+                      : {})}
                   >
                     {body(videoStage)}
-                  </StageSection>
-                  {videoStage === undefined ? null : (
-                    <StageSection
-                      id="shorts"
-                      title="Shorts"
-                      stages={[]}
-                      active={selected === "shorts"}
-                      {...sectionProps}
-                      meta="Vertical clips picked from the video, each with its title and hashtags"
-                    >
+                    {/* The video's Shorts and its YouTube text, parts of this one section. */}
+                    {videoStage !== undefined && shortsShown ? (
                       <ShortsBlock stage={videoStage} project={summary} outputs={outputs} />
-                    </StageSection>
-                  )}
-                  {videoStage === undefined ? null : (
-                    <StageSection
-                      id="youtube"
-                      title="YouTube"
-                      stages={[]}
-                      active={selected === "youtube"}
-                      {...sectionProps}
-                      meta="The description, chapters, hashtags and tags, as they go into YouTube Studio"
-                      // Prepare upload is the next action once the video is done; before that (an
-                      // outdated output waiting, say) it is here, where the upload is prepared.
-                      {...(uploadReady && next.next?.action?.intent.kind !== "prepare-upload"
-                        ? {
-                            extra: (
-                              <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-                                Prepare upload
-                              </Button>
-                            ),
-                          }
-                        : {})}
-                    >
+                    ) : null}
+                    {videoStage !== undefined && youtubeShown ? (
                       <YoutubeBlock stage={videoStage} project={summary} outputs={outputs} />
-                    </StageSection>
-                  )}
+                    ) : null}
+                  </StageSection>
                   {documentStage === undefined ? null : (
                     <StageSection
                       id="document"

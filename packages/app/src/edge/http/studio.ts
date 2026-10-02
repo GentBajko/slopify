@@ -7,6 +7,7 @@ import { z } from "zod";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
+import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
 import { backfillVideos } from "../../slices/studio/backfill.js";
 import {
@@ -16,6 +17,15 @@ import {
 } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
+import {
+  assignedSlot,
+  clearSlot,
+  freeSlots,
+  postingPlanSchema,
+  readPlan,
+  setSlot,
+  writePlan,
+} from "../../slices/studio/plan.js";
 import {
   enqueueFill,
   type FillEntry,
@@ -39,15 +49,24 @@ import {
   studioRequestAllowed,
 } from "../../slices/studio/settings.js";
 import {
+  abResults,
+  abVariantSchema,
+  projectStats,
+  saveAbResult,
+  saveStats,
+} from "../../slices/studio/stats.js";
+import {
   confirmUpload,
+  doneVideos,
   forgetVideo,
   projectVideos,
   recordVideo,
-  setAbState,
+  setTaskState,
   videoIdOf,
   videoIdPattern,
   videoOf,
-  waitingAbTests,
+  waitingTasks,
+  type YoutubeVideo,
 } from "../../slices/studio/videos.js";
 import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
@@ -98,14 +117,29 @@ const extVideoBody = z.object({
   short: shortField,
   videoId: z.string().regex(videoIdPattern),
 });
-const abResultBody = z.object({
+const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
+const slotBody = z.object({
+  slot: z.object({ row: z.string().min(1).max(20), longAt: z.string().max(40) }).nullable(),
+});
+const taskResultBody = z.object({
+  task: z.enum(["finish", "comment"]),
   projectId: id,
   short: shortField,
   ok: z.boolean(),
   message: z.string().max(2000),
 });
-const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
-const abTestBody = z.object({ short: shortField, start: z.boolean() });
+const statsBody = z.object({
+  projectId: id,
+  short: shortField,
+  videoId: z.string().regex(videoIdPattern),
+  impressions: z.number().nonnegative().optional(),
+  ctr: z.number().min(0).max(100).optional(),
+  views: z.number().nonnegative().optional(),
+  averageViewSeconds: z.number().nonnegative().optional(),
+  watchHours: z.number().nonnegative().optional(),
+  abVariants: z.array(abVariantSchema).max(3).optional(),
+});
+const autoCommentKey = "studio.autoComment";
 const backfillBody = z.object({
   videos: z
     .array(z.object({ title: z.string().max(200), videoId: z.string().regex(videoIdPattern) }))
@@ -162,19 +196,21 @@ export function studioRoutes(deps: AppDeps) {
         "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
     });
 
+  // A project ready to upload takes the plan's next free slot when its upload is prepared;
+  // one whose long video is on YouTube already doesn't.
+  const planned = (projectId: string): void => {
+    if (videoOf(deps.db, projectId, null)?.uploadState === "done") return;
+    const result = uploadPack(deps, projectId);
+    if (!result.ok || result.pack.items[0]?.video == null) return;
+    assignedSlot(deps.db, readPlan(deps.db), projectId, deps.clock.now());
+  };
+  const slotChoices = () => freeSlots(deps.db, readPlan(deps.db), deps.clock.now(), 9);
   const extAllowed = (c: Context): boolean =>
     studioRequestAllowed(
       deps.db,
       bearerToken(c.req.header("authorization")),
       c.req.header("origin"),
     );
-  // An upload has an A/B test to run when it has other titles or more than one thumbnail.
-  const abTestable = (projectId: string, short: number | null): boolean => {
-    const result = uploadPack(deps, projectId);
-    const item = result.ok ? packItem(result.pack, short ?? undefined) : undefined;
-    return item !== undefined && (item.titles.length > 0 || item.thumbnails.length > 1);
-  };
-
   return (
     new Hono()
       .get("/settings", (c) => {
@@ -185,7 +221,31 @@ export function studioRoutes(deps: AppDeps) {
           playlists: readStudioPlaylists(deps.db),
           channelPlaylists: readChannelPlaylists(deps.db),
           pairing: studioPairing(deps.db),
+          autoComment: readSetting(deps.db, autoCommentKey) === "on",
         });
+      })
+      // Post and pin each video's comment once it is public (opt-in: it posts in your name).
+      .put(
+        "/settings/auto-comment",
+        zValidator("json", z.object({ on: z.boolean() }), onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          writeSetting(deps.db, autoCommentKey, c.req.valid("json").on ? "on" : "off");
+          return c.json({ autoComment: c.req.valid("json").on });
+        },
+      )
+      // The posting plan and the coming free slots.
+      .get("/plan", (c) => {
+        const plan = readPlan(deps.db);
+        return c.json({ plan, free: freeSlots(deps.db, plan, deps.clock.now(), 9) });
+      })
+      .put("/plan", zValidator("json", postingPlanSchema, onInvalid), (c) => {
+        const denied = samePage(c);
+        if (denied !== undefined) return denied;
+        writePlan(deps.db, c.req.valid("json"));
+        const plan = readPlan(deps.db);
+        return c.json({ plan, free: freeSlots(deps.db, plan, deps.clock.now(), 9) });
       })
       .put("/settings/playlists", zValidator("json", playlistsBody, onInvalid), (c) => {
         const denied = samePage(c);
@@ -217,10 +277,42 @@ export function studioRoutes(deps: AppDeps) {
         return c.json({ pairing: resetStudioPairing(deps.db) });
       })
       .get("/packs/:projectId", zValidator("param", projectParam, onInvalid), (c) => {
-        const result = uploadPack(deps, c.req.valid("param").projectId);
+        const { projectId } = c.req.valid("param");
+        planned(projectId);
+        const result = uploadPack(deps, projectId);
         if (!result.ok) return unknownProject(c);
-        return c.json(result.pack);
+        return c.json({ ...result.pack, slotChoices: slotChoices() });
       })
+      // Prepare upload's slot picker: another free slot of the plan, or none.
+      .put(
+        "/packs/:projectId/slot",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", slotBody, onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          const wanted = c.req.valid("json").slot;
+          if (wanted === null) clearSlot(deps.db, projectId);
+          else {
+            const free = slotChoices().some(
+              (one) => one.row === wanted.row && one.longAt === wanted.longAt,
+            );
+            if (!free)
+              return problem(c, {
+                status: 409,
+                title: titleOf(409),
+                detail:
+                  "That slot is taken or past. Reload Prepare upload and choose one of the slots it lists.",
+              });
+            setSlot(deps.db, projectId, wanted, deps.clock.now());
+          }
+          const result = uploadPack(deps, projectId);
+          return result.ok
+            ? c.json({ ...result.pack, slotChoices: slotChoices() })
+            : unknownProject(c);
+        },
+      )
       // Prepare upload's AI use tick: the project's uploaded clips are real footage.
       .put(
         "/packs/:projectId/real-footage",
@@ -289,6 +381,11 @@ export function studioRoutes(deps: AppDeps) {
         },
       )
       // What waits for the extension, oldest first: each new upload dialog takes the first.
+      // Studio's numbers for a project's videos, and every finished A/B test (Library).
+      .get("/stats/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
+        c.json({ stats: projectStats(deps.db, c.req.valid("param").projectId) }),
+      )
+      .get("/ab-results", (c) => c.json({ results: abResults(deps.db) }))
       // The YouTube videos a project's uploads became, and their A/B tests.
       .get("/videos/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
         c.json({ videos: projectVideos(deps.db, c.req.valid("param").projectId) }),
@@ -317,41 +414,6 @@ export function studioRoutes(deps: AppDeps) {
                 "That isn't a YouTube video link. Copy the video's link from YouTube Studio (Details → Video link, like https://youtu.be/…) and paste it again.",
             });
           recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
-          return c.json({ videos: projectVideos(deps.db, projectId) });
-        },
-      )
-      // Start A/B test (or Cancel): the extension starts it once the video is public.
-      .post(
-        "/videos/:projectId/ab-test",
-        zValidator("param", projectParam, onInvalid),
-        zValidator("json", abTestBody, onInvalid),
-        (c) => {
-          const wrong = samePage(c);
-          if (wrong !== undefined) return wrong;
-          const { projectId } = c.req.valid("param");
-          const { short, start } = c.req.valid("json");
-          if (start && !abTestable(projectId, short ?? null))
-            return problem(c, {
-              status: 409,
-              title: titleOf(409),
-              detail:
-                "There is nothing to A/B test: this upload has one thumbnail and no other titles. Make more thumbnails (Edit project → Thumbnail) or let the YouTube step write other titles, then try again.",
-            });
-          const set = setAbState(
-            deps.db,
-            projectId,
-            short ?? null,
-            start ? "waiting" : "none",
-            null,
-            deps.clock.now().toISOString(),
-          );
-          if (!set)
-            return problem(c, {
-              status: 409,
-              title: titleOf(409),
-              detail:
-                "Slopify doesn't know this upload's YouTube video yet. Paste its link (from YouTube Studio → Details → Video link) first.",
-            });
           return c.json({ videos: projectVideos(deps.db, projectId) });
         },
       )
@@ -494,6 +556,7 @@ export function studioRoutes(deps: AppDeps) {
             state === "partial" ||
             (state === "pending" && aside.has(project.id));
           if (!finished) return [];
+          planned(project.id);
           const result = uploadPack(deps, project.id);
           if (!result.ok || result.pack.items[0]?.video == null) return [];
           return [
@@ -507,6 +570,10 @@ export function studioRoutes(deps: AppDeps) {
                 ready: item.video !== null,
                 uploaded: videoOf(deps.db, project.id, item.short ?? null)?.uploadState === "done",
                 started: videoOf(deps.db, project.id, item.short ?? null)?.uploadState === "filled",
+                ...(videoOf(deps.db, project.id, item.short ?? null) === undefined
+                  ? {}
+                  : { videoId: videoOf(deps.db, project.id, item.short ?? null)?.videoId }),
+                ...(item.scheduleAt === undefined ? {} : { scheduleAt: item.scheduleAt }),
               })),
             },
           ];
@@ -526,8 +593,100 @@ export function studioRoutes(deps: AppDeps) {
             title: titleOf(404),
             detail: "That upload isn't in the project any more. Open the popup again.",
           });
+        planned(projectId);
         fillNow(deps.db, projectId, short ?? null, deps.clock.now());
         return c.json({ url: studioUploadUrl });
+      })
+      // The popup's Upload all Shorts: each short not on YouTube yet waits, in order, and the
+      // upload dialogs take them one after another.
+      .post("/ext/upload-all", zValidator("json", z.object({ projectId: id }), onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { projectId } = c.req.valid("json");
+        planned(projectId);
+        const result = uploadPack(deps, projectId);
+        if (!result.ok) return unknownProject(c);
+        const shorts = result.pack.items.filter(
+          (item) =>
+            item.kind === "short" &&
+            item.video !== null &&
+            videoOf(deps.db, projectId, item.short ?? null)?.uploadState !== "done",
+        );
+        // fillNow puts each first, so the last short goes in first and short 1 ends up first.
+        for (const item of shorts.toReversed())
+          fillNow(deps.db, projectId, item.short ?? null, deps.clock.now());
+        return c.json({ url: studioUploadUrl, count: shorts.length });
+      })
+      // One project's upload pack, for a Studio page opened for one of its uploads.
+      .get("/ext/packs/:projectId", zValidator("param", projectParam, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const result = uploadPack(deps, c.req.valid("param").projectId);
+        return result.ok ? c.json(result.pack) : unknownProject(c);
+      })
+      // What waits for the extension on YouTube's side: the Details touches after an upload,
+      // and the comments to pin once public.
+      .get("/ext/tasks", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const withItems = (videos: readonly YoutubeVideo[]) =>
+          videos.flatMap((video) => {
+            const result = uploadPack(deps, video.projectId);
+            const item = result.ok ? packItem(result.pack, video.short ?? undefined) : undefined;
+            return item === undefined
+              ? []
+              : [{ projectId: video.projectId, short: video.short, videoId: video.videoId, item }];
+          });
+        return c.json({
+          finish: withItems(waitingTasks(deps.db, "finish")),
+          comments: withItems(waitingTasks(deps.db, "comment")),
+        });
+      })
+      .post("/ext/task-result", zValidator("json", taskResultBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { task, projectId, short, ok, message } = c.req.valid("json");
+        setTaskState(deps.db, task, projectId, short ?? null, ok ? "done" : "failed", message);
+        return c.json({ ok: true });
+      })
+      // Every video on YouTube, for the numbers the extension reads from Studio.
+      .get("/ext/known-videos", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        return c.json({
+          videos: doneVideos(deps.db).map((video) => ({
+            projectId: video.projectId,
+            short: video.short,
+            videoId: video.videoId,
+            abTest: video.abState === "started",
+          })),
+        });
+      })
+      .post("/ext/stats", zValidator("json", statsBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const body = c.req.valid("json");
+        const readAt = deps.clock.now().toISOString();
+        saveStats(deps.db, {
+          projectId: body.projectId,
+          short: body.short ?? null,
+          videoId: body.videoId,
+          readAt,
+          impressions: body.impressions ?? null,
+          ctr: body.ctr ?? null,
+          views: body.views ?? null,
+          averageViewSeconds: body.averageViewSeconds ?? null,
+          watchHours: body.watchHours ?? null,
+        });
+        if (body.abVariants !== undefined && body.abVariants.length > 1)
+          saveAbResult(deps.db, {
+            projectId: body.projectId,
+            short: body.short ?? null,
+            videoId: body.videoId,
+            readAt,
+            variants: body.abVariants,
+          });
+        return c.json({ ok: true });
       })
       // The extension read the new video's id from Studio's upload dialog. It is "filled" until
       // Studio says it was scheduled or published (`/ext/video/done`): a cancelled upload isn't
@@ -555,45 +714,26 @@ export function studioRoutes(deps: AppDeps) {
         const { projectId, short, videoId } = c.req.valid("json");
         if (!confirmUpload(deps.db, projectId, short ?? null, videoId))
           recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
-        const testable = abTestable(projectId, short ?? null);
-        if (testable)
-          setAbState(
-            deps.db,
-            projectId,
-            short ?? null,
-            "waiting",
-            null,
-            deps.clock.now().toISOString(),
-          );
-        return c.json({ abTest: testable });
-      })
-      // The A/B tests waiting for their videos to be public, each with its upload item (titles
-      // and thumbnails). One whose project or item is gone is dropped.
-      .get("/ext/ab-tests", (c) => {
-        allowOrigin(c, false);
-        if (!extAllowed(c)) return refused(c);
-        const tests = waitingAbTests(deps.db).flatMap((video) => {
-          const result = uploadPack(deps, video.projectId);
-          const item = result.ok ? packItem(result.pack, video.short ?? undefined) : undefined;
-          return item === undefined
-            ? []
-            : [{ projectId: video.projectId, short: video.short, videoId: video.videoId, item }];
-        });
-        return c.json({ tests });
-      })
-      .post("/ext/ab-tests/result", zValidator("json", abResultBody, onInvalid), (c) => {
-        allowOrigin(c, false);
-        if (!extAllowed(c)) return refused(c);
-        const { projectId, short, ok, message } = c.req.valid("json");
-        setAbState(
-          deps.db,
-          projectId,
-          short ?? null,
-          ok ? "started" : "failed",
-          message,
-          deps.clock.now().toISOString(),
-        );
-        return c.json({ ok: true });
+        // The Details touches (a short's related video, the long video's end screen and
+        // captions) wait for the extension now, and the comment for the video to be public.
+        const confirmedPack = uploadPack(deps, projectId);
+        const confirmedItem = confirmedPack.ok
+          ? packItem(confirmedPack.pack, short ?? undefined)
+          : undefined;
+        if (
+          confirmedItem !== undefined &&
+          (confirmedItem.relatedVideoId !== undefined ||
+            confirmedItem.endScreenVideoId !== undefined ||
+            confirmedItem.captions !== undefined)
+        )
+          setTaskState(deps.db, "finish", projectId, short ?? null, "waiting", null);
+        if (
+          confirmedItem?.kind === "video" &&
+          confirmedItem.pinnedComment !== undefined &&
+          readSetting(deps.db, autoCommentKey) === "on"
+        )
+          setTaskState(deps.db, "comment", projectId, short ?? null, "waiting", null);
+        return c.json({ confirmed: true });
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
         allowOrigin(c, false);

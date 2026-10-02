@@ -562,7 +562,7 @@ describe("Shorts recipes, clip by clip", () => {
 describe("a shorts image prompt with the keywords Slopify fills", () => {
   const styled: RunConfig = {
     ...shorts,
-    shorts: { enabled: true, count: 2, minSeconds: 30, maxSeconds: 60, imagePrompt: "D&D Shorts" },
+    shorts: { enabled: true, count: 2, minSeconds: 30, maxSeconds: 60, imagePrompt: "Shorts" },
     rendered: {
       ...shorts.rendered,
       shortsImage: "An engraving.\n\nScene: {{Scene}}\n\nLooks: {{Appearance}}",

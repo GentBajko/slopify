@@ -198,7 +198,7 @@ describe("clicks from the landing screen to done", () => {
     await waitFor(() =>
       expect(
         within(rail)
-          .getByRole("button", { name: /^YouTube/ })
+          .getByRole("button", { name: /^Video/ })
           .getAttribute("aria-current"),
       ).toBe("true"),
     );

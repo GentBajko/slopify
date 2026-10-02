@@ -66,6 +66,17 @@ export interface PackItem {
         readonly thumbnail: number;
       }
     | undefined;
+  // When it goes out (ISO), from the posting plan's slot: the extension types it into Studio's
+  // schedule. Absent until the project has a slot.
+  readonly scheduleAt?: string | undefined;
+  // The long video's captions file (SRT), uploaded on its Details page after the upload.
+  readonly captions?: PackFile | undefined;
+  // The video its end screen points to (the previous episode), and a short's related video
+  // (the long video): set on the Details page after the upload.
+  readonly endScreenVideoId?: string | undefined;
+  readonly relatedVideoId?: string | undefined;
+  // The comment to post and pin once the video is public (Settings → YouTube Studio).
+  readonly pinnedComment?: string | undefined;
   // What was changed in the description's chapters to meet YouTube's rules
   // (`slices/youtube/chapters.ts`); absent when nothing was.
   readonly chapterNotice?: string | undefined;
@@ -80,6 +91,8 @@ export interface UploadPack {
   // The video's uploaded clips and whether they are marked as real footage (the AI use step's
   // tick). Absent when the project has none.
   readonly footage?: { readonly clips: number; readonly real: boolean } | undefined;
+  // The posting plan's slot (`plan.ts`) and each upload's time, once the project has one.
+  readonly schedule?: import("./plan.js").Schedule | undefined;
   // The channel's playlists, each ticked as this project's uploads go into it; Prepare upload
   // changes the ticks for this project.
   readonly playlistChoices: readonly { readonly name: string; readonly chosen: boolean }[];
@@ -101,6 +114,8 @@ export const studioSteps = [
   "audience",
   "altered",
   "tags",
+  // Studio's Visibility step: when it goes out, from the posting plan.
+  "schedule",
 ] as const;
 export type StudioStep = (typeof studioSteps)[number];
 

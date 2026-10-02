@@ -101,7 +101,7 @@ it("adds the scene after the first paragraph of a prompt without the keyword", (
       "imagePrompts.0": "An engraving about {{Topic}}.\n\nComposition: wide shot.",
     },
   };
-  const c: RunConfig = { ...scened, values: { Topic: "Tiamat" } };
+  const c: RunConfig = { ...scened, values: { Topic: "Lighthouse" } };
   const scenes = find(plan([], undefined, plain, c), "images:scenes");
   const recipes = plan(
     [done("images:scenes", scenes.fingerprint, { scenes: ["A gate.", "A sea."] })],
@@ -111,7 +111,7 @@ it("adds the scene after the first paragraph of a prompt without the keyword", (
   );
   const input = find(recipes, "image:hill").input;
   expect(input.kind === "image" ? input.prompt : "").toBe(
-    "An engraving about Tiamat.\n\nScene: A sea.\n\nComposition: wide shot.",
+    "An engraving about Lighthouse.\n\nScene: A sea.\n\nComposition: wide shot.",
   );
 });
 
