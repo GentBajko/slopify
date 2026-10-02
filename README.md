@@ -14,6 +14,9 @@
   <a href="https://www.npmjs.com/package/@gentbajko/slopify"><img
     src="https://img.shields.io/npm/v/@gentbajko/slopify?style=flat-square&color=9BCB4F&label=npm"
     alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@gentbajko/slopify"><img
+    src="https://img.shields.io/npm/dm/@gentbajko/slopify?style=flat-square&color=9BCB4F&label=installs%20%2F%2030d"
+    alt="npm installs in the last 30 days"></a>
   <img src="https://img.shields.io/badge/node-26%2B-444C56?style=flat-square" alt="Node 26 or newer">
   <a href="docs/docker.md"><img
     src="https://img.shields.io/badge/docker-ghcr.io-444C56?style=flat-square"
