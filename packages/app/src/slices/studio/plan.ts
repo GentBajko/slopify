@@ -8,50 +8,21 @@ import { readSetting, writeSetting } from "../settings/repo.js";
 // after its own long video, so a plan never needs "next week" notes. The extension types the
 // times into Studio's schedule, in the browser's own time zone.
 
-export const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export {
+  type PlanSlot,
+  type PostingPlan,
+  postingPlanSchema,
+  weekdays,
+} from "./plan-model.js";
 
-const slotSchema = z.object({
-  day: z.number().int().min(0).max(6),
-  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-});
-const rowSchema = z.object({
-  name: z.string().trim().min(1).max(20),
-  long: slotSchema,
-  shorts: z.array(slotSchema).max(10),
-});
-export const postingPlanSchema = z.object({
-  timeZone: z.string().min(1).max(100),
-  rows: z.array(rowSchema).max(14),
-});
-export type PostingPlan = z.infer<typeof postingPlanSchema>;
-export type PlanSlot = z.infer<typeof slotSchema>;
+import { type PlanSlot, type PostingPlan, postingPlanSchema } from "./plan-model.js";
 
 export const postingPlanKey = "studio.postingPlan";
 const key = postingPlanKey;
 
-// Three long videos a week, five shorts each, the channel's own times.
-export function defaultPlan(timeZone: string): PostingPlan {
-  const at = (day: number, time: string): PlanSlot => ({ day, time });
-  return {
-    timeZone,
-    rows: [
-      {
-        name: "A",
-        long: at(0, "20:00"),
-        shorts: [at(1, "00:00"), at(1, "17:00"), at(2, "00:00"), at(2, "17:00"), at(3, "17:00")],
-      },
-      {
-        name: "B",
-        long: at(2, "20:00"),
-        shorts: [at(3, "00:00"), at(4, "00:00"), at(4, "17:00"), at(5, "17:00"), at(6, "17:00")],
-      },
-      {
-        name: "C",
-        long: at(4, "20:00"),
-        shorts: [at(5, "00:00"), at(6, "00:00"), at(6, "21:00"), at(0, "00:00"), at(0, "17:00")],
-      },
-    ],
-  };
+// No plan until one is made: nothing is scheduled, and Prepare upload says so.
+export function emptyPlan(timeZone: string): PostingPlan {
+  return { timeZone, rows: [] };
 }
 
 export function localTimeZone(): string {
@@ -65,9 +36,9 @@ export function readPlan(db: DatabaseSync): PostingPlan {
       const parsed = postingPlanSchema.safeParse(JSON.parse(stored));
       if (parsed.success) return parsed.data;
     } catch {
-      // A broken setting reads as the default plan.
+      // A broken setting reads as no plan.
     }
-  return defaultPlan(localTimeZone());
+  return emptyPlan(localTimeZone());
 }
 
 export function writePlan(db: DatabaseSync, plan: PostingPlan): void {
@@ -152,100 +123,19 @@ export function nextOccurrence(timeZone: string, slot: PlanSlot, after: Date): D
   return new Date(after.getTime() + 7 * 24 * 60 * 60 * 1000);
 }
 
-// ---- slots ------------------------------------------------------------------------------
-
-export interface Slot {
-  readonly row: string;
-  // The long video's time, ISO.
-  readonly longAt: string;
-}
-
-export interface Schedule extends Slot {
-  // Each short's time, in order, ISO.
-  readonly shortsAt: readonly string[];
-}
-
-// The coming long-video slots in time order, from `now` (a slot starting within the hour is
-// too close to prepare), over `weeks` weeks.
-export function comingSlots(plan: PostingPlan, now: Date, weeks = 8): readonly Slot[] {
-  const soonest = now.getTime() + 60 * 60 * 1000;
-  const start = localDate(plan.timeZone, now);
-  const slots: { row: string; at: Date }[] = [];
-  for (let day = 0; day < weeks * 7; day += 1) {
-    const date = addDays(start, day);
-    for (const row of plan.rows) {
-      if (row.long.day !== date.weekday) continue;
-      const at = zonedInstant(plan.timeZone, date, row.long.time);
-      if (at.getTime() >= soonest) slots.push({ row: row.name, at });
-    }
+// Every time the slot's day and hour come round from `from` (inclusive) to `until`.
+export function zonedTimes(
+  timeZone: string,
+  slot: PlanSlot,
+  from: Date,
+  until: Date,
+): readonly Date[] {
+  const times: Date[] = [];
+  let date = localDate(timeZone, new Date(from.getTime() - 24 * 60 * 60 * 1000));
+  for (; ; date = addDays(date, 1)) {
+    if (date.weekday !== slot.day) continue;
+    const at = zonedInstant(timeZone, date, slot.time);
+    if (at.getTime() >= until.getTime()) return times;
+    if (at.getTime() >= from.getTime()) times.push(at);
   }
-  return slots
-    .toSorted((left, right) => left.at.getTime() - right.at.getTime())
-    .map((slot) => ({ row: slot.row, longAt: slot.at.toISOString() }));
-}
-
-export function scheduleOf(plan: PostingPlan, slot: Slot): Schedule {
-  const row = plan.rows.find((one) => one.name === slot.row);
-  const longAt = new Date(slot.longAt);
-  return {
-    ...slot,
-    shortsAt: (row?.shorts ?? []).map((short) =>
-      nextOccurrence(plan.timeZone, short, longAt).toISOString(),
-    ),
-  };
-}
-
-// The project's slot: the one it was given, else the next free one, kept from now on. A project
-// set to "Not scheduled" keeps an empty row, so it isn't given one again.
-export function assignedSlot(
-  db: DatabaseSync,
-  plan: PostingPlan,
-  projectId: string,
-  now: Date,
-): Slot | undefined {
-  const row = db
-    .prepare("SELECT row_name, long_at FROM upload_slots WHERE project_id=?")
-    .get(projectId);
-  if (row !== undefined)
-    return String(row.long_at) === ""
-      ? undefined
-      : { row: String(row.row_name), longAt: String(row.long_at) };
-  const free = freeSlots(db, plan, now, 1)[0];
-  if (free === undefined) return undefined;
-  setSlot(db, projectId, free, now);
-  return free;
-}
-
-export function freeSlots(
-  db: DatabaseSync,
-  plan: PostingPlan,
-  now: Date,
-  count: number,
-): readonly Slot[] {
-  const taken = new Set(
-    db
-      .prepare("SELECT long_at FROM upload_slots")
-      .all()
-      .map((row) => String(row.long_at)),
-  );
-  return comingSlots(plan, now)
-    .filter((slot) => !taken.has(slot.longAt))
-    .slice(0, count);
-}
-
-export function setSlot(db: DatabaseSync, projectId: string, slot: Slot, now: Date): void {
-  db.prepare(
-    `INSERT INTO upload_slots(project_id,row_name,long_at,assigned_at) VALUES (?,?,?,?)
-     ON CONFLICT(project_id) DO UPDATE SET row_name=excluded.row_name, long_at=excluded.long_at,
-       assigned_at=excluded.assigned_at`,
-  ).run(projectId, slot.row, slot.longAt, now.toISOString());
-}
-
-// "Not scheduled": the project takes no slot until one is chosen for it.
-export function unschedule(db: DatabaseSync, projectId: string, now: Date): void {
-  setSlot(db, projectId, { row: "", longAt: "" }, now);
-}
-
-export function clearSlot(db: DatabaseSync, projectId: string): void {
-  db.prepare("DELETE FROM upload_slots WHERE project_id=?").run(projectId);
 }

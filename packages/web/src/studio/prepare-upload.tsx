@@ -6,7 +6,7 @@ import {
   studioUploadUrl,
   tagsLine,
 } from "@app/slices/studio/model.js";
-import type { Slot } from "@app/slices/studio/plan.js";
+import type { Slot } from "@app/slices/studio/releases.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -362,12 +362,12 @@ export function PrepareUploadDrawer({
                           : [
                               {
                                 value: `${pack.data.schedule.row}|${pack.data.schedule.longAt}`,
-                                label: `${pack.data.schedule.row} · ${slotTime(pack.data.schedule.longAt)}`,
+                                label: slotTime(pack.data.schedule.longAt),
                               },
                             ]),
                         ...(pack.data.slotChoices ?? []).map((one) => ({
                           value: `${one.row}|${one.longAt}`,
-                          label: `${one.row} · ${slotTime(one.longAt)}`,
+                          label: slotTime(one.longAt),
                         })),
                       ]}
                     />

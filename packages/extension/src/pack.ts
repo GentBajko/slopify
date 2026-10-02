@@ -87,7 +87,13 @@ export type WorkerRequest =
   // Rows of Studio's Content list, matched to projects by title.
   | {
       readonly type: "backfill";
-      readonly videos: readonly { readonly title: string; readonly videoId: string }[];
+      readonly videos: readonly {
+        readonly title: string;
+        readonly videoId: string;
+        readonly checks?: string;
+      }[];
+      // Opened by the worker only to read the checks: close the tab once sent.
+      readonly close?: boolean;
     }
   // The toolbar popup: the projects ready to upload, and the one clicked.
   | { readonly type: "ready" }
@@ -145,6 +151,7 @@ export interface ReadyProject {
     readonly started?: boolean;
     // When it goes out (ISO), from the posting plan; and its YouTube video once known.
     readonly scheduleAt?: string;
+    readonly uploadBy?: string;
     readonly videoId?: string;
   }[];
 }

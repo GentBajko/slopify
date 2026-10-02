@@ -52,12 +52,26 @@ function showProjects(projects: readonly ReadyProject[]): void {
     return;
   }
   const list = document.createElement("ul");
-  for (const project of projects) {
+  // Soonest due first: the earliest time a not-uploaded item must be scheduled by.
+  const due = (project: ReadyProject): number =>
+    Math.min(
+      ...project.items
+        .filter((item) => !item.uploaded && item.uploadBy !== undefined)
+        .map((item) => Date.parse(item.uploadBy ?? "")),
+    );
+  for (const project of projects.toSorted((left, right) => due(left) - due(right))) {
     const left = project.items.filter((item) => !item.uploaded).length;
+    const by = due(project);
     list.append(
       row(
         project.title,
-        left === 0 ? "all on YouTube" : `${String(left)} to upload`,
+        left === 0
+          ? "all on YouTube"
+          : Number.isFinite(by)
+            ? by < Date.now()
+              ? `${String(left)} late`
+              : `${String(left)} · by ${when(new Date(by).toISOString()) ?? ""}`
+            : `${String(left)} to upload`,
         () => showItems(project, projects),
         left === 0,
       ),
@@ -98,14 +112,17 @@ function showItems(project: ReadyProject, projects: readonly ReadyProject[]): vo
     );
   for (const item of project.items) {
     const name = item.kind === "video" ? "Video" : `Short ${String(item.short)}`;
-    const time = when(item.scheduleAt);
+    const time = when(item.uploadBy);
+    const late = item.uploadBy !== undefined && Date.parse(item.uploadBy) < Date.now();
     const meta = item.uploaded
       ? item.kind === "video" && item.videoId !== undefined
         ? "A/B test…"
         : "✓ on YouTube"
       : !item.ready
         ? "not rendered"
-        : `${item.started === true ? "Upload again" : "Upload"}${time === undefined ? "" : ` · ${time}`}`;
+        : `${item.started === true ? "Upload again" : "Upload"}${
+            time === undefined ? "" : late ? " · late" : ` · by ${time}`
+          }`;
     const videoId = item.videoId;
     const run =
       item.uploaded && item.kind === "video" && videoId !== undefined

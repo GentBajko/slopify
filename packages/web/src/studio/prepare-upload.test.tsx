@@ -21,6 +21,7 @@ const file = (asset: string, filename: string) => ({
 const pack: UploadPack = {
   projectId: "p1",
   projectTitle: "The Fox",
+  series: "",
   missing: [],
   playlistChoices: [],
   items: [

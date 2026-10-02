@@ -63,7 +63,7 @@ export const projectTables = [
   // Since 3.2.8: the YouTube video each upload became, and its A/B test.
   "youtube_videos",
   // Since 3.3.0: each project's posting-plan slot, Studio's numbers and its A/B results.
-  "upload_slots",
+  "releases",
   "video_stats",
   "ab_results",
   // Since 2.5.0. Left out on purpose: plan_limit_waits and plan_limit_waiters (an account's

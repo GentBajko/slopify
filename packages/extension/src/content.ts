@@ -253,8 +253,51 @@ async function recordVideo(current: FillPayload): Promise<void> {
     toast("All the shorts are uploaded.", "ok");
     return;
   }
-  toast("Opening the next upload…", "info");
+  // One at a time: leaving this page while its file still uploads would stop the upload, so
+  // the next one opens only once Studio says this one is up.
+  if (!(await uploadFinished())) {
+    toast(
+      "This upload didn't finish within three hours, so the next short wasn't started. Click the extension's icon to upload it.",
+      "error",
+    );
+    return;
+  }
+  toast("Uploaded. Opening the next short…", "info");
   setTimeout(() => location.assign("https://www.youtube.com/upload"), 2500);
+}
+
+// Whether Studio still uploads a file on this page: its progress panel and the confirmation
+// window say "Uploading 45%", "… remaining" or "Keep this page open" until the file is up.
+function stillUploading(): boolean {
+  const places = [
+    ...document.querySelectorAll(
+      "ytcp-multi-progress-monitor, ytcp-video-share-dialog, ytcp-uploads-dialog, ytcp-video-upload-progress",
+    ),
+  ].filter(shown);
+  const text = (places.length > 0 ? places : [document.body])
+    .map((place) => (place as HTMLElement).innerText ?? place.textContent ?? "")
+    .join(" ");
+  return /\buploading\b|\d+\s*%\s*(uploaded|done)|remaining|keep this (page|window|tab) open|don't close/i.test(
+    text,
+  );
+}
+
+// Waits until the file is fully uploaded (two looks in a row with no upload going), up to
+// three hours, saying how it goes; Studio's checks run on YouTube's side after that.
+async function uploadFinished(): Promise<boolean> {
+  let quiet = 0;
+  let told = false;
+  for (let waited = 0; waited < 3 * 60 * 60 * 1000; waited += 2000) {
+    if (stillUploading()) {
+      quiet = 0;
+      if (!told) {
+        toast("Waiting for this short to finish uploading before the next one starts…", "info");
+        told = true;
+      }
+    } else if (++quiet >= 2) return true;
+    await new Promise((done) => setTimeout(done, 2000));
+  }
+  return false;
 }
 
 // Waits for Studio's "Video scheduled" / "Video published" window after the person presses
@@ -503,22 +546,40 @@ async function addVideo(input: HTMLInputElement): Promise<void> {
   );
 }
 
-// Studio's Content list (Videos and Shorts tabs): each row's title and video id go to Slopify,
-// which matches them to its projects by title, so uploads made by hand get their links too.
-// Sent when the rows change, not on every look.
+// Studio's Content list (Videos and Shorts tabs): each row's title, video id and Restrictions
+// (the checks: "None" once copyright and ad suitability are clear) go to Slopify, which
+// matches them to its projects by title, so uploads made by hand get their links too, and
+// keeps each known video's checks. Sent when the rows change, not on every look. A list the
+// worker opened only to read the checks ("#slopify-checks") is closed once it has sent them.
 let sentRows = "";
+function checksOf(row: Element): string | undefined {
+  const cell = row.querySelector('.tablecell-restrictions, [class*="restrictions"]');
+  const text = (cell?.textContent ?? "").replace(/\s+/g, " ").trim();
+  if (text === "") return undefined;
+  if (/^none$/i.test(text)) return "ok";
+  return text.slice(0, 100);
+}
 function backfill(): void {
+  const channel = /\/channel\/(UC[A-Za-z0-9_-]+)/.exec(location.pathname)?.[1];
+  if (channel !== undefined) void api.storage.local.set({ studioChannel: channel });
   if (!/\/channel\/[^/]+\/videos/.test(location.pathname)) return;
   const rows = [...document.querySelectorAll("ytcp-video-row")].flatMap((row) => {
     const link = row.querySelector<HTMLAnchorElement>('a[href*="/video/"]');
     const videoId = /\/video\/([A-Za-z0-9_-]{11})/.exec(link?.getAttribute("href") ?? "")?.[1];
     const title = (row.querySelector("#video-title")?.textContent ?? "").trim();
-    return videoId === undefined || title === "" ? [] : [{ title, videoId }];
+    const checks = checksOf(row);
+    return videoId === undefined || title === ""
+      ? []
+      : [{ title, videoId, ...(checks === undefined ? {} : { checks }) }];
   });
-  const key = rows.map((row) => row.videoId).join(",");
+  const key = rows.map((row) => `${row.videoId}:${row.checks ?? ""}`).join(",");
   if (rows.length === 0 || key === sentRows) return;
   sentRows = key;
-  void api.runtime.sendMessage({ type: "backfill", videos: rows.slice(0, 200) });
+  void api.runtime.sendMessage({
+    type: "backfill",
+    videos: rows.slice(0, 200),
+    close: location.hash.includes("slopify-checks"),
+  });
 }
 
 function look(): void {

@@ -354,6 +354,7 @@ describe("Prepare upload and the project list", () => {
     const pack: UploadPack = {
       projectId: "p1",
       projectTitle: "The Fox",
+      series: "",
       missing: [],
       playlistChoices: [],
       footage: { clips: 1, real: false },

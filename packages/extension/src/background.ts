@@ -130,6 +130,7 @@ const opened = "tasksOpened";
 // A tab opened for a task is not opened again for this long, in case its page never reports.
 const retryMs = 30 * 60 * 1000;
 const statsEveryMs = 24 * 60 * 60 * 1000;
+const checksEveryMs = 2 * 60 * 60 * 1000;
 
 async function isPublic(videoId: string): Promise<boolean> {
   try {
@@ -154,10 +155,15 @@ const query = (projectId: string, short: number | null) =>
 
 async function checkTasks(): Promise<void> {
   if (api.tabs === undefined || (await pairing()) === undefined) return;
-  const tasks = await getJson<{ finish: readonly WaitingTask[]; comments: readonly WaitingTask[] }>(
-    "/api/studio/ext/tasks",
-    "the waiting tasks",
-  ).catch(() => ({ finish: [], comments: [] }));
+  const tasks = await getJson<{
+    finish: readonly WaitingTask[];
+    comments: readonly WaitingTask[];
+    checks?: boolean;
+  }>("/api/studio/ext/tasks", "the waiting tasks").catch(() => ({
+    finish: [],
+    comments: [],
+    checks: false,
+  }));
   const stored = await api.storage.local.get([opened]);
   const times = (stored[opened] ?? {}) as Record<string, number>;
   const now = Date.now();
@@ -182,6 +188,21 @@ async function checkTasks(): Promise<void> {
       `comment:${task.videoId}`,
       `https://www.youtube.com/watch?v=${task.videoId}#slopify-comment&${query(task.projectId, task.short)}`,
     );
+  }
+  // A scheduled video whose checks aren't read yet: the Content list, in the background, every
+  // two hours until they are (the page reads each row's Restrictions and closes itself).
+  const channel = (await api.storage.local.get(["studioChannel"])).studioChannel;
+  if (
+    tasks.checks === true &&
+    typeof channel === "string" &&
+    now - (times.checks ?? 0) > checksEveryMs
+  ) {
+    times.checks = now;
+    await api.storage.local.set({ [opened]: times });
+    await api.tabs?.create({
+      url: `https://studio.youtube.com/channel/${channel}/videos/upload#slopify-checks`,
+      active: false,
+    });
   }
   await sweepStats();
 }
@@ -391,6 +412,7 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     const tab = sender.tab?.id;
     if (tab === undefined) return;
     if (request.type === "task-result") void api.tabs?.remove(tab);
+    if (request.type === "backfill" && request.close === true) void api.tabs?.remove(tab);
     if (request.type === "stats" && request.last) {
       void api.tabs?.remove(tab);
       void nextStats();

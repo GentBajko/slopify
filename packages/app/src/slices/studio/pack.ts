@@ -28,7 +28,8 @@ import {
   type UploadPack,
 } from "./model.js";
 import { picked, readUploadPick } from "./pick.js";
-import { readPlan, scheduleOf } from "./plan.js";
+import { seriesOf } from "./plan-model.js";
+import { scheduleOf } from "./releases.js";
 import { projectPlaylists, readRealFootage } from "./settings.js";
 import { previousLongVideo, videoIdOf, videoOf } from "./videos.js";
 
@@ -170,16 +171,9 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   ];
   const allThumbnails = thumbnails.map(file);
   const pick = readUploadPick(deps.db, projectId);
-  // When each upload goes out, from the posting plan's slot (`plan.ts`), once the project has
-  // one: the long video at the slot, each short at its own time after it.
-  const plan = readPlan(deps.db);
-  const slotRow = deps.db
-    .prepare("SELECT row_name, long_at FROM upload_slots WHERE project_id=?")
-    .get(projectId);
-  const schedule =
-    slotRow === undefined || String(slotRow.long_at) === ""
-      ? undefined
-      : scheduleOf(plan, { row: String(slotRow.row_name), longAt: String(slotRow.long_at) });
+  // When each upload goes out, from the release calendar (`releases.ts`): the long video's
+  // release and each short's, once the project has them.
+  const schedule = scheduleOf(deps.db, projectId);
   // The long video's captions, its end screen's video (the project's Previous video, else the
   // long video uploaded before it) and the comment to pin; a short's related video is the
   // long video, once it is on YouTube.
@@ -258,9 +252,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       alteredContent: disclosure("short"),
       playlists,
       playlist,
-      ...(schedule?.shortsAt[clip.number - 1] === undefined
-        ? {}
-        : { scheduleAt: schedule.shortsAt[clip.number - 1] }),
+      ...((at) => (at == null ? {} : { scheduleAt: at }))(schedule?.shortsAt[clip.number - 1]),
       ...(longVideo?.uploadState === "done" ? { relatedVideoId: longVideo.videoId } : {}),
     });
   }
@@ -269,6 +261,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     pack: {
       projectId,
       projectTitle: project.title,
+      series: seriesOf(config),
       items,
       ...(schedule === undefined ? {} : { schedule }),
       missing,

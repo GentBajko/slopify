@@ -10,6 +10,7 @@ import { channelById } from "../../slices/channels/repo.js";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
 import { backfillVideos } from "../../slices/studio/backfill.js";
+import { releaseCalendar } from "../../slices/studio/calendar.js";
 import {
   type FillQueueItem,
   studioPlaylistMax,
@@ -17,15 +18,8 @@ import {
 } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
-import {
-  assignedSlot,
-  freeSlots,
-  postingPlanSchema,
-  readPlan,
-  setSlot,
-  unschedule,
-  writePlan,
-} from "../../slices/studio/plan.js";
+import { postingPlanSchema, readPlan, writePlan } from "../../slices/studio/plan.js";
+import { leadHoursMax, seriesOf } from "../../slices/studio/plan-model.js";
 import {
   enqueueFill,
   type FillEntry,
@@ -33,6 +27,15 @@ import {
   readFillQueue,
   removeFill,
 } from "../../slices/studio/queue.js";
+import {
+  allReleases,
+  freeSlots,
+  planReleases,
+  readLeadHours,
+  releasesOf,
+  setRelease,
+  writeLeadHours,
+} from "../../slices/studio/releases.js";
 import {
   autoCommentKey,
   bearerToken,
@@ -62,6 +65,7 @@ import {
   forgetVideo,
   projectVideos,
   recordVideo,
+  setChecks,
   setTaskState,
   videoIdOf,
   videoIdPattern,
@@ -142,8 +146,15 @@ const statsBody = z.object({
 });
 const backfillBody = z.object({
   videos: z
-    .array(z.object({ title: z.string().max(200), videoId: z.string().regex(videoIdPattern) }))
+    .array(
+      z.object({
+        title: z.string().max(200),
+        videoId: z.string().regex(videoIdPattern),
+        checks: z.string().max(100).optional(),
+      }),
+    )
     .max(200),
+  close: z.boolean().optional(),
 });
 // The extension builds the app ships (`scripts/copy-extension.mjs`), by browser.
 const extensionFiles: Readonly<Record<string, string>> = {
@@ -196,15 +207,44 @@ export function studioRoutes(deps: AppDeps) {
         "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
     });
 
-  // A project ready to upload takes the plan's next free slot when its upload is prepared;
-  // one whose long video is on YouTube already doesn't.
+  // A project ready to upload gets its release times from the posting plan when its upload is
+  // prepared (`releases.ts`); one whose long video is on YouTube already keeps what it has.
   const planned = (projectId: string): void => {
     if (videoOf(deps.db, projectId, null)?.uploadState === "done") return;
     const result = uploadPack(deps, projectId);
     if (!result.ok || result.pack.items[0]?.video == null) return;
-    assignedSlot(deps.db, readPlan(deps.db), projectId, deps.clock.now());
+    planReleases(
+      deps.db,
+      readPlan(deps.db),
+      {
+        id: projectId,
+        series: result.pack.series,
+        shorts: result.pack.items.filter((item) => item.kind === "short").length,
+      },
+      deps.clock.now(),
+    );
   };
-  const slotChoices = () => freeSlots(deps.db, readPlan(deps.db), deps.clock.now(), 9);
+  const planBody = () => ({
+    plan: readPlan(deps.db),
+    leadHours: readLeadHours(deps.db),
+    series: [...new Set(listProjects(deps.db).map((project) => seriesOf(project.config)))]
+      .filter((one) => one !== "")
+      .toSorted(),
+  });
+  const slotChoices = (projectId: string, series: string) =>
+    freeSlots(deps.db, readPlan(deps.db), series, deps.clock.now(), 9);
+  // Finished projects not marked uploaded: the popup's list and the calendar's candidates.
+  const finishedProjects = () => {
+    const uploads = uploadedProjects(deps.db);
+    const aside = setAsideProjects(deps.db);
+    return listProjects(deps.db).filter((project) => {
+      if (uploads.has(project.id)) return false;
+      const state = derive(stagesOf(deps.db, project.id), project.paused === true);
+      return (
+        state === "done" || state === "partial" || (state === "pending" && aside.has(project.id))
+      );
+    });
+  };
   const extAllowed = (c: Context): boolean =>
     studioRequestAllowed(
       deps.db,
@@ -235,18 +275,80 @@ export function studioRoutes(deps: AppDeps) {
           return c.json({ autoComment: c.req.valid("json").on });
         },
       )
-      // The posting plan and the coming free slots.
-      .get("/plan", (c) => {
-        const plan = readPlan(deps.db);
-        return c.json({ plan, free: freeSlots(deps.db, plan, deps.clock.now(), 9) });
-      })
+      // The posting plan, its lead time, and the series the projects use (for the lines' picker).
+      .get("/plan", (c) => c.json(planBody()))
       .put("/plan", zValidator("json", postingPlanSchema, onInvalid), (c) => {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
         writePlan(deps.db, c.req.valid("json"));
-        const plan = readPlan(deps.db);
-        return c.json({ plan, free: freeSlots(deps.db, plan, deps.clock.now(), 9) });
+        return c.json(planBody());
       })
+      .put(
+        "/settings/lead-hours",
+        zValidator(
+          "json",
+          z.object({ hours: z.number().int().min(1).max(leadHoursMax) }).strict(),
+          onInvalid,
+        ),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          writeLeadHours(deps.db, c.req.valid("json").hours);
+          return c.json(planBody());
+        },
+      )
+      // Calendar → Releases: the coming weeks' long videos and shorts with their times and
+      // states, the plan's free times, and the finished projects that could fill them.
+      .get(
+        "/releases",
+        zValidator("query", z.object({ weeks: z.coerce.number().int().min(1).max(8).optional() })),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const finished = finishedProjects();
+          // Every finished project gets its times, and so does any project already holding a
+          // release (its shorts may still need theirs).
+          for (const id of new Set([
+            ...finished.map((project) => project.id),
+            ...allReleases(deps.db).map((release) => release.projectId),
+          ]))
+            planned(id);
+          return c.json(
+            releaseCalendar(deps, {
+              now: deps.clock.now(),
+              weeks: c.req.valid("query").weeks ?? 2,
+              candidates: finished.map((project) => project.id),
+            }),
+          );
+        },
+      )
+      // Moves one release (a time), sets it to "not scheduled" (null), or puts a project into a
+      // free time of the plan (short 0 with its line).
+      .put(
+        "/releases/:projectId",
+        zValidator("param", projectParam, onInvalid),
+        zValidator(
+          "json",
+          z
+            .object({
+              short: z.number().int().min(0).max(99),
+              at: z.iso.datetime().nullable(),
+              line: z.string().min(1).max(20).optional(),
+            })
+            .strict(),
+          onInvalid,
+        ),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          if (uploadPack(deps, projectId).ok === false) return unknownProject(c);
+          const { short, at, line } = c.req.valid("json");
+          setRelease(deps.db, projectId, short, at ?? "", line ?? null, deps.clock.now());
+          planned(projectId);
+          return c.json({ releases: releasesOf(deps.db, projectId) });
+        },
+      )
       .put("/settings/playlists", zValidator("json", playlistsBody, onInvalid), (c) => {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
@@ -281,7 +383,7 @@ export function studioRoutes(deps: AppDeps) {
         planned(projectId);
         const result = uploadPack(deps, projectId);
         if (!result.ok) return unknownProject(c);
-        return c.json({ ...result.pack, slotChoices: slotChoices() });
+        return c.json({ ...result.pack, slotChoices: slotChoices(projectId, result.pack.series) });
       })
       // Prepare upload's slot picker: another free slot of the plan, or none.
       .put(
@@ -293,9 +395,11 @@ export function studioRoutes(deps: AppDeps) {
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
           const wanted = c.req.valid("json").slot;
-          if (wanted === null) unschedule(deps.db, projectId, deps.clock.now());
+          const before = uploadPack(deps, projectId);
+          if (!before.ok) return unknownProject(c);
+          if (wanted === null) setRelease(deps.db, projectId, 0, "", null, deps.clock.now());
           else {
-            const free = slotChoices().some(
+            const free = slotChoices(projectId, before.pack.series).some(
               (one) => one.row === wanted.row && one.longAt === wanted.longAt,
             );
             if (!free)
@@ -305,11 +409,12 @@ export function studioRoutes(deps: AppDeps) {
                 detail:
                   "That slot is taken or past. Reload Prepare upload and choose one of the slots it lists.",
               });
-            setSlot(deps.db, projectId, wanted, deps.clock.now());
+            setRelease(deps.db, projectId, 0, wanted.longAt, wanted.row, deps.clock.now());
           }
+          planned(projectId);
           const result = uploadPack(deps, projectId);
           return result.ok
-            ? c.json({ ...result.pack, slotChoices: slotChoices() })
+            ? c.json({ ...result.pack, slotChoices: slotChoices(projectId, result.pack.series) })
             : unknownProject(c);
         },
       )
@@ -534,11 +639,10 @@ export function studioRoutes(deps: AppDeps) {
       .post("/ext/backfill", zValidator("json", backfillBody, onInvalid), (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
-        const found = backfillVideos(
-          deps,
-          c.req.valid("json").videos,
-          deps.clock.now().toISOString(),
-        );
+        const { videos } = c.req.valid("json");
+        const found = backfillVideos(deps, videos, deps.clock.now().toISOString());
+        for (const video of videos)
+          if (video.checks !== undefined) setChecks(deps.db, video.videoId, video.checks);
         return c.json({ found });
       })
       // The extension popup: finished projects not marked uploaded, each with its video and
@@ -546,16 +650,7 @@ export function studioRoutes(deps: AppDeps) {
       .get("/ext/ready", (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
-        const uploads = uploadedProjects(deps.db);
-        const aside = setAsideProjects(deps.db);
-        const projects = listProjects(deps.db).flatMap((project) => {
-          if (uploads.has(project.id)) return [];
-          const state = derive(stagesOf(deps.db, project.id), project.paused === true);
-          const finished =
-            state === "done" ||
-            state === "partial" ||
-            (state === "pending" && aside.has(project.id));
-          if (!finished) return [];
+        const projects = finishedProjects().flatMap((project) => {
           planned(project.id);
           const result = uploadPack(deps, project.id);
           if (!result.ok || result.pack.items[0]?.video == null) return [];
@@ -573,7 +668,15 @@ export function studioRoutes(deps: AppDeps) {
                 ...(videoOf(deps.db, project.id, item.short ?? null) === undefined
                   ? {}
                   : { videoId: videoOf(deps.db, project.id, item.short ?? null)?.videoId }),
-                ...(item.scheduleAt === undefined ? {} : { scheduleAt: item.scheduleAt }),
+                ...(item.scheduleAt === undefined
+                  ? {}
+                  : {
+                      scheduleAt: item.scheduleAt,
+                      // When it must be scheduled by, so the checks finish before release.
+                      uploadBy: new Date(
+                        Date.parse(item.scheduleAt) - readLeadHours(deps.db) * 3_600_000,
+                      ).toISOString(),
+                    }),
               })),
             },
           ];
@@ -637,9 +740,20 @@ export function studioRoutes(deps: AppDeps) {
               ? []
               : [{ projectId: video.projectId, short: video.short, videoId: video.videoId, item }];
           });
+        // A video on YouTube, due in the coming weeks, whose checks Studio hasn't cleared (or
+        // the extension hasn't read): the extension reads the Content list for them.
+        const soon = deps.clock.now().getTime();
+        const checks = doneVideos(deps.db).some((video) => {
+          if (video.checks === "ok") return false;
+          const at = releasesOf(deps.db, video.projectId).find(
+            (release) => release.short === (video.short ?? 0),
+          )?.at;
+          return at !== undefined && at !== "" && Date.parse(at) > soon;
+        });
         return c.json({
           finish: withItems(waitingTasks(deps.db, "finish")),
           comments: withItems(waitingTasks(deps.db, "comment")),
+          checks,
         });
       })
       .post("/ext/task-result", zValidator("json", taskResultBody, onInvalid), (c) => {

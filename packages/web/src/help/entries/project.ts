@@ -289,8 +289,8 @@ export const projectHelp = {
     tutorial: { page: "Publishing-to-YouTube", anchor: "ai-use-disclosure" },
   },
   "project.upload.slot": {
-    title: "Posting plan slot",
-    body: "When this project's video goes out, from the posting plan (Settings → YouTube Studio → Posting plan). It takes the next free slot when you prepare its upload; each short goes out the first time its own day and hour come round after the video. Choose another free slot here, or Not scheduled to set the date in Studio yourself. The Slopify Studio extension types the time into Studio's Visibility step; you press Schedule.",
+    title: "Release time",
+    body: "When this video goes out. It takes the next free time of a posting-plan line for its series (Settings → YouTube Studio); each short follows at its own times. Pick another free time, or Not scheduled to set it in Studio yourself. Calendar → Releases shows and moves every time. Upload it before its upload-by time so YouTube's checks finish while it is private.",
     tutorial: { page: "Publishing-to-YouTube", anchor: "upload-a-video" },
   },
   "project.upload.steps": {

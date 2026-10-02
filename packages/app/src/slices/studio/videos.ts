@@ -26,6 +26,9 @@ export interface YoutubeVideo {
   // Why it failed, or what the extension said when it started.
   readonly abMessage: string | null;
   readonly abAt: string | null;
+  // What Studio's Content list says about its checks (copyright, ad suitability), as the
+  // extension last read it: "ok", or the words Studio shows; null until read.
+  readonly checks: string | null;
 }
 
 // A YouTube video id: 11 letters, digits, `-` and `_`.
@@ -60,6 +63,7 @@ function rowOf(row: Record<string, unknown>): YoutubeVideo {
     commentMessage: typeof row.comment_message === "string" ? row.comment_message : null,
     abMessage: typeof row.ab_message === "string" ? row.ab_message : null,
     abAt: typeof row.ab_at === "string" ? row.ab_at : null,
+    checks: typeof row.checks === "string" ? row.checks : null,
   };
 }
 
@@ -173,4 +177,9 @@ export function previousLongVideo(db: DatabaseSync, projectId: string): string |
     )
     .get(projectId, own?.recorded_at ?? null, own?.recorded_at ?? null);
   return typeof row?.video_id === "string" ? row.video_id : undefined;
+}
+
+// Studio's word on a known video's checks, read from its Content list row.
+export function setChecks(db: DatabaseSync, videoId: string, checks: string): void {
+  db.prepare("UPDATE youtube_videos SET checks=? WHERE video_id=?").run(checks, videoId);
 }

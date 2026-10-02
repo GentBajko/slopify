@@ -12,7 +12,7 @@ import { insertProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { writeSetting } from "../settings/repo.js";
 import { writeUploadPick } from "../studio/pick.js";
-import { defaultPlan, writePlan } from "../studio/plan.js";
+import { writePlan } from "../studio/plan.js";
 import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
 import { libraryTables, projectTables, usageTables } from "./backup-format.js";
@@ -202,7 +202,17 @@ function seed(db: DatabaseSync): void {
   writeSetting(db, "studio.playlist.c2", JSON.stringify("Lore tales"));
   writeSetting(db, "studio.fillQueue.0123456789abcdef", JSON.stringify([]));
   writeSetting(db, "studio.autoComment", "on");
-  writePlan(db, defaultPlan("Europe/Berlin"));
+  writePlan(db, {
+    timeZone: "Europe/Berlin",
+    rows: [
+      {
+        name: "1",
+        series: "",
+        long: { day: 0, time: "20:00" },
+        shorts: [{ day: 1, time: "17:00" }],
+      },
+    ],
+  });
   writeUploadPick(db, "p1", { title: 1, thumbnail: 2 });
 }
 

@@ -167,7 +167,9 @@ interface CalendarSearch {
 const scheduleIdPattern = /^[0-9A-Za-z-]{1,64}$/;
 
 export function calendarSearchOf(search: Record<string, unknown>): CalendarSearch {
-  if (calendarTabOf(search.tab) !== "schedules") return {};
+  const tab = calendarTabOf(search.tab);
+  if (tab === "releases") return { tab };
+  if (tab !== "schedules") return {};
   return typeof search.schedule === "string" && scheduleIdPattern.test(search.schedule)
     ? { tab: "schedules", schedule: search.schedule }
     : { tab: "schedules" };
@@ -212,7 +214,7 @@ function CalendarPage() {
       onTab={(next) => {
         void navigate({
           to: "/calendar",
-          search: next === "schedules" ? { tab: "schedules" } : {},
+          search: next === "weeks" ? {} : { tab: next },
           replace: true,
         });
       }}

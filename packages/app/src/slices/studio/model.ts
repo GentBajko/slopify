@@ -91,8 +91,11 @@ export interface UploadPack {
   // The video's uploaded clips and whether they are marked as real footage (the AI use step's
   // tick). Absent when the project has none.
   readonly footage?: { readonly clips: number; readonly real: boolean } | undefined;
-  // The posting plan's slot (`plan.ts`) and each upload's time, once the project has one.
-  readonly schedule?: import("./plan.js").Schedule | undefined;
+  // The release calendar's times (`releases.ts`): the long video's and each short's, once the
+  // project has them.
+  readonly schedule?: import("./releases.js").Schedule | undefined;
+  // The project's series (`plan-model.ts` `seriesOf`): which posting-plan lines it may take.
+  readonly series: string;
   // The channel's playlists, each ticked as this project's uploads go into it; Prepare upload
   // changes the ticks for this project.
   readonly playlistChoices: readonly { readonly name: string; readonly chosen: boolean }[];

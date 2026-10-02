@@ -779,6 +779,28 @@ describe("YouTube videos and their A/B tests", () => {
     expect((await h.call("/ext/tasks")).status).toBe(401);
   });
 
+  it("asks for the checks of a scheduled video until Studio's Content list clears them", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    await h.call("/ext/video/done", ext(token, upload));
+    await h.call("/releases/p1", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ short: 0, at: "2030-01-06T20:00:00.000Z" }),
+    });
+    const tasks = async () =>
+      ((await (await h.call("/ext/tasks", ext(token))).json()) as { checks: boolean }).checks;
+    expect(await tasks()).toBe(true);
+    await h.call(
+      "/ext/backfill",
+      ext(token, { videos: [{ title: "Not ours", videoId: "lKS3FAjekpI", checks: "ok" }] }),
+    );
+    expect(await tasks()).toBe(false);
+  });
+
   it("takes a pasted link for an upload made by hand", async () => {
     const h = harness();
     finished(h.output);
@@ -906,6 +928,22 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
   it("gives a finished project the plan's next free slot, with its shorts' times after it", async () => {
     const h = harness();
     finished(h.output);
+    // No plan yet: nothing is scheduled.
+    const none = (await (await h.call("/packs/p1")).json()) as { schedule?: unknown };
+    expect(none.schedule).toBeUndefined();
+    const slot = (day: number, time: string) => ({ day, time });
+    const saved = await h.call("/plan", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        timeZone: "Europe/Berlin",
+        rows: [
+          { name: "1", long: slot(0, "20:00"), shorts: [slot(1, "17:00"), slot(2, "17:00")] },
+          { name: "2", long: slot(3, "20:00"), shorts: [slot(4, "17:00")] },
+        ],
+      }),
+    });
+    expect(saved.status).toBe(200);
     const pack = (await (await h.call("/packs/p1")).json()) as {
       schedule?: { row: string; longAt: string; shortsAt: string[] };
       slotChoices: { row: string; longAt: string }[];
@@ -940,6 +978,53 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     };
     expect(again.schedule).toBeUndefined();
     expect(again.items[0]?.scheduleAt).toBeUndefined();
+  });
+
+  it("shows the calendar: a finished project in the plan's next time with its shorts, then free times", async () => {
+    const h = harness();
+    finished(h.output);
+    const json = (body: unknown) => ({
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const slot = (day: number, time: string) => ({ day, time });
+    await h.call(
+      "/plan",
+      json({
+        timeZone: "UTC",
+        rows: [
+          { name: "1", series: "", long: slot(0, "20:00"), shorts: [slot(1, "17:00")] },
+          { name: "2", series: "", long: slot(3, "20:00"), shorts: [] },
+        ],
+      }),
+    );
+    expect((await h.call("/settings/lead-hours", json({ hours: 48 }))).status).toBe(200);
+    // Preparing its upload gives it its release times.
+    await h.call("/packs/p1");
+    const calendar = (await (await h.call("/releases?weeks=2")).json()) as {
+      leadHours: number;
+      entries: {
+        at: string;
+        project: { id: string } | null;
+        items: { short: number; at: string | null; uploadBy: string | null; state: string }[];
+      }[];
+      candidates: { id: string }[];
+    };
+    expect(calendar.leadHours).toBe(48);
+    const mine = calendar.entries.find((entry) => entry.project?.id === "p1");
+    expect(mine).toBeDefined();
+    const long = mine?.items.find((item) => item.short === 0);
+    expect(Date.parse(long?.at ?? "") - Date.parse(long?.uploadBy ?? "")).toBe(48 * 3600_000);
+    expect(calendar.entries.some((entry) => entry.project === null)).toBe(true);
+    // Moved by hand to "not scheduled": it leaves the calendar, and its time is free again.
+    const moved = await h.call("/releases/p1", json({ short: 0, at: null }));
+    expect(moved.status).toBe(200);
+    const after = (await (await h.call("/releases")).json()) as typeof calendar;
+    expect(after.entries.some((entry) => entry.project?.id === "p1")).toBe(false);
+    expect(after.entries.some((entry) => entry.project === null && entry.at === mine?.at)).toBe(
+      true,
+    );
   });
 
   it("queues every short for Upload all Shorts, short 1 first", async () => {

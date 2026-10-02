@@ -144,32 +144,54 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 4. Check everything, go through Studio's remaining steps, and schedule or publish yourself.
    The extension never presses Next, Save, Schedule or Publish on an upload.
 
-### Posting plan and schedule (from 3.3.0)
+### Posting plan and release calendar (from 3.3.0; releases from 3.4.0)
 
-**Settings → YouTube Studio → Posting plan** is the week as a table: one row per long video
-(A, B, C…), each with the long video's day and time and its shorts' days and times, in one time
-zone. It is kept as `studio.postingPlan` (`slices/studio/plan.ts`).
+**Settings → YouTube Studio → Posting plan** is the week: one line per long video, with its
+series, the long video's day and time and as many shorts as you post for it (each with its own
+day and time), in one time zone. It starts empty, so nothing is scheduled until you add a long
+video. It is kept as `studio.postingPlan` (`slices/studio/plan.ts`, shapes in `plan-model.ts`).
 
-- When a finished project's upload is prepared (Prepare upload, or the extension asking for it)
-  and the project has no slot yet, it takes the **next free row**: the next long-video time
-  that comes round, among rows no other project holds (`upload_slots`).
-- **Each short goes out the first time its day and hour come round after its own video**, so
-  nothing needs "next week": a short planned for Sunday after a Friday video goes out that
-  Sunday, one planned for Wednesday the Wednesday after.
-- Prepare upload shows the slot with a picker to choose another free one (`PUT
-  /api/studio/packs/:id/slot`). The slot is freed once the long video is recorded on YouTube.
+- **Release times** live in `releases` (`slices/studio/releases.ts`, migration 0048): one row
+  per long video (short 0) and per short. When a finished project's upload is prepared, it
+  appears in Calendar → Releases, or the extension asks for it, a project with no long-video
+  time takes the **next free time of a line that takes its series**, far enough ahead to upload
+  in time, in an hour no other release has.
+- **Series**: a line takes any project, or only one series. A project's series is the part of
+  its title pattern (else its title) after the last "|", placeholders removed
+  (`seriesOf`).
+- **Each short takes its line's first short time after the one before it**, so nothing needs
+  "next week", and never the same hour as another release (it takes the next one instead). A
+  project gets as many short times as it has shorts.
+- **Upload by**: each item is due `studio.leadHours` hours before its release (24 by default,
+  Settings → YouTube Studio), so YouTube's copyright and ad checks finish while it is private.
+- **Calendar → Releases** (`studio/releases-view.tsx`, `GET /api/studio/releases`) shows the
+  coming two weeks: each long video with its shorts, each item's release, upload-by time and
+  state (not rendered, upload by…, late, filled, scheduled with or without checks clear), and
+  the plan's free times with the finished projects that fit them. Any time can be moved, a long
+  video set to not scheduled (`PUT /api/studio/releases/:projectId`); moving a long video drops
+  its shorts' plan-placed times so they are placed again after it.
+- Prepare upload's Schedule step shows the long video's time with a picker of the free times of
+  its series (`PUT /api/studio/packs/:id/slot`).
 - Each pack item carries `scheduleAt`. In the upload dialog's Visibility step the extension
   opens Schedule and types the date and time into Studio's date and time boxes (Studio reads
   them in the browser's time zone). You press **Schedule**.
+- **Checks**: Studio's Content list rows carry each video's Restrictions; the extension sends
+  them with the rows ("None" is kept as `ok`, `youtube_videos.checks`). While a scheduled video
+  due in the future has no clear checks, `GET /ext/tasks` says `checks: true` and the worker
+  opens the Content list in a background tab every two hours (`#slopify-checks`), which closes
+  itself once it has sent the rows. The channel id comes from any Studio page the extension saw.
 
 ### The toolbar popup (from 3.2.10; Upload all from 3.3.0)
 
-Clicking the extension's icon lists the finished projects not marked uploaded in Slopify. A
-project opens to its video and shorts, each with its planned time, and a ✓ on those on YouTube.
-Clicking one puts it first in line and opens Studio's upload page, where the extension adds the
-file and fills the details. **Upload all N shorts** queues every short not yet on YouTube: once
-Studio confirms one upload, the next upload page opens by itself (for up to 3 hours).
-**Pairing** (top right) opens the pairing page.
+Clicking the extension's icon lists the finished projects not marked uploaded in Slopify, the
+soonest due first, each with its upload-by time (or "late"). A project opens to its video and
+shorts, each with its own "by" time, and a ✓ on those on YouTube. Clicking one puts it first in
+line and opens Studio's upload page, where the extension adds the file and fills the details.
+**Upload all N shorts** queues every short not yet on YouTube and uploads them **one at a time**
+(from 1.1.0): once Studio confirms one upload, the extension waits until its file has fully
+uploaded (Studio stops showing "Uploading…", "remaining" or "Keep this page open"), then opens
+the next upload page. Leaving the page earlier would stop the upload. **Pairing** (top right)
+opens the pairing page.
 
 An upload counts as on YouTube only once Studio shows "Video scheduled", "Video published" or
 "Video saved" after you press Schedule, Publish or Save. One cancelled, or closed as a draft,
@@ -326,7 +348,9 @@ selectors stay behind the checked ones as fallbacks.
 
 Still unverified:
 
-- **The 3.3.0 flows on a live page**: the schedule's date and time boxes, Upload all's next
+- **The 3.3.0 and 3.4.0 flows on a live page**: the schedule's date and time boxes, Upload
+  all's wait for the file to finish (read from Studio's words, not an element), the Content
+  list's Restrictions cell (`.tablecell-restrictions`) for the checks, Upload all's next
   upload, the captions upload, the end screen and related-video pickers, posting and pinning the
   comment, the Analytics metric tabs and reading a finished A/B test. Their selectors come from a
   read-only look at Studio on 2026-10-02 (`studio-pages.ts`); none of them was saved then.

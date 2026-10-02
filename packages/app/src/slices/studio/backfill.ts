@@ -1,6 +1,5 @@
 import { listProjects } from "../admission/repo.js";
 import { type PackDeps, uploadPack } from "./pack.js";
-import { clearSlot } from "./plan.js";
 import { projectVideos, recordVideo } from "./videos.js";
 
 // Links read from Studio's Content list (title and video id per row), matched to projects by
@@ -31,8 +30,6 @@ export function backfillVideos(deps: PackDeps, rows: readonly StudioRow[], at: s
       const videoId = titles.map((one) => byTitle.get(norm(one))).find((one) => one !== undefined);
       if (videoId === undefined) continue;
       recordVideo(deps.db, project.id, short, videoId, at);
-      // Uploaded by hand before: its long video holds no slot of the posting plan.
-      if (short === null) clearSlot(deps.db, project.id);
       found += 1;
     }
   }

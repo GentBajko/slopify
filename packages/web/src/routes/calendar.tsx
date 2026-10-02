@@ -51,18 +51,20 @@ import {
 } from "@/schedules/api";
 import { SchedulesView } from "@/schedules/view";
 import { PrepareUpload } from "@/studio/prepare-upload";
+import { ReleasesView } from "@/studio/releases-view";
 import { templatesQuery } from "@/templates/api";
 
 const weeks = 4;
 type View = "weeks" | "list";
 
-// The calendar's two tabs: the coming weeks, and the schedules that fill them. Only the
-// Schedules tab shows in the URL (`?tab=schedules`), so `/calendar` stays the weeks.
-export const calendarTabs = ["weeks", "schedules"] as const;
+// The calendar's tabs: the coming weeks, the YouTube releases (`studio/releases-view.tsx`), and
+// the schedules that fill them. Only the other tabs show in the URL (`?tab=releases`), so
+// `/calendar` stays the weeks.
+export const calendarTabs = ["weeks", "releases", "schedules"] as const;
 export type CalendarTab = (typeof calendarTabs)[number];
 
 export function calendarTabOf(value: unknown): CalendarTab {
-  return value === "schedules" ? "schedules" : "weeks";
+  return value === "schedules" ? "schedules" : value === "releases" ? "releases" : "weeks";
 }
 
 const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric" });
@@ -257,7 +259,7 @@ export function CalendarRoute({
         title="Calendar"
         meta={`${current.channel?.name ?? "Every channel"} · ${String(allRuns.length)} scheduled ${allRuns.length === 1 ? "run" : "runs"} in the next ${String(weeks)} weeks · ${String(queued)} ${queued === 1 ? "topic" : "topics"} queued`}
         actions={
-          tab === "schedules" ? undefined : (
+          tab !== "weeks" ? undefined : (
             <>
               <Segmented
                 label="Calendar view"
@@ -280,6 +282,7 @@ export function CalendarRoute({
       <Tabs
         items={[
           { id: "weeks", label: "Coming weeks" },
+          { id: "releases", label: "Releases" },
           {
             id: "schedules",
             label: "Schedules",
@@ -292,6 +295,9 @@ export function CalendarRoute({
         idPrefix="calendar"
         className="mb-6"
       />
+      <TabPanel idPrefix="calendar" id="releases" active={tab === "releases"}>
+        {tab === "releases" ? <ReleasesView /> : null}
+      </TabPanel>
       <TabPanel idPrefix="calendar" id="schedules" active={tab === "schedules"}>
         {tab === "schedules" ? <SchedulesView pickedId={schedule} onPick={onSchedule} /> : null}
       </TabPanel>

@@ -38,6 +38,7 @@ import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { FilesView } from "@app/slices/storage/files-location.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import type { ProjectStorage } from "@app/slices/storage/trim.js";
+import type { ReleaseCalendar } from "@app/slices/studio/calendar.js";
 import type {
   FillQueueItem,
   StudioExtensionBrowser,
@@ -45,7 +46,8 @@ import type {
   StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
-import type { PostingPlan, Slot } from "@app/slices/studio/plan.js";
+import type { PostingPlan } from "@app/slices/studio/plan-model.js";
+import type { Release, Slot } from "@app/slices/studio/releases.js";
 import type { AbResult, VideoStats } from "@app/slices/studio/stats.js";
 import type { YoutubeVideo } from "@app/slices/studio/videos.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
@@ -528,8 +530,10 @@ export async function saveUploadPick(
 
 export interface PlanBody {
   readonly plan: PostingPlan;
-  // The coming free slots of the plan.
-  readonly free: readonly Slot[];
+  // How many hours before its release each item must be scheduled.
+  readonly leadHours: number;
+  // The series the projects' titles use, for each line's picker.
+  readonly series: readonly string[];
 }
 
 export async function readPostingPlan(api: Api): Promise<PlanBody> {
@@ -538,6 +542,31 @@ export async function readPostingPlan(api: Api): Promise<PlanBody> {
 
 export async function savePostingPlan(api: Api, plan: PostingPlan): Promise<PlanBody> {
   return detailed<PlanBody>(await api.client.studio.plan.$put({ json: plan }));
+}
+
+export async function saveLeadHours(api: Api, hours: number): Promise<PlanBody> {
+  return detailed<PlanBody>(
+    await api.client.studio.settings["lead-hours"].$put({ json: { hours } }),
+  );
+}
+
+// Calendar → Releases.
+export async function readReleaseCalendar(api: Api, weeks = 2): Promise<ReleaseCalendar> {
+  return read<ReleaseCalendar>(
+    await api.client.studio.releases.$get({ query: { weeks: String(weeks) } }),
+  );
+}
+
+// Moves one release, sets it to not scheduled (null), or puts a project into a free time.
+export async function saveRelease(
+  api: Api,
+  projectId: string,
+  release: { readonly short: number; readonly at: string | null; readonly line?: string },
+): Promise<readonly Release[]> {
+  const answer = await detailed<{ releases: readonly Release[] }>(
+    await api.client.studio.releases[":projectId"].$put({ param: { projectId }, json: release }),
+  );
+  return answer.releases;
 }
 
 export async function saveAutoComment(api: Api, on: boolean): Promise<void> {

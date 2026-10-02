@@ -1,7 +1,43 @@
 import { expect, it } from "vitest";
-import { comingSlots, defaultPlan, nextOccurrence, scheduleOf, zonedInstant } from "./plan.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
+import { openDb } from "../../kernel/db/index.js";
+import { migrate } from "../../kernel/db/migrate.js";
+import { emptyPlan, nextOccurrence, type PostingPlan, zonedInstant } from "./plan.js";
+import { seriesOf } from "./plan-model.js";
+import {
+  freeSlots,
+  planReleases,
+  releasesOf,
+  scheduleOf,
+  setRelease,
+  writeLeadHours,
+} from "./releases.js";
 
-const plan = defaultPlan("Europe/Berlin");
+// A three-videos-a-week plan, five shorts each.
+const at = (day: number, time: string) => ({ day, time });
+const plan: PostingPlan = {
+  timeZone: "Europe/Berlin",
+  rows: [
+    {
+      name: "1",
+      series: "",
+      long: at(0, "20:00"),
+      shorts: [at(1, "00:00"), at(1, "17:00"), at(2, "00:00"), at(2, "17:00"), at(3, "17:00")],
+    },
+    {
+      name: "2",
+      series: "",
+      long: at(2, "20:00"),
+      shorts: [at(3, "00:00"), at(4, "00:00"), at(4, "17:00"), at(5, "17:00"), at(6, "17:00")],
+    },
+    {
+      name: "3",
+      series: "",
+      long: at(4, "20:00"),
+      shorts: [at(5, "00:00"), at(6, "00:00"), at(6, "21:00"), at(0, "00:00"), at(0, "17:00")],
+    },
+  ],
+};
 
 it("names a wall-clock time in the plan's zone, across a clock change", () => {
   // 20:00 in Berlin is 18:00 UTC in summer time and 19:00 UTC in winter time.
@@ -29,20 +65,38 @@ it("names a wall-clock time in the plan's zone, across a clock change", () => {
   ).toBe("2026-10-04T18:00:00.000Z");
 });
 
-it("gives the coming long-video slots in time order, A, B, C, week by week", () => {
-  // Friday 2 October 2026, noon in Berlin.
-  const slots = comingSlots(plan, new Date("2026-10-02T10:00:00Z")).slice(0, 4);
-  expect(slots).toEqual([
-    { row: "A", longAt: "2026-10-04T18:00:00.000Z" },
-    { row: "B", longAt: "2026-10-06T18:00:00.000Z" },
-    { row: "C", longAt: "2026-10-08T18:00:00.000Z" },
-    { row: "A", longAt: "2026-10-11T18:00:00.000Z" },
+function db() {
+  const one = openDb(":memory:");
+  migrate(one, fixedClock("2026-10-02T10:00:00.000Z"));
+  for (const id of ["p1", "p2", "p3"])
+    one
+      .prepare("INSERT INTO projects VALUES (?, ?, '16:9', '{}', 'old', 'old')")
+      .run(id, `Project ${id}`);
+  writeLeadHours(one, 24);
+  return one;
+}
+// Friday 2 October 2026, noon in Berlin.
+const now = new Date("2026-10-02T10:00:00Z");
+
+it("gives each finished project the next free long-video time, in time order", () => {
+  const store = db();
+  for (const id of ["p1", "p2", "p3"])
+    planReleases(store, plan, { id, series: "", shorts: 0 }, now);
+  expect(["p1", "p2", "p3"].map((id) => scheduleOf(store, id)?.longAt)).toEqual([
+    "2026-10-04T18:00:00.000Z",
+    "2026-10-06T18:00:00.000Z",
+    "2026-10-08T18:00:00.000Z",
+  ]);
+  expect(freeSlots(store, plan, "", now, 1)).toEqual([
+    { row: "1", longAt: "2026-10-11T18:00:00.000Z" },
   ]);
 });
 
 it("puts each short at the first time its day and hour come round after its own video", () => {
-  const c = scheduleOf(plan, { row: "C", longAt: "2026-10-08T18:00:00.000Z" });
-  expect(c.shortsAt).toEqual([
+  const store = db();
+  setRelease(store, "p1", 0, "2026-10-08T18:00:00.000Z", "3", now);
+  planReleases(store, plan, { id: "p1", series: "", shorts: 5 }, now);
+  expect(scheduleOf(store, "p1")?.shortsAt).toEqual([
     "2026-10-08T22:00:00.000Z", // Fri 00:00
     "2026-10-09T22:00:00.000Z", // Sat 00:00
     "2026-10-10T19:00:00.000Z", // Sat 21:00
@@ -56,4 +110,63 @@ it("puts each short at the first time its day and hour come round after its own 
       new Date("2026-10-08T18:00:00Z"),
     ).toISOString(),
   ).toBe("2026-10-15T18:00:00.000Z");
+});
+
+it("never puts two releases in the same hour, and gives a video as many shorts as it has", () => {
+  const store = db();
+  // Two videos on the same line in consecutive weeks: the second's shorts can't take hours
+  // the first's already hold.
+  setRelease(store, "p1", 0, "2026-10-04T18:00:00.000Z", "1", now);
+  planReleases(store, plan, { id: "p1", series: "", shorts: 7 }, now);
+  setRelease(store, "p2", 0, "2026-10-06T18:00:00.000Z", "2", now);
+  planReleases(store, plan, { id: "p2", series: "", shorts: 2 }, now);
+  const hours = [scheduleOf(store, "p1"), scheduleOf(store, "p2")].flatMap((one) => [
+    one?.longAt,
+    ...(one?.shortsAt ?? []),
+  ]);
+  expect(scheduleOf(store, "p1")?.shortsAt).toHaveLength(7);
+  expect(scheduleOf(store, "p2")?.shortsAt).toHaveLength(2);
+  expect(new Set(hours.map((at) => at?.slice(0, 13))).size).toBe(hours.length);
+});
+
+it("keeps a line's series: a project takes only lines of its series or any", () => {
+  const store = db();
+  const mixed: PostingPlan = {
+    timeZone: "Europe/Berlin",
+    rows: [
+      { name: "1", series: "Games Lore", long: { day: 0, time: "20:00" }, shorts: [] },
+      { name: "2", series: "", long: { day: 2, time: "20:00" }, shorts: [] },
+    ],
+  };
+  planReleases(store, mixed, { id: "p1", series: "Card Lore", shorts: 0 }, now);
+  planReleases(store, mixed, { id: "p2", series: "Games Lore", shorts: 0 }, now);
+  expect(scheduleOf(store, "p1")?.longAt).toBe("2026-10-06T18:00:00.000Z");
+  expect(scheduleOf(store, "p2")?.longAt).toBe("2026-10-04T18:00:00.000Z");
+  expect(seriesOf({ title: "A Tale | Games Lore" })).toBe("Games Lore");
+  expect(seriesOf({ title: "x", titlePattern: "{{Topic}} | Card Lore {{Year}}" })).toBe(
+    "Card Lore",
+  );
+  expect(seriesOf({ title: "No series" })).toBe("");
+});
+
+it("leaves a project set to not scheduled alone, and re-plans shorts when its video moves", () => {
+  const store = db();
+  setRelease(store, "p1", 0, "", null, now);
+  planReleases(store, plan, { id: "p1", series: "", shorts: 2 }, now);
+  expect(scheduleOf(store, "p1")).toBeUndefined();
+  setRelease(store, "p2", 0, "2026-10-04T18:00:00.000Z", "1", now);
+  planReleases(store, plan, { id: "p2", series: "", shorts: 2 }, now);
+  setRelease(store, "p2", 1, "2026-10-05T09:00:00.000Z", "1", now);
+  setRelease(store, "p2", 0, "2026-10-11T18:00:00.000Z", "1", now);
+  // Short 2's plan-placed time is dropped to be planned again; the hand-set short stays.
+  expect(releasesOf(store, "p2").map((one) => [one.short, one.at, one.by])).toEqual([
+    [0, "2026-10-11T18:00:00.000Z", "person"],
+    [1, "2026-10-05T09:00:00.000Z", "person"],
+  ]);
+});
+
+it("has no plan until one is made, so nothing is scheduled", () => {
+  const store = db();
+  planReleases(store, emptyPlan("Europe/Berlin"), { id: "p1", series: "", shorts: 3 }, now);
+  expect(scheduleOf(store, "p1")).toBeUndefined();
 });
