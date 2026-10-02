@@ -10,6 +10,22 @@ const main = document.getElementById("main") as HTMLElement;
 const heading = document.getElementById("heading") as HTMLElement;
 const back = document.getElementById("back") as HTMLButtonElement;
 
+// Reads each known video's numbers from Studio now, one background tab after another, instead
+// of waiting for the daily sweep.
+const statsButton = document.getElementById("stats") as HTMLButtonElement | null;
+statsButton?.addEventListener("click", () => {
+  statsButton.disabled = true;
+  void (api.runtime.sendMessage({ type: "stats-now" }) as Promise<WorkerAnswer<number>>).then(
+    (answer) => {
+      statsButton.textContent = !answer.ok
+        ? answer.message
+        : answer.value <= 0
+          ? "No video on YouTube is known to Slopify yet."
+          : `Reading ${String(answer.value)} videos in background tabs…`;
+    },
+  );
+});
+
 document.getElementById("pairing")?.addEventListener("click", () => {
   void api.runtime.openOptionsPage();
 });

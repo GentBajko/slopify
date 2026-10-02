@@ -215,17 +215,21 @@ interface StatsSweep {
   readonly left: readonly { projectId: string; short: number | null; videoId: string }[];
 }
 
-async function sweepStats(force = false): Promise<void> {
+async function sweepStats(force = false): Promise<number> {
   const stored = await api.storage.local.get([statsKey]);
   const sweep = stored[statsKey] as StatsSweep | undefined;
-  if (!force && sweep !== undefined && Date.now() - sweep.at < statsEveryMs) return;
+  if (!force && sweep !== undefined && Date.now() - sweep.at < statsEveryMs) return 0;
   const { videos } = await getJson<{
     videos: readonly { projectId: string; short: number | null; videoId: string }[];
   }>("/api/studio/ext/known-videos", "the videos on YouTube").catch(() => ({ videos: [] }));
+  // Nothing to read (Slopify not reachable, or no video known yet): the next check tries again,
+  // rather than waiting a day.
+  if (videos.length === 0) return 0;
   await api.storage.local.set({
     [statsKey]: { at: Date.now(), left: videos } satisfies StatsSweep,
   });
   await nextStats();
+  return videos.length;
 }
 
 async function nextStats(): Promise<void> {
@@ -383,6 +387,9 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ok: true,
         value: await post("/api/studio/ext/backfill", { videos: request.videos }, "Studio's list"),
       };
+    if (request.type === "stats-now") {
+      return { ok: true, value: await sweepStats(true) };
+    }
     if (request.type === "ready") {
       const current = await paired();
       const response = await call("/api/studio/ext/ready", current);

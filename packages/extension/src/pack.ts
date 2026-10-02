@@ -97,6 +97,8 @@ export type WorkerRequest =
     }
   // The toolbar popup: the projects ready to upload, and the one clicked.
   | { readonly type: "ready" }
+  // The popup's "Read Studio numbers now": the daily sweep, at once.
+  | { readonly type: "stats-now" }
   | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }
   // Studio said the upload was scheduled or published.
   | {

@@ -1,0 +1,1 @@
+- The extension's stats sweep records itself only when it has videos to read (else the next 15-minute check retries), and the popup's "Read Studio numbers now" runs it at once (`stats-now`; extension 1.1.1).
