@@ -15,6 +15,7 @@ import { validateCues } from "../revisions/rules.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "../subtitles/captions.js";
+import { subtitleFrame } from "../subtitles/layout.js";
 import { spoken } from "../video/plan.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
 import { type CaptionSpeakers, speakerColour } from "../voices/palette.js";
@@ -274,10 +275,7 @@ async function files(
   if (!context.maySubmit(piece.id)) return "held";
   const prepared: PreparedOutput[] = [];
   try {
-    const frame =
-      view.revision.config.format === "16:9"
-        ? { width: 1920, height: 1080 }
-        : { width: 1080, height: 1920 };
+    const frame = subtitleFrame(view.revision.config.format);
     const voices = captionVoices(view.revision.config);
     const portraits = panelPortraits(deps.db, voices);
     const overlay =

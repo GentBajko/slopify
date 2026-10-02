@@ -78,6 +78,8 @@ describe("sizeFor", () => {
     expect(sizeFor("gpt-image-1", "9:16")).toBe("1024x1536");
     expect(sizeFor("gpt-image-1-mini", "16:9")).toBe("1536x1024");
     expect(sizeFor("gpt-image-1.5", "9:16")).toBe("1024x1536");
+    expect(sizeFor("gpt-image-1", "1:1")).toBe("1024x1024");
+    expect(sizeFor("gpt-image-2", "1:1")).toBe("1024x1024");
   });
 
   it("asks gpt-image-2 for the aspect exactly, both sides divisible by 16", () => {

@@ -3,8 +3,14 @@
 // runner may not import a slice to learn them.
 
 // The frame a run is made in, and the aspect an image is asked for: one set, named once.
-export const formats = ["16:9", "9:16"] as const;
+export const formats = ["16:9", "9:16", "1:1"] as const;
 export type Format = (typeof formats)[number];
+
+// The shape a project's thumbnail is drawn in: YouTube shows thumbnails 16:9, so a square
+// project's is landscape; the others follow the project.
+export function thumbnailAspect(format: Format): "16:9" | "9:16" {
+  return format === "1:1" ? "16:9" : format;
+}
 
 // Document is last so every screen that walks this list in order shows the six older
 // stages where they always were.

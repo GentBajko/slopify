@@ -2,7 +2,11 @@ import type { Format } from "../../kernel/pipeline.js";
 import type { SubtitleConfig } from "./model.js";
 
 export function subtitleFrame(format: Format): { readonly width: number; readonly height: number } {
-  return format === "9:16" ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+  return format === "9:16"
+    ? { width: 1080, height: 1920 }
+    : format === "1:1"
+      ? { width: 1080, height: 1080 }
+      : { width: 1920, height: 1080 };
 }
 
 // ASS and the browser preview share anchors. Edge positions keep the existing

@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { RunConfig } from "../admission/model.js";
 import { sniffImage } from "../channels/images.js";
 import { imageBlob } from "../channels/repo.js";
+import { subtitleFrame } from "../subtitles/layout.js";
 import type { PortraitOverlay } from "../video/ffmpeg.js";
 import { usesVoices, type VoicesSettings } from "./model.js";
 import { panelTiles, usesSpeakerPanel } from "./panel.js";
@@ -63,10 +64,7 @@ export function writePortraits(
   const portraits = panelPortraits(db, voices);
   if (voices === undefined || portraits.every((one) => one === undefined)) return undefined;
   // The caption file's frame (`rebuild/runtime-subtitles.ts`), so a portrait lands in its tile.
-  const tiles = panelTiles(
-    voices.speakers.length,
-    config.format === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 },
-  );
+  const tiles = panelTiles(voices.speakers.length, subtitleFrame(config.format));
   const overlays: PortraitOverlay[] = [];
   const recorded: { speaker: string; sha256: string }[] = [];
   portraits.forEach((portrait, index) => {

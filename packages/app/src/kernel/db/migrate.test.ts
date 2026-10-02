@@ -198,6 +198,7 @@ describe("migrate", () => {
       { version: 46, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 47, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 48, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 49, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -207,16 +208,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 41 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 42 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(49, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(50, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 49 is newer than this app knows (48)",
+      "database schema 50 is newer than this app knows (49)",
     );
   });
 
@@ -608,3 +609,22 @@ function withoutRetryColumns(row: Record<string, unknown>): Record<string, unkno
   if (count !== undefined && count !== 0) throw new Error("an existing row gained a retry");
   return rest;
 }
+
+it("keeps every project and its links when it widens the format to square", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 48 });
+  db.prepare("INSERT INTO projects VALUES ('p1','One','16:9','{}','old','old')").run();
+  db.prepare("INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1)").run();
+  migrate(db, clock);
+  db.prepare("INSERT INTO projects VALUES ('p2','Two','1:1','{}','new','new')").run();
+  expect(db.prepare("SELECT id, format FROM projects ORDER BY id").all()).toEqual([
+    { id: "p1", format: "16:9" },
+    { id: "p2", format: "1:1" },
+  ]);
+  expect(db.prepare("SELECT paused FROM project_controls WHERE project_id='p1'").get()).toEqual({
+    paused: 1,
+  });
+  expect(() =>
+    db.prepare("INSERT INTO projects VALUES ('p3','Three','4:3','{}','new','new')").run(),
+  ).toThrow();
+});

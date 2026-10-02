@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
-import type { RunConfig } from "../admission/model.js";
+import type { Format, RunConfig } from "../admission/model.js";
 import { usesFigureCards, usesYoutubeDescription } from "../admission/rules.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
@@ -221,7 +221,7 @@ export function figureShots(
   deps: ExportExecutionDeps,
   context: StageContext,
   view: RevisionView,
-  format: "16:9" | "9:16" = view.revision.config.format,
+  format: Format = view.revision.config.format,
   words: Parameters<typeof passageSpans>[0] = timingWords(deps, context, view),
 ): readonly FigureShot[] {
   const cards = view.outputs

@@ -126,7 +126,7 @@ function cardRecipe(
 ): ResolvedWorkRecipe {
   const { config } = context;
   const formats =
-    config.format === "16:9" && usesShorts(config) ? ["16:9", "9:16"] : [config.format];
+    config.format !== "9:16" && usesShorts(config) ? [config.format, "9:16"] : [config.format];
   return recipe(
     context,
     `figure:card:${String(index)}`,

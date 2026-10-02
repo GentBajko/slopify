@@ -46,6 +46,7 @@ export class StylePreviewError extends Error {
 const previewFrame = {
   "16:9": { width: 480, height: 270 },
   "9:16": { width: 270, height: 480 },
+  "1:1": { width: 360, height: 360 },
 } as const;
 const shotSeconds = stylePreviewSeconds / 3;
 const chapterTitle = "Chapter one";

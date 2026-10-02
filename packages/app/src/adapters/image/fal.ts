@@ -52,8 +52,8 @@ type AspectField = (typeof aspectFields)[number];
 // orientation, so the portrait one is "portrait_16_9" and is 9:16; `aspect_ratio` takes the
 // run's own words.
 const sizes: Readonly<Record<AspectField, Readonly<Record<ImageRequest["aspect"], string>>>> = {
-  image_size: { "16:9": "landscape_16_9", "9:16": "portrait_16_9" },
-  aspect_ratio: { "16:9": "16:9", "9:16": "9:16" },
+  image_size: { "16:9": "landscape_16_9", "9:16": "portrait_16_9", "1:1": "square_hd" },
+  aspect_ratio: { "16:9": "16:9", "9:16": "9:16", "1:1": "1:1" },
 };
 
 const modelAspects: Readonly<Record<string, AspectField>> = {

@@ -24,13 +24,13 @@ const values = z.object({
   source: z.string(),
   section: z.string().nullable(),
   image: z.string().nullable(),
-  formats: z.array(z.enum(["16:9", "9:16"])).min(1),
+  formats: z.array(z.enum(["16:9", "9:16", "1:1"])).min(1),
   fontId: z.string(),
   color: z.string().nullable(),
   language: z.string(),
 });
 
-const frames = { "16:9": [1920, 1080], "9:16": [1080, 1920] } as const;
+const frames = { "16:9": [1920, 1080], "9:16": [1080, 1920], "1:1": [1080, 1080] } as const;
 
 export async function executeFigureCard(
   deps: LocalExecutionDeps,

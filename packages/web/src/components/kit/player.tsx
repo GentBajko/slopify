@@ -48,6 +48,7 @@ export function Player({
   poster,
   label,
   portrait = false,
+  square = false,
   captions,
   chapters = [],
   ref,
@@ -59,6 +60,8 @@ export function Player({
   // The accessible name: "History: Cleopatra, final video".
   readonly label: string;
   readonly portrait?: boolean;
+  // A 1:1 video.
+  readonly square?: boolean;
   // A WebVTT track, when there is one.
   readonly captions?: { readonly src: string; readonly lang: string; readonly label: string };
   // Marks on the track, each titled on hover: the video's YouTube chapters.
@@ -185,6 +188,7 @@ export function Player({
       className={cn(
         "sl-player",
         portrait && "sl-player--portrait",
+        square && "sl-player--square",
         bare && "sl-player--bare",
         full && "sl-player--full",
         className,

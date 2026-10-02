@@ -52,7 +52,7 @@ export const imageModelSchema = base
   .extend({
     image: z
       .object({
-        aspectRatios: z.array(z.enum(["16:9", "9:16"])).min(1),
+        aspectRatios: z.array(z.enum(["16:9", "9:16", "1:1"])).min(1),
         resolution: z.string().max(100).optional(),
       })
       .strict(),

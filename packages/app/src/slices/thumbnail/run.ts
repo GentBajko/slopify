@@ -6,6 +6,7 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
+import { thumbnailAspect } from "../../kernel/pipeline.js";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -253,7 +254,7 @@ async function make(
     model: choice.model,
     ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     prompt,
-    aspect: project.format,
+    aspect: thumbnailAspect(project.format),
   });
   if (!result.ok) return "held";
   const made = result.value;

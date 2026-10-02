@@ -25,6 +25,7 @@ export const fps = 30;
 const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "16:9": { width: 1920, height: 1080 },
   "9:16": { width: 1080, height: 1920 },
+  "1:1": { width: 1080, height: 1080 },
 };
 
 // A zoom shot zooms linearly and centred between 100% and 100% + the project's zoom

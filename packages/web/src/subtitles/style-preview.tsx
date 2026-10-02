@@ -80,7 +80,9 @@ export function SubtitlePreview({
               ? maxFrameHeight
                 ? `min(240px, calc((${maxFrameHeight}) * 9 / 16))`
                 : 240
-              : 480,
+              : format === "1:1"
+                ? 360
+                : 480,
           containerType: "inline-size",
         }}
       >

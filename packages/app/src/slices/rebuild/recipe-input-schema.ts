@@ -103,7 +103,7 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
       provider: z.string(),
       model: z.string(),
       prompt: z.string(),
-      aspect: z.enum(["16:9", "9:16"]),
+      aspect: z.enum(["16:9", "9:16", "1:1"]),
       animate: z.object({ image: z.string(), seconds: z.number() }).strict().optional(),
       thinking: z.enum(thinkingModes).optional(),
       reference: z

@@ -88,7 +88,12 @@ for (const job of demo === undefined ? sampleJobs : demoJobs) {
   });
   const raw = `${path}.${image.mime === "image/png" ? "png" : "jpg"}`;
   writeFileSync(raw, image.bytes);
-  const frame = job.square === true ? "720x720" : job.aspect === "16:9" ? "1920x1080" : "1080x1920";
+  const frame =
+    job.square === true || job.aspect === "1:1"
+      ? "720x720"
+      : job.aspect === "16:9"
+        ? "1920x1080"
+        : "1080x1920";
   execFileSync("magick", [
     raw,
     "-resize",

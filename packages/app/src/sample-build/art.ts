@@ -588,9 +588,14 @@ function disc(dir: string, { w, h }: Size, out: string, seed: number): void {
   ]);
 }
 
-// One scene as JPEG bytes, 1280×720 or 720×1280; the seed varies its details.
-export function drawScene(scene: Scene, aspect: "16:9" | "9:16", seed: number): Uint8Array {
-  const size = aspect === "16:9" ? { w: 1280, h: 720 } : { w: 720, h: 1280 };
+// One scene as JPEG bytes, 1280×720, 720×1280 or 960×960; the seed varies its details.
+export function drawScene(scene: Scene, aspect: "16:9" | "9:16" | "1:1", seed: number): Uint8Array {
+  const size =
+    aspect === "16:9"
+      ? { w: 1280, h: 720 }
+      : aspect === "1:1"
+        ? { w: 960, h: 960 }
+        : { w: 720, h: 1280 };
   const dir = mkdtempSync(join(process.env.SAMPLE_SCRATCH ?? "/tmp", "sample-art-"));
   try {
     const out = join(dir, "out.jpg");

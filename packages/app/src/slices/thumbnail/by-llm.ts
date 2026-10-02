@@ -1,3 +1,4 @@
+import { thumbnailAspect } from "../../kernel/pipeline.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import type { Format } from "../admission/model.js";
 
@@ -35,7 +36,7 @@ export function thumbnailMessages(brief: ThumbnailBrief): readonly Message[] {
           ? "(none)"
           : values.map(([name, value]) => `${name}: ${value}`).join("\n"),
         "",
-        `Aspect ratio of the thumbnail: ${brief.format}`,
+        `Aspect ratio of the thumbnail: ${thumbnailAspect(brief.format)}`,
         "",
         "The article this video narrates:",
         "",

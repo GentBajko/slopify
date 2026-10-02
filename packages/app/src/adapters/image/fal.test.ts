@@ -109,6 +109,13 @@ describe("falImage.generate", () => {
     expect(bodyOf(seen[0])).toMatchObject({ image_size: "portrait_16_9" });
   });
 
+  it("asks for the square frame when the run is 1:1", async () => {
+    const seen: Seen[] = [];
+    await generate(replaying(answering("fal-success.json"), undefined, seen), "1:1");
+
+    expect(bodyOf(seen[0])).toMatchObject({ image_size: "square_hd" });
+  });
+
   // The Google endpoints take `aspect_ratio` where the FLUX ones take `image_size`, and a
   // request carrying the wrong one is a 422 the wrapper would retry three more times.
   it.each(["fal-ai/nano-banana", "fal-ai/nano-banana-2", "fal-ai/gemini-3.1-flash-image-preview"])(

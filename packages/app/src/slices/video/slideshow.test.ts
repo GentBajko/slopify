@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -155,6 +155,36 @@ describe("renderSlideshow", () => {
       expect(turn - start).toBeGreaterThan(20);
       expect(turn - end).toBeGreaterThan(20);
       expect(readdirSync(scratch).sort()).toEqual(["out.mp4", "ramp.ppm"]);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  // Real ffmpeg: a square project renders a 1080x1080 video.
+  it("renders a square video for a 1:1 project", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+    try {
+      const still = join(scratch, "still.ppm");
+      writeFileSync(
+        still,
+        Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 90)]),
+      );
+      const output = join(scratch, "out.mp4");
+      const bin = resolveFfmpeg(process.env, ffmpegStatic);
+      const { edit } = plan({ format: "1:1", imageSeconds: 1, images: [still], body: undefined });
+      await renderSlideshow({
+        bin,
+        edit,
+        output,
+        burnSubtitles: false,
+        scratch,
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      });
+      // ffmpeg -i with no output exits 1 and prints the streams on stderr.
+      const probe = spawnSync(bin, ["-hide_banner", "-i", output]).stderr.toString();
+      expect(probe).toMatch(/Video: .* 1080x1080/);
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }

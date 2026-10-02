@@ -374,7 +374,7 @@ export const playHelp = {
   },
   "play.format": {
     title: "Frame format",
-    body: "16:9 is a landscape video for YouTube and screens. 9:16 is a portrait video for phones. Images are drawn in this shape and captions are placed for it. Default: 16:9.",
+    body: "16:9 is a landscape video for YouTube and screens. 9:16 is a portrait video for phones. 1:1 is square, for posts and feeds. Images are drawn in this shape and captions are placed for it; shorts stay 9:16 and the thumbnail stays 16:9 for YouTube. Default: 16:9.",
     tutorial: { page: "Play-Video-and-Style", anchor: "frame-format" },
   },
   "play.preview-text": {

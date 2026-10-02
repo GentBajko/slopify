@@ -203,7 +203,10 @@ export function StylePreview({
           label={label ?? heading}
           {...(still === undefined ? {} : { poster: still })}
           portrait={portrait}
-          className={portrait ? "max-w-[270px]" : "max-w-[480px]"}
+          square={!portrait && format === "1:1"}
+          className={
+            portrait ? "max-w-[270px]" : format === "1:1" ? "max-w-[360px]" : "max-w-[480px]"
+          }
         />
       )}
       {state.kind === "pending" ? (

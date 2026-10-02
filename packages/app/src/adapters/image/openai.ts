@@ -30,6 +30,7 @@ export const openAiImageModels: readonly ModelInfo[] = [
 const standard: Readonly<Record<ImageRequest["aspect"], string>> = {
   "16:9": "1536x1024",
   "9:16": "1024x1536",
+  "1:1": "1024x1024",
 };
 // gpt-image-2 takes an arbitrary WIDTH×HEIGHT whose sides divide by 16, between 1:3 and
 // 3:1, so on that model the closest supported size is the aspect exactly and the render
@@ -37,6 +38,7 @@ const standard: Readonly<Record<ImageRequest["aspect"], string>> = {
 const exact: Readonly<Record<ImageRequest["aspect"], string>> = {
   "16:9": "1536x864",
   "9:16": "864x1536",
+  "1:1": "1024x1024",
 };
 const arbitrarySizes = /^gpt-image-2/;
 

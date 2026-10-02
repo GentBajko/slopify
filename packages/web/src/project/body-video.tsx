@@ -119,7 +119,14 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           {...(poster === undefined ? {} : { poster: poster.url })}
           chapters={chapters}
           portrait={project.format === "9:16"}
-          className={project.format === "9:16" ? "max-w-[360px]" : "max-w-[1100px]"}
+          square={project.format === "1:1"}
+          className={
+            project.format === "9:16"
+              ? "max-w-[360px]"
+              : project.format === "1:1"
+                ? "max-w-[640px]"
+                : "max-w-[1100px]"
+          }
           {...(playedSubtitles === "files" && vtt && captions
             ? { captions: { src: captions.url, lang: "en", label: "English" } }
             : {})}

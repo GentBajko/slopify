@@ -1,4 +1,4 @@
-import type { Format } from "@app/kernel/pipeline.js";
+import { type Format, formats } from "@app/kernel/pipeline.js";
 import { type ReactElement, useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
@@ -22,12 +22,13 @@ export function FormatPicker({
         type="single"
         value={value}
         aria-labelledby={id}
-        className="w-full max-w-[400px] gap-3 overflow-visible border-0"
+        className="w-full max-w-[560px] gap-3 overflow-visible border-0"
         onValueChange={(next) => {
-          if (next === "16:9" || next === "9:16") onPick(next);
+          const picked = formats.find((format) => format === next);
+          if (picked !== undefined) onPick(picked);
         }}
       >
-        {(["16:9", "9:16"] as const).map((format) => (
+        {formats.map((format) => (
           <ToggleGroupItem
             key={format}
             value={format}
@@ -40,15 +41,15 @@ export function FormatPicker({
                 data-format-shape={format}
                 className="block rounded-[2px] border-2 border-current"
                 style={{
-                  width: format === "16:9" ? 64 : 27,
-                  aspectRatio: format === "16:9" ? "16 / 9" : "9 / 16",
+                  width: format === "16:9" ? 64 : format === "1:1" ? 40 : 27,
+                  aspectRatio: format.replace(":", " / "),
                 }}
               />
             </span>
             <span className="text-left">
               <span className="block text-body font-semibold">{format}</span>
               <span className="text-label text-ink-3">
-                {format === "16:9" ? "Landscape" : "Portrait"}
+                {format === "16:9" ? "Landscape" : format === "1:1" ? "Square" : "Portrait"}
               </span>
             </span>
           </ToggleGroupItem>

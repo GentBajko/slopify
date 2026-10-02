@@ -151,6 +151,7 @@ image:
       aspectRatios: &a5
         - 16:9
         - 9:16
+        - "1:1"
   - provider: openai-image
     id: gpt-image-2.5-flare
     name: GPT Image 2.5 Flare
@@ -261,6 +262,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
   - provider: fal
     id: fal-ai/wan-25-preview/image-to-video
     name: Wan 2.5 (image to video, 720p)
@@ -274,6 +276,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
   - provider: fal
     id: fal-ai/bytedance/seedance/v1/pro/fast/image-to-video
     name: Seedance 1.0 Pro Fast (image to video, 720p)
@@ -288,6 +291,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
   - provider: replicate
     id: kwaivgi/kling-v2.5-turbo-pro
     name: Kling 2.5 Turbo Pro (image to video)
@@ -301,6 +305,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
   - provider: replicate
     id: wan-video/wan-2.5-i2v
     name: Wan 2.5 (image to video, 720p)
@@ -314,6 +319,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
   - provider: replicate
     id: bytedance/seedance-1-pro-fast
     name: Seedance 1 Pro Fast (image to video, 720p)
@@ -327,6 +333,7 @@ image:
       aspectRatios:
         - 16:9
         - 9:16
+        - "1:1"
 tts:
   - provider: elevenlabs
     id: eleven_v4

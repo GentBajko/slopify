@@ -612,6 +612,9 @@
   .sl-player--portrait {
     aspect-ratio: 9 / 16;
   }
+  .sl-player--square {
+    aspect-ratio: 1 / 1;
+  }
   .sl-player--full {
     border-radius: 0;
     aspect-ratio: auto;

@@ -34,7 +34,7 @@ import { SectionMore } from "./stage-section.js";
 // hover and focus, and a press opens it full size in the lightbox.
 
 export function frameAspect(format: Format): Aspect {
-  return format === "9:16" ? "portrait" : "landscape";
+  return format === "9:16" ? "portrait" : format === "1:1" ? "square" : "landscape";
 }
 
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {

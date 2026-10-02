@@ -1,3 +1,4 @@
+import { thumbnailAspect } from "../../kernel/pipeline.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, subjectOf, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
 import { usesShortMode } from "../admission/short-mode.js";
@@ -357,7 +358,7 @@ export function thumbnailRecipes(
             kind: "image",
             version: 1,
             ...imageChoice(config),
-            aspect: config.format,
+            aspect: thumbnailAspect(config.format),
             prompt: thumbnailVariantPrompt(prompt, variant),
             ...(reference === undefined ? {} : { reference: reference.input }),
             // The thumbnail stands for the whole video, like the establishing image.

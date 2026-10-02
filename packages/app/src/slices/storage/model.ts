@@ -78,7 +78,7 @@ export interface OutputMeta {
   // Which short (1-based) a short's image or video belongs to.
   readonly short?: number | undefined;
   // A figure card's frame: the video's, or upright for the Shorts of a 16:9 video.
-  readonly format?: "16:9" | "9:16" | undefined;
+  readonly format?: "16:9" | "9:16" | "1:1" | undefined;
   // The first and last sentence of the narration that short was cut from, so a clip picked
   // again with the same sentences still finds its video.
   readonly sentences?: readonly [number, number] | undefined;

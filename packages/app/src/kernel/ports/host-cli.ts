@@ -92,7 +92,7 @@ export const hostImageSchema = z
     // "codex-imagegen" is the Codex default; any other is one of the Codex CLI's models.
     model: short.refine((v) => !v.startsWith("-") && !/\s/.test(v)),
     prompt: z.string().min(1).max(bridgeLimits.text),
-    aspect: z.enum(["16:9", "9:16"]),
+    aspect: z.enum(["16:9", "9:16", "1:1"]),
     thinking: z.enum(thinkingModes).optional(),
     // The establishing image, as base64 (at most `bridgeLimits.reference` bytes decoded).
     reference: z
