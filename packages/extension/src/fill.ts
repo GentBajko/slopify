@@ -1,11 +1,16 @@
 import { type PackItem, playlistsOf } from "./pack.js";
 import {
+  abBothChip,
+  abBothText,
   abTestButton,
   abTestChips,
   abTestDialog,
   abTestInputs,
+  abTestTitles,
   abThumbnailOnlyChip,
   abThumbnailOnlyText,
+  abTitleOnlyChip,
+  abTitleOnlyText,
   alteredNo,
   alteredYes,
   description,
@@ -44,7 +49,9 @@ export type FieldName =
   | "playlist"
   | "audience"
   | "altered"
-  | "tags";
+  | "tags"
+  // A/B Testing's other titles, when no thumbnails are tested beside them.
+  | "titles";
 
 export interface FieldResult {
   readonly field: FieldName;
@@ -176,12 +183,24 @@ export async function fillStudio(
     message:
       "Couldn't find the Thumbnail upload — press Upload file under Thumbnail and pick the thumbnail from the project folder (Slopify → Prepare upload → Open folder).",
   };
+  // Other titles (Slopify's A/B titles) go into A/B Testing too, beside the video's title.
+  const otherTitles = item.titles ?? [];
+  const abFallback: FieldResult =
+    thumbnails.length > 1
+      ? thumbnailFallback
+      : {
+          field: "titles",
+          ok: false,
+          message:
+            "Couldn't fill A/B Testing's titles: press A/B Testing beside the title, choose Title only and paste the other titles. They are copied.",
+          copy: otherTitles.join("\n"),
+        };
   let abSlot = -1;
   if (thumbnails.length === 1)
     await attempt(async () => setThumbnail(root, thumbnails), thumbnailFallback);
-  else if (thumbnails.length > 1) {
+  if (thumbnails.length > 1 || otherTitles.length > 0) {
     abSlot = results.length;
-    results.push(thumbnailFallback);
+    results.push(abFallback);
   }
   if (playlists.length > 0) {
     const names = playlists.join(", ");
@@ -246,7 +265,10 @@ export async function fillStudio(
   }
   if (abSlot >= 0) {
     const at = results.length;
-    await attempt(() => fillAbTest(root, thumbnails, waits), thumbnailFallback);
+    await attempt(
+      () => fillAbTest(root, thumbnails, item.titles ?? [], item.title, waits),
+      abFallback,
+    );
     const [done] = results.splice(at, 1);
     if (done !== undefined) results[abSlot] = done;
   }
@@ -292,59 +314,105 @@ function setThumbnail(root: Document, files: readonly File[]): FieldResult {
   return { field: "thumbnails", ok: true, message: "Thumbnail set." };
 }
 
-// Two or three thumbnails: presses A/B Testing (with a whole pointer sequence; Studio ignored a
-// plain `.click()` from a script), picks "Thumbnail only", and puts thumbnails 1, 2 and 3 into
-// its slots 1, 2 and 3. The dialog is left open: the person checks the pictures and presses
-// Set test. When A/B Testing isn't there, doesn't open or can't be filled, the first goes in the
-// single Thumbnail slot and the message says to add the others by hand.
+// A/B Testing, last of all: with other titles (`item.titles`) and two or three thumbnails it
+// picks "Title and thumbnail", with titles alone "Title only", with thumbnails alone "Thumbnail
+// only". It presses A/B Testing with a whole pointer sequence (Studio ignored a plain `.click()`
+// from a script), puts the video's title and the others in title boxes 1, 2 and 3 and
+// thumbnails 1, 2 and 3 in their rows. The dialog is left open: the person checks it and
+// presses Set test. When A/B Testing isn't there, doesn't open or can't be filled, the first
+// thumbnail goes in the single Thumbnail slot and the message says what to add by hand.
 async function fillAbTest(
   root: Document,
   files: readonly File[],
+  titles: readonly string[],
+  title: string,
   waits: Waits,
 ): Promise<FieldResult> {
-  const others = files.length === 2 ? "thumbnail 2" : "thumbnails 2 and 3";
+  const testsPictures = files.length > 1;
+  const testsTitles = titles.length > 0;
+  const mode =
+    testsPictures && testsTitles ? abBothText : testsTitles ? abTitleOnlyText : abThumbnailOnlyText;
+  const field: FieldName = testsPictures ? "thumbnails" : "titles";
   const folder = "the project folder (Slopify → Prepare upload → Open folder)";
-  const firstOnly = (why: string): FieldResult => {
-    setThumbnail(root, files);
-    return { field: "thumbnails", ok: true, message: `Thumbnail 1 is set. ${why}` };
+  const asked = [
+    ...(testsPictures ? [files.length === 2 ? "thumbnail 2" : "thumbnails 2 and 3"] : []),
+    ...(testsTitles ? [titles.length === 1 ? "the other title" : "the other titles"] : []),
+  ].join(" and ");
+  const copy = testsTitles ? titles.join("\n") : undefined;
+  const byHand = (why: string): FieldResult => {
+    if (testsPictures) setThumbnail(root, files);
+    const set = testsPictures ? "Thumbnail 1 is set. " : "";
+    const pictures = testsPictures ? ` Pick the pictures from ${folder}.` : "";
+    const words = testsTitles ? " The titles are copied." : "";
+    return { field, ok: testsPictures, message: `${set}${why}${pictures}${words}`, copy };
   };
   const button = findShown(root, abTestButton);
   if (button === undefined)
-    return firstOnly(
-      `Studio's A/B Testing button wasn't found, so add ${others} by hand: press A/B Testing beside the title (it may only appear after the upload is saved), choose Thumbnail only and pick them from ${folder}.`,
+    return byHand(
+      `Studio's A/B Testing button wasn't found, so add ${asked} by hand: press A/B Testing beside the title (it may only appear after the upload is saved) and choose ${mode}.`,
     );
   press(button);
   const dialog = await waits.waitFor(abTestDialog, root, waits.abDialogMs);
   if (dialog === null)
-    return firstOnly(
-      `Studio's A/B Testing didn't open when Slopify pressed it, so add ${others} by hand: press A/B Testing beside the title, choose Thumbnail only and pick them from ${folder}.`,
+    return byHand(
+      `Studio's A/B Testing didn't open when Slopify pressed it, so add ${asked} by hand: press A/B Testing beside the title and choose ${mode}.`,
     );
+  const fallbackChip =
+    mode === abBothText
+      ? abBothChip
+      : mode === abTitleOnlyText
+        ? abTitleOnlyChip
+        : abThumbnailOnlyChip;
   const chip =
     findAll(dialog, abTestChips).find(
-      (one) => (one.textContent ?? "").trim().toLowerCase() === abThumbnailOnlyText.toLowerCase(),
-    ) ?? findField(dialog, abThumbnailOnlyChip);
+      (one) => (one.textContent ?? "").trim().toLowerCase() === mode.toLowerCase(),
+    ) ?? findField(dialog, fallbackChip);
   if (chip !== null) press(chip);
   const HTMLInput = viewOf(root).HTMLInputElement;
-  const inputs = await waits.until(() => {
-    const found = findAll(root, abTestInputs).filter(
-      (one): one is HTMLInputElement => one instanceof HTMLInput,
-    );
-    return found.length >= files.length ? found : null;
-  }, waits.abDialogMs);
-  if (inputs === null)
-    return firstOnly(
-      `Studio's A/B Testing opened, but Slopify couldn't find where it takes the pictures, so add ${others} there by hand (choose Thumbnail only) from ${folder}.`,
+  const HTMLBox = viewOf(root).HTMLElement;
+  const inputs = testsPictures
+    ? await waits.until(() => {
+        const found = findAll(root, abTestInputs).filter(
+          (one): one is HTMLInputElement => one instanceof HTMLInput,
+        );
+        return found.length >= files.length ? found : null;
+      }, waits.abDialogMs)
+    : [];
+  const boxes = testsTitles
+    ? await waits.until(() => {
+        const found = findAll(root, abTestTitles).filter(
+          (one): one is HTMLElement => one instanceof HTMLBox,
+        );
+        return found.length >= titles.length + 1 ? found : null;
+      }, waits.abDialogMs)
+    : [];
+  if (inputs === null || boxes === null)
+    return byHand(
+      `Studio's A/B Testing opened, but Slopify couldn't find where it takes ${inputs === null ? "the pictures" : "the titles"}, so add ${asked} there by hand (choose ${mode}).`,
     );
   files.forEach((file, index) => {
     const slot = inputs[index];
     if (slot !== undefined) setFiles(slot, [file]);
   });
-  const count = files.length === 2 ? "Both" : `All ${String(files.length)}`;
-  const pictures = files.length === 2 ? "two" : "three";
+  // Title 1 is the video's own title; Studio fills it in, and an empty one is filled here.
+  const [own, ...others] = boxes;
+  if (own !== undefined && (own.textContent ?? "").trim() === "") setEditableText(own, title);
+  titles.forEach((one, index) => {
+    const box = others[index];
+    if (box !== undefined) setEditableText(box, one);
+  });
+  const parts = [
+    ...(testsPictures
+      ? [`${files.length === 2 ? "both" : `all ${String(files.length)}`} thumbnails`]
+      : []),
+    ...(testsTitles
+      ? [`${titles.length === 1 ? "the other title" : `the ${String(titles.length)} other titles`}`]
+      : []),
+  ].join(" and ");
   return {
-    field: "thumbnails",
+    field,
     ok: true,
-    message: `${count} thumbnails are in Studio's A/B Testing (Thumbnail only), which is left open. Check the ${pictures} pictures there, then press Set test yourself; closing the dialog drops them.`,
+    message: `Studio's A/B Testing (${mode}) has ${parts}, and is left open. Check them there, then press Set test yourself; closing the dialog drops them.`,
   };
 }
 

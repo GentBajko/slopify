@@ -112,6 +112,28 @@ export const abThumbnailOnlyChip: FieldSelectors = {
   label: 'the A/B Testing "Thumbnail only" choice',
   selectors: ["ytcp-static-chip-bar ytcp-chip#chip-1", "ytcp-chip#chip-1"],
 };
+// Checked live on 2026-10-02 (a video's Details editor): the chips are `role=radio` with
+// `aria-checked`, and every mode shows three rows (`.ytcpCreatorExperimentCreateDialogExperimentOption`),
+// each with its title box ("Add title 1", 2, 3; row 1 holds the video's title) and, with
+// thumbnails in the test, its `ytcp-thumbnail-uploader`.
+export const abTitleOnlyText = "Title only";
+export const abTitleOnlyChip: FieldSelectors = {
+  label: 'the A/B Testing "Title only" choice',
+  selectors: ["ytcp-static-chip-bar ytcp-chip#chip-0", "ytcp-chip#chip-0"],
+};
+export const abBothText = "Title and thumbnail";
+export const abBothChip: FieldSelectors = {
+  label: 'the A/B Testing "Title and thumbnail" choice',
+  selectors: ["ytcp-static-chip-bar ytcp-chip#chip-2", "ytcp-chip#chip-2"],
+};
+// The three title boxes, in row order: contenteditable `div#textbox`es like the Details title.
+export const abTestTitles: FieldSelectors = {
+  label: "the A/B Testing titles",
+  selectors: [
+    "ytcp-creator-experiment-create-dialog .ytcpCreatorExperimentCreateDialogTitleField div#textbox[contenteditable]",
+    'ytcp-creator-experiment-create-dialog #textbox[contenteditable][aria-label^="Add title"]',
+  ],
+};
 // With Thumbnail only chosen: three uploaders, "Thumbnail 1 (required)", "Thumbnail 2
 // (required)" and "Thumbnail 3", each a `ytcp-thumbnail-uploader` holding an
 // `input#file-loader[type=file]` (the same id three times, not multiple). Taken in document

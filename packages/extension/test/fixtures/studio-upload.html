@@ -215,6 +215,63 @@
               <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
             </ytcp-thumbnail-uploader>
           </template>
+          <!-- Title only and Title and thumbnail (read live 2026-10-02): three rows, each a title
+               box and, with thumbnails, an uploader; Studio puts the video's title in row 1. -->
+          <template id="ab-title-rows">
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title (required)</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 1"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title (required)</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 2"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 3"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+          </template>
+          <template id="ab-both-rows">
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <ytcp-thumbnail-uploader><input id="file-loader" type="file" accept="image/jpeg,image/png" hidden /></ytcp-thumbnail-uploader>
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title (required)</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 1"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <ytcp-thumbnail-uploader><input id="file-loader" type="file" accept="image/jpeg,image/png" hidden /></ytcp-thumbnail-uploader>
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title (required)</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 2"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+            <div class="ytcpCreatorExperimentCreateDialogExperimentOption">
+              <ytcp-thumbnail-uploader><input id="file-loader" type="file" accept="image/jpeg,image/png" hidden /></ytcp-thumbnail-uploader>
+              <div class="ytcpCreatorExperimentCreateDialogTitleSection">
+                <ytcp-social-suggestions-textbox class="ytcpCreatorExperimentCreateDialogTitleField">
+                  <span>Title</span>
+                  <div id="textbox" contenteditable="true" aria-label="Add title 3"></div>
+                </ytcp-social-suggestions-textbox>
+              </div>
+            </div>
+          </template>
           <ytcp-button>Set test</ytcp-button>
         </tp-yt-paper-dialog>
       </ytcp-dialog>

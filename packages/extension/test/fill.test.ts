@@ -112,6 +112,15 @@ function loadStudio(
   on("ytcp-creator-experiment-create-dialog #chip-1", () =>
     render("#ab-thumbnail-uploaders", "#experiment-content"),
   );
+  // The title modes show three rows; Studio puts the video's title in row 1.
+  const titleRows = (template: string) => () => {
+    render(template, "#experiment-content");
+    const own = document.querySelector('[aria-label="Add title 1"]');
+    if (own !== null)
+      own.textContent = document.querySelector("#title-textarea #textbox")?.textContent ?? "";
+  };
+  on("ytcp-creator-experiment-create-dialog #chip-0", titleRows("#ab-title-rows"));
+  on("ytcp-creator-experiment-create-dialog #chip-2", titleRows("#ab-both-rows"));
   on("#next-button, #back-button, #done-button, .save-button", (button) =>
     pressed.push(button.id || button.className),
   );
@@ -340,10 +349,44 @@ describe("filling Studio's upload dialog", () => {
     expect(chips()).toEqual(["fox", "cliff diving"]);
   });
 
+  it("tests the other titles beside the thumbnails, Title and thumbnail, in row order", async () => {
+    const titled = { ...item, titles: ["Fox Flight | Tales", "The Cliff Fox | Tales"] };
+    const results = await fillFields(
+      document,
+      titled,
+      [png("one.png"), png("two.png"), png("three.png")],
+      noWait,
+    );
+    const result = results.find((one) => one.field === "thumbnails");
+    expect(result?.message).toContain("A/B Testing (Title and thumbnail)");
+    const boxes = [...document.querySelectorAll('[aria-label^="Add title"]')].map(
+      (box) => box.textContent,
+    );
+    expect(boxes).toEqual([titled.title, ...titled.titles]);
+    expect(abInputs().map((input) => input.files?.[0]?.name)).toEqual([
+      "one.png",
+      "two.png",
+      "three.png",
+    ]);
+    expect(pressed).toEqual([]);
+  });
+
+  it("tests the other titles alone, Title only, beside a single thumbnail", async () => {
+    const titled = { ...item, titles: ["Fox Flight | Tales"] };
+    const results = await fillFields(document, titled, [png("one.png")], noWait);
+    expect(mainThumbnail()?.files?.[0]?.name).toBe("one.png");
+    expect(results.find((one) => one.field === "titles")?.message).toContain(
+      "A/B Testing (Title only)",
+    );
+    expect(document.querySelector('[aria-label="Add title 2"]')?.textContent).toBe(
+      "Fox Flight | Tales",
+    );
+  });
+
   it("puts two thumbnails into A/B Testing's first two slots", async () => {
     const results = await fillFields(document, item, [png("one.png"), png("two.png")], noWait);
     expect(results.find((result) => result.field === "thumbnails")?.message).toContain(
-      "Both thumbnails",
+      "both thumbnails",
     );
     expect(abInputs().map((input) => input.files?.[0]?.name)).toEqual([
       "one.png",

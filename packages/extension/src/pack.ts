@@ -15,6 +15,9 @@ export interface PackItem {
   readonly short?: number | undefined;
   readonly video: PackFile | null;
   readonly title: string;
+  // Other titles for Studio's A/B Testing, beside `title`. Absent from a Slopify older than
+  // title tests.
+  readonly titles?: readonly string[] | undefined;
   readonly description: string;
   readonly tags: readonly string[];
   readonly thumbnails: readonly PackFile[];
@@ -70,6 +73,9 @@ export type WorkerRequest =
 export function packText(item: PackItem): string {
   const parts = [
     `Title:\n${item.title}`,
+    ...((item.titles ?? []).length > 0
+      ? [`Other titles (A/B Testing):\n${(item.titles ?? []).join("\n")}`]
+      : []),
     `Description:\n${item.description}`,
     `Tags:\n${item.tags.join(", ")}`,
     `Playlists: ${playlistsOf(item).join(", ") || "(none)"}`,
