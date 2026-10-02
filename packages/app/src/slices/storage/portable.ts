@@ -41,6 +41,8 @@ import { realPersonVoicesKey, voiceIdMax, voiceNameMax } from "../settings/voice
 import { whatsNewSeenKey } from "../settings/whats-new.js";
 import { uploadPickPrefix, uploadPickSchema } from "../studio/pick.js";
 import { postingPlanKey, postingPlanSchema } from "../studio/plan.js";
+import { leadHoursMax } from "../studio/plan-model.js";
+import { leadHoursKey } from "../studio/releases.js";
 import {
   autoCommentKey,
   storedPlaylistsSchema,
@@ -506,6 +508,7 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key === studioPlaylistKey || key.startsWith(studioChannelPlaylistPrefix))
       storedPlaylistsSchema.parse(parsed);
     else if (key === postingPlanKey) postingPlanSchema.parse(parsed);
+    else if (key === leadHoursKey) z.number().int().min(1).max(leadHoursMax).parse(parsed);
     else if (key.startsWith(uploadPickPrefix)) uploadPickSchema.parse(parsed);
     else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);

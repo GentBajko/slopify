@@ -30,7 +30,8 @@ export interface Schedule extends Slot {
 }
 
 const hourMs = 60 * 60 * 1000;
-const leadKey = "studio.leadHours";
+export const leadHoursKey = "studio.leadHours";
+const leadKey = leadHoursKey;
 
 export function readLeadHours(db: DatabaseSync): number {
   const stored = Number(readSetting(db, leadKey));

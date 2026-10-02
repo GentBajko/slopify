@@ -15,7 +15,7 @@ import { writeUploadPick } from "../studio/pick.js";
 import { writePlan } from "../studio/plan.js";
 import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
-import { libraryTables, projectTables, usageTables } from "./backup-format.js";
+import { libraryTables, projectPartSchema, projectTables, usageTables } from "./backup-format.js";
 import { importBackup } from "./backup-import.js";
 
 // Backups carry everything added since 2.5.0 (migrations 0022-0039): prompt history, channels
@@ -202,6 +202,7 @@ function seed(db: DatabaseSync): void {
   writeSetting(db, "studio.playlist.c2", JSON.stringify("Lore tales"));
   writeSetting(db, "studio.fillQueue.0123456789abcdef", JSON.stringify([]));
   writeSetting(db, "studio.autoComment", "on");
+  writeSetting(db, "studio.leadHours", "36");
   writePlan(db, {
     timeZone: "Europe/Berlin",
     rows: [
@@ -269,7 +270,7 @@ describe("backups carry everything added since 2.5.0", () => {
     same("SELECT * FROM project_trash ORDER BY project_id");
     same("SELECT * FROM standalone_usage ORDER BY id");
     same(
-      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2','studio.autoComment','studio.postingPlan','studio.uploadPick.p1') ORDER BY key",
+      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2','studio.autoComment','studio.postingPlan','studio.uploadPick.p1','studio.leadHours') ORDER BY key",
     );
     expect(rows(target.db, "SELECT key FROM settings WHERE key LIKE 'studio.fillQueue.%'")).toEqual(
       [],
@@ -327,4 +328,27 @@ describe("backups carry everything added since 2.5.0", () => {
     );
     expect(rows(target.db, "SELECT count(*) AS n FROM image_blobs")).toEqual([{ n: 0 }]);
   });
+});
+
+it("reads a 3.3 backup's posting-plan slot as the long video's release", () => {
+  const part = projectPartSchema.parse({
+    id: "p1",
+    tables: {
+      projects: [{ id: "p1" }],
+      upload_slots: [
+        { project_id: "p1", row_name: "A", long_at: "2026-10-04T18:00:00.000Z", assigned_at: "x" },
+      ],
+    },
+    files: [],
+  });
+  expect(part.tables.releases).toEqual([
+    {
+      project_id: "p1",
+      short: 0,
+      release_at: "2026-10-04T18:00:00.000Z",
+      line: "A",
+      by: "plan",
+      set_at: "x",
+    },
+  ]);
 });

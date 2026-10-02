@@ -62,7 +62,8 @@ export const projectTables = [
   "project_uploads",
   // Since 3.2.8: the YouTube video each upload became, and its A/B test.
   "youtube_videos",
-  // Since 3.3.0: each project's posting-plan slot, Studio's numbers and its A/B results.
+  // Since 3.3.0: Studio's numbers and its A/B results; since 3.4.0 each release time
+  // (`releases`, which took the place of 3.3's `upload_slots`: see `fromUploadSlots`).
   "releases",
   "video_stats",
   "ab_results",
@@ -217,13 +218,45 @@ export type LibraryPart = z.infer<typeof libraryPartSchema>;
 export const usagePartSchema = z.object({ tables: tablesOf(usageTables) }).strict();
 export type UsagePart = z.infer<typeof usagePartSchema>;
 
+// A 3.3 backup keeps each project's posting-plan slot in `upload_slots`; it is read as the
+// long video's release, as migration 0048 does with the table itself.
+function fromUploadSlots(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const tables = (value as { tables?: unknown }).tables;
+  if (typeof tables !== "object" || tables === null || !("upload_slots" in tables)) return value;
+  const { upload_slots: slots, ...rest } = tables as Record<string, unknown>;
+  const releases = Array.isArray(slots)
+    ? slots.map((slot: Record<string, unknown>) => ({
+        project_id: slot.project_id ?? null,
+        short: 0,
+        release_at: slot.long_at ?? "",
+        line: slot.row_name === "" || slot.row_name === undefined ? null : slot.row_name,
+        by: "plan",
+        set_at: slot.assigned_at ?? "",
+      }))
+    : slots;
+  return {
+    ...value,
+    tables: {
+      ...rest,
+      ...(releases === undefined || (Array.isArray(releases) && releases.length === 0)
+        ? {}
+        : { releases }),
+    },
+  };
+}
+
 export const projectPartSchema = z
-  .object({
-    id: backupId,
-    tables: tablesOf(projectTables),
-    files: z.array(fileEntry).max(maxFilesPerProject),
-  })
-  .strict()
+  .preprocess(
+    fromUploadSlots,
+    z
+      .object({
+        id: backupId,
+        tables: tablesOf(projectTables),
+        files: z.array(fileEntry).max(maxFilesPerProject),
+      })
+      .strict(),
+  )
   .refine(
     (part) => part.tables.projects?.length === 1 && part.tables.projects[0]?.id === part.id,
     "A project part must hold exactly its own project row.",
