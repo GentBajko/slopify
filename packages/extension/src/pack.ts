@@ -75,6 +75,16 @@ export type WorkerRequest =
       readonly short: number | null;
       readonly videoId: string;
     }
+  // The toolbar popup: the projects ready to upload, and the one clicked.
+  | { readonly type: "ready" }
+  | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }
+  // Studio said the upload was scheduled or published.
+  | {
+      readonly type: "video-done";
+      readonly projectId: string;
+      readonly short: number | null;
+      readonly videoId: string;
+    }
   // A Details page the worker opened for an A/B test asks for it, then says how it went.
   | { readonly type: "ab-test"; readonly videoId: string }
   | {
@@ -85,6 +95,24 @@ export type WorkerRequest =
       readonly ok: boolean;
       readonly message: string;
     };
+
+// A finished project not marked uploaded, as the popup lists it.
+export interface ReadyProject {
+  readonly projectId: string;
+  readonly title: string;
+  readonly items: readonly {
+    readonly kind: "video" | "short";
+    readonly short: number | null;
+    readonly title: string;
+    // Rendered, so there is a file to upload.
+    readonly ready: boolean;
+    // On YouTube: Studio said it was scheduled or published, or a link was pasted.
+    readonly uploaded: boolean;
+    // Filled in Studio but not confirmed: cancelled, or left as a draft. Absent from an older
+    // Slopify.
+    readonly started?: boolean;
+  }[];
+}
 
 // An A/B test waiting for its video to be public, as Slopify lists it.
 export interface WaitingAbTest {

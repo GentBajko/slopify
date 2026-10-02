@@ -89,3 +89,16 @@ export function removeFill(
   write(db, queueKey(db), next);
   return next;
 }
+
+// The extension popup's pick: this item goes first, so the upload dialog it opens gets it.
+export function fillNow(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  now: Date,
+): readonly FillEntry[] {
+  const others = readFillQueue(db, now).filter((entry) => !same(entry, projectId, short));
+  const next = [{ projectId, short, at: now.toISOString() }, ...others].slice(0, fillQueueMax);
+  write(db, queueKey(db), next);
+  return next;
+}

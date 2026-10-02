@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slopify Studio</title>
+    <style>
+      :root { --bg: #fff; --ink: #1b1b1b; --ink2: #5c5c5c; --line: #e3e3e3; --hover: #f2f2f2; --accent: #4f7d17; --done: #3a7a2c; --bad: #a40000; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #1c1c1c; --ink: #f0f0f0; --ink2: #a8a8a8; --line: #333; --hover: #2a2a2a; --accent: #a7d65c; --done: #8ee29b; --bad: #ff8a80; }
+      }
+      body { margin: 0; width: 340px; background: var(--bg); color: var(--ink); font: 13px/1.45 system-ui, sans-serif; }
+      header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      header h1 { flex: 1; margin: 0; font-size: 15px; font-weight: 650; }
+      button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+      .link { color: var(--ink2); padding: 2px 4px; border-radius: 4px; }
+      .link:hover { color: var(--ink); background: var(--hover); }
+      ul { list-style: none; margin: 0; padding: 6px; max-height: 460px; overflow-y: auto; }
+      li button.row { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; text-align: left; }
+      li button.row:hover:not(:disabled) { background: var(--hover); }
+      li button.row:disabled { cursor: default; opacity: 0.6; }
+      .title { flex: 1; min-width: 0; }
+      .meta { color: var(--ink2); font-size: 12px; white-space: nowrap; }
+      .done { color: var(--done); }
+      .action { color: var(--accent); font-weight: 600; }
+      #back { font-size: 18px; line-height: 1; padding: 2px 6px; color: var(--ink); }
+      p.note { margin: 0; padding: 14px; color: var(--ink2); }
+      p.error { color: var(--bad); }
+      .primary { margin: 0 14px 14px; padding: 7px 12px; border-radius: 6px; background: var(--accent); color: #111; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="back" class="link" hidden aria-label="Back to projects">←</button>
+      <h1 id="heading">Ready to upload</h1>
+      <button id="pairing" class="link">Pairing</button>
+    </header>
+    <main id="main"><p class="note">Loading…</p></main>
+    <script src="popup.js"></script>
+  </body>
+</html>

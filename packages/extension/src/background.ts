@@ -230,7 +230,31 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
           "the uploaded video",
         ),
       };
+    if (request.type === "video-done")
+      return {
+        ok: true,
+        value: await post(
+          "/api/studio/ext/video/done",
+          { projectId: request.projectId, short: request.short, videoId: request.videoId },
+          "the finished upload",
+        ),
+      };
     if (request.type === "ab-test") return { ok: true, value: await abTest(request.videoId) };
+    if (request.type === "ready") {
+      const current = await paired();
+      const response = await call("/api/studio/ext/ready", current);
+      if (!response.ok) throw new Error(await failure(response, "the projects ready to upload"));
+      return { ok: true, value: ((await response.json()) as { projects: unknown }).projects };
+    }
+    if (request.type === "upload") {
+      const { url } = (await post(
+        "/api/studio/ext/upload",
+        { projectId: request.projectId, short: request.short },
+        "the upload",
+      )) as { url: string };
+      await api.tabs?.create({ url, active: true });
+      return { ok: true, value: url };
+    }
     if (request.type === "ab-result") {
       await post(
         "/api/studio/ext/ab-tests/result",

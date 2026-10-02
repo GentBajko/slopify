@@ -133,6 +133,17 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 4. Check everything, go through Studio's remaining steps, and schedule or publish yourself.
    The extension never presses Next, Save, Schedule or Publish on an upload.
 
+### The toolbar popup (from 3.2.10, extension 0.4.0)
+
+Clicking the extension's icon lists the finished projects not marked uploaded in Slopify. A
+project opens to its video and shorts, with a ✓ on those on YouTube. Clicking one puts it
+first in line and opens Studio's upload page, where the extension adds the file and fills the
+details. **Pairing** (top right) opens the pairing page.
+
+An upload counts as on YouTube only once Studio shows "Video scheduled", "Video published" or
+"Video saved" after you press Schedule, Publish or Save. One cancelled, or closed as a draft,
+stays offered ("Upload again"), and its A/B test isn't queued.
+
 ### A/B tests after publishing (from 3.2.8, extension 0.3.0)
 
 Studio tests titles and thumbnails only on public videos, and a scheduled video is private

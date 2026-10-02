@@ -43,7 +43,7 @@ for (const [name, target] of Object.entries(targets)) {
   const out = join(dist, name);
   mkdirSync(out, { recursive: true });
   await build({
-    entryPoints: ["background", "content", "options", "video-frame"].map((entry) =>
+    entryPoints: ["background", "content", "options", "popup", "video-frame"].map((entry) =>
       join(root, "src", `${entry}.ts`),
     ),
     outdir: out,
@@ -54,6 +54,7 @@ for (const [name, target] of Object.entries(targets)) {
     logLevel: "warning",
   });
   cpSync(join(root, "static", "options.html"), join(out, "options.html"));
+  cpSync(join(root, "static", "popup.html"), join(out, "popup.html"));
   // The hidden page that hands the video file to Studio's upload dialog (`video-frame.ts`).
   cpSync(join(root, "static", "video-frame.html"), join(out, "video-frame.html"));
   // The app's own mark, from packages/web/public/app-icon.svg, for the toolbar and the

@@ -18,6 +18,8 @@ function uploadName(short: number | null): string {
 }
 
 function abWords(video: YoutubeVideo): string {
+  if (video.uploadState === "filled")
+    return "Filled in Studio, but not scheduled or published yet (cancelled, or left as a draft). Upload it again from the extension, or paste its link once it is up.";
   switch (video.abState) {
     case "waiting":
       return "A/B test starts once it is public";

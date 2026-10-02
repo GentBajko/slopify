@@ -4,15 +4,21 @@ import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
-import { projectById } from "../../slices/admission/repo.js";
+import { derive } from "../../kernel/runner/graph.js";
+import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
-import { type FillQueueItem, studioPlaylistMax } from "../../slices/studio/model.js";
+import {
+  type FillQueueItem,
+  studioPlaylistMax,
+  studioUploadUrl,
+} from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
 import {
   enqueueFill,
   type FillEntry,
+  fillNow,
   readFillQueue,
   removeFill,
 } from "../../slices/studio/queue.js";
@@ -32,14 +38,17 @@ import {
   studioRequestAllowed,
 } from "../../slices/studio/settings.js";
 import {
+  confirmUpload,
   forgetVideo,
   projectVideos,
   recordVideo,
   setAbState,
   videoIdOf,
   videoIdPattern,
+  videoOf,
   waitingAbTests,
 } from "../../slices/studio/videos.js";
+import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -452,14 +461,82 @@ export function studioRoutes(deps: AppDeps) {
         const left = removeFill(deps.db, projectId, short ?? null, deps.clock.now());
         return c.json({ waiting: left.length });
       })
-      // The extension read the new video's id from Studio's upload dialog. An upload with an
-      // A/B test to run (other titles, or several thumbnails) waits for its video to be public:
-      // scheduled videos are private until then, and Studio tests only public ones.
+      // The extension popup: finished projects not marked uploaded, each with its video and
+      // shorts, and which of them are on YouTube already (`youtube_videos`).
+      .get("/ext/ready", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const uploads = uploadedProjects(deps.db);
+        const aside = setAsideProjects(deps.db);
+        const projects = listProjects(deps.db).flatMap((project) => {
+          if (uploads.has(project.id)) return [];
+          const state = derive(stagesOf(deps.db, project.id), project.paused === true);
+          const finished =
+            state === "done" ||
+            state === "partial" ||
+            (state === "pending" && aside.has(project.id));
+          if (!finished) return [];
+          const result = uploadPack(deps, project.id);
+          if (!result.ok || result.pack.items[0]?.video == null) return [];
+          return [
+            {
+              projectId: project.id,
+              title: project.title,
+              items: result.pack.items.map((item) => ({
+                kind: item.kind,
+                short: item.short ?? null,
+                title: item.title,
+                ready: item.video !== null,
+                uploaded: videoOf(deps.db, project.id, item.short ?? null)?.uploadState === "done",
+                started: videoOf(deps.db, project.id, item.short ?? null)?.uploadState === "filled",
+              })),
+            },
+          ];
+        });
+        return c.json({ projects });
+      })
+      // The popup's click: that upload goes first in line, and the extension opens Studio's
+      // upload page, where the dialog takes it.
+      .post("/ext/upload", zValidator("json", queueItemBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { projectId, short } = c.req.valid("json");
+        const result = uploadPack(deps, projectId);
+        if (!result.ok || packItem(result.pack, short ?? undefined) === undefined)
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail: "That upload isn't in the project any more. Open the popup again.",
+          });
+        fillNow(deps.db, projectId, short ?? null, deps.clock.now());
+        return c.json({ url: studioUploadUrl });
+      })
+      // The extension read the new video's id from Studio's upload dialog. It is "filled" until
+      // Studio says it was scheduled or published (`/ext/video/done`): a cancelled upload isn't
+      // on YouTube.
       .post("/ext/video", zValidator("json", extVideoBody, onInvalid), (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const { projectId, short, videoId } = c.req.valid("json");
-        recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
+        recordVideo(
+          deps.db,
+          projectId,
+          short ?? null,
+          videoId,
+          deps.clock.now().toISOString(),
+          "filled",
+        );
+        return c.json({ recorded: true });
+      })
+      // Studio showed "Video scheduled" or "Video published". An upload with an A/B test to run
+      // (other titles, or several thumbnails) now waits for its video to be public: scheduled
+      // videos are private until then, and Studio tests only public ones.
+      .post("/ext/video/done", zValidator("json", extVideoBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { projectId, short, videoId } = c.req.valid("json");
+        if (!confirmUpload(deps.db, projectId, short ?? null, videoId))
+          recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
         const testable = abTestable(projectId, short ?? null);
         if (testable)
           setAbState(

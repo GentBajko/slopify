@@ -219,18 +219,54 @@ async function recordVideo(current: FillPayload): Promise<void> {
     );
     return;
   }
-  const answer = (await api.runtime.sendMessage({
-    type: "video",
+  const upload = {
     projectId: current.projectId,
     short: item.kind === "short" ? (item.short ?? null) : null,
     videoId,
-  })) as WorkerAnswer<{ abTest?: boolean }>;
-  if (!answer.ok) toast(answer.message, "error");
-  else if (answer.value.abTest === true)
+  };
+  const answer = (await api.runtime.sendMessage({
+    type: "video",
+    ...upload,
+  })) as WorkerAnswer<unknown>;
+  if (!answer.ok) {
+    toast(answer.message, "error");
+    return;
+  }
+  // On YouTube only once Studio says so: a cancelled upload, or one closed as a draft, is not.
+  if (!(await confirmed())) return;
+  const done = (await api.runtime.sendMessage({ type: "video-done", ...upload })) as WorkerAnswer<{
+    abTest?: boolean;
+  }>;
+  if (!done.ok) toast(done.message, "error");
+  else if (done.value.abTest === true)
     toast(
       "Its A/B test (titles and thumbnails) starts by itself once the video is public. Keep Chrome open around that time; otherwise it starts the next time Chrome opens.",
       "info",
     );
+}
+
+// Waits for Studio's "Video scheduled" / "Video published" window after the person presses
+// Schedule, Publish or Save; true when it shows, false when the upload dialog closes without
+// it (cancelled, or left as a draft). Gives up after three hours.
+async function confirmed(): Promise<boolean> {
+  const said = /^\s*video (scheduled|published|saved)\b/i;
+  for (let waited = 0; waited < 3 * 60 * 60 * 1000; waited += 1000) {
+    const share = document.querySelector("ytcp-video-share-dialog");
+    if (share !== null && shown(share)) return true;
+    const headings = document.querySelectorAll(
+      "tp-yt-paper-dialog h1, ytcp-dialog h1, tp-yt-paper-dialog #dialog-title, ytcp-dialog #dialog-title",
+    );
+    if ([...headings].some((one) => shown(one) && said.test(one.textContent ?? ""))) return true;
+    const dialog = findField(document, uploadDialog);
+    if (dialog === null || !shown(dialog)) {
+      // Studio swaps the upload dialog for the confirmation; give it a moment.
+      await new Promise((done) => setTimeout(done, 1500));
+      const later = document.querySelector("ytcp-video-share-dialog");
+      return later !== null && shown(later);
+    }
+    await new Promise((done) => setTimeout(done, 1000));
+  }
+  return false;
 }
 
 // A video's Details page the worker opened for its A/B test (`#slopify-ab`): sets the test,

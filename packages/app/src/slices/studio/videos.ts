@@ -10,6 +10,9 @@ export interface YoutubeVideo {
   readonly short: number | null;
   readonly videoId: string;
   readonly recordedAt: string;
+  // "filled": the extension filled its upload, which may still be cancelled; "done": Studio
+  // said it was scheduled or published, or its link was pasted.
+  readonly uploadState: "filled" | "done";
   readonly abState: AbState;
   // Why it failed, or what the extension said when it started.
   readonly abMessage: string | null;
@@ -40,28 +43,50 @@ function rowOf(row: Record<string, unknown>): YoutubeVideo {
     short: short === 0 ? null : short,
     videoId: String(row.video_id),
     recordedAt: String(row.recorded_at),
+    uploadState: row.upload_state === "filled" ? "filled" : "done",
     abState: String(row.ab_state) as AbState,
     abMessage: typeof row.ab_message === "string" ? row.ab_message : null,
     abAt: typeof row.ab_at === "string" ? row.ab_at : null,
   };
 }
 
-// Records (or replaces) the video an upload became. A new video id starts its A/B test over.
+// Records (or replaces) the video an upload became: "filled" from the upload dialog, "done"
+// once confirmed or pasted. A new video id starts its A/B test over; a confirmed video isn't
+// taken back to "filled" by filling it again.
 export function recordVideo(
   db: DatabaseSync,
   projectId: string,
   short: number | null,
   videoId: string,
   at: string,
+  state: "filled" | "done" = "done",
 ): void {
   db.prepare(
-    `INSERT INTO youtube_videos(project_id,short,video_id,recorded_at) VALUES (?,?,?,?)
+    `INSERT INTO youtube_videos(project_id,short,video_id,recorded_at,upload_state) VALUES (?,?,?,?,?)
      ON CONFLICT(project_id,short) DO UPDATE SET
        ab_state=CASE WHEN video_id=excluded.video_id THEN ab_state ELSE 'none' END,
        ab_message=CASE WHEN video_id=excluded.video_id THEN ab_message ELSE NULL END,
        ab_at=CASE WHEN video_id=excluded.video_id THEN ab_at ELSE NULL END,
+       upload_state=CASE WHEN video_id=excluded.video_id AND upload_state='done' THEN 'done'
+         ELSE excluded.upload_state END,
        video_id=excluded.video_id, recorded_at=excluded.recorded_at`,
-  ).run(projectId, slot(short), videoId, at);
+  ).run(projectId, slot(short), videoId, at, state);
+}
+
+// Studio said the upload was scheduled or published. False when no such upload was filled.
+export function confirmUpload(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  videoId: string,
+): boolean {
+  return (
+    db
+      .prepare(
+        "UPDATE youtube_videos SET upload_state='done' WHERE project_id=? AND short=? AND video_id=?",
+      )
+      .run(projectId, slot(short), videoId).changes > 0
+  );
 }
 
 export function forgetVideo(db: DatabaseSync, projectId: string, short: number | null): void {

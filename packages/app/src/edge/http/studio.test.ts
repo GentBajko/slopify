@@ -736,12 +736,16 @@ describe("YouTube videos and their A/B tests", () => {
     const h = harness();
     finished(h.output);
     const token = await paired(h);
-    // The upload dialog showed the new video's link: three thumbnails, so a test waits.
-    const recorded = await h.call(
-      "/ext/video",
-      ext(token, { projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
-    );
-    expect(await recorded.json()).toEqual({ abTest: true });
+    // The upload dialog showed the new video's link; nothing waits until Studio confirms it.
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    expect(await (await h.call("/ext/ab-tests", ext(token))).json()).toEqual({ tests: [] });
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ uploadState: "filled" }],
+    });
+    // "Video scheduled": three thumbnails, so a test waits.
+    const confirmed = await h.call("/ext/video/done", ext(token, upload));
+    expect(await confirmed.json()).toEqual({ abTest: true });
     const waiting = (await (await h.call("/ext/ab-tests", ext(token))).json()) as {
       tests: { videoId: string; item: { thumbnails: unknown[] } }[];
     };
@@ -797,4 +801,38 @@ it("keeps Prepare upload's pick: the upload's thumbnail first, every one still i
     "thumbnail-2",
   ]);
   expect(video?.pickable?.thumbnail).toBe(2);
+});
+
+it("lists finished projects not marked uploaded for the popup, and puts the clicked upload first", async () => {
+  const h = harness();
+  finished(h.output);
+  h.db
+    .prepare(
+      "INSERT INTO stages (id,project_id,kind,source,state,attempt_count) VALUES ('s-video','p1','video','generate','done',1)",
+    )
+    .run();
+  const token = await paired(h);
+  const headers = { authorization: `Bearer ${token}`, origin: extension };
+  const ready = (await (await h.call("/ext/ready", { headers })).json()) as {
+    projects: {
+      projectId: string;
+      items: { kind: string; short: number | null; uploaded: boolean }[];
+    }[];
+  };
+  expect(ready.projects.map((project) => project.projectId)).toEqual(["p1"]);
+  expect(ready.projects[0]?.items[0]).toMatchObject({
+    kind: "video",
+    short: null,
+    uploaded: false,
+  });
+  const clicked = await h.call("/ext/upload", {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({ projectId: "p1", short: 1 }),
+  });
+  expect(await clicked.json()).toEqual({ url: "https://www.youtube.com/upload" });
+  // The upload dialog gets that short first.
+  expect(await (await h.call("/ext/pack", { headers })).json()).toMatchObject({
+    item: { kind: "short", short: 1 },
+  });
 });
