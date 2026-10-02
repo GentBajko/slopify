@@ -170,3 +170,12 @@ it("has no plan until one is made, so nothing is scheduled", () => {
   planReleases(store, emptyPlan("Europe/Berlin"), { id: "p1", series: "", shorts: 3 }, now);
   expect(scheduleOf(store, "p1")).toBeUndefined();
 });
+
+it("reads Studio's clear checks as ok, and keeps any other words", async () => {
+  const { checksWord } = await import("./videos.js");
+  expect(
+    checksWord("— No noticesThis video is reaching viewers and earning according to your settings"),
+  ).toBe("ok");
+  expect(checksWord("None")).toBe("ok");
+  expect(checksWord("Copyright claim")).toBe("Copyright claim");
+});

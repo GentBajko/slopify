@@ -63,7 +63,7 @@ function rowOf(row: Record<string, unknown>): YoutubeVideo {
     commentMessage: typeof row.comment_message === "string" ? row.comment_message : null,
     abMessage: typeof row.ab_message === "string" ? row.ab_message : null,
     abAt: typeof row.ab_at === "string" ? row.ab_at : null,
-    checks: typeof row.checks === "string" ? row.checks : null,
+    checks: typeof row.checks === "string" ? checksWord(row.checks) : null,
   };
 }
 
@@ -179,7 +179,17 @@ export function previousLongVideo(db: DatabaseSync, projectId: string): string |
   return typeof row?.video_id === "string" ? row.video_id : undefined;
 }
 
-// Studio's word on a known video's checks, read from its Content list row.
+// Studio's word on a known video's checks, read from its Content list row. Studio shows a clear
+// video's Restrictions as "None", or as "—" with "No notices… reaching viewers and earning";
+// both are kept as "ok", anything else as Studio's words (a claim, a limit).
+export function checksWord(text: string): string {
+  const plain = text.replace(/\s+/g, " ").trim();
+  return /^(none|[—–-]?\s*no notices.*)$/i.test(plain) || /^[—–-]$/.test(plain) ? "ok" : plain;
+}
+
 export function setChecks(db: DatabaseSync, videoId: string, checks: string): void {
-  db.prepare("UPDATE youtube_videos SET checks=? WHERE video_id=?").run(checks, videoId);
+  db.prepare("UPDATE youtube_videos SET checks=? WHERE video_id=?").run(
+    checksWord(checks),
+    videoId,
+  );
 }

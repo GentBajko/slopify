@@ -46,6 +46,7 @@ import type {
   StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
+import type { ChannelPerformance } from "@app/slices/studio/performance.js";
 import type { PostingPlan } from "@app/slices/studio/plan-model.js";
 import type { Release, Slot } from "@app/slices/studio/releases.js";
 import type { AbResult, VideoStats } from "@app/slices/studio/stats.js";
@@ -595,6 +596,16 @@ export async function readProjectStats(
     await api.client.studio.stats[":projectId"].$get({ param: { projectId } }),
   );
   return answer.stats;
+}
+
+// Channels → YouTube: the channel's videos on YouTube with Studio's numbers.
+export async function readChannelPerformance(
+  api: Api,
+  channelId: string,
+): Promise<ChannelPerformance> {
+  return read<ChannelPerformance>(
+    await api.client.studio.channels[":channelId"].performance.$get({ param: { channelId } }),
+  );
 }
 
 export async function readAbResults(

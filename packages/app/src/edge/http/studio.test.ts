@@ -801,6 +801,41 @@ describe("YouTube videos and their A/B tests", () => {
     expect(await tasks()).toBe(false);
   });
 
+  it("totals a channel's numbers: CTR over all impressions, view duration weighted by views", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const long = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    const short = { projectId: "p1", short: 1, videoId: "xQgNw85mvH4" };
+    for (const one of [long, short]) {
+      await h.call("/ext/video", ext(token, one));
+      await h.call("/ext/video/done", ext(token, one));
+    }
+    await h.call(
+      "/ext/stats",
+      ext(token, {
+        ...long,
+        impressions: 1000,
+        ctr: 2,
+        views: 100,
+        averageViewSeconds: 600,
+        watchHours: 16.7,
+      }),
+    );
+    await h.call("/ext/stats", ext(token, { ...short, views: 300, averageViewSeconds: 20 }));
+    const body = (await (
+      await h.call("/channels/00000000-0000-4000-8000-000000000001/performance")
+    ).json()) as {
+      projects: { long: { stats: { views: number } } | null; shorts: unknown[] }[];
+      long: { views: number; ctr: number | null; averageViewSeconds: number | null };
+      shorts: { views: number; impressions: number | null; averageViewSeconds: number | null };
+    };
+    expect(body.projects).toHaveLength(1);
+    expect(body.projects[0]?.shorts).toHaveLength(1);
+    expect(body.long).toMatchObject({ views: 100, ctr: 2, averageViewSeconds: 600 });
+    expect(body.shorts).toMatchObject({ views: 300, impressions: null, averageViewSeconds: 20 });
+  });
+
   it("takes a pasted link for an upload made by hand", async () => {
     const h = harness();
     finished(h.output);

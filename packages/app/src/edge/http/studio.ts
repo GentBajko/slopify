@@ -17,6 +17,7 @@ import {
   studioUploadUrl,
 } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
+import { channelPerformance } from "../../slices/studio/performance.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
 import { postingPlanSchema, readPlan, writePlan } from "../../slices/studio/plan.js";
 import { leadHoursMax, seriesOf } from "../../slices/studio/plan-model.js";
@@ -491,6 +492,12 @@ export function studioRoutes(deps: AppDeps) {
         c.json({ stats: projectStats(deps.db, c.req.valid("param").projectId) }),
       )
       .get("/ab-results", (c) => c.json({ results: abResults(deps.db) }))
+      // Channels → YouTube: the channel's videos on YouTube with Studio's numbers and totals.
+      .get(
+        "/channels/:channelId/performance",
+        zValidator("param", z.object({ channelId: id }), onInvalid),
+        (c) => c.json(channelPerformance(deps, c.req.valid("param").channelId)),
+      )
       // The YouTube videos a project's uploads became, and their A/B tests.
       .get("/videos/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
         c.json({ videos: projectVideos(deps.db, c.req.valid("param").projectId) }),
