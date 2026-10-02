@@ -142,7 +142,7 @@ function UploadRow({
       </div>
       {video === undefined && error === undefined ? null : (
         <p
-          className={`m-0 pl-[72px] text-small ${error !== undefined || video?.abState === "failed" ? "text-danger" : "text-ink-3"}`}
+          className={`m-0 pl-18 text-small ${error !== undefined || video?.abState === "failed" ? "text-danger" : "text-ink-3"}`}
         >
           {error ?? (video === undefined ? "" : abWords(video))}
         </p>
