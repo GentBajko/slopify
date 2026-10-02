@@ -43,9 +43,15 @@ for (const [name, target] of Object.entries(targets)) {
   const out = join(dist, name);
   mkdirSync(out, { recursive: true });
   await build({
-    entryPoints: ["background", "comment", "content", "options", "popup", "video-frame"].map(
-      (entry) => join(root, "src", `${entry}.ts`),
-    ),
+    entryPoints: [
+      "background",
+      "comment",
+      "content",
+      "early",
+      "options",
+      "popup",
+      "video-frame",
+    ].map((entry) => join(root, "src", `${entry}.ts`)),
     outdir: out,
     bundle: true,
     format: "iife",

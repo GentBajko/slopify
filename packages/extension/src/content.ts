@@ -326,8 +326,22 @@ async function confirmed(): Promise<boolean> {
 
 // A Studio page opened for one upload: the hash says what to do there and for which upload
 // ("#slopify-ab=both&p=<project>&s=<short>", "#slopify-finish&…", "#slopify-stats=1&…").
+// The task this page was opened for: kept by `early.ts` before Studio's router saw the "#…"
+// (read once, so a later navigation in the same tab isn't taken for it), or still in the
+// address on a page where the early script didn't run.
+let task: string | undefined;
 function hashParams(): URLSearchParams {
-  return new URLSearchParams(location.hash.replace(/^#/, ""));
+  if (task === undefined) {
+    let kept: string | null = null;
+    try {
+      kept = sessionStorage.getItem("slopify.task");
+      sessionStorage.removeItem("slopify.task");
+    } catch {
+      // No session storage: the address is all there is.
+    }
+    task = kept ?? location.hash.replace(/^#/, "");
+  }
+  return new URLSearchParams(task);
 }
 
 async function itemFor(projectId: string, short: number | null): Promise<FillPayload | undefined> {
@@ -578,7 +592,7 @@ function backfill(): void {
   void api.runtime.sendMessage({
     type: "backfill",
     videos: rows.slice(0, 200),
-    close: location.hash.includes("slopify-checks"),
+    close: hashParams().has("slopify-checks"),
   });
 }
 
