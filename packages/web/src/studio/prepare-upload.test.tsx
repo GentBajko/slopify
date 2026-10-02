@@ -37,6 +37,12 @@ const pack: UploadPack = {
       playlists: ["Fox tales"],
       playlist: "Fox tales",
       chapterNotice: 'Chapters adjusted for YouTube: moved the first, "Intro", from 0:04 to 0:00.',
+      pickable: {
+        titles: ["The Fox", "The Fox Who Ran", "Why the Fox Ran"],
+        thumbnails: [file("thumbnail", "the-fox-thumbnail.png"), file("thumbnail-2", "t2.png")],
+        title: 0,
+        thumbnail: 0,
+      },
     },
     {
       kind: "short",
@@ -118,7 +124,15 @@ describe("Prepare upload", () => {
     // Each row carries its own small action: Copy for text, Download for files.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
     // The other titles for Studio's A/B Testing, with a Copy of their own.
-    expect(within(drawer).getByText(/also "The Fox Who Ran" and "Why the Fox Ran"/)).not.toBeNull();
+    // The upload carries one title and one thumbnail, picked here; the A/B test tries the rest.
+    const titles = within(drawer).getByRole("radiogroup", { name: "Title the upload uses" });
+    expect(
+      within(titles)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
+    ).toEqual(["The Fox", "The Fox Who Ran", "Why the Fox Ran"]);
+    expect(within(titles).getByRole("radio", { name: "The Fox" })).toHaveProperty("checked", true);
+    expect(within(drawer).getAllByRole("button", { name: "Use for upload" })).toHaveLength(1);
     expect(within(drawer).getByRole("button", { name: "Copy the other titles" })).not.toBeNull();
     expect(
       within(drawer).getByRole("link", { name: "Download the-fox-video.mp4" }).getAttribute("href"),

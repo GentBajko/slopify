@@ -510,6 +510,18 @@ export async function saveProjectPlaylists(
   );
 }
 
+// Prepare upload's pick: the title and thumbnail the upload carries (indexes in the project's
+// own order); the A/B test tries the others once the video is public.
+export async function saveUploadPick(
+  api: Api,
+  projectId: string,
+  pick: { readonly title: number; readonly thumbnail: number },
+): Promise<UploadPack> {
+  return detailed<UploadPack>(
+    await api.client.studio.packs[":projectId"].pick.$put({ param: { projectId }, json: pick }),
+  );
+}
+
 // Where Settings' and Prepare upload's Download fetch the extension from.
 export function studioExtensionUrl(api: Api, browser: StudioExtensionBrowser): string {
   return `${api.origin}/api/studio/extension/${browser}.zip`;

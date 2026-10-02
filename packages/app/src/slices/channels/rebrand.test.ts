@@ -127,8 +127,10 @@ describe("changing a project's channel in Edit project", () => {
     const h = fixture();
     const revision = await save(h, { ...h.base.revision.config, title: "Renamed" });
     const { title: _before, ...before } = h.base.revision.config;
-    const { title: _after, ...after } = revision.config;
+    const { title: _after, subjectTitle, ...after } = revision.config;
     expect(after).toEqual(before);
+    // The rename keeps what the project is about (`revisions/subject.ts`).
+    expect(subjectTitle).toBe(h.base.revision.config.title);
     expect(revision.fingerprints).toEqual(h.base.revision.fingerprints);
     expect(projectChannelId(h.deps.db, h.projectId)).toBe(defaultChannelId);
   });

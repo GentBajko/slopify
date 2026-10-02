@@ -26,6 +26,7 @@ import {
   studioTitleMax,
   type UploadPack,
 } from "./model.js";
+import { picked, readUploadPick } from "./pick.js";
 import { projectPlaylists, readRealFootage } from "./settings.js";
 
 export interface PackDeps {
@@ -153,18 +154,34 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       "No playlist is set for this project's channel, so the playlist step is left to you. Set one in Settings → YouTube Studio → Playlists.",
     );
 
+  // The video's titles and thumbnails in the project's order, and the ones the person picked
+  // for the upload first (`pick.ts`); the A/B test later tries the rest beside them.
+  const ownTitle = project.title.slice(0, studioTitleMax);
+  const allTitles = [
+    ownTitle,
+    ...(edited?.titles ?? "")
+      .split("\n")
+      .map((one) => one.trim().slice(0, studioTitleMax))
+      .filter((one) => one !== ""),
+  ];
+  const allThumbnails = thumbnails.map(file);
+  const pick = readUploadPick(deps.db, projectId);
+  const arranged = picked(allTitles, allThumbnails, pick);
   const items: PackItem[] = [
     {
       kind: "video",
       video: video === undefined ? null : file(video),
-      title: project.title.slice(0, studioTitleMax),
-      titles: (edited?.titles ?? "")
-        .split("\n")
-        .map((one) => one.trim().slice(0, studioTitleMax))
-        .filter((one) => one !== ""),
+      title: arranged.titles[0] ?? ownTitle,
+      titles: arranged.titles.slice(1),
       description: description ?? "",
       tags: tagsOf(tagsFile),
-      thumbnails: thumbnails.map(file),
+      thumbnails: arranged.thumbnails,
+      pickable: {
+        titles: allTitles,
+        thumbnails: allThumbnails,
+        title: pick.title < allTitles.length ? pick.title : 0,
+        thumbnail: pick.thumbnail < allThumbnails.length ? pick.thumbnail : 0,
+      },
       audience: studioAudience,
       alteredContent: disclosure("video"),
       playlists,

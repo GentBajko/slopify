@@ -1,0 +1,1 @@
+- Prepare upload picks the upload's title and thumbnail (`studio/pick.ts`, kept in settings as `studio.uploadPick.<projectId>`): the pack's video item carries the picked ones as `title` and `thumbnails[0]`, the others after them, and `pickable` with the project's own order; `PUT /api/studio/packs/:projectId/pick` saves it.

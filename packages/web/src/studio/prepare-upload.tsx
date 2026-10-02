@@ -17,6 +17,7 @@ import {
   removeFromStudioQueue,
   saveProjectPlaylists,
   saveRealFootage,
+  saveUploadPick,
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
@@ -159,6 +160,19 @@ export function PrepareUploadDrawer({
         tone: "error",
       }),
   });
+  const pick = useMutation({
+    mutationFn: (next: { readonly title: number; readonly thumbnail: number }) =>
+      saveUploadPick(api, projectId, next),
+    onSuccess: (saved) => {
+      client.setQueryData(packKey, saved);
+      setStatus({ text: "Saved what the upload uses.", tone: "success" });
+    },
+    onError: (error) =>
+      setStatus({
+        text: `Couldn't save the choice: ${error.message} Choose it again.`,
+        tone: "error",
+      }),
+  });
   const copy = (text: string, what: string) => {
     if (!navigator.clipboard) {
       setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
@@ -296,6 +310,8 @@ export function PrepareUploadDrawer({
                 ) : undefined
               }
               copy={copy}
+              onPick={(next) => pick.mutate(next)}
+              picking={pick.isPending}
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
           )}
@@ -376,6 +392,8 @@ function Steps({
   footageSwitch,
   playlistPicker,
   copy,
+  onPick,
+  picking,
   doneKey,
 }: {
   readonly projectId: string;
@@ -385,6 +403,9 @@ function Steps({
   // The channel's playlists to tick for this project, when it has more than one.
   readonly playlistPicker?: ReactNode;
   readonly copy: (text: string, what: string) => void;
+  // Which title and thumbnail the upload carries (indexes in the project's own order).
+  readonly onPick: (pick: { readonly title: number; readonly thumbnail: number }) => void;
+  readonly picking: boolean;
   // Where this browser remembers the ticks; a tick is a note to self, not project state.
   readonly doneKey: string;
 }) {
@@ -443,7 +464,7 @@ function Steps({
           : {
               value:
                 item.thumbnails.length > 1
-                  ? `The first under Thumbnail; all ${String(item.thumbnails.length)} in A/B Testing (beside the title).`
+                  ? `${letterOf(item.pickable?.thumbnail ?? 0)} under Thumbnail (choose below). The A/B test tries all ${String(item.thumbnails.length)} once the video is public.`
                   : (item.thumbnails[0]?.filename ?? ""),
               actions: (
                 <OpenFolder
@@ -479,14 +500,35 @@ function Steps({
           actions: copyAction(step),
         };
       case "title":
-        return item.titles.length === 0
+        return item.titles.length === 0 || item.pickable === undefined
           ? { value: copyTextOf(item, step), actions: copyAction(step) }
           : {
               value: (
                 <span className="flex flex-col gap-1">
-                  <span>{item.title}</span>
+                  <span
+                    role="radiogroup"
+                    aria-label="Title the upload uses"
+                    className="flex flex-col gap-1"
+                  >
+                    {item.pickable.titles.map((one, index) => (
+                      <label key={one} className="flex min-h-8 items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`upload-title-${projectId}`}
+                          className="size-4 accent-[var(--color-accent)]"
+                          checked={index === item.pickable?.title}
+                          disabled={picking}
+                          onChange={() =>
+                            onPick({ title: index, thumbnail: item.pickable?.thumbnail ?? 0 })
+                          }
+                        />
+                        {one}
+                      </label>
+                    ))}
+                  </span>
                   <span className="text-ink-2">
-                    {`A/B Testing (beside the title): also ${item.titles.map((one) => `"${one}"`).join(" and ")}`}
+                    The upload uses the chosen title; the A/B test tries the others beside it once
+                    the video is public.
                   </span>
                 </span>
               ),
@@ -580,22 +622,45 @@ function Steps({
             className="mb-3"
           />
           <MediaGrid label="Thumbnails to upload" density="compact">
-            {item.thumbnails.map((file, index) => (
-              <MediaFrame
-                key={file.asset}
-                src={`${api.origin}${file.url}`}
-                alt={`Thumbnail ${String.fromCharCode(65 + index)}`}
-                title={String.fromCharCode(65 + index)}
-                meta={file.filename}
-                onOpen={() => setOpenThumbnail(index)}
-                openLabel={`Open thumbnail ${String.fromCharCode(65 + index)} full size`}
-                actionsShown
-                actions={<Download href={`${api.origin}${file.url}`} filename={file.filename} />}
-              />
-            ))}
+            {(item.pickable?.thumbnails ?? item.thumbnails).map((file, index) => {
+              const chosen = index === (item.pickable?.thumbnail ?? 0);
+              return (
+                <MediaFrame
+                  key={file.asset}
+                  src={`${api.origin}${file.url}`}
+                  alt={`Thumbnail ${letterOf(index)}`}
+                  title={
+                    chosen && item.thumbnails.length > 1
+                      ? `${letterOf(index)} · upload`
+                      : letterOf(index)
+                  }
+                  meta={file.filename}
+                  onOpen={() => setOpenThumbnail(index)}
+                  openLabel={`Open thumbnail ${letterOf(index)} full size`}
+                  actionsShown
+                  actions={
+                    <>
+                      {chosen || item.pickable === undefined ? null : (
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          disabled={picking}
+                          onClick={() =>
+                            onPick({ title: item.pickable?.title ?? 0, thumbnail: index })
+                          }
+                        >
+                          Use for upload
+                        </Button>
+                      )}
+                      <Download href={`${api.origin}${file.url}`} filename={file.filename} />
+                    </>
+                  }
+                />
+              );
+            })}
           </MediaGrid>
           <Lightbox
-            items={item.thumbnails.map((file, index) => ({
+            items={(item.pickable?.thumbnails ?? item.thumbnails).map((file, index) => ({
               src: `${api.origin}${file.url}`,
               alt: `Thumbnail ${String.fromCharCode(65 + index)}`,
               caption: file.filename,
@@ -604,7 +669,7 @@ function Steps({
             onIndex={setOpenThumbnail}
             onClose={() => setOpenThumbnail(null)}
             actions={(_, index) => {
-              const file = item.thumbnails[index];
+              const file = (item.pickable?.thumbnails ?? item.thumbnails)[index];
               return file === undefined ? null : (
                 <Download href={`${api.origin}${file.url}`} filename={file.filename} />
               );
@@ -614,6 +679,11 @@ function Steps({
       )}
     </div>
   );
+}
+
+// "A", "B", "C": a thumbnail as Studio's A/B Testing and this page name it.
+function letterOf(index: number): string {
+  return String.fromCharCode(65 + index);
 }
 
 function copyTextOf(item: PackItem, step: StudioStep): string {

@@ -9,6 +9,7 @@ import { channelById } from "../../slices/channels/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
 import { type FillQueueItem, studioPlaylistMax } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
+import { writeUploadPick } from "../../slices/studio/pick.js";
 import {
   enqueueFill,
   type FillEntry,
@@ -77,6 +78,10 @@ const projectPlaylistsBody = z.object({
   playlists: z.array(z.string().max(studioPlaylistMax)).max(studioPlaylistsMax).nullable(),
 });
 const realFootageBody = z.object({ realFootage: z.boolean() });
+const pickBody = z.object({
+  title: z.number().int().min(0).max(9),
+  thumbnail: z.number().int().min(0).max(9),
+});
 const shortField = z.number().int().min(1).max(99).nullable().optional();
 const extVideoBody = z.object({
   projectId: id,
@@ -212,6 +217,22 @@ export function studioRoutes(deps: AppDeps) {
           const { projectId } = c.req.valid("param");
           if (!uploadPack(deps, projectId).ok) return unknownProject(c);
           saveRealFootage(deps.db, projectId, c.req.valid("json").realFootage);
+          const result = uploadPack(deps, projectId);
+          return result.ok ? c.json(result.pack) : unknownProject(c);
+        },
+      )
+      // Prepare upload's pick: which title and thumbnail the upload carries; the A/B test tries
+      // the others once the video is public.
+      .put(
+        "/packs/:projectId/pick",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", pickBody, onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          if (!uploadPack(deps, projectId).ok) return unknownProject(c);
+          writeUploadPick(deps.db, projectId, c.req.valid("json"));
           const result = uploadPack(deps, projectId);
           return result.ok ? c.json(result.pack) : unknownProject(c);
         },

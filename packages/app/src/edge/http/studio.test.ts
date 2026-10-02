@@ -778,3 +778,23 @@ describe("YouTube videos and their A/B tests", () => {
     expect((await h.call("/videos/p1/ab-test", json({ short: 1, start: true }))).status).toBe(409);
   });
 });
+
+it("keeps Prepare upload's pick: the upload's thumbnail first, every one still in the pack", async () => {
+  const h = harness();
+  finished(h.output);
+  const response = await h.call("/packs/p1/pick", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ title: 0, thumbnail: 2 }),
+  });
+  const pack = (await response.json()) as {
+    items: { thumbnails: { asset: string }[]; pickable?: { thumbnail: number } }[];
+  };
+  const video = pack.items[0];
+  expect(video?.thumbnails.map((one) => one.asset)).toEqual([
+    "thumbnail-3",
+    "thumbnail",
+    "thumbnail-2",
+  ]);
+  expect(video?.pickable?.thumbnail).toBe(2);
+});

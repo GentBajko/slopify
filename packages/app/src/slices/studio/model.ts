@@ -55,6 +55,17 @@ export interface PackItem {
   readonly playlists: readonly string[];
   // The first of them, for an extension from before several playlists: it ticks one.
   readonly playlist: string | null;
+  // The long video's titles and thumbnails in the project's own order, and which of them the
+  // upload uses (Prepare upload's pick, `pick.ts`): `title` and `thumbnails[0]` above are the
+  // picked ones. Absent for a short.
+  readonly pickable?:
+    | {
+        readonly titles: readonly string[];
+        readonly thumbnails: readonly PackFile[];
+        readonly title: number;
+        readonly thumbnail: number;
+      }
+    | undefined;
   // What was changed in the description's chapters to meet YouTube's rules
   // (`slices/youtube/chapters.ts`); absent when nothing was.
   readonly chapterNotice?: string | undefined;
