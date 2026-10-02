@@ -13,6 +13,7 @@ import { Player } from "@/components/kit/player";
 import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { knownVideoLink, useProjectVideos } from "./on-youtube.js";
 import { StageFiles, useOutputText } from "./parts.js";
 import type { Review } from "./review-api.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
@@ -54,12 +55,15 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
   const videos = currentShorts(own, "short_video", clips);
   const settings = project.config.shorts;
+  // The link set in the project, else the long video's once Slopify knows it on YouTube.
+  const youtube = useProjectVideos(project.id);
+  const fullVideoLink = settings?.fullVideoLink ?? knownVideoLink(youtube.data);
   const revisions = use(RevisionControlContext);
   const requestEdit = use(EditRequestContext);
   if (settings?.enabled !== true && list === undefined && videos.length === 0) return null;
   const editable = revisions && requestEdit !== undefined && settings?.enabled === true;
   const copy = (clip: Clip) => {
-    const text = shortUploadText(clip, settings?.fullVideoLink);
+    const text = shortUploadText(clip, fullVideoLink);
     const failed = {
       text: `Couldn't copy short ${String(clip.number)}. Select its text and copy it.`,
       tone: "error" as const,
@@ -115,7 +119,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
               stills={currentShorts(own, "short_image", clips)
                 .filter((output) => ofClip(output, clip))
                 .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
-              link={settings?.fullVideoLink}
+              link={fullVideoLink}
               wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
               state={stage.state}
               failed={failedHere(stage.failureReason, clip.number)}

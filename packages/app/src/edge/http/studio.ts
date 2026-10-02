@@ -8,6 +8,7 @@ import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
+import { backfillVideos } from "../../slices/studio/backfill.js";
 import {
   type FillQueueItem,
   studioPlaylistMax,
@@ -105,6 +106,11 @@ const abResultBody = z.object({
 });
 const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
 const abTestBody = z.object({ short: shortField, start: z.boolean() });
+const backfillBody = z.object({
+  videos: z
+    .array(z.object({ title: z.string().max(200), videoId: z.string().regex(videoIdPattern) }))
+    .max(200),
+});
 // The extension builds the app ships (`scripts/copy-extension.mjs`), by browser.
 const extensionFiles: Readonly<Record<string, string>> = {
   "chrome.zip": "slopify-studio-chrome.zip",
@@ -460,6 +466,18 @@ export function studioRoutes(deps: AppDeps) {
         const { projectId, short } = c.req.valid("json");
         const left = removeFill(deps.db, projectId, short ?? null, deps.clock.now());
         return c.json({ waiting: left.length });
+      })
+      // Rows of Studio's Content list (title and video id), matched to projects by title so
+      // uploads made by hand get their links too (`backfill.ts`).
+      .post("/ext/backfill", zValidator("json", backfillBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const found = backfillVideos(
+          deps,
+          c.req.valid("json").videos,
+          deps.clock.now().toISOString(),
+        );
+        return c.json({ found });
       })
       // The extension popup: finished projects not marked uploaded, each with its video and
       // shorts, and which of them are on YouTube already (`youtube_videos`).

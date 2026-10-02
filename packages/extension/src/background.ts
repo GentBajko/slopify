@@ -240,6 +240,11 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ),
       };
     if (request.type === "ab-test") return { ok: true, value: await abTest(request.videoId) };
+    if (request.type === "backfill")
+      return {
+        ok: true,
+        value: await post("/api/studio/ext/backfill", { videos: request.videos }, "Studio's list"),
+      };
     if (request.type === "ready") {
       const current = await paired();
       const response = await call("/api/studio/ext/ready", current);

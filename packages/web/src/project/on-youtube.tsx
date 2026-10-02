@@ -13,6 +13,21 @@ import { Input } from "@/components/kit/field";
 
 const videosKey = (projectId: string) => ["project", projectId, "youtube-videos"] as const;
 
+// The project's YouTube videos, shared by On YouTube and the Shorts part.
+export function useProjectVideos(projectId: string) {
+  const { api } = useApp();
+  return useQuery({
+    queryKey: videosKey(projectId),
+    queryFn: () => readProjectVideos(api, projectId),
+  });
+}
+
+// The long video's link once it is on YouTube, for the shorts' "Watch the full video" line.
+export function knownVideoLink(videos: readonly YoutubeVideo[] | undefined): string | undefined {
+  const own = videos?.find((one) => one.short === null && one.uploadState === "done");
+  return own === undefined ? undefined : `https://youtu.be/${own.videoId}`;
+}
+
 function uploadName(short: number | null): string {
   return short === null ? "Video" : `Short ${String(short)}`;
 }
@@ -40,11 +55,7 @@ export function OnYoutube({
   // How many shorts the project has, each a row of its own.
   readonly shorts: number;
 }): ReactElement {
-  const { api } = useApp();
-  const videos = useQuery({
-    queryKey: videosKey(projectId),
-    queryFn: () => readProjectVideos(api, projectId),
-  });
+  const videos = useProjectVideos(projectId);
   const uploads: readonly (number | null)[] = [
     null,
     ...Array.from({ length: shorts }, (_, index) => index + 1),

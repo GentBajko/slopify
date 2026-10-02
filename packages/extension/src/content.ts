@@ -392,7 +392,26 @@ async function addVideo(input: HTMLInputElement): Promise<void> {
   );
 }
 
+// Studio's Content list (Videos and Shorts tabs): each row's title and video id go to Slopify,
+// which matches them to its projects by title, so uploads made by hand get their links too.
+// Sent when the rows change, not on every look.
+let sentRows = "";
+function backfill(): void {
+  if (!/\/channel\/[^/]+\/videos/.test(location.pathname)) return;
+  const rows = [...document.querySelectorAll("ytcp-video-row")].flatMap((row) => {
+    const link = row.querySelector<HTMLAnchorElement>('a[href*="/video/"]');
+    const videoId = /\/video\/([A-Za-z0-9_-]{11})/.exec(link?.getAttribute("href") ?? "")?.[1];
+    const title = (row.querySelector("#video-title")?.textContent ?? "").trim();
+    return videoId === undefined || title === "" ? [] : [{ title, videoId }];
+  });
+  const key = rows.map((row) => row.videoId).join(",");
+  if (rows.length === 0 || key === sentRows) return;
+  sentRows = key;
+  void api.runtime.sendMessage({ type: "backfill", videos: rows.slice(0, 200) });
+}
+
 function look(): void {
+  backfill();
   const dialog = findField(document, uploadDialog);
   // The first step: the dialog's file input, before a video is in.
   const picker = dialog === null ? null : findField(dialog, videoInput);

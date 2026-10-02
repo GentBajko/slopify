@@ -1,0 +1,1 @@
+- The extension sends Studio's Content list rows (title, video id) to `POST /api/studio/ext/backfill`, which records the uploads whose title matches exactly and whose video isn't known yet (`studio/backfill.ts`). Once the long video's link is known, the shorts' "Watch the full video" line uses it when the project sets none (the pack and the Shorts part).

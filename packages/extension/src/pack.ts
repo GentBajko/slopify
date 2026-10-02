@@ -75,6 +75,11 @@ export type WorkerRequest =
       readonly short: number | null;
       readonly videoId: string;
     }
+  // Rows of Studio's Content list, matched to projects by title.
+  | {
+      readonly type: "backfill";
+      readonly videos: readonly { readonly title: string; readonly videoId: string }[];
+    }
   // The toolbar popup: the projects ready to upload, and the one clicked.
   | { readonly type: "ready" }
   | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }

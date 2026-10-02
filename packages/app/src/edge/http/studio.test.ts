@@ -836,3 +836,49 @@ it("lists finished projects not marked uploaded for the popup, and puts the clic
     item: { kind: "short", short: 1 },
   });
 });
+
+it("fills in links from Studio's Content list by title, never over a known one", async () => {
+  const h = harness();
+  finished(h.output);
+  const token = await paired(h);
+  const send = (videos: { title: string; videoId: string }[]) =>
+    h.call("/ext/backfill", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        origin: extension,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ videos }),
+    });
+  const pack = (await (await h.call("/packs/p1")).json()) as {
+    items: { kind: string; short?: number; title: string }[];
+  };
+  const video = pack.items.find((item) => item.kind === "video");
+  const short = pack.items.find((item) => item.kind === "short");
+  if (video === undefined || short === undefined) throw new Error("fixture lacks an item");
+  const found = await send([
+    { title: `  ${video.title.toUpperCase()} `, videoId: "aaaaaaaaaaa" },
+    { title: short.title, videoId: "bbbbbbbbbbb" },
+    { title: "Someone else's video", videoId: "ccccccccccc" },
+  ]);
+  expect(await found.json()).toEqual({ found: 2 });
+  // Known now: a second list with another id for the same title changes nothing.
+  expect(await (await send([{ title: video.title, videoId: "ddddddddddd" }])).json()).toEqual({
+    found: 0,
+  });
+  const videos = (await (await h.call("/videos/p1")).json()) as {
+    videos: { short: number | null; videoId: string }[];
+  };
+  expect(videos.videos.map((one) => [one.short, one.videoId])).toEqual([
+    [null, "aaaaaaaaaaa"],
+    [short.short ?? null, "bbbbbbbbbbb"],
+  ]);
+  // The shorts now link the full video.
+  const after = (await (await h.call("/packs/p1")).json()) as {
+    items: { kind: string; description: string }[];
+  };
+  expect(after.items.find((item) => item.kind === "short")?.description).toContain(
+    "Watch the full video: https://youtu.be/aaaaaaaaaaa",
+  );
+});

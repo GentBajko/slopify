@@ -28,6 +28,7 @@ import {
 } from "./model.js";
 import { picked, readUploadPick } from "./pick.js";
 import { projectPlaylists, readRealFootage } from "./settings.js";
+import { videoOf } from "./videos.js";
 
 export interface PackDeps {
   readonly db: DatabaseSync;
@@ -190,6 +191,12 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     },
   ];
 
+  // The shorts link the long video: the link set in the project, else the one Slopify knows
+  // the video by on YouTube (`videos.ts`).
+  const longVideo = videoOf(deps.db, projectId, null);
+  const fullVideoLink =
+    config.shorts?.fullVideoLink ??
+    (longVideo?.uploadState === "done" ? `https://youtu.be/${longVideo.videoId}` : undefined);
   const clips = clipsOf(text(outputs.find((output) => output.role === "shorts")));
   const shortVideos = outputs.filter((output) => output.role === "short_video");
   for (const clip of clips) {
@@ -215,7 +222,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       titles: [],
       description: [
         clip.description,
-        fullVideoLine(config.shorts?.fullVideoLink),
+        fullVideoLine(fullVideoLink),
         "",
         clip.hashtags.join(" "),
       ].join("\n"),
