@@ -289,12 +289,7 @@ export const steps = [
         .getByRole("heading", { name: /calendar/i })
         .first()
         .waitFor(quick);
-      await maybe(() =>
-        page
-          .getByText(new RegExp(queuedTopics[0]))
-          .first()
-          .waitFor(quick),
-      );
+      await maybe(() => page.getByText(new RegExp(queuedTopics[0])).first().waitFor(quick));
       start();
     },
   },
@@ -323,7 +318,10 @@ export const steps = [
       await page.waitForTimeout(400);
       start();
       await page.keyboard.press("Control+k");
-      await page.getByPlaceholder(/search or run/i).first().waitFor(quick);
+      await page
+        .getByPlaceholder(/search or run/i)
+        .first()
+        .waitFor(quick);
     },
   },
 ];
