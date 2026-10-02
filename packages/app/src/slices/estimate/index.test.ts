@@ -176,8 +176,8 @@ describe("cost planning", () => {
   });
   it("prices a supplied article by characters and gives local/off stages zero API charges", () => {
     const estimate = estimateRun(draft, {}, 1500, catalogue);
-    expect(estimate.low).toBe(0.25);
-    expect(estimate.high).toBe(0.25);
+    expect(estimate.low).toBeCloseTo(0.175);
+    expect(estimate.high).toBeCloseTo(0.175);
     expect(estimate.unknown).toBe(0);
   });
   it("counts images and a thumbnail separately", () => {
@@ -192,7 +192,7 @@ describe("cost planning", () => {
       1500,
       catalogue,
     );
-    expect(estimate.low).toBeCloseTo(0.25 + 4 * 0.101);
+    expect(estimate.low).toBeCloseTo(0.175 + 4 * 0.101);
     expect(estimate.rows.filter((row) => row.stage === "Images")).toHaveLength(1);
   });
   it("shows a CLI run as $0 on the plan with its API price beside it", () => {

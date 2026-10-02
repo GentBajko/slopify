@@ -1,0 +1,1 @@
+- Inworld TTS-2 is priced at $17.50 per million characters in `assets/models.yaml`.

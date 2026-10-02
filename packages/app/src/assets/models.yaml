@@ -407,9 +407,9 @@ tts:
     keywords:
       - tts
     pricing:
-      perMillionCharacters: 25
-      note: On-Demand rate before discounts or credits. Requests are split at 10,000
-        characters for account compatibility.
+      perMillionCharacters: 17.5
+      note: The rate as charged. Requests are split at 10,000 characters for account
+        compatibility.
     tts:
       maxCharacters: 10000
       asyncMaxCharacters: 100000
