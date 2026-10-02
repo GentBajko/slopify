@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: 14480f26c13e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 93582bc251e5
+content_hash: 1df493942ef4
 paths_covered:
   - ":(top)packages/app/src/kernel/db/**"
   - ":(top)packages/app/src/kernel/ports/*.ts"
@@ -25,7 +25,7 @@ paths_covered:
 
 # Models
 
-One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 40 SQL files numbered up to 0047 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
+One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 41 SQL files numbered up to 0048 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
 
 Companion chapters own three areas in depth and are not repeated here: narration text preparation, glossary and pronunciation types in `02-models-narration.md`; research documents and the reader model in `02-models-research.md`; the Docker host, container and project-folder types in `02-models-docker.md`. `slices/narration/` and `slices/research/` types are listed there only.
 
@@ -339,19 +339,24 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | StudioPlaylist | `packages/app/src/slices/studio/model.ts:32` | `settings` keys `studio.playlist[.<channelId>]` | A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not |
 | PackItem | `packages/app/src/slices/studio/model.ts:37` | In-memory | One video or short of an upload pack with its metadata |
 | UploadPack | `packages/app/src/slices/studio/model.ts:85` | In-memory | Everything the Studio extension fills for a project |
-| ActivePack | `packages/app/src/slices/studio/model.ts:102` | In-memory | Pack item the extension fills |
-| FillQueueItem | `packages/app/src/slices/studio/model.ts:128` | `settings` key `studio.fillQueue.<hash>` | Item waiting for the Studio extension |
-| StudioPairingView | `packages/app/src/slices/studio/model.ts:142` | `settings` key `studio.pairing` | Extension pairing token, origin and time |
+| ActivePack | `packages/app/src/slices/studio/model.ts:105` | In-memory | Pack item the extension fills |
+| FillQueueItem | `packages/app/src/slices/studio/model.ts:131` | `settings` key `studio.fillQueue.<hash>` | Item waiting for the Studio extension |
+| StudioPairingView | `packages/app/src/slices/studio/model.ts:145` | `settings` key `studio.pairing` | Extension pairing token, origin and time |
 | UploadPick | `packages/app/src/slices/studio/pick.ts:11` | `settings` key `studio.uploadPick.<projectId>` | Which title and thumbnail (indexes 0-9) the upload carries |
-| PostingPlan | `packages/app/src/slices/studio/plan.ts:26` | `settings` key `studio.postingPlan` | A week of named long-video slots, each with its shorts' slots, in one time zone |
-| PlanSlot | `packages/app/src/slices/studio/plan.ts:27` | `settings` JSON (`PostingPlan`) | A weekday and HH:MM time of the plan |
-| Slot | `packages/app/src/slices/studio/plan.ts:157` | `upload_slots` | A plan row's long-video time taken by one project |
-| Schedule | `packages/app/src/slices/studio/plan.ts:163` | In-memory | A slot plus each short's time after it |
-| YoutubeVideo | `packages/app/src/slices/studio/videos.ts:11` | `youtube_videos` | The YouTube video an upload became, its upload state and its A/B, finish and comment task states |
+| PostingPlan | `packages/app/src/slices/studio/plan-model.ts:23` | `settings` key `studio.postingPlan` | A week of posting-plan lines, each a long-video time with its series and its shorts' times, in one time zone |
+| PlanLine | `packages/app/src/slices/studio/plan-model.ts:24` | `settings` JSON (`PostingPlan.rows`) | One line of the posting plan |
+| PlanSlot | `packages/app/src/slices/studio/plan-model.ts:25` | `settings` JSON (`PostingPlan`) | A weekday and HH:MM time of the plan |
+| Release | `packages/app/src/slices/studio/releases.ts:12` | `releases` | One release time of a project's long video (short 0) or one short, with its plan line and who set it |
+| Slot | `packages/app/src/slices/studio/releases.ts:20` | In-memory; taken as a `releases` short-0 row (`line`, `release_at`) | A posting-plan line's long-video time |
+| Schedule | `packages/app/src/slices/studio/releases.ts:27` | In-memory, read from `releases` | A project's long-video release plus each short's release |
+| ReleaseCalendar | `packages/app/src/slices/studio/calendar.ts:43` | HTTP response (`GET /api/studio/releases`) | Calendar → Releases: the coming long videos with their shorts, the plan's free times, and finished projects that could fill them |
+| CalendarEntry | `packages/app/src/slices/studio/calendar.ts:34` | HTTP response (`ReleaseCalendar.entries`) | One long-video release of a project, or one free plan time |
+| CalendarItem | `packages/app/src/slices/studio/calendar.ts:24` | HTTP response (`CalendarEntry.items`) | One video or short of an entry with its release, upload-by time, state and Studio's checks |
+| YoutubeVideo | `packages/app/src/slices/studio/videos.ts:11` | `youtube_videos` | The YouTube video an upload became, its upload state, its A/B, finish and comment task states and Studio's checks |
 | VideoStats | `packages/app/src/slices/studio/stats.ts:8` | `video_stats` | Studio's numbers for one video as the extension last read them |
 | AbVariant | `packages/app/src/slices/studio/stats.ts:29` | `ab_results.variants` JSON | One variant of a finished A/B test |
 | AbResult | `packages/app/src/slices/studio/stats.ts:31` | `ab_results` | A finished A/B test as Studio shows it |
-| StudioRow | `packages/app/src/slices/studio/backfill.ts:11` | In-memory | One row of Studio's Content list sent by the extension |
+| StudioRow | `packages/app/src/slices/studio/backfill.ts:10` | In-memory | One row of Studio's Content list sent by the extension |
 | FillEntry | `packages/app/src/slices/studio/queue.ts:18` | `settings` key `studio.fillQueue.<hash>` | One stored fill-queue entry |
 | TitleShape | `packages/app/src/slices/youtube/titles.ts:8` | In-memory | A title pattern with keywords and what each holds in the video's title |
 | DescriptionBrief | `packages/app/src/slices/youtube/answer.ts:21` | In-memory | Brief the text model writes the YouTube description from |
@@ -442,24 +447,24 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | TutorialHit | `packages/app/src/slices/tutorials/library.ts:31` | In-memory | Tutorial search hit |
 | TutorialBook | `packages/app/src/slices/tutorials/library.ts:40` | In-memory | All tutorial pages |
 | UpdateInfo | `packages/app/src/updater/model.ts:5` | In-memory | Update check state |
-| ProjectListBody | `packages/web/src/api.ts:96` | Browser HTTP DTO | GET projects body |
-| ProjectBody | `packages/web/src/api.ts:102` | Browser HTTP DTO | GET project body: head revision, project, stages, outputs |
-| CreatedProjectBody | `packages/web/src/api.ts:111` | Browser HTTP DTO | Project create body |
-| StagingListBody | `packages/web/src/api.ts:115` | Browser HTTP DTO | Staging list body |
-| NoticeBody | `packages/web/src/api.ts:137` | Browser HTTP DTO | Telemetry notice body |
-| ProviderListBody | `packages/web/src/api.ts:143` | Browser HTTP DTO | Provider list body |
-| VoiceListBody | `packages/web/src/api.ts:146` | Browser HTTP DTO | Voice list body |
-| PromptListBody | `packages/web/src/api.ts:152` | Browser HTTP DTO | All prompts list body |
-| EntryListBody | `packages/web/src/api.ts:157` | Browser HTTP DTO | All entries list body |
-| DocumentThemeListBody | `packages/web/src/api.ts:162` | Browser HTTP DTO | Built-in and saved document themes list body |
-| KeyStatusBody | `packages/web/src/api.ts:172` | Browser HTTP DTO | Key save response: presence and mask |
-| BackupExportSummary | `packages/web/src/api.ts:254` | Browser HTTP DTO | Backup export response |
-| NotificationUrlBody | `packages/web/src/api.ts:445` | Browser HTTP DTO | Notification URL body |
-| StudioSettingsBody | `packages/web/src/api.ts:475` | Browser HTTP DTO | Settings → YouTube Studio body: playlists, pairing and the auto-comment switch |
-| PlanBody | `packages/web/src/api.ts:529` | Browser HTTP DTO | Posting plan and its coming free slots |
-| VoiceRefusal | `packages/web/src/api.ts:682` | Browser HTTP DTO | Voice add refusal |
-| LibraryHistoryBody | `packages/web/src/api.ts:887` | Browser HTTP DTO | Library history body |
-| AuditionLine | `packages/web/src/api.ts:1033` | Browser HTTP DTO | One speaker line of a voice audition request |
+| ProjectListBody | `packages/web/src/api.ts:98` | Browser HTTP DTO | GET projects body |
+| ProjectBody | `packages/web/src/api.ts:104` | Browser HTTP DTO | GET project body: head revision, project, stages, outputs |
+| CreatedProjectBody | `packages/web/src/api.ts:113` | Browser HTTP DTO | Project create body |
+| StagingListBody | `packages/web/src/api.ts:117` | Browser HTTP DTO | Staging list body |
+| NoticeBody | `packages/web/src/api.ts:139` | Browser HTTP DTO | Telemetry notice body |
+| ProviderListBody | `packages/web/src/api.ts:145` | Browser HTTP DTO | Provider list body |
+| VoiceListBody | `packages/web/src/api.ts:148` | Browser HTTP DTO | Voice list body |
+| PromptListBody | `packages/web/src/api.ts:154` | Browser HTTP DTO | All prompts list body |
+| EntryListBody | `packages/web/src/api.ts:159` | Browser HTTP DTO | All entries list body |
+| DocumentThemeListBody | `packages/web/src/api.ts:164` | Browser HTTP DTO | Built-in and saved document themes list body |
+| KeyStatusBody | `packages/web/src/api.ts:174` | Browser HTTP DTO | Key save response: presence and mask |
+| BackupExportSummary | `packages/web/src/api.ts:256` | Browser HTTP DTO | Backup export response |
+| NotificationUrlBody | `packages/web/src/api.ts:447` | Browser HTTP DTO | Notification URL body |
+| StudioSettingsBody | `packages/web/src/api.ts:477` | Browser HTTP DTO | Settings → YouTube Studio body: playlists, pairing and the auto-comment switch |
+| PlanBody | `packages/web/src/api.ts:531` | Browser HTTP DTO | Posting plan, lead hours and the projects' series |
+| VoiceRefusal | `packages/web/src/api.ts:711` | Browser HTTP DTO | Voice add refusal |
+| LibraryHistoryBody | `packages/web/src/api.ts:916` | Browser HTTP DTO | Library history body |
+| AuditionLine | `packages/web/src/api.ts:1062` | Browser HTTP DTO | One speaker line of a voice audition request |
 | CastMemberInput | `packages/web/src/channels/api.ts:82` | Browser HTTP DTO | Cast member create/update body |
 | CatalogueStatus | `packages/web/src/components/provider-upkeep-api.ts:18` | Browser HTTP DTO | Catalogue file status body |
 | SampleState | `packages/web/src/onboarding/api.ts:58` | Browser HTTP DTO | Sample project state body |
@@ -482,8 +487,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Aggregates | `packages/collector/src/model.ts:34` | Collector D1 `aggregates` | Collector totals the marketing page reads |
 | FillPayload | `packages/extension/src/pack.ts:56` | Extension message | Item, thumbnail bytes and captions bytes handed to a Studio page |
 | WorkerRequest | `packages/extension/src/pack.ts:71` | Extension message | Message to the extension's background worker |
-| ReadyProject | `packages/extension/src/pack.ts:132` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
-| WaitingTask | `packages/extension/src/pack.ts:153` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
+| ReadyProject | `packages/extension/src/pack.ts:138` | Extension HTTP DTO (`GET /api/studio/ext/ready`) | A finished project not marked uploaded, as the popup lists it |
+| WaitingTask | `packages/extension/src/pack.ts:160` | Extension HTTP DTO (`GET /api/studio/ext/tasks`) | An upload with a Details touch or pinned comment waiting on YouTube's side |
 
 ## Fields and types
 
@@ -3851,11 +3856,11 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | playlists | `readonly string[]` | yes |  |
 | playlist | `string \| null` | yes |  |
 | pickable | `{ readonly titles: readonly string[]; readonly thumbnails: readonly PackFile[]; readonly title: number; readonly thumbnail: number }` | no | Long video only: all titles and thumbnails in the project's order and the UploadPick indexes; `title` and `thumbnails[0]` are the picked ones (`packages/app/src/slices/studio/model.ts:61`, `packages/app/src/slices/studio/pick.ts:41`) |
-| scheduleAt | `string` | no | ISO time from the project's `upload_slots` row: the slot for the long video, `Schedule.shortsAt[n-1]` for short n (`packages/app/src/slices/studio/pack.ts:211`, `:263`) |
-| captions | `PackFile` | no | Long video's `subtitles_srt` output (`packages/app/src/slices/studio/pack.ts:186`) |
-| endScreenVideoId | `string` | no | The project's Previous video, else `previousLongVideo` (`packages/app/src/slices/studio/pack.ts:188`, `packages/app/src/slices/studio/videos.ts:165`) |
-| relatedVideoId | `string` | no | A short's: the long video's id once its `upload_state` is `done` (`packages/app/src/slices/studio/pack.ts:264`) |
-| pinnedComment | `string` | no | Long video only: the `youtube_pinned_comment` output with the project's description edits applied, when non-empty (`packages/app/src/slices/studio/pack.ts:125`, `:189`); shorts carry none |
+| scheduleAt | `string` | no | ISO time from the project's `releases` rows through `scheduleOf`: `Schedule.longAt` for the long video, `Schedule.shortsAt[n-1]` for short n when not null (`packages/app/src/slices/studio/pack.ts:176`, `:205`, `:255`) |
+| captions | `PackFile` | no | Long video's `subtitles_srt` output (`packages/app/src/slices/studio/pack.ts:180`) |
+| endScreenVideoId | `string` | no | The project's Previous video, else `previousLongVideo` (`packages/app/src/slices/studio/pack.ts:182`, `packages/app/src/slices/studio/videos.ts:169`) |
+| relatedVideoId | `string` | no | A short's: the long video's id once its `upload_state` is `done` (`packages/app/src/slices/studio/pack.ts:256`) |
+| pinnedComment | `string` | no | Long video only: the `youtube_pinned_comment` output with the project's description edits applied, when non-empty (`packages/app/src/slices/studio/pack.ts:126`, `:183`); shorts carry none |
 | chapterNotice | `string` | no |  |
 
 ### UploadPack
@@ -3868,6 +3873,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | missing | `readonly string[]` | yes |
 | footage | `{ readonly clips: number; readonly real: boolean }` | no |
 | schedule | `Schedule` | no |
+| series | `string` | yes |
 | playlistChoices | `readonly { readonly name: string; readonly chosen: boolean }[]` | yes |
 
 ### ActivePack
@@ -3908,33 +3914,90 @@ Read with default `{title:0, thumbnail:0}` when the setting is missing or invali
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | timeZone | `string` | yes | 1-100 characters |
-| rows | `{ name: string; long: PlanSlot; shorts: PlanSlot[] }[]` | yes | ≤ 14 rows; `name` trimmed 1-20; ≤ 10 shorts per row (`packages/app/src/slices/studio/plan.ts:17`) |
+| rows | `PlanLine[]` | yes | ≤ 14 rows (`packages/app/src/slices/studio/plan-model.ts:19-22`) |
 
-Missing or invalid setting reads as `defaultPlan(localTimeZone())`: rows A, B, C, each one long slot and five shorts (`packages/app/src/slices/studio/plan.ts:33`, `:61`).
+Missing or invalid setting reads as `emptyPlan(localTimeZone())`: no rows, so nothing is scheduled (`packages/app/src/slices/studio/plan.ts:24-26`, `:32-42`).
+
+### PlanLine
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| name | `string` | yes |  | Trimmed 1-20; an inner id ("1", "2"…), never shown; a release keeps the line it came from (`packages/app/src/slices/studio/plan-model.ts:12-13`) |
+| series | `string` | no | `""` | Trimmed ≤ 100; `""` takes any project, else only a project whose `seriesOf` matches (`packages/app/src/slices/studio/plan-model.ts:14-15`, `packages/app/src/slices/studio/releases.ts:92-93`) |
+| long | `PlanSlot` | yes |  | The long video's weekly time |
+| shorts | `PlanSlot[]` | yes |  | ≤ 10 (`packages/app/src/slices/studio/plan-model.ts:17`) |
+
+`seriesOf` reads a project's series from its title pattern (else its title): the text after the last `|`, with `{{…}}` keywords removed and spaces collapsed; `""` without a `|` (`packages/app/src/slices/studio/plan-model.ts:32-47`).
 
 ### PlanSlot
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| day | `number` | yes | 0-6, Sunday first (`weekdays`, `packages/app/src/slices/studio/plan.ts:11`) |
+| day | `number` | yes | 0-6, Sunday first (`weekdays`, `packages/app/src/slices/studio/plan-model.ts:5`) |
 | time | `string` | yes | `HH:MM`, 24-hour |
+
+### Release
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| short | `number` | yes | 0 is the long video |
+| at | `string` | yes | ISO; `""` is not scheduled |
+| line | `string \| null` | yes | The posting-plan line (`PlanLine.name`) the time came from; null when picked by hand |
+| by | `"plan" \| "person"` | yes | accepted: plan, person |
+
+Read by `releasesOf` (one project, by `short`) and `allReleases` (every scheduled row, by time); written by `planReleases` (`by='plan'`) and `setRelease` (`by='person'`), which for short 0 also deletes the project's `by='plan'` short rows (`packages/app/src/slices/studio/releases.ts:46-81`, `:140-197`).
 
 ### Slot
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| row | `string` | yes | Plan row name |
+| row | `string` | yes | Plan line name |
 | longAt | `string` | yes | ISO time of the long video |
 
-`comingSlots` lists slots from one hour after now over eight weeks; `freeSlots` drops any `long_at` already in `upload_slots` (`packages/app/src/slices/studio/plan.ts:170`, `:219`).
+`lineSlots` lists every line's long-video times between two instants in time order; `freeSlots` keeps those from `studio.leadHours` ahead over eight weeks whose line takes the project's series and whose hour no other project's release holds (`packages/app/src/slices/studio/releases.ts:96-135`).
 
 ### Schedule
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| row | `string` | yes |  |
+| row | `string` | yes | The long video's `line`, `""` when null |
 | longAt | `string` | yes |  |
-| shortsAt | `readonly string[]` | yes | Each short's ISO time: the first occurrence of its plan slot after `longAt` (`packages/app/src/slices/studio/plan.ts:187`) |
+| shortsAt | `readonly (string \| null)[]` | yes | Short n's release at index n-1, up to the highest short with a row; null where it has none or is not scheduled (`packages/app/src/slices/studio/releases.ts:199-212`) |
+
+Absent (`scheduleOf` answers undefined) when the project has no short-0 row or it is not scheduled.
+
+### ReleaseCalendar
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| leadHours | `number` | yes | Setting `studio.leadHours` |
+| timeZone | `string` | yes | The posting plan's |
+| from | `string` | yes | ISO, 24 h before now |
+| until | `string` | yes | ISO, `weeks` after now |
+| entries | `readonly CalendarEntry[]` | yes | Sorted by `at` |
+| candidates | `readonly { id: string; title: string; series: string }[]` | yes | Finished projects with no short-0 release row, or one set to not scheduled (`packages/app/src/slices/studio/calendar.ts:132-147`) |
+
+### CalendarEntry
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| at | `string` | yes | ISO long-video release or free plan time |
+| line | `string \| null` | yes |  |
+| series | `string` | yes | The project's `seriesOf`, or the free line's `series` |
+| project | `{ id: string; title: string } \| null` | yes | null for a free time of the plan (`packages/app/src/slices/studio/calendar.ts:118-130`) |
+| items | `readonly CalendarItem[]` | yes | Empty for a free time |
+
+### CalendarItem
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| short | `number` | yes | 0 is the long video |
+| title | `string` | yes |  |
+| at | `string \| null` | yes | Its release; null when none or not scheduled |
+| uploadBy | `string \| null` | yes | `at` minus `leadHours` (`packages/app/src/slices/studio/calendar.ts:93`) |
+| state | `ItemState` | yes | accepted: not-ready, ready, late, filled, scheduled. `scheduled` when the video's `upload_state` is `done`, `filled` when `filled`, `not-ready` without a video file, `late` once now is past `uploadBy`, else `ready` (`packages/app/src/slices/studio/calendar.ts:12-22`, `:95-104`) |
+| checks | `string \| null` | yes | `YoutubeVideo.checks` |
+| videoId | `string \| null` | yes |  |
 
 ### YoutubeVideo
 
@@ -3942,16 +4005,17 @@ Missing or invalid setting reads as `defaultPlan(localTimeZone())`: rows A, B, C
 |---|---|---|---|
 | projectId | `string` | yes |  |
 | short | `number \| null` | yes | null is the long video; stored as 0 |
-| videoId | `string` | yes | 11 characters `[A-Za-z0-9_-]` (`videoIdPattern`, `packages/app/src/slices/studio/videos.ts:32`) |
+| videoId | `string` | yes | 11 characters `[A-Za-z0-9_-]` (`videoIdPattern`, `packages/app/src/slices/studio/videos.ts:35`) |
 | recordedAt | `string` | yes |  |
 | uploadState | `"filled" \| "done"` | yes | accepted: filled, done |
-| abState | `AbState` | yes | accepted: none, waiting, started, failed. Only `recordVideo` writes it (reset to `none` on a new video id); A/B tests start on request and are not tracked (`packages/app/src/slices/studio/videos.ts:80`) |
+| abState | `AbState` | yes | accepted: none, waiting, started, failed. Only `recordVideo` writes it (reset to `none` on a new video id); A/B tests start on request and are not tracked (`packages/app/src/slices/studio/videos.ts:84`) |
 | finishState | `TaskState` | yes | accepted: none, waiting, done, failed |
 | finishMessage | `string \| null` | yes |  |
 | commentState | `TaskState` | yes | accepted: none, waiting, done, failed |
 | commentMessage | `string \| null` | yes |  |
 | abMessage | `string \| null` | yes |  |
 | abAt | `string \| null` | yes |  |
+| checks | `string \| null` | yes | Studio's Content-list Restrictions as the extension last read them: `ok` for None, else Studio's words (≤ 100); null until read. Written by `setChecks` from `/ext/backfill` (`packages/app/src/slices/studio/videos.ts:29-31`, `:183`) |
 
 ### VideoStats
 
@@ -3992,7 +4056,7 @@ Zod `abVariantSchema` (`packages/app/src/slices/studio/stats.ts:21`).
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| title | `string` | yes | Matched to a pack item's titles after trim, whitespace collapse and lower-casing (`packages/app/src/slices/studio/backfill.ts:16`) |
+| title | `string` | yes | Matched to a pack item's titles after trim, whitespace collapse and lower-casing (`packages/app/src/slices/studio/backfill.ts:15`) |
 | videoId | `string` | yes |  |
 
 ### FillEntry
@@ -5058,7 +5122,8 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | Field | Type | Required |
 |---|---|---|
 | plan | `PostingPlan` | yes |
-| free | `readonly Slot[]` | yes |
+| leadHours | `number` | yes |
+| series | `readonly string[]` | yes |
 
 ### VoiceRefusal
 
@@ -5333,11 +5398,12 @@ The extension's `PackItem` copy (`packages/extension/src/pack.ts:13`) marks `tit
 | projectId | `string` | no | filled, video, upload, video-done, item, upload-all, task-result, stats |
 | short | `number \| null` | no | filled, video, upload, video-done, item, task-result, stats |
 | videoId | `string` | no | video, video-done, stats |
-| videos | `readonly { readonly title: string; readonly videoId: string }[]` | no | only when type is backfill |
+| videos | `readonly { readonly title: string; readonly videoId: string; readonly checks?: string }[]` | no | only when type is backfill |
+| close | `boolean` | no | only when type is backfill; the worker closes the sending tab (`packages/extension/src/background.ts:415`) |
 | task | `"finish" \| "comment"` | no | only when type is task-result |
 | ok | `boolean` | no | only when type is task-result |
 | message | `string` | no | only when type is task-result |
-| metrics | `Readonly<Record<string, number>>` | no | only when type is stats; Studio metric ids such as `VIDEO_THUMBNAIL_IMPRESSIONS`, mapped to the `/ext/stats` body by the worker (`packages/extension/src/background.ts:335`) |
+| metrics | `Readonly<Record<string, number>>` | no | only when type is stats; Studio metric ids such as `VIDEO_THUMBNAIL_IMPRESSIONS`, mapped to the `/ext/stats` body by the worker (`packages/extension/src/background.ts:356`) |
 | abVariants | `readonly { title: string \| null; thumbnail: number \| null; share: number \| null; winner: boolean }[]` | no | only when type is stats |
 | last | `boolean` | no | only when type is stats |
 
@@ -5349,7 +5415,7 @@ Union of 14 object variants; a field present in only some variants is `Required:
 |---|---|---|---|
 | projectId | `string` | yes |  |
 | title | `string` | yes |  |
-| items | `readonly { kind: "video" \| "short"; short: number \| null; title: string; ready: boolean; uploaded: boolean; started?: boolean; scheduleAt?: string; videoId?: string }[]` | yes | `ready`: rendered; `uploaded`: `upload_state` done; `started`: `upload_state` filled (`packages/app/src/edge/http/studio.ts:566`) |
+| items | `readonly { kind: "video" \| "short"; short: number \| null; title: string; ready: boolean; uploaded: boolean; started?: boolean; scheduleAt?: string; uploadBy?: string; videoId?: string }[]` | yes | `ready`: rendered; `uploaded`: `upload_state` done; `started`: `upload_state` filled; `uploadBy`: `scheduleAt` minus `studio.leadHours` (`packages/app/src/edge/http/studio.ts:661`, `:671-679`) |
 
 ### WaitingTask
 
@@ -5364,7 +5430,7 @@ Union of 14 object variants; a field present in only some variants is `Required:
 
 Projects and runs:
 
-- `projects` owns `stages`, `outputs`, `project_controls`, `project_revisions`, `project_assets`, `project_heads`, `revision_mutations`, `project_queue` and every 3.0 per-project table (`review_verdicts`, `provider_usage`, `plan_limit_readings`, `plan_limit_waiters`, `prompt_softening`, `youtube_description_edits`, `project_channels`, `project_uploads`, `project_trash`, `narration_retries`) and the 3.1-3.3 per-project tables (`prepared_videos`, `project_set_aside`, `youtube_videos`, `upload_slots`, `video_stats`, `ab_results`) through `ON DELETE CASCADE` foreign keys (`packages/app/src/kernel/db/migrations/0001-init.sql:2`, `packages/app/src/kernel/db/migrations/0027-run-cost.sql:7`, `packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:11`, `packages/app/src/kernel/db/migrations/0042-narration-retries.sql:5`, `packages/app/src/kernel/db/migrations/0043-prepared-videos.sql:7`, `packages/app/src/kernel/db/migrations/0044-project-set-aside.sql:6`, `packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:7`, `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:5`).
+- `projects` owns `stages`, `outputs`, `project_controls`, `project_revisions`, `project_assets`, `project_heads`, `revision_mutations`, `project_queue` and every 3.0 per-project table (`review_verdicts`, `provider_usage`, `plan_limit_readings`, `plan_limit_waiters`, `prompt_softening`, `youtube_description_edits`, `project_channels`, `project_uploads`, `project_trash`, `narration_retries`) and the 3.1-3.4 per-project tables (`prepared_videos`, `project_set_aside`, `youtube_videos`, `video_stats`, `ab_results`, `releases`) through `ON DELETE CASCADE` foreign keys (`packages/app/src/kernel/db/migrations/0001-init.sql:2`, `packages/app/src/kernel/db/migrations/0027-run-cost.sql:7`, `packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:11`, `packages/app/src/kernel/db/migrations/0042-narration-retries.sql:5`, `packages/app/src/kernel/db/migrations/0043-prepared-videos.sql:7`, `packages/app/src/kernel/db/migrations/0044-project-set-aside.sql:6`, `packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:7`, `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:20`, `:33`, `packages/app/src/kernel/db/migrations/0048-releases.sql:7`).
 - `stages` is unique on `(project_id, kind)`: one row per stage kind, seven kinds since migration 0014 added `document` and gave every existing project a skipped `document` stage (`packages/app/src/kernel/db/migrations/0014-document-stage.sql:15`). `attempts.stage_id` references `stages`; `attempts.piece_id` is a plain nullable column; `revision_id`, `work_id` and `work_piece_id` reference the revision tables with `ON DELETE SET NULL` (`packages/app/src/kernel/db/migrations/0005-revision-work.sql:80`).
 - `project_queue` orders projects into `batches`; only `project_id` cascades (`packages/app/src/kernel/db/migrations/0003-batch-queue.sql:5`).
 - A project's accepted RunConfig (`projects.config`, `project_revisions.config`) holds copies, not references: rendered prompt text (`RunConfig.rendered`), narration aliases, shared pronunciations, custom document theme values, cast snapshots with pictures named by SHA-256, earlier episode summaries, the channel id (`packages/app/src/slices/admission/model.ts:150`, `packages/app/src/slices/channels/model.ts:103`, `packages/app/src/slices/document/model.ts:29`). No SQL foreign key joins config JSON to library, channel or theme rows.
@@ -5387,12 +5453,12 @@ Play drafts, templates and schedules:
 - `prepared_videos` ties a project to a schedule id and the run title by value (no schedule foreign key); the scheduler's run of that title continues the project instead of starting one, and `CalendarRun.prepared` names it (`packages/app/src/slices/schedules/prepare.ts:135`, `:170`, `packages/app/src/slices/schedules/schema.ts:223`).
 - `project_set_aside.revision_id` is compared with `project_heads.revision_id` by value; an edit that moves the head ends the mark (`packages/app/src/slices/uploads/repo.ts:61`).
 
-Studio uploads (3.2-3.3):
+Studio uploads (3.2-3.4):
 
 - `youtube_videos`, `video_stats` and `ab_results` are keyed `(project_id, short)` with `short` 0 for the long video; `video_stats.video_id` and `ab_results.video_id` repeat the id by value (`packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:14`, `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:29`, `:38`).
-- `upload_slots` holds one posting-plan slot per project; the plan itself is the `settings` key `studio.postingPlan`, and plan row names are matched by value (`packages/app/src/slices/studio/plan.ts:29`, `:187`).
-- A PackItem names its end-screen video and a short's related video by YouTube id from `youtube_videos` (`previousLongVideo`, `packages/app/src/slices/studio/videos.ts:165`; `packages/app/src/slices/studio/pack.ts:264`).
-- `settings` keys added for Studio: `studio.autoComment` (`on`/`off`, `packages/app/src/edge/http/studio.ts:234`), `studio.postingPlan`, `studio.uploadPick.<projectId>` (`packages/app/src/slices/studio/pick.ts:21`).
+- `releases` is keyed `(project_id, short)` with `short` 0 for the long video and cascades with its project; `line` names a posting-plan line by value (`PlanLine.name`), and the plan itself is the `settings` key `studio.postingPlan` (`packages/app/src/kernel/db/migrations/0048-releases.sql:6-14`, `packages/app/src/slices/studio/plan.ts:20`, `packages/app/src/slices/studio/releases.ts:156`). `youtube_videos` and `releases` are joined by `(project_id, short)` in code (`packages/app/src/slices/studio/calendar.ts:91-94`).
+- A PackItem names its end-screen video and a short's related video by YouTube id from `youtube_videos` (`previousLongVideo`, `packages/app/src/slices/studio/videos.ts:169`; `packages/app/src/slices/studio/pack.ts:256`).
+- `settings` keys added for Studio: `studio.autoComment` (`on`/`off`, `packages/app/src/edge/http/studio.ts:274`), `studio.postingPlan`, `studio.leadHours` (integer 1-168, default 24, `packages/app/src/slices/studio/releases.ts:33-44`), `studio.uploadPick.<projectId>` (`packages/app/src/slices/studio/pick.ts:21`).
 
 Channels (3.0):
 
@@ -5426,7 +5492,7 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 | Rebuild preview/admission | `body_json` = RebuildPreview, `execution_json` = ExecutionSnapshot, `response_json` = RebuildAdmission (replayed on a repeated idempotency key) | `packages/app/src/slices/rebuild/repo.ts:76`, `packages/app/src/slices/rebuild/admission-repo.ts:39`, `packages/app/src/slices/rebuild/admission-repo.ts:84` |
 | Provider call → cost rows | MeteredCall is priced (CallPrice) when the call lands and written to `provider_usage`, or `standalone_usage` for schedule/channel calls; plan windows go to `plan_limit_readings` | `packages/app/src/slices/run-cost/meter.ts:27`, `packages/app/src/slices/run-cost/meter.ts:73` |
 | Runner → browser events | ProjectEvent objects are JSON-serialized onto SSE (`event` = type) by the hub; the browser `JSON.parse`s without validation | `packages/app/src/edge/events/hub.ts:105`, `packages/app/src/edge/http/app.ts:299`, `packages/web/src/events.ts:186` |
-| HTTP responses → browser | Route handlers `c.json` domain objects; `packages/web/src/api.ts` names the bodies from the app's declarations (`*Body` interfaces) and casts; drafts, revisions, checkpoints and the tutorial session parse request bodies (and draft/revision responses) with the app's zod schemas; problems are RFC 9457 `application/problem+json` with `fields`/`errors` members | `packages/web/src/api.ts:92`, `packages/web/src/http.ts:24`, `packages/web/src/play/draft-api.ts:94`, `packages/web/src/project/revision-api.ts:114`, `packages/web/src/tutorial/session-api.ts:28`, `packages/app/src/edge/http/problem.ts:29` |
+| HTTP responses → browser | Route handlers `c.json` domain objects; `packages/web/src/api.ts` names the bodies from the app's declarations (`*Body` interfaces) and casts; drafts, revisions, checkpoints and the tutorial session parse request bodies (and draft/revision responses) with the app's zod schemas; problems are RFC 9457 `application/problem+json` with `fields`/`errors` members | `packages/web/src/api.ts:94`, `packages/web/src/http.ts:24`, `packages/web/src/play/draft-api.ts:94`, `packages/web/src/project/revision-api.ts:114`, `packages/web/src/tutorial/session-api.ts:28`, `packages/app/src/edge/http/problem.ts:29` |
 | Upload pack → extension | UploadPack/PackItem are copied, not imported, into the extension; the copy's PackItem makes the fields an older app omits optional and has no `pickable`; the worker base64-encodes thumbnails and captions into FillPayload, and the hidden video frame hands the video `File` to the Studio page by `postMessage` | `packages/app/src/slices/studio/model.ts:37`, `packages/extension/src/pack.ts:1`, `packages/extension/src/background.ts:96`, `packages/extension/src/video-frame.ts:28` |
 | Database → backup tar | Rows travel table by table as stored (`BackupRow` cells: string, finite number, null) with the schema version they fit; project tables per project, library and usage tables once; `image_blobs` travel as files; provider keys, the machine id and `project_queue` never leave | `packages/app/src/slices/storage/backup-format.ts:38`, `packages/app/src/slices/storage/backup-format.ts:83`, `packages/app/src/slices/storage/backup-export.ts:270` |
 | Backup tar → database | Import loads rows into a scratch database migrated `through` the backup's `databaseVersion`, then migrates it forward with the same files and copies rows in, renaming or skipping clashes (BackupImportSummary); `backup_imports` records the backup id once | `packages/app/src/slices/storage/backup-import.ts:159`, `packages/app/src/kernel/db/migrate.ts:10`, `packages/app/src/slices/storage/backup-import.ts:914` |
@@ -5449,7 +5515,7 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 - Library: `lintPrompt`/`lintEntry` check bodies and keyword slots (`packages/app/src/slices/library/lint.ts:11`); name uniqueness per kind/category is the case-insensitive partial unique index over rows not in the trash (`packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:19`).
 - Catalogue: unknown provider/family pairs, duplicate models and providers without concurrency limits are refused (`packages/app/src/catalog/schema.ts:85`).
 - Host CLI bridge: strict schemas with 1–128 messages, text up to 2 MiB, ids up to 256 characters without control characters; frames and faults are read leniently (unknown fields dropped) (`packages/app/src/kernel/ports/host-cli.ts:64`, `packages/app/src/kernel/ports/host-cli.ts:171`).
-- Studio: `postingPlanSchema` (≤ 14 rows, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the default plan (`packages/app/src/slices/studio/plan.ts:22`, `:61`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:111`-`:147`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:117`).
+- Studio: `postingPlanSchema` (≤ 14 rows, `name` 1-20, `series` ≤ 100 defaulting to `""`, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the empty plan (`packages/app/src/slices/studio/plan-model.ts:7-22`, `packages/app/src/slices/studio/plan.ts:32-46`); `studio.leadHours` is an integer 1-168 on write and reads as 24 otherwise (`packages/app/src/edge/http/studio.ts:286-300`, `packages/app/src/slices/studio/releases.ts:35-40`); `PUT /releases/:projectId` takes a strict `{short 0-99, at: ISO datetime or null, line? 1-20}` and `GET /releases` a `weeks` 1-8 (`packages/app/src/edge/http/studio.ts:302-306`, `:327-340`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200 with optional `checks` ≤ 100 and an optional `close`, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:115`-`:158`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:117`).
 - Collector: at most 500 events and 256 KiB per request, one machine per request, flat payloads of at most 20 keys (`packages/collector/src/model.ts:39`, `packages/collector/src/model.ts:75`).
 - Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some legacy columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:29`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
 
@@ -6552,24 +6618,28 @@ CREATE TABLE youtube_videos (
   finish_message TEXT,
   comment_state TEXT NOT NULL DEFAULT 'none' CHECK (comment_state IN ('none', 'waiting', 'done', 'failed')),
   comment_message TEXT,
+  checks TEXT,
   PRIMARY KEY (project_id, short)
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:6`; `upload_state` added by `0046-youtube-upload-state.sql:5` (rows from before it read `done`); `finish_state`, `finish_message`, `comment_state`, `comment_message` added by `0047-studio-autopilot.sql:12`-`:17`. `short` 0 is the long video. Code model: YoutubeVideo via `rowOf` (`packages/app/src/slices/studio/videos.ts:48`). In backups since 3.2.8 (`packages/app/src/slices/storage/backup-format.ts:64`).
+Migrations: `packages/app/src/kernel/db/migrations/0045-youtube-videos.sql:6`; `upload_state` added by `0046-youtube-upload-state.sql:5` (rows from before it read `done`); `finish_state`, `finish_message`, `comment_state`, `comment_message` added by `0047-studio-autopilot.sql:12`-`:17`; `checks` added by `0048-releases.sql:20` (null until the extension reads Studio's Content list). `short` 0 is the long video. Code model: YoutubeVideo via `rowOf` (`packages/app/src/slices/studio/videos.ts:51`). In backups since 3.2.8 (`packages/app/src/slices/storage/backup-format.ts:64`).
 
-### upload_slots
+### releases
 
 ```sql
-CREATE TABLE upload_slots (
-  project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
-  row_name TEXT NOT NULL,
-  long_at TEXT NOT NULL,
-  assigned_at TEXT NOT NULL
+CREATE TABLE releases (
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  short INTEGER NOT NULL CHECK (short >= 0),
+  release_at TEXT NOT NULL,
+  line TEXT,
+  by TEXT NOT NULL DEFAULT 'plan' CHECK (by IN ('plan', 'person')),
+  set_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, short)
 );
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:4`. No uniqueness on `long_at`; `freeSlots` filters taken times in code (`packages/app/src/slices/studio/plan.ts:219`). Code model: Slot (`setSlot`, `assignedSlot`, `clearSlot`, `packages/app/src/slices/studio/plan.ts:236`, `:200`, `:249`). In backups since 3.3.0 (`packages/app/src/slices/storage/backup-format.ts:66`).
+Migrations: `packages/app/src/kernel/db/migrations/0048-releases.sql:6`, which copies each `upload_slots` row in as short 0 (`row_name` '' becomes a null `line`, `assigned_at` becomes `set_at`, `by` 'plan') and drops `upload_slots` (`:15`-`:17`). `short` 0 is the long video; `release_at` '' is not scheduled. No uniqueness on `release_at`; `freeSlots` and `planReleases` keep two releases out of the same hour in code (`packages/app/src/slices/studio/releases.ts:83-90`, `:114-135`). Code model: Release (`releasesOf`, `allReleases`, `planReleases`, `setRelease`, `packages/app/src/slices/studio/releases.ts:46`, `:58`, `:140`, `:186`). In backups since 3.4.0 in place of `upload_slots` (`packages/app/src/slices/storage/backup-format.ts:66`).
 
 ### video_stats
 

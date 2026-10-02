@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: 14480f26c13e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: 50c66fdc7bfe
+content_hash: 9b1b8696221b
 paths_covered:
   - ":(top)package.json"
   - ":(top)Dockerfile"
@@ -68,7 +68,7 @@ paths_covered:
 
 # Operations
 
-The published package is `@gentbajko/slopify` 3.3.0, bin `slopify` → `dist/edge/cli.js`, Node `>=26` (`packages/app/package.json:3`, `packages/app/package.json:14`, `packages/app/package.json:17`). The workspace holds five packages: `app`, `web`, `extension`, `collector`, `site` (`package.json:5`, `packages/`).
+The published package is `@gentbajko/slopify` 3.4.0, bin `slopify` → `dist/edge/cli.js`, Node `>=26` (`packages/app/package.json:3`, `packages/app/package.json:14`, `packages/app/package.json:17`). The workspace holds five packages: `app`, `web`, `extension`, `collector`, `site` (`package.json:5`, `packages/`).
 
 ## Processes
 
@@ -302,4 +302,4 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 
 ## Extension packaging
 
-`@slopify/extension` 1.0.0 (private; manifest `version` 1.0.0) builds with `node scripts/build.mjs`: esbuild bundles `background`, `comment`, `content`, `options`, `popup`, `video-frame` as IIFE for `chrome120` and `firefox128`, copies `options.html`, `popup.html`, `video-frame.html`, icons and manifest, and zips `dist/slopify-studio-chrome.zip` and `dist/slopify-studio-firefox.zip`; Firefox's manifest swaps the service worker for `background.scripts` and adds gecko id `studio@slopify.local` (`packages/extension/package.json:3`, `packages/extension/package.json:8`, `packages/extension/scripts/build.mjs:28`, `packages/extension/scripts/build.mjs:45-62`, `packages/extension/scripts/build.mjs:73`). The MV3 manifest requests `storage`, `clipboardWrite`, `alarms`, hosts `http://127.0.0.1/*`, `http://localhost/*` and `https://www.youtube.com/oembed*`, injects `content.js` into `https://studio.youtube.com/*` and `comment.js` into `https://www.youtube.com/watch*`, opens `popup.html` from the toolbar and exposes `video-frame.html` to Studio (`packages/extension/static/manifest.json:4`, `:12-30`, `:37-50`). The worker's `slopify-ab-tests` alarm runs every 15 min (`packages/extension/src/background.ts:408-418`). The app build copies both zips into `dist/extension/` and fails if they are missing; the running app serves them at `GET /api/studio/extension/{chrome,firefox}.zip`, 404 with a rebuild instruction when absent (`packages/app/scripts/copy-extension.mjs:6`, `packages/app/src/edge/http/studio.ts:147`, `packages/app/src/edge/http/studio.ts:434`). On a release tag the `chrome-web-store` job builds the extension workspace and runs `packages/extension/scripts/publish-chrome.mjs`, which signs a service-account JWT, uploads the Chrome zip to the Chrome Web Store API v2 and submits it for review; missing secrets skip it, and a version the store already has counts as nothing new (`.github/workflows/release.yml:67-85`, `packages/extension/scripts/publish-chrome.mjs:23-26`, `:59-71`, `:74-82`). No Firefox store upload exists.
+`@slopify/extension` 1.1.0 (private; manifest `version` 1.1.0) builds with `node scripts/build.mjs`: esbuild bundles `background`, `comment`, `content`, `options`, `popup`, `video-frame` as IIFE for `chrome120` and `firefox128`, copies `options.html`, `popup.html`, `video-frame.html`, icons and manifest, and zips `dist/slopify-studio-chrome.zip` and `dist/slopify-studio-firefox.zip`; Firefox's manifest swaps the service worker for `background.scripts` and adds gecko id `studio@slopify.local` (`packages/extension/package.json:3`, `packages/extension/package.json:8`, `packages/extension/scripts/build.mjs:28`, `packages/extension/scripts/build.mjs:45-62`, `packages/extension/scripts/build.mjs:73`). The MV3 manifest requests `storage`, `clipboardWrite`, `alarms`, hosts `http://127.0.0.1/*`, `http://localhost/*` and `https://www.youtube.com/oembed*`, injects `content.js` into `https://studio.youtube.com/*` and `comment.js` into `https://www.youtube.com/watch*`, opens `popup.html` from the toolbar and exposes `video-frame.html` to Studio (`packages/extension/static/manifest.json:4`, `:12-30`, `:37-50`). The worker's `slopify-ab-tests` alarm runs every 15 min (`packages/extension/src/background.ts:408-418`). The app build copies both zips into `dist/extension/` and fails if they are missing; the running app serves them at `GET /api/studio/extension/{chrome,firefox}.zip`, 404 with a rebuild instruction when absent (`packages/app/scripts/copy-extension.mjs:6`, `packages/app/src/edge/http/studio.ts:147`, `packages/app/src/edge/http/studio.ts:434`). On a release tag the `chrome-web-store` job builds the extension workspace and runs `packages/extension/scripts/publish-chrome.mjs`, which signs a service-account JWT, uploads the Chrome zip to the Chrome Web Store API v2 and submits it for review; missing secrets skip it, and a version the store already has counts as nothing new (`.github/workflows/release.yml:67-85`, `packages/extension/scripts/publish-chrome.mjs:23-26`, `:59-71`, `:74-82`). No Firefox store upload exists.

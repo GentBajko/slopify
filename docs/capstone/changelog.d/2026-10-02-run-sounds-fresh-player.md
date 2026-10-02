@@ -1,1 +1,0 @@
-- Run sounds play each chime on a new `AudioContext` closed after it plays (`packages/web/src/notifications/sounds.ts`), so a player stuck after an output change or sleep can no longer silence every later chime.

@@ -6,6 +6,24 @@ capstone_version: 5.2.0
 # Changelog
 
 ## 2026-10-02 - map: all
+key: map/all@14480f26c13e
+
+- 01-architecture.md, 02-models.md, 04-data-flow.md, 08-glossary.md: regenerated (covered paths changed); release calendar (`releases` replaces `upload_slots`), lead hours, series, checks.
+- 07-operations.md: package 3.4.0, extension 1.1.0.
+- logic/14, logic/40: backups carry `releases`; a 3.3 backup's `upload_slots` imports as releases.
+- logic/32, logic/44, logic/README: release calendar, Upload all one at a time, Studio checks.
+- uiux/screens/08-settings, 13-schedules (Releases tab), 23-studio-upload: regenerated (covered paths changed).
+- Found while proving and mapping, fixed before release: shorts of a project that held a 3.3 slot got no times; the lead time and a 3.3 backup's slots didn't survive a backup.
+
+## 2026-10-02 - note: run-sounds-fresh-player
+
+- Run sounds play each chime on a new `AudioContext` closed after it plays (`packages/web/src/notifications/sounds.ts`), so a player stuck after an output change or sleep can no longer silence every later chime.
+
+## 2026-10-02 - note: release-calendar
+
+- Release calendar (3.4.0, migration 0048): `releases` (one row per long video, short 0, and per short; `''` = not scheduled; `by` plan|person) replaces `upload_slots` (`slices/studio/releases.ts`). Posting-plan lines gain `series` (`plan-model.ts`, `seriesOf` from the title pattern after "|"); the default plan is empty; shorts never share an hour with another release; `studio.leadHours` (default 24) sets each item's upload-by. Calendar → Releases (`studio/releases-view.tsx`, `GET /api/studio/releases`, `PUT /api/studio/releases/:projectId`, `slices/studio/calendar.ts`). `youtube_videos.checks` from the Content list's Restrictions; `/ext/tasks` `checks` makes the worker read the list every two hours. Upload all waits for each file to finish uploading before opening the next (extension 1.1.0); the popup sorts by upload-by.
+
+## 2026-10-02 - map: all
 key: map/all@e9226a34aa8a
 
 - 01-architecture.md, 01-architecture-research/recovery/narration/docker.md: regenerated (covered paths changed); Studio extension ↔ app section rewritten (16 `/ext/*` routes, worker messages, alarm, comment script); narration/docker brace globs expanded to one glob per file.

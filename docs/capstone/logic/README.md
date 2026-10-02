@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
+generated_at_commit: 14480f26c13e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
-content_hash: d42303df0b0c
+content_hash: 7859106991d1
 paths_covered:
   - ":(top)packages/app/src/slices/**"
   - ":(top)packages/app/src/edge/**"
@@ -65,7 +65,7 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 | 41 Onboarding and bundled samples | [41-onboarding-and-sample.md](41-onboarding-and-sample.md) |
 | 42 In-app help, What's new, patch notes | [42-in-app-help.md](42-in-app-help.md) |
 | 43 Start at login | [43-autostart.md](43-autostart.md) |
-| 44 Studio autopilot: posting plan, Details touches, pinned comment, A/B tests on request, Studio numbers | [44-studio-autopilot.md](44-studio-autopilot.md) |
+| 44 Studio autopilot: posting plan and release calendar, Studio checks, Details touches, pinned comment, A/B tests on request, Studio numbers | [44-studio-autopilot.md](44-studio-autopilot.md) |
 
 ## Branches
 
