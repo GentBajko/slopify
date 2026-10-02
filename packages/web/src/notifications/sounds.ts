@@ -54,25 +54,47 @@ const tunes: Readonly<
   ],
 };
 
-let context: AudioContext | undefined;
-
-function audio(): AudioContext | undefined {
+// A new player for every chime, closed once it has played: a player kept for the page's life
+// can go silent for good after the sound output changes or the computer sleeps, and still say
+// it is running. The browser lets a page make one only after it has been clicked once; the
+// shell's unlock below wakes the page's first one on that click.
+function player(): AudioContext | undefined {
   if (typeof window === "undefined" || typeof window.AudioContext !== "function") return undefined;
-  context ??= new window.AudioContext();
-  return context;
+  try {
+    return new window.AudioContext();
+  } catch {
+    return undefined;
+  }
 }
 
 // Browsers keep audio silent until the page has been clicked once; the shell calls this on the
 // first click so a run that finishes later can be heard.
 export function unlockRunSounds(): void {
-  const ctx = audio();
-  if (ctx?.state === "suspended") void ctx.resume().catch(() => {});
+  const ctx = player();
+  if (ctx === undefined) return;
+  void ctx
+    .resume()
+    .catch(() => {})
+    .finally(() => void ctx.close().catch(() => {}));
 }
 
 export function playRunSound(sound: RunSound): void {
-  const ctx = audio();
+  const ctx = player();
   if (ctx === undefined) return;
-  if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+  void (async () => {
+    // Waits for the player to start, up to a moment; one the browser keeps silent stays silent.
+    if (ctx.state !== "running")
+      await Promise.race([
+        ctx.resume().catch(() => {}),
+        new Promise((done) => setTimeout(done, 400)),
+      ]);
+    const length = tune(ctx, sound);
+    setTimeout(() => void ctx.close().catch(() => {}), (length + 0.5) * 1000);
+  })();
+}
+
+// Plays the tune and says how long it lasts, in seconds.
+function tune(ctx: AudioContext, sound: RunSound): number {
   const now = ctx.currentTime + 0.02;
   // Near full scale, through a limiter so the stacked partials never clip.
   const limiter = ctx.createDynamicsCompressor();
@@ -96,4 +118,5 @@ export function playRunSound(sound: RunSound): void {
       tone.stop(now + at + length + 0.05);
     }
   }
+  return Math.max(...tunes[sound].map(([, at, length]) => at + length));
 }
