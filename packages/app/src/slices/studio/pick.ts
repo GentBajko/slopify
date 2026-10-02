@@ -13,18 +13,19 @@ export interface UploadPick {
   readonly thumbnail: number;
 }
 
-const pickSchema = z.object({
+export const uploadPickSchema = z.object({
   title: z.number().int().min(0).max(9),
   thumbnail: z.number().int().min(0).max(9),
 });
 
-const keyOf = (projectId: string) => `studio.uploadPick.${projectId}`;
+export const uploadPickPrefix = "studio.uploadPick.";
+const keyOf = (projectId: string) => `${uploadPickPrefix}${projectId}`;
 
 export function readUploadPick(db: DatabaseSync, projectId: string): UploadPick {
   const stored = readSetting(db, keyOf(projectId));
   if (stored === undefined) return { title: 0, thumbnail: 0 };
   try {
-    const parsed = pickSchema.safeParse(JSON.parse(stored));
+    const parsed = uploadPickSchema.safeParse(JSON.parse(stored));
     return parsed.success ? parsed.data : { title: 0, thumbnail: 0 };
   } catch {
     return { title: 0, thumbnail: 0 };
@@ -32,7 +33,7 @@ export function readUploadPick(db: DatabaseSync, projectId: string): UploadPick 
 }
 
 export function writeUploadPick(db: DatabaseSync, projectId: string, pick: UploadPick): void {
-  writeSetting(db, keyOf(projectId), JSON.stringify(pickSchema.parse(pick)));
+  writeSetting(db, keyOf(projectId), JSON.stringify(uploadPickSchema.parse(pick)));
 }
 
 // The chosen title first, the others after it in their order; the same for the thumbnails. A

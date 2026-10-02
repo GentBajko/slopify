@@ -177,7 +177,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     .prepare("SELECT row_name, long_at FROM upload_slots WHERE project_id=?")
     .get(projectId);
   const schedule =
-    slotRow === undefined
+    slotRow === undefined || String(slotRow.long_at) === ""
       ? undefined
       : scheduleOf(plan, { row: String(slotRow.row_name), longAt: String(slotRow.long_at) });
   // The long video's captions, its end screen's video (the project's Previous video, else the

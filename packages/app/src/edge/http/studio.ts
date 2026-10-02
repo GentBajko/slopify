@@ -19,11 +19,11 @@ import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
 import {
   assignedSlot,
-  clearSlot,
   freeSlots,
   postingPlanSchema,
   readPlan,
   setSlot,
+  unschedule,
   writePlan,
 } from "../../slices/studio/plan.js";
 import {
@@ -34,6 +34,7 @@ import {
   removeFill,
 } from "../../slices/studio/queue.js";
 import {
+  autoCommentKey,
   bearerToken,
   isExtensionOrigin,
   pairStudioExtension,
@@ -139,7 +140,6 @@ const statsBody = z.object({
   watchHours: z.number().nonnegative().optional(),
   abVariants: z.array(abVariantSchema).max(3).optional(),
 });
-const autoCommentKey = "studio.autoComment";
 const backfillBody = z.object({
   videos: z
     .array(z.object({ title: z.string().max(200), videoId: z.string().regex(videoIdPattern) }))
@@ -293,7 +293,7 @@ export function studioRoutes(deps: AppDeps) {
           if (denied !== undefined) return denied;
           const { projectId } = c.req.valid("param");
           const wanted = c.req.valid("json").slot;
-          if (wanted === null) clearSlot(deps.db, projectId);
+          if (wanted === null) unschedule(deps.db, projectId, deps.clock.now());
           else {
             const free = slotChoices().some(
               (one) => one.row === wanted.row && one.longAt === wanted.longAt,
@@ -658,7 +658,6 @@ export function studioRoutes(deps: AppDeps) {
             projectId: video.projectId,
             short: video.short,
             videoId: video.videoId,
-            abTest: video.abState === "started",
           })),
         });
       })
@@ -746,14 +745,16 @@ export function studioRoutes(deps: AppDeps) {
         )
           return refused(c);
         const { projectId, asset } = c.req.valid("param");
-        // Only a pack's own files, its videos and thumbnails: the extension puts the video into
-        // Studio's upload dialog and the thumbnails into Details, and needs nothing else.
+        // Only a pack's own files, its videos, thumbnails and captions: the extension puts the
+        // video into Studio's upload dialog, the thumbnails into Details and the captions file
+        // into Subtitles, and needs nothing else.
         const result = uploadPack(deps, projectId);
         const listed =
           result.ok &&
           result.pack.items.some(
             (item) =>
               item.video?.asset === asset ||
+              item.captions?.asset === asset ||
               item.thumbnails.some((thumbnail) => thumbnail.asset === asset),
           );
         const found = listed ? findDownload(deps, projectId, asset) : undefined;

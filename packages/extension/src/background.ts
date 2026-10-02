@@ -9,8 +9,9 @@ import type {
 } from "./pack.js";
 
 // The background worker: the only part of the extension that talks to Slopify. It keeps the
-// Slopify address and the pairing token, reads the chosen upload pack and its thumbnails, and
-// hands them to the Studio page. It only reads; it never sends Slopify anything but the token.
+// Slopify address and the pairing token, reads upload packs and their files and hands them to
+// the Studio pages, and reports back what happened there: links, confirmed uploads, task
+// results and Studio's numbers. Every 15 minutes it opens the tabs for waiting tasks.
 
 const api = browserApi();
 

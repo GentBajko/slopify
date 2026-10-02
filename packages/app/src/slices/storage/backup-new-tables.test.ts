@@ -11,6 +11,8 @@ import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { insertProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { writeSetting } from "../settings/repo.js";
+import { writeUploadPick } from "../studio/pick.js";
+import { defaultPlan, writePlan } from "../studio/plan.js";
 import { readChannelLinksFor } from "../youtube/edits-repo.js";
 import { type BackupDeps, planBackup, streamBackup } from "./backup-export.js";
 import { libraryTables, projectTables, usageTables } from "./backup-format.js";
@@ -199,6 +201,9 @@ function seed(db: DatabaseSync): void {
   // A channel's own Studio playlist travels; what waits to be filled in Studio does not.
   writeSetting(db, "studio.playlist.c2", JSON.stringify("Lore tales"));
   writeSetting(db, "studio.fillQueue.0123456789abcdef", JSON.stringify([]));
+  writeSetting(db, "studio.autoComment", "on");
+  writePlan(db, defaultPlan("Europe/Berlin"));
+  writeUploadPick(db, "p1", { title: 1, thumbnail: 2 });
 }
 
 const rows = (db: DatabaseSync, sql: string) => db.prepare(sql).all();
@@ -254,7 +259,7 @@ describe("backups carry everything added since 2.5.0", () => {
     same("SELECT * FROM project_trash ORDER BY project_id");
     same("SELECT * FROM standalone_usage ORDER BY id");
     same(
-      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2') ORDER BY key",
+      "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2','studio.autoComment','studio.postingPlan','studio.uploadPick.p1') ORDER BY key",
     );
     expect(rows(target.db, "SELECT key FROM settings WHERE key LIKE 'studio.fillQueue.%'")).toEqual(
       [],

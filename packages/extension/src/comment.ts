@@ -38,6 +38,9 @@ async function post(text: string): Promise<string | undefined> {
   );
   if (placeholder === null)
     return "The comment box wasn't found (comments may be off on this video).";
+  // Posted already (a tab that never reported is opened again later): only pin that one.
+  const earlier = threadWith(text);
+  if (earlier !== undefined) return pin(earlier);
   placeholder.click();
   const box = await until(
     () => [...document.querySelectorAll<HTMLElement>("#contenteditable-root")].find(shown),
@@ -52,15 +55,20 @@ async function post(text: string): Promise<string | undefined> {
   );
   if (submit === null) return "The comment's Comment button wasn't found.";
   submit.click();
-  const posted = await until(
-    () =>
-      [...document.querySelectorAll("ytd-comment-thread-renderer")].find((thread) =>
-        (thread.querySelector("#content-text")?.textContent ?? "").includes(text.slice(0, 40)),
-      ),
-    15000,
-  );
+  const posted = await until(() => threadWith(text), 15000);
   if (posted === null) return "The comment didn't show after posting; check the video's comments.";
-  // Its own menu: Pin, then the confirmation's Pin.
+  return pin(posted);
+}
+
+const threadWith = (text: string): Element | undefined =>
+  [...document.querySelectorAll("ytd-comment-thread-renderer")].find((thread) =>
+    (thread.querySelector("#content-text")?.textContent ?? "").includes(text.slice(0, 40)),
+  );
+
+// The comment's own menu: Pin, then the confirmation's Pin.
+async function pin(posted: Element): Promise<string | undefined> {
+  if (shown(posted.querySelector("#pinned-comment-badge ytd-pinned-comment-badge-renderer")))
+    return undefined;
   const menu = posted.querySelector<HTMLElement>("#action-menu button, ytd-menu-renderer button");
   if (menu === null)
     return "Posted, but the comment's menu wasn't found to pin it; pin it by hand.";

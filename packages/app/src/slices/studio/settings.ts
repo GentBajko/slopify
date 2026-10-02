@@ -165,6 +165,8 @@ export function saveProjectPlaylists(
 // project's Prepare upload, under AI use. One row holding their ids; YouTube's second AI use
 // case is footage of a real event or place altered by AI (`disclosure.ts`).
 export const studioRealFootageKey = "studio.realFootage";
+// "on" or "off": whether the extension posts and pins each video's comment once it is public.
+export const autoCommentKey = "studio.autoComment";
 
 function realFootageIds(db: DatabaseSync): readonly string[] {
   const stored = readSetting(db, studioRealFootageKey);

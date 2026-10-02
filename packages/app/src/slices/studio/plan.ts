@@ -26,7 +26,8 @@ export const postingPlanSchema = z.object({
 export type PostingPlan = z.infer<typeof postingPlanSchema>;
 export type PlanSlot = z.infer<typeof slotSchema>;
 
-const key = "studio.postingPlan";
+export const postingPlanKey = "studio.postingPlan";
+const key = postingPlanKey;
 
 // Three long videos a week, five shorts each, the channel's own times.
 export function defaultPlan(timeZone: string): PostingPlan {
@@ -194,7 +195,8 @@ export function scheduleOf(plan: PostingPlan, slot: Slot): Schedule {
   };
 }
 
-// The project's slot: the one it was given, else the next free one, kept from now on.
+// The project's slot: the one it was given, else the next free one, kept from now on. A project
+// set to "Not scheduled" keeps an empty row, so it isn't given one again.
 export function assignedSlot(
   db: DatabaseSync,
   plan: PostingPlan,
@@ -204,7 +206,10 @@ export function assignedSlot(
   const row = db
     .prepare("SELECT row_name, long_at FROM upload_slots WHERE project_id=?")
     .get(projectId);
-  if (row !== undefined) return { row: String(row.row_name), longAt: String(row.long_at) };
+  if (row !== undefined)
+    return String(row.long_at) === ""
+      ? undefined
+      : { row: String(row.row_name), longAt: String(row.long_at) };
   const free = freeSlots(db, plan, now, 1)[0];
   if (free === undefined) return undefined;
   setSlot(db, projectId, free, now);
@@ -234,6 +239,11 @@ export function setSlot(db: DatabaseSync, projectId: string, slot: Slot, now: Da
      ON CONFLICT(project_id) DO UPDATE SET row_name=excluded.row_name, long_at=excluded.long_at,
        assigned_at=excluded.assigned_at`,
   ).run(projectId, slot.row, slot.longAt, now.toISOString());
+}
+
+// "Not scheduled": the project takes no slot until one is chosen for it.
+export function unschedule(db: DatabaseSync, projectId: string, now: Date): void {
+  setSlot(db, projectId, { row: "", longAt: "" }, now);
 }
 
 export function clearSlot(db: DatabaseSync, projectId: string): void {

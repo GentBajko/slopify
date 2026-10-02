@@ -39,7 +39,10 @@ import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { realPersonVoicesKey, voiceIdMax, voiceNameMax } from "../settings/voices.js";
 import { whatsNewSeenKey } from "../settings/whats-new.js";
+import { uploadPickPrefix, uploadPickSchema } from "../studio/pick.js";
+import { postingPlanKey, postingPlanSchema } from "../studio/plan.js";
 import {
+  autoCommentKey,
   storedPlaylistsSchema,
   storedProjectPlaylistsSchema,
   studioChannelPlaylistPrefix,
@@ -491,12 +494,19 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
       key === patchNotesSeenKey
     )
       continue;
+    if (key === autoCommentKey) {
+      z.enum(["on", "off"]).parse(value);
+      portable[key] = value;
+      continue;
+    }
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === "loudness") storedLoudness.parse(parsed);
     else if (key === studioPlaylistKey || key.startsWith(studioChannelPlaylistPrefix))
       storedPlaylistsSchema.parse(parsed);
+    else if (key === postingPlanKey) postingPlanSchema.parse(parsed);
+    else if (key.startsWith(uploadPickPrefix)) uploadPickSchema.parse(parsed);
     else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
     else if (

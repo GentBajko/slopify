@@ -754,6 +754,15 @@ describe("YouTube videos and their A/B tests", () => {
       finish: { videoId: string }[];
     };
     expect(tasks.finish.map((one) => one.videoId)).toEqual(["lKS3FAjekpI"]);
+    // The Details page gets the captions file from the pack.
+    const pack = (await (await h.call("/ext/packs/p1", ext(token))).json()) as {
+      items: { kind: string; captions?: { asset: string } }[];
+    };
+    const captions = pack.items.find((item) => item.kind === "video")?.captions;
+    expect(captions).toBeDefined();
+    const file = await h.call(`/ext/files/p1/${captions?.asset ?? ""}`, ext(token));
+    expect(file.status).toBe(200);
+    expect(await file.text()).toContain("A fox.");
     await h.call(
       "/ext/task-result",
       ext(token, {
@@ -919,6 +928,18 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     expect(((await moved.json()) as { schedule?: { longAt: string } }).schedule?.longAt).toBe(
       other.longAt,
     );
+    // "Not scheduled" sticks: reading the pack again gives it no slot.
+    await h.call("/packs/p1/slot", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: null }),
+    });
+    const again = (await (await h.call("/packs/p1")).json()) as {
+      schedule?: unknown;
+      items: { scheduleAt?: string }[];
+    };
+    expect(again.schedule).toBeUndefined();
+    expect(again.items[0]?.scheduleAt).toBeUndefined();
   });
 
   it("queues every short for Upload all Shorts, short 1 first", async () => {

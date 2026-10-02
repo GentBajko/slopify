@@ -127,31 +127,6 @@ export function videoOf(
   return row === undefined ? undefined : rowOf(row);
 }
 
-// Sets an A/B test's state; false when the project has no video recorded for that upload.
-export function setAbState(
-  db: DatabaseSync,
-  projectId: string,
-  short: number | null,
-  state: AbState,
-  message: string | null,
-  at: string,
-): boolean {
-  return (
-    db
-      .prepare(
-        "UPDATE youtube_videos SET ab_state=?, ab_message=?, ab_at=? WHERE project_id=? AND short=?",
-      )
-      .run(state, message, at, projectId, slot(short)).changes > 0
-  );
-}
-
-export function waitingAbTests(db: DatabaseSync): readonly YoutubeVideo[] {
-  return db
-    .prepare("SELECT * FROM youtube_videos WHERE ab_state='waiting' ORDER BY recorded_at")
-    .all()
-    .map(rowOf);
-}
-
 export function setTaskState(
   db: DatabaseSync,
   task: "finish" | "comment",
