@@ -140,9 +140,12 @@ export function releaseCalendar(
     from: from.toISOString(),
     until: until.toISOString(),
     entries: entries.toSorted((left, right) => Date.parse(left.at) - Date.parse(right.at)),
+    // Only a project with its video made can take a time.
     candidates: options.candidates.flatMap((id) => {
       const project = projects.get(id);
       if (project === undefined || scheduled.has(id)) return [];
+      const pack = uploadPack(deps, id);
+      if (!pack.ok || pack.pack.items[0]?.video == null) return [];
       return [{ id, title: project.title, series: seriesOf(project.config) }];
     }),
   };

@@ -1,0 +1,1 @@
+- Calendar → Releases candidates are only finished projects whose upload pack has its video (`slices/studio/calendar.ts`).
