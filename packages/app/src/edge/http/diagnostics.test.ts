@@ -22,7 +22,7 @@ it("returns a downloadable diagnostics bundle without credentials", async () => 
     const body = await response.json();
     expect(body).toMatchObject({
       appVersion: "0.8.5",
-      schemaVersion: 44,
+      schemaVersion: 45,
       providers: expect.arrayContaining([
         expect.objectContaining({ id: "codex", readiness: { kind: "cli", installed: false } }),
       ]),

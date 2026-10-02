@@ -1,5 +1,5 @@
 import { browserApi } from "./browser.js";
-import { type FieldResult, fillStudio, setFiles } from "./fill.js";
+import { type FieldResult, fillStudio, setFiles, startAbTest } from "./fill.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
 import type { VideoAnswer, VideoRequest } from "./video-frame.js";
@@ -147,7 +147,9 @@ async function fill(next: boolean): Promise<void> {
   }
   const current = payload;
   const { item, thumbnails } = current;
-  const report = await fillStudio(document, item, thumbnails.map(file));
+  // The A/B test waits for the video to be public (scheduled videos can't be tested), so the
+  // upload gets only the first thumbnail.
+  const report = await fillStudio(document, item, thumbnails.map(file), { abTestLater: true });
   if (!report.filled) {
     const text = packText(item);
     const copied = await copyText(text);
@@ -183,6 +185,7 @@ async function fill(next: boolean): Promise<void> {
   );
   if (reported) return;
   reported = true;
+  void recordVideo(current);
   // Filled: it leaves Slopify's queue, and the next upload dialog gets the next item.
   const left = (await api.runtime.sendMessage({
     type: "filled",
@@ -195,6 +198,65 @@ async function fill(next: boolean): Promise<void> {
       `${String(left.value)} more upload${left.value === 1 ? "" : "s"} waiting from Slopify: start the next upload in Studio and it is filled the same way.`,
       "info",
     );
+}
+
+// Reads the new video's link from the upload dialog (Studio shows it once the upload starts)
+// and tells Slopify, which keeps it; an upload with other titles or thumbnails gets its A/B test
+// started once the video is public.
+async function recordVideo(current: FillPayload): Promise<void> {
+  const { item } = current;
+  let videoId: string | undefined;
+  for (let waited = 0; waited < 60_000 && videoId === undefined; waited += 1000) {
+    const dialog = findField(document, uploadDialog);
+    const link = dialog?.querySelector<HTMLAnchorElement>('a#video-link, a[href*="youtu.be/"]');
+    videoId = /youtu\.be\/([A-Za-z0-9_-]{11})/.exec(link?.href ?? "")?.[1];
+    if (videoId === undefined) await new Promise((done) => setTimeout(done, 1000));
+  }
+  if (videoId === undefined) {
+    toast(
+      "Studio didn't show the new video's link, so Slopify can't start its A/B test by itself. Once it is up, paste its link in Slopify (project → YouTube → On YouTube).",
+      "info",
+    );
+    return;
+  }
+  const answer = (await api.runtime.sendMessage({
+    type: "video",
+    projectId: current.projectId,
+    short: item.kind === "short" ? (item.short ?? null) : null,
+    videoId,
+  })) as WorkerAnswer<{ abTest?: boolean }>;
+  if (!answer.ok) toast(answer.message, "error");
+  else if (answer.value.abTest === true)
+    toast(
+      "Its A/B test (titles and thumbnails) starts by itself once the video is public. Keep Chrome open around that time; otherwise it starts the next time Chrome opens.",
+      "info",
+    );
+}
+
+// A video's Details page the worker opened for its A/B test (`#slopify-ab`): sets the test,
+// says how it went, and the worker closes the tab.
+async function runAbTest(videoId: string): Promise<void> {
+  const answer = (await api.runtime.sendMessage({
+    type: "ab-test",
+    videoId,
+  })) as WorkerAnswer<FillPayload>;
+  if (!answer.ok) {
+    toast(answer.message, "error");
+    return;
+  }
+  const { projectId, item, thumbnails } = answer.value;
+  // The Details editor renders a moment after the page.
+  for (let waited = 0; waited < 30_000 && findField(document, title) === null; waited += 500)
+    await new Promise((done) => setTimeout(done, 500));
+  const result = await startAbTest(document, item, thumbnails.map(file), { timeoutMs: 8000 });
+  await api.runtime.sendMessage({
+    type: "ab-result",
+    projectId,
+    short: item.kind === "short" ? (item.short ?? null) : null,
+    videoId,
+    ok: result.ok,
+    message: result.message,
+  });
 }
 
 // A failure whose text isn't on the clipboard says to press its Copy instead.
@@ -335,5 +397,9 @@ function look(): void {
   void fill(true);
 }
 
-watch();
-look();
+const abVideo = /^\/video\/([A-Za-z0-9_-]{11})\/edit/.exec(location.pathname)?.[1];
+if (location.hash === "#slopify-ab" && abVideo !== undefined) void runAbTest(abVideo);
+else {
+  watch();
+  look();
+}

@@ -130,9 +130,28 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
 3. When the Details step appears, the extension fills the title, description, thumbnail(s),
    playlist, audience, the AI use answer (Yes or No, with why) and tags, then says what it did.
    **Fill again from Slopify** (bottom right) repeats it.
-4. Check everything (with two or three thumbnails, check them in the A/B Testing dialog left
-   open and press Set test), go through Studio's remaining steps, and publish yourself. The
-   extension never presses Next, Save, Schedule, Publish or Set test.
+4. Check everything, go through Studio's remaining steps, and schedule or publish yourself.
+   The extension never presses Next, Save, Schedule or Publish on an upload.
+
+### A/B tests after publishing (from 3.2.8, extension 0.3.0)
+
+Studio tests titles and thumbnails only on public videos, and a scheduled video is private
+until its time. So the upload gets only thumbnail 1, and the A/B test waits:
+
+- After filling the Details, the extension reads the new video's link from the dialog and tells
+  Slopify, which keeps it (project → YouTube → On YouTube). An upload with other titles or two or
+  three thumbnails gets its test queued.
+- Every 15 minutes, and when Chrome starts, the extension asks Slopify for the waiting tests and
+  checks each video with YouTube's public oEmbed (it answers only for a public video, no
+  sign-in). A public one's Details page opens in a background tab; the extension presses
+  A/B Testing, picks Title and thumbnail (or Title only, or Thumbnail only), fills the titles and
+  thumbnails, presses **Set test** (and Save, if Studio then enables it), reports to Slopify and
+  closes the tab. This is the only place it presses Set test, and only for a test queued in
+  Slopify; if anything isn't found it presses nothing and On YouTube shows why.
+- Chrome has to be open and signed in to Studio; a test whose time passed while Chrome was
+  closed starts the next time it opens.
+- On YouTube also takes a pasted link for an upload made by hand, and **Start A/B test** queues a
+  test for any recorded video after the fact.
 
 **Several uploads in a row.** Each Fill in YouTube Studio adds the item to **Waiting for
 Studio**, which Prepare upload lists (oldest first, from every project, each with Remove). Each

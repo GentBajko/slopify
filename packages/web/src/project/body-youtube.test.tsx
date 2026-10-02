@@ -269,7 +269,7 @@ it("says a description written before pinned comments has none, and writes it ag
   expect(screen.getByRole("button", { name: "Copy pinned comment" }).hasAttribute("disabled")).toBe(
     true,
   );
-  await userEvent.click(screen.getByRole("button", { name: "Write again" }));
+  await userEvent.click(screen.getByRole("button", { name: "Write the pinned comment again" }));
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toContain("A field you edited keeps your text");
   await userEvent.click(within(dialog).getByRole("button", { name: "Write again" }));

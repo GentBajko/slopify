@@ -30,6 +30,15 @@ import {
   studioPlaylistsProblem,
   studioRequestAllowed,
 } from "../../slices/studio/settings.js";
+import {
+  forgetVideo,
+  projectVideos,
+  recordVideo,
+  setAbState,
+  videoIdOf,
+  videoIdPattern,
+  waitingAbTests,
+} from "../../slices/studio/videos.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -68,6 +77,20 @@ const projectPlaylistsBody = z.object({
   playlists: z.array(z.string().max(studioPlaylistMax)).max(studioPlaylistsMax).nullable(),
 });
 const realFootageBody = z.object({ realFootage: z.boolean() });
+const shortField = z.number().int().min(1).max(99).nullable().optional();
+const extVideoBody = z.object({
+  projectId: id,
+  short: shortField,
+  videoId: z.string().regex(videoIdPattern),
+});
+const abResultBody = z.object({
+  projectId: id,
+  short: shortField,
+  ok: z.boolean(),
+  message: z.string().max(2000),
+});
+const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
+const abTestBody = z.object({ short: shortField, start: z.boolean() });
 // The extension builds the app ships (`scripts/copy-extension.mjs`), by browser.
 const extensionFiles: Readonly<Record<string, string>> = {
   "chrome.zip": "slopify-studio-chrome.zip",
@@ -118,6 +141,19 @@ export function studioRoutes(deps: AppDeps) {
       detail:
         "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
     });
+
+  const extAllowed = (c: Context): boolean =>
+    studioRequestAllowed(
+      deps.db,
+      bearerToken(c.req.header("authorization")),
+      c.req.header("origin"),
+    );
+  // An upload has an A/B test to run when it has other titles or more than one thumbnail.
+  const abTestable = (projectId: string, short: number | null): boolean => {
+    const result = uploadPack(deps, projectId);
+    const item = result.ok ? packItem(result.pack, short ?? undefined) : undefined;
+    return item !== undefined && (item.titles.length > 0 || item.thumbnails.length > 1);
+  };
 
   return (
     new Hono()
@@ -217,6 +253,72 @@ export function studioRoutes(deps: AppDeps) {
         },
       )
       // What waits for the extension, oldest first: each new upload dialog takes the first.
+      // The YouTube videos a project's uploads became, and their A/B tests.
+      .get("/videos/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
+        c.json({ videos: projectVideos(deps.db, c.req.valid("param").projectId) }),
+      )
+      // A video's link pasted in Slopify, for an upload made without the extension; an empty
+      // link forgets it.
+      .put(
+        "/videos/:projectId",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", videoLinkBody, onInvalid),
+        (c) => {
+          const wrong = samePage(c);
+          if (wrong !== undefined) return wrong;
+          const { projectId } = c.req.valid("param");
+          const { short, link } = c.req.valid("json");
+          if (link.trim() === "") {
+            forgetVideo(deps.db, projectId, short ?? null);
+            return c.json({ videos: projectVideos(deps.db, projectId) });
+          }
+          const videoId = videoIdOf(link);
+          if (videoId === undefined)
+            return problem(c, {
+              status: 400,
+              title: titleOf(400),
+              detail:
+                "That isn't a YouTube video link. Copy the video's link from YouTube Studio (Details → Video link, like https://youtu.be/…) and paste it again.",
+            });
+          recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
+          return c.json({ videos: projectVideos(deps.db, projectId) });
+        },
+      )
+      // Start A/B test (or Cancel): the extension starts it once the video is public.
+      .post(
+        "/videos/:projectId/ab-test",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", abTestBody, onInvalid),
+        (c) => {
+          const wrong = samePage(c);
+          if (wrong !== undefined) return wrong;
+          const { projectId } = c.req.valid("param");
+          const { short, start } = c.req.valid("json");
+          if (start && !abTestable(projectId, short ?? null))
+            return problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "There is nothing to A/B test: this upload has one thumbnail and no other titles. Make more thumbnails (Edit project → Thumbnail) or let the YouTube step write other titles, then try again.",
+            });
+          const set = setAbState(
+            deps.db,
+            projectId,
+            short ?? null,
+            start ? "waiting" : "none",
+            null,
+            deps.clock.now().toISOString(),
+          );
+          if (!set)
+            return problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "Slopify doesn't know this upload's YouTube video yet. Paste its link (from YouTube Studio → Details → Video link) first.",
+            });
+          return c.json({ videos: projectVideos(deps.db, projectId) });
+        },
+      )
       .get("/queue", (c) => {
         const denied = samePage(c);
         if (denied !== undefined) return denied;
@@ -328,6 +430,54 @@ export function studioRoutes(deps: AppDeps) {
         const { projectId, short } = c.req.valid("json");
         const left = removeFill(deps.db, projectId, short ?? null, deps.clock.now());
         return c.json({ waiting: left.length });
+      })
+      // The extension read the new video's id from Studio's upload dialog. An upload with an
+      // A/B test to run (other titles, or several thumbnails) waits for its video to be public:
+      // scheduled videos are private until then, and Studio tests only public ones.
+      .post("/ext/video", zValidator("json", extVideoBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { projectId, short, videoId } = c.req.valid("json");
+        recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
+        const testable = abTestable(projectId, short ?? null);
+        if (testable)
+          setAbState(
+            deps.db,
+            projectId,
+            short ?? null,
+            "waiting",
+            null,
+            deps.clock.now().toISOString(),
+          );
+        return c.json({ abTest: testable });
+      })
+      // The A/B tests waiting for their videos to be public, each with its upload item (titles
+      // and thumbnails). One whose project or item is gone is dropped.
+      .get("/ext/ab-tests", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const tests = waitingAbTests(deps.db).flatMap((video) => {
+          const result = uploadPack(deps, video.projectId);
+          const item = result.ok ? packItem(result.pack, video.short ?? undefined) : undefined;
+          return item === undefined
+            ? []
+            : [{ projectId: video.projectId, short: video.short, videoId: video.videoId, item }];
+        });
+        return c.json({ tests });
+      })
+      .post("/ext/ab-tests/result", zValidator("json", abResultBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const { projectId, short, ok, message } = c.req.valid("json");
+        setAbState(
+          deps.db,
+          projectId,
+          short ?? null,
+          ok ? "started" : "failed",
+          message,
+          deps.clock.now().toISOString(),
+        );
+        return c.json({ ok: true });
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
         allowOrigin(c, false);

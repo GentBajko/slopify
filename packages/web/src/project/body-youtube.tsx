@@ -49,6 +49,7 @@ import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { OnYoutube } from "./on-youtube.js";
 import { useOutputText } from "./parts.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
 
@@ -211,6 +212,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     .map((one) => one.trim())
     .filter((one) => one !== "");
 
+  // Write again, on every part's head: one AI call writes all the parts anew.
+  const again =
+    written && regenerateNow !== undefined && stage.state !== "running"
+      ? () => setRewriting(true)
+      : undefined;
   const copy = (text: string, what: string) => {
     const failed = `Couldn't copy the ${what}. Select the text in the YouTube section and copy it.`;
     if (!navigator.clipboard) {
@@ -250,9 +256,9 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       multiline={name !== "hashtags"}
       placeholder={
         written && name === "pinnedComment"
-          ? "Written before pinned comments existed. Use Write again above to have one written, or Edit to write your own."
+          ? "Written before pinned comments existed. Use Write again to have one written, or Edit to write your own."
           : written && name === "titles"
-            ? "Written before other titles existed. Use Write again above to have two written, or Edit to write your own, one per line."
+            ? "Written before other titles existed. Use Write again to have two written, or Edit to write your own, one per line."
             : waiting
       }
       render={render}
@@ -302,11 +308,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             }
             over={filledDescription.text.length > descriptionMaxCharacters}
             main
-            again={
-              written && regenerateNow !== undefined && stage.state !== "running"
-                ? () => setRewriting(true)
-                : undefined
-            }
+            again={again}
           />
           <div hidden={openPart !== "description"} className="flex min-w-0 flex-col gap-3">
             {field("summary")}
@@ -352,6 +354,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 : undefined
             }
             over={filledComment.text.length > pinnedCommentMaxCharacters}
+            again={again}
           />
           <div hidden={openPart !== "pinned"} className="flex min-w-0 flex-col gap-3">
             {field("pinnedComment")}
@@ -374,6 +377,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 : undefined
             }
             over={titleList.some((one) => one.length > studioTitleMax)}
+            again={again}
           />
           <div hidden={openPart !== "titles"} className="flex min-w-0 flex-col gap-3">
             {field("titles")}
@@ -400,6 +404,10 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           {`${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
         </p>
       )}
+      <OnYoutube
+        projectId={project.id}
+        shorts={outputs.filter((output) => output.role === "short_video").length}
+      />
       <PreviousVideo
         projectId={project.id}
         edits={edits.data}
@@ -413,7 +421,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       <ConfirmDialog
         open={rewriting}
         title="Write the description again?"
-        consequence="Your text model writes a new summary, chapters, hashtags, tags and pinned comment. It is one AI call, billed like the first. A field you edited keeps your text and offers the new one beside it."
+        consequence="Your text model writes a new summary, chapters, hashtags, tags, pinned comment and other titles. It is one AI call, billed like the first. A field you edited keeps your text and offers the new one beside it."
         confirmLabel="Write again"
         cancelLabel="Keep what is there"
         tone="primary"
@@ -455,7 +463,7 @@ function PartHead({
   readonly over: boolean;
   // Copy description is the section's main action (the one-click task); Copy tags is not.
   readonly main?: boolean;
-  // Write again, on the description's head; undefined where it is not offered.
+  // Write again; undefined where it is not offered.
   readonly again?: (() => void) | undefined;
 }): ReactElement {
   return (
@@ -487,7 +495,12 @@ function PartHead({
       )}
       <span className="flex-1" />
       {again === undefined ? null : (
-        <Button type="button" variant="secondary" onClick={again}>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-label={`Write the ${label.toLowerCase()} again`}
+          onClick={again}
+        >
           <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
           Write again
         </Button>

@@ -67,7 +67,32 @@ export type WorkerRequest =
   | { readonly type: "pack" }
   // The page filled this item: Slopify takes it out of the queue, so the next upload dialog
   // gets the next one.
-  | { readonly type: "filled"; readonly projectId: string; readonly short: number | null };
+  | { readonly type: "filled"; readonly projectId: string; readonly short: number | null }
+  // The upload became this YouTube video: Slopify keeps its id, and an A/B test waits for it.
+  | {
+      readonly type: "video";
+      readonly projectId: string;
+      readonly short: number | null;
+      readonly videoId: string;
+    }
+  // A Details page the worker opened for an A/B test asks for it, then says how it went.
+  | { readonly type: "ab-test"; readonly videoId: string }
+  | {
+      readonly type: "ab-result";
+      readonly projectId: string;
+      readonly short: number | null;
+      readonly videoId: string;
+      readonly ok: boolean;
+      readonly message: string;
+    };
+
+// An A/B test waiting for its video to be public, as Slopify lists it.
+export interface WaitingAbTest {
+  readonly projectId: string;
+  readonly short: number | null;
+  readonly videoId: string;
+  readonly item: PackItem;
+}
 
 // The whole item as text, for pasting by hand when the dialog can't be filled.
 export function packText(item: PackItem): string {

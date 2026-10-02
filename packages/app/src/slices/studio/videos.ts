@@ -1,0 +1,115 @@
+import type { DatabaseSync } from "node:sqlite";
+
+// The YouTube video each upload became, and its A/B test waiting to start
+// (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
+
+export type AbState = "none" | "waiting" | "started" | "failed";
+
+export interface YoutubeVideo {
+  readonly projectId: string;
+  readonly short: number | null;
+  readonly videoId: string;
+  readonly recordedAt: string;
+  readonly abState: AbState;
+  // Why it failed, or what the extension said when it started.
+  readonly abMessage: string | null;
+  readonly abAt: string | null;
+}
+
+// A YouTube video id: 11 letters, digits, `-` and `_`.
+export const videoIdPattern = /^[A-Za-z0-9_-]{11}$/;
+
+// The id inside a link as Studio and YouTube show it (youtu.be/ID, watch?v=ID, /shorts/ID,
+// studio's /video/ID/edit), or the bare id.
+export function videoIdOf(text: string): string | undefined {
+  const trimmed = text.trim();
+  if (videoIdPattern.test(trimmed)) return trimmed;
+  const match =
+    /(?:youtu\.be\/|[?&]v=|\/shorts\/|\/video\/|\/live\/|\/embed\/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/.exec(
+      trimmed,
+    );
+  return match?.[1];
+}
+
+const slot = (short: number | null): number => short ?? 0;
+
+function rowOf(row: Record<string, unknown>): YoutubeVideo {
+  const short = Number(row.short);
+  return {
+    projectId: String(row.project_id),
+    short: short === 0 ? null : short,
+    videoId: String(row.video_id),
+    recordedAt: String(row.recorded_at),
+    abState: String(row.ab_state) as AbState,
+    abMessage: typeof row.ab_message === "string" ? row.ab_message : null,
+    abAt: typeof row.ab_at === "string" ? row.ab_at : null,
+  };
+}
+
+// Records (or replaces) the video an upload became. A new video id starts its A/B test over.
+export function recordVideo(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  videoId: string,
+  at: string,
+): void {
+  db.prepare(
+    `INSERT INTO youtube_videos(project_id,short,video_id,recorded_at) VALUES (?,?,?,?)
+     ON CONFLICT(project_id,short) DO UPDATE SET
+       ab_state=CASE WHEN video_id=excluded.video_id THEN ab_state ELSE 'none' END,
+       ab_message=CASE WHEN video_id=excluded.video_id THEN ab_message ELSE NULL END,
+       ab_at=CASE WHEN video_id=excluded.video_id THEN ab_at ELSE NULL END,
+       video_id=excluded.video_id, recorded_at=excluded.recorded_at`,
+  ).run(projectId, slot(short), videoId, at);
+}
+
+export function forgetVideo(db: DatabaseSync, projectId: string, short: number | null): void {
+  db.prepare("DELETE FROM youtube_videos WHERE project_id=? AND short=?").run(
+    projectId,
+    slot(short),
+  );
+}
+
+export function projectVideos(db: DatabaseSync, projectId: string): readonly YoutubeVideo[] {
+  return db
+    .prepare("SELECT * FROM youtube_videos WHERE project_id=? ORDER BY short")
+    .all(projectId)
+    .map(rowOf);
+}
+
+export function videoOf(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+): YoutubeVideo | undefined {
+  const row = db
+    .prepare("SELECT * FROM youtube_videos WHERE project_id=? AND short=?")
+    .get(projectId, slot(short));
+  return row === undefined ? undefined : rowOf(row);
+}
+
+// Sets an A/B test's state; false when the project has no video recorded for that upload.
+export function setAbState(
+  db: DatabaseSync,
+  projectId: string,
+  short: number | null,
+  state: AbState,
+  message: string | null,
+  at: string,
+): boolean {
+  return (
+    db
+      .prepare(
+        "UPDATE youtube_videos SET ab_state=?, ab_message=?, ab_at=? WHERE project_id=? AND short=?",
+      )
+      .run(state, message, at, projectId, slot(short)).changes > 0
+  );
+}
+
+export function waitingAbTests(db: DatabaseSync): readonly YoutubeVideo[] {
+  return db
+    .prepare("SELECT * FROM youtube_videos WHERE ab_state='waiting' ORDER BY recorded_at")
+    .all()
+    .map(rowOf);
+}

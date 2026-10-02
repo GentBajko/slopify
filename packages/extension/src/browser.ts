@@ -9,7 +9,7 @@ export interface ExtensionApi {
       addListener(
         listener: (
           message: unknown,
-          sender: unknown,
+          sender: { readonly tab?: { readonly id?: number } },
           respond: (answer: unknown) => void,
         ) => boolean | undefined,
       ): void;
@@ -17,6 +17,24 @@ export interface ExtensionApi {
     openOptionsPage(): Promise<void>;
     // The address of one of the extension's own files, for the page that fetches the video.
     getURL(path: string): string;
+    readonly onStartup: { addListener(listener: () => void): void };
+    readonly onInstalled: { addListener(listener: () => void): void };
+  };
+  // The check for public videos with an A/B test waiting, every 15 minutes.
+  readonly alarms?: {
+    create(
+      name: string,
+      info: { readonly periodInMinutes: number; readonly delayInMinutes?: number },
+    ): void;
+    readonly onAlarm: { addListener(listener: (alarm: { readonly name: string }) => void): void };
+  };
+  // Opens a video's Details page for its A/B test, and closes it when done.
+  readonly tabs?: {
+    create(options: {
+      readonly url: string;
+      readonly active: boolean;
+    }): Promise<{ readonly id?: number }>;
+    remove(tabId: number): Promise<void>;
   };
   readonly action?: {
     readonly onClicked: { addListener(listener: () => void): void };

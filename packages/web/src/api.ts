@@ -45,6 +45,7 @@ import type {
   StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
+import type { YoutubeVideo } from "@app/slices/studio/videos.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import type { DescriptionField } from "@app/slices/youtube/edits.js";
 import type { ProjectDescriptionEdits } from "@app/slices/youtube/edits-repo.js";
@@ -571,6 +572,48 @@ export async function chooseUploadPack(
     }),
   );
   return answer.queue ?? [];
+}
+
+// The YouTube videos a project's uploads became and their A/B tests (`slices/studio/videos.ts`).
+export async function readProjectVideos(
+  api: Api,
+  projectId: string,
+): Promise<readonly YoutubeVideo[]> {
+  const answer = await read<{ videos: readonly YoutubeVideo[] }>(
+    await api.client.studio.videos[":projectId"].$get({ param: { projectId } }),
+  );
+  return answer.videos;
+}
+
+// A video's link pasted by hand; an empty link forgets it.
+export async function saveProjectVideo(
+  api: Api,
+  projectId: string,
+  short: number | null,
+  link: string,
+): Promise<readonly YoutubeVideo[]> {
+  const answer = await detailed<{ videos: readonly YoutubeVideo[] }>(
+    await api.client.studio.videos[":projectId"].$put({
+      param: { projectId },
+      json: { short, link },
+    }),
+  );
+  return answer.videos;
+}
+
+export async function setProjectAbTest(
+  api: Api,
+  projectId: string,
+  short: number | null,
+  start: boolean,
+): Promise<readonly YoutubeVideo[]> {
+  const answer = await detailed<{ videos: readonly YoutubeVideo[] }>(
+    await api.client.studio.videos[":projectId"]["ab-test"].$post({
+      param: { projectId },
+      json: { short, start },
+    }),
+  );
+  return answer.videos;
 }
 
 export async function listVoices(api: Api): Promise<VoiceListBody> {

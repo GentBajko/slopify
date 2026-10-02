@@ -720,3 +720,61 @@ describe("the extension download", () => {
     expect((await harness().call("/extension/chrome.zip")).status).toBe(404);
   });
 });
+
+describe("YouTube videos and their A/B tests", () => {
+  const ext = (token: string, body?: unknown): RequestInit => ({
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      origin: extension,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+
+  it("holds an upload's A/B test until the extension says its video went public and started it", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    // The upload dialog showed the new video's link: three thumbnails, so a test waits.
+    const recorded = await h.call(
+      "/ext/video",
+      ext(token, { projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
+    );
+    expect(await recorded.json()).toEqual({ abTest: true });
+    const waiting = (await (await h.call("/ext/ab-tests", ext(token))).json()) as {
+      tests: { videoId: string; item: { thumbnails: unknown[] } }[];
+    };
+    expect(waiting.tests.map((test) => test.videoId)).toEqual(["lKS3FAjekpI"]);
+    expect(waiting.tests[0]?.item.thumbnails).toHaveLength(3);
+    await h.call(
+      "/ext/ab-tests/result",
+      ext(token, { projectId: "p1", short: null, ok: true, message: "Test set." }),
+    );
+    expect(await (await h.call("/ext/ab-tests", ext(token))).json()).toEqual({ tests: [] });
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ videoId: "lKS3FAjekpI", abState: "started", abMessage: "Test set." }],
+    });
+    // Without the pairing token nothing is answered.
+    expect((await h.call("/ext/ab-tests")).status).toBe(401);
+  });
+
+  it("takes a pasted link and starts an A/B test after the fact", async () => {
+    const h = harness();
+    finished(h.output);
+    const put = (link: string) =>
+      h.call("/videos/p1", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ short: null, link }),
+      });
+    expect((await put("not a link")).status).toBe(400);
+    expect((await put("https://youtu.be/6tRcYUoxyQo")).status).toBe(200);
+    const started = await h.call("/videos/p1/ab-test", json({ short: null, start: true }));
+    expect(await started.json()).toMatchObject({
+      videos: [{ videoId: "6tRcYUoxyQo", abState: "waiting" }],
+    });
+    // A short without its video recorded can't be tested yet.
+    expect((await h.call("/videos/p1/ab-test", json({ short: 1, start: true }))).status).toBe(409);
+  });
+});
