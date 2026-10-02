@@ -45,7 +45,7 @@ describe("the pages", () => {
   });
 
   it("describes the recording that is published", () => {
-    expect(home).toContain("The Keeper of the Drowned Light");
+    expect(home).toContain("Library of Alexandria sample that ships with Slopify");
     expect(read("assets/play-run.vtt")).toMatch(/^WEBVTT\n/);
   });
 });

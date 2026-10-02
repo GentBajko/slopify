@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Records the walkthrough video on slopify.stream: starts this checkout's built Slopify on a
-// random loopback port against a throwaway data directory seeded with a finished demo
-// project, walks the steps in walkthrough/steps.mjs at 1920x1080, then cuts the recording
+// random loopback port against a throwaway data directory holding only what Slopify ships
+// with (the bundled samples and a starter pack), walks the steps in walkthrough/steps.mjs at 1920x1080, then cuts the recording
 // down to the kept part of each step with ffmpeg and writes play-run.mp4 (faststart), its
 // poster and play-run.vtt captions describing each step.
 //
@@ -35,33 +35,12 @@ import { parseArgs } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
 import { chromium } from "playwright";
 import { seedApp } from "./walkthrough/seed-app.mjs";
-import { seedDemo } from "./walkthrough/seed-demo.mjs";
 import { steps } from "./walkthrough/steps.mjs";
 
 const width = 1920;
 const height = 1080;
 const cli = fileURLToPath(new URL("../../app/dist/edge/cli.js", import.meta.url));
 const assets = fileURLToPath(new URL("../public/assets/", import.meta.url));
-
-// Library prompts the Play step picks from. Created through the app's own API, so their
-// shape is always the one the running version accepts.
-const prompts = [
-  {
-    kind: "article",
-    name: "Sleep lore article",
-    body: "Write a calm, slow documentary about {{Topic}} for listeners falling asleep. Six chapters, no invented sources.",
-  },
-  {
-    kind: "image",
-    name: "Lore scene",
-    body: "A quiet, painterly scene from {{Topic}}, low light, muted colours, no text.",
-  },
-  {
-    kind: "thumbnail",
-    name: "Lore thumbnail",
-    body: "One striking image of {{Topic}} with space for a three-word title.",
-  },
-];
 
 const { values: flags } = parseArgs({
   options: {
@@ -164,9 +143,6 @@ async function main() {
   const browser = await chromium.launch();
   let app;
   try {
-    log(`Seeding the demo project in ${dataDir}`);
-    await seedDemo(dataDir, browser);
-
     const port = await freePort();
     const origin = `http://127.0.0.1:${port}`;
     // process.execPath rather than "node": a version manager's shim may read HOME, which is
@@ -190,23 +166,14 @@ async function main() {
     await waitForHealth(origin, app);
     log(`Slopify is up at ${origin}`);
 
-    for (const prompt of prompts) {
-      const response = await fetch(`${origin}/api/prompts`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(prompt),
-      });
-      if (!response.ok) log(`  (the ${prompt.kind} prompt was not saved: ${response.status})`);
-    }
-    // The samples, a template and a schedule, so Run cost, the voices and the calendar have
-    // something to show.
+    // The samples, the History starter pack, the channel and a schedule.
     const { samples } = await seedApp(origin);
-    log("Seeded the samples, a template and a schedule");
+    log("Seeded the samples, the History pack, the channel and a schedule");
 
-    // A warm-up visit outside the recording: the first read adopts the seeded project, and
-    // the one-time usage-stats notice is answered here instead of on camera.
+    // A warm-up visit outside the recording: the one-time usage-stats notice is answered here
+    // instead of on camera.
     const warm = await browser.newPage({ viewport: { width, height }, colorScheme: "dark" });
-    await warm.goto(`${origin}/projects/demo-lighthouse`);
+    await warm.goto(`${origin}/projects/${samples.library}`);
     await warm
       .getByRole("button", { name: /got it/i })
       .click({ timeout: 8_000 })

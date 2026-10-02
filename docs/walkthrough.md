@@ -29,18 +29,14 @@ Options:
 
 ## What it does
 
-1. Seeds a new temp data directory with one finished demo project, "The Keeper of the Drowned
-   Light" (`packages/site/scripts/walkthrough/seed-demo.mjs`). Everything is made on this
-   machine: title cards drawn by the recording's browser, a sine tone for the narration, and
-   the bundled ffmpeg for the video, a vertical short, captions, a description with chapters,
-   tags and a one-page PDF. No provider is called.
-2. Starts this checkout's built Slopify natively (`packages/app/dist/edge/cli.js`) on a random
-   loopback port against that directory, with a temp `HOME`, updates off and the telemetry
-   collector pointed at a closed local port, so the recording neither signs in to a CLI nor
-   adds to the public counters. It never touches Docker or `~/Slopify`.
-3. Saves three Library prompts through the app's API, answers the one-time usage-stats notice
-   off camera, then records a 1920x1080 browser session walking the steps.
-4. Cuts the recording down to the kept part of each step (page loads are cut away), fades
+1. Starts this checkout's built Slopify natively (`packages/app/dist/edge/cli.js`) on a random
+   loopback port against a new temp data directory, with a temp `HOME`, updates off and the
+   telemetry collector pointed at a closed local port, so the recording neither signs in to a
+   CLI nor adds to the public counters. It never touches Docker or `~/Slopify`, and no
+   provider is called.
+2. Puts in place what the steps show through the app's API (see below), answers the one-time
+   usage-stats notice off camera, then records a 1920x1080 browser session walking the steps.
+3. Cuts the recording down to the kept part of each step (page loads are cut away), fades
    between them, and encodes H.264 with `+faststart`, no audio. The captions file has one cue
    per step; the poster is a frame of the finished project.
 
@@ -54,18 +50,19 @@ published `play-run.vtt` must have one cue per step, in order. `packages/site/wa
 checks that, so changing a step's caption, or adding or dropping a step, fails the tests until
 the video is recorded again.
 
-What the steps past the demo project need is added through the app's API before recording
-(`scripts/walkthrough/seed-app.mjs`): the bundled samples (restored if the first launch did not
-bring them), a template saved from the Library of Alexandria sample, and a weekly schedule with
-six queued topics whose first run is hours away and whose topic generation is off. The demo
-project also gets priced calls (`provider_usage` rows) so Run cost has numbers to show.
+Everything on screen is what Slopify ships with; no project or prompt of your own is used.
+`scripts/walkthrough/seed-app.mjs` adds it through the app's API before recording: the
+bundled samples (the Library of Alexandria, the audiobook and the podcast, restored if the
+first launch did not bring them), the History starter pack's prompts and template, a name and
+series brief for the default channel, and a weekly schedule from the pack's template with six
+queued topics whose first run is hours away and whose topic generation is off.
 
 Never add a step that starts a run, tests a key or signs in to a CLI: the recording must cost
 nothing.
 
 ## Known limits
 
-- The demo project is written in the pre-revision layout, which the app adopts on first read.
-  That layout holds one short, so the demo has one.
-- The media is placeholder cards, not generated images: the recording shows the product's
-  screens, not a provider's output.
+- The recording has no API keys, so Play's image provider stays unpicked and its estimate
+  is not shown; the Claude Code CLI is picked as the text model when this machine has it.
+- The samples were made by the sample builder, so Run cost prices only their narration and
+  lists the rest as unknown.

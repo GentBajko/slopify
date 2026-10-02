@@ -1,25 +1,55 @@
 WEBVTT
 
-00:00:00.000 --> 00:00:02.501
-The finished project: the video with captions, ready to download.
+00:00:00.000 --> 00:00:04.001
+The finished project: a narrated video with moving images, captions and a look.
 
-00:00:02.501 --> 00:00:06.223
-The YouTube description with chapter timestamps, and the tags, each with a Copy button.
-
-00:00:06.223 --> 00:00:10.439
+00:00:04.001 --> 00:00:07.716
 Shorts: vertical clips picked from the video, each with its own title and hashtags.
 
-00:00:10.439 --> 00:00:20.481
-Play: type the topic, pick the saved prompts, check what the run will make.
+00:00:07.716 --> 00:00:11.427
+The YouTube description with chapter timestamps, hashtags and tags, ready to copy.
 
-00:00:20.481 --> 00:00:25.637
-Several voices: an audiobook, podcast, radio drama or interview, with a voice per speaker.
+00:00:11.427 --> 00:00:13.633
+The article in a reading view, with contents and search.
 
-00:00:25.637 --> 00:00:29.857
-Run cost: what the run cost per stage and model, CLI calls included.
+00:00:13.633 --> 00:00:15.840
+Narration in your own voice, every piece levelled to one loudness.
 
-00:00:29.857 --> 00:00:34.402
-Prepare upload: the files and every text, in the order YouTube Studio asks for them.
+00:00:15.840 --> 00:00:18.048
+The images and the thumbnail, from your own prompts. Redo any one of them.
 
-00:00:34.402 --> 00:00:37.404
-The calendar: the coming weeks of uploads, each run with its queued topic.
+00:00:18.048 --> 00:00:19.855
+A PDF of the article, with a cover, contents and a theme of your own.
+
+00:00:19.855 --> 00:00:22.055
+Run cost: what the run cost per stage and model.
+
+00:00:22.055 --> 00:00:25.493
+Checkpoints to approve work before it moves on, and a history of every version.
+
+00:00:25.493 --> 00:00:28.003
+Several voices: a podcast, audiobook, radio drama or interview, with a voice per speaker.
+
+00:00:28.003 --> 00:00:34.750
+Play: pick a template, type the topic, see the look before you start.
+
+00:00:34.750 --> 00:00:38.168
+Cuts that follow the narration, transitions, a colour grade, grain and chapter cards.
+
+00:00:38.168 --> 00:00:40.781
+Automatic reviews: a reviewer model checks each stage and sends work back.
+
+00:00:40.781 --> 00:00:42.992
+The Library: prompts written once with {{keywords}}, templates and starter packs.
+
+00:00:42.992 --> 00:00:45.200
+Channels: a brand kit, a series brief, templates and a cast for each channel.
+
+00:00:45.200 --> 00:00:48.009
+The calendar: a schedule works through its queued topics, one run each.
+
+00:00:48.009 --> 00:00:51.030
+Prepare upload: every file and text in the order YouTube Studio asks for them.
+
+00:00:51.030 --> 00:00:53.266
+Ctrl+K for everything: regenerate, copy, prepare upload, start a video.

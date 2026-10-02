@@ -853,8 +853,8 @@ main h3 {
 
 .feature-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4) var(--space-5);
 }
 
 .feature-group h3 {
@@ -865,8 +865,8 @@ main h3 {
 /* The release that is still being built. Its list ships inside an inert <template> and
    is only put on the page once main.js's `nextReleasePublished` is true. */
 .feature-next {
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
 
@@ -878,10 +878,12 @@ main h3 {
 
 .feature-group ul {
   display: grid;
-  gap: calc(var(--step) * 2);
+  gap: var(--step);
   margin: 0;
   padding: 0;
   color: var(--ink-2);
+  font-size: 14px;
+  line-height: 20px;
   list-style: none;
 }
 
