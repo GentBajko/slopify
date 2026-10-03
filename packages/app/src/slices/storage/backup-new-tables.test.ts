@@ -31,6 +31,8 @@ afterEach(() => {
 // Every table is either carried or left out on purpose. A new table fails here until it is
 // put in one list or the other.
 const leftOut = new Set([
+  // A Studio export is imported again from Studio at any time.
+  "studio_reports",
   // Secrets and this install's identity.
   "provider_keys",
   "machine",

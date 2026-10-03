@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
@@ -37,6 +38,7 @@ import {
   setRelease,
   writeLeadHours,
 } from "../../slices/studio/releases.js";
+import { parseStudioExport, readReport, saveReport } from "../../slices/studio/report.js";
 import {
   autoCommentKey,
   bearerToken,
@@ -232,6 +234,33 @@ export function studioRoutes(deps: AppDeps) {
       .filter((one) => one !== "")
       .toSorted(),
   });
+  // A report and, for each of its videos Slopify made, the project and which upload it is.
+  const reportBody = (channelId: string) => {
+    const report = readReport(deps.db, channelId);
+    const known = new Map(
+      listProjects(deps.db).flatMap((project) =>
+        projectVideos(deps.db, project.id).map(
+          (video) =>
+            [
+              video.videoId,
+              { projectId: project.id, short: video.short, projectTitle: project.title },
+            ] as const,
+        ),
+      ),
+    );
+    return {
+      report,
+      projects:
+        report === null
+          ? {}
+          : Object.fromEntries(
+              report.rows.flatMap((row) => {
+                const found = known.get(row.videoId);
+                return found === undefined ? [] : [[row.videoId, found]];
+              }),
+            ),
+    };
+  };
   const slotChoices = (projectId: string, series: string) =>
     freeSlots(deps.db, readPlan(deps.db), series, deps.clock.now(), 9);
   // Finished projects not marked uploaded: the popup's list and the calendar's candidates.
@@ -492,6 +521,40 @@ export function studioRoutes(deps: AppDeps) {
         c.json({ stats: projectStats(deps.db, c.req.valid("param").projectId) }),
       )
       .get("/ab-results", (c) => c.json({ results: abResults(deps.db) }))
+      // Channels → YouTube numbers: Studio's Advanced-mode export, imported as the zip Studio
+      // downloads, and which project each of its videos is.
+      .get(
+        "/channels/:channelId/report",
+        zValidator("param", z.object({ channelId: id }), onInvalid),
+        (c) => c.json(reportBody(c.req.valid("param").channelId)),
+      )
+      .post(
+        "/channels/:channelId/report",
+        zValidator("param", z.object({ channelId: id }), onInvalid),
+        bodyLimit({
+          maxSize: 30 * 1024 * 1024,
+          onError: (c) =>
+            problem(c, {
+              status: 413,
+              title: titleOf(413),
+              detail:
+                "That file is larger than 30 MB, which a Studio export never is. Export again from Studio's Advanced mode and import the zip it downloads.",
+            }),
+        }),
+        async (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { channelId } = c.req.valid("param");
+          const parsed = parseStudioExport(
+            new Uint8Array(await c.req.arrayBuffer()),
+            deps.clock.now().toISOString(),
+          );
+          if (!parsed.ok)
+            return problem(c, { status: 400, title: titleOf(400), detail: parsed.message });
+          saveReport(deps.db, channelId, parsed.report);
+          return c.json(reportBody(channelId));
+        },
+      )
       // Channels → YouTube: the channel's videos on YouTube with Studio's numbers and totals.
       .get(
         "/channels/:channelId/performance",

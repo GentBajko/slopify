@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Stat, Stats } from "@/components/kit/stats";
+import { StudioReportSection } from "./studio-report";
 
 // Channels → YouTube numbers: the channel's long videos and shorts on YouTube with Studio's
 // numbers as the Slopify Studio extension last read them (daily, or Read Studio numbers now in
@@ -92,11 +93,14 @@ export function YoutubeTab({ channelId }: { readonly channelId: string }): React
   const data = read.data;
   if (data.projects.length === 0)
     return (
-      <EmptyState title="No video of this channel is known on YouTube yet">
-        Upload with the Slopify Studio extension, or open YouTube Studio's Content list once so the
-        extension links your videos. Their numbers then arrive daily, or at once with Read Studio
-        numbers now in the extension's popup.
-      </EmptyState>
+      <div className="flex flex-col gap-6">
+        <StudioReportSection channelId={channelId} />
+        <EmptyState title="No video of this channel is known on YouTube yet">
+          Upload with the Slopify Studio extension, or open YouTube Studio's Content list once so
+          the extension links your videos. Their numbers then arrive daily, or at once with Read
+          Studio numbers now in the extension's popup.
+        </EmptyState>
+      </div>
     );
   const lines: Line[] = data.projects
     .toSorted((left, right) => sortValue(right, sort) - sortValue(left, sort))
@@ -170,6 +174,7 @@ export function YoutubeTab({ channelId }: { readonly channelId: string }): React
         <Totals label="Long videos" totals={data.long} />
         <Totals label="Shorts" totals={data.shorts} />
       </div>
+      <StudioReportSection channelId={channelId} />
       <section aria-label="Every video" className="flex flex-col gap-2">
         <SectionHead as="h3" title="Every video">
           <Select
