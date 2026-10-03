@@ -7,6 +7,7 @@ import type { Api } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Select } from "@/components/kit/field";
+import { LineChart } from "@/components/kit/line-chart";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { read } from "@/http";
@@ -61,31 +62,165 @@ function shown(value: number | string | null, kind: string, label: string): stri
   });
 }
 
-// The chart's metric per day as a small line: the whole period, scaled to the video's peak.
-function Spark({ daily, label }: { readonly daily: readonly number[]; readonly label: string }) {
-  const start = daily.findIndex((value) => value > 0);
-  const days = start < 0 ? [] : daily.slice(start);
-  if (days.length < 2) return <span className="text-ink-3">–</span>;
-  const peak = Math.max(...days, 1);
-  const width = 120;
-  const height = 24;
-  const points = days
-    .map(
-      (value, at) =>
-        `${((at / (days.length - 1)) * width).toFixed(1)},${(height - (value / peak) * height).toFixed(1)}`,
-    )
-    .join(" ");
+// Distinct, readable on light and dark: one per compared video.
+const palette = [
+  "#7cb342",
+  "#42a5f5",
+  "#ef6c00",
+  "#ab47bc",
+  "#26a69a",
+  "#ec407a",
+  "#fdd835",
+  "#8d6e63",
+  "#5c6bc0",
+  "#78909c",
+];
+
+type Shape = "daily" | "average" | "total";
+type Timeline = "dates" | "since";
+type Range = "all" | "90" | "30";
+
+const dayLabel = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
+const yearLabel = new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" });
+
+function shaped(values: readonly number[], shape: Shape): number[] {
+  if (shape === "total") {
+    let sum = 0;
+    return values.map((value) => (sum += value));
+  }
+  if (shape === "average")
+    return values.map((_, at) => {
+      const window = values.slice(Math.max(0, at - 6), at + 1);
+      return window.reduce((sum, value) => sum + value, 0) / window.length;
+    });
+  return [...values];
+}
+
+function TrendChart({
+  report,
+  rows,
+  picked,
+  colorOf,
+}: {
+  readonly report: StudioReport;
+  readonly rows: readonly ReportRow[];
+  readonly picked: readonly string[];
+  readonly colorOf: (videoId: string) => string;
+}): ReactElement {
+  const [shape, setShape] = useState<Shape>("average");
+  const [timeline, setTimeline] = useState<Timeline>("dates");
+  const [range, setRange] = useState<Range>("all");
+  const metric = report.chartMetric ?? "Views";
+  const chosen = rows.filter((row) => picked.includes(row.videoId));
+  const from = report.from === null ? new Date() : new Date(`${report.from}T00:00:00`);
+  const dayCount = Math.max(0, ...rows.map((row) => row.daily.length));
+  let xLabels: string[];
+  let series: { id: string; label: string; color: string; values: (number | null)[] }[];
+  if (timeline === "dates") {
+    const first = range === "all" ? 0 : Math.max(0, dayCount - Number(range));
+    const spansYears = dayCount - first > 200;
+    xLabels = Array.from({ length: dayCount - first }, (_, index) => {
+      const day = new Date(from);
+      day.setDate(day.getDate() + first + index);
+      return (spansYears ? yearLabel : dayLabel).format(day);
+    });
+    series = chosen.map((row) => {
+      const start = row.daily.findIndex((value) => value > 0);
+      const values: (number | null)[] = shaped(row.daily, shape).map((value, at) =>
+        start < 0 || at < start ? null : value,
+      );
+      return {
+        id: row.videoId,
+        label: row.title,
+        color: colorOf(row.videoId),
+        values: values.slice(first),
+      };
+    });
+  } else {
+    const longest = Math.max(
+      1,
+      ...chosen.map((row) => {
+        const start = row.daily.findIndex((value) => value > 0);
+        return start < 0 ? 0 : row.daily.length - start;
+      }),
+    );
+    const span = range === "all" ? longest : Math.min(longest, Number(range));
+    xLabels = Array.from({ length: span }, (_, index) => `Day ${String(index + 1)}`);
+    series = chosen.map((row) => {
+      const start = Math.max(
+        0,
+        row.daily.findIndex((value) => value > 0),
+      );
+      const values = shaped(row.daily.slice(start), shape).slice(0, span);
+      return {
+        id: row.videoId,
+        label: row.title,
+        color: colorOf(row.videoId),
+        values: Array.from({ length: span }, (_, at) => values[at] ?? null),
+      };
+    });
+  }
+  const what =
+    shape === "daily"
+      ? `${metric} per day`
+      : shape === "average"
+        ? `${metric} per day, 7-day average`
+        : `${metric}, running total`;
   return (
-    <svg
-      role="img"
-      aria-label={label}
-      width={width}
-      height={height}
-      viewBox={`0 0 ${String(width)} ${String(height)}`}
-      className="block text-accent"
-    >
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.25" />
-    </svg>
+    <section aria-label="Over time" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-semibold">{what}</span>
+        <span className="flex-1" />
+        <Select
+          aria-label="Show"
+          className="w-[200px]"
+          value={shape}
+          onChange={(event) => setShape(event.currentTarget.value as Shape)}
+          options={[
+            { value: "average", label: "7-day average" },
+            { value: "daily", label: "Per day" },
+            { value: "total", label: "Running total" },
+          ]}
+        />
+        <Select
+          aria-label="Timeline"
+          className="w-[220px]"
+          value={timeline}
+          onChange={(event) => setTimeline(event.currentTarget.value as Timeline)}
+          options={[
+            { value: "dates", label: "By date" },
+            { value: "since", label: "Days since release" },
+          ]}
+        />
+        <Select
+          aria-label="Period"
+          className="w-[170px]"
+          value={range}
+          onChange={(event) => setRange(event.currentTarget.value as Range)}
+          options={[
+            { value: "all", label: timeline === "dates" ? "All time" : "Whole life" },
+            { value: "90", label: timeline === "dates" ? "Last 90 days" : "First 90 days" },
+            { value: "30", label: timeline === "dates" ? "Last 30 days" : "First 30 days" },
+          ]}
+        />
+      </div>
+      {chosen.length === 0 ? (
+        <p className="m-0 text-small text-ink-3">
+          Tick videos in the Chart column below to compare them here.
+        </p>
+      ) : (
+        <LineChart
+          series={series}
+          xLabels={xLabels}
+          label={`${what} for ${String(chosen.length)} videos`}
+          formatValue={(value) =>
+            value >= 10_000
+              ? `${(value / 1000).toFixed(value >= 100_000 ? 0 : 1)}k`
+              : Math.round(value).toLocaleString("en")
+          }
+        />
+      )}
+    </section>
   );
 }
 
@@ -108,6 +243,7 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
   const key = ["studio", "report", channelId] as const;
   const body = useQuery({ queryKey: key, queryFn: () => readStudioReport(api, channelId) });
   const [sort, setSort] = useState<number>(0);
+  const [pickedChoice, setPicked] = useState<readonly string[] | undefined>();
   const [hiddenChoice, setHidden] = useState<readonly string[] | undefined>(() =>
     storedHidden(channelId),
   );
@@ -147,6 +283,17 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
   const rows = [...(report?.rows ?? [])].toSorted(
     (left, right) => value(right, sort) - value(left, sort),
   );
+  // The five with the most of the chart's metric are compared until the person picks.
+  const byChart = [...(report?.rows ?? [])].toSorted(
+    (left, right) =>
+      right.daily.reduce((sum, one) => sum + one, 0) -
+      left.daily.reduce((sum, one) => sum + one, 0),
+  );
+  const picked = pickedChoice ?? byChart.slice(0, 5).map((row) => row.videoId);
+  const colorOf = (videoId: string) => {
+    const at = (report?.rows ?? []).findIndex((row) => row.videoId === videoId);
+    return palette[(at < 0 ? 0 : at) % palette.length] ?? "#7cb342";
+  };
   return (
     <section aria-label="From Studio" className="flex flex-col gap-3">
       <SectionHead
@@ -187,6 +334,9 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
       </p>
       {report === null ? null : (
         <>
+          {report.chartMetric === null ? null : (
+            <TrendChart report={report} rows={rows} picked={picked} colorOf={colorOf} />
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <Select
               aria-label="Order by"
@@ -227,10 +377,8 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
               <caption className="sr-only">Studio's numbers for every video</caption>
               <thead>
                 <tr>
+                  {report.chartMetric === null ? null : <th scope="col">Chart</th>}
                   <th scope="col">Video</th>
-                  {report.chartMetric === null ? null : (
-                    <th scope="col">{`${report.chartMetric} per day`}</th>
-                  )}
                   {visible.map(({ column }) => (
                     <th key={column.label} scope="col" className="num">
                       {column.label}
@@ -240,8 +388,8 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
               </thead>
               <tbody>
                 <tr className="font-semibold">
-                  <td>Total</td>
                   {report.chartMetric === null ? null : <td />}
+                  <td>Total</td>
                   {visible.map(({ column, index }) => (
                     <td key={column.label} className="num">
                       {shown(report.totals[index] ?? null, column.kind, column.label)}
@@ -252,6 +400,33 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                   const project = body.data?.projects[row.videoId];
                   return (
                     <tr key={row.videoId}>
+                      {report.chartMetric === null ? null : (
+                        <td>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              aria-label={`Compare ${row.title} in the chart`}
+                              checked={picked.includes(row.videoId)}
+                              onChange={(event) =>
+                                setPicked(
+                                  event.currentTarget.checked
+                                    ? [...picked, row.videoId]
+                                    : picked.filter((one) => one !== row.videoId),
+                                )
+                              }
+                            />
+                            <span
+                              aria-hidden="true"
+                              className="inline-block size-2.5 rounded-full"
+                              style={{
+                                background: picked.includes(row.videoId)
+                                  ? colorOf(row.videoId)
+                                  : "transparent",
+                              }}
+                            />
+                          </label>
+                        </td>
+                      )}
                       <td className="max-w-[320px]">
                         {project === undefined ? (
                           <span className="block truncate" title={row.title}>
@@ -269,14 +444,6 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                         )}
                         <span className="text-label text-ink-3">{row.published ?? ""}</span>
                       </td>
-                      {report.chartMetric === null ? null : (
-                        <td>
-                          <Spark
-                            daily={row.daily}
-                            label={`${report.chartMetric} per day for ${row.title}`}
-                          />
-                        </td>
-                      )}
                       {visible.map(({ column, index }) => (
                         <td key={column.label} className="num">
                           {shown(row.values[index] ?? null, column.kind, column.label)}

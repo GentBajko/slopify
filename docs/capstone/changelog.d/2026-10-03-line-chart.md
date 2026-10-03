@@ -1,0 +1,1 @@
+- `components/kit/line-chart.tsx`: an SVG line chart with axes, gridlines, legend and hover values; the Studio export section charts ticked videos per day, 7-day average or running total, by date or days since release.
