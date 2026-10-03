@@ -13,7 +13,6 @@ export interface ChartSeries {
   readonly values: readonly (number | null)[];
 }
 
-const plotHeight = 260;
 const left = 56;
 const right = 12;
 const top = 12;
@@ -32,6 +31,8 @@ export function LineChart({
   xLabels,
   formatValue,
   label,
+  height: plotHeight = 260,
+  legend = true,
   className,
 }: {
   readonly series: readonly ChartSeries[];
@@ -40,6 +41,10 @@ export function LineChart({
   readonly formatValue: (value: number) => string;
   // The chart's accessible name.
   readonly label: string;
+  // The plot's height in pixels, axes aside.
+  readonly height?: number;
+  // The legend under the chart; off for a chart of one series titled elsewhere.
+  readonly legend?: boolean;
   readonly className?: string;
 }): ReactElement {
   const box = useRef<HTMLDivElement>(null);
@@ -189,18 +194,20 @@ export function LineChart({
           </div>
         )}
       </div>
-      <figcaption className="flex flex-wrap gap-x-4 gap-y-1 text-small text-ink-2">
-        {series.map((one) => (
-          <span key={one.id} className="flex max-w-[320px] items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="inline-block h-[3px] w-4 shrink-0 rounded"
-              style={{ background: one.color }}
-            />
-            <span className="truncate">{one.label}</span>
-          </span>
-        ))}
-      </figcaption>
+      {legend ? (
+        <figcaption className="flex flex-wrap gap-x-4 gap-y-1 text-small text-ink-2">
+          {series.map((one) => (
+            <span key={one.id} className="flex max-w-[320px] items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="inline-block h-[3px] w-4 shrink-0 rounded"
+                style={{ background: one.color }}
+              />
+              <span className="truncate">{one.label}</span>
+            </span>
+          ))}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

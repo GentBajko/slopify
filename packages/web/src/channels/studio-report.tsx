@@ -101,15 +101,24 @@ function TrendChart({
   rows,
   picked,
   colorOf,
+  shape,
+  setShape,
+  timeline,
+  setTimeline,
+  range,
+  setRange,
 }: {
   readonly report: StudioReport;
   readonly rows: readonly ReportRow[];
   readonly picked: readonly string[];
   readonly colorOf: (videoId: string) => string;
+  readonly shape: Shape;
+  readonly setShape: (next: Shape) => void;
+  readonly timeline: Timeline;
+  readonly setTimeline: (next: Timeline) => void;
+  readonly range: Range;
+  readonly setRange: (next: Range) => void;
 }): ReactElement {
-  const [shape, setShape] = useState<Shape>("average");
-  const [timeline, setTimeline] = useState<Timeline>("dates");
-  const [range, setRange] = useState<Range>("all");
   const metric = report.chartMetric ?? "Views";
   const chosen = rows.filter((row) => picked.includes(row.videoId));
   const from = report.from === null ? new Date() : new Date(`${report.from}T00:00:00`);
@@ -213,13 +222,84 @@ function TrendChart({
           series={series}
           xLabels={xLabels}
           label={`${what} for ${String(chosen.length)} videos`}
-          formatValue={(value) =>
-            value >= 10_000
-              ? `${(value / 1000).toFixed(value >= 100_000 ? 0 : 1)}k`
-              : Math.round(value).toLocaleString("en")
-          }
+          formatValue={compact}
         />
       )}
+    </section>
+  );
+}
+
+const compact = (value: number) =>
+  value >= 10_000
+    ? `${(value / 1000).toFixed(value >= 100_000 ? 0 : 1)}k`
+    : Math.round(value).toLocaleString("en");
+
+// One chart per video, from its first day on YouTube: its own scale, dates along the bottom,
+// the value on hover, under its title and total.
+function EachVideo({
+  report,
+  rows,
+  shape,
+  range,
+  colorOf,
+}: {
+  readonly report: StudioReport;
+  readonly rows: readonly ReportRow[];
+  readonly shape: Shape;
+  readonly range: Range;
+  readonly colorOf: (videoId: string) => string;
+}): ReactElement {
+  const metric = report.chartMetric ?? "Views";
+  const from = report.from === null ? new Date() : new Date(`${report.from}T00:00:00`);
+  return (
+    <section aria-label="Each video" className="flex flex-col gap-3">
+      <span className="font-semibold">{`Each video · ${metric}`}</span>
+      {rows.some((row) => !row.daily.some((value) => value > 0)) ? (
+        <p className="m-0 text-small text-ink-3">
+          Studio's export holds daily figures only for the videos drawn in its own chart. To chart
+          more, tick them in Advanced mode's chart before you export.
+        </p>
+      ) : null}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {rows.map((row) => {
+          const start = row.daily.findIndex((value) => value > 0);
+          if (start < 0) return null;
+          const all = shaped(row.daily.slice(start), shape);
+          const first = range === "all" ? 0 : Math.max(0, all.length - Number(range));
+          const values = all.slice(first);
+          const labels = values.map((_, at) => {
+            const day = new Date(from);
+            day.setDate(day.getDate() + start + first + at);
+            return (values.length > 200 ? yearLabel : dayLabel).format(day);
+          });
+          const total = row.daily.reduce((sum, value) => sum + value, 0);
+          return (
+            <div key={row.videoId} className="flex min-w-0 flex-col gap-1">
+              <div className="flex items-baseline gap-2">
+                <span
+                  aria-hidden="true"
+                  className="inline-block size-2.5 shrink-0 rounded-full"
+                  style={{ background: colorOf(row.videoId) }}
+                />
+                <span className="min-w-0 flex-1 truncate font-semibold" title={row.title}>
+                  {row.title}
+                </span>
+                <span className="text-small text-ink-3">{`${total.toLocaleString("en")} total`}</span>
+              </div>
+              <LineChart
+                height={150}
+                legend={false}
+                label={`${metric} for ${row.title}`}
+                xLabels={labels}
+                formatValue={compact}
+                series={[
+                  { id: row.videoId, label: row.title, color: colorOf(row.videoId), values },
+                ]}
+              />
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -244,6 +324,9 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
   const body = useQuery({ queryKey: key, queryFn: () => readStudioReport(api, channelId) });
   const [sort, setSort] = useState<number>(0);
   const [pickedChoice, setPicked] = useState<readonly string[] | undefined>();
+  const [shape, setShape] = useState<Shape>("average");
+  const [timeline, setTimeline] = useState<Timeline>("dates");
+  const [range, setRange] = useState<Range>("all");
   const [hiddenChoice, setHidden] = useState<readonly string[] | undefined>(() =>
     storedHidden(channelId),
   );
@@ -335,7 +418,18 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
       {report === null ? null : (
         <>
           {report.chartMetric === null ? null : (
-            <TrendChart report={report} rows={rows} picked={picked} colorOf={colorOf} />
+            <TrendChart
+              report={report}
+              rows={rows}
+              picked={picked}
+              colorOf={colorOf}
+              shape={shape}
+              setShape={setShape}
+              timeline={timeline}
+              setTimeline={setTimeline}
+              range={range}
+              setRange={setRange}
+            />
           )}
           <div className="flex flex-wrap items-center gap-3">
             <Select
@@ -405,6 +499,7 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                           <label className="flex items-center gap-2">
                             <input
                               type="checkbox"
+                              disabled={!row.daily.some((value) => value > 0)}
                               aria-label={`Compare ${row.title} in the chart`}
                               checked={picked.includes(row.videoId)}
                               onChange={(event) =>
@@ -455,6 +550,9 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
               </tbody>
             </table>
           </div>
+          {report.chartMetric === null ? null : (
+            <EachVideo report={report} rows={rows} shape={shape} range={range} colorOf={colorOf} />
+          )}
         </>
       )}
     </section>

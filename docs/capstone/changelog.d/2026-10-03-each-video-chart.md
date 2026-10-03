@@ -1,0 +1,1 @@
+- The Studio export section draws one `LineChart` per video (`EachVideo`, own scale, from its first day) under the table; `LineChart` takes `height` and `legend`.
