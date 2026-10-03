@@ -1,0 +1,1 @@
+- Local subtitle alignment reads Latin letters without a decomposition (ø æ œ ß ð þ ł đ ħ ı ŋ) as their plain spelling before the script check (`adapters/alignment/text.ts` `plainLatin`).

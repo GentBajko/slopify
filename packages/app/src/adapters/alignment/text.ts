@@ -89,8 +89,39 @@ function pick(forms: readonly string[], observed: string): string {
   );
 }
 
+// Latin letters with no accent to strip, spelled the way an English reader says them:
+// "Asbjørnsen" is read "Asbjornsen", "Ægir" "Aegir", "Straße" "Strasse".
+const plainLatin: Readonly<Record<string, string>> = {
+  ø: "o",
+  Ø: "O",
+  æ: "ae",
+  Æ: "AE",
+  œ: "oe",
+  Œ: "OE",
+  ß: "ss",
+  ẞ: "SS",
+  ð: "d",
+  Ð: "D",
+  þ: "th",
+  Þ: "TH",
+  ł: "l",
+  Ł: "L",
+  đ: "d",
+  Đ: "D",
+  ħ: "h",
+  Ħ: "H",
+  ı: "i",
+  ŋ: "ng",
+  Ŋ: "NG",
+};
+const plainLatinPattern = new RegExp(`[${Object.keys(plainLatin).join("")}]`, "gu");
+
 function wordForms(raw: string): readonly string[] {
-  const plain = raw.normalize("NFKD").replace(/\p{M}/gu, "").replace(/[‘’]/g, "'");
+  const plain = raw
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(plainLatinPattern, (letter) => plainLatin[letter] ?? letter)
+    .replace(/[‘’]/g, "'");
   if (/\p{L}/u.test(plain.replace(/[A-Za-z]/g, "")))
     throw new Error(
       "Local subtitles currently support English speech and Latin-script names only.",

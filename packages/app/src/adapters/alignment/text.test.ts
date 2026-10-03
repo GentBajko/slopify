@@ -30,6 +30,27 @@ describe("subtitle speech normalization", () => {
       "TWENTY TWENTY TWO",
     ]);
   });
+  it("reads Latin letters with no accent to strip as their plain spelling, and still refuses other scripts", () => {
+    const words = speechWords("Asbjørnsen met Ægir in Straße Łódź", "");
+    expect(words.map((word) => word.text)).toEqual([
+      "Asbjørnsen",
+      "met",
+      "Ægir",
+      "in",
+      "Straße",
+      "Łódź",
+    ]);
+    expect(words.map((word) => word.spoken)).toEqual([
+      "ASBJORNSEN",
+      "MET",
+      "AEGIR",
+      "IN",
+      "STRASSE",
+      "LODZ",
+    ]);
+    expect(() => speechWords("Москва", "")).toThrow("Latin-script names only");
+  });
+
   it("selects a cardinal number when that is what the recording says", () => {
     expect(speechWords("2022 people", "TWO THOUSAND TWENTY TWO PEOPLE")[0]?.spoken).toBe(
       "TWO THOUSAND TWENTY TWO",
