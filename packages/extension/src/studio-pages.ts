@@ -121,6 +121,62 @@ export async function rateAdSuitability(dialog: Element): Promise<Step> {
     : { ok: true, message: "Ad suitability: None of the above, rating submitted." };
 }
 
+const monthShort = (at: Date): string =>
+  new Intl.DateTimeFormat("en-US", { month: "short" }).format(at);
+
+// The date as the field shows dates: day first ("6 Oct 2026") when what it shows starts with
+// a number, else month first ("Oct 6, 2026").
+export function typedDate(shown: string, at: Date): string {
+  return /^\s*\d/.test(shown)
+    ? `${String(at.getDate())} ${monthShort(at)} ${String(at.getFullYear())}`
+    : studioDate(at);
+}
+
+// Whether a shown date names the same day, in either order.
+export function sameDay(shown: string, at: Date): boolean {
+  const words = shown
+    .replace(/[,.]/g, " ")
+    .split(/\s+/)
+    .filter((one) => one !== "");
+  return (
+    words.includes(String(at.getDate())) &&
+    words.includes(String(at.getFullYear())) &&
+    words.some((one) => one.toLowerCase().startsWith(monthShort(at).toLowerCase()))
+  );
+}
+
+// The time as the field shows times: "5:00 PM", or "17:00" when it shows no AM or PM.
+export function typedTime(shown: string, at: Date): string {
+  if (/[ap]\.?\s*m/i.test(shown) || shown.trim() === "") return studioTime(at);
+  return `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+}
+
+export function sameTime(shown: string, at: Date): boolean {
+  const match = /(\d{1,2})[:.](\d{2})\s*([ap])?/i.exec(shown);
+  if (match === null) return false;
+  let hours = Number(match[1]) % 12;
+  if (match[3] === undefined) hours = Number(match[1]);
+  else if (match[3].toLowerCase() === "p") hours += 12;
+  return hours === at.getHours() && Number(match[2]) === at.getMinutes();
+}
+
+// Enter, as a person presses it to accept what they typed.
+function commit(input: HTMLInputElement): void {
+  for (const type of ["keydown", "keypress", "keyup"])
+    input.dispatchEvent(
+      new KeyboardEvent(type, {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 // The Visibility step: opens Schedule and types the date and time. The person presses Schedule.
 export async function fillSchedule(dialog: Element, at: Date): Promise<Step> {
   const when = `${studioDate(at)}, ${studioTime(at)}`;
@@ -150,21 +206,41 @@ export async function fillSchedule(dialog: Element, at: Date): Promise<Step> {
     3000,
   );
   if (dateInput === null) return byHand("Studio's date picker didn't open.");
-  setInputValue(dateInput, studioDate(at));
-  dateInput.dispatchEvent(
-    new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true }),
-  );
-  await sleep(400);
+  // Studio writes dates and times the way the account's language does ("Oct 6, 2026" or
+  // "6 Oct 2026", "5:00 PM" or "17:00"): each is typed the way the field already shows it, and
+  // committed (Enter, then the field is left) and seen kept before the next is typed, since
+  // typing the time while the date is still being edited throws the date away.
+  const dateShown = (): boolean => sameDay(trigger.textContent ?? "", at);
+  setInputValue(dateInput, typedDate(trigger.textContent ?? "", at));
+  commit(dateInput);
+  if ((await until(() => (dateShown() ? true : null), 3000)) === null) {
+    dateInput.dispatchEvent(new FocusEvent("focusout", { bubbles: true, composed: true }));
+    if ((await until(() => (dateShown() ? true : null), 2000)) === null)
+      return byHand("Studio didn't keep the date Slopify typed.");
+  }
+  // The date's dropdown closes on Enter; one still open would take the time's keys.
+  if (laidOut(dateInput))
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", code: "Escape", keyCode: 27, bubbles: true }),
+    );
+  await sleep(300);
   const time = picker.querySelector<HTMLInputElement>(
     "#time-of-day-container input, tp-yt-paper-input#textbox input",
   );
   if (time === null) return byHand("Studio's time field wasn't found.");
-  setInputValue(time, studioTime(at));
-  time.dispatchEvent(new Event("blur", { bubbles: true }));
-  await sleep(400);
-  const shownDate = (trigger.textContent ?? "").replace(/\s+/g, " ").trim();
-  if (!shownDate.includes(studioDate(at)) || time.value.trim() !== studioTime(at))
-    return byHand("Studio didn't keep the date or time Slopify typed.");
+  const wanted = typedTime(time.value, at);
+  time.focus();
+  setInputValue(time, wanted);
+  commit(time);
+  time.dispatchEvent(new FocusEvent("focusout", { bubbles: true, composed: true }));
+  time.blur();
+  const kept = await until(() => (sameTime(time.value, at) && dateShown() ? true : null), 3000);
+  if (kept === null)
+    return byHand(
+      dateShown()
+        ? "Studio didn't keep the time Slopify typed."
+        : "Studio dropped the date when the time was typed.",
+    );
   return {
     ok: true,
     message: `Schedule set to ${when} (your time). Check it, then press Schedule.`,

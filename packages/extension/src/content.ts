@@ -216,8 +216,11 @@ async function recordVideo(current: FillPayload): Promise<void> {
   let videoId: string | undefined;
   for (let waited = 0; waited < 60_000 && videoId === undefined; waited += 1000) {
     const dialog = findField(document, uploadDialog);
-    const link = dialog?.querySelector<HTMLAnchorElement>('a#video-link, a[href*="youtu.be/"]');
-    videoId = /youtu\.be\/([A-Za-z0-9_-]{11})/.exec(link?.href ?? "")?.[1];
+    // A video's link is youtu.be/ID; a short's is youtube.com/shorts/ID.
+    const link = dialog?.querySelector<HTMLAnchorElement>(
+      'a#video-link, a[href*="youtu.be/"], a[href*="/shorts/"]',
+    );
+    videoId = /(?:youtu\.be\/|\/shorts\/|[?&]v=)([A-Za-z0-9_-]{11})/.exec(link?.href ?? "")?.[1];
     if (videoId === undefined) await new Promise((done) => setTimeout(done, 1000));
   }
   if (videoId === undefined) {
@@ -528,7 +531,10 @@ async function addVideo(input: HTMLInputElement): Promise<void> {
   if (lastAdded?.key === key && Date.now() - lastAdded.at < 90_000) return;
   lastAdded = { key, at: Date.now() };
   const video = item.video;
-  const size = `${(video.bytes / 1024 ** 3).toFixed(1)} GB`;
+  const size =
+    video.bytes >= 1024 ** 3
+      ? `${(video.bytes / 1024 ** 3).toFixed(1)} GB`
+      : `${String(Math.max(1, Math.round(video.bytes / 1024 ** 2)))} MB`;
   toast(`Adding ${itemName(item)} (${video.filename}, ${size}) from Slopify…`, "info");
   const frame = document.createElement("iframe");
   frame.src = api.runtime.getURL("video-frame.html");

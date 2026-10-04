@@ -83,10 +83,8 @@ function showProjects(projects: readonly ReadyProject[]): void {
         project.title,
         left === 0
           ? "all on YouTube"
-          : Number.isFinite(by)
-            ? by < Date.now()
-              ? `${String(left)} late`
-              : `${String(left)} · by ${when(new Date(by).toISOString()) ?? ""}`
+          : Number.isFinite(by) && by < Date.now()
+            ? `${String(left)} late`
             : `${String(left)} to upload`,
         () => showItems(project, projects),
         left === 0,
@@ -128,7 +126,8 @@ function showItems(project: ReadyProject, projects: readonly ReadyProject[]): vo
     );
   for (const item of project.items) {
     const name = item.kind === "video" ? "Video" : `Short ${String(item.short)}`;
-    const time = when(item.uploadBy);
+    // When it goes public; flagged late once it is too near that to upload in time.
+    const time = when(item.scheduleAt);
     const late = item.uploadBy !== undefined && Date.parse(item.uploadBy) < Date.now();
     const meta = item.uploaded
       ? item.kind === "video" && item.videoId !== undefined
@@ -137,7 +136,7 @@ function showItems(project: ReadyProject, projects: readonly ReadyProject[]): vo
       : !item.ready
         ? "not rendered"
         : `${item.started === true ? "Upload again" : "Upload"}${
-            time === undefined ? "" : late ? " · late" : ` · by ${time}`
+            time === undefined ? "" : late ? ` · late, public ${time}` : ` · public ${time}`
           }`;
     const videoId = item.videoId;
     const run =

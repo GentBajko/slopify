@@ -1,0 +1,1 @@
+- Extension 1.1.6: `fillSchedule` commits the date (Enter, seen kept) before typing the time, in the format the fields show (`typedDate`, `typedTime`, `sameDay`, `sameTime`); the upload link reader accepts /shorts/ID; the popup shows `scheduleAt`.
