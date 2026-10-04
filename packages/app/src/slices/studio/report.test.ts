@@ -38,6 +38,8 @@ it("reads Studio's export zip: every column, the totals and each video's days", 
   expect(report.chartMetric).toBe("Views");
   expect([report.from, report.to]).toEqual(["2025-03-09", "2025-03-10"]);
   expect(report.rows[0]?.daily).toEqual([10, 30]);
+  // Totals.csv: the whole view per day, on the chart's days.
+  expect(report.dailyTotals).toEqual([10, 0]);
   expect(report.rows[1]?.daily).toEqual([0, 7]);
 });
 

@@ -48,6 +48,7 @@ for (const [name, target] of Object.entries(targets)) {
       "comment",
       "content",
       "early",
+      "export-hook",
       "options",
       "popup",
       "video-frame",

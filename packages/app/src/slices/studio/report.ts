@@ -28,6 +28,9 @@ export interface ReportRow {
 
 export interface StudioReport {
   readonly importedAt: string;
+  // The view's own total per day (Totals.csv), on the chart's days; absent from imports made
+  // before it was read, or when the zip had none.
+  readonly dailyTotals?: readonly number[] | undefined;
   // The chart's metric ("Engaged views"), and the first and last day of the period.
   readonly chartMetric: string | null;
   readonly from: string | null;
@@ -161,10 +164,19 @@ export function parseStudioExport(bytes: Uint8Array, importedAt: string): Report
     series[at] = Number(row.at(-1)) || 0;
     daily.set(id, series);
   }
+  // Totals.csv: Date, then the metric; the whole view's figure per day.
+  const totalsBytes = named("totals");
+  const totals = totalsBytes === undefined ? [] : parseCsv(strFromU8(totalsBytes)).slice(1);
+  const dailyTotals = Array.from({ length: days.length }, () => 0);
+  for (const row of totals) {
+    const at = dayIndex.get(row[0] ?? "");
+    if (at !== undefined) dailyTotals[at] = Number(row.at(-1)) || 0;
+  }
   return {
     ok: true,
     report: {
       importedAt,
+      ...(totals.length > 0 && days.length > 0 ? { dailyTotals } : {}),
       chartMetric: chart.length > 1 ? chartMetric : null,
       from: days[0] ?? null,
       to: days.at(-1) ?? null,

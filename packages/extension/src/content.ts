@@ -702,11 +702,95 @@ function look(): void {
   void fill(true);
 }
 
+// The extension opened Studio's Analytics view to export it ("#slopify-export&c=<channel>"):
+// presses Export → Comma-separated values, takes the zip from Studio's answer (passed on by
+// `export-hook.ts`), sends it to Slopify for that channel, and closes the tab.
+async function runExport(channelId: string): Promise<void> {
+  const report = (ok: boolean, message: string) =>
+    api.runtime.sendMessage({ type: "export-done", channelId, ok, message });
+  const caught = new Promise<string | null>((resolve) => {
+    const listen = (event: MessageEvent): void => {
+      const data = event.data as { source?: unknown; zippedData?: unknown } | null;
+      if (event.source !== window || data?.source !== "slopify-export-hook") return;
+      if (typeof data.zippedData !== "string") return;
+      window.removeEventListener("message", listen);
+      resolve(data.zippedData);
+    };
+    window.addEventListener("message", listen);
+    setTimeout(() => {
+      window.removeEventListener("message", listen);
+      resolve(null);
+    }, 90_000);
+  });
+  const button = await waitFor(
+    () => document.querySelector("ytcp-icon-button#export-button"),
+    45_000,
+  );
+  if (button === null) {
+    await report(false, "Studio's Export button didn't show on the Analytics view.");
+    return;
+  }
+  pressLike(button);
+  const csv = await waitFor(
+    () =>
+      [...document.querySelectorAll('tp-yt-paper-item[test-id="CSV"]')].find(
+        (one) => one.getClientRects().length > 0,
+      ) ?? null,
+    10_000,
+  );
+  if (csv === null) {
+    await report(false, "Studio's Export menu didn't offer Comma-separated values.");
+    return;
+  }
+  pressLike(csv);
+  const zippedData = await caught;
+  if (zippedData === null) {
+    await report(false, "Studio didn't send the export within a minute and a half.");
+    return;
+  }
+  const sent = (await api.runtime.sendMessage({
+    type: "report",
+    channelId,
+    zippedData,
+  })) as WorkerAnswer<{ rows: number }>;
+  await report(sent.ok, sent.ok ? `Exported ${String(sent.value.rows)} videos.` : sent.message);
+}
+
+async function waitFor<T>(look: () => T | null, ms: number): Promise<T | null> {
+  for (let waited = 0; waited < ms; waited += 300) {
+    const found = look();
+    if (found !== null) return found;
+    await new Promise((done) => setTimeout(done, 300));
+  }
+  return null;
+}
+
+// Studio's menus open on a pointer press, not on a bare click() call.
+function pressLike(element: Element): void {
+  const box = element.getBoundingClientRect();
+  const at = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    button: 0,
+    clientX: box.left + box.width / 2,
+    clientY: box.top + box.height / 2,
+  };
+  const pointer = { ...at, pointerId: 1, pointerType: "mouse", isPrimary: true };
+  element.dispatchEvent(new PointerEvent("pointerdown", { ...pointer, buttons: 1 }));
+  element.dispatchEvent(new MouseEvent("mousedown", { ...at, buttons: 1 }));
+  element.dispatchEvent(new PointerEvent("pointerup", pointer));
+  element.dispatchEvent(new MouseEvent("mouseup", at));
+  element.dispatchEvent(new MouseEvent("click", at));
+}
+
 const params = hashParams();
 const projectId = params.get("p");
 const short = Number(params.get("s") ?? "0") || null;
 const ab = params.get("slopify-ab");
-if (projectId !== null && (ab === "titles" || ab === "thumbnails" || ab === "both"))
+const exportChannel = params.has("slopify-export") ? params.get("c") : null;
+if (exportChannel !== null) void runExport(exportChannel);
+else if (projectId !== null && (ab === "titles" || ab === "thumbnails" || ab === "both"))
   void runAb(ab, projectId, short);
 else if (projectId !== null && params.has("slopify-finish")) void runFinish(projectId, short);
 else if (projectId !== null && params.get("slopify-stats") === "3") void runAbRead(projectId);

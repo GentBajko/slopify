@@ -215,7 +215,58 @@ interface StatsSweep {
   readonly left: readonly { projectId: string; short: number | null; videoId: string }[];
 }
 
+// Once a day, each channel's Analytics view (Settings in Slopify: Channels → YouTube), its end
+// moved to today, is opened in the background to export (`content.ts`'s `runExport`).
+const exportKey = "exportAt";
+
+// The view's end moved to the end of today: Studio counts days from midnight Pacific time and
+// keeps the end exclusive; the start stays as saved.
+export function viewToday(url: string, now: Date): string {
+  const parsed = new URL(url);
+  const [start] = (parsed.searchParams.get("time_period") ?? "").split(",");
+  const pacific = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  const [year, month, day] = pacific.split("-").map(Number);
+  // Midnight Pacific of the next day: 07:00 or 08:00 UTC, whichever names midnight there.
+  const next = Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) + 1, 7);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date(next)),
+  );
+  // 07:00 UTC is midnight in summer time (PDT) and 23:00 the day before in winter (PST).
+  const end = next + ((24 - hour) % 24) * 3_600_000;
+  if (start !== undefined && start !== "")
+    parsed.searchParams.set("time_period", `${start},${String(end)}`);
+  return parsed.href;
+}
+
+async function exportViews(force = false): Promise<number> {
+  const stored = await api.storage.local.get([exportKey]);
+  const at = typeof stored[exportKey] === "number" ? stored[exportKey] : 0;
+  if (!force && Date.now() - at < statsEveryMs) return 0;
+  const { views } = await getJson<{ views: readonly { channelId: string; url: string }[] }>(
+    "/api/studio/ext/export-views",
+    "the Analytics views to export",
+  ).catch(() => ({ views: [] }));
+  if (views.length === 0) return 0;
+  await api.storage.local.set({ [exportKey]: Date.now() });
+  for (const view of views)
+    await api.tabs?.create({
+      url: `${viewToday(view.url, new Date())}#slopify-export&c=${encodeURIComponent(view.channelId)}`,
+      active: false,
+    });
+  return views.length;
+}
+
 async function sweepStats(force = false): Promise<number> {
+  await exportViews(force);
   const stored = await api.storage.local.get([statsKey]);
   const sweep = stored[statsKey] as StatsSweep | undefined;
   if (!force && sweep !== undefined && Date.now() - sweep.at < statsEveryMs) return 0;
@@ -400,6 +451,16 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
       );
       return { ok: true, value: true };
     }
+    if (request.type === "report")
+      return {
+        ok: true,
+        value: await post(
+          "/api/studio/ext/report",
+          { channelId: request.channelId, zippedData: request.zippedData },
+          "Studio's export",
+        ),
+      };
+    if (request.type === "export-done") return { ok: true, value: true };
     if (request.type === "backfill")
       return {
         ok: true,
@@ -437,6 +498,7 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     const tab = sender.tab?.id;
     if (tab === undefined) return;
     if (request.type === "task-result") void api.tabs?.remove(tab);
+    if (request.type === "export-done") void api.tabs?.remove(tab);
     if (request.type === "backfill" && request.close === true) void api.tabs?.remove(tab);
     if (request.type === "stats" && request.last) {
       void api.tabs?.remove(tab);

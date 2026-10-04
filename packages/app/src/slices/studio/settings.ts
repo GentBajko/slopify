@@ -291,3 +291,44 @@ export function studioRequestAllowed(
   if (origin === undefined) return true;
   return pairing.origin !== null && origin === pairing.origin;
 }
+
+// Each channel's Studio Analytics view (Advanced mode's Explore link with its chosen columns),
+// which the extension opens every day to export into Channels → YouTube. The start stays as
+// saved; the extension moves the end to today.
+export const studioExportViewPrefix = "studio.exportView.";
+
+export function exportViewProblem(url: string): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return "That isn't a link. In YouTube Studio, open Analytics → Advanced mode, set it up, and copy the address from the browser's address bar.";
+  }
+  if (
+    parsed.origin !== "https://studio.youtube.com" ||
+    !/^\/channel\/UC[A-Za-z0-9_-]+\/analytics\/.+\/explore$/.test(parsed.pathname)
+  )
+    return "That isn't a Studio Analytics Advanced mode link. In YouTube Studio, open Analytics → Advanced mode, set it up, and copy the address from the browser's address bar.";
+  if (!parsed.searchParams.has("time_period"))
+    return "That link has no date range. In Advanced mode, pick the dates (the start stays as you set it; the end follows today), then copy the address again.";
+  return undefined;
+}
+
+export function readExportView(db: DatabaseSync, channelId: string): string | null {
+  return readSetting(db, `${studioExportViewPrefix}${channelId}`) ?? null;
+}
+
+export function saveExportView(db: DatabaseSync, channelId: string, url: string | null): void {
+  const key = `${studioExportViewPrefix}${channelId}`;
+  if (url === null || url.trim() === "") db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+  else writeSetting(db, key, url.trim());
+}
+
+export function exportViews(db: DatabaseSync): { channelId: string; url: string }[] {
+  const prefix = studioExportViewPrefix;
+  return (
+    db
+      .prepare("SELECT key, value FROM settings WHERE substr(key, 1, ?) = ? ORDER BY key")
+      .all(prefix.length, prefix) as { key: string; value: string }[]
+  ).map((row) => ({ channelId: row.key.slice(prefix.length), url: row.value }));
+}

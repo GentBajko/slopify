@@ -99,6 +99,15 @@ export type WorkerRequest =
   | { readonly type: "ready" }
   // The popup's "Read Studio numbers now": the daily sweep, at once.
   | { readonly type: "stats-now" }
+  // A channel's Analytics view exported: Studio's zip (base64) for Slopify; then the page says
+  // it is done, and the worker closes its tab.
+  | { readonly type: "report"; readonly channelId: string; readonly zippedData: string }
+  | {
+      readonly type: "export-done";
+      readonly channelId: string;
+      readonly ok: boolean;
+      readonly message: string;
+    }
   | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }
   // Studio said the upload was scheduled or published.
   | {

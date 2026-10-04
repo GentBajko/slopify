@@ -50,14 +50,19 @@ import {
   writeLeadHours,
 } from "../../slices/studio/releases.js";
 import { parseStudioExport, readReport, saveReport } from "../../slices/studio/report.js";
+import { statsFromReport } from "../../slices/studio/report-stats.js";
 import {
   autoCommentKey,
   bearerToken,
+  exportViewProblem,
+  exportViews,
   isExtensionOrigin,
   pairStudioExtension,
   readChannelPlaylists,
+  readExportView,
   readStudioPlaylists,
   resetStudioPairing,
+  saveExportView,
   saveProjectPlaylists,
   saveRealFootage,
   saveStudioPlaylists,
@@ -277,6 +282,7 @@ export function studioRoutes(deps: AppDeps) {
       ),
     );
     return {
+      exportView: readExportView(deps.db, channelId),
       report,
       projects:
         report === null
@@ -632,7 +638,76 @@ export function studioRoutes(deps: AppDeps) {
           if (!parsed.ok)
             return problem(c, { status: 400, title: titleOf(400), detail: parsed.message });
           saveReport(deps.db, channelId, parsed.report);
+          statsFromReport(deps.db, parsed.report, parsed.report.importedAt);
           return c.json(reportBody(channelId));
+        },
+      )
+      // The Analytics view the extension exports every day for this channel; null forgets it.
+      .put(
+        "/channels/:channelId/export-view",
+        zValidator("param", z.object({ channelId: id }), onInvalid),
+        zValidator("json", z.object({ url: z.string().max(4000).nullable() }), onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { channelId } = c.req.valid("param");
+          const { url } = c.req.valid("json");
+          const wrong = url === null || url.trim() === "" ? undefined : exportViewProblem(url);
+          if (wrong !== undefined)
+            return problem(c, {
+              status: 400,
+              title: titleOf(400),
+              detail: wrong,
+              extensions: { fields: [{ field: "url", message: wrong }] },
+            });
+          saveExportView(deps.db, channelId, url);
+          return c.json(reportBody(channelId));
+        },
+      )
+      // The extension: each channel's Analytics view to export.
+      .get("/ext/export-views", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        return c.json({ views: exportViews(deps.db) });
+      })
+      // The extension exported a channel's view: the zip Studio's Export makes, as Studio sends
+      // it (base64). Saved as an import would be, and each known video's numbers with it.
+      .post(
+        "/ext/report",
+        bodyLimit({
+          maxSize: 40 * 1024 * 1024,
+          onError: (c) =>
+            problem(c, {
+              status: 413,
+              title: titleOf(413),
+              detail: "Studio's export was larger than Slopify takes (40 MB).",
+            }),
+        }),
+        zValidator(
+          "json",
+          z.object({
+            channelId: id,
+            zippedData: z
+              .string()
+              .min(1)
+              .max(40 * 1024 * 1024),
+          }),
+          onInvalid,
+        ),
+        (c) => {
+          allowOrigin(c, false);
+          if (!extAllowed(c)) return refused(c);
+          const { channelId, zippedData } = c.req.valid("json");
+          const now = deps.clock.now().toISOString();
+          const parsed = parseStudioExport(
+            new Uint8Array(Buffer.from(zippedData, "base64url")),
+            now,
+          );
+          if (!parsed.ok)
+            return problem(c, { status: 400, title: titleOf(400), detail: parsed.message });
+          saveReport(deps.db, channelId, parsed.report);
+          const videos = statsFromReport(deps.db, parsed.report, now);
+          return c.json({ rows: parsed.report.rows.length, videos });
         },
       )
       // Channels → YouTube: the channel's videos on YouTube with Studio's numbers and totals.
@@ -920,11 +995,14 @@ export function studioRoutes(deps: AppDeps) {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         return c.json({
-          videos: doneVideos(deps.db).map((video) => ({
-            projectId: video.projectId,
-            short: video.short,
-            videoId: video.videoId,
-          })),
+          // The export brings every video's numbers; only an A/B test's result needs a visit.
+          videos: doneVideos(deps.db)
+            .filter((video) => video.short === null && video.abState === "started")
+            .map((video) => ({
+              projectId: video.projectId,
+              short: video.short,
+              videoId: video.videoId,
+            })),
         });
       })
       .post("/ext/stats", zValidator("json", statsBody, onInvalid), (c) => {
@@ -932,17 +1010,26 @@ export function studioRoutes(deps: AppDeps) {
         if (!extAllowed(c)) return refused(c);
         const body = c.req.valid("json");
         const readAt = deps.clock.now().toISOString();
-        saveStats(deps.db, {
-          projectId: body.projectId,
-          short: body.short ?? null,
-          videoId: body.videoId,
-          readAt,
-          impressions: body.impressions ?? null,
-          ctr: body.ctr ?? null,
-          views: body.views ?? null,
-          averageViewSeconds: body.averageViewSeconds ?? null,
-          watchHours: body.watchHours ?? null,
-        });
+        // A visit for the A/B result alone brings no numbers: the export's are kept.
+        const numbers = [
+          body.impressions,
+          body.ctr,
+          body.views,
+          body.averageViewSeconds,
+          body.watchHours,
+        ].some((one) => one !== undefined);
+        if (numbers)
+          saveStats(deps.db, {
+            projectId: body.projectId,
+            short: body.short ?? null,
+            videoId: body.videoId,
+            readAt,
+            impressions: body.impressions ?? null,
+            ctr: body.ctr ?? null,
+            views: body.views ?? null,
+            averageViewSeconds: body.averageViewSeconds ?? null,
+            watchHours: body.watchHours ?? null,
+          });
         if (body.abVariants !== undefined && body.abVariants.length > 1)
           saveAbResult(deps.db, {
             projectId: body.projectId,

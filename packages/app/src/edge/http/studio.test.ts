@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
@@ -982,6 +983,62 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     authorization: `Bearer ${token}`,
     origin: extension,
     "content-type": "application/json",
+  });
+
+  it("takes the extension's daily export of the channel's view, with each video's numbers", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const channelId = "00000000-0000-4000-8000-000000000001";
+    // The view to export: only a Studio Advanced mode link is kept.
+    const wrong = await h.call(`/channels/${channelId}/export-view`, {
+      ...json({ url: "https://example.com/" }),
+      method: "PUT",
+    });
+    expect(wrong.status).toBe(400);
+    const url =
+      "https://studio.youtube.com/channel/UCabc/analytics/tab-content/period-default/explore?time_period=1741420800000%2C1790924400000";
+    await h.call(`/channels/${channelId}/export-view`, { ...json({ url }), method: "PUT" });
+    expect(
+      await (await h.call("/ext/export-views", { headers: extHeaders(token) })).json(),
+    ).toEqual({
+      views: [{ channelId, url }],
+    });
+    // The project's video is on YouTube; the export has its row.
+    await h.call("/ext/video", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
+    });
+    await h.call("/ext/video/done", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
+    });
+    const table = [
+      "Content,Video title,Video publish time,Duration,Views,Average view duration,Watch time (hours),Impressions,Impressions click-through rate (%)",
+      "Total,,,,66,0:32:19,35.5,493,2.2",
+      'lKS3FAjekpI,The Lighthouse,"Oct 1, 2026",3600,66,0:32:19,35.5,493,2.2',
+    ].join("\n");
+    const zip = zipSync({ "Table data.csv": strToU8(table) });
+    const sent = await h.call("/ext/report", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ channelId, zippedData: Buffer.from(zip).toString("base64url") }),
+    });
+    expect(await sent.json()).toEqual({ rows: 1, videos: 1 });
+    expect(await (await h.call("/stats/p1")).json()).toMatchObject({
+      stats: [
+        {
+          videoId: "lKS3FAjekpI",
+          views: 66,
+          impressions: 493,
+          ctr: 2.2,
+          averageViewSeconds: 1939,
+          watchHours: 35.5,
+        },
+      ],
+    });
   });
 
   it("gives a finished project the plan's next free slot, with its shorts' times after it", async () => {

@@ -6,7 +6,7 @@ import { Fragment, type ReactElement, useRef, useState } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Select } from "@/components/kit/field";
+import { Input, Select } from "@/components/kit/field";
 import { LineChart } from "@/components/kit/line-chart";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
@@ -19,6 +19,8 @@ import { read } from "@/http";
 
 interface ReportBody {
   readonly report: StudioReport | null;
+  // The Analytics view the extension exports every day; absent from an older Slopify.
+  readonly exportView?: string | null;
   readonly projects: Readonly<
     Record<
       string,
@@ -41,6 +43,75 @@ async function importStudioReport(api: Api, channelId: string, file: File): Prom
       headers: { "content-type": file.type || "application/zip" },
       body: file,
     }),
+  );
+}
+
+async function saveExportView(
+  api: Api,
+  channelId: string,
+  url: string | null,
+): Promise<ReportBody> {
+  return read(
+    await api.fetch(`${api.origin}/api/studio/channels/${channelId}/export-view`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+    }),
+  );
+}
+
+// The Analytics view the extension opens every day: paste the Advanced mode address; the
+// start date stays as it is, the end follows today.
+function ExportView({
+  channelId,
+  saved,
+}: {
+  readonly channelId: string;
+  readonly saved: string | null;
+}): ReactElement {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const notify = useToast();
+  const [draft, setDraft] = useState<string | undefined>();
+  const value = draft ?? saved ?? "";
+  const save = useMutation({
+    mutationFn: (url: string | null) => saveExportView(api, channelId, url),
+    onSuccess: (body) => {
+      client.setQueryData(["studio", "report", channelId], body);
+      setDraft(undefined);
+      notify(
+        body.exportView
+          ? "The extension exports this view every day."
+          : "The extension no longer exports a view for this channel.",
+        "success",
+      );
+    },
+    onError: (error: Error) => notify(`The view wasn't saved: ${error.message}`, "error"),
+  });
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          aria-label="Studio Analytics view to export every day"
+          placeholder="https://studio.youtube.com/channel/…/analytics/…/explore?…"
+          className="min-w-0 flex-1 basis-[320px]"
+          value={value}
+          onChange={(event) => setDraft(event.currentTarget.value)}
+        />
+        <Button
+          type="button"
+          disabled={save.isPending || value.trim() === (saved ?? "")}
+          onClick={() => save.mutate(value.trim() === "" ? null : value.trim())}
+        >
+          Save view
+        </Button>
+      </div>
+      <p className="m-0 text-small text-ink-3">
+        The Studio extension opens this view once a day, exports it and brings it in here: every
+        column, and each video's numbers on its project. Paste the address of Analytics → Advanced
+        mode as you set it up; the start date stays, the end moves to today.
+      </p>
+    </div>
   );
 }
 
@@ -120,6 +191,7 @@ function TrendChart({
   readonly setRange: (next: Range) => void;
 }): ReactElement {
   const metric = report.chartMetric ?? "Views";
+  const [withTotal, setWithTotal] = useState(false);
   const chosen = rows.filter((row) => picked.includes(row.videoId));
   const from = report.from === null ? new Date() : new Date(`${report.from}T00:00:00`);
   const dayCount = Math.max(0, ...rows.map((row) => row.daily.length));
@@ -145,6 +217,17 @@ function TrendChart({
         values: values.slice(first),
       };
     });
+    // The whole view's own daily figure (Totals.csv), drawn under the videos when asked.
+    if (withTotal && report.dailyTotals !== undefined)
+      series = [
+        {
+          id: "channel-total",
+          label: "Channel total",
+          color: "var(--color-ink-2)",
+          values: shaped(report.dailyTotals, shape).slice(first),
+        },
+        ...series,
+      ];
   } else {
     const longest = Math.max(
       1,
@@ -180,6 +263,16 @@ function TrendChart({
       <div className="flex flex-wrap items-center gap-3">
         <span className="font-semibold">{what}</span>
         <span className="flex-1" />
+        {report.dailyTotals === undefined || timeline !== "dates" ? null : (
+          <label className="flex items-center gap-2 text-small">
+            <input
+              type="checkbox"
+              checked={withTotal}
+              onChange={(event) => setWithTotal(event.currentTarget.checked)}
+            />
+            Channel total
+          </label>
+        )}
         <Select
           aria-label="Show"
           className="w-[200px]"
@@ -398,6 +491,7 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
         Export arrow → Comma-separated values, and import the zip it downloads here. Every column
         comes along; a new import replaces the old one.
       </p>
+      <ExportView channelId={channelId} saved={body.data?.exportView ?? null} />
       {report === null ? null : (
         <>
           {report.chartMetric === null ? null : (
