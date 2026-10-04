@@ -232,16 +232,34 @@ async function sweepStats(force = false): Promise<number> {
   return videos.length;
 }
 
+// The Analytics tab being read, and when it opened. A video Studio can't open (deleted in
+// Studio, say) never reports, which used to stop the day's sweep there: past `statsTabMs` the
+// tab is closed and the next video opens.
+const statsTabKey = "statsTab";
+const statsTabMs = 4 * 60 * 1000;
+
 async function nextStats(): Promise<void> {
   const stored = await api.storage.local.get([statsKey]);
   const sweep = stored[statsKey] as StatsSweep | undefined;
   const next = sweep?.left[0];
+  await api.storage.local.set({ [statsTabKey]: null });
   if (sweep === undefined || next === undefined) return;
   await api.storage.local.set({ [statsKey]: { ...sweep, left: sweep.left.slice(1) } });
-  await api.tabs?.create({
+  const tab = await api.tabs?.create({
     url: `https://studio.youtube.com/video/${next.videoId}/analytics/tab-reach_viewers/period-default#slopify-stats=1&${query(next.projectId, next.short)}`,
     active: false,
   });
+  if (tab?.id !== undefined)
+    await api.storage.local.set({ [statsTabKey]: { id: tab.id, at: Date.now() } });
+}
+
+// Closes an Analytics tab that hasn't reported in time and moves the sweep on.
+async function unstickStats(): Promise<void> {
+  const stored = await api.storage.local.get([statsTabKey]);
+  const open = stored[statsTabKey] as { id: number; at: number } | null | undefined;
+  if (open == null || Date.now() - open.at < statsTabMs) return;
+  await api.tabs?.remove(open.id).catch(() => {});
+  await nextStats();
 }
 
 // A page opened for one upload asks for it: the item, its thumbnails' and captions' bytes.
@@ -436,9 +454,11 @@ api.action?.onClicked.addListener(() => {
 
 api.alarms?.onAlarm.addListener((alarm) => {
   if (alarm.name === "slopify-ab-tests") void checkTasks();
+  if (alarm.name === "slopify-stats-watch") void unstickStats();
 });
 const schedule = (): void => {
   api.alarms?.create("slopify-ab-tests", { periodInMinutes: 15, delayInMinutes: 1 });
+  api.alarms?.create("slopify-stats-watch", { periodInMinutes: 1, delayInMinutes: 1 });
 };
 api.runtime.onInstalled.addListener(schedule);
 api.runtime.onStartup.addListener(() => {

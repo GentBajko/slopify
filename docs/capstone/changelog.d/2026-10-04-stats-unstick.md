@@ -1,0 +1,1 @@
+- Extension 1.1.4: the stats sweep remembers its open tab (`statsTab`); a one-minute alarm closes one older than 4 minutes and opens the next.
