@@ -1,8 +1,8 @@
 import type { ReportRow, StudioReport } from "@app/slices/studio/report.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { UploadIcon } from "lucide-react";
-import { type ReactElement, useRef, useState } from "react";
+import { ChevronDownIcon, ChevronRightIcon, UploadIcon } from "lucide-react";
+import { Fragment, type ReactElement, useRef, useState } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
@@ -236,71 +236,52 @@ const compact = (value: number) =>
 
 // One chart per video, from its first day on YouTube: its own scale, dates along the bottom,
 // the value on hover, under its title and total.
-function EachVideo({
+// One video's chart, opened from its row in the table: its daily figures from the day it
+// started, with the overview chart's shape and range.
+function VideoChart({
   report,
-  rows,
+  row,
   shape,
   range,
   colorOf,
 }: {
   readonly report: StudioReport;
-  readonly rows: readonly ReportRow[];
+  readonly row: ReportRow;
   readonly shape: Shape;
   readonly range: Range;
   readonly colorOf: (videoId: string) => string;
 }): ReactElement {
   const metric = report.chartMetric ?? "Views";
   const from = report.from === null ? new Date() : new Date(`${report.from}T00:00:00`);
+  const start = row.daily.findIndex((value) => value > 0);
+  if (start < 0)
+    return (
+      <p className="m-0 text-small text-ink-3">
+        Studio's export holds daily figures only for the videos drawn in its own chart. To chart
+        this one, tick it in Advanced mode's chart before you export.
+      </p>
+    );
+  const all = shaped(row.daily.slice(start), shape);
+  const first = range === "all" ? 0 : Math.max(0, all.length - Number(range));
+  const values = all.slice(first);
+  const labels = values.map((_, at) => {
+    const day = new Date(from);
+    day.setDate(day.getDate() + start + first + at);
+    return (values.length > 200 ? yearLabel : dayLabel).format(day);
+  });
+  const total = row.daily.reduce((sum, value) => sum + value, 0);
   return (
-    <section aria-label="Each video" className="flex flex-col gap-3">
-      <span className="font-semibold">{`Each video · ${metric}`}</span>
-      {rows.some((row) => !row.daily.some((value) => value > 0)) ? (
-        <p className="m-0 text-small text-ink-3">
-          Studio's export holds daily figures only for the videos drawn in its own chart. To chart
-          more, tick them in Advanced mode's chart before you export.
-        </p>
-      ) : null}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {rows.map((row) => {
-          const start = row.daily.findIndex((value) => value > 0);
-          if (start < 0) return null;
-          const all = shaped(row.daily.slice(start), shape);
-          const first = range === "all" ? 0 : Math.max(0, all.length - Number(range));
-          const values = all.slice(first);
-          const labels = values.map((_, at) => {
-            const day = new Date(from);
-            day.setDate(day.getDate() + start + first + at);
-            return (values.length > 200 ? yearLabel : dayLabel).format(day);
-          });
-          const total = row.daily.reduce((sum, value) => sum + value, 0);
-          return (
-            <div key={row.videoId} className="flex min-w-0 flex-col gap-1">
-              <div className="flex items-baseline gap-2">
-                <span
-                  aria-hidden="true"
-                  className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ background: colorOf(row.videoId) }}
-                />
-                <span className="min-w-0 flex-1 truncate font-semibold" title={row.title}>
-                  {row.title}
-                </span>
-                <span className="text-small text-ink-3">{`${total.toLocaleString("en")} total`}</span>
-              </div>
-              <LineChart
-                height={150}
-                legend={false}
-                label={`${metric} for ${row.title}`}
-                xLabels={labels}
-                formatValue={compact}
-                series={[
-                  { id: row.videoId, label: row.title, color: colorOf(row.videoId), values },
-                ]}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </section>
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-small text-ink-2">{`${metric} · ${total.toLocaleString("en")} total`}</span>
+      <LineChart
+        height={180}
+        legend={false}
+        label={`${metric} for ${row.title}`}
+        xLabels={labels}
+        formatValue={compact}
+        series={[{ id: row.videoId, label: row.title, color: colorOf(row.videoId), values }]}
+      />
+    </div>
   );
 }
 
@@ -327,6 +308,8 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
   const [shape, setShape] = useState<Shape>("average");
   const [timeline, setTimeline] = useState<Timeline>("dates");
   const [range, setRange] = useState<Range>("all");
+  // The video whose own chart is open under its row.
+  const [opened, setOpened] = useState<string | undefined>();
   const [hiddenChoice, setHidden] = useState<readonly string[] | undefined>(() =>
     storedHidden(channelId),
   );
@@ -492,67 +475,106 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                 </tr>
                 {rows.map((row) => {
                   const project = body.data?.projects[row.videoId];
+                  const open = opened === row.videoId;
+                  const toggle = () => setOpened(open ? undefined : row.videoId);
                   return (
-                    <tr key={row.videoId}>
-                      {report.chartMetric === null ? null : (
-                        <td>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              disabled={!row.daily.some((value) => value > 0)}
-                              aria-label={`Compare ${row.title} in the chart`}
-                              checked={picked.includes(row.videoId)}
-                              onChange={(event) =>
-                                setPicked(
-                                  event.currentTarget.checked
-                                    ? [...picked, row.videoId]
-                                    : picked.filter((one) => one !== row.videoId),
-                                )
-                              }
-                            />
-                            <span
-                              aria-hidden="true"
-                              className="inline-block size-2.5 rounded-full"
-                              style={{
-                                background: picked.includes(row.videoId)
-                                  ? colorOf(row.videoId)
-                                  : "transparent",
-                              }}
-                            />
-                          </label>
-                        </td>
-                      )}
-                      <td className="max-w-[320px]">
-                        {project === undefined ? (
-                          <span className="block truncate" title={row.title}>
-                            {row.title}
-                          </span>
-                        ) : (
-                          <Link
-                            to="/projects/$projectId"
-                            params={{ projectId: project.projectId }}
-                            className="block truncate"
-                            title={row.title}
-                          >
-                            {row.title}
-                          </Link>
+                    <Fragment key={row.videoId}>
+                      <tr
+                        className={report.chartMetric === null ? undefined : "cursor-pointer"}
+                        onClick={(event) => {
+                          // The checkbox and the project link keep their own clicks.
+                          if (report.chartMetric === null) return;
+                          if ((event.target as Element).closest("a, input, label, button")) return;
+                          toggle();
+                        }}
+                      >
+                        {report.chartMetric === null ? null : (
+                          <td>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                disabled={!row.daily.some((value) => value > 0)}
+                                aria-label={`Compare ${row.title} in the chart`}
+                                checked={picked.includes(row.videoId)}
+                                onChange={(event) =>
+                                  setPicked(
+                                    event.currentTarget.checked
+                                      ? [...picked, row.videoId]
+                                      : picked.filter((one) => one !== row.videoId),
+                                  )
+                                }
+                              />
+                              <span
+                                aria-hidden="true"
+                                className="inline-block size-2.5 rounded-full"
+                                style={{
+                                  background: picked.includes(row.videoId)
+                                    ? colorOf(row.videoId)
+                                    : "transparent",
+                                }}
+                              />
+                            </label>
+                          </td>
                         )}
-                        <span className="text-label text-ink-3">{row.published ?? ""}</span>
-                      </td>
-                      {visible.map(({ column, index }) => (
-                        <td key={column.label} className="num">
-                          {shown(row.values[index] ?? null, column.kind, column.label)}
+                        <td className="max-w-[320px]">
+                          <span className="flex min-w-0 items-center gap-1">
+                            {report.chartMetric === null ? null : (
+                              <button
+                                type="button"
+                                aria-expanded={open}
+                                aria-label={`${open ? "Hide" : "Show"} the chart of ${row.title}`}
+                                className="shrink-0 text-ink-3"
+                                onClick={toggle}
+                              >
+                                {open ? (
+                                  <ChevronDownIcon aria-hidden="true" className="size-4" />
+                                ) : (
+                                  <ChevronRightIcon aria-hidden="true" className="size-4" />
+                                )}
+                              </button>
+                            )}
+                            {project === undefined ? (
+                              <span className="block truncate" title={row.title}>
+                                {row.title}
+                              </span>
+                            ) : (
+                              <Link
+                                to="/projects/$projectId"
+                                params={{ projectId: project.projectId }}
+                                className="block truncate"
+                                title={row.title}
+                              >
+                                {row.title}
+                              </Link>
+                            )}
+                          </span>
+                          <span className="text-label text-ink-3">{row.published ?? ""}</span>
                         </td>
-                      ))}
-                    </tr>
+                        {visible.map(({ column, index }) => (
+                          <td key={column.label} className="num">
+                            {shown(row.values[index] ?? null, column.kind, column.label)}
+                          </td>
+                        ))}
+                      </tr>
+                      {open ? (
+                        <tr>
+                          <td colSpan={visible.length + 2}>
+                            <VideoChart
+                              report={report}
+                              row={row}
+                              shape={shape}
+                              range={range}
+                              colorOf={colorOf}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          {report.chartMetric === null ? null : (
-            <EachVideo report={report} rows={rows} shape={shape} range={range} colorOf={colorOf} />
-          )}
         </>
       )}
     </section>
