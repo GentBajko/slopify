@@ -57,7 +57,9 @@ export function PostingPlanSettings({
     onSuccess: () => client.invalidateQueries({ queryKey: ["studio", "settings"] }),
     onError: (error: Error) => notify(`Not saved: ${error.message}`, "error"),
   });
-  const old = saved.data?.plan;
+  if (saved.data === undefined)
+    return <p className="text-small text-ink-3">Loading the release settings…</p>;
+  const old = saved.data.plan;
   return (
     <section aria-label="Release times" className="flex flex-col gap-3">
       <SectionHead as="h3" title="Release times" />
@@ -69,7 +71,7 @@ export function PostingPlanSettings({
         </Link>{" "}
         → Edit → Release times. See and move them in Calendar → Releases.
       </p>
-      {old !== undefined && old.rows.length > 0 ? (
+      {old.rows.length > 0 ? (
         <Callout
           tone="info"
           title="An older posting plan still applies"
