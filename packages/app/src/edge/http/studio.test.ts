@@ -1084,6 +1084,27 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     });
   });
 
+  it("waits for only the one upload picked, dropping what an earlier Upload all left", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    await h.call("/ext/upload-all", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ projectId: "p1" }),
+    });
+    await h.call("/ext/upload", {
+      method: "POST",
+      headers: extHeaders(token),
+      body: JSON.stringify({ projectId: "p1", short: null }),
+    });
+    const pack = (await (await h.call("/ext/pack", { headers: extHeaders(token) })).json()) as {
+      item: { kind: string };
+      waiting: number;
+    };
+    expect(pack).toMatchObject({ item: { kind: "video" }, waiting: 1 });
+  });
+
   it("keeps Studio's numbers and an A/B result for the project and the Library", async () => {
     const h = harness();
     finished(h.output);

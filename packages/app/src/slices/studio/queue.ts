@@ -90,15 +90,16 @@ export function removeFill(
   return next;
 }
 
-// The extension popup's pick: this item goes first, so the upload dialog it opens gets it.
-export function fillNow(
+// The popup's Upload or Upload all: only these wait, in this order, and anything left from an
+// earlier pick is dropped, so Studio's upload dialogs never take more than was asked for.
+export function fillOnly(
   db: DatabaseSync,
-  projectId: string,
-  short: number | null,
+  items: readonly { readonly projectId: string; readonly short: number | null }[],
   now: Date,
 ): readonly FillEntry[] {
-  const others = readFillQueue(db, now).filter((entry) => !same(entry, projectId, short));
-  const next = [{ projectId, short, at: now.toISOString() }, ...others].slice(0, fillQueueMax);
+  const next = items
+    .slice(0, fillQueueMax)
+    .map((item) => ({ projectId: item.projectId, short: item.short, at: now.toISOString() }));
   write(db, queueKey(db), next);
   return next;
 }

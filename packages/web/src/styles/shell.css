@@ -449,11 +449,16 @@
       ),
       var(--color-ground);
   }
+  /* Fixed to the window's full height rather than sticky: a sticky rail could end partway down
+     the window (a zoomed or short window scrolled to the bottom), leaving an empty band. The
+     grid keeps its 232px column, and the main column is placed in the second one. */
   .sl-app__rail {
-    position: sticky;
+    position: fixed;
     top: 0;
-    align-self: start;
-    height: 100dvh;
+    bottom: 0;
+    left: 0;
+    width: 232px;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -497,6 +502,7 @@
     gap: 10px;
   }
   .sl-app__main {
+    grid-column: 2;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -939,6 +945,9 @@
     }
     .sl-app__rail {
       display: none;
+    }
+    .sl-app__main {
+      grid-column: 1;
     }
     .sl-topbar {
       padding: 8px 16px;

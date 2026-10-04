@@ -26,7 +26,7 @@ import { leadHoursMax, seriesOf } from "../../slices/studio/plan-model.js";
 import {
   enqueueFill,
   type FillEntry,
-  fillNow,
+  fillOnly,
   readFillQueue,
   removeFill,
 } from "../../slices/studio/queue.js";
@@ -807,7 +807,7 @@ export function studioRoutes(deps: AppDeps) {
         });
         return c.json({ projects });
       })
-      // The popup's click: that upload goes first in line, and the extension opens Studio's
+      // The popup's click: only that upload waits, and the extension opens Studio's
       // upload page, where the dialog takes it.
       .post("/ext/upload", zValidator("json", queueItemBody, onInvalid), (c) => {
         allowOrigin(c, false);
@@ -821,7 +821,7 @@ export function studioRoutes(deps: AppDeps) {
             detail: "That upload isn't in the project any more. Open the popup again.",
           });
         planned(projectId);
-        fillNow(deps.db, projectId, short ?? null, deps.clock.now());
+        fillOnly(deps.db, [{ projectId, short: short ?? null }], deps.clock.now());
         return c.json({ url: studioUploadUrl });
       })
       // The popup's Upload all Shorts: each short not on YouTube yet waits, in order, and the
@@ -839,9 +839,11 @@ export function studioRoutes(deps: AppDeps) {
             item.video !== null &&
             videoOf(deps.db, projectId, item.short ?? null)?.uploadState !== "done",
         );
-        // fillNow puts each first, so the last short goes in first and short 1 ends up first.
-        for (const item of shorts.toReversed())
-          fillNow(deps.db, projectId, item.short ?? null, deps.clock.now());
+        fillOnly(
+          deps.db,
+          shorts.map((item) => ({ projectId, short: item.short ?? null })),
+          deps.clock.now(),
+        );
         return c.json({ url: studioUploadUrl, count: shorts.length });
       })
       // One project's upload pack, for a Studio page opened for one of its uploads.

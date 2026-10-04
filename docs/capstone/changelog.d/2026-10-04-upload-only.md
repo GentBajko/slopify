@@ -1,0 +1,1 @@
+- The popup's Upload and Upload all replace the fill queue (`fillOnly`, `fillNow` removed); the sidebar rail is `position: fixed`.
