@@ -67,6 +67,8 @@ for (const [name, target] of Object.entries(targets)) {
   // The app's own mark, from packages/web/public/app-icon.svg, for the toolbar and the
   // extensions page.
   cpSync(join(root, "static", "icons"), join(out, "icons"), { recursive: true });
+  // Barlow, Slopify's typeface (SIL Open Font License 1.1), for the popup.
+  cpSync(join(root, "static", "fonts"), join(out, "fonts"), { recursive: true });
   writeFileSync(join(out, "manifest.json"), `${JSON.stringify(target, null, 2)}\n`);
   const files = {};
   const walk = (dir) => {
