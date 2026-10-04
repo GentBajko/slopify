@@ -1,0 +1,1 @@
+- Recovery requests refused as `running` before anything was saved are forgotten instead of remembered (and a stored one is dropped on read), so a fixed-key narration retry asks again.

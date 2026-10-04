@@ -95,3 +95,31 @@ it("reuses the original saved intent when a process stops before recording its r
     h.close();
   }
 });
+
+it("never replays a busy refusal: the same request asks again", async () => {
+  const h = await serviceFixture(false);
+  try {
+    const input = {
+      baseRevisionId: h.base.revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "redo" as const, item: "audio:body:chunk-1" },
+    };
+    reserveRecovery(h.deps, h.projectId, input, null);
+    rememberRecovery(h.deps, h.projectId, input, { ok: false, reason: "running" });
+    expect(readRecovery(h.deps, h.projectId, input)).toBeUndefined();
+    // One stored before this was fixed is dropped when read.
+    reserveRecovery(h.deps, h.projectId, input, null);
+    h.deps.db
+      .prepare(
+        "UPDATE project_recovery_requests SET response_json=? WHERE project_id=? AND idempotency_key=?",
+      )
+      .run(JSON.stringify({ ok: false, reason: "running" }), h.projectId, input.idempotencyKey);
+    expect(readRecovery(h.deps, h.projectId, input)).toBeUndefined();
+    // Any other answer is kept.
+    reserveRecovery(h.deps, h.projectId, input, null);
+    rememberRecovery(h.deps, h.projectId, input, { ok: false, reason: "conflict" });
+    expect(readRecovery(h.deps, h.projectId, input)).toEqual({ ok: false, reason: "conflict" });
+  } finally {
+    h.close();
+  }
+});

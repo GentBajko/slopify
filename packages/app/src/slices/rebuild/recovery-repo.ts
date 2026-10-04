@@ -65,7 +65,16 @@ export function readRecovery(
   const row = rowSchema.parse(raw);
   if (row.request_hash !== requestHash("direct-recovery", input.baseRevisionId, input.action))
     return { ok: false, reason: "idempotency-conflict" };
-  if (row.response_json !== null) return recoveryResultSchema.parse(JSON.parse(row.response_json));
+  if (row.response_json !== null) {
+    const saved = recoveryResultSchema.parse(JSON.parse(row.response_json));
+    // "Busy" was the moment's answer, not the request's outcome: one kept from before this was
+    // forgotten is dropped, so the same request asks again instead of replaying it forever.
+    if (busy(saved)) {
+      forget(deps, projectId, input);
+      return undefined;
+    }
+    return saved;
+  }
   return {
     pending: true,
     authority: row.authority_stamp,
@@ -103,12 +112,28 @@ export function rememberRecovery(
   result: RecoveryResult,
 ): RecoveryResult {
   const response = recoveryResultSchema.parse(result);
+  // Refused because the project was busy: nothing was done, so the same request may come again
+  // (an automatic narration retry keeps its request id) and must be tried again, not replayed.
+  if (busy(response)) {
+    forget(deps, projectId, input);
+    return response;
+  }
   deps.db
     .prepare(
       "UPDATE project_recovery_requests SET response_json=? WHERE project_id=? AND idempotency_key=?",
     )
     .run(JSON.stringify(response), projectId, input.idempotencyKey);
   return response;
+}
+
+// Busy before anything was saved (a refusal after the revision was saved keeps its answer).
+const busy = (result: RecoveryResult): boolean =>
+  !result.ok && result.reason === "running" && result.intentRevisionId === undefined;
+
+function forget(deps: RevisionDeps, projectId: string, input: RecoveryRequest): void {
+  deps.db
+    .prepare("DELETE FROM project_recovery_requests WHERE project_id=? AND idempotency_key=?")
+    .run(projectId, input.idempotencyKey);
 }
 // The head has unfinished stages but nothing that will move them on its own: no call in
 // flight and no admitted, dispatchable work. A saved rerun or edit is admitted by no one
