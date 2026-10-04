@@ -198,7 +198,7 @@ export function HomeRoute(): ReactElement {
               ) : null}
               {hasWork || active ? null : (
                 <EmptyState title="Nothing needs you and nothing is running">
-                  Start a video with New project, or let a schedule start one.
+                  Start something with Create, or let a schedule start one.
                 </EmptyState>
               )}
             </>
@@ -238,7 +238,7 @@ export function HomeRoute(): ReactElement {
               )}
             </section>
           ) : null}
-          <WeekTotals channelId={current.channelId} />
+          <WeekTotals channelId={current.channelId} channelName={current.channel?.name} />
         </BoardColumn>
       </Board>
     </div>

@@ -26,6 +26,10 @@ export function ThisWeek({ channelId }: { readonly channelId: string | null }): 
   const { api } = useApp();
   const since = startOfWeek().toISOString();
   const week = useQuery(weekQuery(api, since, channelId));
+  // One channel's spend can be $0 while another's is not; the whole account's total sits
+  // beside it so a filtered Home never reads as "nothing was spent".
+  const everything = useQuery({ ...weekQuery(api, since, null), enabled: channelId !== null });
+  const total = channelId === null ? undefined : everything.data;
   return (
     <QueryState
       query={week}
@@ -36,7 +40,12 @@ export function ThisWeek({ channelId }: { readonly channelId: string | null }): 
       {(data) => (
         <Stats className="sl-home-stats">
           <Stat value={String(data.videos)} label="videos made" />
-          <Stat value={money.format(data.cost)} label={spentLabel(data)} />
+          <Stat
+            value={money.format(data.cost)}
+            label={`${spentLabel(data)}${
+              total === undefined ? "" : ` · ${money.format(total.cost)} across all channels`
+            }`}
+          />
           {data.plans
             .filter((plan) => plan.weeklyPercent !== null)
             .map((plan) => {
@@ -74,7 +83,13 @@ function readOpen(): boolean {
 
 // The week's totals on request: folded by default so the work stays first, and remembered in
 // this browser once opened. Folded, nothing is fetched.
-export function WeekTotals({ channelId }: { readonly channelId: string | null }): ReactElement {
+export function WeekTotals({
+  channelId,
+  channelName,
+}: {
+  readonly channelId: string | null;
+  readonly channelName?: string | undefined;
+}): ReactElement {
   const [open, setOpen] = useState(readOpen);
   const id = useId();
   const toggle = (): void => {
@@ -88,7 +103,15 @@ export function WeekTotals({ channelId }: { readonly channelId: string | null })
   };
   return (
     <section aria-label="This week">
-      <SectionHead title="This week" info="home.this-week" meta="Since Monday">
+      <SectionHead
+        title="This week"
+        info="home.this-week"
+        meta={
+          channelId === null
+            ? "Since Monday · every channel"
+            : `Since Monday · ${channelName ?? "this channel"} only`
+        }
+      >
         <Button
           variant="quiet"
           size="small"
