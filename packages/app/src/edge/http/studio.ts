@@ -232,11 +232,13 @@ export function studioRoutes(deps: AppDeps) {
     };
   };
   // A project ready to upload gets its release times from the posting plan when its upload is
-  // prepared (`releases.ts`); one whose long video is on YouTube already keeps what it has.
+  // prepared (`releases.ts`).
+  // A long video already on YouTube keeps when it went up; its shorts still get times.
   const planned = (projectId: string): void => {
-    if (videoOf(deps.db, projectId, null)?.uploadState === "done") return;
+    const long = videoOf(deps.db, projectId, null);
+    const out = long?.uploadState === "done" ? long.recordedAt : undefined;
     const result = uploadPack(deps, projectId);
-    if (!result.ok || result.pack.items[0]?.video == null) return;
+    if (!result.ok || (out === undefined && result.pack.items[0]?.video == null)) return;
     planReleases(
       deps.db,
       readPlan(deps.db),
@@ -244,6 +246,7 @@ export function studioRoutes(deps: AppDeps) {
         id: projectId,
         ...whoOf(projectId, result.pack.series),
         shorts: result.pack.items.filter((item) => item.kind === "short").length,
+        ...(out === undefined ? {} : { longOut: out }),
       },
       deps.clock.now(),
     );

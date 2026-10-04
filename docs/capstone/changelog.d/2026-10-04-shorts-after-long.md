@@ -1,0 +1,1 @@
+- `planReleases` takes `longOut` (a long video on YouTube with no release): kept as its release, shorts planned from max(long, now + lead); `planned` no longer skips projects whose long video is up.

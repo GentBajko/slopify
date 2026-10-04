@@ -157,11 +157,27 @@ export function freeSlots(
 export function planReleases(
   db: DatabaseSync,
   plan: PostingPlan,
-  project: PlanWho & { readonly id: string; readonly shorts: number },
+  project: PlanWho & {
+    readonly id: string;
+    readonly shorts: number;
+    // When the long video went up, for one on YouTube before it had a release time: it is
+    // kept as its release, and its shorts take the line's times from the upload lead on.
+    readonly longOut?: string | undefined;
+  },
   now: Date,
 ): void {
   let releases = releasesOf(db, project.id);
   let long = releases.find((release) => release.short === 0);
+  if (long === undefined && project.longOut !== undefined) {
+    const line =
+      plan.rows.find(
+        (one) => one.schedule !== undefined && fits(one, project) && one.runDay === project.runDay,
+      ) ?? plan.rows.find((one) => fits(one, project));
+    if (line === undefined) return;
+    long = { short: 0, at: project.longOut, line: line.name, by: "plan" };
+    write(db, project.id, long, now);
+    releases = releasesOf(db, project.id);
+  }
   if (long === undefined) {
     // The line of the day its schedule ran comes first, then any line that takes it.
     const slots = freeSlots(db, plan, project, now, 30, project.id);
@@ -182,17 +198,14 @@ export function planReleases(
   for (const release of releases)
     if (release.at !== "") taken.add(Math.floor(Date.parse(release.at) / hourMs));
   const longAt = new Date(long.at);
+  // A short is never due before it could be uploaded in time.
+  const start = Math.max(longAt.getTime(), now.getTime() + readLeadHours(db) * hourMs);
   const times = line.shorts
     .flatMap((slot) =>
-      zonedTimes(
-        zoneOf(plan, line),
-        slot,
-        longAt,
-        new Date(longAt.getTime() + 5 * 7 * 24 * hourMs),
-      ),
+      zonedTimes(zoneOf(plan, line), slot, new Date(start), new Date(start + 5 * 7 * 24 * hourMs)),
     )
     .toSorted((left, right) => left.getTime() - right.getTime());
-  let after = longAt.getTime();
+  let after = start;
   for (let short = 1; short <= project.shorts; short += 1) {
     const kept = releases.find((release) => release.short === short);
     if (kept !== undefined) {

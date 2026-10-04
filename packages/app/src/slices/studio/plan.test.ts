@@ -242,3 +242,17 @@ it("gives a schedule's project its run day's line, in the schedule's zone, and n
   planReleases(store, series, { id: "p3", series: "Tales", shorts: 0 }, now);
   expect(scheduleOf(store, "p3")?.longAt).toBe("2026-10-11T18:00:00.000Z");
 });
+
+it("gives the shorts of a long video already on YouTube times from the upload lead on", () => {
+  const store = db();
+  planReleases(
+    store,
+    plan,
+    { id: "p1", series: "", shorts: 2, longOut: "2026-09-30T18:00:00.000Z" },
+    now,
+  );
+  const placed = scheduleOf(store, "p1");
+  expect(placed?.longAt).toBe("2026-09-30T18:00:00.000Z");
+  // None before Saturday noon (now plus the 24-hour lead), at the line's short times.
+  expect(placed?.shortsAt).toEqual(["2026-10-04T22:00:00.000Z", "2026-10-05T15:00:00.000Z"]);
+});
