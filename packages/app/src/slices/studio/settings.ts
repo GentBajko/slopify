@@ -2,7 +2,13 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { readSetting, writeSetting } from "../settings/repo.js";
-import { type StudioPairingView, type StudioPlaylist, studioPlaylistMax } from "./model.js";
+import {
+  type PlaylistUse,
+  playlistUses,
+  type StudioPairingView,
+  type StudioPlaylist,
+  studioPlaylistMax,
+} from "./model.js";
 
 // Rows of the key/value `settings` table. The playlists travel with a backup; the
 // pairing stays on this machine (`slices/storage/portable.ts`): its token is what lets the
@@ -33,6 +39,7 @@ export const studioPlaylistsMax = 20;
 export const studioPlaylistSchema = z.object({
   name: z.string().trim().min(1).max(studioPlaylistMax),
   byDefault: z.boolean(),
+  for: z.enum(playlistUses).optional(),
 });
 // What a row holds: the list, or the one name a row held before lists.
 export const storedPlaylistsSchema = z.union([
@@ -101,7 +108,12 @@ export function saveStudioPlaylists(
   channelId?: string,
 ): StudioPlaylist[] {
   const value = list
-    .map((one) => ({ name: one.name.trim(), byDefault: one.byDefault }))
+    .map((one) => ({
+      name: one.name.trim(),
+      byDefault: one.byDefault,
+      // "all" is the default, so a list that never narrows stays as it was saved.
+      ...(one.for === undefined || one.for === "all" ? {} : { for: one.for }),
+    }))
     .filter((one) => one.name !== "");
   const key = playlistKey(channelId);
   if (value.length === 0) {
@@ -137,11 +149,12 @@ export function projectPlaylists(
   db: DatabaseSync,
   projectId: string,
   channelId?: string,
-): { readonly name: string; readonly chosen: boolean }[] {
+): { readonly name: string; readonly chosen: boolean; readonly for: PlaylistUse }[] {
   const list = readStudioPlaylists(db, channelId);
   const own = projectChoices(db)[projectId];
   return list.map((one) => ({
     name: one.name,
+    for: one.for ?? "all",
     chosen:
       own === undefined
         ? one.byDefault

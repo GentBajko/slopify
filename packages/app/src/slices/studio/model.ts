@@ -28,10 +28,16 @@ export interface PackFile {
   readonly bytes: number;
 }
 
-// A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not.
+// What a playlist takes: every upload, only long videos, or only shorts.
+export const playlistUses = ["all", "long", "shorts"] as const;
+export type PlaylistUse = (typeof playlistUses)[number];
+
+// A playlist of a channel's list (Settings → YouTube Studio), ticked by default or not, and
+// whether it takes long videos, shorts or both (absent: both, as every list saved before).
 export interface StudioPlaylist {
   readonly name: string;
   readonly byDefault: boolean;
+  readonly for?: PlaylistUse | undefined;
 }
 
 export interface PackItem {

@@ -1,0 +1,1 @@
+- Playlists carry `for` (all, long, shorts); the pack puts the long video and each short into the chosen ones that take it. Extension 1.1.5 ticks None of the above and presses Submit rating in Ad suitability (`rateAdSuitability`), found by text.

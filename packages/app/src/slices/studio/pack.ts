@@ -81,8 +81,15 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
   const channelId = projectChannelId(deps.db, projectId);
   // The channel's playlists (Settings → YouTube Studio), ticked as this project chose.
   const playlistChoices = projectPlaylists(deps.db, projectId, channelId);
-  const playlists = playlistChoices.filter((one) => one.chosen).map((one) => one.name);
+  // The long video goes into the chosen playlists that take long videos, each short into those
+  // that take shorts.
+  const into = (kind: "long" | "shorts") =>
+    playlistChoices
+      .filter((one) => one.chosen && (one.for === "all" || one.for === kind))
+      .map((one) => one.name);
+  const playlists = into("long");
   const playlist = playlists[0] ?? null;
+  const shortPlaylists = into("shorts");
   const missing: string[] = [];
   // The channel's setting, then what the project narrates and shows (`disclosure.ts`).
   const setting = channelById(deps.db, channelId)?.aiDisclosure ?? "auto";
@@ -250,8 +257,8 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       thumbnails: [],
       audience: studioAudience,
       alteredContent: disclosure("short"),
-      playlists,
-      playlist,
+      playlists: shortPlaylists,
+      playlist: shortPlaylists[0] ?? null,
       ...((at) => (at == null ? {} : { scheduleAt: at }))(schedule?.shortsAt[clip.number - 1]),
       ...(longVideo?.uploadState === "done" ? { relatedVideoId: longVideo.videoId } : {}),
     });
@@ -265,7 +272,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
       items,
       ...(schedule === undefined ? {} : { schedule }),
       missing,
-      playlistChoices,
+      playlistChoices: playlistChoices.map(({ name, chosen }) => ({ name, chosen })),
       ...(uploadedClips > 0 ? { footage: { clips: uploadedClips, real: realFootage } } : {}),
     },
   };

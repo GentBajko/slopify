@@ -2,7 +2,14 @@ import { browserApi } from "./browser.js";
 import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
-import { fillSchedule, finishDetails, readAbResult, readMetrics } from "./studio-pages.js";
+import {
+  adSuitabilityShown,
+  fillSchedule,
+  finishDetails,
+  rateAdSuitability,
+  readAbResult,
+  readMetrics,
+} from "./studio-pages.js";
 import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 
 // Runs on studio.youtube.com. When an upload dialog opens on its first step (Select files), it
@@ -637,7 +644,13 @@ function look(): void {
   observer.disconnect();
   // The Visibility step comes after the person presses Next: its schedule is typed in once.
   let scheduled = false;
+  // The Checks step's Ad suitability questions: answered once.
+  let rated = false;
   const closed = setInterval(() => {
+    if (!rated && dialog !== null && shown(dialog) && adSuitabilityShown(dialog)) {
+      rated = true;
+      void rateAdSuitability(dialog).then((step) => toast(step.message, step.ok ? "ok" : "error"));
+    }
     const at = payload?.item.scheduleAt;
     const visibility = dialog?.querySelector("ytcp-video-visibility-select");
     if (

@@ -16,6 +16,7 @@ import { backfillVideos } from "../../slices/studio/backfill.js";
 import { releaseCalendar } from "../../slices/studio/calendar.js";
 import {
   type FillQueueItem,
+  playlistUses,
   studioPlaylistMax,
   studioUploadUrl,
 } from "../../slices/studio/model.js";
@@ -114,6 +115,8 @@ const playlistsBody = z.object({
       z.object({
         name: z.string().max(studioPlaylistMax * 2),
         byDefault: z.boolean(),
+        // Long videos, shorts or both (absent: both).
+        for: z.enum(playlistUses).optional(),
       }),
     )
     .max(studioPlaylistsMax),

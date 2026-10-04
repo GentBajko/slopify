@@ -54,6 +54,73 @@ export function studioTime(at: Date): string {
   }).format(at);
 }
 
+// ---- ad suitability ------------------------------------------------------------------------
+
+// Whether the upload dialog shows Studio's Ad suitability questions (the Checks step's
+// self-rating): a heading or section saying "Ad suitability" with a "None of the above" box.
+export function adSuitabilityShown(dialog: Element): boolean {
+  return noneOfTheAbove(dialog) !== undefined && submitRating(dialog) !== undefined;
+}
+
+// The "None of the above" box: a checkbox whose own text or label reads so (Studio's
+// checkboxes are custom elements; the text sits beside the box, inside the same element).
+function noneOfTheAbove(dialog: Element): Element | undefined {
+  const boxes = [
+    ...dialog.querySelectorAll(
+      'ytcp-checkbox-lit, tp-yt-paper-checkbox, [role="checkbox"], input[type="checkbox"]',
+    ),
+  ].filter(laidOut);
+  const text = (one: Element): string =>
+    [one.getAttribute("aria-label"), one.textContent, one.closest("label")?.textContent]
+      .map((part) => (part ?? "").replace(/\s+/g, " ").trim())
+      .join(" ");
+  return (
+    boxes.find((one) =>
+      /^none of the above$/i.test((one.textContent ?? "").replace(/\s+/g, " ").trim()),
+    ) ?? boxes.find((one) => /\bnone of the above\b/i.test(text(one)))
+  );
+}
+
+const submitRating = (dialog: Element): Element | undefined =>
+  byText(dialog, "ytcp-button, button, [role='button']", /^submit rating$/i);
+
+function ticked(box: Element): boolean {
+  const inner = box.querySelector('[role="checkbox"]') ?? box;
+  return (
+    inner.getAttribute("aria-checked") === "true" ||
+    box.hasAttribute("checked") ||
+    (box as HTMLInputElement).checked === true
+  );
+}
+
+// Ad suitability: ticks "None of the above" (the video shows none of the listed content) and
+// presses Submit rating, as the person asked every upload to do. Never presses Next or Publish.
+export async function rateAdSuitability(dialog: Element): Promise<Step> {
+  const byHand = (why: string): Step => ({
+    ok: false,
+    message: `${why} In Ad suitability, tick None of the above and press Submit rating by hand.`,
+  });
+  const box = noneOfTheAbove(dialog);
+  if (box === undefined) return byHand("Studio's None of the above box wasn't found.");
+  if (!ticked(box)) {
+    press(box.querySelector('[role="checkbox"]') ?? box);
+    if ((await until(() => (ticked(box) ? true : null), 3000)) === null)
+      return byHand("Studio didn't tick None of the above.");
+  }
+  const submit = submitRating(dialog);
+  if (submit === undefined) return byHand("Studio's Submit rating button wasn't found.");
+  if (submit.hasAttribute("disabled") || submit.getAttribute("aria-disabled") === "true")
+    return byHand("Studio's Submit rating button isn't enabled.");
+  press(submit);
+  const gone = await until(() => (laidOut(submit) ? null : true), 5000);
+  return gone === null
+    ? {
+        ok: true,
+        message: "Ticked None of the above and pressed Submit rating. Check it in Studio.",
+      }
+    : { ok: true, message: "Ad suitability: None of the above, rating submitted." };
+}
+
 // The Visibility step: opens Schedule and types the date and time. The person presses Schedule.
 export async function fillSchedule(dialog: Element, at: Date): Promise<Step> {
   const when = `${studioDate(at)}, ${studioTime(at)}`;

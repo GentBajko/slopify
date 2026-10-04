@@ -138,6 +138,21 @@ function Playlists() {
               />
               On by default
             </label>
+            <Select
+              aria-label={`${row.name.trim() || `Playlist ${String(at + 1)}`}: takes`}
+              className="w-[190px]"
+              value={row.for ?? "all"}
+              onChange={(event) => {
+                const use = event.currentTarget.value;
+                const next = use === "long" || use === "shorts" ? use : "all";
+                change(rows.map((one, i) => (i === at ? { ...one, for: next } : one)));
+              }}
+              options={[
+                { value: "all", label: "Videos and shorts" },
+                { value: "long", label: "Long videos only" },
+                { value: "shorts", label: "Shorts only" },
+              ]}
+            />
             <Button
               variant="quiet"
               size="small"

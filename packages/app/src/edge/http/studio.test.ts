@@ -594,6 +594,30 @@ describe("a playlist per channel", () => {
   const put = (body: unknown): RequestInit => ({ ...json(body), method: "PUT" });
   const defaultChannel = "00000000-0000-4000-8000-000000000001";
 
+  it("puts shorts only into the playlists that take shorts, and the video into its own", async () => {
+    const h = harness();
+    finished(h.output);
+    await h.call(
+      "/settings/playlists",
+      put({
+        playlists: [
+          { name: "Fox tales", byDefault: true, for: "long" },
+          { name: "Fox shorts", byDefault: true, for: "shorts" },
+          { name: "Everything", byDefault: true },
+        ],
+      }),
+    );
+    const items = ((await (await h.call("/packs/p1")).json()) as UploadPack).items;
+    expect(items.find((item) => item.kind === "video")?.playlists).toEqual([
+      "Fox tales",
+      "Everything",
+    ]);
+    expect(items.find((item) => item.kind === "short")).toMatchObject({
+      playlists: ["Fox shorts", "Everything"],
+      playlist: "Fox shorts",
+    });
+  });
+
   it("names the channel's own playlists, else the default list", async () => {
     const h = harness();
     finished(h.output);
