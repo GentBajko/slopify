@@ -54,44 +54,72 @@ export function studioTime(at: Date): string {
   }).format(at);
 }
 
-// ---- ad suitability ------------------------------------------------------------------------
+// ---- monetization and ad suitability -------------------------------------------------------
 
-// Whether the upload dialog shows Studio's Ad suitability questions (the Checks step's
-// self-rating): a heading or section saying "Ad suitability" with a "None of the above" box.
+// Read on the live upload dialog on 2026-10-04. A long video's Monetization step shows
+// "Select" until a choice is made; its arrow (`ytcp-icon-button`) opens a dialog with On and
+// Off radios and a Done button (`#save-button`, pressed as a save). Choosing On adds the Ad
+// suitability step: a questionnaire with a "None of the above" box and a Submit rating button
+// that is enabled once the box is ticked; once submitted, the questionnaire says it is locked.
+// Shorts have no choice to make there.
+
+const monetization = (dialog: Element): Element | undefined =>
+  shownIn(dialog, "ytcp-video-monetization");
+
+// Whether the Monetization step waits for its first choice.
+export function monetizationUnset(dialog: Element): boolean {
+  const field = monetization(dialog);
+  return field !== undefined && /^\s*select\s*$/i.test(field.textContent ?? "");
+}
+
+// Turns Watch Page ads on: opens the choice, picks On and presses Done.
+export async function monetizationOn(dialog: Element): Promise<Step> {
+  const byHand = (why: string): Step => ({
+    ok: false,
+    message: `${why} In Monetization, open Select, choose On and press Done by hand.`,
+  });
+  const field = monetization(dialog);
+  const arrow = field?.querySelector("ytcp-icon-button");
+  if (field === undefined || arrow === null || arrow === undefined)
+    return byHand("Studio's Monetization choice wasn't found.");
+  press(arrow);
+  const edit = await until(
+    () => shownIn(document, "ytcp-video-monetization-edit-dialog tp-yt-paper-dialog"),
+    4000,
+  );
+  if (edit === null) return byHand("Studio's Monetization choice didn't open.");
+  const on = edit.querySelector("tp-yt-paper-radio-button#radio-on");
+  if (on === null) return byHand("Studio's On choice wasn't found.");
+  if (on.getAttribute("aria-checked") !== "true") press(on);
+  if (
+    (await until(() => (on.getAttribute("aria-checked") === "true" ? true : null), 3000)) === null
+  )
+    return byHand("Studio didn't take On.");
+  const done = edit.querySelector("ytcp-button#save-button");
+  if (done === null) return byHand("Studio's Done button wasn't found.");
+  pressToSave(done.querySelector("button") ?? done);
+  const closed = await until(() => (laidOut(edit) ? null : true), 4000);
+  if (closed === null || !/^\s*on\s*$/i.test(field.textContent ?? ""))
+    return byHand("Studio didn't keep On.");
+  return {
+    ok: true,
+    message: "Monetization set to On. Press Next to answer Ad suitability.",
+  };
+}
+
+const questionnaire = (dialog: Element): Element | undefined =>
+  shownIn(dialog, "ytpp-self-certification-questionnaire");
+
+// Whether the Ad suitability questions show and still wait for an answer.
 export function adSuitabilityShown(dialog: Element): boolean {
-  return noneOfTheAbove(dialog) !== undefined && submitRating(dialog) !== undefined;
+  const questions = questionnaire(dialog);
+  return questions !== undefined && !locked(questions);
 }
 
-// The "None of the above" box: a checkbox whose own text or label reads so (Studio's
-// checkboxes are custom elements; the text sits beside the box, inside the same element).
-function noneOfTheAbove(dialog: Element): Element | undefined {
-  const boxes = [
-    ...dialog.querySelectorAll(
-      'ytcp-checkbox-lit, tp-yt-paper-checkbox, [role="checkbox"], input[type="checkbox"]',
-    ),
-  ].filter(laidOut);
-  const text = (one: Element): string =>
-    [one.getAttribute("aria-label"), one.textContent, one.closest("label")?.textContent]
-      .map((part) => (part ?? "").replace(/\s+/g, " ").trim())
-      .join(" ");
-  return (
-    boxes.find((one) =>
-      /^none of the above$/i.test((one.textContent ?? "").replace(/\s+/g, " ").trim()),
-    ) ?? boxes.find((one) => /\bnone of the above\b/i.test(text(one)))
+const locked = (questions: Element): boolean =>
+  /locked since you have submitted/i.test(
+    (questions.closest("ytcp-uploads-content-ratings") ?? questions).textContent ?? "",
   );
-}
-
-const submitRating = (dialog: Element): Element | undefined =>
-  byText(dialog, "ytcp-button, button, [role='button']", /^submit rating$/i);
-
-function ticked(box: Element): boolean {
-  const inner = box.querySelector('[role="checkbox"]') ?? box;
-  return (
-    inner.getAttribute("aria-checked") === "true" ||
-    box.hasAttribute("checked") ||
-    (box as HTMLInputElement).checked === true
-  );
-}
 
 // Ad suitability: ticks "None of the above" (the video shows none of the listed content) and
 // presses Submit rating, as the person asked every upload to do. Never presses Next or Publish.
@@ -100,25 +128,27 @@ export async function rateAdSuitability(dialog: Element): Promise<Step> {
     ok: false,
     message: `${why} In Ad suitability, tick None of the above and press Submit rating by hand.`,
   });
-  const box = noneOfTheAbove(dialog);
-  if (box === undefined) return byHand("Studio's None of the above box wasn't found.");
-  if (!ticked(box)) {
-    press(box.querySelector('[role="checkbox"]') ?? box);
-    if ((await until(() => (ticked(box) ? true : null), 3000)) === null)
-      return byHand("Studio didn't tick None of the above.");
-  }
-  const submit = submitRating(dialog);
-  if (submit === undefined) return byHand("Studio's Submit rating button wasn't found.");
-  if (submit.hasAttribute("disabled") || submit.getAttribute("aria-disabled") === "true")
-    return byHand("Studio's Submit rating button isn't enabled.");
-  press(submit);
-  const gone = await until(() => (laidOut(submit) ? null : true), 5000);
-  return gone === null
-    ? {
-        ok: true,
-        message: "Ticked None of the above and pressed Submit rating. Check it in Studio.",
-      }
-    : { ok: true, message: "Ad suitability: None of the above, rating submitted." };
+  const questions = questionnaire(dialog);
+  if (questions === undefined) return byHand("Studio's Ad suitability questions weren't found.");
+  if (locked(questions)) return { ok: true, message: "Ad suitability was already submitted." };
+  const box = questions.querySelector("ytcp-checkbox-lit.all-none-checkbox");
+  const tick = box?.querySelector('#checkbox[role="checkbox"]') ?? box;
+  if (tick === null || tick === undefined)
+    return byHand("Studio's None of the above box wasn't found.");
+  const ticked = () => tick.getAttribute("aria-checked") === "true" || box?.hasAttribute("checked");
+  if (!ticked()) press(tick);
+  if ((await until(() => (ticked() ? true : null), 3000)) === null)
+    return byHand("Studio didn't tick None of the above.");
+  const submit = questions.querySelector("ytcp-button#submit-questionnaire-button");
+  if (submit === null) return byHand("Studio's Submit rating button wasn't found.");
+  const enabled = () =>
+    !submit.hasAttribute("disabled") && submit.getAttribute("aria-disabled") !== "true";
+  if ((await until(() => (enabled() ? true : null), 3000)) === null)
+    return byHand("Studio's Submit rating button didn't enable.");
+  press(submit.querySelector("button") ?? submit);
+  if ((await until(() => (locked(questions) ? true : null), 6000)) === null)
+    return byHand("Studio didn't confirm the rating.");
+  return { ok: true, message: "Ad suitability: None of the above, rating submitted." };
 }
 
 const monthShort = (at: Date): string =>

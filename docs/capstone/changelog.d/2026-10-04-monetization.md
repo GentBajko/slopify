@@ -1,0 +1,1 @@
+- Extension 1.1.7: `monetizationOn` (Select → On → Done) on a long video's Monetization step; Ad suitability uses the live selectors (`ytcp-checkbox-lit.all-none-checkbox`, `#submit-questionnaire-button`, "locked since you have submitted").

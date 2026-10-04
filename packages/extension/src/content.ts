@@ -6,6 +6,8 @@ import {
   adSuitabilityShown,
   fillSchedule,
   finishDetails,
+  monetizationOn,
+  monetizationUnset,
   rateAdSuitability,
   readAbResult,
   readMetrics,
@@ -650,9 +652,20 @@ function look(): void {
   observer.disconnect();
   // The Visibility step comes after the person presses Next: its schedule is typed in once.
   let scheduled = false;
-  // The Checks step's Ad suitability questions: answered once.
+  // A long video's Monetization step: turned on once. Ad suitability: answered once.
+  let monetized = false;
   let rated = false;
   const closed = setInterval(() => {
+    if (
+      !monetized &&
+      payload?.item.kind === "video" &&
+      dialog !== null &&
+      shown(dialog) &&
+      monetizationUnset(dialog)
+    ) {
+      monetized = true;
+      void monetizationOn(dialog).then((step) => toast(step.message, step.ok ? "ok" : "error"));
+    }
     if (!rated && dialog !== null && shown(dialog) && adSuitabilityShown(dialog)) {
       rated = true;
       void rateAdSuitability(dialog).then((step) => toast(step.message, step.ok ? "ok" : "error"));
