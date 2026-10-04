@@ -18,6 +18,14 @@ export function backfillVideos(deps: PackDeps, rows: readonly StudioRow[], at: s
   const byTitle = new Map<string, string>();
   for (const row of rows) byTitle.set(norm(row.title), row.videoId);
   if (byTitle.size === 0) return 0;
+  // A video already linked to an upload is never claimed by another: two projects can have a
+  // short with the same title (a remake of a topic), and only one of them made that video.
+  const taken = new Set(
+    deps.db
+      .prepare("SELECT video_id FROM youtube_videos")
+      .all()
+      .map((row) => String(row.video_id)),
+  );
   let found = 0;
   for (const project of listProjects(deps.db)) {
     const known = projectVideos(deps.db, project.id).filter((one) => one.uploadState === "done");
@@ -28,8 +36,9 @@ export function backfillVideos(deps: PackDeps, rows: readonly StudioRow[], at: s
       if (known.some((one) => one.short === short)) continue;
       const titles = item.pickable?.titles ?? [item.title, ...item.titles];
       const videoId = titles.map((one) => byTitle.get(norm(one))).find((one) => one !== undefined);
-      if (videoId === undefined) continue;
+      if (videoId === undefined || taken.has(videoId)) continue;
       recordVideo(deps.db, project.id, short, videoId, at);
+      taken.add(videoId);
       found += 1;
     }
   }

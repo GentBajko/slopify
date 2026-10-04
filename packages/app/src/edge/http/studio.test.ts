@@ -978,6 +978,35 @@ it("fills in links from Studio's Content list by title, never over a known one",
   );
 });
 
+it("never links one Studio video to two uploads that share a title", async () => {
+  const h = harness();
+  finished(h.output);
+  const token = await paired(h);
+  const pack = (await (await h.call("/packs/p1")).json()) as {
+    items: { kind: string; short?: number; title: string }[];
+  };
+  const video = pack.items.find((item) => item.kind === "video");
+  const short = pack.items.find((item) => item.kind === "short");
+  if (video === undefined || short === undefined) throw new Error("fixture lacks an item");
+  const answer = await h.call("/ext/backfill", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      origin: extension,
+      "content-type": "application/json",
+    },
+    // Studio lists the same video under both titles only in this test; in life it is two
+    // projects with a short of the same name, and one video id.
+    body: JSON.stringify({
+      videos: [
+        { title: video.title, videoId: "aaaaaaaaaaa" },
+        { title: short.title, videoId: "aaaaaaaaaaa" },
+      ],
+    }),
+  });
+  expect(await answer.json()).toEqual({ found: 1 });
+});
+
 describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
   const extHeaders = (token: string) => ({
     authorization: `Bearer ${token}`,
