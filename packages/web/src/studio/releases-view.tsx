@@ -48,10 +48,13 @@ function look(item: CalendarItem): { readonly tone: BadgeTone; readonly word: st
     case "not-ready":
       return { tone: "neutral", word: "Not rendered yet" };
     default:
-      return {
-        tone: "waiting",
-        word: item.uploadBy === null ? "No time" : `Upload by ${when(item.uploadBy)}`,
-      };
+      // Ready to upload now; the deadline is only the latest time, so it turns orange only in
+      // its last day.
+      return item.uploadBy === null
+        ? { tone: "neutral", word: "No time" }
+        : Date.parse(item.uploadBy) - Date.now() < 864e5
+          ? { tone: "waiting", word: `Upload soon · before ${when(item.uploadBy)}` }
+          : { tone: "neutral", word: `Ready · upload before ${when(item.uploadBy)}` };
   }
 }
 
@@ -154,7 +157,10 @@ function ItemCell({
   const label = item.short === 0 ? "Long video" : `Short ${String(item.short)}`;
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
-      <span className="text-small text-ink-3">{label}</span>
+      <span className="text-small text-ink-3">
+        {label}
+        {item.at === null ? "" : " · goes public"}
+      </span>
       {item.short === 0 ? null : (
         <span className="w-full truncate text-small" title={item.title}>
           {item.title}
