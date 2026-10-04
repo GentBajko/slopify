@@ -118,17 +118,18 @@ const plain = (text: string): string[] =>
     .split(/\s+/)
     .filter((word) => word !== "");
 
-// Which narration chunk a line was spoken from: the first chunk whose words hold the line's
-// opening words in order. The spoken text can differ slightly from the chunk (numbers read
-// out), so it tries the first five words, then the first three.
-export function chunkOfLine(
-  chunks: readonly { readonly text: string }[],
-  line: string,
-  from = 0,
-): number | undefined {
+// The narration chunks' words, cleaned once: matching ~2,000 lines against them must not clean
+// every chunk again for each line (that froze a two-hour project's page for seconds).
+export function chunkTexts(chunks: readonly { readonly text: string }[]): readonly string[] {
+  return chunks.map((chunk) => ` ${plain(chunk.text).join(" ")} `);
+}
+
+// Which narration chunk a line was spoken from: the first chunk (from `from` on, then the ones
+// before) whose words hold the line's opening words in order. The spoken text can differ slightly
+// from the chunk (numbers read out), so it tries the first five words, then the first three.
+export function chunkOfLine(texts: readonly string[], line: string, from = 0): number | undefined {
   const words = plain(line);
   if (words.length === 0) return undefined;
-  const texts = chunks.map((chunk) => ` ${plain(chunk.text).join(" ")} `);
   for (const size of [5, 3]) {
     const needle = ` ${words.slice(0, size).join(" ")} `;
     for (let index = from; index < texts.length; index++)

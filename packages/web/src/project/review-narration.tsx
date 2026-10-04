@@ -10,6 +10,7 @@ import { useOutputText } from "./parts.js";
 import { focusPiece } from "./review-focus.js";
 import {
   chunkOfLine,
+  chunkTexts,
   placeLine,
   type SpokenSegment,
   segmentStarts,
@@ -115,6 +116,7 @@ export function useNarrationTiming(
     const marks: Partial<Record<SpokenSegment, PlayerChapter[]>> = {};
     const chunkOf = new Map<string, number>();
     let lastChunk = -1;
+    const texts = chunkTexts(chunks);
     if (starts !== undefined)
       for (const [index, line] of timed.entries()) {
         const placed = placeLine(line, starts, seconds);
@@ -129,7 +131,7 @@ export function useNarrationTiming(
           media: refs[placed.segment],
           speaker: speaker(line.speaker),
         });
-        const chunk = chunkOfLine(chunks, line.text, Math.max(0, lastChunk));
+        const chunk = chunkOfLine(texts, line.text, Math.max(0, lastChunk));
         if (chunk === undefined) continue;
         chunkOf.set(key, chunk);
         if (chunk !== lastChunk && chunks.length > 1) {

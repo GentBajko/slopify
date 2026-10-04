@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { thumbnailProblem } from "./review-thumbnail.js";
-import { chunkOfLine, lineAt, placeLine, segmentStarts, timedLines } from "./review-timing.js";
+import {
+  chunkOfLine,
+  chunkTexts,
+  lineAt,
+  placeLine,
+  segmentStarts,
+  timedLines,
+} from "./review-timing.js";
 
 const timing = JSON.stringify({
   words: [
@@ -70,11 +77,11 @@ describe("chunkOfLine", () => {
     { text: "Nobody remembered who had built it, or why." },
   ];
   it("finds the chunk a line was spoken from, ignoring case and punctuation", () => {
-    expect(chunkOfLine(chunks, "nobody remembered who had built it")).toBe(1);
-    expect(chunkOfLine(chunks, "The tower stood alone, on the hill")).toBe(0);
+    expect(chunkOfLine(chunkTexts(chunks), "nobody remembered who had built it")).toBe(1);
+    expect(chunkOfLine(chunkTexts(chunks), "The tower stood alone, on the hill")).toBe(0);
   });
   it("is none for words no chunk holds", () => {
-    expect(chunkOfLine(chunks, "Something else entirely")).toBeUndefined();
+    expect(chunkOfLine(chunkTexts(chunks), "Something else entirely")).toBeUndefined();
   });
 });
 

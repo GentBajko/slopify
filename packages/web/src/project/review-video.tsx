@@ -4,7 +4,7 @@ import { type ReactElement, type RefObject, useCallback, useMemo } from "react";
 import { Button } from "@/components/kit/button";
 import { type PlayerChapter, playerTime } from "@/components/kit/player";
 import { useNarrationChunks, useTimedLines } from "./review-narration.js";
-import { chunkOfLine } from "./review-timing.js";
+import { chunkOfLine, chunkTexts } from "./review-timing.js";
 import { playFrom, speakerNames, Transcript, type TranscriptLine } from "./review-transcript.js";
 
 // Under the finished video (or combined audio): its chapters and the narration's transcript,
@@ -40,7 +40,7 @@ export function VideoReview({
     }));
   }, [timed, media, voices]);
   const fix = useCallback(
-    (line: TranscriptLine) => open?.(chunkOfLine(chunks, line.text)),
+    (line: TranscriptLine) => open?.(chunkOfLine(chunkTexts(chunks), line.text)),
     [open, chunks],
   );
   const conversation = voices?.format === "podcast" || voices?.format === "interview";
