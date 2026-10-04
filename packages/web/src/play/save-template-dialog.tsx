@@ -107,7 +107,7 @@ export function SaveTemplateDialog({
         if (!next) close();
       }}
       title="Save as template"
-      description="Keeps this setup's prompts, voice, images, style, outputs and reviews to start the next video from."
+      description="Saves this setup's prompts, voice, images, style, outputs and reviews as a new template. Projects you start from it, and schedules you point at it, use it; this project and earlier ones stay as they are."
       footer={
         <>
           <Button variant="secondary" onClick={close}>

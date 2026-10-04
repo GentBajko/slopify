@@ -5,6 +5,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
   useState,
@@ -16,7 +17,8 @@ import { type ChannelSummary, channelsQuery } from "./api.js";
 
 // The channel the person is looking at, picked in the rail. Home, the calendar and Projects
 // show only its work; "All channels" (null) shows everything. The choice is this browser's
-// own and survives a reload; storage can be missing or throw, and the picker still works.
+// own, shared by its tabs, and survives a reload; storage can be missing or throw, and the
+// picker still works.
 
 const storageKey = "slopify.channel";
 
@@ -51,6 +53,16 @@ export function CurrentChannelProvider({ children }: { readonly children: ReactN
     picked !== null && channels.data !== undefined && !list.some((one) => one.id === picked)
       ? null
       : picked;
+  // The choice belongs to the browser, not the tab: a pick made in another Slopify tab is
+  // followed here too, so two tabs never quietly show different channels' work.
+  useEffect(() => {
+    const follow = (event: StorageEvent) => {
+      if (event.key !== storageKey && event.key !== null) return;
+      setPicked(stored());
+    };
+    window.addEventListener("storage", follow);
+    return () => window.removeEventListener("storage", follow);
+  }, []);
   const setChannelId = useCallback((id: string | null) => {
     setPicked(id);
     try {

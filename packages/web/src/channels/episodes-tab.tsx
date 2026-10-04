@@ -5,9 +5,10 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { Field, Textarea } from "@/components/kit/field";
+import { Field, Input, Textarea } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Switch } from "@/components/kit/switch";
+import { episodeDeleteConsequence, episodeDeleteTitle } from "./delete-copy";
 import {
   deleteEpisodeMemory,
   type EpisodeMemory,
@@ -16,6 +17,19 @@ import {
   saveEpisodeSummary,
   setEpisodeMemory,
 } from "./memory-api";
+
+// The episodes whose title, cast or summary hold every word typed, any case.
+export function matchingEpisodes(
+  memories: readonly EpisodeMemory[],
+  search: string,
+): readonly EpisodeMemory[] {
+  const words = search.trim().toLowerCase().split(/\s+/u).filter(Boolean);
+  if (words.length === 0) return memories;
+  return memories.filter((memory) => {
+    const text = [memory.title, memory.summary, ...memory.cast].join(" ").toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+}
 
 const preview = (text: string): string => (text.length > 160 ? `${text.slice(0, 160)}…` : text);
 
@@ -41,6 +55,8 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
   });
   const enabled = read.data?.enabled ?? false;
   const memories = read.data?.memories ?? [];
+  const [search, setSearch] = useState("");
+  const found = matchingEpisodes(memories, search);
   return (
     <div>
       <Switch
@@ -68,8 +84,30 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
         </EmptyState>
       ) : null}
       {memories.length > 0 ? (
+        <div className="mt-2 mb-2 flex flex-wrap items-center gap-3">
+          <Input
+            type="search"
+            aria-label="Search episode summaries"
+            placeholder="Search episode summaries"
+            value={search}
+            className="w-full min-w-0 sm:w-64"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <span className="text-small text-ink-2" role="status">
+            {search.trim() === ""
+              ? `${String(memories.length)} ${memories.length === 1 ? "episode" : "episodes"}`
+              : `${String(found.length)} of ${String(memories.length)} match`}
+          </span>
+        </div>
+      ) : null}
+      {memories.length > 0 && found.length === 0 ? (
+        <EmptyState title="No episode matches">
+          {`No title, cast member or summary contains “${search.trim()}”. Clear the search to see every episode.`}
+        </EmptyState>
+      ) : null}
+      {found.length > 0 ? (
         <List label="Episode summaries">
-          {memories.map((memory) => (
+          {found.map((memory) => (
             <ListRow
               key={memory.id}
               title={memory.title}
@@ -116,11 +154,8 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
       ) : null}
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete the summary of ${deleting?.title ?? "this episode"}?`}
-        consequence={
-          remove.error?.message ??
-          "New episodes stop being reminded of it. The video itself is not changed."
-        }
+        title={episodeDeleteTitle(deleting?.title)}
+        consequence={remove.error?.message ?? episodeDeleteConsequence}
         confirmLabel="Delete summary"
         pending={remove.isPending}
         onConfirm={() => {

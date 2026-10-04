@@ -16,16 +16,16 @@ From top to bottom:
 | --- | --- |
 | Logo | The Slopify play logo and name, with the version you are running beside it (for example `v3.0.0`). Click it to go Home. |
 | **Search or run a command** | Opens the command palette (`Ctrl+K`). |
-| Destinations | **Home**, **Projects**, **Calendar** (also lit on Schedules), **Channels**, **Library** (Prompts, Intros & Outros, Templates, Document themes, Narration aliases), **Settings** (also lit on Usage). |
+| Destinations | **Home**, **Projects**, **Calendar** (also lit on Schedules), **Channels**, **Library** (Templates; Prompts, Intros & outros, PDF themes, Narration aliases; A/B results), **Settings** (also lit on Usage). |
 | **N running** | Shown while runs are going. It links to Running now on Home. |
 | **Channel** | The channel picker (see below). |
-| **New project** | Opens Play (`C` from anywhere). |
+| **Create** | Opens Play to make a new project (`C` from anywhere). |
 | Links | **GitHub**, **Patreon** and **Buy Me a Coffee**, each opening in a new tab. |
-| Foot | "Free. Your keys, your machine.", the updates button (circular arrows, see [Updating and Patch Notes](Updating-and-Patch-Notes)) and the tutorial button (question mark, **Start interactive tutorial**). |
+| Foot | "Free. Your keys, your machine.", the updates button (circular arrows, see [Updating and Patch Notes](Updating-and-Patch-Notes)), the **Tutorials** button (book, the guides; its page also has **Welcome screen**) and the tutorial button (question mark, **Start interactive tutorial**). |
 
 ### On a phone
 
-Below 768 pixels wide the sidebar is hidden. A slim bar at the top holds the logo, the search button, the running count, the GitHub, Patreon and Buy Me a Coffee icons, the updates button and the tutorial button. A bottom bar has five destinations: Home, Projects, Calendar, Library and Settings. Channels is reachable from the command palette, and the Channel picker sits at the top of Home.
+Below 768 pixels wide the sidebar is hidden. A slim bar at the top holds the logo, the search button, the running count, the GitHub, Patreon and Buy Me a Coffee icons, the updates button and the tutorial button. A bottom bar has all six destinations: Home, Projects, Calendar, Channels, Library and Settings. The Channel picker sits at the top of Home.
 
 ### Rows open with one press
 
@@ -33,7 +33,7 @@ In every list, a press anywhere on a row or tile opens or picks it, not only on 
 
 ### The command palette
 
-Press `Ctrl+K`, or click **Search or run a command**, to jump anywhere or run an action by typing. The **Go to** group has **Open home**, **Open projects**, **Open calendar**, **Open schedules**, **Open channels**, **Open library**, **Open settings**, **Open usage and costs** and **Show patch notes**. **New project** opens Play. The **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
+Press `Ctrl+K`, or click **Search or run a command**, to jump anywhere or run an action by typing. The **Go to** group has **Open home**, **Open projects**, **Open calendar**, **Open schedules**, **Open channels**, **Open library**, **Open settings**, **Open usage and costs**, **Open tutorials** and **Show patch notes**. **Create** opens Play. The **Channel** group has **Show all channels** and **Switch to <channel>**. See [Keyboard Shortcuts and Command Palette](Keyboard-Shortcuts-and-Command-Palette).
 
 ### The Channel picker
 
@@ -49,7 +49,7 @@ On a fresh install, Home sends you to the first-run screen once. See [First Laun
 
 ### Needs you
 
-Things that don't move on until you act:
+One work list: the things that don't move on until you act, then the finished videos ready to upload.
 
 | Item | Status | Button |
 | --- | --- | --- |
@@ -57,10 +57,11 @@ Things that don't move on until you act:
 | A run whose next step is held another way | **Waiting for you** | **Open to continue** |
 | A run you paused | **Paused** | **Open to continue** |
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
-| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Storage when that is the fix, otherwise **Open to retry**. |
+| A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `gemini`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
+| A finished video you have not marked uploaded | **Ready to upload** | **Prepare upload** lists everything YouTube Studio asks for, with Copy buttons (Slopify never uploads for you; see [Publishing to YouTube](Publishing-to-YouTube)). **Mark uploaded** takes it off the list, with **Undo** in the notice; Projects still has it. |
 
-Up to 4 failed runs show here. Only the first item's button is lime; the rest are plain buttons. The heading says how many things are waiting, or **Nothing is waiting for a decision**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
+Up to 4 failed runs and 4 videos ready to upload show here; **See all N ready to upload** opens Projects filtered to them. The bundled samples never show as ready to upload. Only the first item's button is lime; the rest are plain buttons. The heading says how many decisions are waiting and how many videos are ready to upload. With nothing waiting and nothing running, Home says **Nothing needs you and nothing is running**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running now
 
@@ -74,13 +75,6 @@ Time left comes from the step's own pace once it has counted something, otherwis
 ### Coming up
 
 The schedule runs due in the next 7 days, with the template and topic each will use, up to 6. Paused schedules show too. **Calendar** opens the calendar to plan or move runs. With none it says **No scheduled runs this week. Plan some on the calendar.** See [Calendar](Calendar).
-
-### Ready to upload
-
-Finished videos you have not marked uploaded, up to 4. The bundled samples never show here.
-
-- **Prepare upload** lists everything YouTube Studio asks for, with Copy buttons. Slopify never uploads for you. See [Publishing to YouTube](Publishing-to-YouTube).
-- **Mark uploaded** takes the video off this list. Projects still has it.
 
 ### This week
 
@@ -98,7 +92,7 @@ See [Costs and Run Cost](Costs-and-Run-Cost).
 
 **Where to find it:** the sidebar → **Projects**.
 
-Every run ever started, newest first, for the channel picked in the sidebar. The heading says how many projects there are and for which channel. **New project** opens Play.
+Every run ever started, newest first unless you pick another order, for the channel picked in the sidebar. The heading says how many projects there are and for which channel. **New project** opens Play.
 
 ### Search and filter
 
@@ -114,7 +108,9 @@ Every run ever started, newest first, for the channel picked in the sidebar. The
 | **Ready to upload** | Finished videos not marked uploaded. |
 | **Failed** | Failed projects and those **Done with problems**. |
 
-The filter is part of the address, so a link can open Projects on it: `/projects?show=running`, `queued`, `waiting` (Needs you), `ready` or `failed`. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
+3. Pick an order beside the filter: **Newest first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
+
+The search, the filter and the order are part of the address, so Back from a project, a reload or a link opens Projects the same way: `/projects?show=running` (`queued`, `waiting` for Needs you, `ready` or `failed`), `?q=` for the search words and `?sort=changed`, `name` or `status`. The list draws 50 projects at a time; **Show N more** under it adds the next ones. Press `/` to jump to the search box. The command palette has shortcuts: **Show projects that need you**, **Show videos ready to upload** and **Show failed projects**.
 
 On a wide screen, **At a glance** beside the list counts the projects under each filter.
 
@@ -122,7 +118,8 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 
 ### What each row shows
 
-- The title, with a **Sample** badge on the bundled samples. A press anywhere on the row opens the project.
+- A checkbox to select it (see [Work on several projects at once](#work-on-several-projects-at-once)).
+- The title, with a **Sample** badge on the bundled samples. A press anywhere on the row opens the project. A long title is cut short; hover it to read all of it.
 - For an audiobook that is a chapter of a book, **Book · Chapter N**.
 - What it was made of and when: the article prompt and format, for example `Documentary dossier · 16:9 · started …`.
 - A progress bar with **N% done** while it runs.
@@ -137,20 +134,34 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | **Done** | Finished. |
 | **Done with problems** | Finished, but part of it failed. |
 | **Failed** | Stopped with an error. |
-| **Canceled** | You cancelled it. |
+| **Canceled** | You canceled it. |
 
-- **Mark uploaded** on a finished video; once marked, an **Uploaded** badge with **Undo**.
+- **Mark uploaded** on a finished video; once marked, an **Uploaded** badge. For a day after marking, **Undo upload mark** puts it back on Ready to upload; after that, select it and press **Mark not uploaded**.
 - The delete button (bin icon).
+
+### Work on several projects at once
+
+Tick the checkbox on each row you want, or **Select all** above the list (it covers the rows shown: a search, a filter or Show more changes which). Shift+click ticks every row between two; Esc clears the selection. The bar above the list says how many are selected and offers:
+
+| Button | Does |
+| --- | --- |
+| **Mark uploaded** | Marks the selected finished videos uploaded. The others are left as they are. |
+| **Mark not uploaded** | Shown when a selected video is marked uploaded; puts it back on Ready to upload. |
+| **Move to channel…** then **Move to <channel>** | Moves the selected projects to another channel (with more than one channel). |
+| **Delete** | Asks first, then moves the selected projects to the trash. Running projects stay: cancel the run first. |
+| **Clear selection** | Unticks everything. |
+
+Each one says what it did in a notice with **Undo**: Undo after a delete restores the projects from the trash; after a move it sends each project back to its channel. There is no way to re-run several projects at once: each run costs money and is started from its own project page.
 
 ### Delete a project
 
 1. Press the bin icon on its row. While the project is running it is disabled: cancel the run first.
 2. Confirm with **Delete project** (or **Keep it** to back out).
-3. The project goes to the trash for 30 days. Restore it or delete it for good in Settings → **Trash**. See [Trash](Trash).
+3. The project goes to the trash for 30 days. The notice that says so has **Undo**; later, restore it or delete it for good in Settings → **Backup & storage** → **Trash**. See [Trash](Trash).
 
 ### The video queue
 
-Videos started together (a batch from Play, for example) run one at a time. The queue itself is on the Calendar, under **Batch queue**, numbered in the order they run (see [Calendar](Calendar#the-batch-queue)); Projects only links to it (**Video queue** → **Open calendar**) and has the **Queued** filter. Pausing a project holds the queue; when one fails or is cancelled, the next one starts. The project page has the same list behind a **Queue · N** button in its right rail. See [Templates](Templates) and [Schedules](Schedules) for batches.
+Videos started together (a batch from Play, for example) run one at a time. The queue itself is on the Calendar, under **Batch queue**, numbered in the order they run (see [Calendar](Calendar#the-batch-queue)); Projects only links to it (**Video queue** → **Open calendar**) and has the **Queued** filter. Pausing a project holds the queue; when one fails or is canceled, the next one starts. The project page has the same list behind a **Queue · N** button in its right rail. See [Templates](Templates) and [Schedules](Schedules) for batches.
 
 ### When there are no projects
 

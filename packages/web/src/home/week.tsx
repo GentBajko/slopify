@@ -1,15 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactElement } from "react";
+import { type ReactElement, useId, useState } from "react";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { LoadingBlock, QueryState } from "@/components/kit/query-state";
+import { SectionHead } from "@/components/kit/section-head";
 import { Meter, Stat, Stats } from "@/components/kit/stats";
+import { usd } from "@/lib/format";
 import { startOfWeek, type WeekSummary, weekQuery } from "./api.js";
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const money = { format: usd };
 
 // "$9.40", with the unpriced calls said rather than read as free.
 export function spentLabel(week: WeekSummary): string {
@@ -27,39 +26,80 @@ export function ThisWeek({ channelId }: { readonly channelId: string | null }): 
   const { api } = useApp();
   const since = startOfWeek().toISOString();
   const week = useQuery(weekQuery(api, since, channelId));
-  if (week.error !== null)
-    return (
-      <p className="m-0 text-small text-danger">
-        {`This week's numbers didn't load: ${week.error.message} Reload the page to try again.`}
-      </p>
-    );
-  const data = week.data;
   return (
-    <Stats className="sl-home-stats">
-      <Stat value={data === undefined ? "—" : String(data.videos)} label="videos made" />
-      <Stat
-        value={data === undefined ? "—" : money.format(data.cost)}
-        label={data === undefined ? "spent" : spentLabel(data)}
-      />
-      {(data?.plans ?? [])
-        .filter((plan) => plan.weeklyPercent !== null)
-        .map((plan) => {
-          const percent = Math.round(plan.weeklyPercent ?? 0);
-          return (
-            <Stat
-              key={plan.account}
-              value={`${String(percent)}%`}
-              label={`weekly ${plan.name} limit`}
-            >
-              <Meter
-                value={percent / 100}
-                label={`Weekly ${plan.name} limit`}
-                valueText={`${String(percent)}% of your weekly ${plan.name} limit`}
-                tone={percent >= 80 ? "waiting" : "accent"}
-              />
-            </Stat>
-          );
-        })}
-    </Stats>
+    <QueryState
+      query={week}
+      what="This week's numbers"
+      compact
+      loading={<LoadingBlock label="Loading this week's numbers…" rows={1} rowClassName="h-20" />}
+    >
+      {(data) => (
+        <Stats className="sl-home-stats">
+          <Stat value={String(data.videos)} label="videos made" />
+          <Stat value={money.format(data.cost)} label={spentLabel(data)} />
+          {data.plans
+            .filter((plan) => plan.weeklyPercent !== null)
+            .map((plan) => {
+              const percent = Math.round(plan.weeklyPercent ?? 0);
+              return (
+                <Stat
+                  key={plan.account}
+                  value={`${String(percent)}%`}
+                  label={`weekly ${plan.name} limit`}
+                >
+                  <Meter
+                    value={percent / 100}
+                    label={`Weekly ${plan.name} limit`}
+                    valueText={`${String(percent)}% of your weekly ${plan.name} limit`}
+                    tone={percent >= 80 ? "waiting" : "accent"}
+                  />
+                </Stat>
+              );
+            })}
+        </Stats>
+      )}
+    </QueryState>
+  );
+}
+
+const openKey = "slopify.home.week-open";
+
+function readOpen(): boolean {
+  try {
+    return window.localStorage.getItem(openKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
+// The week's totals on request: folded by default so the work stays first, and remembered in
+// this browser once opened. Folded, nothing is fetched.
+export function WeekTotals({ channelId }: { readonly channelId: string | null }): ReactElement {
+  const [open, setOpen] = useState(readOpen);
+  const id = useId();
+  const toggle = (): void => {
+    const next = !open;
+    setOpen(next);
+    try {
+      window.localStorage.setItem(openKey, next ? "1" : "0");
+    } catch {
+      // A blocked storage only forgets the choice.
+    }
+  };
+  return (
+    <section aria-label="This week">
+      <SectionHead title="This week" info="home.this-week" meta="Since Monday">
+        <Button
+          variant="quiet"
+          size="small"
+          aria-expanded={open}
+          aria-controls={id}
+          onClick={toggle}
+        >
+          {open ? "Hide totals" : "Show totals"}
+        </Button>
+      </SectionHead>
+      <div id={id}>{open ? <ThisWeek channelId={channelId} /> : null}</div>
+    </section>
   );
 }

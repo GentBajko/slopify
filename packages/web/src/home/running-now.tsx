@@ -1,3 +1,4 @@
+import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectListing, Stage } from "@app/slices/admission/model.js";
 import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
@@ -8,10 +9,12 @@ import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { hitArea } from "@/components/kit/list-row";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
+import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { stageStateWord } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
-import { activityText, capitalised, stageName } from "@/project/summary";
+import { activityText, capitalised, stageName, stageNames } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery } from "@/queries";
 
@@ -27,16 +30,6 @@ const stepTone: Readonly<Record<Stage["state"], Step["tone"]>> = {
   failed: "failed",
   canceled: "off",
   skipped: "off",
-};
-
-const stepWord: Readonly<Record<Stage["state"], string>> = {
-  pending: "Not started",
-  running: "Running",
-  done: "Done",
-  provided: "Provided",
-  failed: "Failed",
-  canceled: "Canceled",
-  skipped: "Skipped",
 };
 
 // "4 min", "1 h 12 min", "38 s".
@@ -87,6 +80,10 @@ export function RunningProject({
   useLiveProject(project.id);
   const [open, setOpen] = useState<number | null>(null);
   const body = useQuery(projectQuery(api, project.id));
+  // The list row carries no full settings; the step names read the project's own.
+  const config = body.data?.project.config;
+  const nameOf = (kind: StageKind): string =>
+    config === undefined ? stageNames[kind] : stageName(kind, config);
   const stages = (body.data?.stages ?? []).filter(
     (stage) => stage.source !== "off" && stage.state !== "skipped",
   );
@@ -101,9 +98,9 @@ export function RunningProject({
   const shown = images.slice(drawing === undefined ? -4 : -3);
   const steps: Step[] = stages.map((stage) => ({
     id: stage.kind,
-    name: stageName(stage.kind, project.config),
+    name: nameOf(stage.kind),
     tone: stepTone[stage.state],
-    state: stepWord[stage.state],
+    state: stageStateWord[stage.state],
     time: elapsed(stage.startedAt, stage.finishedAt, now),
     detail: runningDetail(stage, now),
   }));
@@ -122,7 +119,7 @@ export function RunningProject({
             <Status tone="waiting">{waiting}</Status>
           ) : (
             <Status tone="running">
-              {running === undefined ? "Running" : `${stageName(running.kind, project.config)}`}
+              {running === undefined ? "Running" : nameOf(running.kind)}
             </Status>
           )}
         </div>
@@ -163,7 +160,23 @@ export function RunningProject({
           </p>
         )}
       </div>
-      <Steps steps={steps} label={`Steps of ${project.title}`} />
+      {body.data !== undefined ? (
+        <Steps steps={steps} label={`Steps of ${project.title}`} />
+      ) : body.error !== null ? (
+        <LoadFailed
+          compact
+          what="Its steps"
+          error={body.error}
+          onRetry={() => void body.refetch()}
+          retrying={body.isFetching}
+        />
+      ) : (
+        <LoadingBlock
+          label={`Loading the steps of ${project.title}…`}
+          rows={3}
+          rowClassName="h-6"
+        />
+      )}
     </li>
   );
 }

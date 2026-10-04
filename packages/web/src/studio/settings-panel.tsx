@@ -10,6 +10,8 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { UnsavedStatus } from "@/components/save-state";
+import { SecretText } from "@/components/secret-input";
 import { ExtensionInstall } from "./extension-install";
 import { PostingPlanSettings } from "./posting-plan";
 
@@ -54,7 +56,15 @@ function Playlists() {
   const channels = useQuery(channelsQuery(api));
   const channelId = useId();
   const [channel, setChannel] = useState(everyChannel);
-  const [draft, setDraft] = useState<StudioPlaylist[] | undefined>(undefined);
+  // Unsaved lists per channel, so picking another channel never drops what was typed for this one.
+  const [drafts, setDrafts] = useState<Readonly<Record<string, StudioPlaylist[]>>>({});
+  const draft = drafts[channel];
+  const setDraft = (next: StudioPlaylist[] | undefined): void => {
+    setDrafts((now) => {
+      const { [channel]: _dropped, ...rest } = now;
+      return next === undefined ? rest : { ...rest, [channel]: next };
+    });
+  };
   const fallback = saved.data?.playlists ?? [];
   const own = channel === everyChannel ? undefined : saved.data?.channelPlaylists[channel];
   const stored = channel === everyChannel ? fallback : (own ?? []);
@@ -91,7 +101,14 @@ function Playlists() {
             : "This channel's own playlists. Ticked ones are on for every project; Prepare upload changes them for one project."
       }
     >
-      <div className="flex flex-col gap-2">
+      {/* A form so Enter in a name saves the list, as Save playlists does. */}
+      <form
+        className="flex flex-col gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!save.isPending && draft !== undefined && problem === undefined) save.mutate(rows);
+        }}
+      >
         <Select
           id={channelId}
           aria-label="Channel"
@@ -99,11 +116,15 @@ function Playlists() {
           options={options}
           onChange={(event) => {
             save.reset();
-            setDraft(undefined);
             setChannel(event.currentTarget.value);
           }}
           className="max-w-[260px]"
         />
+        {rows.length === 0 ? null : (
+          <p className="m-0 text-small text-ink-2">
+            Type each name exactly as the playlist is called in YouTube Studio.
+          </p>
+        )}
         {rows.map((row, at) => (
           <div
             // Rows have no id of their own; their place is stable while editing.
@@ -114,7 +135,6 @@ function Playlists() {
             <Input
               autoComplete="off"
               aria-label={`Playlist ${String(at + 1)} name`}
-              placeholder="The playlist's name in Studio"
               className="min-w-0 flex-1 basis-[220px]"
               value={row.name}
               disabled={saved.data === undefined}
@@ -173,14 +193,23 @@ function Playlists() {
             Add playlist
           </Button>
           <Button
+            type="submit"
             variant="primary"
             disabled={save.isPending || draft === undefined || problem !== undefined}
-            onClick={() => save.mutate(rows)}
+            disabledReason={problem ?? "Nothing changed since the last save."}
           >
             Save playlists
           </Button>
         </div>
-      </div>
+        <UnsavedStatus
+          dirty={draft !== undefined}
+          saveLabel="Save playlists"
+          onDiscard={() => {
+            save.reset();
+            setDraft(undefined);
+          }}
+        />
+      </form>
       {error === undefined ? null : (
         <p id={errorId} role="alert" className="m-0 text-small text-danger">
           {error}
@@ -235,9 +264,11 @@ function Pairing() {
         <InfoTip id="settings.studio.pairing" className="-my-1" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <code className="sl-code min-w-0 flex-1 basis-[220px] truncate py-2 select-all">
-          {pairing?.token ?? "…"}
-        </code>
+        <SecretText
+          value={pairing?.token}
+          revealLabel="pairing token"
+          className="flex-1 basis-[220px]"
+        />
         <Button variant="quiet" disabled={pairing === undefined} onClick={copy}>
           <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
           Copy

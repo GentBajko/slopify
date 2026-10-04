@@ -2,7 +2,7 @@
 
 Slopify never uploads or publishes for you: there is no YouTube sign-in and no upload API. Instead, **Prepare upload** lists everything YouTube Studio asks for, in the order it asks, with a Copy button for each value, for the long video and for every short. You upload in Studio in your own browser and press Publish yourself. The optional [Studio-Extension](Studio-Extension) can fill Studio's upload dialog from the same list.
 
-**Where to find it:** a finished project → **Prepare upload** (the next action, and in the **YouTube** section), Home → **Ready to upload** → **Prepare upload**, or the Calendar's **Needs you** → **Prepare upload**. Settings → **YouTube Studio** holds the playlists, and each channel's **Brand** tab holds the links it uses.
+**Where to find it:** a finished project → **Prepare upload** (the next action, and in the **YouTube** section), Home → **Needs you** → **Prepare upload** on a video marked **Ready to upload**, or the Calendar's **Needs you** → **Prepare upload**. Settings → **YouTube Studio** holds the playlists, and each channel's **Brand** tab holds the links it uses.
 
 ## Before your first upload
 
@@ -111,7 +111,7 @@ With **Thumbnails** set to 3 on Play or in Edit project → Images, Slopify draw
 
 Slopify does not check YouTube, so it can't know when you've published. After you upload:
 
-1. Press **Mark uploaded** on Home under **Ready to upload**, or in the Projects list.
+1. Press **Mark uploaded** on Home under **Needs you**, or in the Projects list (one row, or several selected at once).
 2. The video leaves the ready-to-upload lists and shows an **Uploaded** badge in Projects.
 3. Press **Undo** beside the badge to take the mark off.
 

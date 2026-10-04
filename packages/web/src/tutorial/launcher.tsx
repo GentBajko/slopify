@@ -11,6 +11,7 @@ export function TutorialLauncher() {
       className="shrink-0"
       onClick={tutorial.start}
       disabled={tutorial.active}
+      focusableWhenDisabled
       disabledReason="The tutorial is already running"
     >
       <CircleHelpIcon aria-hidden="true" strokeWidth={1.75} />

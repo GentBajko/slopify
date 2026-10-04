@@ -1,6 +1,7 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { type KeyboardEvent, type ReactElement, type ReactNode, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useScrollEdges } from "./scroll-edges.js";
 
 export interface TabItem<Id extends string> {
   readonly id: Id;
@@ -36,6 +37,7 @@ export function Tabs<Id extends string>({
   readonly className?: string;
 }): ReactElement {
   const list = useRef<HTMLDivElement>(null);
+  useScrollEdges(list, value);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const enabled = items.filter((item) => !item.disabled);
     const at = enabled.findIndex((item) => item.id === value);
@@ -105,8 +107,11 @@ export function TabLinks({
   readonly label: string;
   readonly className?: string;
 }): ReactElement {
+  const row = useRef<HTMLElement>(null);
+  const pathname = useLocation({ select: (location) => location.pathname });
+  useScrollEdges(row, pathname);
   return (
-    <nav aria-label={label} className={cn("sl-tabs min-w-0", className)}>
+    <nav ref={row} aria-label={label} className={cn("sl-tabs min-w-0", className)}>
       {items.map((item) => (
         <Link
           key={item.to}

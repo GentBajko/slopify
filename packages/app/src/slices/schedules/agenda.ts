@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
-import { liveProject, projectPaused, stageStandingsByProject } from "../admission/repo.js";
+import { liveProject, stageStandingsByProject } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
@@ -130,7 +130,9 @@ function upcomingRuns(
 const projectRow = z.object({
   id: z.string(),
   title: z.string(),
-  config: z.string(),
+  // The stored `sources.video`, null when absent or the configuration is unreadable.
+  video_source: z.unknown(),
+  paused: z.number(),
   created_at: z.string(),
   finished_at: z.string().nullable(),
 });
@@ -157,14 +159,8 @@ function awaitingReview(db: DatabaseSync): ReadonlySet<string> {
 
 // Whether a finished project's settings make a video: projects stored before sources were
 // recorded made one.
-const videoSource = z.object({ sources: z.object({ video: z.string() }).partial() }).partial();
-function makesVideo(config: string): boolean {
-  try {
-    const parsed = videoSource.safeParse(JSON.parse(config));
-    return !parsed.success || parsed.data.sources?.video !== "off";
-  } catch {
-    return true;
-  }
+function makesVideo(videoSource: unknown): boolean {
+  return videoSource !== "off";
 }
 
 function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
@@ -205,14 +201,23 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
   }
   return deps.db
     .prepare(
-      `SELECT projects.id,projects.title,projects.config,projects.created_at,max(stages.finished_at) AS finished_at
+      // A project with no stage pending or running, not paused and with stages is finished
+      // (`derive`), so one that ended before the range is left out here rather than read.
+      `SELECT projects.id,projects.title,projects.created_at,
+         CASE WHEN json_valid(projects.config) THEN json_extract(projects.config,'$.sources.video') END AS video_source,
+         COALESCE(project_controls.paused,0) AS paused,max(stages.finished_at) AS finished_at
        FROM projects LEFT JOIN stages ON stages.project_id=projects.id
-       WHERE projects.created_at<? AND ${liveProject()} GROUP BY projects.id ORDER BY projects.created_at,projects.id`,
+       LEFT JOIN project_controls ON project_controls.project_id=projects.id
+       WHERE projects.created_at<? AND ${liveProject()} GROUP BY projects.id
+       HAVING COALESCE(project_controls.paused,0)=1 OR count(stages.id)=0
+         OR sum(stages.state IN ('pending','running'))>0
+         OR COALESCE(max(stages.finished_at),projects.created_at)>=?
+       ORDER BY projects.created_at,projects.id`,
     )
-    .all(to.toISOString())
+    .all(to.toISOString(), from.toISOString())
     .flatMap((row) => {
       const project = projectRow.parse(row);
-      const state = derive(standings.get(project.id) ?? [], projectPaused(deps.db, project.id));
+      const state = derive(standings.get(project.id) ?? [], project.paused === 1);
       const terminal =
         state === "done" || state === "partial" || state === "failed" || state === "canceled";
       if (terminal) {
@@ -222,7 +227,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
       const needs = needsOf(state, reviewing.has(project.id));
       const ready =
         (state === "done" || state === "partial") &&
-        makesVideo(project.config) &&
+        makesVideo(project.video_source) &&
         !uploads.has(project.id) &&
         !samples.has(project.id);
       const waiting = waits.get(project.id);

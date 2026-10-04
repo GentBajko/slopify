@@ -1,122 +1,21 @@
 import { titleMax, valueMax } from "@app/slices/admission/rules.js";
 import { render } from "@app/slices/admission/substitute.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { youtubeTitleProblem } from "@app/slices/youtube/model.js";
 import { PencilIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useId, useRef, useState } from "react";
-import { useApp } from "@/app-context";
-import { channelsQuery } from "@/channels/api";
-import { channelOfTemplate } from "@/channels/members-tabs";
 import { KeywordList } from "@/components/keyword-list";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { Field, Input, Select } from "@/components/kit/field";
+import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Chip } from "@/components/kit/status";
-import { instantiateProjectTemplate, templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
+import { headingOf, outputKindOf, outputNoun } from "./output-kind";
 
 // The most videos one Start queues: this setup and 49 more.
 export const moreVideosMax = 49;
 
-// Template first: picking one opens a fresh draft made from it, and what was typed for the
-// topic comes along.
-export function TemplateField({
-  topics,
-  onError,
-}: {
-  readonly topics: readonly string[];
-  readonly onError: (message: string | null) => void;
-}): ReactElement {
-  const { api } = useApp();
-  const client = useQueryClient();
-  const session = usePlaySession();
-  const templates = useQuery(templatesQuery(api));
-  const channels = useQuery(channelsQuery(api));
-  const [busy, setBusy] = useState(false);
-  const blocked =
-    session.review.starting || session.review.uncertain || session.review.created !== null;
-  const source = session.document.templateSource;
-  const current = templates.data?.find((template) => template.id === source?.id);
-  const channelName = (id: string): string | undefined =>
-    channels.data?.find((channel) => channel.id === id)?.name;
-  const pick = async (id: string): Promise<void> => {
-    onError(null);
-    if (id === "") {
-      await session.newDraft();
-      return;
-    }
-    const template = templates.data?.find((one) => one.id === id);
-    if (!template) return;
-    setBusy(true);
-    try {
-      if (!(await session.flush())) {
-        onError(
-          "Your draft wasn't saved, so the template wasn't applied. Press Retry beside Drafts, then pick the template again.",
-        );
-        return;
-      }
-      // The topic typed so far goes with the person into the new draft.
-      const typed = Object.fromEntries(
-        topics
-          .map((name) => [name, session.document.form.values[name] ?? ""] as const)
-          .filter(([, value]) => value.trim() !== ""),
-      );
-      const reply = await instantiateProjectTemplate(api, template, crypto.randomUUID());
-      if (!reply.ok) {
-        onError(`The template "${template.name}" wasn't applied. ${reply.message}`);
-        return;
-      }
-      await client.invalidateQueries({ queryKey: ["play-drafts"] });
-      if (!(await session.open(reply.value.draft.id))) {
-        onError(`The draft made from "${template.name}" didn't open. Open it from Drafts.`);
-        return;
-      }
-      const made = reply.value.draft.document;
-      const carried = Object.fromEntries(
-        Object.entries(typed).filter(([name]) => (made.form.values[name] ?? "") === ""),
-      );
-      if (Object.keys(carried).length > 0)
-        session.edit({
-          ...made,
-          form: { ...made.form, values: { ...made.form.values, ...carried } },
-        });
-    } catch (error) {
-      onError(
-        error instanceof Error
-          ? `The template "${template.name}" wasn't applied. ${error.message}`
-          : `The template "${template.name}" wasn't applied. Pick it again.`,
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  const help = templates.error
-    ? `Templates didn't load. ${templates.error.message}`
-    : current
-      ? [channelName(channelOfTemplate(current)), `version ${String(current.version)}`]
-          .filter(Boolean)
-          .join(" · ")
-      : templates.data?.length === 0
-        ? "No templates yet. Set this video up, then Save as template."
-        : undefined;
-  return (
-    <Field label="Template" tip="play.template" help={help}>
-      <Select
-        data-play-field="template"
-        value={current?.id ?? ""}
-        disabled={busy || blocked}
-        onChange={(event) => void pick(event.target.value)}
-      >
-        <option value="">{source && !current ? "Template no longer saved" : "No template"}</option>
-        {(templates.data ?? []).map((template) => (
-          <option key={template.id} value={template.id}>
-            {template.name}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
-}
+export { TemplateField } from "./template-field";
 
 // What the video is about. A title that names keywords ("History: {{Topic}}") asks for those
 // keywords here, with the title they make beneath; a title without keywords is typed itself.
@@ -134,21 +33,30 @@ export function TopicFields({
     session.edit({ ...document, form: next });
     session.invalidateReview(true);
   };
+  // The project's title is also the YouTube title when the video goes there and no YouTube
+  // title is written for it, so YouTube's own limit is said beside it (it does not stop Start).
+  const forYoutube = (title: string): string | undefined => {
+    if (form.sources.video === "off") return undefined;
+    const refused = youtubeTitleProblem(title);
+    return refused === undefined ? undefined : `As a YouTube title: ${refused}`;
+  };
   if (topics.length === 0)
     return (
-      <Field label="Title" tip="play.title" error={problem("title")}>
+      <Field label="Title" tip="play.title" error={problem("title")} help={forYoutube(form.title)}>
         <Input
           data-play-field="title"
           className="!h-11 text-[17px]"
           value={form.title}
+          spellCheck
           maxLength={titleMax}
-          placeholder="What's the video about?"
+          placeholder={headingOf(outputKindOf(form))}
           aria-invalid={problem("title") !== undefined}
           onChange={(event) => setForm({ ...form, title: event.target.value })}
         />
       </Field>
     );
   const title = render(form.title, form.values);
+  const youtubeNote = forYoutube(title);
   return (
     <div className="grid min-w-0 gap-4">
       {topics.map((name, index) => (
@@ -160,6 +68,9 @@ export function TopicFields({
             index === topics.length - 1 ? (
               <>
                 Title: <b className="font-semibold text-ink">{title}</b>
+                {youtubeNote === undefined ? null : (
+                  <span className="block text-waiting">{youtubeNote}</span>
+                )}
               </>
             ) : undefined
           }
@@ -173,7 +84,8 @@ export function TopicFields({
             className="!h-11 text-[17px]"
             value={form.values[name] ?? ""}
             maxLength={valueMax}
-            spellCheck={false}
+            // A topic is words ("The Library of Alexandria"), so spelling is checked.
+            spellCheck
             aria-invalid={problem(`values.${name}`) !== undefined}
             onChange={(event) =>
               setForm({ ...form, values: { ...form.values, [name]: event.target.value } })
@@ -286,7 +198,7 @@ export function MoreVideos({
             }}
           >
             <label htmlFor={inputId} className="sr-only">
-              {first === undefined ? "Title of another video" : `${first} of another video`}
+              {`${first ?? "Title"} of another ${outputNoun(outputKindOf(form))}`}
             </label>
             <Input
               ref={input}
@@ -345,9 +257,11 @@ export function MoreVideos({
               label="Title"
               tip="play.title"
               error={problem(`items.${String(opened + 1)}.title`)}
+              help={form.sources.video === "off" ? undefined : youtubeTitleProblem(variant.title)}
             >
               <Input
                 data-play-field={`items.${variant.id}.title`}
+                spellCheck
                 value={variant.title}
                 maxLength={titleMax}
                 onChange={(event) =>

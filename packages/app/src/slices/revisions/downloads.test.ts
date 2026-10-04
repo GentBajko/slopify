@@ -136,13 +136,14 @@ it("zips only selected retained images in saved slideshow order, skipping missin
   expect(result).toMatchObject({ ok: true, filename: "saved-images.zip" });
   if (!result.ok) throw new Error(result.reason);
   const entries = unzipSync(result.bytes);
+  // The second file saved in image "first"'s place is its second version, and says so.
   expect(Object.keys(entries)).toEqual([
     "saved-image-1.jpg",
-    "saved-image-2.png",
+    "saved-image-2-v2.png",
     "saved-thumbnail.webp",
   ]);
   expect(Buffer.from(entries["saved-image-1.jpg"] ?? []).toString()).toBe("second");
-  expect(Buffer.from(entries["saved-image-2.png"] ?? []).toString()).toBe("first");
+  expect(Buffer.from(entries["saved-image-2-v2.png"] ?? []).toString()).toBe("first");
   expect(revisionImagesZip(h.deps, h.projectId, "missing")).toEqual({
     ok: false,
     reason: "no-images",

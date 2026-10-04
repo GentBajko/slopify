@@ -42,3 +42,17 @@ export function formatScheduleDate(value: string, timeZone: string): string {
     timeStyle: "short",
   }).format(new Date(value));
 }
+
+// The same, with the zone's short name ("12 Sept 2026, 09:00 UTC", "… GMT+2"), for a time
+// read away from the schedule's settings, such as when topics were last generated.
+export function formatScheduleDateZoned(value: string, timeZone: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(value));
+}

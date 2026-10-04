@@ -15,6 +15,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
+import { usd } from "@/lib/format";
 import { runCostQuery } from "@/queries";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { stageNames } from "./summary.js";
@@ -324,11 +325,7 @@ function count(value: number, noun: string): string {
   return `${whole.format(value)} ${noun}${value === 1 ? "" : "s"}`;
 }
 
-export function money(value: number): string {
-  if (value === 0) return "$0";
-  if (value < 0.01) return "<$0.01";
-  return `$${value.toFixed(2)}`;
-}
+export const money = usd;
 
 // "1:03:27": a clock that visibly counts, for a run in progress.
 export function stopwatch(ms: number): string {

@@ -126,8 +126,15 @@ function swapped(
   fallback?: string,
 ): string | undefined {
   const fromOldKit =
-    current === undefined || current === fallback || (old !== undefined && current === old);
+    current === undefined || current === fallback || (old !== undefined && same(current, old));
   return fromOldKit ? (next ?? fallback) : current;
+}
+
+// Channels store colours as #RRGGBB, a project's own colour boxes may hold #rrggbb: the same colour.
+function same(one: string, other: string): boolean {
+  return one.startsWith("#") && other.startsWith("#")
+    ? one.toLowerCase() === other.toLowerCase()
+    : one === other;
 }
 
 function assign<T extends object, K extends keyof T>(target: T, key: K, value: T[K] | undefined) {

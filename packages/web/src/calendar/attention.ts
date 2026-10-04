@@ -1,6 +1,6 @@
-import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { Calendar } from "@app/slices/schedules/schema.js";
 import type { Tone } from "@/components/kit/status";
+import { heldWord, projectStateLook } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 
 // How a project reads on the calendar: what it needs from the person, whether its video is
@@ -15,16 +15,6 @@ export interface ProjectLook {
   // What pressing the row's action does: open the project to act there, or prepare the upload.
   readonly action?: { readonly kind: "open"; readonly label: string } | { readonly kind: "upload" };
 }
-
-const stateLook: Readonly<Record<ProjectState, ProjectLook>> = {
-  running: { tone: "running", word: "Running" },
-  paused: { tone: "waiting", word: "Paused" },
-  pending: { tone: "waiting", word: "Waiting" },
-  failed: { tone: "failed", word: "Failed" },
-  partial: { tone: "info", word: "Done with problems" },
-  done: { tone: "done", word: "Done" },
-  canceled: { tone: "off", word: "Canceled" },
-};
 
 export function projectLook(
   project: CalendarProject,
@@ -42,7 +32,7 @@ export function projectLook(
     case "review":
       return {
         tone: "waiting",
-        word: "Waiting for your review",
+        word: heldWord,
         action: { kind: "open", label: "Open to review" },
       };
     case undefined:
@@ -52,7 +42,7 @@ export function projectLook(
   if (waiting !== undefined) return { tone: "waiting", word: waiting };
   if (project.readyToUpload === true)
     return { tone: "done", word: "Ready to upload", action: { kind: "upload" } };
-  return stateLook[project.state];
+  return projectStateLook[project.state];
 }
 
 // "2 waiting for you · 1 ready to upload".

@@ -16,7 +16,11 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { SystemVoicePicker } from "@/components/system-voices";
-import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
+import {
+  languagesOfText,
+  languagesReading,
+  VoiceLanguagesCell,
+} from "@/language/voice-languages-cell";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
 // The voice list and the row that adds to it. Nothing here is checked against the provider: a
@@ -228,8 +232,26 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
   const problem = (field: VoiceField): string | undefined =>
     refusal?.field === field ? refusal.message : undefined;
 
+  const submit = (): void => {
+    if (provider === undefined || refusal !== undefined || add.isPending) return;
+    const codes = languagesOfText(languages);
+    add.mutate({
+      provider,
+      name,
+      voiceId,
+      ...(codes.length === 0 ? {} : { languages: codes }),
+    });
+  };
+
   return (
-    <div className="flex flex-col gap-3">
+    // A form so Enter in any box adds the voice, as Add voice does.
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <Field label="Voice name" tip="play.voices.name" error={problem("name")}>
           <Input
@@ -322,7 +344,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
         <Field
           label="Languages"
           tip="play.voices.languages"
-          help="Codes such as es, de."
+          help={languagesReading(languages)}
           error={problem("languages")}
         >
           <Input
@@ -338,20 +360,10 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
         </Field>
 
         <Button
+          type="submit"
           variant="primary"
           className="md:mt-6"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
-          onClick={() => {
-            if (provider !== undefined) {
-              const codes = languagesOfText(languages);
-              add.mutate({
-                provider,
-                name,
-                voiceId,
-                ...(codes.length === 0 ? {} : { languages: codes }),
-              });
-            }
-          }}
         >
           Add voice
         </Button>
@@ -361,7 +373,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
           {add.error.message}
         </p>
       )}
-    </div>
+    </form>
   );
 }
 

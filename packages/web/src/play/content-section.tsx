@@ -2,6 +2,7 @@ import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
 import { articleKind } from "./article-kind";
+import { articleTaskOf } from "./article-task";
 import type { RailProps } from "./rail-frame";
 import { ArticleRail, ResearchRail } from "./stage-rails";
 import { TextGenerationIn } from "./text-generation";
@@ -58,10 +59,8 @@ export function ContentSection(
           and anything else that reads the article stay off.
         </p>
       ) : form.sources.article === "provide" ? (
-        <p className="py-4 text-small text-ink-3">
-          Research is Off because the article is provided.
-        </p>
-      ) : (
+        <p className="py-4 text-small text-ink-3">Research is Off: your text is read as written.</p>
+      ) : articleTaskOf(form) === "adapt" ? null : (
         <ResearchRail {...props} />
       )}
     </>

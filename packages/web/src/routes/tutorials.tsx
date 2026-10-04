@@ -15,6 +15,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useSearchShortcut } from "@/components/kit/command-palette";
 import { PageHeader, Workspace } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { ReadingView } from "@/components/kit/reading-view";
 import {
   type TutorialHit,
@@ -121,6 +122,12 @@ export function TutorialsRoute({
           group === undefined
             ? "Guides to every screen of Slopify, for the version you are running."
             : group.title
+        }
+        // The first-run screen stays reachable after it was skipped: samples and a first short.
+        actions={
+          <ButtonLink to="/welcome" variant="quiet">
+            Welcome screen
+          </ButtonLink>
         }
       />
       <Workspace

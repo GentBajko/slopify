@@ -1,4 +1,4 @@
-import { languageInfo } from "@app/kernel/ports/languages.js";
+import { languageInfo, languageList } from "@app/kernel/ports/languages.js";
 import type { Voice } from "@app/slices/settings/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useId, useState } from "react";
@@ -14,6 +14,19 @@ export function languagesOfText(text: string): readonly string[] {
     .split(/[\s,;]+/)
     .map((one) => one.trim().toLowerCase())
     .filter((one) => one !== "");
+}
+
+// What the typed codes read as, under the box: the names Slopify knows, and the codes it does
+// not, so "es, dee" says at once that "dee" is not a language before Add voice is pressed.
+export function languagesReading(text: string): string {
+  const codes = languagesOfText(text);
+  if (codes.length === 0) return "Codes such as es, de. Empty means any language.";
+  const known = codes.filter((code) => languageList.some((one) => one.code === code));
+  const unknown = codes.filter((code) => !known.includes(code));
+  const names = known.map((code) => languageInfo(code).name).join(", ");
+  if (unknown.length === 0) return `Reads as: ${names}.`;
+  const list = languageList.map((one) => one.code).join(", ");
+  return `${names === "" ? "" : `Reads as: ${names}. `}Not a language code Slopify knows: ${unknown.join(", ")}. Use one of ${list}.`;
 }
 
 // The languages a voice speaks, by name; unknown is offered for every language.
@@ -60,7 +73,14 @@ export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactE
       </div>
     );
   return (
-    <div className="grid gap-1">
+    // A form so Enter in the box saves, as Save does.
+    <form
+      className="grid gap-1"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!save.isPending) save.mutate();
+      }}
+    >
       <Input
         id={id}
         aria-label={`Languages of ${voice.name}`}
@@ -72,12 +92,13 @@ export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactE
           setRefusal(undefined);
         }}
       />
+      <p className="m-0 text-small text-ink-2">{languagesReading(text)}</p>
       {refusal === undefined ? null : <p className="m-0 text-small text-danger">{refusal}</p>}
       {save.error === null ? null : (
         <p className="m-0 text-small text-danger">{save.error.message}</p>
       )}
       <div className="flex gap-2">
-        <Button size="small" disabled={save.isPending} onClick={() => save.mutate()}>
+        <Button type="submit" size="small" disabled={save.isPending}>
           Save
         </Button>
         <Button
@@ -92,6 +113,6 @@ export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactE
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

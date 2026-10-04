@@ -99,3 +99,28 @@ export function pumpQueue(db: DatabaseSync, runner: Runner): void {
     return;
   }
 }
+
+export type QueueMove =
+  | { readonly ok: true; readonly queue: QueueEntry[] }
+  | { readonly ok: false; readonly reason: "not-queued" | "edge" };
+
+// Batch queue's Up and Down: a video still waiting its turn trades places with the next waiting
+// one before or after it. A video already started (active) or finished keeps its place, so
+// nothing admitted is ever overtaken.
+export function moveQueued(db: DatabaseSync, projectId: string, by: -1 | 1): QueueMove {
+  return transact<QueueMove>(db, () => {
+    const waiting = queueEntries(db).filter((entry) => entry.state === "queued");
+    const at = waiting.findIndex((entry) => entry.projectId === projectId);
+    if (at === -1) return { ok: false, reason: "not-queued" };
+    const other = waiting[at + by];
+    const self = waiting[at];
+    if (other === undefined || self === undefined) return { ok: false, reason: "edge" };
+    // `position` is the row's key, so the swap goes through a free one.
+    const free = -1 - Math.max(self.position, other.position);
+    const set = db.prepare("UPDATE project_queue SET position = ? WHERE project_id = ?");
+    set.run(free, self.projectId);
+    set.run(self.position, other.projectId);
+    set.run(other.position, self.projectId);
+    return { ok: true, queue: queueEntries(db) };
+  });
+}

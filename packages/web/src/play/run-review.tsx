@@ -1,6 +1,8 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import type { ReactElement } from "react";
+import { Fold } from "@/components/kit/fold";
+import { usd } from "@/lib/format";
 import { checkpointOptions } from "./checkpoints";
 import type { PlayFormState } from "./state";
 
@@ -85,10 +87,13 @@ export function RunReview({
           Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
         </p>
       ) : null}
-      <details className="rounded-control border border-line px-3">
-        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-          Cost by stage · {rows.length} {rows.length === 1 ? "stage" : "stages"}
-        </summary>
+      <Fold
+        summary={
+          <>
+            Cost by stage · {rows.length} {rows.length === 1 ? "stage" : "stages"}
+          </>
+        }
+      >
         <div className="flex flex-col gap-3 pt-1 pb-3">
           {onPlan ? (
             <p className="m-0 text-small text-ink-2">
@@ -126,11 +131,10 @@ export function RunReview({
             combined costs.
           </p>
         </div>
-      </details>
+      </Fold>
     </div>
   );
 }
 function money(low: number, high: number): string {
-  const format = (n: number): string => (n === 0 ? "$0" : n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`);
-  return low === high ? format(low) : `${format(low)} – ${format(high)}`;
+  return low === high ? usd(low) : `${usd(low)} – ${usd(high)}`;
 }

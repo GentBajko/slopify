@@ -51,10 +51,10 @@ it("does not mark untouched fields when another field changes", async () => {
   expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
 });
 
-it("keeps every chunking mode selectable inside Audio Advanced", async () => {
+it("keeps every chunking mode selectable inside More audio settings", async () => {
   await mountPlay();
   await openRow("Narration");
-  await userEvent.click(screen.getByText(/Audio Advanced/));
+  await userEvent.click(screen.getByText(/More audio settings/));
   for (const name of [/Every .* words/, /Every .* characters/, "Paragraph", "Whole"]) {
     await userEvent.click(screen.getByRole("radio", { name }));
     expect(screen.getByRole("radio", { name }).getAttribute("aria-checked")).toBe("true");
@@ -127,7 +127,7 @@ it("edits a provided article from the summary and preserves focus through autosa
   await mountPlay();
   await userEvent.click(
     within(screen.getByRole("radiogroup", { name: "article source" })).getByRole("radio", {
-      name: "Provide",
+      name: "Use my text as written",
     }),
   );
   // The reason under the Play key names what is missing and goes to it.

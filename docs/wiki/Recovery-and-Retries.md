@@ -55,7 +55,7 @@ The same words appear everywhere the project shows up: on Home under Running now
 
 - Other providers are not held up, and a waiting call holds no place in the provider queue.
 - The wait survives a restart: a stage that was waiting when Slopify stopped waits on the stored reset again at the next start.
-- A project paused or cancelled meanwhile is left alone.
+- A project paused or canceled meanwhile is left alone.
 
 See [AI CLIs](AI-CLIs) and [Costs and Run Cost](Costs-and-Run-Cost) for the plan-limit share each run uses.
 

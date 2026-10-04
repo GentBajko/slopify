@@ -18,6 +18,7 @@ import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { PlayAmbientBed } from "./ambient-bed";
 import { articleKind } from "./article-kind";
+import { ArticleTaskSwitch, articleTaskOf, SpokenText } from "./article-task";
 import { ShowFiguresToggle } from "./describe-figures.js";
 import { PlayLoudness } from "./loudness";
 import { ThumbnailCountPicker } from "./thumbnail-count.js";
@@ -53,7 +54,7 @@ export function ResearchRail({ form, problem, update }: RailProps) {
 export function ArticleRail({ form, prompts, problem, update, titled }: RailProps) {
   return (
     <StageRail kind="article" name="Article" dim={false} titled={titled}>
-      <SourceSwitch kind="article" form={form} update={update} />
+      <ArticleTaskSwitch form={form} update={update} />
       <div className={`${railBeneath} grid gap-4`}>
         {form.sources.article === "generate" ? (
           <OptionPicker
@@ -83,6 +84,26 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
               update({ provided: { ...form.provided, article } });
             }}
           />
+          <SpokenText form={form} />
+        </div>
+      ) : null}
+      {articleTaskOf(form) === "adapt" ? (
+        <div className={railBeneath}>
+          <PasteArea
+            field="provided.research"
+            label="Your text"
+            tip="play.provided.research"
+            value={form.provided.research}
+            placeholder="Paste the text the article prompt will rewrite."
+            problem={problem("provided.research")}
+            onChange={(research) => {
+              update({ provided: { ...form.provided, research } });
+            }}
+          />
+          <p className="mt-2 mb-0 text-small text-ink-2">
+            The article prompt rewrites this text; the narration reads the rewritten article. To
+            read it before it is narrated, add a checkpoint after Article under Reviews.
+          </p>
         </div>
       ) : null}
     </StageRail>

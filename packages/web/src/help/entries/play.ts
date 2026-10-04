@@ -5,6 +5,11 @@ import type { HelpEntry } from "../entry.js";
 // table is here too, as it lives in the same voice components.
 export const playHelp = {
   // Top of Play
+  "play.output": {
+    title: "What are you making?",
+    body: "Picks the stages the project uses. Video narrates images with captions. Article writes or takes text, with an optional PDF. Audiobook reads a text aloud. Podcast is a conversation between speakers. Images draws pictures from your prompts. Each choice turns on what it needs and folds the rest away; every stage can still be changed under its row.",
+    tutorial: { page: "Play-Overview" },
+  },
   "play.template": {
     title: "Template",
     body: "Starts this video from a saved setup: prompts, voice, images, style, outputs and reviews. Picking one opens a fresh draft made from it and carries the topic you typed. No template starts from the default setup. Save a setup you like with Save as template in the right rail.",
@@ -12,7 +17,7 @@ export const playHelp = {
   },
   "play.title": {
     title: "Title",
-    body: "The video's name, shown on the project and in Projects. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Add topic queues more videos from the same setup. Up to 200 characters.",
+    body: "The project's name in Slopify, shown on the project and in Projects. For a YouTube video it is also the YouTube title unless the YouTube text writes its own, and YouTube takes at most 100 characters there, without < or >. Write a keyword in double braces, like {{Topic}}, and the title becomes a pattern: you type the topic per video, and Add topic queues more videos from the same setup. Up to 200 characters.",
     tutorial: { page: "Play-Overview", anchor: "title-title-pattern-and-topic" },
   },
   "play.title-pattern": {
@@ -37,7 +42,7 @@ export const playHelp = {
   },
   "play.drafts": {
     title: "Drafts",
-    body: "Play saves every change to this draft on its own; nothing starts until you press the Play key. Drafts lists your saved setups to open again or discard. New draft starts an empty one and keeps this one in the list.",
+    body: "Play saves every change to this draft on its own; nothing starts until you press the Play key. Drafts lists your saved setups to open again or delete. New draft starts an empty one and keeps this one in the list.",
     tutorial: { page: "Play-Overview", anchor: "drafts" },
   },
   "play.draft-conflict": {
@@ -54,7 +59,7 @@ export const playHelp = {
   },
   "play.source.article": {
     title: "Article source",
-    body: "Generate has the text model write the article from the article prompt, one call. Provide narrates text you paste, word for word, with no text-model cost. The article is what the narration reads and the PDF lays out. Default: Generate.",
+    body: "Write it for me has the text model write the article from the article prompt, one call. Use my text as written narrates text you paste, word for word, with no text-model cost. Adapt my text has the article prompt rewrite text you paste, one call. No text is for images only. The article is what the narration reads and the PDF lays out. Default: Write it for me.",
     tutorial: { page: "Play-Title-and-Article", anchor: "choose-where-the-article-comes-from" },
   },
   "play.source.audio": {
@@ -143,7 +148,7 @@ export const playHelp = {
   },
   "play.intro": {
     title: "Intro",
-    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Intros & Outros.",
+    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Intros & outros.",
     tutorial: { page: "Play-Narration", anchor: "intro-and-outro" },
   },
   "play.outro": {
@@ -193,7 +198,7 @@ export const playHelp = {
   },
   "play.narration-aliases": {
     title: "Narration aliases",
-    body: "Says the words listed in Library → Aliases the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
+    body: "Says the words listed in Library → Narration aliases the way they are written there, such as Dr. as Doctor, with any generated voice. They are copied when the project starts. The article and captions keep the written words. Default: on.",
     tutorial: { page: "Narration-Aliases-and-Glossary", anchor: "use-aliases-in-a-video" },
   },
 
@@ -205,7 +210,7 @@ export const playHelp = {
   },
   "play.speakers.script": {
     title: "Script",
-    body: "Write a script has the text model write speaker turns from a Script prompt, one Name: words paragraph each. Split the article keeps the article as written and has the text model hand its narration and dialogue to the speakers, one extra call.",
+    body: "Write a script has the text model write speaker turns from a Script prompt, one Name: words paragraph each. Split the article (audiobooks) keeps the article as written and has the text model hand its narration and dialogue to the speakers, one extra call. Adapt the article (podcasts, interviews, dramas) also keeps the article as written; one extra call rewrites it as a conversation for the speakers, kept beside it as the script.",
     tutorial: { page: "Multiple-Voices", anchor: "the-script" },
   },
   "play.speakers.add-from-cast": {
@@ -456,7 +461,7 @@ export const playHelp = {
   },
   "play.document-theme": {
     title: "Theme",
-    body: "How the PDF looks: a built-in theme or one of yours from Library → Documents. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. Edit themes opens the list.",
+    body: "How the PDF looks: a built-in theme or one of yours from Library → PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. Edit themes opens the list.",
     tutorial: { page: "PDF-Documents", anchor: "options" },
   },
 
@@ -495,7 +500,7 @@ export const playHelp = {
   },
   "play.brand-kit": {
     title: "Channel's brand kit",
-    body: "Fills what this setup leaves at its default from the channel: the caption font, intro, outro, document theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
+    body: "Fills what this setup leaves at its default from the channel: the caption font, intro, outro, PDF theme and ambient sound. What you set here wins. Turn it off to take none of it; the cast and language still apply. Default: on.",
     tutorial: { page: "Play-Overview", anchor: "channel-row" },
   },
   "play.language": {
@@ -527,7 +532,7 @@ export const playHelp = {
   },
   "play.queue": {
     title: "Video queue",
-    body: "Videos started together run one at a time, in this order. Pausing a project holds the queue; when one fails or is cancelled, the next one starts.",
+    body: "Videos started together run one at a time, in this order. Pausing a project holds the queue; when one fails or is canceled, the next one starts.",
     tutorial: { page: "Play-Overview", anchor: "the-video-queue" },
   },
 

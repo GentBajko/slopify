@@ -152,7 +152,7 @@ describe("the destructive actions", () => {
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(
-        "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
+        "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History. No charge: it runs on this computer.",
       ),
     ).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();
@@ -206,9 +206,7 @@ describe("editing the article", () => {
     await selectProjectStage("Article");
     // The draft waits in the Settings view, which the rail marks unsaved.
     const rail = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(rail).getByRole("button", { name: /^Settings/ }).textContent).toContain(
-      "unsaved",
-    );
+    expect(within(rail).getByRole("link", { name: /^Settings/ }).textContent).toContain("unsaved");
     await openProjectTab("Edit");
     expect((screen.getByLabelText("Article text") as HTMLTextAreaElement).value).toBe(
       "My unfinished changes.",

@@ -14,13 +14,17 @@ import { confirmationFor } from "./confirmations.js";
 import { useOutputChange } from "./output-change.js";
 import { DownloadMenu, OutputFolder } from "./parts.js";
 import type { Review } from "./review-api.js";
+import { ImageReviewActions } from "./review-image-actions.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
+import { YouTubePreview } from "./review-youtube-preview.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
+import { SetDownload } from "./set-download.js";
 import { SectionMore } from "./stage-section.js";
 
 // The thumbnails above the slideshow images: one, or three side by side for YouTube's Test &
-// compare, each a media frame with its own Regenerate and Download and its review badge. The
-// prompt behind them is not shown; the picture is what gets judged.
+// compare, each a media frame with its own Regenerate, Compare and Download and its review
+// badge. The prompt behind each shows under it full size, and a fold shows them the size
+// YouTube shows them at.
 export function ThumbnailPanel({
   stage,
   project,
@@ -51,6 +55,8 @@ export function ThumbnailPanel({
   const items: LightboxItem[] = openable.map((output) => ({
     src: files.get(output.id)?.url ?? "",
     alt: `Thumbnail ${String(output.meta.index ?? 1)}`,
+    // The prompt that made it, so a weak thumbnail can be traced to its wording.
+    caption: output.meta.prompt ?? "Uploaded thumbnail",
   }));
   const tall = project.format === "9:16";
   const tile = ({ variant, output }: (typeof variants)[number]): ReactElement => (
@@ -88,6 +94,9 @@ export function ThumbnailPanel({
             label: count === 1 ? "Thumbnail" : `Thumbnail ${String(output.meta.index ?? 1)}`,
           }))}
         />
+        {made.length > 1 ? (
+          <SetDownload projectId={project.id} set="thumbnails" members={made} variant="secondary" />
+        ) : null}
         <OutputFolder output={made[0]} />
         <SectionMore stages={[stage]} project={project} actions={actions} />
       </SectionHead>
@@ -103,6 +112,12 @@ export function ThumbnailPanel({
           ))}
         </MediaGrid>
       )}
+      <YouTubePreview
+        thumbnails={made}
+        title={project.title}
+        durationMs={outputs.find((output) => output.role === "video")?.durationMs ?? null}
+        portrait={tall}
+      />
       <Lightbox
         items={items}
         index={open}
@@ -168,6 +183,7 @@ function ThumbnailVariant({
           outputId: output.id,
           now: change.now,
           thumbnail: true,
+          price: change.price,
         });
   return (
     <>
@@ -206,6 +222,16 @@ function ThumbnailVariant({
                     <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
                     Regenerate
                   </Button>
+                  <ImageReviewActions
+                    output={output}
+                    name={name}
+                    aspect={frameAspect(project.format)}
+                    replaceable={
+                      project.config.sources.thumbnail === "from_prompt" ||
+                      project.config.sources.thumbnail === "prompt_by_llm"
+                    }
+                    disabled={change.unavailable}
+                  />
                   {media === undefined ? null : (
                     <DownloadButton href={media.url} label={`Download ${name}`} />
                   )}

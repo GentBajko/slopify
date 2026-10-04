@@ -8,14 +8,16 @@ import { Board, BoardColumn } from "@/components/kit/board";
 import { EmptyState } from "@/components/kit/empty-state";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
-import { ButtonLink, TextLink } from "@/components/kit/link";
+import { ButtonLink } from "@/components/kit/link";
+import { LoadFailed, LoadingBlock, QueryState, StaleNote } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
-import { FailedItem, HeldTopicsItem, isWaiting, PausedItem, WaitingItem } from "@/home/needs-you";
-import { isReadyToUpload, ReadyItem } from "@/home/ready";
+import { isWaiting } from "@/home/needs-you";
+import { isReadyToUpload } from "@/home/ready";
 import { isQueued, RunningMore } from "@/home/running-more";
 import { RunningProject } from "@/home/running-now";
-import { ThisWeek } from "@/home/week";
+import { WeekTotals } from "@/home/week";
+import { type Decision, WorkList } from "@/home/work-list";
 import { dismissFirstRun, onboardingKey, readFirstRun } from "@/onboarding/api";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
@@ -27,16 +29,17 @@ const today = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
   month: "long",
 });
-// Enough to see what matters without the page turning into the projects list.
-const shownPerSection = 4;
 
 // Set once the first-run screen was opened in this tab, so coming back to Home stays here.
 let welcomed = false;
 // The settle is sent once per visit.
 let settled = false;
 
-// Home: what needs the person, what is running, what is coming up on the calendar, what is
-// ready to upload and what this week cost, for the channel picked in the rail (or all).
+// Home, for the channel picked in the rail (or all): one work list of what needs the person
+// (decisions, then videos ready to upload), what is running, what the schedules start in the
+// next seven days once there are schedules, and this week's totals on request. Each region
+// says when it is loading or failed, with Retry in place; nothing reads as empty before it
+// loaded.
 export function HomeRoute(): ReactElement {
   const { api } = useApp();
   const current = useCurrentChannel();
@@ -88,31 +91,36 @@ export function HomeRoute(): ReactElement {
   const running = mine.filter((one) => one.status === "running");
   // Started and waiting their turn: they show as one line under Running now.
   const queued = mine.filter(isQueued);
-  const paused = mine.filter((one) => one.status === "paused");
-  const waiting = mine.filter(isWaiting);
-  const failed = mine.filter((one) => one.status === "failed");
   // The bundled samples are finished videos too, but nobody uploads them.
   const samples = new Set(
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
   const ready = mine.filter((one) => isReadyToUpload(one) && !samples.has(one.id));
-  const held = (schedules.data ?? []).filter(
-    (one) =>
-      one.deletedAt === null &&
-      one.topicGeneration.mode === "hold" &&
-      one.topics.held > 0 &&
-      current.includes(templateChannel.get(one.templateId)),
+  const failed = mine.filter((one) => one.status === "failed");
+  const mySchedules = (schedules.data ?? []).filter(
+    (one) => one.deletedAt === null && current.includes(templateChannel.get(one.templateId)),
+  );
+  const held = mySchedules.filter(
+    (one) => one.topicGeneration.mode === "hold" && one.topics.held > 0,
   );
   const upcoming = (calendar.data?.runs ?? []).filter((run) =>
     current.includes(templateChannel.get(run.templateId)),
   );
-  const needs = [
-    ...waiting.map((project) => ({ kind: "waiting" as const, project })),
-    ...paused.map((project) => ({ kind: "paused" as const, project })),
+  const decisions: Decision[] = [
+    ...mine.filter(isWaiting).map((project) => ({ kind: "waiting" as const, project })),
+    ...mine
+      .filter((one) => one.status === "paused")
+      .map((project) => ({ kind: "paused" as const, project })),
     ...held.map((schedule) => ({ kind: "held" as const, schedule })),
-    ...failed.slice(0, shownPerSection).map((project) => ({ kind: "failed" as const, project })),
   ];
-  const loading = projects.isPending;
+  const hasWork = decisions.length + failed.length + ready.length > 0;
+  const active = running.length + queued.length > 0;
+  // Upcoming runs only matter once there is a schedule; until the schedules answer, the
+  // section holds its place.
+  const showComingUp = schedules.data === undefined || mySchedules.length > 0;
+  const retryProjects = (): void => {
+    void projects.refetch();
+  };
 
   return (
     <div data-tour="home">
@@ -125,7 +133,7 @@ export function HomeRoute(): ReactElement {
           <>
             <ButtonLink to="/play" variant="secondary">
               <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New project
+              Create
             </ButtonLink>
             <ButtonLink to="/calendar" variant="quiet">
               <CalendarIcon aria-hidden="true" strokeWidth={1.75} />
@@ -138,124 +146,99 @@ export function HomeRoute(): ReactElement {
         <ChannelPicker className="min-w-0 flex-1" />
         <InfoTip id="home.channel" className="mb-1" />
       </div>
-      {projects.error === null ? null : (
-        <p role="alert" className="m-0 mb-5 text-danger">
-          {`Your projects didn't load: ${projects.error.message} Check that Slopify is still running, then reload the page.`}
-        </p>
-      )}
       <Board split="main-side">
         <BoardColumn>
-          <section aria-label="Needs you">
-            <SectionHead
-              title="Needs you"
-              info="home.needs-you"
-              meta={
-                loading
-                  ? "Loading…"
-                  : needs.length === 0
-                    ? "Nothing is waiting for a decision"
-                    : `${String(needs.length)} ${needs.length === 1 ? "thing is" : "things are"} waiting for you`
-              }
-            />
-            {needs.length === 0 ? null : (
-              <ul aria-label="Waiting for you" className="m-0 flex list-none flex-col gap-3 p-0">
-                {needs.map((item, index) =>
-                  item.kind === "waiting" ? (
-                    <WaitingItem
-                      key={item.project.id}
-                      project={item.project}
-                      primary={index === 0}
-                    />
-                  ) : item.kind === "paused" ? (
-                    <PausedItem
-                      key={item.project.id}
-                      project={item.project}
-                      primary={index === 0}
-                    />
-                  ) : item.kind === "held" ? (
-                    <HeldTopicsItem
-                      key={item.schedule.id}
-                      schedule={item.schedule}
-                      primary={index === 0}
-                    />
-                  ) : (
-                    <FailedItem
-                      key={item.project.id}
-                      project={item.project}
-                      primary={index === 0}
-                    />
-                  ),
-                )}
-              </ul>
-            )}
-          </section>
-          <section id="running" aria-label="Running now">
-            <SectionHead
-              title="Running now"
-              info="home.running"
-              meta={
-                running.length === 0
-                  ? "Nothing is running"
-                  : `${String(running.length)} ${running.length === 1 ? "video" : "videos"}`
-              }
-            />
-            {running.length === 0 ? (
-              loading || queued.length > 0 ? null : (
-                <EmptyState title="Start the next video">
-                  Pick a template and a topic on Play, or let a schedule start one.
-                </EmptyState>
-              )
+          {projects.data === undefined ? (
+            projects.error !== null ? (
+              <LoadFailed
+                what="Your projects"
+                error={projects.error}
+                onRetry={retryProjects}
+                retrying={projects.isFetching}
+              />
             ) : (
-              <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {running.slice(0, 3).map((project) => (
-                  <RunningProject key={project.id} project={project} now={now} />
-                ))}
-              </ul>
-            )}
-            <RunningMore running={running.length} queued={queued} />
-          </section>
+              // A placeholder, not yet the Needs you region: its rows are not known.
+              <div>
+                <SectionHead title="Needs you" info="home.needs-you" meta="Loading…" />
+                <LoadingBlock label="Loading your projects…" rows={2} rowClassName="h-28" />
+              </div>
+            )
+          ) : (
+            <>
+              {projects.error === null ? null : (
+                <StaleNote
+                  what="your projects"
+                  error={projects.error}
+                  updatedAt={projects.dataUpdatedAt}
+                  onRetry={retryProjects}
+                  retrying={projects.isFetching}
+                />
+              )}
+              {hasWork ? <WorkList decisions={decisions} failed={failed} ready={ready} /> : null}
+              {active ? (
+                <section id="running" aria-label="Running now">
+                  <SectionHead
+                    title="Running now"
+                    info="home.running"
+                    meta={
+                      running.length === 0
+                        ? "Nothing is running yet"
+                        : `${String(running.length)} ${running.length === 1 ? "video" : "videos"}`
+                    }
+                  />
+                  {running.length === 0 ? null : (
+                    <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                      {running.slice(0, 3).map((project) => (
+                        <RunningProject key={project.id} project={project} now={now} />
+                      ))}
+                    </ul>
+                  )}
+                  <RunningMore running={running.length} queued={queued} />
+                </section>
+              ) : null}
+              {hasWork || active ? null : (
+                <EmptyState title="Nothing needs you and nothing is running">
+                  Start a video with New project, or let a schedule start one.
+                </EmptyState>
+              )}
+            </>
+          )}
         </BoardColumn>
         <BoardColumn>
-          <section aria-label="Coming up">
-            <SectionHead title="Coming up" info="home.coming-up" meta="Next 7 days">
-              <TextLink to="/calendar">Calendar</TextLink>
-            </SectionHead>
-            {calendar.error !== null ? (
-              <p className="m-0 text-small text-danger">
-                {`The calendar didn't load: ${calendar.error.message} Reload the page to try again.`}
-              </p>
-            ) : upcoming.length === 0 ? (
-              <p className="m-0 text-small text-ink-2">
-                {calendar.isPending
-                  ? "Loading…"
-                  : "No scheduled runs this week. Plan some on the calendar."}
-              </p>
-            ) : (
-              <ComingUp runs={upcoming.slice(0, 6)} />
-            )}
-          </section>
-          <section aria-label="Ready to upload">
-            <SectionHead
-              title="Ready to upload"
-              info="home.ready"
-              meta={
-                ready.length === 0
-                  ? "Finished videos you haven't marked uploaded show here"
-                  : `${String(ready.length)} finished and not marked uploaded`
-              }
-            />
-            {ready.length === 0 ? null : (
-              <ul className="m-0 flex list-none flex-col gap-4 p-0">
-                {ready.slice(0, shownPerSection).map((project) => (
-                  <ReadyItem key={project.id} project={project} />
-                ))}
-              </ul>
-            )}
-          </section>
-          <section aria-label="This week">
-            <SectionHead title="This week" info="home.this-week" meta="Since Monday" />
-            <ThisWeek channelId={current.channelId} />
-          </section>
+          {showComingUp ? (
+            <section aria-label="Coming up">
+              <SectionHead title="Coming up" info="home.coming-up" meta="Next 7 days" />
+              {schedules.error !== null && schedules.data === undefined ? (
+                <LoadFailed
+                  compact
+                  what="Your schedules"
+                  error={schedules.error}
+                  onRetry={() => void schedules.refetch()}
+                  retrying={schedules.isFetching}
+                />
+              ) : (
+                <QueryState
+                  query={calendar}
+                  what="The calendar"
+                  compact
+                  loading={
+                    <LoadingBlock label="Loading the calendar…" rows={2} rowClassName="h-12" />
+                  }
+                >
+                  {() =>
+                    upcoming.length === 0 ? (
+                      <p className="m-0 text-small text-ink-2">
+                        No scheduled runs in the next 7 days.
+                      </p>
+                    ) : (
+                      <ComingUp runs={upcoming.slice(0, 6)} />
+                    )
+                  }
+                </QueryState>
+              )}
+            </section>
+          ) : null}
+          <WeekTotals channelId={current.channelId} />
         </BoardColumn>
       </Board>
     </div>

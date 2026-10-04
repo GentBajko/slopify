@@ -6,8 +6,10 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
-import { Status, type Tone } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
+import { scheduleStatusLook } from "@/lib/state-words";
 import { schedulesQuery } from "@/schedules/api";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesKey, templatesQuery } from "@/templates/api";
@@ -88,19 +90,6 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
   );
 }
 
-const statusLabels = {
-  active: "Active",
-  paused: "Paused",
-  completed: "Completed",
-  canceled: "Canceled",
-} as const;
-const statusTones: Readonly<Record<keyof typeof statusLabels, Tone>> = {
-  active: "running",
-  paused: "waiting",
-  completed: "done",
-  canceled: "off",
-};
-
 // The Schedules tab: the schedules that run this channel's templates. They are managed in
 // Calendar → Schedules.
 export function SchedulesTab({ channelId }: { readonly channelId: string }): ReactElement {
@@ -137,11 +126,15 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
           {own.map((schedule) => (
             <ListRow
               key={schedule.id}
-              title={schedule.name}
+              title={
+                <TextLink to="/calendar" search={{ tab: "schedules", schedule: schedule.id }}>
+                  {schedule.name}
+                </TextLink>
+              }
               meta={
                 <>
-                  <Status tone={statusTones[schedule.status]}>
-                    {statusLabels[schedule.status]}
+                  <Status tone={scheduleStatusLook[schedule.status].tone}>
+                    {scheduleStatusLook[schedule.status].word}
                   </Status>
                   {` · ${
                     schedule.nextRunAt === null

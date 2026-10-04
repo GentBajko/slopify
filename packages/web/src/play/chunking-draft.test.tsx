@@ -19,7 +19,7 @@ it.each(["words", "characters"] as const)(
     await act(async () => {
       await h.session().navigate("outputs");
     });
-    await userEvent.click(screen.getByText(/Audio Advanced/));
+    await userEvent.click(screen.getByText(/More audio settings/));
     const label = mode === "words" ? "Words" : "Characters";
     fireEvent.change(screen.getByLabelText(label), { target: { value: "" } });
     expect(h.session().document.form.chunking[mode]).toBe("");
@@ -33,7 +33,7 @@ it.each(["words", "characters"] as const)(
     await act(async () => {
       await h.session().navigate("outputs");
     });
-    await userEvent.click(screen.getByText(/Audio Advanced/));
+    await userEvent.click(screen.getByText(/More audio settings/));
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
     fireEvent.change(screen.getByLabelText(label), { target: { value: "777" } });
     expect(h.session().document.form.chunking[mode]).toBe("777");

@@ -60,6 +60,23 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
+  /* A sideways row with more behind an edge fades that edge (kit/scroll-edges.ts): the
+     scrollbar is hidden, so the fade is what says the row goes on. */
+  [data-more-after] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  }
+  [data-more-before] {
+    mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+  }
+  [data-more-before][data-more-after] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
   .sl-tab {
     flex: none;
     white-space: nowrap;
@@ -228,8 +245,63 @@
     width: min(420px, calc(100vw - 32px));
     pointer-events: none;
   }
+  .sl-toasts__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
   .sl-toast {
     pointer-events: auto;
+  }
+  /* Skip to content: out of sight until the Tab key reaches it, then over the top left. */
+  .sl-skip {
+    position: fixed;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 100;
+    transform: translateY(calc(-100% - 24px));
+  }
+  .sl-skip:focus-visible {
+    transform: none;
+  }
+  /* Focus moved to a screen's heading on arrival (components/shell-location.ts) draws no ring
+     for a pointer user; a keyboard user still sees it. */
+  [tabindex="-1"]:focus:not(:focus-visible) {
+    outline: none;
+  }
+  /* The connection's state (components/connection-status.tsx): one line pinned to the top
+     of the window, over the page rather than pushing it down. */
+  .sl-connection-slot {
+    position: fixed;
+    top: var(--space-3);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 95;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    pointer-events: none;
+  }
+  .sl-connection {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 8px 14px;
+    border-radius: var(--radius-media);
+    border: 1px solid var(--color-line);
+    background: var(--color-raised);
+    box-shadow: var(--shadow-pop);
+    font-size: 13px;
+    line-height: 19px;
+    pointer-events: auto;
+  }
+  .sl-connection--down {
+    border-color: var(--color-waiting);
+  }
+  .sl-connection svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
   }
   .sl-toast svg {
     width: 16px;
@@ -432,32 +504,32 @@
     }
   }
 
-  /* The app shell: a 232px rail and a fluid main column, centred beyond content-max. The
-     rail's surface and hairline are also painted on the shell itself, the full height of the
-     page, so however far a long page scrolls (and wherever a webview gives up on sticky) the
-     rail's column never ends at the first screen. */
+  /* The app shell: a --rail-width (232px) rail and a fluid main column, centred beyond
+     content-max. The rail's surface and hairline are also painted on the shell itself, the
+     full height of the page, so however far a long page scrolls (and wherever a webview
+     gives up on sticky) the rail's column never ends at the first screen. */
   .sl-app {
     display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
     min-height: 100dvh;
     background:
       linear-gradient(
         to right,
-        var(--color-surface) 0 231px,
-        var(--color-line) 231px 232px,
-        transparent 232px
+        var(--color-surface) 0 calc(var(--rail-width) - 1px),
+        var(--color-line) calc(var(--rail-width) - 1px) var(--rail-width),
+        transparent var(--rail-width)
       ),
       var(--color-ground);
   }
   /* Fixed to the window's full height rather than sticky: a sticky rail could end partway down
      the window (a zoomed or short window scrolled to the bottom), leaving an empty band. The
-     grid keeps its 232px column, and the main column is placed in the second one. */
+     grid keeps its rail column, and the main column is placed in the second one. */
   .sl-app__rail {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
-    width: 232px;
+    width: var(--rail-width);
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -746,6 +818,27 @@
   .sl-home-item > .sl-media__frame {
     border-radius: 8px;
   }
+  /* Home's work list sizes its rows by its own width, not the window's: in a narrow column
+     (the two-column board around 1024-1280px, or a stacked one beside the rail) the actions go
+     under the text instead of squeezing it to a word per line. */
+  .sl-home-list {
+    container-type: inline-size;
+  }
+  @container (max-width: 640px) {
+    .sl-home-item {
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: var(--space-3) var(--space-4);
+      align-items: start;
+    }
+    .sl-home-item__action {
+      grid-column: 1 / -1;
+    }
+  }
+  @container (max-width: 420px) {
+    .sl-home-item {
+      grid-template-columns: 96px minmax(0, 1fr);
+    }
+  }
   .sl-home-run {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
@@ -754,15 +847,6 @@
     border-radius: var(--radius-media);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-  }
-  .sl-home-ready {
-    display: grid;
-    grid-template-columns: 132px minmax(0, 1fr);
-    gap: var(--space-4);
-    align-items: center;
-  }
-  .sl-home-ready > .sl-media__frame {
-    border-radius: 8px;
   }
   @media (max-width: 1280px) {
     .sl-home-run {
@@ -780,10 +864,6 @@
     }
     .sl-home-run {
       padding: var(--space-4);
-    }
-    .sl-home-ready {
-      grid-template-columns: 96px minmax(0, 1fr);
-      align-items: start;
     }
   }
 
@@ -962,7 +1042,7 @@
       bottom: 0;
       z-index: 40;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       border-top: 1px solid var(--color-line);
       background: var(--color-surface);
       padding: 8px 0 max(12px, env(safe-area-inset-bottom));
@@ -972,10 +1052,17 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
+      min-width: 0;
       font-size: 12px;
       line-height: 16px;
       color: var(--color-ink-3);
       text-decoration: none;
+    }
+    @media (max-width: 359px) {
+      .sl-bottomnav a {
+        font-size: 11px;
+        letter-spacing: -0.01em;
+      }
     }
     .sl-bottomnav a[aria-current="page"] {
       color: var(--color-ink);
@@ -1012,8 +1099,10 @@
       flex-wrap: wrap;
       align-items: flex-start;
     }
+    /* Above the bottom bar (its 8px top padding, 20px icon, 4px gap, 16px label and its
+       bottom padding with the safe area) and a gap, never over it. */
     .sl-toasts {
-      bottom: 84px;
+      bottom: calc(56px + max(12px, env(safe-area-inset-bottom)));
     }
   }
 }

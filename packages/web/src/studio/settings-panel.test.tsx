@@ -91,9 +91,51 @@ describe("Settings → YouTube Studio", () => {
     await screen.findByRole("textbox", { name: "Playlist 1 name" });
     await user.click(screen.getByRole("button", { name: "Add playlist" }));
     await user.type(screen.getByRole("textbox", { name: "Playlist 2 name" }), "everything");
-    expect(screen.getByRole("alert").textContent).toContain("listed twice");
+    expect(screen.getByText(/listed twice/).getAttribute("role")).toBe("alert");
     expect(screen.getByRole("button", { name: "Save playlists" }).hasAttribute("disabled")).toBe(
       true,
+    );
+  });
+
+  it("keeps a channel's unsaved list when another channel is picked, and saves it on Enter", async () => {
+    const user = userEvent.setup();
+    const saved: unknown[] = [];
+    renderRouted(
+      <StudioSettings />,
+      testDeps({
+        "GET /api/channels": jsonAnswer({ channels: [channel("c1", "My channel")] }),
+        "GET /api/studio/settings": jsonAnswer({
+          playlists: [{ name: "Everything", byDefault: true }],
+          channelPlaylists: {},
+          pairing: { token: "secret-token-value", origin: null, pairedAt: null },
+        }),
+        "PUT /api/studio/settings/playlists": async (request) => {
+          const body = (await request.json()) as { playlists: unknown };
+          saved.push(body);
+          return jsonAnswer({ playlists: body.playlists })(request);
+        },
+      }),
+    );
+    const first = await screen.findByRole<HTMLInputElement>("textbox", {
+      name: "Playlist 1 name",
+    });
+    await waitFor(() => expect(first.value).toBe("Everything"));
+    // The pairing token is masked until Show pairing token is pressed.
+    expect(screen.queryByText("secret-token-value")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show pairing token" }));
+    expect(screen.getByText("secret-token-value")).not.toBeNull();
+
+    await user.type(first, " else");
+    expect(screen.getByText(/Unsaved changes/)).not.toBeNull();
+    const picker = screen.getByRole("combobox", { name: "Channel" });
+    await screen.findByRole("option", { name: "My channel" });
+    await user.selectOptions(picker, "c1");
+    await user.selectOptions(picker, "");
+    const again = screen.getByRole<HTMLInputElement>("textbox", { name: "Playlist 1 name" });
+    expect(again.value).toBe("Everything else");
+    await user.type(again, "{Enter}");
+    await waitFor(() =>
+      expect(saved).toEqual([{ playlists: [{ name: "Everything else", byDefault: true }] }]),
     );
   });
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { thumbnailKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { normalizeArticleIntent } from "../rebuild/recipe-save.js";
@@ -6,7 +7,13 @@ import { discardPreparedAssets, type PreparedAsset } from "../storage/assets.js"
 import type { OutputRole } from "../storage/model.js";
 import { prepareStagedFile, prepareText } from "../storage/prepare.js";
 import { outputSchema } from "../storage/schema.js";
-import type { RevisionDeps, RevisionEdit, RevisionView } from "./model.js";
+import {
+  type RevisionContent,
+  type RevisionDeps,
+  type RevisionEdit,
+  type RevisionView,
+  thumbnailOverrideOf,
+} from "./model.js";
 import {
   bindUpload,
   measureAudio,
@@ -29,20 +36,27 @@ export async function prepareEditAssets(
   const allocated: PreparedAsset[] = [];
   try {
     const projectId = base.revision.projectId;
-    let content = normalizeArticleIntent(base, edit);
+    let content = remadeThumbnails(normalizeArticleIntent(base, edit), edit);
     for (const upload of edit.uploads ?? []) {
       const to = upload.destination;
       const role =
         to.kind === "image"
           ? "image"
-          : to.kind === "provided" && to.stage !== "audio"
-            ? providedOutput[to.stage].role
-            : "audio_body";
+          : to.kind === "thumbnail"
+            ? "thumbnail"
+            : to.kind === "provided" && to.stage !== "audio"
+              ? providedOutput[to.stage].role
+              : "audio_body";
       const result = prepareStagedFile(deps, {
         projectId,
         stagedFileId: upload.stagedFileId,
         role,
-        index: to.kind === "image" ? content.imageOrder.indexOf(to.imageKey) + 1 : 1,
+        index:
+          to.kind === "image"
+            ? content.imageOrder.indexOf(to.imageKey) + 1
+            : to.kind === "thumbnail"
+              ? to.variant
+              : 1,
       });
       if (!result.ok) throw new Error("A validated upload became unavailable.");
       // The shorts' music is an asset the revision names, like a narration replacement,
@@ -54,15 +68,26 @@ export async function prepareEditAssets(
             ? to.key
             : to.kind === "shortsMusic"
               ? "shorts:music"
-              : providedOutput[to.stage].workKey;
+              : to.kind === "thumbnail"
+                ? thumbnailKey(to.variant)
+                : providedOutput[to.stage].workKey;
+      // The first thumbnail keeps the slot a thumbnail always had; the second and third have
+      // their own, as when they are drawn (`rebuild/runtime-publication.ts`).
+      const ownSlot =
+        to.kind === "image" ||
+        to.kind === "narration" ||
+        to.kind === "shortsMusic" ||
+        (to.kind === "thumbnail" && to.variant > 1);
       const item: PreparedEditAsset = {
         ...result,
         upload,
         workKey,
-        slot:
-          to.kind === "image" || to.kind === "narration" || to.kind === "shortsMusic"
-            ? workKey
-            : `${result.output.stageKind}:${role}`,
+        slot: ownSlot ? workKey : `${result.output.stageKind}:${role}`,
+        // The second and third thumbnails carry their number; the first carries none, as when
+        // they are drawn.
+        ...(to.kind === "thumbnail" && to.variant > 1
+          ? { output: { ...result.output, meta: { ...result.output.meta, index: to.variant } } }
+          : {}),
       };
       allocated.push(result.asset);
       const durationMs =
@@ -198,6 +223,26 @@ export async function prepareEditAssets(
     discardPreparedAssets(deps, allocated);
     throw error;
   }
+}
+
+// Remaking a thumbnail that was replaced by the person's own file draws it again: the edit's
+// regenerate list names it, and no new file for it comes with the edit.
+function remadeThumbnails(content: RevisionContent, edit: RevisionEdit): RevisionContent {
+  const overrides = { ...content.thumbnailOverrides };
+  for (const key of edit.regenerate ?? []) {
+    const variant = thumbnailVariant(key);
+    const slot = variant === undefined ? undefined : thumbnailOverrideOf(variant);
+    if (
+      slot !== undefined &&
+      !edit.uploads?.some(
+        (one) => one.destination.kind === "thumbnail" && one.destination.variant === variant,
+      )
+    )
+      delete overrides[slot];
+  }
+  if (content.thumbnailOverrides === undefined) return content;
+  const { thumbnailOverrides: _dropped, ...rest } = content;
+  return Object.keys(overrides).length === 0 ? rest : { ...rest, thumbnailOverrides: overrides };
 }
 
 function retainedAsset(deps: RevisionDeps, projectId: string, assetId: string): PreparedAsset {

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type Answer, jsonAnswer, renderRouted, testDeps } from "../test-app";
+import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "../test-app";
 import { CalendarRoute } from "./calendar";
 
 afterEach(cleanup);
@@ -85,6 +85,33 @@ function deps(
 }
 
 describe("the calendar", () => {
+  it("says the calendar didn't load, with Retry, instead of empty weeks", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const working = deps();
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": (request) =>
+          fail
+            ? problemAnswer("The calendar query failed.", 500)(request)
+            : working.api.fetch(request),
+      }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "The calendar didn't loadThe calendar query failed.",
+    );
+    expect(screen.queryByText("Nothing needs you right now.")).toBeNull();
+    expect(document.querySelectorAll(".sl-cal-week")).toHaveLength(0);
+    fail = false;
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(
+      await screen.findByRole("article", {
+        name: /^Cleopatra, .*Lore\. Alt\+arrow keys move it\.$/,
+      }),
+    ).not.toBeNull();
+  });
+
   it("lays the weeks out Monday to Sunday with each run's topic on its day", async () => {
     renderRouted(<CalendarRoute />, deps());
     const chip = await screen.findByRole("article", {
@@ -160,9 +187,91 @@ describe("the calendar", () => {
     await user.click(screen.getByRole("button", { name: "List" }));
     await user.click(screen.getByRole("button", { name: "Move Hypatia earlier" }));
     await waitFor(() => expect(move).toHaveBeenCalledOnce());
+    expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
+  });
+
+  it("offers Undo after a move, which moves the topic back", async () => {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    const move: Answer = async (request) => {
+      bodies.push(JSON.parse(await request.text()));
+      return jsonAnswer(summary(scheduleId, "Lore", ["Hypatia", "Cleopatra"], { version: 5 }))(
+        request,
+      );
+    };
+    renderRouted(
+      <CalendarRoute />,
+      deps({ [`POST /api/schedules/${scheduleId}/topics/move`]: move }),
+    );
+    const hypatia = await screen.findByRole("article", { name: /^Hypatia,/ });
+    fireEvent.keyDown(hypatia, { key: "ArrowLeft", altKey: true });
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(bodies).toEqual([
+        { baseVersion: 4, from: 1, to: 0 },
+        { baseVersion: 5, from: 0, to: 1 },
+      ]),
+    );
+  });
+
+  it("shows a move at once and puts it back, with the reason, when the schedule changed", async () => {
+    let refuse: () => void = () => {};
+    const move: Answer = (request) =>
+      new Promise<Response>((resolve) => {
+        refuse = () =>
+          resolve(
+            problemAnswer(
+              "Lore was changed in another tab, so this move was not saved.",
+              409,
+            )(request),
+          );
+      });
+    renderRouted(
+      <CalendarRoute />,
+      deps({ [`POST /api/schedules/${scheduleId}/topics/move`]: move }),
+    );
+    const hypatia = await screen.findByRole("article", { name: /^Hypatia,/ });
+    fireEvent.keyDown(hypatia, { key: "ArrowLeft", altKey: true });
+    // Before the server answers, Hypatia already sits on Cleopatra's day.
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("article").map((one) => one.getAttribute("aria-label")?.split(",")[0]),
+      ).toContain("Hypatia"),
+    );
+    const first = screen.getAllByRole("article")[0];
+    expect(first?.getAttribute("aria-label")).toMatch(/^Hypatia,/);
+    refuse();
     expect(
-      screen.getByRole("combobox", { name: "Move Cleopatra to another schedule" }),
+      await screen.findByText(
+        /^Hypatia wasn't moved: Lore was changed in another tab, so this move was not saved\. The calendar shows where it is now/,
+      ),
     ).not.toBeNull();
+    expect(screen.getAllByRole("article")[0]?.getAttribute("aria-label")).toMatch(/^Cleopatra,/);
+  });
+
+  it("links each topic to its schedule and steps the weeks Earlier and Later", async () => {
+    const user = userEvent.setup();
+    const asked: string[] = [];
+    const working = deps();
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": (request) => {
+          asked.push(new URL(request.url).searchParams.get("from") ?? "");
+          return working.api.fetch(request);
+        },
+      }),
+    );
+    const cleopatra = await screen.findByRole("article", { name: /^Cleopatra,/ });
+    expect(within(cleopatra).getByRole("link", { name: "Lore" }).getAttribute("href")).toBe(
+      `/calendar?tab=schedules&schedule=${scheduleId}`,
+    );
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    await waitFor(() => expect(asked).toHaveLength(2));
+    expect(Date.parse(asked[1] ?? "") - Date.parse(asked[0] ?? "")).toBeGreaterThan(
+      27 * 24 * 60 * 60_000,
+    );
+    expect(screen.getByRole("button", { name: "This week" })).toHaveProperty("disabled", false);
   });
 
   it("adds typed topics to the end of a schedule's queue", async () => {
@@ -204,7 +313,7 @@ describe("what needs you and what is ready", () => {
     ...over,
   });
 
-  it("lists the projects waiting for the person and the ones ready to upload, each with its action", async () => {
+  it("counts the projects waiting for the person and ready to upload, and sends them to Home", async () => {
     renderRouted(
       <CalendarRoute />,
       testDeps({
@@ -239,26 +348,10 @@ describe("what needs you and what is ready", () => {
         "GET /api/schedules": jsonAnswer({ schedules: [] }),
       }),
     );
-    const needs = await screen.findByRole("list", { name: "Needs you" });
-    const rows = within(needs).getAllByRole("listitem");
-    // Waiting for the person first, then ready to upload; a plain finished one is not here.
-    expect(rows.map((row) => within(row).getAllByRole("link")[0]?.textContent)).toEqual([
-      "Held one",
-      "Broken one",
-      "Ready one",
-    ]);
-    expect(within(rows[0] as HTMLElement).getByText("Waiting for your review")).not.toBeNull();
-    expect(
-      within(rows[0] as HTMLElement)
-        .getByRole("link", { name: "Open to review" })
-        .getAttribute("href"),
-    ).toBe("/projects/p-review");
-    expect(
-      within(rows[1] as HTMLElement).getByRole("link", { name: "Open to fix" }),
-    ).not.toBeNull();
-    expect(
-      within(rows[2] as HTMLElement).getByRole("button", { name: "Prepare upload" }),
-    ).not.toBeNull();
+    // What needs a decision is Home's list: the calendar says how much and links there.
+    expect(await screen.findByText(/^2 waiting for you · 1 ready to upload\./)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Open Home" }).getAttribute("href")).toBe("/");
+    expect(screen.queryByRole("list", { name: "Needs you" })).toBeNull();
     // On its day, a project waiting for CLI limits says when they reset.
     const time = new Date(inDays(0, 14)).toLocaleTimeString(undefined, {
       hour: "2-digit",

@@ -49,14 +49,28 @@ describe("the project workspace", () => {
   it("lists the sections in the rail, each stage with its lamp, then the views", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
+    // Each stage's state is in its name as a word, not only in the lamp's colour.
     expect(
       within(rail)
-        .getAllByRole("button")
+        .getAllByRole("link")
         .map((item) => item.textContent),
-    ).toEqual(["Article", "Narration", "Images", "Video", "Cost", "Live", "Settings", "History"]);
-    expect(
-      within(rail).getByRole("button", { name: "Video" }).querySelector("[data-tone]"),
-    ).not.toBeNull();
+    ).toEqual([
+      "Outputs",
+      "Article, Done",
+      "Narration, Done",
+      "Images, Done",
+      "Video, Done",
+      "Cost",
+      "Live",
+      "Settings",
+      "History",
+    ]);
+    const video = within(rail).getByRole("link", { name: /^Video/ });
+    expect(video.textContent).toBe("Video, Done");
+    expect(within(rail).getByRole("link", { name: /^Video\W+Done$/ })).toBe(video);
+    expect(video.querySelector("[data-tone]")).not.toBeNull();
+    // A section is an address: it opens in a new tab and survives a reload.
+    expect(video.getAttribute("href")).toBe("/projects/p1?section=video");
     expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
       "Project: Done",
     );
@@ -130,9 +144,18 @@ describe("the project workspace", () => {
 
 describe("the next action", () => {
   it("opens a finished project on its video, with Prepare upload the one action", async () => {
+    // A video made for YouTube: it writes the YouTube description.
+    const youtube = {
+      ...finished,
+      project: {
+        ...finished.project,
+        config: { ...finished.project.config, youtubeDescription: true },
+      },
+    };
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
+        "GET /api/projects/p1": jsonAnswer(youtube),
         "GET /files/p1/article-md": () =>
           new Response(`# The Pharaoh\n\n${"A long finished article. ".repeat(500)}`),
       }),
@@ -141,16 +164,24 @@ describe("the next action", () => {
     expect(within(video).getByLabelText("Generated video")).not.toBeNull();
     expect(await downloadItem("Video (.mp4)")).not.toBeNull();
     expect(within(nextAction()).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
-    // Two primary actions: the project's next step, and the open section's own Download.
+    // The project's next step, the open section's own Download, and its YouTube part's Copy.
     const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
       (button) => button.closest("[hidden]") === null,
     );
     expect(shown.map((button) => button.textContent?.trim()).sort()).toEqual([
+      "Copy",
       "Download",
       "Prepare upload",
     ]);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
+  });
+
+  it("offers no Prepare upload for a video that is not made for YouTube", async () => {
+    renderRouted(<ProjectRoute projectId="p1" />, deps());
+    const video = await screen.findByRole("region", { name: "Video" });
+    expect(within(video).getByLabelText("Generated video")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Prepare upload" })).toBeNull();
   });
 
   it("offers Pause while the run is at work, and the steps with their state", async () => {
@@ -420,9 +451,15 @@ describe("the stage bodies", () => {
       `${testOrigin}/files/p1/image-1`,
       `${testOrigin}/files/p1/image-2`,
     ]);
-    expect(within(slideshow).getByRole("link", { name: "Download all" }).getAttribute("href")).toBe(
-      `${testOrigin}/files/p1/images.zip`,
-    );
+    // Download all lists the files first; the zip link is in that dialog.
+    await userEvent.click(screen.getByRole("button", { name: "Download all images" }));
+    const files = await screen.findByRole("dialog", { name: "Download images" });
+    expect(
+      within(files)
+        .getByRole("link", { name: /^Download zip/ })
+        .getAttribute("href"),
+    ).toBe(`${testOrigin}/files/p1/images.zip`);
+    await userEvent.click(within(files).getByRole("button", { name: "Cancel" }));
     await userEvent.click(
       within(slideshow).getByRole("button", { name: "Open image 2 full size" }),
     );

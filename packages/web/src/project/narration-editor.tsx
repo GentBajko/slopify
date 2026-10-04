@@ -1,11 +1,12 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { type ComponentProps, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { usePieceFocus } from "./review-focus.js";
 import { type NarrationChunkOrder, narrationChunkOrderOf } from "./revision-api.js";
 import { RevisionUpload } from "./revision-upload.js";
 
@@ -145,7 +146,8 @@ export function NarrationEditor({
                   label={`text for narration chunk ${String(index + 1)}`}
                 />
               </div>
-              <Textarea
+              <ChunkText
+                focusKey={`narration:${chunk.key}`}
                 id={`${editorId}-${chunk.key}-text`}
                 value={override?.kind === "text" ? override.text : chunk.text}
                 onChange={(event) => {
@@ -246,4 +248,14 @@ export function NarrationEditor({
       })}
     </section>
   );
+}
+
+// A chunk's text, which takes focus when the project page's transcript asked for this chunk.
+function ChunkText({
+  focusKey,
+  ...props
+}: ComponentProps<typeof Textarea> & { readonly focusKey: string }) {
+  const field = useRef<HTMLTextAreaElement>(null);
+  usePieceFocus(focusKey, field);
+  return <Textarea ref={field} {...props} />;
 }

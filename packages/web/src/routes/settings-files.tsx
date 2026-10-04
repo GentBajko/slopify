@@ -185,6 +185,7 @@ export function FilesFolder({
               running until it finishes.
             </p>
             <Meter
+              progress
               label={view.move.phase === "copying" ? "Files copied" : "Files checked"}
               value={view.move.totalBytes === 0 ? 0 : view.move.bytes / view.move.totalBytes}
             />

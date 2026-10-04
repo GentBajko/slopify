@@ -8,6 +8,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { heldWord, retryingWord, stageStateWord } from "@/lib/state-words";
 import type { HeldGate } from "./next-action.js";
 import { stageWords } from "./next-action.js";
 import { money, workDuration } from "./run-cost.js";
@@ -32,23 +33,9 @@ const toneOf = (stage: Stage, held: boolean): Tone => {
 };
 
 const stateWord = (stage: Stage, held: boolean): string => {
-  if (held) return "Held for you";
-  switch (stage.state) {
-    case "running":
-      return "Running";
-    case "done":
-      return "Done";
-    case "provided":
-      return "Provided";
-    case "failed":
-      return stage.retryAt === undefined ? "Failed" : "Waiting to try again";
-    case "canceled":
-      return "Canceled";
-    case "skipped":
-      return "Off";
-    case "pending":
-      return "Not started";
-  }
+  if (held) return heldWord;
+  if (stage.state === "failed" && stage.retryAt !== undefined) return retryingWord;
+  return stageStateWord[stage.state];
 };
 
 // "6 min", "41 s", "1 h 52 min": how long a step took, or has taken so far.
@@ -104,7 +91,7 @@ export function runSteps({
         state: stateWord(stage, isHeld),
         ...(time === undefined ? {} : { time }),
         detail: isHeld
-          ? "Held for your review"
+          ? "Approve it under Checkpoints to carry on."
           : withEta(summaryOf(stage, outputs, project, resumable), stage, now),
       };
     });

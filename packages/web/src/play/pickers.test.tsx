@@ -89,7 +89,7 @@ describe("the provider picker", () => {
     expect(screen.queryByRole("option", { name: /fal\.ai/ })).toBeNull();
   });
 
-  it("greys a keyed provider with no key and says Key Missing", () => {
+  it("greys a keyed provider with no key and says No key", () => {
     render(
       <ProviderPicker
         label="LLM"
@@ -102,11 +102,11 @@ describe("the provider picker", () => {
     );
 
     const unkeyed = option(/OpenRouter/);
-    expect(unkeyed.textContent).toBe("OpenRouter · Key Missing");
+    expect(unkeyed.textContent).toBe("OpenRouter · No key");
     expect(unkeyed.disabled).toBe(true);
   });
 
-  it("greys a CLI provider that is not installed and says CLI Missing", () => {
+  it("greys a CLI provider that is not installed and says Not found", () => {
     render(
       <ProviderPicker
         label="LLM"
@@ -119,7 +119,7 @@ describe("the provider picker", () => {
     );
 
     const absent = option(/Codex CLI/);
-    expect(absent.textContent).toBe("Codex CLI · CLI Missing");
+    expect(absent.textContent).toBe("Codex CLI · Not found");
     expect(absent.disabled).toBe(true);
   });
 
@@ -136,7 +136,7 @@ describe("the provider picker", () => {
     );
 
     const outdated = option(/Gemini CLI/);
-    expect(outdated.textContent).toBe("Gemini CLI · CLI Update Required");
+    expect(outdated.textContent).toBe("Gemini CLI · Needs an update");
     expect(outdated.disabled).toBe(true);
   });
 

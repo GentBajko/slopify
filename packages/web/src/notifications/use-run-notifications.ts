@@ -13,6 +13,7 @@ import {
   showTopicsNotification,
 } from "./browser.js";
 import { onRunSoundsChange, playRunSound, runSoundsOn, unlockRunSounds } from "./sounds.js";
+import { useAwaySummary } from "./use-away-summary.js";
 import { createRunWatcher, type RunWatcher } from "./watcher.js";
 
 // The shell's one watcher. It rides the global event stream the shell already holds open, so
@@ -25,6 +26,8 @@ export function useRunNotifications(): RunWatcher {
   // Read through a ref so a new navigate never rebuilds the watcher and forgets what it saw.
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
+  // The other half of being told: what happened while no tab was looking.
+  useAwaySummary();
 
   const watcher = useMemo(
     () =>

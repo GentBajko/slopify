@@ -1,26 +1,33 @@
 import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { ClipboardPasteIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
 import { saveNarrationAliases } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Board, BoardColumn } from "@/components/kit/board";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { EmptyState } from "@/components/kit/empty-state";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { List, ListRow } from "@/components/kit/list-row";
+import { Input } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
-import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/kit/toast";
 import { keys, narrationAliasesQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
-
-interface Row extends NarrationAlias {
-  readonly key: number;
-}
+import { mergeAliases, PasteAliasesDialog } from "./narration-alias-paste.js";
+import { type AliasRow, AliasRows, matchingRows } from "./narration-alias-rows.js";
+import { UnsavedLeaveGuard } from "./unsaved-leave-guard.js";
 
 const blank = { written: "", spoken: "", wholeWord: true, caseSensitive: false };
+
+const plain = (rows: readonly AliasRow[]): readonly NarrationAlias[] =>
+  rows.map(({ written, spoken, wholeWord, caseSensitive }) => ({
+    written,
+    spoken,
+    wholeWord,
+    caseSensitive,
+  }));
 
 // Library → Aliases: words the narrator says differently from how they are written ("Dr." as
 // "Doctor"). One list, saved as a whole. A project takes a copy when it starts, and only uses
@@ -28,22 +35,42 @@ const blank = { written: "", spoken: "", wholeWord: true, caseSensitive: false }
 export function NarrationAliasesRoute(): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
+  const notify = useToast();
   const listing = useQuery(narrationAliasesQuery(api));
-  const [rows, setRows] = useState<readonly Row[] | undefined>(undefined);
+  const [rows, setRows] = useState<readonly AliasRow[] | undefined>(undefined);
+  // What Save last kept (or the load), to tell whether the list on screen has unsaved changes.
+  const [saved, setSaved] = useState<string | undefined>(undefined);
   const [errors, setErrors] = useState<Readonly<Record<number, string>>>({});
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const [query, setQuery] = useState("");
+  const [pasting, setPasting] = useState(false);
+  const [focusKey, setFocusKey] = useState<number | undefined>(undefined);
   const next = useRef(0);
   const idPrefix = useId();
-  const keyed = (aliases: readonly NarrationAlias[]): readonly Row[] =>
+  const keyed = (aliases: readonly NarrationAlias[]): readonly AliasRow[] =>
     aliases.map((alias) => {
       next.current += 1;
       return { ...alias, key: next.current };
     });
   // The saved list fills the editor once; after that the editor is the source until Save.
   useEffect(() => {
-    if (rows === undefined && listing.data !== undefined) setRows(keyed(listing.data.aliases));
+    if (rows === undefined && listing.data !== undefined) {
+      setRows(keyed(listing.data.aliases));
+      setSaved(JSON.stringify(listing.data.aliases));
+    }
   });
   const shown = rows ?? [];
+  const dirty = rows !== undefined && saved !== JSON.stringify(plain(shown));
+
+  // A row just added gets the cursor in its Written field, scrolled into view.
+  useEffect(() => {
+    if (focusKey === undefined) return;
+    const field = document.getElementById(`${idPrefix}-${String(focusKey)}-written`);
+    if (field === null) return;
+    field.focus();
+    if (typeof field.scrollIntoView === "function") field.scrollIntoView({ block: "center" });
+    setFocusKey(undefined);
+  }, [focusKey, idPrefix]);
 
   const save = useMutation({
     mutationFn: (aliases: readonly NarrationAlias[]) => saveNarrationAliases(api, aliases),
@@ -63,6 +90,7 @@ export function NarrationAliasesRoute(): ReactElement {
       }
       setErrors({});
       setRows(keyed(result.value.aliases));
+      setSaved(JSON.stringify(result.value.aliases));
       setStatus({
         text: "Saved. New projects use these aliases; a project you already started keeps its copy until you refresh it in Edit project.",
         tone: "success",
@@ -70,7 +98,10 @@ export function NarrationAliasesRoute(): ReactElement {
       await queryClient.invalidateQueries({ queryKey: keys.narrationAliases });
     },
     onError: (error) =>
-      setStatus({ text: `Couldn't save the aliases: ${error.message}`, tone: "error" }),
+      setStatus({
+        text: `Couldn't save the aliases: ${error.message} Your changes are still on screen; press Save aliases to try again.`,
+        tone: "error",
+      }),
   });
 
   const update = (key: number, change: Partial<NarrationAlias>) => {
@@ -79,25 +110,75 @@ export function NarrationAliasesRoute(): ReactElement {
   };
   const add = () => {
     next.current += 1;
-    setRows([...shown, { ...blank, key: next.current }]);
+    const key = next.current;
+    setRows([...shown, { ...blank, key }]);
+    // The new row is blank, so a search would hide it.
+    setQuery("");
+    setFocusKey(key);
     setStatus(undefined);
   };
   const remove = (key: number) => {
+    const at = shown.findIndex((row) => row.key === key);
+    const removed = shown[at];
+    if (removed === undefined) return;
     setRows(shown.filter((row) => row.key !== key));
     setErrors({});
     setStatus(undefined);
+    const name = removed.written.trim();
+    notify(
+      name === ""
+        ? `Removed alias ${String(at + 1)}. Press Save aliases to keep the change.`
+        : `Removed the alias for “${name}”. Press Save aliases to keep the change.`,
+      "info",
+      {
+        label: "Undo",
+        run: () =>
+          setRows((current) => {
+            const list = [...(current ?? [])];
+            list.splice(Math.min(at, list.length), 0, removed);
+            return list;
+          }),
+      },
+    );
   };
+  const addPasted = (aliases: readonly NarrationAlias[]) => {
+    const merged = mergeAliases(shown, aliases, (alias) => {
+      next.current += 1;
+      return { ...alias, key: next.current };
+    });
+    setRows(merged.rows);
+    setQuery("");
+    setStatus({
+      text: `Added ${String(merged.added)} and updated ${String(merged.updated)} from the pasted lines. Press Save aliases to keep them.`,
+      tone: "info",
+    });
+  };
+  const visible = matchingRows(shown, query);
 
   return (
     <div>
       <LibraryToolbar
         action={
-          <Button type="button" onClick={add} disabled={rows === undefined}>
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
-            Add alias
-          </Button>
+          <>
+            <Button type="button" onClick={() => setPasting(true)} disabled={rows === undefined}>
+              <ClipboardPasteIcon aria-hidden="true" className="size-[14px]" />
+              Paste many
+            </Button>
+            <Button type="button" onClick={add} disabled={rows === undefined}>
+              <PlusIcon aria-hidden="true" className="size-[14px]" />
+              Add alias
+            </Button>
+          </>
         }
       >
+        <Input
+          type="search"
+          aria-label="Search aliases"
+          placeholder="Search aliases"
+          value={query}
+          className="w-full min-w-0 sm:w-64"
+          onChange={(event) => setQuery(event.target.value)}
+        />
         <p className="m-0 flex items-center gap-1 text-small text-ink-2">
           Words the narrator says differently, like Dr. as Doctor.
           <InfoTip id="library.aliases" />
@@ -114,11 +195,16 @@ export function NarrationAliasesRoute(): ReactElement {
         <BoardColumn label="Aliases">
           {rows === undefined ? null : shown.length === 0 ? (
             <EmptyState title="No aliases yet">
-              Use Add alias to say a word differently from how it is written.
+              Use Add alias to say a word differently from how it is written, or Paste many to add a
+              list.
+            </EmptyState>
+          ) : visible.length === 0 ? (
+            <EmptyState title="No alias matches">
+              {`Nothing in the ${String(shown.length)} aliases contains “${query.trim()}”. Clear the search to see them all.`}
             </EmptyState>
           ) : (
             <AliasRows
-              rows={shown}
+              rows={visible}
               errors={errors}
               idPrefix={idPrefix}
               update={update}
@@ -146,144 +232,25 @@ export function NarrationAliasesRoute(): ReactElement {
         </BoardColumn>
       </Board>
 
-      <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
+      <PasteAliasesDialog open={pasting} onClose={() => setPasting(false)} onAdd={addPasted} />
+      <UnsavedLeaveGuard dirty={dirty} what="your alias changes" saveLabel="Save aliases" />
+
+      <ActionBar
+        status={
+          <StatusSlot tone={status?.tone ?? (dirty ? "warning" : "info")}>
+            {status?.text ?? (dirty ? "Unsaved changes. Press Save aliases to keep them." : "")}
+          </StatusSlot>
+        }
+      >
         <Button
           type="button"
           variant="primary"
           disabled={rows === undefined || save.isPending}
-          onClick={() =>
-            save.mutate(
-              shown.map(({ written, spoken, wholeWord, caseSensitive }) => ({
-                written,
-                spoken,
-                wholeWord,
-                caseSensitive,
-              })),
-            )
-          }
+          onClick={() => save.mutate(plain(shown))}
         >
           {save.isPending ? "Saving…" : "Save aliases"}
         </Button>
       </ActionBar>
-    </div>
-  );
-}
-
-// The editable rows, as hairline-separated rows on the page rather than a box.
-function AliasRows({
-  rows: shown,
-  errors,
-  idPrefix,
-  update,
-  remove,
-}: {
-  readonly rows: readonly Row[];
-  readonly errors: Readonly<Record<number, string>>;
-  readonly idPrefix: string;
-  readonly update: (key: number, change: Partial<NarrationAlias>) => void;
-  readonly remove: (key: number) => void;
-}): ReactElement {
-  return (
-    // One info button per column, once above the rows rather than on every row.
-    <div {...helpScope}>
-      <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 pb-2 text-small text-ink-2">
-        <span className="flex items-center gap-1">
-          Written
-          <InfoTip id="library.aliases.written" />
-        </span>
-        <span className="flex items-center gap-1">
-          Say it as
-          <InfoTip id="library.aliases.spoken" />
-        </span>
-        <span className="flex items-center gap-1">
-          Whole word
-          <InfoTip id="library.aliases.whole-word" />
-        </span>
-        <span className="flex items-center gap-1">
-          Match case
-          <InfoTip id="library.aliases.match-case" />
-        </span>
-      </p>
-      <List label="Narration aliases">
-        {shown.map((row, index) => {
-          const id = `${idPrefix}-${row.key}`;
-          const error = errors[index];
-          const written = row.written.trim();
-          const spoken = row.spoken.trim();
-          return (
-            <ListRow
-              key={row.key}
-              title={`Alias ${String(index + 1)}`}
-              meta={
-                written === "" || spoken === ""
-                  ? "Not filled in yet"
-                  : `Says ${written} as ${spoken}${row.wholeWord ? " · whole word" : ""}${
-                      row.caseSensitive ? " · match case" : ""
-                    }`
-              }
-              actions={
-                <IconButton
-                  size="small"
-                  label={`Remove alias ${String(index + 1)}`}
-                  onClick={() => remove(row.key)}
-                >
-                  <Trash2Icon aria-hidden="true" />
-                </IconButton>
-              }
-            >
-              {/* Every alias is edited in place: the list is saved as a whole. */}
-              <div className="grid grid-cols-1 gap-x-4 gap-y-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
-                <label className="grid gap-1 text-label text-ink-2" htmlFor={`${id}-written`}>
-                  Written
-                  <Input
-                    id={`${id}-written`}
-                    value={row.written}
-                    placeholder="Dr."
-                    maxLength={200}
-                    aria-invalid={error !== undefined}
-                    aria-describedby={error === undefined ? undefined : `${id}-error`}
-                    onChange={(event) => update(row.key, { written: event.target.value })}
-                  />
-                </label>
-                <label className="grid gap-1 text-label text-ink-2" htmlFor={`${id}-spoken`}>
-                  Say it as
-                  <Input
-                    id={`${id}-spoken`}
-                    value={row.spoken}
-                    placeholder="Doctor"
-                    maxLength={500}
-                    aria-invalid={error !== undefined}
-                    onChange={(event) => update(row.key, { spoken: event.target.value })}
-                  />
-                </label>
-                <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-accent"
-                    checked={row.wholeWord}
-                    onChange={(event) => update(row.key, { wholeWord: event.target.checked })}
-                  />
-                  Whole word
-                </label>
-                <label className="flex min-h-8 items-center gap-2 text-small max-[1099px]:min-h-11">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-accent"
-                    checked={row.caseSensitive}
-                    onChange={(event) => update(row.key, { caseSensitive: event.target.checked })}
-                  />
-                  Match case
-                </label>
-                {error === undefined ? null : (
-                  <p id={`${id}-error`} className="m-0 text-small text-danger md:col-span-4">
-                    {error}
-                  </p>
-                )}
-              </div>
-            </ListRow>
-          );
-        })}
-      </List>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Format } from "@app/kernel/pipeline.js";
+import { thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
@@ -21,11 +22,13 @@ import { ThumbnailPanel } from "./body-thumbnail.js";
 import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
 import { useOutdated, useOutputChange, useRegenerateAll } from "./output-change.js";
-import { DownloadLink } from "./parts.js";
+import { OutputFolder } from "./parts.js";
 import { useRegenerateByNumber } from "./regenerate-by-number.js";
 import type { Review } from "./review-api.js";
+import { ImageReviewActions } from "./review-image-actions.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
+import { SetDownload } from "./set-download.js";
 import { SectionMore } from "./stage-section.js";
 
 // Images: the establishing image the others follow, the thumbnails, then the slideshow images
@@ -132,7 +135,7 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                 open={regenerateAll.asking}
                 tone="primary"
                 title={`Regenerate all ${String(regenerateAll.count)} images?`}
-                consequence={`Makes ${String(regenerateAll.count)} new images now, one paid image call each. The video keeps the current ones until you remake it; the old images stay in History.`}
+                consequence={`Makes ${String(regenerateAll.count)} new images now, one paid image call each. The video keeps the current ones until you remake it; the old images stay in History.${regenerateAll.price === undefined ? "" : ` ${regenerateAll.price.text}`}`}
                 confirmLabel="Regenerate them"
                 cancelLabel="Keep them"
                 pending={actions.pending}
@@ -140,7 +143,20 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                 onCancel={regenerateAll.dismiss}
               />
             )}
-            <DownloadLink projectId={project.id} asset="images.zip" label="Download all" />
+            {/* The files and their version are listed before the zip downloads. */}
+            <SetDownload
+              projectId={project.id}
+              set="images"
+              members={[
+                ...all,
+                ...outputs.filter(
+                  (output) =>
+                    output.role === "thumbnail" &&
+                    (output.meta.index ?? 1) <= thumbnailCountOf(project.config),
+                ),
+              ]}
+            />
+            <OutputFolder output={all[0]} />
             <SectionMore stages={[stage]} project={project} actions={actions} />
           </SectionHead>
           {groups.length === 0 && waiting === 0 ? (
@@ -279,7 +295,12 @@ export function OutputLightboxActions({
   const copy =
     change.asking === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: output.id, now: change.now });
+      : confirmationFor({
+          kind: change.asking,
+          outputId: output.id,
+          now: change.now,
+          price: change.price,
+        });
   return (
     <>
       <Button
@@ -433,7 +454,7 @@ function ReferencePanel({
         open={change.asking !== undefined}
         tone="primary"
         title="Make the establishing image again?"
-        consequence={`A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you remake them` : ""}. The old one stays in History.`}
+        consequence={`A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you remake them` : ""}. The old one stays in History.${change.price === undefined ? "" : ` ${change.price}`}`}
         confirmLabel="Make it again"
         cancelLabel="Keep this one"
         pending={actions.pending}
@@ -514,7 +535,12 @@ function ImageTile({
   const copy =
     change.asking === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: image.id, now: change.now });
+      : confirmationFor({
+          kind: change.asking,
+          outputId: image.id,
+          now: change.now,
+          price: change.price,
+        });
   return (
     <>
       <MediaFrame
@@ -552,6 +578,13 @@ function ImageTile({
               <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
               Regenerate
             </Button>
+            <ImageReviewActions
+              output={image}
+              name={name}
+              aspect={frameAspect(format)}
+              replaceable={!card}
+              disabled={change.unavailable}
+            />
             {media === undefined ? null : (
               <DownloadButton href={media.url} label={`Download ${name}`} />
             )}

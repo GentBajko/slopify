@@ -1,3 +1,4 @@
+import { useLocation } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode, useState } from "react";
@@ -218,12 +219,15 @@ it("confirms deletion and keeps the template visible when the server refuses", a
     <TemplatesRoute onApplied={vi.fn()} />,
     testDeps({ ...routes, [`DELETE /api/project-templates/${templateId}`]: remove }),
   );
-  await user.click(await screen.findByRole("button", { name: `Delete ${template.name}` }));
+  await user.click(
+    await screen.findByRole("button", { name: `More actions for ${template.name}` }),
+  );
+  await user.click(await screen.findByRole("menuitem", { name: `Delete ${template.name}` }));
   expect(remove).not.toHaveBeenCalled();
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Delete template" }));
   await screen.findByText("Template changed elsewhere.");
-  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await user.click(within(dialog).getByRole("button", { name: "Keep it" }));
   expect(
     within(screen.getByRole("list", { name: "Project templates" })).getByText(template.name),
   ).not.toBeNull();
@@ -299,7 +303,10 @@ it("deletes the selected version and refreshes the list", async () => {
       [`DELETE /api/project-templates/${templateId}`]: remove,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Delete ${template.name}` }));
+  await user.click(
+    await screen.findByRole("button", { name: `More actions for ${template.name}` }),
+  );
+  await user.click(await screen.findByRole("menuitem", { name: `Delete ${template.name}` }));
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete template" }),
   );
@@ -321,10 +328,8 @@ it("shows the Library row actions on the row itself and offers Save a setup in t
     [...actions.querySelectorAll("button")].map((one) => one.getAttribute("aria-label")),
   ).toEqual([
     `Edit ${template.name}`,
-    `Duplicate ${template.name}`,
     `Use ${template.name} in Play`,
-    `History of ${template.name}`,
-    `Delete ${template.name}`,
+    `More actions for ${template.name}`,
   ]);
 
   const save = registry.list().find((command) => command.title === "Save a setup as a template");
@@ -437,7 +442,10 @@ it("duplicates a template as a named copy", async () => {
       "POST /api/project-templates": created,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Duplicate ${template.name}` }));
+  await user.click(
+    await screen.findByRole("button", { name: `More actions for ${template.name}` }),
+  );
+  await user.click(await screen.findByRole("menuitem", { name: `Duplicate ${template.name}` }));
   await waitFor(() => expect(created).toHaveBeenCalledOnce());
   expect(names).toEqual([`${template.name} copy`]);
 });
@@ -472,7 +480,8 @@ it("lists a template's versions in History and restores an older one as a new ve
       },
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `History of ${second.name}` }));
+  await user.click(await screen.findByRole("button", { name: `More actions for ${second.name}` }));
+  await user.click(await screen.findByRole("menuitem", { name: `History of ${second.name}` }));
   const drawer = await screen.findByRole("dialog", { name: `History of ${second.name}` });
   const versions = within(drawer).getByRole("list", { name: `Versions of ${second.name}` });
   expect(within(versions).getAllByRole("listitem")).toHaveLength(2);
@@ -480,4 +489,67 @@ it("lists a template's versions in History and restores an older one as a new ve
   await user.click(within(drawer).getByRole("button", { name: "Restore version 1" }));
   await waitFor(() => expect(restored).toHaveLength(1));
   expect(restored[0]).toMatchObject({ baseVersion: 2, name: "Old documentary" });
+});
+
+const older = {
+  id: "33333333-3333-4333-8333-333333333333",
+  name: "Archive explainer",
+  version: 4,
+  createdAt: "2026-08-01T00:00:00Z",
+  updatedAt: "2026-08-02T09:30:15Z",
+};
+
+function rowNames(): string[] {
+  return within(screen.getByRole("list", { name: "Project templates" }))
+    .getAllByRole("listitem")
+    .map((row) => row.querySelector(".sl-row__title")?.textContent ?? "");
+}
+
+it("searches templates by name and sorts them by name or last change", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      "GET /api/project-templates": jsonAnswer({ templates: [template, older] }),
+    }),
+  );
+  await screen.findByRole("list", { name: "Project templates" });
+  expect(rowNames().map((name) => name.slice(0, 7))).toEqual(["Archive", "Weekly "]);
+
+  await user.click(screen.getByRole("button", { name: "Sort templates: Name" }));
+  await user.click(await screen.findByRole("menuitem", { name: /^Sort by last changed/u }));
+  expect(rowNames().map((name) => name.slice(0, 7))).toEqual(["Weekly ", "Archive"]);
+
+  await user.type(screen.getByRole("searchbox", { name: "Search templates" }), "archive");
+  expect(rowNames().map((name) => name.slice(0, 7))).toEqual(["Archive"]);
+  await user.type(screen.getByRole("searchbox", { name: "Search templates" }), "zzz");
+  expect(await screen.findByText('No templates match "archivezzz".')).not.toBeNull();
+});
+
+it("keeps the picked template in the URL and shows its version with the exact time", async () => {
+  const user = userEvent.setup();
+  let path = "";
+  function Probe() {
+    const location = useLocation();
+    path = location.searchStr;
+    return null;
+  }
+  renderRouted(
+    <>
+      <TemplatesRoute onApplied={vi.fn()} />
+      <Probe />
+    </>,
+    testDeps({
+      ...routes,
+      "GET /api/project-templates": jsonAnswer({ templates: [template, older] }),
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `Edit ${older.name}` }));
+  await waitFor(() => expect(path).toContain(older.id));
+  const detail = await screen.findByRole("region", { name: `Keywords of ${older.name}` });
+  const stamp = detail.querySelector("time");
+  expect(stamp?.getAttribute("dateTime")).toBe(older.updatedAt);
+  expect(stamp?.getAttribute("title")).toMatch(/2026/u);
+  expect(detail.textContent).toContain("Version 4 · saved");
 });

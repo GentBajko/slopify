@@ -61,7 +61,7 @@ Mark voices in **Settings → Voices** and Image prompts in **Library → Prompt
 | **Title font** | The font of chapter cards and the end screen, for videos whose template sets no title style. |
 | **Title colour** | The text colour of chapter cards and the end screen, such as `#FFD700`. |
 | **End screen text** | A line shown centred over the last 5 seconds of every video, such as "Subscribe for more". Up to 200 characters. Blank shows none. |
-| **Intro** / **Outro** | An entry from **Library → Intros & Outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus a text call for an LLM entry), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
+| **Intro** / **Outro** | An entry from **Library → Intros & outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus a text call for an LLM entry), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
 | **Document theme** | The look of the PDF for videos whose template picks no theme. A saved theme that was deleted is skipped. |
 | **Ambient sound** | Rain, Fireplace or Wind under the long video's narration, with its level (−40 to −6 dB, default −18), fade-in (0 to 30 s, default 3) and tail (0 to 30 s, default 6). Used when the template leaves its own ambient sound on "The channel's". A channel can't hold your own audio file. |
 

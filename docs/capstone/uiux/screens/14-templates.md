@@ -53,7 +53,7 @@ The detail column is `TemplateDetail`: "Pick a template to see the keywords it f
 | Load error | Query fails | Error in `StatusSlot` + "Reload templates" | `templates.tsx:227-228`, `templates.tsx:283-287` |
 | Empty | Zero templates | `EmptyState` "No templates yet": "Use Save a setup to keep a Play draft for reuse." | `templates.tsx:297-301` |
 | Filtered empty | Channel filter hides all | "No templates in this channel." | `templates.tsx:302-304` |
-| Play busy | A Play start is starting, uncertain or just created | Warning `StatusSlot` "A run is still starting in Play. Wait for it to finish (or press Check Start result there), then apply a template."; Use in Play disabled with a title reason | `templates.tsx:222-226`, `templates.tsx:360-367`, `router.tsx:234-236` |
+| Play busy | A Play start is starting, uncertain or just created | Warning `StatusSlot` "A run is still starting in Play. Wait for it to finish (or press Check whether it started there), then apply a template."; Use in Play disabled with a title reason | `templates.tsx:222-226`, `templates.tsx:360-367`, `router.tsx:234-236` |
 | Working | Any action in flight | Duplicate and Use in Play disabled "Working on the last press"; Refresh disabled | `templates.tsx:97-110`, `templates.tsx:291`, `templates.tsx:353-366` |
 | Action error | Save/apply/duplicate/delete throws | Message in `StatusSlot` (in the confirm's consequence while deleting) | `templates.tsx:104-106`, `templates.tsx:219-221`, `templates.tsx:499-501` |
 | Apply refused | Play draft not flushed | "Save or discard the draft open in Play first, then apply the template again." | `templates.tsx:137-141` |

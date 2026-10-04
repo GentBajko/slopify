@@ -399,7 +399,7 @@ describe("a provided stage", () => {
   it("asks for the research notes when research is provided beside a generated article", () => {
     expect(
       ask({ ...generated, sources: { ...generated.sources, research: "provide" } }).blocker?.hint,
-    ).toBe("Paste the research notes to play");
+    ).toBe("Paste your text under Article to play");
   });
 
   it("posts the shorts' background music only while Shorts is on, and waits for its upload", () => {

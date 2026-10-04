@@ -1,179 +1,55 @@
-import { defaultLoudness } from "@app/slices/loudness/model.js";
-import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
-import type { ItemCounts } from "@app/slices/storage/backup-import.js";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { DownloadIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import {
-  type BackupImportSummary,
-  readBackupExportSummary,
-  readStorageUsage,
-  saveAppSettings,
-} from "@/api";
 import { useApp } from "@/app-context";
 import { AutostartSettings } from "@/autostart/autostart-settings";
 import { CatalogueSettings } from "@/components/catalogue";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
-import { Field, Input } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { FileLink } from "@/components/kit/link";
 import { Rail, RailButton } from "@/components/kit/rail";
-import { SectionHead } from "@/components/kit/section-head";
-import { Meter } from "@/components/kit/stats";
-import { Segmented } from "@/components/kit/switch";
+import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { useToast } from "@/components/kit/toast";
 import { ProviderHealthCheck, useProviderHealth } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
-import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Voices } from "@/components/voices";
 import { Welcome } from "@/components/welcome";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
 import { PatchNotesSettings } from "@/patch-notes/settings-panel";
-import { keys, settingsQuery } from "@/queries";
-import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
-import { fontsKey } from "@/subtitles/api";
-import { templatesKey } from "@/templates/api";
 import { TrashSettings } from "@/trash/trash-settings";
-import { LoudnessControls } from "@/video/loudness-controls";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
 import { BackupSettings, useBackUpNow } from "./settings-backups";
+import { StorageTools, storageQueryKey } from "./settings-export";
 import { FilesFolder } from "./settings-files";
-import { formatBytes, ProjectStorageList } from "./settings-storage";
+import { AppearanceSetting, ProductionDefaults } from "./settings-preferences";
+import { ConnectionReadiness } from "./settings-readiness";
+import {
+  groupOfSection,
+  type SettingsSection,
+  settingsGroups,
+  settingsSectionOf,
+  settingsSections,
+} from "./settings-sections";
 import { UsageBoard } from "./usage";
 
-const storageQueryKey = ["storage-usage"] as const;
-export const portableMaxUploadBytes = 100 * 1024 * 1024;
-export const portableImportQueryKeys = [
-  storageQueryKey,
-  keys.projects,
-  ["project"] as const,
-  keys.usage,
-  keys.documentThemes,
-  schedulesKey,
-  ["play-drafts"] as const,
-  keys.settings,
-  keys.providers,
-  keys.voices,
-  keys.prompts,
-  keys.entries,
-  keys.staging,
-  templatesKey,
-  fontsKey,
-  ["provider-models"] as const,
-] as const;
-
-export async function refreshPortableImportQueries(queryClient: QueryClient): Promise<void> {
-  await Promise.all(
-    portableImportQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-  );
-}
-
-// The bound slices/admission/rules.ts validates a run's gap against, so the field refuses
-// what a run would refuse rather than letting the server say it first.
-const silenceGapSecondsMax = 30;
-
-const appearances: readonly { readonly value: Appearance; readonly label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "dark", label: "Dark" },
-  { value: "light", label: "Light" },
-];
-
-// Empty, negative, fractional or past the bound: one sentence, the server's own
-// (slices/settings/playback.ts).
-export function gapProblem(value: string): string | undefined {
-  const trimmed = value.trim();
-  const bounded =
-    /^\d+$/.test(trimmed) && Number(trimmed) >= 0 && Number(trimmed) <= silenceGapSecondsMax;
-  return bounded
-    ? undefined
-    : `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
-}
-
-// Each section's title is the page title, and its one line of meta sits under it.
-export const settingsSections = [
-  {
-    id: "general",
-    label: "General",
-    meta: "How Slopify starts on this computer.",
-  },
-  {
-    id: "providers",
-    label: "Providers",
-    meta: "Keys stay on this machine and go only to their provider. Readiness is checked again before each run.",
-  },
-  {
-    id: "voices",
-    label: "Voices",
-    meta: "A wrong voice ID shows up when the audio stage uses it.",
-  },
-  {
-    id: "models",
-    label: "Models",
-    meta: "New models, prices and retirements, checked once a day.",
-  },
-  {
-    id: "playback",
-    label: "Playback & appearance",
-    meta: "How narration is paced and how Slopify looks.",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    meta: "When a run finishes, fails, waits for you, or a review needs a decision.",
-  },
-  {
-    id: "channel-links",
-    label: "Channel links",
-    meta: "The links a YouTube description's {{Name}} placeholders fill from.",
-  },
-  {
-    id: "studio",
-    label: "YouTube Studio",
-    meta: "The playlist upload packs name, and the Studio extension's pairing.",
-  },
-  {
-    id: "storage",
-    label: "Backup & storage",
-    meta: "Export everything, import a backup, and see what uses disk space.",
-  },
-  {
-    id: "backups",
-    label: "Backups",
-    meta: "A daily copy of everything, in a folder you choose.",
-  },
-  {
-    id: "trash",
-    label: "Trash",
-    meta: "Deleted projects, prompts, templates and schedules, kept for 30 days.",
-  },
-  {
-    id: "usage",
-    label: "Usage",
-    meta: "This machine only. The same counters, anonymised, feed slopify.stream.",
-  },
-  {
-    id: "patch-notes",
-    label: "Patch notes",
-    meta: "What changed in each version of Slopify.",
-  },
-  {
-    id: "about",
-    label: "About",
-    meta: "Free and open source, running on your machine with your own keys.",
-  },
-] as const;
-
-export type SettingsSection = (typeof settingsSections)[number]["id"];
-
-export function settingsSectionOf(value: unknown): SettingsSection {
-  return settingsSections.find((section) => section.id === value)?.id ?? "providers";
-}
+export {
+  ImportResult,
+  portableImportQueryKeys,
+  portableMaxUploadBytes,
+  refreshPortableImportQueries,
+} from "./settings-export";
+export { gapProblem } from "./settings-preferences";
+export {
+  type SettingsSection,
+  settingsGroups,
+  settingsSectionOf,
+  settingsSections,
+} from "./settings-sections";
 
 // The browser's own download of the diagnostics file, the same one the header's link saves.
 function downloadDiagnostics(origin: string): void {
@@ -185,11 +61,12 @@ function downloadDiagnostics(origin: string): void {
   link.remove();
 }
 
-// A settings rail beside one section at a time. The rail is the `section` search parameter,
-// not a route, so the page title follows it; on phones the rail is a row of tabs that scrolls
-// sideways on its own. Explanations sit behind the info buttons beside what they explain.
+// A settings rail of a few groups beside one section at a time; a group of several sections
+// shows them as tabs. The section is the `section` search parameter, not a route, so the page
+// title follows it; on phones the rail is a row of tabs that scrolls sideways on its own.
+// Explanations sit behind the info buttons beside what they explain.
 export function SettingsRoute({
-  section = "providers",
+  section: asked = "providers",
   note,
   onSection = () => {},
   onNote = () => {},
@@ -206,7 +83,9 @@ export function SettingsRoute({
   const notify = useToast();
   const health = useProviderHealth();
   const backUp = useBackUpNow();
+  const section = settingsSectionOf(asked);
   const current = settingsSections.find((item) => item.id === section) ?? settingsSections[0];
+  const group = groupOfSection(section);
 
   useCommand({
     id: "settings.check-providers",
@@ -224,11 +103,11 @@ export function SettingsRoute({
     group: "Settings",
     keywords: ["backup"],
     run: () => {
-      onSection("backups");
+      onSection("storage");
       backUp.mutate(undefined, {
         onError: (error) => {
           notify(
-            `The backup didn't start: ${error.message} Open Settings → Backups to see its state.`,
+            `The backup didn't start: ${error.message} Open Settings → Backup & storage to see its state.`,
             "error",
           );
         },
@@ -244,6 +123,11 @@ export function SettingsRoute({
       downloadDiagnostics(api.origin);
     },
   });
+
+  const tabs = group.sections.map((id) => ({
+    id,
+    label: settingsSections.find((item) => item.id === id)?.label ?? id,
+  }));
 
   return (
     <div>
@@ -275,11 +159,11 @@ export function SettingsRoute({
       <Workspace
         sections={
           <Rail label="Settings sections">
-            {settingsSections.map((item) => (
+            {settingsGroups.map((item) => (
               <RailButton
                 key={item.id}
-                current={item.id === section}
-                onClick={() => onSection(item.id)}
+                current={item.id === group.id}
+                onClick={() => onSection(item.sections[0] ?? "providers")}
                 className="whitespace-nowrap max-md:w-auto"
               >
                 {item.label}
@@ -288,522 +172,67 @@ export function SettingsRoute({
           </Rail>
         }
       >
-        <section aria-label={current.label} className="flex min-w-0 flex-col gap-10">
-          {section === "providers" ? (
-            <>
-              <Welcome />
-              <ProviderKeys />
-              <ProviderHealthCheck run={health} />
-            </>
-          ) : null}
-          {section === "general" ? <AutostartSettings /> : null}
-          {section === "voices" ? <Voices /> : null}
-          {section === "models" ? <CatalogueSettings /> : null}
-          {section === "playback" ? <Playback /> : null}
-          {section === "notifications" ? <NotificationSettings /> : null}
-          {section === "channel-links" ? <ChannelLinksSettings /> : null}
-          {section === "studio" ? <StudioSettings /> : null}
-          {section === "storage" ? <FilesFolder usageQueryKey={storageQueryKey} /> : null}
-          {section === "storage" ? <StorageTools /> : null}
-          {section === "storage" ? <SampleSettings /> : null}
-          {section === "backups" ? <BackupSettings /> : null}
-          {section === "trash" ? <TrashSettings /> : null}
-          {section === "usage" ? <UsageBoard /> : null}
-          {section === "patch-notes" ? <PatchNotesSettings note={note} onNote={onNote} /> : null}
-          {section === "about" ? (
-            <AboutSettings
-              onWhatsNew={() => {
-                queryClient.fetchQuery(patchNotesQuery(api)).then(
-                  (notes) => onNote(notes.current ?? undefined),
-                  (error: unknown) => {
-                    notify(
-                      `The patch notes did not open: ${error instanceof Error ? error.message : String(error)} Open Settings → Patch notes to try again.`,
-                      "error",
-                    );
-                  },
-                );
-              }}
-            />
-          ) : null}
-        </section>
-      </Workspace>
-    </div>
-  );
-}
-
-type ExportState =
-  | { readonly phase: "idle" }
-  | { readonly phase: "preparing" }
-  | { readonly phase: "downloading"; readonly bytes: number; readonly projects: number };
-
-type ImportState =
-  | { readonly phase: "idle" }
-  | { readonly phase: "uploading"; readonly sent: number; readonly total: number }
-  | { readonly phase: "importing" };
-
-const importFailed =
-  "The backup wasn't imported. Check it is a file made with Export everything (.tar) or Export backup (.zip), then try again.";
-
-function StorageTools() {
-  const { api } = useApp();
-  const queryClient = useQueryClient();
-  const usage = useQuery({
-    queryKey: storageQueryKey,
-    queryFn: () => readStorageUsage(api),
-    staleTime: 30_000,
-  });
-  const [busy, setBusy] = useState(false);
-  const [exporting, setExporting] = useState<ExportState>({ phase: "idle" });
-  const [importing, setImporting] = useState<ImportState>({ phase: "idle" });
-  const [result, setResult] = useState<BackupImportSummary | null>(null);
-  const notify = useToast();
-  const [error, setError] = useState<string | null>(null);
-
-  // Asked first, because a download link cannot show a refusal: the browser would save the
-  // error as the backup. The download itself is the browser's, so a multi-gigabyte archive
-  // goes straight to disk and its progress shows in the browser's downloads.
-  async function exportEverything(): Promise<void> {
-    setError(null);
-    setExporting({ phase: "preparing" });
-    try {
-      const summary = await readBackupExportSummary(api);
-      if (!summary.ready) {
-        setExporting({ phase: "idle" });
-        setError(summary.detail ?? "The backup can't be made right now. Try again in a moment.");
-        return;
-      }
-      setExporting({
-        phase: "downloading",
-        bytes: summary.bytes ?? 0,
-        projects: summary.projects ?? 0,
-      });
-      const link = document.createElement("a");
-      link.href = `${api.origin}/api/storage/export`;
-      link.download = "";
-      document.body.append(link);
-      link.click();
-      link.remove();
-    } catch (caught) {
-      setExporting({ phase: "idle" });
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "The backup couldn't be prepared. Try again in a moment.",
-      );
-    }
-  }
-
-  async function importBackup(file: File): Promise<void> {
-    // The settings-only backups older versions wrote are ZIPs, read whole in memory by the
-    // server, so they keep their 100 MB limit. A full backup is a tar streamed to disk.
-    const legacy = file.name.toLowerCase().endsWith(".zip") || file.type === "application/zip";
-    if (file.size === 0 || (legacy && file.size > portableMaxUploadBytes)) {
-      setError(
-        legacy
-          ? "This file is empty or larger than 100 MB. Choose a .zip made with Export backup, or a .tar made with Export everything."
-          : "This file is empty. Choose the .tar made with Export everything.",
-      );
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setResult(null);
-    setImporting({ phase: "uploading", sent: 0, total: file.size });
-    try {
-      const response = await api.upload(
-        `${api.origin}/api/storage/import`,
-        file,
-        legacy ? "application/zip" : "application/x-tar",
-        (sent, total) => {
-          setImporting(
-            sent >= total ? { phase: "importing" } : { phase: "uploading", sent, total },
-          );
-        },
-      );
-      const body = (await response.json()) as {
-        detail?: string;
-        templates?: number;
-        fonts?: number;
-        fontFallbacks?: number;
-        stagedFiles?: number;
-      } & Partial<BackupImportSummary>;
-      if (!response.ok) throw new Error(body.detail ?? importFailed);
-      if (body.projects !== undefined) {
-        setResult(body as BackupImportSummary);
-        notify("Backup imported.", "success");
-      } else
-        notify(
-          `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
-          "success",
-        );
-      await refreshPortableImportQueries(queryClient);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : importFailed);
-    } finally {
-      setImporting({ phase: "idle" });
-      setBusy(false);
-    }
-  }
-
-  async function cleanup(): Promise<void> {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await api.fetch(`${api.origin}/api/storage/cleanup`, { method: "POST" });
-      const body = (await response.json()) as { orphanFiles?: number; stagedFiles?: number };
-      if (!response.ok) throw new Error("Clean orphan files didn't finish. Try again in a moment.");
-      notify(
-        `Removed ${body.orphanFiles ?? 0} orphan project file(s) and ${body.stagedFiles ?? 0} stale staged file(s).`,
-        "success",
-      );
-      await queryClient.invalidateQueries({ queryKey: storageQueryKey });
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Clean orphan files didn't finish. Try again in a moment.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useCommand({
-    id: "settings.export-everything",
-    title: "Export everything",
-    group: "Settings",
-    context: "Backup & storage",
-    keywords: ["backup", "download"],
-    run: () => {
-      if (!busy && exporting.phase !== "preparing") void exportEverything();
-    },
-  });
-
-  const working = busy || exporting.phase === "preparing";
-  const backupFile = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      <div>
-        <SectionHead title="Export and import" info="settings.storage.export">
-          <Button disabled={working} onClick={() => void exportEverything()}>
-            Export everything
-          </Button>
-          <Button disabled={working} onClick={() => backupFile.current?.click()}>
-            Import a backup
-          </Button>
-          <input
-            ref={backupFile}
-            className="sr-only"
-            type="file"
-            tabIndex={-1}
-            aria-label="Import a backup"
-            accept=".tar,application/x-tar,.zip,application/zip"
-            disabled={working}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importBackup(file);
-              event.target.value = "";
-            }}
+        {tabs.length > 1 ? (
+          <Tabs
+            items={tabs}
+            value={section}
+            onChange={onSection}
+            label={`${group.label} sections`}
+            idPrefix="settings"
+            className="mb-6"
           />
-          <span className="inline-flex items-center gap-1">
-            <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
-              Clean orphan files
-            </Button>
-            <InfoTip id="settings.storage.clean" />
-          </span>
-        </SectionHead>
-        <div className="flex flex-col gap-2 text-small text-ink-2">
-          <p className="m-0">
-            Provider keys are never included in a backup. After importing, enter them again in
-            Settings → Providers.
-          </p>
-          {exporting.phase === "preparing" ? (
-            <p role="status" className="m-0 text-ink">
-              Preparing the backup…
-            </p>
-          ) : null}
-          {exporting.phase === "downloading" ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p role="status" className="m-0 min-w-0 flex-1 text-ink">
-                Downloading {formatBytes(exporting.bytes)} ({exporting.projects} project
-                {exporting.projects === 1 ? "" : "s"}). Your browser's downloads show its progress;
-                keep Slopify running until it finishes.
-              </p>
-              <Button variant="quiet" size="small" onClick={() => setExporting({ phase: "idle" })}>
-                Dismiss
-              </Button>
-            </div>
-          ) : null}
-          {importing.phase === "uploading" ? (
-            <div className="flex flex-col gap-2">
-              <p role="status" className="m-0 text-ink tabular-nums">
-                Uploading the backup: {formatBytes(importing.sent)} of{" "}
-                {formatBytes(importing.total)}
-              </p>
-              <Meter
-                label="Backup upload"
-                value={importing.total === 0 ? 0 : importing.sent / importing.total}
-              />
-            </div>
-          ) : null}
-          {importing.phase === "importing" ? (
-            <p role="status" className="m-0 text-ink">
-              Checking and importing the backup… large projects can take a minute.
-            </p>
-          ) : null}
-          {error ? (
-            <p role="alert" className="m-0 text-danger">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      {result ? <ImportResult result={result} onDismiss={() => setResult(null)} /> : null}
-      <div>
-        <SectionHead
-          title="Disk space"
-          info="settings.storage.disk"
-          meta={
-            usage.data ? (
-              <>
-                <span className="font-semibold text-ink">
-                  {formatBytes(usage.data.data)} stored
-                </span>
-                <span className="tabular-nums">
-                  {" "}
-                  · {formatBytes(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
-                  files · {formatBytes(usage.data.staging)} staged files
-                  {usage.data.trash.projects > 0
-                    ? ` · ${formatBytes(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
-                    : null}
-                </span>
-              </>
-            ) : usage.error ? (
-              "Storage usage is unavailable. Reload the page to try again."
-            ) : (
-              <span className="inline-block h-4 w-48 rounded-control bg-raised" />
-            )
-          }
-        />
-        {usage.data && usage.data.byProject.length > 0 ? (
-          <ProjectStorageList projects={usage.data.byProject} queryKey={[...storageQueryKey]} />
         ) : null}
-      </div>
-    </>
-  );
-}
-
-// Deleted projects keep their folders for 30 days (Settings → Trash), so their space only
-// comes back once Delete now or the daily purge removes them for good.
-function trashedProjects(count: number): string {
-  return count === 1 ? "1 deleted project" : `${String(count)} deleted projects`;
-}
-
-function counted(label: string, counts: ItemCounts | undefined): string | null {
-  if (counts === undefined) return null;
-  const parts = [
-    counts.added > 0 ? `${counts.added} added` : null,
-    counts.renamed > 0
-      ? `${counts.renamed} added as “(imported)” because the name was taken`
-      : null,
-    counts.skipped > 0 ? `${counts.skipped} already here` : null,
-  ].filter((part) => part !== null);
-  return parts.length === 0 ? null : `${label}: ${parts.join(", ")}.`;
-}
-
-// What the last import brought in and what it left out, so nothing is skipped silently.
-export function ImportResult({
-  result,
-  onDismiss,
-}: {
-  readonly result: BackupImportSummary;
-  readonly onDismiss: () => void;
-}) {
-  const lines = [
-    result.projects.imported.length > 0
-      ? `Projects: ${result.projects.imported.length} added (${formatBytes(result.files.bytes)} of files).`
-      : "Projects: none added.",
-    counted("Prompts", result.prompts),
-    counted("Intros and outros", result.entries),
-    counted("Channels", result.channels),
-    counted("Cast members", result.cast),
-    counted("Episode memories", result.episodeMemories),
-    counted("Existing videos", result.channelVideos),
-    counted("Document themes", result.documentThemes),
-    counted("Templates", result.templates),
-    counted("Schedules", result.schedules),
-    result.schedules.paused > 0
-      ? `${result.schedules.paused} schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.`
-      : null,
-    counted("Voices", result.voices),
-    counted("Play drafts", result.drafts),
-    result.settings.added + result.settings.kept > 0
-      ? `Settings: ${result.settings.added} filled in${result.settings.kept > 0 ? `, ${result.settings.kept} kept as this install has them` : ""}.`
-      : null,
-    result.fonts > 0 ? `Uploaded fonts: ${result.fonts} added.` : null,
-    result.usage.alreadyImported
-      ? "Usage: this backup's history was already added before, so it wasn't counted twice."
-      : `Usage: ${result.usage.events} recorded event(s) added to the totals.`,
-    "Provider keys are not in backups: enter them in Settings → Providers.",
-  ].filter((line) => line !== null);
-  return (
-    <div>
-      <SectionHead
-        as="h3"
-        title={`Imported the backup from ${result.backup.createdAt.slice(0, 10)}`}
-      >
-        <Button variant="quiet" size="small" onClick={onDismiss}>
-          Dismiss
-        </Button>
-      </SectionHead>
-      <ul aria-label="Import result" className="m-0 list-disc pl-5 text-small text-ink-2">
-        {lines.map((line) => (
-          <li key={line} className="py-0.5">
-            {line}
-          </li>
-        ))}
-        {result.projects.skipped.map((project) => (
-          <li key={project.id} className="py-0.5">
-            Skipped “{project.title}”: {project.reason}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function Playback() {
-  const { api } = useApp();
-  const queryClient = useQueryClient();
-  const settings = useQuery(settingsQuery(api));
-
-  const [typed, setTyped] = useState<string | undefined>(undefined);
-  const [saved, setSaved] = useState(false);
-
-  const save = useMutation({
-    mutationFn: (next: AppSettings) => saveAppSettings(api, next),
-    // Switching theme is immediate, and the
-    // cache is what components/theme.tsx paints from, so the write happens before the
-    // request and is rolled back if the request refuses it.
-    onMutate: (next: AppSettings) => {
-      const previous = queryClient.getQueryData<AppSettings>(keys.settings);
-      queryClient.setQueryData(keys.settings, next);
-      return { previous };
-    },
-    onError: (_error: Error, _next: AppSettings, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(keys.settings, context.previous);
-      }
-    },
-    onSuccess: (body) => {
-      queryClient.setQueryData(keys.settings, body);
-    },
-  });
-
-  useEffect(() => {
-    if (!saved) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setSaved(false);
-    }, savedTickMs);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [saved]);
-
-  if (settings.error !== null) {
-    return (
-      <p role="alert" className="m-0 text-body text-danger">
-        {settings.error.message}
-      </p>
-    );
-  }
-  if (settings.data === undefined) {
-    return (
-      <div className="grid gap-6 md:grid-cols-2" role="status" aria-label="Loading settings">
-        <span className="h-16 rounded-control bg-raised" />
-        <span className="h-16 rounded-control bg-raised" />
-      </div>
-    );
-  }
-
-  const current = settings.data;
-  const gap = typed ?? String(current.silenceGapSeconds);
-  const problem = gapProblem(gap);
-
-  return (
-    <div className="grid items-start gap-6 md:grid-cols-2">
-      <Field
-        label="Silence between segments"
-        tip="settings.playback.silence-gap"
-        help="Seconds of quiet between narrated segments."
-        error={problem ?? save.error?.message}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={silenceGapSecondsMax}
-            step={1}
-            className="w-[88px] tabular-nums"
-            value={gap}
-            aria-invalid={problem !== undefined}
-            onChange={(event) => {
-              setTyped(event.target.value);
-            }}
-          />
-          <span className="text-small text-ink-2">seconds</span>
-          <Button
-            variant="primary"
-            disabled={problem !== undefined || save.isPending}
-            onClick={() => {
-              setSaved(false);
-              save.mutate(
-                { ...current, silenceGapSeconds: Number(gap.trim()) },
-                {
-                  onSuccess: () => {
-                    setTyped(undefined);
-                    setSaved(true);
-                  },
-                },
-              );
-            }}
-          >
-            Save
-          </Button>
-          <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-        </div>
-      </Field>
-
-      <div className="sl-field" {...helpScope}>
-        <div className="flex min-w-0 items-center gap-1">
-          <span className="sl-field__label">Appearance</span>
-          <InfoTip id="settings.appearance" className="-my-1" />
-        </div>
-        <Segmented
-          label="Appearance"
-          value={current.appearance}
-          options={appearances}
-          className="self-start"
-          onChange={(next) => {
-            save.mutate({ ...current, appearance: next });
-          }}
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <LoudnessControls
-          // A settings answer from before the setting reads as its default.
-          value={current.loudness ?? defaultLoudness}
-          switchLabel="Level the volume for new runs"
-          switchTip="settings.loudness"
-          onChange={(loudness) => {
-            save.mutate({ ...current, loudness });
-          }}
-        />
-      </div>
+        <TabPanel idPrefix="settings" id={section} active>
+          <section aria-label={current.label} className="flex min-w-0 flex-col gap-10">
+            {section === "providers" ? (
+              <>
+                <ConnectionReadiness />
+                <Welcome />
+                <ProviderKeys />
+                <ProviderHealthCheck run={health} />
+              </>
+            ) : null}
+            {section === "general" ? (
+              <>
+                <AppearanceSetting />
+                <AutostartSettings />
+              </>
+            ) : null}
+            {section === "voices" ? <Voices /> : null}
+            {section === "models" ? <CatalogueSettings /> : null}
+            {section === "playback" ? <ProductionDefaults /> : null}
+            {section === "notifications" ? <NotificationSettings /> : null}
+            {section === "channel-links" ? <ChannelLinksSettings /> : null}
+            {section === "studio" ? <StudioSettings /> : null}
+            {section === "storage" ? (
+              <>
+                <BackupSettings />
+                <FilesFolder usageQueryKey={storageQueryKey} />
+                <StorageTools />
+                <SampleSettings />
+              </>
+            ) : null}
+            {section === "trash" ? <TrashSettings /> : null}
+            {section === "usage" ? <UsageBoard /> : null}
+            {section === "patch-notes" ? <PatchNotesSettings note={note} onNote={onNote} /> : null}
+            {section === "about" ? (
+              <AboutSettings
+                onWhatsNew={() => {
+                  queryClient.fetchQuery(patchNotesQuery(api)).then(
+                    (notes) => onNote(notes.current ?? undefined),
+                    (error: unknown) => {
+                      notify(
+                        `The patch notes did not open: ${error instanceof Error ? error.message : String(error)} Open Settings → About → Patch notes to try again.`,
+                        "error",
+                      );
+                    },
+                  );
+                }}
+              />
+            ) : null}
+          </section>
+        </TabPanel>
+      </Workspace>
     </div>
   );
 }

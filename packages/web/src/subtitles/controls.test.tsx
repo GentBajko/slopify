@@ -58,7 +58,11 @@ describe("subtitle controls", () => {
     await user.clear(size);
     await user.type(size, "64");
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":64');
-    expect(screen.getByText(/approximately 95 MB/)).not.toBeNull();
+    expect(screen.getByText(/95 MB speech model/)).not.toBeNull();
+    expect(screen.getByText("Changed · default 48")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Reset subtitle font size to 48" }));
+    expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":48');
+    expect(screen.getByText("Default size")).not.toBeNull();
   });
 
   it("uploads and selects a custom font after the server accepts it", async () => {
@@ -273,4 +277,69 @@ it("reports failed font loading, removes the face, and never adds a late loaded 
     if (descriptor) Object.defineProperty(document, "fonts", descriptor);
     else Reflect.deleteProperty(document, "fonts");
   }
+});
+
+describe("subtitle facts", () => {
+  it("names the project's language and its model instead of a fixed English line", async () => {
+    renderApp(
+      <SubtitleControls
+        value={{ ...defaultSubtitles, mode: "files" }}
+        language="de"
+        videoEnabled
+        audioEnabled
+        onChange={() => {}}
+      />,
+      testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
+    );
+    expect(screen.getByText("German · local · no paid API")).not.toBeNull();
+    expect(screen.getByText(/248 MB multilingual speech model/)).not.toBeNull();
+    expect(screen.queryByText(/English · local/)).toBeNull();
+  });
+});
+
+describe("font picker", () => {
+  it("filters a long font list by name and keeps the picked font", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 20 }, (_, at) => ({
+      id: `font-${String(at)}`,
+      name: at === 7 ? "Garamond Book" : `Sans ${String(at)}`,
+      family: "Sans",
+      source: "system",
+    }));
+    renderApp(<Form />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts: [...fonts, ...many] }) }));
+    await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+    const filter = await screen.findByRole("searchbox", { name: "Filter fonts" });
+    await user.type(filter, "garamond");
+    const options = screen
+      .getAllByRole("option")
+      .filter(
+        (option) =>
+          option.closest("select")?.getAttribute("data-play-field") === "subtitles.fontId",
+      )
+      .map((option) => option.textContent);
+    expect(options).toEqual(["Default · bundled", "Garamond Book · system"]);
+    expect(screen.getByLabelText("Font sample")).not.toBeNull();
+    await user.clear(filter);
+    await user.type(filter, "zzz");
+    expect(screen.getByText('No font name contains "zzz".')).not.toBeNull();
+  });
+});
+
+describe("the style preview of a short", () => {
+  it("shades what YouTube covers on a phone when asked, for a 9:16 frame only", async () => {
+    const user = userEvent.setup();
+    const short = renderApp(
+      <SubtitlePreview value={defaultSubtitles} format="9:16" />,
+      testDeps({}),
+    );
+    const toggle = screen.getByRole("switch", { name: "Show what YouTube covers on a phone" });
+    expect(screen.queryByText("Buttons")).toBeNull();
+    await user.click(toggle);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("Buttons")).not.toBeNull();
+    expect(screen.getByText("Title and channel")).not.toBeNull();
+    short.unmount();
+    renderApp(<SubtitlePreview value={defaultSubtitles} format="16:9" />, testDeps({}));
+    expect(screen.queryByRole("switch", { name: /YouTube covers/ })).toBeNull();
+  });
 });

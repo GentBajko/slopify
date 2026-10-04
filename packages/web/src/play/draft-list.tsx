@@ -9,7 +9,7 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn, startedAt } from "@/lib/utils";
+import { cn, exactTime, startedAt } from "@/lib/utils";
 import { listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
@@ -43,7 +43,9 @@ export function DraftList(): ReactElement {
       );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "The draft wasn't discarded. Try again.";
+        error instanceof Error
+          ? error.message
+          : "The draft wasn't deleted. Press Delete on it again.";
       setError(message);
       notify(message, "error");
     } finally {
@@ -129,7 +131,7 @@ export function DraftList(): ReactElement {
             </p>
           ) : null}
           {list.data?.length ? (
-            // The title opens the draft; Discard sits on the row.
+            // The title opens the draft; Delete sits on the row.
             <List label="Saved drafts" className="max-h-72 overflow-y-auto border-t-0">
               {list.data.map((draft) => (
                 <ListRow
@@ -137,12 +139,14 @@ export function DraftList(): ReactElement {
                   title={draft.title || "Untitled draft"}
                   onSelect={() => void session.open(draft.id)}
                   meta={
-                    <time dateTime={draft.updatedAt}>Last edited {startedAt(draft.updatedAt)}</time>
+                    <time dateTime={draft.updatedAt} title={exactTime(draft.updatedAt)}>
+                      Last edited {startedAt(draft.updatedAt)}
+                    </time>
                   }
                   actions={
                     <IconButton
                       size="small"
-                      label={`Discard ${draft.title || "Untitled draft"}`}
+                      label={`Delete ${draft.title || "Untitled draft"}`}
                       onClick={() => {
                         setConfirm(draft);
                         setError(null);
@@ -154,7 +158,7 @@ export function DraftList(): ReactElement {
                 >
                   {draft.readable ? null : (
                     <p className="m-0 text-label text-waiting">
-                      Unsupported or corrupt draft. Try opening it to recover, or discard it.
+                      Unsupported or corrupt draft. Try opening it to recover, or delete it.
                     </p>
                   )}
                 </ListRow>
@@ -167,9 +171,9 @@ export function DraftList(): ReactElement {
       <InfoTip id="play.drafts" />
       <ConfirmDialog
         open={confirm !== null}
-        title={`Discard ${confirm?.title || "Untitled draft"}?`}
-        consequence="The draft is removed. This cannot be undone."
-        confirmLabel="Discard draft"
+        title={`Delete ${confirm?.title || "Untitled draft"}?`}
+        consequence="The saved draft is deleted for good; it does not go to the trash."
+        confirmLabel="Delete draft"
         pending={busy}
         onConfirm={() => void discard()}
         onCancel={() => {

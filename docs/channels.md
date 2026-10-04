@@ -23,7 +23,7 @@ Every field is optional, and each only fills what the template leaves at its def
   colour.
 - **Chapter cards and end screen:** title font (else the caption font) and colour, and the end
   screen text, shown centred over the video's last 5 seconds.
-- **Intro, outro** (Library → Intros & Outros) when the template has none, and the **document
+- **Intro, outro** (Library → Intros & outros) when the template has none, and the **document
   theme** when it has not chosen one.
 - **Ambient sound:** rain, a fireplace or wind under the long video's narration, with its
   level, fade-in and tail, when the template leaves its own on *The channel's*

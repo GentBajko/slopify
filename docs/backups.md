@@ -51,7 +51,7 @@ on a new install (native or Docker, see [storage.md](storage.md)). Installs from
 it inside the projects folder, because that was the one folder a Docker install shared with your
 computer: `~/Slopify/Projects/Backups` with the managed Linux launcher, `<data dir>/projects/Backups`
 natively. Moving your files (Settings → Backup & storage → Move to Documents/Slopify) takes the
-archives along to the new `Backups`. Storage cleanup (Clean orphan files, and the sweep at start)
+archives along to the new `Backups`. Storage cleanup (Clear leftover files, and the sweep at start)
 leaves this folder alone, and it is not counted as project files on Backup & storage.
 
 A folder you choose must be a full path. It may not be inside the projects folder (other than

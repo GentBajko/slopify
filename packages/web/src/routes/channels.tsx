@@ -11,6 +11,7 @@ import {
   deleteChannel,
   saveChannel,
 } from "@/channels/api";
+import { channelDeleteConsequence, channelDeleteTitle } from "@/channels/delete-copy";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
@@ -221,11 +222,8 @@ export function ChannelsRoute(): ReactElement {
       </Dialog>
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete ${deleting?.name ?? "this channel"}?`}
-        consequence={
-          remove.error?.message ??
-          "Its cast goes with it. Its videos move to the default channel and keep what they were made with."
-        }
+        title={channelDeleteTitle(deleting?.name)}
+        consequence={remove.error?.message ?? channelDeleteConsequence}
         confirmLabel="Delete channel"
         cancelLabel="Keep it"
         pending={remove.isPending}
@@ -244,7 +242,7 @@ function ChannelGlance({ channel }: { readonly channel: ChannelSummary }): React
   const facts: readonly (readonly [string, string])[] = [
     ["Intro", brand.intro ?? "None"],
     ["Outro", brand.outro ?? "None"],
-    ["Document theme", brand.documentTheme ?? "Default"],
+    ["PDF theme", brand.documentTheme ?? "Default"],
     ["End screen text", brand.endScreenText ?? "None"],
   ];
   return (

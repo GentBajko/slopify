@@ -14,6 +14,14 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { Button, IconButton } from "./button.js";
+import {
+  applyPreferences,
+  claimSound,
+  playbackRates,
+  readPlaybackPreferences,
+  releaseSound,
+  savePlaybackPreferences,
+} from "./playback-preferences.js";
 
 // What the video Player and the AudioPlayer share: one hook that keeps a media element's state
 // and moves it (play, seek, volume, speed), and the controls drawn from it (the play key, the
@@ -25,7 +33,7 @@ export interface PlayerChapter {
   readonly title: string;
 }
 
-export const playbackRates = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+export { playbackRates };
 
 // "0:07", "12:40", "2:04:11".
 export function playerTime(seconds: number): string {
@@ -107,9 +115,17 @@ export function useMediaControls(): MediaControls {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
-  const [rate, setRate] = useState(1);
+  const [start] = useState(readPlaybackPreferences);
+  const [volume, setVolume] = useState(start.volume);
+  const [muted, setMuted] = useState(start.muted);
+  const [rate, setRate] = useState(start.rate);
+  useEffect(() => {
+    const element = media.current;
+    if (element !== null) applyPreferences(element, start);
+    return () => {
+      if (element !== null) releaseSound(element);
+    };
+  }, [start]);
   const [menu, setMenu] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
   const [seeking, setSeeking] = useState(false);
@@ -139,17 +155,20 @@ export function useMediaControls(): MediaControls {
     element.muted = next === 0;
     setVolume(next);
     setMuted(next === 0);
+    savePlaybackPreferences({ volume: next, muted: next === 0 });
   };
   const toggleMute = () => {
     const element = media.current;
     if (element === null) return;
     element.muted = !element.muted;
     setMuted(element.muted);
+    savePlaybackPreferences({ muted: element.muted });
   };
   const pickRate = (next: number) => {
     const element = media.current;
     if (element !== null) element.playbackRate = next;
     setRate(next);
+    savePlaybackPreferences({ rate: next });
     setMenu(false);
     document.getElementById(`${menuId}-button`)?.focus();
   };
@@ -190,14 +209,21 @@ export function useMediaControls(): MediaControls {
     pickRate,
     keyAction,
     events: {
-      onPlay: () => setPlaying(true),
+      onPlay: (event) => {
+        claimSound(event.currentTarget);
+        setPlaying(true);
+      },
       onPause: () => setPlaying(false),
       onEnded: () => setPlaying(false),
       onTimeUpdate: (event) => {
         if (!seeking) setCurrent(event.currentTarget.currentTime);
       },
       onDurationChange: (event) => setDuration(event.currentTarget.duration),
-      onLoadedMetadata: (event) => setDuration(event.currentTarget.duration),
+      // A new source resets the element's rate; the player keeps the one picked.
+      onLoadedMetadata: (event) => {
+        setDuration(event.currentTarget.duration);
+        event.currentTarget.playbackRate = rate;
+      },
       onProgress: (event) => {
         const ranges = event.currentTarget.buffered;
         setBuffered(ranges.length > 0 ? ranges.end(ranges.length - 1) : 0);

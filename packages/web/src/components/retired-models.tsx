@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { LinkedText } from "@/components/linked-text";
 import { readRetired, switchRetired, upkeepKeys } from "@/components/provider-upkeep-api";
 import { schedulesKey } from "@/schedules/api";
 import { templatesKey } from "@/templates/api";
@@ -43,9 +44,11 @@ export function RetiredModelRow({
           <span className="text-waiting">
             {`${slotLabels[usage.slot]} ${usage.model} is ${usage.why === "retired" ? "retired" : "no longer listed"}.`}
             {usage.blocked === null ? "" : ` ${usage.blocked}`}
-            {usage.replacement === null && usage.blocked === null
-              ? ` No replacement is suggested: choose another model in Settings → Models, or edit the ${kind}.`
-              : ""}
+            {usage.replacement === null && usage.blocked === null ? (
+              <LinkedText
+                text={` No replacement is suggested: choose another model in Settings → Models, or edit the ${kind}.`}
+              />
+            ) : null}
           </span>
           {usage.replacement === null ? null : (
             <Button

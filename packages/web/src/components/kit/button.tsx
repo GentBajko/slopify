@@ -1,5 +1,5 @@
 import { Slot } from "radix-ui";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { type ComponentProps, type ReactElement, type ReactNode, useId } from "react";
 import { cn } from "@/lib/utils";
 
 // The five button kinds, one meaning each (docs/design-system.md, Actions):
@@ -22,35 +22,78 @@ export function buttonClass({
 export type ButtonProps = ComponentProps<"button"> & {
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
-  // Why a disabled button is disabled, shown as its tooltip.
-  readonly disabledReason?: string;
+  // Why a disabled button is disabled, as its tooltip.
+  readonly disabledReason?: string | undefined;
+  // For a reason the person needs in order to go on ("Cancel the run first, then delete
+  // it."), not a passing "Saving…": the disabled button stays in the tab order
+  // (`aria-disabled`, presses refused here), the reason is its description, and the kit's
+  // tooltip shows it on hover and on keyboard focus. A native `disabled` button can be
+  // neither focused nor described to a keyboard user.
+  readonly focusableWhenDisabled?: boolean;
 };
 
 export function Button({
   variant = "secondary",
   size = "default",
   disabledReason,
+  focusableWhenDisabled = false,
   className,
   type,
   title,
+  disabled,
+  onClick,
+  children,
   ...props
 }: ButtonProps): ReactElement {
+  const reasonId = useId();
+  const classes = cn(buttonClass({ variant, size }), className);
+  const reason = disabled === true && disabledReason !== "" ? disabledReason : undefined;
+  if (reason === undefined || !focusableWhenDisabled)
+    return (
+      <button
+        data-slot="button"
+        data-variant={variant}
+        type={type ?? "button"}
+        title={reason ?? title}
+        disabled={disabled}
+        onClick={onClick}
+        className={classes}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  // Preventing the click also keeps a submit button from sending its form.
+  const describedBy = [props["aria-describedby"], reasonId].filter(Boolean).join(" ");
   return (
     <button
       data-slot="button"
       data-variant={variant}
       type={type ?? "button"}
-      title={props.disabled && disabledReason !== undefined ? disabledReason : title}
-      className={cn(buttonClass({ variant, size }), className)}
+      className={classes}
       {...props}
-    />
+      aria-disabled="true"
+      aria-describedby={describedBy}
+      data-tip={reason}
+      data-reason=""
+      onClick={(event) => event.preventDefault()}
+      onPointerDown={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") event.preventDefault();
+      }}
+    >
+      {children}
+      <span id={reasonId} hidden>
+        {reason}
+      </span>
+    </button>
   );
 }
 
-// An icon-only button. The label is required: it is the accessible name and the tooltip.
-// `tip` shows the label (or the shorter words given) at once on hover and focus, drawn by the
-// kit (`data-tip`), for icon buttons standing in for words that did not fit; otherwise the
-// label is the browser's title.
+// An icon-only button. The label is required: it is the accessible name and the tooltip,
+// drawn by the kit (`data-tip`) at once on hover and on keyboard focus (a browser's `title`
+// shows on hover only). `tip` gives shorter words for the tooltip; `tip={false}` falls back
+// to the browser's title where the kit's tooltip would be cut off by its container.
 export function IconButton({
   label,
   tip,
@@ -62,7 +105,7 @@ export function IconButton({
   readonly tip?: boolean | string;
   readonly children: ReactNode;
 }): ReactElement {
-  const shown = tip === undefined || tip === false ? undefined : tip === true ? label : tip;
+  const shown = tip === false ? undefined : typeof tip === "string" ? tip : label;
   return (
     <Button
       variant="icon"

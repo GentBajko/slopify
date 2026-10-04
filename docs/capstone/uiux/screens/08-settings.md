@@ -46,20 +46,20 @@ Operate surface for everything install-wide: login autostart, provider keys and 
 
 - kit `PageHeader`: crumb "Settings", title = the current section's label, meta = its one line (`packages/web/src/routes/settings.tsx:250`, `:99`). Header actions: "Check all" (only on Providers; "Checking…" while pending) and a secondary `FileLink` "Download diagnostics" (download icon, saves `slopify-diagnostics.json` from `/api/diagnostics`) with InfoTip `settings.diagnostics` (`packages/web/src/routes/settings.tsx:256`, `:262`).
 - kit `Workspace` with a sections column and no aside: 180 px rail + fluid main; below 768 px one column and the rail becomes a sideways-scrolling row of tabs (`packages/web/src/routes/settings.tsx:275`, `packages/web/src/styles/shell.css:592`, `:985`).
-- kit `Rail` "Settings sections" of `RailButton`s in this order (`packages/web/src/routes/settings.tsx:99`, `:277`):
+- kit `Rail` "Settings sections" with seven groups, one rail item each; a group with more than one section shows them as `TabLinks` above the section (`settingsGroups` in `packages/web/src/routes/settings-sections.ts`): Connections (Providers, Voices, Models), Production defaults (playback), Notifications, Publishing (Channel links, YouTube Studio), Backup & storage (storage, trash), General, About (About, Usage, Patch notes). `?section=` keeps each section's own id; the old `backups` id opens Backup & storage (`settingsSectionOf`). Sections and their lines:
 
 | id | Rail label | Meta line | Renders | Source |
 |---|---|---|---|---|
-| general | General | How Slopify starts on this computer. | `AutostartSettings` | `packages/web/src/autostart/autostart-settings.tsx:42` |
+| general | General | How Slopify looks and how it starts on this computer. | `AppearanceSetting`, `AutostartSettings` | `packages/web/src/autostart/autostart-settings.tsx:42` |
 | providers | Providers | Keys stay on this machine and go only to their provider. Readiness is checked again before each run. | `Welcome`, `ProviderKeys`, `ProviderHealthCheck` | `packages/web/src/routes/settings.tsx:292` |
 | voices | Voices | A wrong voice ID shows up when the audio stage uses it. | `Voices` | `packages/web/src/components/voices.tsx:25` |
 | models | Models | New models, prices and retirements, checked once a day. | `CatalogueSettings` | `packages/web/src/components/catalogue.tsx:39` |
-| playback | Playback & appearance | How narration is paced and how Slopify looks. | `Playback` | `packages/web/src/routes/settings.tsx:675` |
+| playback | Production defaults | How new runs pace the narration and level the volume. | `ProductionDefaults` (`packages/web/src/routes/settings-preferences.tsx`) | `packages/web/src/routes/settings.tsx:675` |
 | notifications | Notifications | When a run finishes, fails, waits for you, or a review needs a decision. | `NotificationSettings` | `packages/web/src/notifications/settings-panel.tsx:29` |
 | channel-links | Channel links | The links a YouTube description's {{Name}} placeholders fill from. | `ChannelLinksSettings` | `packages/web/src/youtube/channel-links.tsx:83` |
 | studio | YouTube Studio | The playlist upload packs name, and the Studio extension's pairing. (The posting plan is in this section though the meta does not name it.) | `StudioSettings` | `packages/web/src/studio/settings-panel.tsx:20` |
-| storage | Backup & storage | Export everything, import a backup, and see what uses disk space. | `FilesFolder`, `StorageTools`, `SampleSettings` | `packages/web/src/routes/settings.tsx:306` |
-| backups | Backups | A daily copy of everything, in a folder you choose. | `BackupSettings` | `packages/web/src/routes/settings-backups.tsx:60` |
+| storage | Backup & storage | Daily backups, export and import, and what uses disk space. | `FilesFolder`, `BackupSettings`, `StorageTools`, `SampleSettings` | `packages/web/src/routes/settings.tsx:306` |
+| backups | (no rail item) | Old id, opens Backup & storage, where `BackupSettings` now renders. | `BackupSettings` |
 | trash | Trash | Deleted projects, prompts, templates and schedules, kept for 30 days. | `TrashSettings` | `packages/web/src/trash/trash-settings.tsx:50` |
 | usage | Usage | This machine only. The same counters, anonymised, feed slopify.stream. | `UsageBoard` (see `09-usage.md`) | `packages/web/src/routes/usage.tsx:18` |
 | patch-notes | Patch notes | What changed in each version of Slopify. | `PatchNotesSettings` | `packages/web/src/patch-notes/settings-panel.tsx:52` |
@@ -91,7 +91,7 @@ A `sl-table` (min 640 px, scrolls sideways) with columns Name, Provider, Voice I
 
 `SectionHead` "Model catalogue" (InfoTip) with "Check now" ("Checking…") and quiet "Replace with published file" ("Replacing…", InfoTip `settings.models.replace`), both disabled without a catalogue path; a `dl` of Catalogue file (mono), Verified, Last checked (date · "<n> new, <n> repriced, <n> retired" or "No changes"); then "New: …" and "Retired: …" lines (`packages/web/src/components/catalogue.tsx:125`, `:140`, `:162`). Section "Retired models in use" with primary "Switch all" ("Switching…"; disabled when nothing is switchable) and a list: kicker Template/Schedule/Draft/Project, name, "<slot>: <model> (retired | no longer listed)", a waiting-toned blocked reason, and "Switch to <replacement>" or "No replacement" (`packages/web/src/components/catalogue.tsx:179`, `:203`).
 
-### Playback & appearance
+### Production defaults (and Appearance, now under General)
 
 Two-column grid from `md` (`packages/web/src/routes/settings.tsx:736`): `Field` "Silence between segments" (number input 0–30, "seconds", primary "Save", 52 px Saved-tick slot; help "Seconds of quiet between narrated segments.") (`packages/web/src/routes/settings.tsx:737`); "Appearance" `Segmented` System / Dark / Light with InfoTip, saved on change (`packages/web/src/routes/settings.tsx:780`); full-width `LoudnessControls`: `Switch` "Level the volume for new runs" and, when on, "Video volume" and "Audio files volume" fields each with a dB input and a % input and help naming the LUFS target and true-peak cap (`packages/web/src/routes/settings.tsx:796`, `packages/web/src/video/loudness-controls.tsx:29`, `:119`).
 

@@ -3,6 +3,7 @@ import type { Output } from "@app/slices/storage/model.js";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { stubMedia } from "@/components/kit/media-stub";
 import { body, output, stage } from "@/routes/project-fixtures";
 import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
 import type { BodyProps } from "./body.js";
@@ -118,7 +119,9 @@ it("makes every image again at once from Regenerate all, after asking", async ()
   expect(dialog.textContent).toContain("one paid image call each");
   expect(regenerateNow).not.toHaveBeenCalled();
   await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate them" }));
-  expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"]);
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-1", "image:key-2"], {
+    approvedUpTo: undefined,
+  });
   // Nothing opens the settings on the way.
   expect(requests).toEqual([]);
 });
@@ -131,7 +134,7 @@ it("makes one image again at once on a project with saved versions, leaving the 
   const dialog = await screen.findByRole("dialog", { name: "Regenerate this image?" });
   expect(dialog.textContent).toContain("The video keeps the current one until you remake it");
   await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
-  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"]);
+  expect(regenerateNow).toHaveBeenCalledWith(["image:key-2"], { approvedUpTo: undefined });
   expect(run).not.toHaveBeenCalled();
   expect(requests).toEqual([]);
 });
@@ -178,4 +181,20 @@ it("turns the YouTube chapters into the player's marks, fitted as YouTube takes 
     { start: 150, title: "Why it holds" },
   ]);
   expect(playerChapters("")).toEqual([]);
+});
+
+it("plays the video from a passage the captions left out when its time is pressed", async () => {
+  const video = output("video", "video", {
+    id: "o-video",
+    path: "video.mp4",
+    meta: { subtitleOmissions: [{ start: 75, text: "A line the aligner lost." }] },
+  });
+  const { props: given } = props([video]);
+  renderApp(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
+  const player = screen.getByLabelText("Generated video", { selector: "video" });
+  if (!(player instanceof HTMLVideoElement)) throw new Error("Expected the video element.");
+  stubMedia(player);
+  await userEvent.click(screen.getByText(/Subtitles recovered after missing narration/));
+  await userEvent.click(screen.getByRole("button", { name: "Play from 1:15" }));
+  expect(player.currentTime).toBe(75);
 });

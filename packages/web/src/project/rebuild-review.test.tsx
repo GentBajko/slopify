@@ -273,3 +273,45 @@ it("puts every requirement beside Start and lifts each as it is met", async () =
   expect(start.hasAttribute("disabled")).toBe(false);
   expect(start.getAttribute("aria-describedby")).toBeNull();
 });
+it("says what is made again, what is rebuilt on this computer and what stays", () => {
+  const work = (
+    key: string,
+    kind: "provider" | "local",
+    disposition: "generate" | "local" | "reuse",
+  ) => ({
+    key,
+    stage: "images" as const,
+    kind,
+    disposition,
+    requestFingerprint: "q",
+    fingerprint: "f",
+    dependsOn: [],
+    reason: "",
+    inflight: false,
+    pieceIds: [],
+  });
+  render(
+    <RebuildReview
+      preview={{
+        ...preview,
+        providedReuseRequired: [],
+        wholeRequestNotice: null,
+        work: [
+          work("image:a", "provider", "generate"),
+          work("export:video", "local", "local"),
+          work("image:b", "provider", "reuse"),
+          work("image:c", "provider", "reuse"),
+        ],
+        costs: { ...preview.costs, low: 0.04, high: 0.04, unknown: 0 },
+      }}
+      pending={false}
+      onStart={() => {}}
+      onCancel={() => {}}
+    />,
+  );
+  const scope = screen.getByRole("list", { name: "What this remake does" });
+  expect(scope.textContent).toContain("Made again, charged: Image request 1.");
+  expect(scope.textContent).toContain("Then rebuilt on this computer, free: Video export.");
+  expect(scope.textContent).toContain("Stays as it is: 2 image requests.");
+  expect(scope.textContent).toContain("the current version stays in use");
+});

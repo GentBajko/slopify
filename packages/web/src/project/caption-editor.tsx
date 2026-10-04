@@ -3,13 +3,17 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import type { Audition } from "./review-audition.js";
 
 export function CaptionEditor({
   cues,
   duration,
   onChange,
   onPending,
+  audition,
 }: {
+  // Plays a caption's stretch of the finished video's sound; absent without one.
+  readonly audition?: Audition | undefined;
   readonly cues: readonly ManualCue[];
   readonly duration: number;
   readonly onChange: (cues: readonly ManualCue[]) => void;
@@ -85,6 +89,15 @@ export function CaptionEditor({
       {draft.map((cue, index) => (
         <fieldset key={cue.id} className="space-y-2 rounded-control border border-line-strong p-3">
           <legend>Caption {index + 1}</legend>
+          {audition?.play === undefined ? null : (
+            <CaptionPlay
+              audition={audition}
+              id={cue.id}
+              number={index + 1}
+              start={Number(cue.start)}
+              end={Number(cue.end)}
+            />
+          )}
           <label htmlFor={`${editorId}-${cue.id}-text`} className="block text-small">
             Text for caption {index + 1}
             <Textarea
@@ -137,5 +150,36 @@ export function CaptionEditor({
       </span>
       {dirty ? <p>Apply these caption edits before saving the project.</p> : null}
     </section>
+  );
+}
+
+// Hears the caption's own stretch as typed, so a moved start or end can be checked before saving.
+function CaptionPlay({
+  audition,
+  id,
+  number,
+  start,
+  end,
+}: {
+  readonly audition: Audition;
+  readonly id: string;
+  readonly number: number;
+  readonly start: number;
+  readonly end: number;
+}): import("react").ReactElement {
+  const playing = audition.playing === id;
+  const valid = Number.isFinite(start) && Number.isFinite(end) && end > start && start >= 0;
+  return (
+    <Button
+      type="button"
+      size="small"
+      variant="quiet"
+      disabled={!valid}
+      disabledReason="Enter a start and an end in seconds to play this caption"
+      aria-label={playing ? `Stop caption ${String(number)}` : `Play caption ${String(number)}`}
+      onClick={() => (playing ? audition.stop() : audition.play?.(start, end, id))}
+    >
+      {playing ? "Stop" : "Play"}
+    </Button>
   );
 }

@@ -222,4 +222,38 @@ describe.skipIf(bin === null)("multi-voice audio with the real ffmpeg", () => {
     // The whole clip still plays: the still picture is held, not the end of the video.
     expect(duration(output)).toBeCloseTo(1, 1);
   }, 30_000);
+
+  it("keeps every chapter of a book, once and in order, with its title and the book's tags", async () => {
+    const titles = ["Prologue", "Tides = time; part #1", "Back\\slash", "Interlude", "Epilogue"];
+    const totalSeconds = 5;
+    const chapters = audioChapters({
+      title: "Tides",
+      sections: titles.map((title, at) => ({ title, firstTurn: at + 1 })),
+      turnStarts: new Map(titles.map((_title, at) => [at + 1, at * 0.9 + 0.2])),
+      totalSeconds,
+    });
+    const metadata = join(dir, "book.txt");
+    writeFileSync(metadata, ffmetadata("Tides", chapters, { title: "Sea Stories", chapter: 3 }));
+    for (const kind of ["mp3", "m4b"] as const) {
+      const output = join(dir, `book.${kind}`);
+      await runFfmpeg({
+        ...run(),
+        args: audioFileArgs([{ path: null, seconds: totalSeconds }], metadata, output, kind),
+        onProgress: () => undefined,
+      });
+      const found = chaptersOf(output);
+      // Read back unescaped by ffmpeg's own FFMETADATA writer, so compare escaped titles.
+      expect(found.map((one) => one.title.replace(/\\(.)/g, "$1"))).toEqual(titles);
+      expect(found[0]?.start).toBeCloseTo(0, 2);
+      for (const [at, one] of found.entries()) {
+        expect(one.end).toBeGreaterThan(one.start);
+        // Each chapter seeks to where the next begins: no gap, no overlap.
+        if (at > 0) expect(one.start).toBeCloseTo(found[at - 1]?.end ?? -1, 2);
+      }
+      expect(found.at(-1)?.end).toBeCloseTo(totalSeconds, 1);
+      const tags = ffmpeg(["-i", output, "-f", "ffmetadata", "-"]).stdout.toString("utf8");
+      expect(tags).toMatch(/^album=Sea Stories$/m);
+      expect(tags).toMatch(/^track=3$/m);
+    }
+  }, 30_000);
 });

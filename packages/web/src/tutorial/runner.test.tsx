@@ -212,7 +212,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
         .closest('[data-tour="project-controls"]'),
     ).not.toBeNull();
     const sections = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(sections).getByRole("button", { name: "Settings" })).not.toBeNull();
+    expect(within(sections).getByRole("link", { name: "Settings" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
     expect(
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
@@ -220,14 +220,16 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await next(user, "download");
     await screen.findByRole("region", { name: "Video" });
     const rail = screen.getByRole("navigation", { name: "Project sections" });
-    expect(within(rail).getByRole("button", { name: "Video" }).getAttribute("aria-current")).toBe(
-      "true",
-    );
+    expect(
+      within(rail)
+        .getByRole("link", { name: /^Video/ })
+        .getAttribute("aria-current"),
+    ).toBe("page");
     expect(screen.queryByRole("region", { name: "Article" })).toBeNull();
     // Then the rest of a channel's screens: the run's cost, the upload, Home, Channels, Calendar.
     await next(user, "run-cost");
     expect(document.querySelector('[data-tutorial="hole"]')).not.toBeNull();
-    expect(within(rail).getByRole("button", { name: "Cost" }).getAttribute("data-tour")).toBe(
+    expect(within(rail).getByRole("link", { name: "Cost" }).getAttribute("data-tour")).toBe(
       "project-rail-cost",
     );
     await next(user, "studio-prep");
@@ -282,7 +284,7 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
       await fill(user, "Title", "Optional stages");
       await user.click(guide().getByRole("button", { name: /^Skip/ }));
       await at("play-article");
-      await source("article", "Provide");
+      await source("article", "Use my text as written");
       await fill(user, "Article text", "My finished article.");
       await next(user, "play-keywords");
       await next(user, "play-audio");

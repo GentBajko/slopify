@@ -5,6 +5,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
+import { Input } from "@/components/kit/field";
 import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Badge } from "@/components/kit/status";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,10 @@ import {
   pictureUrl,
 } from "./api";
 import { CastEditor } from "./cast-editor";
+import { castDeleteConsequence, castDeleteTitle } from "./delete-copy";
+
+// More members than this and a search box shows above the gallery.
+const searchFrom = 8;
 
 // The Cast tab: every character, creature, place and object the channel draws the same way,
 // as a gallery of their first pictures, with the picked member's editor beside it (under it
@@ -63,6 +68,21 @@ export function CastTab({
     caption: `${castKindLabels[one.member.kind]} · ${one.member.description || "No description yet"}`,
   }));
   const [open, setOpen] = useState<number | null>(null);
+  // Past a handful of members a search box narrows the gallery by name, other name, kind or
+  // description; the member being edited stays shown.
+  const [search, setSearch] = useState("");
+  const words = search.trim().toLowerCase();
+  const shown =
+    words === ""
+      ? cast
+      : cast.filter(
+          (one) =>
+            one.id === selected ||
+            [one.name, ...one.aliases, castKindLabels[one.kind], one.description]
+              .join(" ")
+              .toLowerCase()
+              .includes(words),
+        );
   const editing = selected === "new" || member !== undefined;
   return (
     <div className="grid grid-cols-1 items-start gap-8 min-[1024px]:grid-cols-[minmax(0,1fr)_440px]">
@@ -83,57 +103,74 @@ export function CastTab({
             Add the characters, creatures, places and objects this channel keeps coming back to.
           </EmptyState>
         ) : (
-          <MediaGrid label="Cast">
-            {cast.map((one) => {
-              const ready = one.images.filter((image) => image.state === "ready");
-              const first = ready[0]?.sha256;
-              return (
-                <MediaFrame
-                  key={one.id}
-                  className={cn(
-                    one.id === selected &&
-                      "rounded-media outline-2 outline-accent outline-offset-4 outline-solid",
-                  )}
-                  {...(first ? { src: pictureUrl(api, first) } : {})}
-                  alt={one.name}
-                  onOpen={() => setOpen(pictured.findIndex((entry) => entry.member.id === one.id))}
-                  openLabel={`Open ${one.name}'s picture full size`}
-                  title={one.name}
-                  meta={`${castKindLabels[one.kind]}${one.host === true ? " · Host" : ""} · ${String(ready.length)} ${
-                    ready.length === 1 ? "picture" : "pictures"
-                  }`}
-                  {...(ready.length === 0
-                    ? { badge: <Badge tone="waiting">No picture</Badge> }
-                    : {})}
-                  actionsShown
-                  actions={
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        aria-label={`Edit ${one.name}`}
-                        aria-pressed={one.id === selected}
-                        onClick={() => select(one.id)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        aria-label={`Delete ${one.name}`}
-                        onClick={() => {
-                          remove.reset();
-                          setDeleting(one);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </>
-                  }
-                />
-              );
-            })}
-          </MediaGrid>
+          <>
+            {cast.length > searchFrom ? (
+              <Input
+                type="search"
+                aria-label="Search the cast"
+                placeholder={`Search ${String(cast.length)} members by name, kind or description`}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="mb-4 max-w-[420px]"
+              />
+            ) : null}
+            {shown.length === 0 ? (
+              <p className="m-0 text-small text-ink-2">{`No member's name, kind or description contains "${search.trim()}".`}</p>
+            ) : null}
+            <MediaGrid label="Cast">
+              {shown.map((one) => {
+                const ready = one.images.filter((image) => image.state === "ready");
+                const first = ready[0]?.sha256;
+                return (
+                  <MediaFrame
+                    key={one.id}
+                    className={cn(
+                      one.id === selected &&
+                        "rounded-media outline-2 outline-accent outline-offset-4 outline-solid",
+                    )}
+                    {...(first ? { src: pictureUrl(api, first) } : {})}
+                    alt={one.name}
+                    onOpen={() =>
+                      setOpen(pictured.findIndex((entry) => entry.member.id === one.id))
+                    }
+                    openLabel={`Open ${one.name}'s picture full size`}
+                    title={one.name}
+                    meta={`${castKindLabels[one.kind]}${one.host === true ? " · Host" : ""} · ${String(ready.length)} ${
+                      ready.length === 1 ? "picture" : "pictures"
+                    }`}
+                    {...(ready.length === 0
+                      ? { badge: <Badge tone="waiting">No picture</Badge> }
+                      : {})}
+                    actionsShown
+                    actions={
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          aria-label={`Edit ${one.name}`}
+                          aria-pressed={one.id === selected}
+                          onClick={() => select(one.id)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          aria-label={`Delete ${one.name}`}
+                          onClick={() => {
+                            remove.reset();
+                            setDeleting(one);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </MediaGrid>
+          </>
         )}
         <Lightbox
           items={items}
@@ -177,11 +214,8 @@ export function CastTab({
       </aside>
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete ${deleting?.name ?? "this cast member"}?`}
-        consequence={
-          remove.error?.message ??
-          "New videos stop using its pictures. Videos already made keep the pictures they were started with."
-        }
+        title={castDeleteTitle(deleting?.name)}
+        consequence={remove.error?.message ?? castDeleteConsequence}
         confirmLabel="Delete from cast"
         cancelLabel="Keep it"
         pending={remove.isPending}

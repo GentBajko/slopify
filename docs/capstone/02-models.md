@@ -184,7 +184,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | UsedBy | `packages/app/src/slices/library/used-by.ts:37` | In-memory | Everything using a Library item |
 | NarrationAlias | `packages/app/src/kernel/ports/narration-aliases.ts:8` | `narration_aliases`; copied into `RunConfig` | A written word and how the narrator says it |
 | AliasMatch | `packages/app/src/kernel/ports/narration-aliases.ts:16` | In-memory | One narration-alias match inside a text |
-| CustomDocumentTheme | `packages/app/src/slices/document/model.ts:29` | `document_themes` | A theme saved in Library → Documents |
+| CustomDocumentTheme | `packages/app/src/slices/document/model.ts:29` | `document_themes` | A theme saved in Library → PDF themes |
 | DocumentSettings | `packages/app/src/slices/document/model.ts:37` | `RunConfig.document` | What a project says about its document |
 | SavedDocumentTheme | `packages/app/src/slices/document/model.ts:62` | `document_themes` | A saved Library theme, as the list endpoint returns it |
 | RGB | `packages/app/src/slices/document/theme.ts:19` | In-memory | Colour as 0-255 channels inside DocumentTheme |

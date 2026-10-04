@@ -97,7 +97,8 @@ export function KeywordList({
             value={keyword.value}
             maxLength={maxLength}
             {...(inputLabel === undefined ? {} : { "aria-label": inputLabel(keyword.name) })}
-            spellCheck={false}
+            // A topic is words to check; any other value is a token (a count, a name, a code).
+            spellCheck={keyword.topic === true}
             aria-invalid={problem?.(`${fieldPrefix}.${keyword.name}`) !== undefined}
             onChange={(event) => onChange(keyword.name, event.target.value)}
           />

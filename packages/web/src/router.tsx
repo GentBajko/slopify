@@ -8,11 +8,14 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
+import { useDocumentTitle } from "@/components/document-title";
 import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
+import { itemOf } from "@/library/list-url";
 import { usePlaySession } from "@/play/draft-context";
 import { pickInPlay } from "@/play/pick-in-play";
+import type { SectionId } from "@/project/next-action";
 import { AbResultsRoute } from "@/routes/ab-results";
 import { CalendarRoute, type CalendarTab, calendarTabOf } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab, channelTabOf } from "@/routes/channel";
@@ -24,24 +27,43 @@ import { EntryEditorRoute } from "@/routes/entry-editor";
 import { HomeRoute } from "@/routes/home";
 import { LibraryLayout } from "@/routes/library";
 import { NarrationAliasesRoute } from "@/routes/narration-aliases";
+import { NotFoundRoute, RouteError } from "@/routes/not-found";
 import { PlayRoute } from "@/routes/play";
-import { ProjectRoute } from "@/routes/project";
-import { type ProjectFilter, ProjectsRoute, projectFilterOf } from "@/routes/projects";
+import { ProjectRoute, projectSectionOf } from "@/routes/project";
+import {
+  type ProjectFilter,
+  type ProjectSort,
+  ProjectsRoute,
+  projectFilterOf,
+  projectSortOf,
+} from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
-import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
+import {
+  SettingsRoute,
+  type SettingsSection,
+  settingsSectionOf,
+  settingsSections,
+} from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
 import { WelcomeRoute } from "@/routes/welcome";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
-const rootRoute = createRootRoute({ component: Shell });
+// An address no route answers shows the not-found screen inside the shell, and a screen
+// that throws while drawing shows its error there, so the rail stays usable either way.
+const rootRoute = createRootRoute({ component: Shell, notFoundComponent: NotFoundRoute });
 
 // The kind tab of 04 and the kind a new prompt opens on live in the URL, so the tab survives a
 // reload and "New prompt" can carry the tab it was pressed on into 05.
 interface KindSearch {
   readonly kind: PromptKind;
+}
+
+// The Library row shown beside a list (`library/list-url.ts`), so its address opens that row.
+interface ItemSearch {
+  readonly item?: string;
 }
 
 interface NewPromptSearch extends KindSearch {
@@ -66,20 +88,67 @@ const homeRoute = createRoute({
   component: HomeRoute,
 });
 
+// The filter and the search words are in the address, so Back from a project, a reload and a
+// new tab all return to the same list. Changing them replaces the entry: a filter is not a
+// place to go Back through, and neither is every typed letter.
+interface ProjectsSearch {
+  readonly show?: ProjectFilter;
+  readonly q?: string;
+  readonly sort?: ProjectSort;
+}
+
+export function projectsSearchOf(search: Record<string, unknown>): ProjectsSearch {
+  const show = projectFilterOf(search.show);
+  const q = typeof search.q === "string" && search.q.trim() !== "" ? search.q.slice(0, 200) : "";
+  const sort = projectSortOf(search.sort);
+  return {
+    ...(show === undefined || show === "all" ? {} : { show }),
+    ...(q === "" ? {} : { q }),
+    ...(sort === undefined || sort === "newest" ? {} : { sort }),
+  };
+}
+
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "projects",
-  validateSearch: (search: Record<string, unknown>): { show?: ProjectFilter } => {
-    const show = projectFilterOf(search.show);
-    return show === undefined ? {} : { show };
-  },
+  validateSearch: projectsSearchOf,
   component: ProjectsPage,
 });
 
 function ProjectsPage() {
-  const { show } = projectsRoute.useSearch();
-  // Keyed so a link to another filter while on Projects starts from it.
-  return <ProjectsRoute key={show ?? "all"} initialFilter={show ?? "all"} />;
+  const { show, q, sort } = projectsRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <ProjectsRoute
+      filter={show ?? "all"}
+      query={q ?? ""}
+      sort={sort ?? "newest"}
+      onFilter={(next) => {
+        void navigate({
+          to: "/projects",
+          search: projectsSearchOf({ show: next, q, sort }),
+          replace: true,
+          resetScroll: false,
+        });
+      }}
+      onQuery={(next) => {
+        void navigate({
+          to: "/projects",
+          search: projectsSearchOf({ show, q: next, sort }),
+          replace: true,
+          resetScroll: false,
+        });
+      }}
+      onSort={(next) => {
+        void navigate({
+          to: "/projects",
+          search: projectsSearchOf({ show, q, sort: next }),
+          replace: true,
+          resetScroll: false,
+        });
+      }}
+    />
+  );
 }
 
 // The first-run screen; Projects sends a fresh install here once (`routes/projects.tsx`).
@@ -144,7 +213,7 @@ function ChannelPage() {
           to: "/channels/$channelId",
           params: { channelId },
           search: { tab: next },
-          replace: true,
+          resetScroll: false,
         });
       }}
     />
@@ -154,6 +223,7 @@ function ChannelPage() {
 const templatesRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "templates",
+  validateSearch: (search: Record<string, unknown>): ItemSearch => itemOf(search.item),
   component: TemplatesPage,
 });
 
@@ -212,10 +282,11 @@ function CalendarPage() {
       tab={search.tab ?? "weeks"}
       schedule={search.schedule}
       onTab={(next) => {
+        // A tab is a place: Back returns to the one before.
         void navigate({
           to: "/calendar",
           search: next === "weeks" ? {} : { tab: next },
-          replace: true,
+          resetScroll: false,
         });
       }}
       onSchedule={(scheduleId) => {
@@ -253,13 +324,20 @@ function TemplatesPage(): import("react").ReactElement {
 const projectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "projects/$projectId",
+  validateSearch: (search: Record<string, unknown>): { section?: SectionId } => {
+    const section = projectSectionOf(search.section);
+    return section === undefined ? {} : { section };
+  },
   component: ProjectPage,
 });
 
 const promptsRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "prompts",
-  validateSearch: (search: Record<string, unknown>): KindSearch => ({ kind: kindOf(search.kind) }),
+  validateSearch: (search: Record<string, unknown>): KindSearch & ItemSearch => ({
+    kind: kindOf(search.kind),
+    ...itemOf(search.item),
+  }),
   component: PromptsPage,
 });
 
@@ -282,8 +360,9 @@ const promptRoute = createRoute({
 const entriesRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "entries",
-  validateSearch: (search: Record<string, unknown>): CategorySearch => ({
+  validateSearch: (search: Record<string, unknown>): CategorySearch & ItemSearch => ({
     category: categoryOf(search.category),
+    ...itemOf(search.item),
   }),
   component: EntriesPage,
 });
@@ -319,6 +398,7 @@ const abResultsRoute = createRoute({
 const documentThemesRoute = createRoute({
   getParentRoute: () => libraryRoute,
   path: "document-themes",
+  validateSearch: (search: Record<string, unknown>): ItemSearch => itemOf(search.item),
   component: DocumentThemesRoute,
 });
 
@@ -417,12 +497,15 @@ const usageRoute = createRoute({
 function SettingsPage() {
   const { section, note } = settingsRoute.useSearch();
   const navigate = useNavigate();
+  const shown = settingsSections.find((one) => one.id === (section ?? "providers"));
+  useDocumentTitle(shown === undefined ? "Settings" : `Settings · ${shown.label}`);
   return (
     <SettingsRoute
       section={section ?? "providers"}
       note={note}
       onSection={(next) => {
-        void navigate({ to: "/settings", search: { section: next }, replace: true });
+        // A section is a place: Back returns to the one before.
+        void navigate({ to: "/settings", search: { section: next }, resetScroll: false });
       }}
       onNote={(next) => {
         // Opening a note is a step a reader goes Back from.
@@ -644,7 +727,12 @@ const routeTree = rootRoute.addChildren({
 });
 
 export function createAppRouter() {
-  return createRouter({ routeTree });
+  return createRouter({
+    routeTree,
+    defaultErrorComponent: RouteError,
+    // Back and Forward return to where the page was scrolled; a new screen starts at the top.
+    scrollRestoration: true,
+  });
 }
 
 export type AppRouter = ReturnType<typeof createAppRouter>;

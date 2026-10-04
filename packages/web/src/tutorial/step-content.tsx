@@ -112,11 +112,12 @@ export function StepContent({
         <>
           <p>
             Play is where you configure one project. Leave <strong>Article</strong> on{" "}
-            <strong>Generate</strong>, then select the article prompt you saved.
+            <strong>Write it for me</strong>, then select the article prompt you saved.
           </p>
           <p>
-            <strong>Provide</strong> is for an article you already have. For this first run, use
-            Generate and keep the script short. Article is required; every other stage can be Off.
+            <strong>Use my text as written</strong> is for an article you already have. For this
+            first run, use Write it for me and keep the script short. Article is required; every
+            other stage can be Off.
           </p>
           <p>
             Research starts Off. You can turn it on in a later run for web-grounded notes that are
@@ -133,7 +134,7 @@ export function StepContent({
             <strong>Voice</strong>.
           </p>
           <p>
-            Keep <strong>Chunking</strong> (under <strong>Audio Advanced</strong>) on{" "}
+            Keep <strong>Chunking</strong> (under <strong>More audio settings</strong>) on{" "}
             <strong>Whole</strong> for the short example: the narration is sent as one request.
             Other chunking modes split longer text into pieces. <strong>Speakers</strong> is where
             an audiobook or podcast gets more than one voice; leave it on one voice for now.

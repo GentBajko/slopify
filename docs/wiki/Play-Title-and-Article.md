@@ -2,7 +2,7 @@
 
 The article is the script of your video: the narration reads it, the captions show it, the chapters come from its headings and the PDF lays it out. On Play you either have a text model write it from a prompt, or paste your own. This page covers the **Title and keywords** row, the **Article** row (article source, prompt, text generation and research) and the intro and outro that wrap the article.
 
-**Where to find it:** Play → **Title and keywords** row and **Article** row → **Change**. The intro and outro are under Play → **Narration** → **Change** → **Audio Advanced**.
+**Where to find it:** Play → **Title and keywords** row and **Article** row → **Change**. The intro and outro are under Play → **Narration** → **Change** → **More audio settings**.
 
 ## Title and keywords
 
@@ -99,7 +99,7 @@ The notes are given to the text model with the article prompt, in place of web r
 
 ## Intro and outro
 
-An intro is read before the article and an outro after it. Both are Library entries, picked in the Narration row under **Audio Advanced**.
+An intro is read before the article and an outro after it. Both are Library entries, picked in the Narration row under **More audio settings**.
 
 | Option | What it does | Default |
 | --- | --- | --- |
@@ -107,7 +107,7 @@ An intro is read before the article and an outro after it. Both are Library entr
 | **Outro** | A Library entry read after the article, such as a sign-off. Text or LLM, as above. | Off |
 
 1. Open the **Narration** row and press **Change**.
-2. Open **Audio Advanced**.
+2. Open **More audio settings**.
 3. Pick an **Intro** and an **Outro**, or leave them **Off**.
 4. Optional: set **Silence between segments** in the **Video and style** row to change the quiet between the intro, the article and the outro (Settings has the default, 3 seconds).
 

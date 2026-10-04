@@ -75,6 +75,49 @@ export function downloadName(slug: string, output: Output): string {
   return `${slug}-${assetOf(output)}${extname(output.path)}`;
 }
 
+// Which version of its place a file is: 1 for the first file ever saved there, 2 for the one
+// that replaced it, and so on. Retained files keep their number across later versions of the
+// project, so the same file always downloads under the same name.
+export function fileVersion(
+  deps: DownloadDeps,
+  projectId: string,
+  slot: string,
+  assetId: string,
+): number {
+  const assets = deps.db
+    .prepare(
+      `SELECT o.asset_id AS id, MIN(a.created_at) AS made FROM revision_outputs o
+      JOIN project_assets a ON a.project_id=o.project_id AND a.id=o.asset_id
+      WHERE o.project_id=? AND o.slot=? GROUP BY o.asset_id ORDER BY made, o.asset_id`,
+    )
+    .all(projectId, slot)
+    .map((row) => String(row.id));
+  return Math.max(1, assets.indexOf(assetId) + 1);
+}
+
+// "tides-image-3.png" for a first version, "tides-image-3-v2.png" once it was remade, so a
+// newer download never silently takes an older one's name.
+export function versionedName(name: string, version: number): string {
+  if (version <= 1) return name;
+  const extension = extname(name);
+  return `${name.slice(0, name.length - extension.length)}-v${String(version)}${extension}`;
+}
+
+// The version of the file a project's current output points at, so the current download and
+// History name the same file the same way.
+function currentVersion(deps: DownloadDeps, projectId: string, path: string): number {
+  const row = deps.db
+    .prepare(
+      `SELECT o.slot, o.asset_id FROM revision_outputs o
+      JOIN project_assets a ON a.project_id=o.project_id AND a.id=o.asset_id
+      WHERE o.project_id=? AND a.path=? LIMIT 1`,
+    )
+    .get(projectId, path);
+  return row === undefined
+    ? 1
+    : fileVersion(deps, projectId, String(row.slot), String(row.asset_id));
+}
+
 export function findDownload(deps: DownloadDeps, projectId: string, asset: string): DownloadResult {
   const title = projectTitle(deps.db, projectId);
   if (title === undefined) {
@@ -100,7 +143,10 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
     ok: true,
     download: {
       path,
-      filename: downloadName(slugOf(title), output),
+      filename: versionedName(
+        downloadName(slugOf(title), output),
+        currentVersion(deps, projectId, output.path),
+      ),
       bytes: shown?.byteLength ?? stats,
       contentType: contentTypeOf(path),
       ...(shown === undefined ? {} : { text: shown }),
@@ -149,7 +195,12 @@ function shownYoutubeText(
 }
 
 // "download all" images as `<title-slug>-images.zip`, thumbnail included.
-export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResult {
+// `set`: every picture (Images' Download all), the thumbnails alone, or every rendered short.
+export function imagesZip(
+  deps: DownloadDeps,
+  projectId: string,
+  set: "images" | "thumbnails" | "shorts" = "images",
+): ImagesZipResult {
   const title = projectTitle(deps.db, projectId);
   if (title === undefined) {
     return { ok: false, reason: "unknown-project" };
@@ -157,7 +208,13 @@ export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResul
   const slug = slugOf(title);
   const entries: Record<string, [Uint8Array, { level: 0 }]> = {};
   for (const output of outputsOf(deps.db, projectId)) {
-    if (output.role !== "image" && output.role !== "thumbnail") {
+    const member =
+      set === "images"
+        ? output.role === "image" || output.role === "thumbnail"
+        : set === "thumbnails"
+          ? output.role === "thumbnail"
+          : output.role === "short_video";
+    if (!member) {
       continue;
     }
     const path = outputPath(deps.paths, projectId, output.path);
@@ -176,7 +233,7 @@ export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResul
   if (Object.keys(entries).length === 0) {
     return { ok: false, reason: "no-images" };
   }
-  return { ok: true, filename: `${slug}-images.zip`, bytes: zipSync(entries) };
+  return { ok: true, filename: `${slug}-${set}.zip`, bytes: zipSync(entries) };
 }
 
 function sizeOf(path: string): number | undefined {

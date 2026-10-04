@@ -3,10 +3,12 @@ import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { ToastProvider } from "@/components/kit/toast";
 import { startedAt } from "@/lib/utils";
+import { projectsSearchOf } from "@/router";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
-import { ProjectsRoute, projectFilterOf } from "./projects.js";
+import { ProjectsRoute, projectFilterOf, projectSortOf } from "./projects.js";
 
 afterEach(cleanup);
 
@@ -27,8 +29,6 @@ export function listing(
     channelId: defaultChannel,
     uploadedAt: null,
     config: {
-      title,
-      format: "16:9",
       sources: {
         research: "off",
         article: "generate",
@@ -38,15 +38,6 @@ export function listing(
         video: "generate",
       },
       articlePrompt: "Documentary dossier",
-      imagePrompts: [],
-      values: {},
-      provided: {},
-      silenceGapSeconds: 3,
-      imageSeconds: 15,
-      zoomPercent: 22.5,
-      motionStyle: "zoom",
-      edgeSilenceSeconds: 0,
-      rendered: {},
     },
     createdAt: "2026-09-02T19:14:00.000Z",
     updatedAt: "2026-09-02T19:14:00.000Z",
@@ -120,7 +111,7 @@ describe("the projects list", () => {
     ).not.toBeNull();
   });
 
-  it("carries a meter on a running row at the share the server averaged, and none otherwise", async () => {
+  it("carries a progress bar on a running row at the share the server averaged, and none otherwise", async () => {
     renderRouted(
       <ProjectsRoute />,
       deps([
@@ -128,9 +119,10 @@ describe("the projects list", () => {
         listing("p2", "Knots", "done", { progress: 1 }),
       ]),
     );
-    const meter = await screen.findByRole("meter", { name: "Rope Tricks progress" });
-    expect(meter.getAttribute("aria-valuenow")).toBe("37");
-    expect(screen.queryByRole("meter", { name: "Knots progress" })).toBeNull();
+    // Task completion is a progress bar, not a meter (a meter is a quantity in a range).
+    const bar = await screen.findByRole("progressbar", { name: "Rope Tricks progress" });
+    expect(bar.getAttribute("aria-valuenow")).toBe("37");
+    expect(screen.queryByRole("progressbar", { name: "Knots progress" })).toBeNull();
   });
 
   it("says a run that stopped for a review is waiting for you", async () => {
@@ -143,7 +135,7 @@ describe("the projects list", () => {
 
   it("offers a new video", async () => {
     renderRouted(<ProjectsRoute />, deps([]));
-    expect((await screen.findByRole("link", { name: "New project" })).getAttribute("href")).toBe(
+    expect((await screen.findByRole("link", { name: "Create" })).getAttribute("href")).toBe(
       "/play",
     );
   });
@@ -195,7 +187,7 @@ describe("the projects list", () => {
 });
 
 describe("marking uploaded", () => {
-  it("marks a finished video uploaded from its row, and undoes it", async () => {
+  it("marks a finished video uploaded from its row, and offers the undo for a day", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
     renderRouted(
@@ -203,7 +195,8 @@ describe("marking uploaded", () => {
       deps(
         [
           listing("p1", "Rope Tricks", "done"),
-          listing("p2", "Knots", "done", { uploadedAt: "2026-09-03T10:00:00.000Z" }),
+          listing("p2", "Knots", "done", { uploadedAt: new Date().toISOString() }),
+          listing("p3", "Sailing", "done", { uploadedAt: "2026-09-03T10:00:00.000Z" }),
         ],
         {
           "PUT /api/projects/p1/uploaded": async (request) => {
@@ -217,11 +210,14 @@ describe("marking uploaded", () => {
         },
       ),
     );
-    await user.click(await screen.findByRole("button", { name: "Mark uploaded" }));
+    const list = await screen.findByRole("list", { name: "Projects" });
+    await user.click(within(list).getByRole("button", { name: "Mark uploaded" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }]));
-    expect(screen.getByText("Uploaded")).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Mark Knots not uploaded" }));
+    expect(screen.getAllByText("Uploaded")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "Undo upload mark: Knots" }));
     await waitFor(() => expect(sent).toEqual([{ uploaded: true }, { uploaded: false }]));
+    // Marked weeks ago: the badge stays, the row no longer offers to take it back.
+    expect(screen.queryByRole("button", { name: "Undo upload mark: Sailing" })).toBeNull();
   });
 });
 
@@ -245,7 +241,7 @@ describe("deleting a project", () => {
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
     expect(
       within(dialog).getByText(
-        "Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash.",
+        "Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash.",
       ),
     ).not.toBeNull();
     expect(deleted).toBeUndefined();
@@ -280,8 +276,8 @@ describe("deleting a project", () => {
   it("refuses while the run is going, and says what to do first", async () => {
     renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "running")]));
     const button = await screen.findByRole("button", { name: "Delete Rope Tricks" });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.getAttribute("title")).toBe("Cancel the run first, then delete it.");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("data-tip")).toBe("Cancel the run first, then delete it.");
   });
 
   it("names the problem when the server refuses the delete", async () => {
@@ -303,5 +299,165 @@ describe("deleting a project", () => {
     expect(
       await screen.findByText("Some of this project's files could not be removed."),
     ).not.toBeNull();
+  });
+});
+
+describe("ordering and paging", () => {
+  it("sorts by name, by recent change and by status, and keeps the order in the address", async () => {
+    const user = userEvent.setup();
+    const picked: string[] = [];
+    renderRouted(
+      <ProjectsRoute onSort={(sort) => picked.push(sort)} />,
+      deps([
+        listing("p1", "Beta", "done", {
+          createdAt: "2026-09-03T10:00:00.000Z",
+          updatedAt: "2026-09-03T10:00:00.000Z",
+        }),
+        listing("p2", "alpha", "failed", {
+          createdAt: "2026-09-01T10:00:00.000Z",
+          updatedAt: "2026-09-05T10:00:00.000Z",
+        }),
+        listing("p3", "Gamma", "running", {
+          createdAt: "2026-09-02T10:00:00.000Z",
+          updatedAt: "2026-09-02T10:00:00.000Z",
+        }),
+      ]),
+    );
+    const names = (): string[] =>
+      within(screen.getByRole("list", { name: "Projects" }))
+        .getAllByRole("link")
+        .map((link) => link.textContent ?? "");
+    await screen.findByRole("link", { name: "Beta" });
+    expect(names()).toEqual(["Beta", "Gamma", "alpha"]);
+    const sort = screen.getByRole("combobox", { name: "Sort projects" });
+    await user.selectOptions(sort, "name");
+    expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
+    await user.selectOptions(sort, "changed");
+    expect(names()).toEqual(["alpha", "Beta", "Gamma"]);
+    await user.selectOptions(sort, "status");
+    expect(names()).toEqual(["Gamma", "alpha", "Beta"]);
+    expect(picked).toEqual(["name", "changed", "status"]);
+    expect(projectsSearchOf({ sort: "name" })).toEqual({ sort: "name" });
+    expect(projectsSearchOf({ sort: "newest" })).toEqual({});
+    expect(projectSortOf("nonsense")).toBeUndefined();
+  });
+
+  it("draws fifty rows and offers the rest behind Show more", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <ProjectsRoute />,
+      deps(
+        Array.from({ length: 62 }, (_, index) =>
+          listing(`p${String(index)}`, `Project ${String(index)}`, "done"),
+        ),
+      ),
+    );
+    await screen.findByRole("link", { name: "Project 0" });
+    expect(screen.getAllByRole("checkbox", { name: /^Select row:/ })).toHaveLength(50);
+    expect(screen.getByText("50 of 62 shown")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show 12 more" }));
+    expect(screen.getAllByRole("checkbox", { name: /^Select row:/ })).toHaveLength(62);
+    expect(screen.queryByRole("button", { name: /^Show \d+ more$/ })).toBeNull();
+  });
+
+  it("gives a long name its full text on hover", async () => {
+    const long = "A very long project name that the row cuts short with an ellipsis";
+    renderRouted(<ProjectsRoute />, deps([listing("p1", long, "done")]));
+    expect((await screen.findByRole("link", { name: long })).getAttribute("title")).toBe(long);
+  });
+});
+
+describe("selected projects", () => {
+  it("deletes the ticked projects after asking, and Undo restores them from the trash", async () => {
+    const user = userEvent.setup();
+    const deleted: string[] = [];
+    const restored: unknown[] = [];
+    renderRouted(
+      <ToastProvider>
+        <ProjectsRoute />
+      </ToastProvider>,
+      deps(
+        [
+          listing("p1", "Rope Tricks", "done"),
+          listing("p2", "Knots", "failed"),
+          listing("p3", "Sailing", "running"),
+        ],
+        {
+          "DELETE /api/projects/p1": (request) => {
+            deleted.push("p1");
+            return emptyAnswer()(request);
+          },
+          "DELETE /api/projects/p2": (request) => {
+            deleted.push("p2");
+            return emptyAnswer()(request);
+          },
+          "POST /api/trash/bulk/restore": async (request) => {
+            restored.push(await request.json());
+            return jsonAnswer({ restored: [{}, {}], failed: [] })(request);
+          },
+        },
+      ),
+    );
+    await screen.findByRole("link", { name: "Rope Tricks" });
+    const bar = document.querySelector<HTMLElement>("[data-slot='selection-bar']");
+    if (bar === null) throw new Error("no selection bar");
+    const remove = within(bar).getByRole("button", { name: "Delete" });
+    expect(remove.hasAttribute("disabled")).toBe(true);
+
+    await user.click(within(bar).getByRole("checkbox", { name: "Select all" }));
+    expect(within(bar).getByText("3 of 3 projects selected")).not.toBeNull();
+    await user.click(remove);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Delete 2 projects?")).not.toBeNull();
+    expect(within(dialog).getByText(/1 project still running stays/)).not.toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Delete 2 projects" }));
+    await waitFor(() => expect(deleted).toEqual(["p1", "p2"]));
+
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(restored).toEqual([
+        {
+          items: [
+            { kind: "project", id: "p1" },
+            { kind: "project", id: "p2" },
+          ],
+        },
+      ]),
+    );
+  });
+
+  it("marks the ticked finished videos uploaded and leaves the rest", async () => {
+    const user = userEvent.setup();
+    const marked: string[] = [];
+    const answer = (id: string) => async (request: Request) => {
+      marked.push(id);
+      return jsonAnswer({ uploadedAt: "2026-09-04T10:00:00.000Z" })(request);
+    };
+    renderRouted(
+      <ProjectsRoute />,
+      deps(
+        [
+          listing("p1", "Rope Tricks", "done"),
+          listing("p2", "Knots", "running"),
+          listing("p3", "Sailing", "done"),
+        ],
+        {
+          "PUT /api/projects/p1/uploaded": answer("p1"),
+          "PUT /api/projects/p3/uploaded": answer("p3"),
+        },
+      ),
+    );
+    await user.click(await screen.findByRole("checkbox", { name: "Select row: Rope Tricks" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select row: Knots" }));
+    const bar = document.querySelector<HTMLElement>("[data-slot='selection-bar']");
+    if (bar === null) throw new Error("no selection bar");
+    await user.click(within(bar).getByRole("button", { name: "Mark uploaded" }));
+    await waitFor(() => expect(marked).toEqual(["p1"]));
+  });
+
+  it("gives each row checkbox a 24px target", async () => {
+    renderRouted(<ProjectsRoute />, deps([listing("p1", "Rope Tricks", "done")]));
+    const box = await screen.findByRole("checkbox", { name: "Select row: Rope Tricks" });
+    expect(box.closest("label")?.className).toContain("size-6");
   });
 });

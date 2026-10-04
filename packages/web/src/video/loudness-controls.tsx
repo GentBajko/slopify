@@ -1,6 +1,7 @@
 import {
   dbOfLufs,
   dbOfPercent,
+  defaultLoudness,
   type LoudnessTarget,
   loudnessDbMax,
   loudnessDbMin,
@@ -14,6 +15,7 @@ import { type ReactElement, useId, useState } from "react";
 import { Field, Input } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
 import type { HelpId } from "@/help/catalog";
+import { ResetToDefault } from "./reset-to-default";
 
 // Level the volume (`slices/loudness/model.ts`): the switch, and the two volumes it masters to,
 // each typed as dB from the recommended level or as a percentage of it. One number is kept,
@@ -32,6 +34,7 @@ export function LoudnessControls({
   problem,
   switchTip = "project.loudness",
   switchLabel = "Level the volume",
+  defaults = defaultLoudness,
 }: {
   readonly value: LoudnessValue;
   readonly onChange: (next: LoudnessValue) => void;
@@ -39,6 +42,8 @@ export function LoudnessControls({
   readonly problem?: ((field: "videoLufs" | "audioFilesLufs") => string | undefined) | undefined;
   readonly switchTip?: HelpId;
   readonly switchLabel?: string;
+  // What Reset puts each volume back to: the recommended levels, or on Play the Settings ones.
+  readonly defaults?: Pick<LoudnessValue, "videoLufs" | "audioFilesLufs">;
 }): ReactElement {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
@@ -55,6 +60,7 @@ export function LoudnessControls({
             label="Video volume"
             tip="project.loudness.video"
             lufs={value.videoLufs}
+            defaultLufs={defaults.videoLufs}
             error={problem?.("videoLufs")}
             onChange={(videoLufs) => onChange({ ...value, videoLufs })}
           />
@@ -63,6 +69,7 @@ export function LoudnessControls({
             label="Audio files volume"
             tip="project.loudness.audio-files"
             lufs={value.audioFilesLufs}
+            defaultLufs={defaults.audioFilesLufs}
             error={problem?.("audioFilesLufs")}
             onChange={(audioFilesLufs) => onChange({ ...value, audioFilesLufs })}
           />
@@ -93,6 +100,7 @@ function VolumeField({
   label,
   tip,
   lufs,
+  defaultLufs,
   error,
   onChange,
 }: {
@@ -100,6 +108,7 @@ function VolumeField({
   readonly label: string;
   readonly tip: HelpId;
   readonly lufs: number;
+  readonly defaultLufs: number;
   readonly error: string | undefined;
   readonly onChange: (lufs: number) => void;
 }): ReactElement {
@@ -145,6 +154,15 @@ function VolumeField({
         />
         <span>%</span>
       </span>
+      <ResetToDefault
+        changed={Math.abs(lufs - defaultLufs) > 0.01}
+        defaultText={`${signed(dbOfLufs(defaultLufs, target))} dB`}
+        label={label.toLowerCase()}
+        onReset={() => {
+          setTyped(undefined);
+          onChange(defaultLufs);
+        }}
+      />
     </Field>
   );
 }

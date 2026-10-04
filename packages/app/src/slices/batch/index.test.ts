@@ -11,7 +11,7 @@ import type { RunDraft } from "../admission/model.js";
 import { projectById, setProjectPaused } from "../admission/repo.js";
 import { outputsOf, stagedFiles } from "../storage/repo.js";
 import { type StorageDeps, stageUpload } from "../storage/staging.js";
-import { enqueueBatch, pumpQueue, queueEntries, queueWaiting } from "./index.js";
+import { enqueueBatch, moveQueued, pumpQueue, queueEntries, queueWaiting } from "./index.js";
 
 const clock = fixedClock("2026-09-10T00:00:00Z");
 const databases: ReturnType<typeof openDb>[] = [];
@@ -207,4 +207,24 @@ it("retains staged bytes and metadata when its caller owns the commit", async ()
   );
   expect(stagedFiles(h.db)).toHaveLength(1);
   expect(readFileSync(join(h.paths.staging, upload.file.path))).toEqual(Buffer.from([1, 2, 3]));
+});
+
+it("reorders waiting videos but never moves one past the video already running", () => {
+  const h = harness();
+  const [arda, gondor, rohan] = enqueueBatch(h, "order", runs).map((entry) => entry.projectId);
+  const runner: Runner = {
+    tick: () => {},
+    settled: async () => {},
+    abortAll: async () => {},
+    abortProject: async () => {},
+  };
+  pumpQueue(h.db, runner);
+  const order = () => queueEntries(h.db).map((entry) => entry.projectId);
+  expect(moveQueued(h.db, rohan ?? "", -1)).toMatchObject({ ok: true });
+  expect(order()).toEqual([arda, rohan, gondor]);
+  // Rohan is now the first waiting video; Arda is running and keeps its place.
+  expect(moveQueued(h.db, rohan ?? "", -1)).toEqual({ ok: false, reason: "edge" });
+  expect(moveQueued(h.db, arda ?? "", 1)).toEqual({ ok: false, reason: "not-queued" });
+  expect(moveQueued(h.db, rohan ?? "", 1)).toMatchObject({ ok: true });
+  expect(order()).toEqual([arda, gondor, rohan]);
 });

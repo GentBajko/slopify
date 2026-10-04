@@ -78,4 +78,22 @@ describe("LoudnessControls", () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
     expect(screen.queryByRole("textbox", { name: "Video volume" })).toBeNull();
   });
+
+  it("says when a volume left its default and resets it", async () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const reset = screen.getByRole("button", { name: "Reset video volume to 0 dB" });
+    expect(reset).toHaveProperty("disabled", true);
+    const db = screen.getByRole("textbox", { name: "Video volume" });
+    await userEvent.clear(db);
+    await userEvent.type(db, "-3");
+    expect(screen.getByText("Changed · default 0 dB")).toBeTruthy();
+    await userEvent.click(reset);
+    expect(onChange).toHaveBeenLastCalledWith({
+      enabled: true,
+      videoLufs: -14,
+      audioFilesLufs: -18,
+    });
+    expect(screen.getByRole("textbox", { name: "Video volume" })).toHaveProperty("value", "0");
+  });
 });

@@ -256,7 +256,9 @@ it("explains held stage, dependents and reviewed revision without issuing comman
   );
   await screen.findByRole("button", { name: "Approve Audio checkpoint" });
   expect(screen.getByText(/Audio is held for your review/)).not.toBeNull();
-  expect(screen.getByText("Reviewed revision: r1")).not.toBeNull();
+  expect(screen.getByText("Applies to the project as it is now.").getAttribute("title")).toBe(
+    "Version r1",
+  );
   expect(screen.getByRole("list", { name: "Dependent work" }).textContent).toContain("Video");
   expect(post).not.toHaveBeenCalled();
 });

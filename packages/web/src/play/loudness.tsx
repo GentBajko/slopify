@@ -41,6 +41,7 @@ export function PlayLoudness({
           videoLufs: chosen?.videoLufs ?? fallback.videoLufs,
           audioFilesLufs: chosen?.audioFilesLufs ?? fallback.audioFilesLufs,
         }}
+        defaults={fallback}
         problem={(field) => problem(`loudness.${field}`)}
         onChange={(next) => update({ loudness: next })}
       />

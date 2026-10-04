@@ -103,7 +103,8 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  --rail-width: 264px;
+  /* The app shell's left rail (shell.css .sl-app, .sl-app__rail). */
+  --rail-width: 232px;
   --measure: 68ch;
   --content-max: 1680px;
 }
@@ -257,10 +258,13 @@
     outline-offset: 2px;
   }
 
+  /* Dimmed, but still under the pointer: a disabled control says why on hover, and an
+     `aria-disabled` one refuses the press in its own handler (kit Button), so it can be
+     focused for its reason too. */
   [disabled],
   [aria-disabled="true"] {
     opacity: 0.45;
-    pointer-events: none;
+    cursor: not-allowed;
   }
 }
 

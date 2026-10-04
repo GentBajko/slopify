@@ -39,6 +39,7 @@ import type { MutationLifecycle } from "./mutations.js";
 import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { onboardingRoutes } from "./onboarding.js";
 import { openFolderRoutes } from "./open-folder.js";
+import { outputRoutes } from "./outputs.js";
 import { patchNotesRoutes } from "./patch-notes.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
@@ -189,6 +190,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", checkpointRoutes(deps))
       .route("/projects", reviewRoutes(deps))
       .route("/projects", revisionRoutes(deps))
+      .route("/projects", outputRoutes(deps))
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))

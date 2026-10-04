@@ -10,7 +10,7 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
 - **Needs you**, above the weeks: every project that is waiting on you or ready to upload (see below).
-- **Projects** running or finished on their day, with their state: **Running**, **Paused**, **Waiting**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
+- **Projects** running or finished on their day, with their state: **Running**, **Paused**, **Queued**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
 - **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
@@ -33,7 +33,7 @@ The bundled samples never show here. A press anywhere on an entry opens its proj
 
 ## The batch queue
 
-Videos started together, such as extra videos queued from Play, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is cancelled, the next one starts. The batch queue is only shown on the calendar; Projects links here and has a **Queued** filter. It is hidden when nothing is queued.
+Videos started together, such as extra videos queued from Play, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is canceled, the next one starts. The batch queue is only shown on the calendar; Projects links here and has a **Queued** filter. It is hidden when nothing is queued.
 
 ## Switch between weeks and a list
 

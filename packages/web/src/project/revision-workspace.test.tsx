@@ -189,7 +189,7 @@ it("does not adopt an old successful receipt as the current editor", async () =>
   await user.clear(title);
   await user.type(title, "Changed");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  await screen.findByText("The project changed again. Your draft is preserved.");
+  await screen.findByText(/The project changed again while saving\. Your edit is kept/);
   if (!(title instanceof HTMLInputElement)) throw new Error("Expected title input.");
   expect(title.value).toBe("Changed");
 });
@@ -449,14 +449,14 @@ function RegenerateButton(): ReactElement {
     <button
       type="button"
       disabled={regenerateNow === undefined}
-      onClick={() => regenerateNow?.(["image:a"])}
+      onClick={() => regenerateNow?.(["image:a"], { approvedUpTo: 0.05 })}
     >
       Regenerate image a
     </button>
   );
 }
 
-it("makes pictures again at once: saves them marked, then starts only them", async () => {
+it("makes pictures again at once when the charge shown at the button covers the estimate", async () => {
   const user = userEvent.setup();
   const baseline = revisionView();
   const next = revisionView("r2", "Saved");

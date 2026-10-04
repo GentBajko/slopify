@@ -120,7 +120,7 @@ const costRowSchema = z.object({
   apiHigh: z.number().finite().nonnegative().nullable().optional(),
 });
 
-const costEstimateSchema: z.ZodType<CostEstimate> = z.object({
+export const costEstimateSchema: z.ZodType<CostEstimate> = z.object({
   currency: z.literal("USD"),
   rows: z.array(costRowSchema),
   low: z.number().finite().nonnegative(),

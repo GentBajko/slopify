@@ -10,6 +10,18 @@ export interface ModelInfo {
   readonly id: string;
   readonly name: string;
   readonly group?: string;
+  // List prices from models.yaml, in US dollars; absent means unknown, never free.
+  readonly price?: ModelPrice;
+  // How many tokens a language model reads at once, from models.yaml.
+  readonly contextTokens?: number;
+}
+
+export interface ModelPrice {
+  readonly inputPerMillionTokens?: number;
+  readonly outputPerMillionTokens?: number;
+  readonly perMillionCharacters?: number;
+  readonly perImage?: number;
+  readonly perMinute?: number;
 }
 
 // What Settings and Play both read per provider. `installed` describes the executable itself;

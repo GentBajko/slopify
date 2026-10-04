@@ -4,6 +4,7 @@ import { discardStaged, listStaged, uploadStaged } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { LinkedText } from "@/components/linked-text";
 
 function waitForCopy(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -90,7 +91,7 @@ export function RevisionUpload({
         try {
           await discardStaged(api, stagedId);
         } catch (cleanupFailure) {
-          message += ` The partial upload couldn't be removed (${cleanupFailure instanceof Error ? cleanupFailure.message : String(cleanupFailure)}); use Clean orphan files in Settings → Backup & storage to clear it.`;
+          message += ` The partial upload couldn't be removed (${cleanupFailure instanceof Error ? cleanupFailure.message : String(cleanupFailure)}); use Clear leftover files in Settings → Backup & storage to clear it.`;
         }
       }
       if (mounted.current) setError(message);
@@ -132,7 +133,7 @@ export function RevisionUpload({
       ) : null}
       {error === undefined ? null : (
         <p role="alert" className="text-small text-danger">
-          {error}
+          <LinkedText text={error} />
         </p>
       )}
     </div>

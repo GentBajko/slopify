@@ -106,7 +106,7 @@ Each prompt's row has, in order:
 | **Duplicate** | Opens the editor with a copy. Give it a new name and save. |
 | **Use in Play** | Picks the prompt in your open Play draft and opens Play on its field. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, and a Description or Shorts prompt turns that step on. |
 | **History** | Opens the prompt's history (below). |
-| **Delete** | Asks first, then moves the prompt to **Settings → Trash** for 30 days, where **Restore** brings it back. |
+| **Delete** | Asks first, then moves the prompt to **Settings → Backup & storage → Trash** for 30 days, where **Restore** brings it back. |
 
 Use **Search prompts** (`/`) to find one by name. A press anywhere on a row picks it.
 

@@ -176,4 +176,74 @@ describe("/api/trash", () => {
       400,
     );
   });
+
+  it("restores several at once and reports the ones it could not", async () => {
+    const h = harness();
+    project(h, "p1");
+    project(h, "p2");
+    await h.app.request("/api/projects/p1", { method: "DELETE" });
+    await h.app.request("/api/projects/p2", { method: "DELETE" });
+
+    const response = await h.app.request("/api/trash/bulk/restore", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { kind: "project", id: "p1" },
+          { kind: "project", id: "p2" },
+          { kind: "prompt", id: "gone" },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await json(response)) as {
+      restored: { id: string }[];
+      failed: { id: string; reason: string; detail: string }[];
+    };
+    expect(body.restored.map((item) => item.id)).toEqual(["p1", "p2"]);
+    expect(body.failed).toEqual([
+      expect.objectContaining({ id: "gone", reason: "not-found", detail: expect.any(String) }),
+    ]);
+    expect(h.ticked).toEqual(["p1", "p2"]);
+    expect(await json(await h.app.request("/api/trash"))).toEqual({ items: [] });
+  });
+
+  it("deletes several for good at once", async () => {
+    const h = harness();
+    const one = project(h, "p1");
+    const two = project(h, "p2");
+    await h.app.request("/api/projects/p1", { method: "DELETE" });
+    await h.app.request("/api/projects/p2", { method: "DELETE" });
+
+    const response = await h.app.request("/api/trash/bulk/delete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          { kind: "project", id: "p1" },
+          { kind: "project", id: "p2" },
+        ],
+      }),
+    });
+
+    expect(await json(response)).toEqual({
+      deleted: [
+        { kind: "project", id: "p1" },
+        { kind: "project", id: "p2" },
+      ],
+      failed: [],
+    });
+    expect(existsSync(one)).toBe(false);
+    expect(existsSync(two)).toBe(false);
+    expect(
+      (
+        await h.app.request("/api/trash/bulk/delete", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ items: [] }),
+        })
+      ).status,
+    ).toBe(400);
+  });
 });

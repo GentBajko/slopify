@@ -293,3 +293,50 @@ it("shows the other titles for YouTube's A/B test and copies them one per line",
   await userEvent.click(screen.getByRole("button", { name: "Copy other titles" }));
   expect(writeText).toHaveBeenLastCalledWith("Rope That Holds\nThe Knot Sailors Trust");
 });
+
+it("counts the description as it is typed and checks it against YouTube's rules", async () => {
+  mount();
+  await screen.findByText(/How rope holds/u);
+  const count = () => screen.getByText(/ \/ 5000 characters/u).textContent ?? "";
+  const before = count();
+  await userEvent.click(screen.getByRole("button", { name: "Edit summary" }));
+  const box = screen.getByRole("textbox", { name: "Summary" });
+  await userEvent.type(box, " <b>");
+  expect(count()).not.toBe(before);
+  expect(
+    screen.getByText("YouTube doesn't allow < or > in a description. Remove them."),
+  ).not.toBeNull();
+  expect(screen.getByText("2 hashtags; the first 2 show above the title.")).not.toBeNull();
+});
+
+it("holds Use it while an edit is open, and Use generated offers Undo", async () => {
+  const saved: unknown[] = [];
+  mount({
+    edits: {
+      fields: {
+        chapters: { base: "0:00 Old\n0:30 Older", text: "0:00 Mine\n0:20 Knots\n0:40 End" },
+      },
+      links: [],
+    },
+    extra: {
+      "DELETE /api/projects/p1/youtube-edits/fields/chapters": (request) =>
+        jsonAnswer({ fields: {}, links: [] })(request),
+      "PUT /api/projects/p1/youtube-edits/fields/chapters": async (request) => {
+        saved.push(await request.json());
+        return jsonAnswer({ fields: {}, links: [] })(request);
+      },
+    },
+  });
+  expect(await screen.findByText("New generated version available.")).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Edit chapters" }));
+  const useIt = screen.getByRole("button", { name: "Use the new generated chapters" });
+  expect(useIt.hasAttribute("disabled")).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await userEvent.click(useIt);
+  await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(saved).toEqual([
+      { text: "0:00 Mine\n0:20 Knots\n0:40 End", base: "0:00 Old\n0:30 Older" },
+    ]),
+  );
+});

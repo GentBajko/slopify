@@ -1,5 +1,5 @@
 import type { FirstRunView } from "@app/slices/onboarding/model.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
@@ -75,9 +75,13 @@ describe("the first-run steps", () => {
         "Narration uses your computer's built-in voice (eSpeak NG); add an ElevenLabs or OpenAI key later for a better one.",
       ),
     ).not.toBeNull();
+    // A sequence, so an ordered list of steps rather than tabs, the current one marked.
+    const list = screen.getByRole("list", { name: "First-run steps" });
     expect(
-      screen.getByRole("tab", { name: "1 · What you have" }).getAttribute("aria-selected"),
-    ).toBe("true");
+      within(list).getByRole("button", { name: "1 · What you have" }).getAttribute("aria-current"),
+    ).toBe("step");
+    expect(within(list).getByText("Step 1 of 3")).not.toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 
   it("offers the fix inline when no voice can narrate", async () => {

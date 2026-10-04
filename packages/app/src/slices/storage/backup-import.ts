@@ -559,7 +559,7 @@ function checkScratch(
       if (documentThemeNameProblems(String(row.name)).length > 0) throw new Error("name");
     }
   } catch {
-    throw unreadable("a document theme");
+    throw unreadable("a PDF theme");
   }
   try {
     for (const row of rowsOf(scratch, "SELECT id FROM channels")) {
@@ -622,7 +622,7 @@ function projectConflict(deps: BackupDeps, scratch: DatabaseSync, id: string): s
   if (deps.db.prepare("SELECT 1 FROM projects WHERE id=?").get(id) !== undefined)
     return "It is already in this install.";
   if (existsSync(projectDir(deps.paths, id)))
-    return "Its folder is already in the projects folder without a project. Press Clean orphan files in Settings → Backup & storage, then import again.";
+    return "Its folder is already in the projects folder without a project. Press Clear leftover files in Settings → Backup & storage, then import again.";
   for (const table of projectTables)
     for (const row of projectRows(scratch, table, id))
       if (

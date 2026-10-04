@@ -215,3 +215,31 @@ it.skipIf(process.platform !== "linux")(
     }
   },
 );
+
+it("serves the thumbnails and the shorts as zips, narrowed to the picked records", async () => {
+  const h = await fixture();
+  try {
+    const thumb = retainedOutput(h.deps, h.base.revision, "thumbnail", "t.png", "thumb");
+    retainedOutput(h.deps, h.base.revision, "image", "i.png", "image", "image:one");
+    const all = await h.app.request(h.file("thumbnails.zip"));
+    expect(all.status).toBe(200);
+    expect(all.headers.get("content-disposition")).toBe(
+      'attachment; filename="saved-thumbnails.zip"',
+    );
+    expect(Object.keys(unzipSync(new Uint8Array(await all.arrayBuffer())))).toEqual([
+      "saved-thumbnail.png",
+    ]);
+    const picked = await h.app.request(`${h.file("images.zip")}?only=${thumb.recordId}`);
+    expect(picked.status).toBe(200);
+    expect(Object.keys(unzipSync(new Uint8Array(await picked.arrayBuffer())))).toEqual([
+      "saved-thumbnail.png",
+    ]);
+    const none = await h.app.request(h.file("shorts.zip"));
+    expect(none.status).toBe(404);
+    expect(await none.json()).toMatchObject({ detail: expect.stringMatching(/Wait for the step/) });
+    const bad = await h.app.request(`${h.file("shorts.zip")}?only=../x`);
+    expect(bad.status).toBe(400);
+  } finally {
+    h.close();
+  }
+});

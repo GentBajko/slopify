@@ -531,6 +531,48 @@ describe("GET /api/projects", () => {
       uploadedAt: null,
     });
   });
+
+  // The list once sent every project's whole configuration, rendered prompts and provided
+  // text included. A row carries the three settings the list screens read.
+  it("carries only the list's settings, not the rendered prompts or provided text", async () => {
+    const { app, db } = harness();
+    const config = {
+      title: "First",
+      format: "16:9",
+      sources: {
+        research: "off",
+        article: "provide",
+        audio: "generate",
+        images: "off",
+        thumbnail: "off",
+        video: "off",
+      },
+      articlePrompt: "Documentary dossier",
+      imagePrompts: [],
+      values: {},
+      provided: { article: "A very long provided article." },
+      silenceGapSeconds: 3,
+      imageSeconds: 15,
+      zoomPercent: 22.5,
+      motionStyle: "zoom",
+      edgeSilenceSeconds: 0,
+      voices: { ...defaultVoicesSettings("audiobook"), book: { title: "The Book", chapter: 2 } },
+      rendered: { article: "The whole rendered prompt." },
+    };
+    db.prepare(
+      "INSERT INTO projects (id, title, format, config, created_at, updated_at) VALUES ('p1','First','16:9',?,'2026-09-01','2026-09-01')",
+    ).run(JSON.stringify(config));
+
+    const body = (await (await app.request("/api/projects")).json()) as {
+      projects: Array<{ config: Record<string, unknown> }>;
+    };
+
+    expect(body.projects[0]?.config).toEqual({
+      sources: config.sources,
+      articlePrompt: "Documentary dossier",
+      voices: { book: { title: "The Book", chapter: 2 } },
+    });
+  });
 });
 
 // Refused while running, otherwise the rows and the folder go.

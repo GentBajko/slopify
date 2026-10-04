@@ -193,7 +193,7 @@ describe("editable projects through the real app", () => {
     const newWav = readFileSync(replacementPath);
     verifyPcmWav(replacementPath);
     expect(newWav.equals(fixture.oldWav)).toBe(false);
-    expect(await download(app, currentPath, "legacy-title-audio-export.wav")).toEqual(newWav);
+    expect(await download(app, currentPath, "legacy-title-audio-export-v2.wav")).toEqual(newWav);
     const replayed = await post(
       app,
       `${projectPath}/rebuild`,
@@ -221,7 +221,7 @@ describe("editable projects through the real app", () => {
       title: "Revised title",
       config: { title: "Revised title" },
     });
-    expect(await download(app, currentPath, "revised-title-audio-export.wav")).toEqual(newWav);
+    expect(await download(app, currentPath, "revised-title-audio-export-v2.wav")).toEqual(newWav);
     expect(
       await download(app, historyPath(baseline.view), "legacy-title-audio-export.wav"),
     ).toEqual(fixture.oldWav);
@@ -258,12 +258,13 @@ describe("editable projects through the real app", () => {
     expect(
       await download(app, historyPath(baseline.view), "legacy-title-audio-export.wav"),
     ).toEqual(fixture.oldWav);
-    expect(await download(app, historyPath(rebuilt), "legacy-title-audio-export.wav")).toEqual(
+    // The rebuilt WAV is the second file saved in its place, and its name says so.
+    expect(await download(app, historyPath(rebuilt), "legacy-title-audio-export-v2.wav")).toEqual(
       newWav,
     );
-    expect(await download(app, historyPath(titled.view), "revised-title-audio-export.wav")).toEqual(
-      newWav,
-    );
+    expect(
+      await download(app, historyPath(titled.view), "revised-title-audio-export-v2.wav"),
+    ).toEqual(newWav);
     expect(executionCounts(app)).toEqual({ admissions: 1, attempts: 0 });
     const { revisions } = await request(
       app,

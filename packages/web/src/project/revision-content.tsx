@@ -12,9 +12,12 @@ import { EditImagePrompts } from "./edit-image-prompts.js";
 import { EditImageScale, EditImageScenes } from "./edit-sound-and-scale.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
+import { useAudition } from "./review-audition.js";
+import { thumbnailProblem } from "./review-thumbnail.js";
 import { revisionFileUrl } from "./revision-api.js";
 import { captionNarrationDuration } from "./revision-caption-duration.js";
 import { RevisionReference } from "./revision-reference.js";
+import { ThumbnailFiles } from "./revision-thumbnail-files.js";
 import { RevisionUpload } from "./revision-upload.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 
@@ -91,6 +94,8 @@ export function RevisionContentEditors({
   pendingCallback.current = onPending;
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | undefined>();
+  const [thumbnailRefused, setThumbnailRefused] = useState<string | undefined>();
+  const audition = useAudition(view);
   const operation = useRef<AbortController | undefined>(undefined);
   const mounted = useRef(true);
   const mark = useCallback((key: string, active: boolean): void => {
@@ -190,6 +195,7 @@ export function RevisionContentEditors({
   const shows = (part: EditSection) => section === undefined || section === part;
   return (
     <div className="space-y-5">
+      {audition.element}
       <section aria-label="Images" hidden={!shows("images")} className="space-y-6">
         <EditImagePrompts
           edit={edit}
@@ -232,6 +238,12 @@ export function RevisionContentEditors({
             }}
           />
         ) : null}
+        <ThumbnailFiles
+          edit={edit}
+          getEdit={() => latest.current.edit}
+          onChange={emit}
+          onPending={mark}
+        />
         {(["audio", "thumbnail"] as const).map((stage) =>
           edit.config.sources[stage] !== "provide" ? null : (
             <RevisionUpload
@@ -242,6 +254,12 @@ export function RevisionContentEditors({
               onReady={(file) => {
                 const current = latest.current;
                 if (current.edit.config.sources[stage] !== "provide") return;
+                if (stage === "thumbnail") {
+                  // Checked against where it goes: YouTube Studio's thumbnail field.
+                  const refused = thumbnailProblem(file.bytes);
+                  setThumbnailRefused(refused);
+                  if (refused !== undefined) return;
+                }
                 emit({
                   ...current.edit,
                   uploads: [
@@ -255,6 +273,11 @@ export function RevisionContentEditors({
               }}
             />
           ),
+        )}
+        {thumbnailRefused === undefined ? null : (
+          <p role="alert" className="text-small text-danger">
+            {thumbnailRefused}
+          </p>
         )}
         <ImageEditor
           getEdit={() => latest.current.edit}
@@ -306,6 +329,7 @@ export function RevisionContentEditors({
             {ready && duration !== undefined ? (
               <CaptionEditor
                 key={`${view.revision.id}:${fingerprint}`}
+                audition={audition}
                 cues={captions.cues}
                 duration={duration}
                 onPending={(active) => mark("captions:dirty", active)}

@@ -99,10 +99,31 @@
     font-size: 12px;
     font-weight: 500;
     line-height: 1.3;
-    white-space: nowrap;
+    width: max-content;
+    max-width: min(280px, 80vw);
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 100ms;
+    /* Not drawn at all until asked for: a hidden tip near the window's edge would still
+       widen the page on a phone. */
+    display: none;
+  }
+  /* A disabled button's reason is a sentence. */
+  .sl-btn[data-reason]::after {
+    text-align: left;
+  }
+  .sl-btn[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  /* Tips at the ends of the player's bar and a frame's actions open inwards. */
+  .sl-player__bar .sl-btn[data-tip]:first-child::after {
+    left: 0;
+    transform: none;
+  }
+  .sl-player__bar .sl-btn[data-tip]:last-child::after,
+  .sl-media__actions .sl-btn[data-tip]::after {
+    left: auto;
+    right: 0;
+    transform: none;
   }
   /* In a row the tips open inwards from the button's edge, so they stay inside the card. */
   .sl-btn-row > .sl-btn[data-tip]::after {
@@ -115,7 +136,7 @@
   }
   .sl-btn[data-tip]:hover::after,
   .sl-btn[data-tip]:focus-visible::after {
-    opacity: 1;
+    display: block;
   }
   .sl-btn--small {
     height: 30px;
@@ -188,11 +209,16 @@
     color: var(--color-ink);
     font: 400 15px / 22px var(--font-sans);
   }
+  /* A long field grows with its text, from its `rows` up to most of the screen, then scrolls.
+     `--sl-rows` is set from `rows` by kit/field; where field-sizing is unsupported, `rows`
+     alone sizes it as before. */
   .sl-textarea {
     height: auto;
-    min-height: 96px;
+    min-height: max(96px, calc(var(--sl-rows, 4) * 22px + 22px));
+    max-height: 70vh;
     padding: 10px 12px;
     resize: vertical;
+    field-sizing: content;
   }
   /* A group of fields: labels above, equal columns at least 15rem wide (three or four across
      a wide screen, one on a phone), so a select is as wide as its column and never half the
@@ -706,6 +732,7 @@
   }
   .sl-player__track[aria-disabled="true"] {
     cursor: default;
+    pointer-events: none;
   }
   .sl-player__rail {
     position: relative;
@@ -989,6 +1016,12 @@
     height: 18px;
     flex: none;
   }
+  /* In a rail, a stage not started yet is a hollow ring and a done one a filled lamp, so the
+     two differ by more than colour. */
+  .sl-rail__item .sl-lamp[data-tone="off"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--color-ink-3);
+  }
   .sl-rail__meta {
     margin-left: auto;
     font-size: 13px;
@@ -1111,6 +1144,7 @@
     display: flex;
     flex-direction: column;
     border-top: 1px solid var(--color-line);
+    container-type: inline-size;
   }
   .sl-row {
     display: grid;
@@ -1149,6 +1183,17 @@
   .sl-row__body {
     grid-column: 1 / -1;
     min-width: 0;
+  }
+  /* A list squeezed beside a panel puts its row actions under the text, so the name keeps the
+     width instead of shrinking to a few letters. */
+  @container (max-width: 520px) {
+    .sl-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+    .sl-row__actions {
+      align-items: center;
+    }
   }
   /* A link that reads as one (kit/link TextLink). */
   .sl-link {

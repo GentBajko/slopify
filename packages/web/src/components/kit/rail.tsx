@@ -46,11 +46,17 @@ export function RailLink({
   meta,
   current,
   exact = false,
+  resetScroll,
   className,
   children,
+  "data-tour": tour,
 }: {
   readonly to: string;
   readonly search?: Readonly<Record<string, string>>;
+  // False for a section of the same page: the page stays where it was scrolled to.
+  readonly resetScroll?: boolean;
+  // The interactive tutorial's target name.
+  readonly "data-tour"?: string;
   readonly icon?: ReactNode;
   // A count or state on the right: "14", "2 wait".
   readonly meta?: ReactNode;
@@ -72,6 +78,8 @@ export function RailLink({
     <Link
       to={to}
       {...(search ? { search } : {})}
+      {...(resetScroll === undefined ? {} : { resetScroll })}
+      data-tour={tour}
       className={cn("sl-rail__item", className)}
       {...(current === undefined
         ? {

@@ -1,9 +1,12 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import { subtitleFrame, subtitlePlacement } from "@app/slices/subtitles/layout.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
-import { type CSSProperties, type ReactElement, useEffect, useId, useState } from "react";
+import { type CSSProperties, type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
+import { Switch } from "@/components/kit/switch";
+import { ShortsSafeZone } from "@/project/review-safe-zone";
 import { fontUrl } from "./api";
+import { usePreviewFont } from "./use-preview-font";
 
 export function SubtitlePreview({
   value,
@@ -22,26 +25,10 @@ export function SubtitlePreview({
 }): ReactElement {
   const { api } = useApp();
   const url = fontUrl(api, value.fontId);
-  const family = `subtitle-preview-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (typeof FontFace === "undefined" || !document.fonts) return;
-    let active = true;
-    const font = new FontFace(family, `url(${JSON.stringify(url)})`);
-    setFailed(false);
-    void font
-      .load()
-      .then((loaded) => {
-        if (active) document.fonts.add(loaded);
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-      document.fonts.delete(font);
-    };
-  }, [family, url]);
+  const { family, failed } = usePreviewFont(url);
+  // A 9:16 frame is a short: YouTube's own buttons and title cover parts of it on a phone.
+  const [safeZone, setSafeZone] = useState(false);
+  const portrait = format === "9:16";
   const frame = subtitleFrame(format);
   const placement = subtitlePlacement(value.position ?? "bottom", frame.height);
   const fontSize = Number.isFinite(value.fontSize)
@@ -94,7 +81,16 @@ export function SubtitlePreview({
             {sample}
           </span>
         ) : null}
+        {portrait && safeZone ? <ShortsSafeZone /> : null}
       </div>
+      {portrait ? (
+        <Switch
+          checked={safeZone}
+          onChange={setSafeZone}
+          label="Show what YouTube covers on a phone"
+          className="mt-2"
+        />
+      ) : null}
       <figcaption className="mt-2 text-label text-ink-3">
         {frame.width} × {frame.height} · Preview at reduced scale.
         {failed ? " Font preview unavailable; showing a fallback." : ""}

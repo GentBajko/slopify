@@ -32,12 +32,15 @@ export function Stat({
 }
 
 // A share of a limit. The label names what is measured, and the value text reads it in
-// words ("18% of your weekly Codex limit").
+// words ("18% of your weekly Codex limit"). `progress` is for a task moving towards done (a run,
+// a copy, an upload): it is then a progress bar to assistive technology, not a meter, which is
+// for a quantity within a known range (a plan limit, disk space).
 export function Meter({
   value,
   label,
   valueText,
   tone = "accent",
+  progress = false,
   className,
 }: {
   // 0..1
@@ -45,22 +48,40 @@ export function Meter({
   readonly label: string;
   readonly valueText?: string;
   readonly tone?: "accent" | "waiting";
+  readonly progress?: boolean;
   readonly className?: string;
 }): ReactElement {
   const share = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
   const percent = Math.round(share * 100);
-  return (
-    // biome-ignore lint/a11y/useSemanticElements: a native <meter> cannot be styled consistently across browsers; the ARIA meter carries the same semantics.
+  const text = valueText ?? `${String(percent)}%`;
+  const classes = cn("sl-meter", tone === "waiting" && "sl-meter--waiting", className);
+  const bar = <span style={{ width: `${String(percent)}%` }} />;
+  // Native <meter> and <progress> cannot be styled consistently across browsers; the ARIA
+  // roles carry the same semantics.
+  return progress ? (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+      aria-valuetext={text}
+      className={classes}
+    >
+      {bar}
+    </div>
+  ) : (
+    // biome-ignore lint/a11y/useSemanticElements: see above.
     <div
       role="meter"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
-      aria-valuetext={valueText ?? `${String(percent)}%`}
-      className={cn("sl-meter", tone === "waiting" && "sl-meter--waiting", className)}
+      aria-valuetext={text}
+      className={classes}
     >
-      <span style={{ width: `${String(percent)}%` }} />
+      {bar}
     </div>
   );
 }

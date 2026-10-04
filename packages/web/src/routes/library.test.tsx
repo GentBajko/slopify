@@ -7,7 +7,7 @@ import { LibraryLayout } from "./library.js";
 afterEach(cleanup);
 
 describe("the Library layout", () => {
-  it("titles the page and offers its five tabs; schedules and the calendar live elsewhere", async () => {
+  it("titles the page and groups its tabs: setups, building blocks, results", async () => {
     renderRouted(
       <CommandPaletteProvider>
         <LibraryLayout />
@@ -16,12 +16,19 @@ describe("the Library layout", () => {
     );
 
     expect(await screen.findByRole("heading", { level: 1, name: "Library" })).not.toBeNull();
-    const tabs = screen.getByRole("navigation", { name: "Library sections" });
-    expect(
-      within(tabs)
+    const group = (name: string) =>
+      within(screen.getByRole("navigation", { name }))
         .getAllByRole("link")
-        .map((link) => link.textContent),
-    ).toEqual(["Prompts", "Intros & Outros", "Templates", "Documents", "Aliases", "A/B results"]);
+        .map((link) => link.textContent);
+    expect(group("Setups")).toEqual(["Templates"]);
+    // PDF themes, not "Documents"; aliases named for what they change.
+    expect(group("Building blocks")).toEqual([
+      "Prompts",
+      "Intros & outros",
+      "PDF themes",
+      "Narration aliases",
+    ]);
+    expect(group("Results")).toEqual(["A/B results"]);
   });
 
   it("registers the Library's frequent actions in the command palette", async () => {
@@ -38,11 +45,11 @@ describe("the Library layout", () => {
     expect(library.map((command) => command.title)).toEqual([
       "New prompt",
       "New intro or outro",
-      "New document theme",
+      "New PDF theme",
       "Open prompts",
       "Open intros and outros",
       "Open templates",
-      "Open document themes",
+      "Open PDF themes",
     ]);
   });
 });

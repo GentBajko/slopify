@@ -10,7 +10,8 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 
 export type Destructive =
   | { readonly kind: "cancel" }
-  | { readonly kind: "rerun"; readonly stage: StageKind }
+  // `price`: what it is likely to cost (`stage-price.ts`), when that can be said honestly.
+  | { readonly kind: "rerun"; readonly stage: StageKind; readonly price?: string | undefined }
   | { readonly kind: "delete-image"; readonly outputId: string }
   // `now`: a project with saved versions makes the picture at once and leaves the video
   // outdated, instead of rendering the video again.
@@ -20,6 +21,7 @@ export type Destructive =
       readonly outputId: string;
       readonly now?: boolean;
       readonly thumbnail?: boolean;
+      readonly price?: string | undefined;
     }
   | { readonly kind: "save-article"; readonly markdown: string }
   | { readonly kind: "discard-article" };
@@ -29,7 +31,8 @@ export interface Confirmation {
   readonly consequence: string;
   readonly verb: string;
   // What the way out is called. "Cancel" beside "Cancel run" would name both halves of
-  // the choice the same thing, so the cancel dialog says what keeping it does instead.
+  // the choice the same thing, so the cancel dialog says what keeping it does instead. A
+  // destructive dialog's way out keeps the thing ("Keep it"); "Cancel" is for neutral dialogs.
   readonly dismiss: string;
 }
 
@@ -50,6 +53,10 @@ const rerunConsequence: Readonly<Record<StageKind, string>> = {
     "Renders the PDF again from the saved article and title without regenerating anything else; previous outputs stay in History.",
 };
 
+function withPrice(consequence: string, price: string | undefined): string {
+  return price === undefined ? consequence : `${consequence} ${price}`;
+}
+
 export function confirmationFor(action: Destructive): Confirmation {
   switch (action.kind) {
     case "cancel":
@@ -61,41 +68,46 @@ export function confirmationFor(action: Destructive): Confirmation {
       };
     case "rerun":
       return {
-        title: "Re-run this stage?",
-        consequence: rerunConsequence[action.stage],
-        verb: "Re-run",
-        dismiss: "Cancel",
+        title: "Make this stage again?",
+        consequence: withPrice(rerunConsequence[action.stage], action.price),
+        verb: "Make it again",
+        dismiss: "Keep what is there",
       };
     case "delete-image":
       return {
         title: "Delete this image?",
         consequence: "Removes the image and re-renders video when enabled.",
-        verb: "Delete",
-        dismiss: "Cancel",
+        verb: "Delete image",
+        dismiss: "Keep it",
       };
     case "regenerate-image":
       if (action.thumbnail)
         return {
           title: "Regenerate this thumbnail?",
-          consequence:
+          consequence: withPrice(
             "Makes a new thumbnail, one paid image call. The video and shorts are not touched; the PDF's cover follows the first thumbnail. The old one stays in History.",
+            action.price,
+          ),
           verb: "Regenerate",
-          dismiss: "Cancel",
+          dismiss: "Keep it",
         };
       return {
         title: "Regenerate this image?",
-        consequence: action.now
-          ? "Makes a new image now, one paid image call. The video keeps the current one until you remake it; the old image stays in History."
-          : "Replaces the image with a new one and re-renders video when enabled.",
+        consequence: withPrice(
+          action.now
+            ? "Makes a new image now, one paid image call. The video keeps the current one until you remake it; the old image stays in History."
+            : "Replaces the image with a new one and re-renders video when enabled.",
+          action.price,
+        ),
         verb: "Regenerate",
-        dismiss: "Cancel",
+        dismiss: "Keep it",
       };
     case "save-article":
       return {
         title: "Save the edited article?",
         consequence: "Replaces the article, then updates the enabled narration and final export.",
         verb: "Save & update outputs",
-        dismiss: "Cancel",
+        dismiss: "Keep editing",
       };
     case "discard-article":
       return {

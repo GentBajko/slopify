@@ -47,7 +47,7 @@ Scope: spoken (clean) text versus request (sent-to-voice) text, the Pronunciatio
 | SharedGlossary | `packages/app/src/slices/narration/shared-glossary.ts:12` | In memory; HTTP JSON | Merged glossary of every other project plus contributor count. |
 | NarrationAlias | `packages/app/src/kernel/ports/narration-aliases.ts:8` | `narration_aliases` table; run config JSON | Written word/phrase and how the narrator says it. |
 | AliasMatch | `packages/app/src/kernel/ports/narration-aliases.ts:16` | In memory | Chosen alias occurrence in a text. |
-| AliasProblem | `packages/app/src/slices/narration/aliases-schema.ts:23` | In memory; HTTP problem extension | Field-level save problem of Library → Aliases. |
+| AliasProblem | `packages/app/src/slices/narration/aliases-schema.ts:23` | In memory; HTTP problem extension | Field-level save problem of Library → Narration aliases. |
 | NarrationSource | `packages/app/src/slices/narration/pronunciation-chunks.ts:10` | Revision content JSON (`narrationSources`) | Source identity of a merged narration group. |
 | PronunciationChunk | `packages/app/src/slices/narration/pronunciation-chunks.ts:16` | In memory | Logical body narration group with optional source binding. |
 | NarrationOverride | `packages/app/src/slices/revisions/model.ts:28` | Revision content JSON (`narrationOverrides`) | Per-group replacement: uploaded asset, or edited text with an optional per-chunk delivery note. |

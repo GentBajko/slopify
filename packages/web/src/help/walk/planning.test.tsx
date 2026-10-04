@@ -230,7 +230,7 @@ describe("the planning screens explain every control", () => {
     await screen.findByRole("article", { name: /^Cleopatra,/ });
     expectExplained();
     await user.click(screen.getByRole("button", { name: "List" }));
-    await screen.findByLabelText("Move Cleopatra to another schedule");
+    await screen.findByLabelText("Move Cleopatra to…");
     expectExplained();
     await user.click(screen.getByRole("button", { name: "Add to calendar" }));
     await screen.findByLabelText("Topics, one per line");

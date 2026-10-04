@@ -17,6 +17,7 @@ import {
   switchRetired,
   upkeepKeys,
 } from "@/components/provider-upkeep-api";
+import { startedAt } from "@/lib/utils";
 import { schedulesKey } from "@/schedules/api";
 import { templatesKey } from "@/templates/api";
 
@@ -155,7 +156,7 @@ export function CatalogueSettings() {
           </dt>
           <dd className="m-0 border-b border-line pb-3 text-ink-2 sm:pt-3">
             {sync?.checkedAt
-              ? `${new Date(sync.checkedAt).toLocaleString()} · ${changeSummary(sync.changes)}`
+              ? `${startedAt(sync.checkedAt)} · ${changeSummary(sync.changes)}`
               : "Not checked yet"}
           </dd>
         </dl>

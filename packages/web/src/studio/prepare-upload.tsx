@@ -7,6 +7,7 @@ import {
   tagsLine,
 } from "@app/slices/studio/model.js";
 import type { Slot } from "@app/slices/studio/releases.js";
+import { youtubeTitleProblem } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -568,10 +569,19 @@ function Steps({
         };
       case "title":
         return item.titles.length === 0 || item.pickable === undefined
-          ? { value: copyTextOf(item, step), actions: copyAction(step) }
+          ? {
+              value: (
+                <span className="flex flex-col gap-1">
+                  <span>{copyTextOf(item, step)}</span>
+                  <TitleProblem title={item.title} />
+                </span>
+              ),
+              actions: copyAction(step),
+            }
           : {
               value: (
                 <span className="flex flex-col gap-1">
+                  <TitleProblem title={item.title} />
                   <span
                     role="radiogroup"
                     aria-label="Title the upload uses"
@@ -779,4 +789,14 @@ function copyTextOf(item: PackItem, step: StudioStep): string {
     default:
       return "";
   }
+}
+
+// Why YouTube would refuse the title the upload carries, and where to change it.
+function TitleProblem({ title }: { readonly title: string }): ReactNode {
+  const problem = youtubeTitleProblem(title);
+  return problem === undefined ? null : (
+    <span role="alert" className="text-danger">
+      {`${problem} Change it in the project's YouTube section (Video), then open Prepare upload again.`}
+    </span>
+  );
 }

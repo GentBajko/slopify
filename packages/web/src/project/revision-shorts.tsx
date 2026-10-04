@@ -20,6 +20,8 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { Shorts, shortsPreviewOf } from "@/play/shorts";
 import type { ShortsForm } from "@/play/state";
 import { StylePreview } from "@/video/style-preview";
+import { type Audition, useAudition } from "./review-audition.js";
+import { ClipAudition } from "./review-clip-audition.js";
 import { editOfForm, setPrompt } from "./revision-form-state";
 import { RevisionUpload } from "./revision-upload.js";
 
@@ -263,6 +265,7 @@ function PickedClips({
   readonly onChange: (edit: RevisionEdit) => void;
 }): ReactElement {
   const id = useId();
+  const audition = useAudition(view);
   const saved = view.revision.config.shorts;
   // Another count, length or prompt picks the moments again as well.
   const repicking =
@@ -343,11 +346,13 @@ function PickedClips({
           can be adjusted once the new ones are picked.
         </p>
       ) : null}
+      {audition.element}
       <ol className="space-y-3">
         {clips.map((clip) => (
           <ClipRow
             key={clip.number}
             clip={clip}
+            audition={audition}
             picked={pick.picked}
             adjusted={ranges[String(clip.number)] !== undefined}
             locked={repicking}
@@ -381,6 +386,7 @@ function PickedClips({
 
 function ClipRow({
   clip,
+  audition,
   picked,
   adjusted,
   locked,
@@ -390,6 +396,7 @@ function ClipRow({
   onRemake,
 }: {
   readonly clip: ShortPick;
+  readonly audition: Audition;
   readonly picked: PickedShorts;
   readonly adjusted: boolean;
   readonly locked: boolean;
@@ -480,6 +487,7 @@ function ClipRow({
           ) : null}
         </>
       )}
+      <ClipAudition audition={audition} clip={clip} />
       {problem !== undefined ? (
         <p role="alert" className="text-small text-danger">
           {problem}

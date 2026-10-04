@@ -15,7 +15,10 @@ import { readText } from "@/http";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
-import { useAssetMedia, useOutputMedia } from "./revision-media.js";
+import type { ZipSet } from "./output-api.js";
+import { outdatedWords } from "./output-status.js";
+import { useAssetMedia, useCurrentRevisionView, useOutputMedia } from "./revision-media.js";
+import { SetDownload } from "./set-download.js";
 
 // The furniture every stage body is made of: the column a body stacks in, the prose measure,
 // a stage's download and folder actions, and the "Show instructions" toggle each stage carries. It sits apart from
@@ -219,11 +222,17 @@ export function DownloadMenu({
     (file): file is { readonly output: Output; readonly label: string } =>
       file.output !== undefined,
   );
+  const older = useOlderOutputs(shown.map((file) => file.output));
   const [only] = shown;
   if (only === undefined) return null;
   if (shown.length === 1)
     return (
-      <SingleDownload output={only.output} label={label} file={only.label} variant={variant} />
+      <SingleDownload
+        output={only.output}
+        label={older.has(only.output.id) ? `${label} (previous version)` : label}
+        file={only.label}
+        variant={variant}
+      />
     );
   return (
     // Not modal: an open menu leaves the rest of the page readable and clickable.
@@ -237,7 +246,11 @@ export function DownloadMenu({
       </MenuTrigger>
       <MenuContent>
         {shown.map((file) => (
-          <DownloadItem key={file.output.id} output={file.output} label={file.label} />
+          <DownloadItem
+            key={file.output.id}
+            output={file.output}
+            label={older.has(file.output.id) ? `${file.label} · previous version` : file.label}
+          />
         ))}
       </MenuContent>
     </Menu>
@@ -293,21 +306,55 @@ export function StageFiles({
   files,
   label = "Download",
   variant = "primary",
+  noteOlder = true,
+  zip,
   children,
 }: {
   readonly files: readonly StageFile[];
   readonly label?: string;
   readonly variant?: "primary" | "secondary";
+  // False where the body already says its file is from before the last change.
+  readonly noteOlder?: boolean;
+  // Download all as one zip (the shorts, the thumbnails), its files listed before it downloads.
+  readonly zip?: { readonly set: ZipSet; readonly members: readonly Output[] } | undefined;
   readonly children?: ReactNode;
 }) {
   const saved = present(files);
+  const older = useOlderOutputs(saved);
+  const first = saved.find((output) => older.has(output.id));
   if (saved.length === 0 && children === undefined) return null;
   return (
-    <ButtonRow>
-      <DownloadMenu files={files} label={label} variant={variant} />
-      <OutputFolder output={saved[0]} />
-      {children}
-    </ButtonRow>
+    <>
+      <ButtonRow>
+        <DownloadMenu files={files} label={label} variant={variant} />
+        {zip === undefined || zip.members.length < 2 || saved[0] === undefined ? null : (
+          <SetDownload
+            projectId={saved[0].projectId}
+            set={zip.set}
+            members={zip.members}
+            variant="secondary"
+          />
+        )}
+        <OutputFolder output={saved[0]} />
+        {children}
+      </ButtonRow>
+      {noteOlder && first !== undefined ? (
+        <MetaLine>
+          {`${outdatedWords(first.role)}. The download is that previous version until you remake it.`}
+        </MetaLine>
+      ) : null}
+    </>
+  );
+}
+
+// The files an edit made outdated: they stay usable, named as the previous version.
+function useOlderOutputs(outputs: readonly Output[]): ReadonlySet<string> {
+  const view = useCurrentRevisionView();
+  const ids = new Set(outputs.map((output) => output.id));
+  return new Set(
+    view?.outputs
+      .filter((row) => row.state === "outdated" && ids.has(row.output.id))
+      .map((row) => row.output.id) ?? [],
   );
 }
 

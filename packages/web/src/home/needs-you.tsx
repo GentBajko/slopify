@@ -5,17 +5,16 @@ import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LayersIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef } from "react";
+import { type ReactElement, useRef } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
-import { Button, ButtonRow } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ButtonLink } from "@/components/kit/link";
-import { hitArea, hitTarget } from "@/components/kit/list-row";
+import { hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
-import { cn } from "@/lib/utils";
 import {
   type ApprovalIdentity,
   approveCheckpoint,
@@ -28,6 +27,7 @@ import { stageNames } from "@/project/summary";
 import { keys } from "@/queries";
 import { setAside } from "./api.js";
 import { ProjectThumb } from "./project-thumb.js";
+import { WorkItem } from "./work-item.js";
 
 // Home's "Needs you": runs holding for a review, schedules holding suggested topics, and runs
 // that failed with the one thing that fixes them. Only the first item's action is primary;
@@ -46,32 +46,6 @@ export function needsYouCount(
 // you" notification uses. One the person chose to keep as is waits for nobody.
 export function isWaiting(project: ProjectListing): boolean {
   return project.status === "pending" && project.progress > 0 && project.setAside !== true;
-}
-
-function Item({
-  lead,
-  status,
-  title,
-  detail,
-  action,
-}: {
-  readonly lead: ReactNode;
-  readonly status: ReactNode;
-  readonly title: ReactNode;
-  readonly detail: ReactNode;
-  readonly action: ReactNode;
-}): ReactElement {
-  return (
-    <li className={cn("sl-home-item", hitArea)}>
-      {lead}
-      <div className="flex min-w-0 flex-col gap-1">
-        {status}
-        <div className="sl-row__title text-[17px]">{title}</div>
-        <div className="text-small text-ink-2">{detail}</div>
-      </div>
-      <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
-    </li>
-  );
 }
 
 function projectLink(project: { readonly id: string; readonly title: string }): ReactElement {
@@ -187,7 +161,7 @@ export function WaitingItem({
     },
   });
   return (
-    <Item
+    <WorkItem
       lead={<ProjectThumb projectId={project.id} />}
       status={
         <Status tone="waiting">
@@ -196,9 +170,11 @@ export function WaitingItem({
       }
       title={projectLink(project)}
       detail={
-        gate === undefined
-          ? "Its next step is held. Open the project to review it and continue the run."
-          : "Everything before this step is done. Approve to let the run go on, or open the project to look first."
+        gate !== undefined
+          ? undefined
+          : status.error !== null
+            ? `Its review didn't load: ${status.error.message} Open the project to review it there.`
+            : "Its next step is held for your review."
       }
       action={
         gate === undefined || label === undefined ? (
@@ -243,7 +219,7 @@ export function HeldTopicsItem({
 }): ReactElement {
   const count = schedule.topics.held;
   return (
-    <Item
+    <WorkItem
       lead={
         <div className="sl-media__frame flex items-center justify-center bg-sunken text-info">
           <LayersIcon aria-hidden="true" strokeWidth={1.75} className="size-7" />
@@ -253,7 +229,7 @@ export function HeldTopicsItem({
         <Status tone="info">{`${String(count)} new ${count === 1 ? "topic" : "topics"}`}</Status>
       }
       title={schedule.name}
-      detail={`Slopify suggested ${count === 1 ? "a topic" : `${String(count)} topics`} for this schedule. Queue the ones you want and reject the rest.`}
+      detail="Queue the ones you want and reject the rest."
       action={
         <ButtonLink
           to="/calendar"
@@ -277,11 +253,11 @@ export function PausedItem({
   readonly primary: boolean;
 }): ReactElement {
   return (
-    <Item
+    <WorkItem
       lead={<ProjectThumb projectId={project.id} />}
       status={<Status tone="waiting">Paused</Status>}
       title={projectLink(project)}
-      detail="You paused this run. Nothing more happens until you open it and press Continue the run."
+      detail="You paused it. Nothing runs until you continue it."
       action={
         <ButtonLink
           to="/projects/$projectId"
@@ -320,7 +296,11 @@ export function FailedItem({
   };
   const fix =
     stage === undefined || body.data === undefined ? undefined : fixOf(stage, body.data.project);
-  const reason = shortReason(stage?.failureReason) ?? "The run stopped with an error.";
+  const reason =
+    shortReason(stage?.failureReason) ??
+    (body.error === null
+      ? "The run stopped with an error."
+      : `The run stopped with an error; its details didn't load (${body.error.message}). Open the project to see them.`);
   const where: string = stage === undefined ? "" : ` · ${stageNames[stage.kind as StageKind]}`;
   const variant = primary ? "primary" : "secondary";
   const action =
@@ -348,7 +328,7 @@ export function FailedItem({
       </ButtonLink>
     );
   return (
-    <Item
+    <WorkItem
       lead={<ProjectThumb projectId={project.id} />}
       status={<Status tone="failed">{`Failed${where}`}</Status>}
       title={projectLink(project)}

@@ -7,15 +7,19 @@ import { AiDisclosureSettingField } from "@/channels/ai-disclosure";
 import { channelQuery, channelsKey, deleteChannel } from "@/channels/api";
 import { BrandTab } from "@/channels/brand-tab";
 import { CastTab } from "@/channels/cast-tab";
+import { channelDeleteConsequence, channelDeleteTitle } from "@/channels/delete-copy";
 import { EpisodesTab } from "@/channels/episodes-tab";
 import { SchedulesTab, TemplatesTab } from "@/channels/members-tabs";
 import { VideosTab } from "@/channels/videos-tab";
 import { YoutubeTab } from "@/channels/youtube-tab";
+import { useDocumentTitle } from "@/components/document-title";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
+import { EmptyState } from "@/components/kit/empty-state";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 
 export const channelTabs = [
@@ -72,6 +76,7 @@ export function ChannelRoute({
   });
   const channel = read.data?.channel;
   const cast = read.data?.cast ?? [];
+  useDocumentTitle(channel === undefined ? undefined : `${channel.name} · ${labels[tab]}`);
   const addToCast = () => {
     onTab("cast");
     setCastSelected("new");
@@ -84,6 +89,33 @@ export function ChannelRoute({
     keywords: ["character", "creature", "place", "object"],
     run: addToCast,
   });
+  // A channel deleted meanwhile, or an address naming none: say so and point at the list.
+  // Channels are not kept in Trash, so there is nothing to restore.
+  if (read.error !== null && read.data === undefined)
+    return (
+      <div>
+        <PageHeader crumb={<Link to="/channels">Channels</Link>} title="Channel not opened" />
+        <EmptyState
+          title="This channel could not be opened"
+          actions={
+            <>
+              <ButtonLink to="/channels" variant="primary">
+                Open Channels
+              </ButtonLink>
+              <Button
+                disabled={read.isFetching}
+                disabledReason="Trying again…"
+                onClick={() => void read.refetch()}
+              >
+                Try again
+              </Button>
+            </>
+          }
+        >
+          {`${read.error.message} A deleted channel is gone for good (its videos moved to the default channel). Pick a channel from Channels, or press Try again.`}
+        </EmptyState>
+      </div>
+    );
   return (
     <div>
       <PageHeader
@@ -126,7 +158,7 @@ export function ChannelRoute({
       />
       <StatusSlot tone={read.error ? "error" : "info"} className="mb-2">
         {read.error
-          ? `The channel couldn't be loaded: ${read.error.message} Go back to Channels and open it again.`
+          ? `The channel couldn't be read again: ${read.error.message} What is shown may be out of date; reload the page to try again.`
           : read.isPending
             ? "Loading the channel…"
             : undefined}
@@ -164,11 +196,8 @@ export function ChannelRoute({
       ) : null}
       <ConfirmDialog
         open={deleting}
-        title={`Delete ${channel?.name ?? "this channel"}?`}
-        consequence={
-          remove.error?.message ??
-          "Its cast goes with it. Its videos move to the default channel and keep what they were made with."
-        }
+        title={channelDeleteTitle(channel?.name)}
+        consequence={remove.error?.message ?? channelDeleteConsequence}
         confirmLabel="Delete channel"
         cancelLabel="Keep it"
         pending={remove.isPending}

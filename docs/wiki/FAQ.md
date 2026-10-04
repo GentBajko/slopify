@@ -86,7 +86,7 @@ The main output was made, but another step failed, for example the thumbnail. Th
 
 ### I deleted a project by mistake. Can I get it back?
 
-Yes, within 30 days. Open Settings → **Trash** and press **Restore**. See [Trash](Trash).
+Yes, within 30 days. Open Settings → **Backup & storage** → **Trash** and press **Restore**. See [Trash](Trash).
 
 ### Are captions free?
 

@@ -1,6 +1,7 @@
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { ReactElement } from "react";
 import { Field, Input } from "@/components/kit/field";
+import { useDraftLanguage } from "@/language/play-language";
 import { SubtitleControls } from "@/subtitles/controls";
 import { usePlaySession } from "./draft-context";
 import { FormatPicker } from "./format-picker";
@@ -11,6 +12,7 @@ export function StyleSection({
   readonly problem: (field: string) => string | undefined;
 }): ReactElement {
   const session = usePlaySession();
+  const language = useDraftLanguage();
   const { document } = session;
   const { form } = document;
   const change = (subtitles: SubtitleConfig): void =>
@@ -49,6 +51,7 @@ export function StyleSection({
               }),
           }}
           format={form.format}
+          language={language}
           audioEnabled={form.sources.audio !== "off"}
           videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
           onChange={change}

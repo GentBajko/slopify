@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { EntityCommands } from "@/components/entity-commands";
 import { useCommand } from "@/components/kit/command-palette";
 import { intents, requestIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
 
 // The palette from anywhere: every project by name ("Open Cleopatra", "Regenerate image 3 in
-// Cleopatra"), New schedule and Add to calendar. They are searched, not listed: an empty palette
+// Cleopatra"), the Library and the plans by name (`entity-commands.tsx`), New schedule and Add
+// to calendar. They are searched, not listed: an empty palette
 // keeps the screen's own commands on top. A command that finishes on another screen goes
 // there and leaves an intent that screen takes (`lib/intents.ts`). The project in front of
 // the person has its own commands, so it is left out here.
@@ -25,6 +27,7 @@ export function GlobalCommands(): ReactElement {
   const current = /^\/projects\/([^/]+)/.exec(pathname)?.[1];
   return (
     <>
+      <EntityCommands />
       {onSchedules ? null : <NewScheduleCommand />}
       {pathname === "/calendar" ? null : <AddToCalendarCommand />}
       {(projects.data?.projects ?? [])

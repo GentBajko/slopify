@@ -18,8 +18,10 @@ export type SpeakerRole = (typeof speakerRoles)[number];
 
 // Where the script comes from. `script` asks the text model for speaker turns with a Script
 // prompt; `attribute` (audiobooks) writes or takes the article as usual and has the text model
-// hand its dialogue to the speakers.
-export const scriptSources = ["script", "attribute"] as const;
+// hand its dialogue to the speakers; `adapt` writes or takes the article as usual and has the
+// text model rewrite it as a conversation between the speakers (a podcast of an article). With
+// `attribute` and `adapt` the article stays as written and the spoken script is kept beside it.
+export const scriptSources = ["script", "attribute", "adapt"] as const;
 export type ScriptSource = (typeof scriptSources)[number];
 
 export const speakersMax = 10;

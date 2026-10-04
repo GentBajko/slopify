@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { readChannelLinks } from "@/api";
 import { useApp } from "@/app-context";
+import { ColourInput } from "@/components/colour-input";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
@@ -10,6 +11,8 @@ import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
 import { LanguageSelect } from "@/language/language-select";
+import { contrastWarning, hexProblem, parseHex } from "@/lib/hex-colour";
+import { limitCount } from "@/lib/limit-count";
 import { documentThemesQuery, entriesQuery, keys } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { ChannelLinksEditor } from "@/youtube/channel-links";
@@ -33,6 +36,9 @@ const fields: readonly (keyof Draft)[] = [
   "documentTheme",
   "language",
 ];
+
+// The server's limit on the series brief (slices/channels/schema.ts), in characters.
+const briefMax = 10000;
 
 function draftOf(brand: BrandKit): Draft {
   return Object.fromEntries(fields.map((field) => [field, brand[field] ?? ""])) as Draft;
@@ -73,7 +79,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         brand: {
           ...Object.fromEntries(
             fields.flatMap((field) =>
-              kit[field].trim() === "" ? [] : [[field, kit[field].trim()]],
+              kit[field].trim() === "" ? [] : [[field, sentValue(field, kit[field])]],
             ),
           ),
           ...bedSave.brand,
@@ -94,6 +100,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     },
   });
   const set = (field: keyof Draft) => (value: string) => setKit({ ...kit, [field]: value });
+  const badColour = colourFields.some((field) => hexProblem(kit[field]) !== undefined);
   const fontOptions = (fonts.data?.fonts ?? []).map((font) => ({
     value: font.id,
     label: font.name,
@@ -126,12 +133,12 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <Field
           label="Series brief"
           tip="planning.channel.brief"
-          help="Topic generation reads it for this channel's schedules."
+          help={`Topic generation reads it for this channel's schedules. ${limitCount(brief.length, briefMax, "characters")}.`}
         >
           <Textarea
             rows={4}
             value={brief}
-            maxLength={10000}
+            maxLength={briefMax}
             onChange={(event) => setBrief(event.target.value)}
           />
         </Field>
@@ -170,6 +177,12 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             tip="planning.channel.brand.caption-outline"
             value={kit.captionOutlineColor}
             onChange={set("captionOutlineColor")}
+            contrast={contrastWarning(
+              kit.captionColor,
+              kit.captionOutlineColor,
+              "the caption colour",
+              3,
+            )}
           />
         </section>
         <section
@@ -221,7 +234,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             onPick={set("outro")}
           />
           <Choice
-            label="Document theme"
+            label="PDF theme"
             tip="planning.channel.brand.document-theme"
             value={kit.documentTheme}
             options={themeOptions}
@@ -243,9 +256,13 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <Button
           type="submit"
           variant="primary"
-          disabled={save.isPending || name.trim() === "" || bedSave.blocked}
+          disabled={save.isPending || name.trim() === "" || bedSave.blocked || badColour}
           disabledReason={
-            name.trim() === "" ? "Give the channel a name" : "Fix the ambient sound settings above"
+            name.trim() === ""
+              ? "Give the channel a name"
+              : badColour
+                ? "Fix the colour marked above"
+                : "Fix the ambient sound settings above"
           }
         >
           Save channel
@@ -285,38 +302,46 @@ function Choice({
   );
 }
 
-// A #RRGGBB field with a swatch; blank is "not set", which a colour input cannot say.
+// A colour field: 3 or 6 hex digits, with or without #, saved as #RRGGBB; blank is "not set",
+// which a colour input cannot say. `contrast` warns when the colour is hard to read on the one
+// it is drawn against.
 function Colour({
   label,
   tip,
   value,
   onChange,
+  contrast,
 }: {
   readonly label: string;
   readonly tip: HelpId;
   readonly value: string;
   readonly onChange: (value: string) => void;
+  readonly contrast?: string | undefined;
 }): ReactElement {
-  const valid = /^#[0-9a-fA-F]{6}$/.test(value);
+  const problem = hexProblem(value);
   return (
     <Field
       label={label}
       tip={tip}
-      {...(value !== "" && !valid ? { error: "Write the colour as # and six hex digits." } : {})}
+      {...(problem === undefined ? {} : { error: problem })}
+      {...(problem === undefined && contrast !== undefined ? { help: contrast } : {})}
     >
-      <span className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="size-6 shrink-0 rounded-control border border-line-strong"
-          style={{ background: valid ? value : "transparent" }}
-        />
-        <Input
-          value={value}
-          placeholder="#FFFFFF"
-          maxLength={7}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </span>
+      <ColourInput
+        value={value}
+        placeholder="#FFFFFF"
+        maxLength={7}
+        pickerLabel={`${label} picker`}
+        onChange={onChange}
+      />
     </Field>
   );
+}
+
+const colourFields = ["captionColor", "captionOutlineColor", "titleColor"] as const;
+
+// What Save sends for a kit field: a colour in the server's #RRGGBB, anything else trimmed.
+function sentValue(field: keyof Draft, value: string): string {
+  const trimmed = value.trim();
+  if (!(colourFields as readonly string[]).includes(field)) return trimmed;
+  return parseHex(trimmed)?.toUpperCase() ?? trimmed;
 }

@@ -11,11 +11,13 @@ import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Player } from "@/components/kit/player";
 import { Badge } from "@/components/kit/status";
+import { Switch } from "@/components/kit/switch";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { knownVideoLink, useProjectVideos } from "./on-youtube.js";
 import { StageFiles, useOutputText } from "./parts.js";
 import type { Review } from "./review-api.js";
+import { ShortsSafeZone } from "./review-safe-zone.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
 import { useOutputMedia } from "./revision-media.js";
@@ -53,6 +55,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
   const clips = useShortClips(own);
   const reviews = useReviews(project.id);
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const [safeZone, setSafeZone] = useState(false);
   const videos = currentShorts(own, "short_video", clips);
   const settings = project.config.shorts;
   // The link set in the project, else the long video's once Slopify knows it on YouTube.
@@ -91,6 +94,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
           label: `Short ${String(clip.number)}: ${clip.title} (.mp4)`,
         }))}
         label={videos.length === 1 ? "Download the short" : "Download"}
+        zip={{ set: "shorts", members: videos }}
       >
         {editable && clips.length > 0 ? (
           <span className="inline-flex items-center gap-1" {...helpScope}>
@@ -108,35 +112,46 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
             : "Not made yet. They are made with the video."}
         </p>
       ) : (
-        <MediaGrid shorts list label="Shorts" className="gap-y-7">
-          {clips.map((clip) => (
-            <ShortCard
-              key={clip.number}
-              clip={clip}
-              projectId={project.id}
-              review={reviewFor(reviews, { itemKey: `shorts:${String(clip.number)}` })}
-              video={videos.find((output) => ofClip(output, clip))}
-              stills={currentShorts(own, "short_image", clips)
-                .filter((output) => ofClip(output, clip))
-                .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
-              link={fullVideoLink}
-              wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
-              state={stage.state}
-              failed={failedHere(stage.failureReason, clip.number)}
-              ownDownload={videos.length > 1}
-              onCopy={() => copy(clip)}
-              {...(editable
-                ? {
-                    onRemake: () =>
-                      requestEdit({
-                        section: "shorts",
-                        change: (edit) => remakeShort(edit, clip.number),
-                      }),
-                  }
-                : {})}
+        <>
+          {videos.length === 0 ? null : (
+            <Switch
+              checked={safeZone}
+              onChange={setSafeZone}
+              label="Show what YouTube covers on a phone"
+              className="self-start"
             />
-          ))}
-        </MediaGrid>
+          )}
+          <MediaGrid shorts list label="Shorts" className="gap-y-7">
+            {clips.map((clip) => (
+              <ShortCard
+                key={clip.number}
+                clip={clip}
+                projectId={project.id}
+                review={reviewFor(reviews, { itemKey: `shorts:${String(clip.number)}` })}
+                video={videos.find((output) => ofClip(output, clip))}
+                stills={currentShorts(own, "short_image", clips)
+                  .filter((output) => ofClip(output, clip))
+                  .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0))}
+                link={fullVideoLink}
+                wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
+                state={stage.state}
+                failed={failedHere(stage.failureReason, clip.number)}
+                ownDownload={videos.length > 1}
+                onCopy={() => copy(clip)}
+                safeZone={safeZone}
+                {...(editable
+                  ? {
+                      onRemake: () =>
+                        requestEdit({
+                          section: "shorts",
+                          change: (edit) => remakeShort(edit, clip.number),
+                        }),
+                    }
+                  : {})}
+              />
+            ))}
+          </MediaGrid>
+        </>
       )}
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
@@ -156,7 +171,10 @@ function ShortCard({
   ownDownload,
   onCopy,
   onRemake,
+  safeZone,
 }: {
+  // Shades where YouTube's buttons and text sit over the short.
+  readonly safeZone: boolean;
   readonly clip: Clip;
   readonly projectId: string;
   // The automatic review's verdict on this short, when it had one.
@@ -188,13 +206,16 @@ function ShortCard({
   return (
     <li aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
       {video !== undefined && media !== undefined ? (
-        <Player
-          key={video.id}
-          src={media.url}
-          label={`Short ${String(clip.number)}`}
-          portrait
-          {...(poster === undefined ? {} : { poster: poster.url })}
-        />
+        <div className="relative">
+          <Player
+            key={video.id}
+            src={media.url}
+            label={`Short ${String(clip.number)}`}
+            portrait
+            {...(poster === undefined ? {} : { poster: poster.url })}
+          />
+          {safeZone ? <ShortsSafeZone /> : null}
+        </div>
       ) : failed || state !== "running" ? (
         <div className="sl-media__frame sl-media__frame--portrait">
           <p

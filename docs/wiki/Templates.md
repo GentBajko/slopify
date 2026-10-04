@@ -112,7 +112,7 @@ Each template shows **Version N · updated** with the date. Schedules remember t
 1. Press the bin icon (**Delete <name>**) on the template's row.
 2. Confirm with **Delete template**.
 
-The template goes to **Settings → Trash** for 30 days, where you can restore it. A template that a schedule still runs can't be deleted: delete or change that schedule first. See [Trash](Trash).
+The template goes to **Settings → Backup & storage → Trash** for 30 days, where you can restore it. A template that a schedule still runs can't be deleted: delete or change that schedule first. See [Trash](Trash).
 
 ## Retired models
 

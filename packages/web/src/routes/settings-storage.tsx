@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
+import { fileSize } from "@/lib/format";
 
 type ProjectUsage = StorageUsage["byProject"][number];
 
@@ -92,6 +93,7 @@ export function ProjectStorageList({
           asking?.removableBytes ?? 0,
         )}
         confirmLabel="Keep outputs only"
+        cancelLabel="Keep everything"
         pending={trim.isPending}
         onConfirm={() => {
           const project = asking;
@@ -110,16 +112,4 @@ export function keepOutputsConsequence(files: number, bytes: number): string {
   return `This removes ${String(files)} working file(s) and frees ${formatBytes(bytes)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unit = units[0] ?? "KB";
-  for (const candidate of units) {
-    value /= 1024;
-    unit = candidate;
-    if (value < 1024 || candidate === units.at(-1)) break;
-  }
-  const rounded = value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "");
-  return `${rounded} ${unit}`;
-}
+export const formatBytes = fileSize;

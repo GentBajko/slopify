@@ -56,7 +56,8 @@ export const keys = {
 };
 
 // Live events keep these fresh (`events.ts`); while something runs they are also looked at
-// again every 15 seconds, so a missed event never leaves a page behind until a refresh.
+// again every 15 seconds, so a missed event never leaves a page behind until a refresh. The
+// look-again stops while the tab is hidden; coming back to it refetches at once.
 const whileRunningMs = 15_000;
 const active = new Set(["running", "pending"]);
 
@@ -68,6 +69,7 @@ export function projectsQuery(api: Api) {
       query.state.data?.projects.some((project) => active.has(project.status)) === true
         ? whileRunningMs
         : false,
+    refetchIntervalInBackground: false,
   });
 }
 

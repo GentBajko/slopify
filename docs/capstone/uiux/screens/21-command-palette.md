@@ -50,7 +50,7 @@ Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active comman
 | Ctrl+K | Open/close the palette (fixed) | `components/kit/command-palette.tsx:374-378` |
 | Esc | Close a dialog, a drawer or the palette (listed, handled by Radix) | `components/kit/command-palette.tsx:471` |
 | `?` | Show keyboard shortcuts | `components/kit/command-palette.tsx:358-369` |
-| `C` | New project → `/play` | `components/shell.tsx:222-229` |
+| `C` | Create → `/play` | `components/shell-commands.tsx` |
 | G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings | `components/shell.tsx:189-260` |
 | `/` | Search <list> (Projects, Prompts, Intros and outros, Tutorials) | `components/kit/command-palette.tsx:132-150`, `routes/projects.tsx:125`, `routes/prompts.tsx:44`, `routes/entries.tsx:45`, `routes/tutorials.tsx:195` |
 | Shift+N | The project's next action | `routes/project.tsx:193-199` |
@@ -67,9 +67,10 @@ Binding rules: a sequence is two plain keys pressed within 1500ms; letters witho
 | Group | Commands | Source |
 |---|---|---|
 | Go to | Open home, Open projects, Open calendar, Open schedules (`/calendar?tab=schedules`), Open library (`/prompts`), Open settings, Open channels, Open tutorials, Open usage and costs (`/settings?section=usage`), Show patch notes | `packages/web/src/components/shell.tsx:183-280`, `packages/web/src/patch-notes/popup.tsx:86-94` |
-| Create | New project; New schedule and Add to calendar (search-only, hidden where the target screen registers its own) | `packages/web/src/components/shell.tsx:222-229`, `packages/web/src/components/global-commands.tsx:15-69` |
+| Create | Create (`/play`); New schedule and Add to calendar (search-only, hidden where the target screen registers its own) | `packages/web/src/components/shell.tsx:222-229`, `packages/web/src/components/global-commands.tsx:15-69` |
 | Channel | Show all channels; Switch to <name> per channel | `packages/web/src/components/shell.tsx:214-220`, `packages/web/src/components/shell.tsx:282-300` |
 | Projects | Open <title>; Regenerate an image in <title> (numbered: "Regenerate image N in <title>", only when the project's images are not off) — search-only, one set per project except the one open | `packages/web/src/components/global-commands.tsx:71-126` |
+| Library and plans | Open template <name> (`/templates?item=<id>`, the template shown beside the list), Edit prompt <name>, Edit intro/outro <name>, Edit PDF theme <name>, Open schedule <name>, Open channel <name> — search-only, the lists read the first time the palette opens | `packages/web/src/components/entity-commands.tsx` |
 | Tutorials | Open tutorial: <title>, search-only, one per wiki page | `packages/web/src/tutorials/commands.tsx:8-35` |
 | Help | Show keyboard shortcuts | `packages/web/src/components/kit/command-palette.tsx:358-369` |
 
@@ -86,7 +87,7 @@ A command that finishes on another screen leaves an intent (`schedules.new`, `ca
 | Calendar | Calendar | Add to calendar, Show the schedules, Show the calendar as weeks, Show the calendar as a list, Queue all suggested topics (per schedule) | `packages/web/src/routes/calendar.tsx:216-243`, `packages/web/src/calendar/suggestions.tsx:102-106` |
 | Schedules tab | Schedules | New schedule; Pause/Resume schedule (context = schedule name) | `packages/web/src/schedules/view.tsx:143-146`, `packages/web/src/schedules/view.tsx:650-664` |
 | Channels / Channel | Channels / Channel | New channel; Add to cast (context = channel name) | `packages/web/src/routes/channels.tsx:76`, `packages/web/src/routes/channel.tsx:76-80` |
-| Library (all its routes) | Library | New prompt, New intro or outro, New document theme, Open prompts, Open intros and outros, Open templates, Open document themes; Save a setup as a template on Templates | `packages/web/src/routes/library.tsx:45-106`, `packages/web/src/routes/templates.tsx:212-215` |
+| Library (all its routes) | Library | New prompt, New intro or outro, New PDF theme, Open prompts, Open intros and outros, Open templates, Open PDF themes; Save a setup as a template on Templates | `packages/web/src/routes/library.tsx:45-106`, `packages/web/src/routes/templates.tsx:212-215` |
 | Library editors | This editor | Save (Ctrl+S) | `packages/web/src/components/editor-actions.tsx:40-45` |
 | Settings | Settings | Check all providers, Back up now, Download diagnostics, Export everything (context "Backup & storage"), Check for new models (context "Models") | `packages/web/src/routes/settings.tsx:211-241`, `packages/web/src/routes/settings.tsx:471-475`, `packages/web/src/components/catalogue.tsx:112-116` |
 

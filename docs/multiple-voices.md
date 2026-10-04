@@ -70,7 +70,7 @@ text. Changing one speaker's voice remakes only that speaker's turns.
 
 ## Delivery cues
 
-With a **Narration Preparation** prompt (Narration → Audio Advanced), every turn of a speaker on Inworld's
+With a **Narration Preparation** prompt (Narration → More audio settings), every turn of a speaker on Inworld's
 Realtime TTS-2 is prepared on its own before it is spoken: the text model gets the turn's
 sentences and who says them (`"Rat (character)"`), and answers cues in the same format as a
 single voice's preparation. They become Inworld's bracketed tags in that turn's request: a

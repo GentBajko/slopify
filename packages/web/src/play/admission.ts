@@ -279,7 +279,7 @@ function hintOf(form: PlayFormState, error: FieldError): string {
     case "shorts.fullVideoLink":
       return "Fix the full video link to play";
     case "provided.research":
-      return "Paste the research notes to play";
+      return "Paste your text under Article to play";
     case "provided.article":
       return "Paste the article to play";
     case "provided.audio":

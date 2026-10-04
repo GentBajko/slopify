@@ -38,6 +38,7 @@ const base = {
 function server() {
   let schedule: Record<string, unknown> = { ...base };
   const sent: { baseVersion: number; items: ScheduleSummary["items"] }[] = [];
+  const moves: { baseVersion: number; from: number; to: number }[] = [];
   const routes = {
     "GET /api/schedules": (request: Request) => jsonAnswer({ schedules: [schedule] })(request),
     "GET /api/project-templates": jsonAnswer({
@@ -56,10 +57,22 @@ function server() {
       schedule = { ...schedule, items: body.items, version: body.baseVersion + 1 };
       return jsonAnswer(schedule)(request);
     },
+    [`POST /api/schedules/${scheduleId}/topics/move`]: async (request: Request) => {
+      const body = (await request.json()) as { baseVersion: number; from: number; to: number };
+      moves.push(body);
+      if (body.baseVersion !== schedule.version)
+        return problemAnswer("This schedule changed while you were editing.", 409)(request);
+      const items = [...(schedule.items as ScheduleSummary["items"])];
+      const [row] = items.splice(body.from, 1);
+      if (row !== undefined) items.splice(body.to, 0, row);
+      schedule = { ...schedule, items, version: body.baseVersion + 1 };
+      return jsonAnswer(schedule)(request);
+    },
   };
   return {
     routes,
     sent,
+    moves,
     titles: () => (schedule.items as ScheduleSummary["items"]).map((one) => one.title),
   };
 }
@@ -100,10 +113,11 @@ it("adds, renames, moves and removes a queued topic from the schedule detail, ea
 
   await user.click(within(queue).getByRole("button", { name: "Move Hypatia up" }));
   await waitFor(() => expect(fake.titles()).toEqual(["Pyramid tombs", "Hypatia", "Obelisks"]));
+  expect(fake.moves).toEqual([{ baseVersion: 3, from: 2, to: 1 }]);
 
   await user.click(within(queue).getByRole("button", { name: "Remove Obelisks" }));
   await waitFor(() => expect(fake.titles()).toEqual(["Pyramid tombs", "Hypatia"]));
-  expect(fake.sent.map((one) => one.baseVersion)).toEqual([1, 2, 3, 4]);
+  expect(fake.sent.map((one) => one.baseVersion)).toEqual([1, 2, 4]);
 });
 
 it("undoes a change from its toast", async () => {
@@ -155,4 +169,79 @@ it("leaves the queue alone for a schedule that can no longer run", async () => {
   });
   await screen.findByRole("region", { name: "Morning stories detail" });
   expect(screen.queryByRole("region", { name: "Queued topics" })).toBeNull();
+});
+
+it("adds one topic per pasted line in one save, and Undo takes them all back", async () => {
+  const user = userEvent.setup();
+  const fake = server();
+  mount(fake.routes);
+  const queue = await screen.findByRole("region", { name: "Queued topics" });
+  await user.click(within(queue).getByRole("textbox", { name: "New topic" }));
+  await user.paste("- Hypatia\n\n- Nefertiti\nSphinx");
+  await waitFor(() =>
+    expect(fake.titles()).toEqual(["Pyramids", "Obelisks", "Hypatia", "Nefertiti", "Sphinx"]),
+  );
+  expect(fake.sent).toHaveLength(1);
+  const toast = await screen.findByText("Added 3 topics.");
+  await user.click(
+    within(toast.closest("div") as HTMLElement).getByRole("button", { name: "Undo" }),
+  );
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramids", "Obelisks"]));
+});
+
+it("removes the ticked topics together, says how many, and Undo restores them", async () => {
+  const user = userEvent.setup();
+  const fake = server();
+  mount(fake.routes);
+  const queue = await screen.findByRole("region", { name: "Queued topics" });
+  await user.click(within(queue).getByRole("checkbox", { name: "Select row: Pyramids" }));
+  await user.click(within(queue).getByRole("checkbox", { name: "Select row: Obelisks" }));
+  expect(within(queue).getByText("2 of 2 topics selected")).toBeTruthy();
+  await user.click(within(queue).getByRole("button", { name: "Remove selected" }));
+  await waitFor(() => expect(fake.titles()).toEqual([]));
+  const toast = await screen.findByText("Removed 2 topics.");
+  expect(toast.closest("[aria-live=polite]")).toBeTruthy();
+  await user.click(
+    within(toast.closest("div") as HTMLElement).getByRole("button", { name: "Undo" }),
+  );
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramids", "Obelisks"]));
+});
+
+it("moves a topic with Alt+Arrow keys and the focus goes with it", async () => {
+  const user = userEvent.setup();
+  const fake = server();
+  mount(fake.routes);
+  const queue = await screen.findByRole("region", { name: "Queued topics" });
+  within(queue).getByRole("textbox", { name: "Topic 1" }).focus();
+  await user.keyboard("{Alt>}{ArrowDown}{/Alt}");
+  await waitFor(() => expect(fake.titles()).toEqual(["Obelisks", "Pyramids"]));
+  expect(fake.moves).toEqual([{ baseVersion: 1, from: 0, to: 1 }]);
+  await waitFor(() =>
+    expect((document.activeElement as HTMLInputElement | null)?.value).toBe("Pyramids"),
+  );
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("Topic 2");
+});
+
+it("moves to the top, inserts below and duplicates from a row's More menu", async () => {
+  const user = userEvent.setup();
+  const fake = server();
+  mount(fake.routes);
+  const queue = await screen.findByRole("region", { name: "Queued topics" });
+  await user.click(within(queue).getByRole("button", { name: "More for Obelisks" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Move to top" }));
+  await waitFor(() => expect(fake.titles()).toEqual(["Obelisks", "Pyramids"]));
+  expect(fake.moves).toEqual([{ baseVersion: 1, from: 1, to: 0 }]);
+
+  await user.click(within(queue).getByRole("button", { name: "More for Obelisks" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Insert below" }));
+  const insert = await within(queue).findByRole("textbox", { name: "New topic below 1" });
+  expect(document.activeElement).toBe(insert);
+  await user.type(insert, "Hypatia{Enter}");
+  await waitFor(() => expect(fake.titles()).toEqual(["Obelisks", "Hypatia", "Pyramids"]));
+
+  await user.click(within(queue).getByRole("button", { name: "More for Pyramids" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+  await waitFor(() =>
+    expect(fake.titles()).toEqual(["Obelisks", "Hypatia", "Pyramids", "Pyramids"]),
+  );
 });

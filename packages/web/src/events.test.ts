@@ -225,3 +225,32 @@ it("rejects old events before reducing article or writing previews", () => {
   expect(sink.refetch).toHaveBeenCalledOnce();
   stop();
 });
+
+describe("the connection's state", () => {
+  it("says lost when the stream drops and open when it is back, refetching on the way back", () => {
+    const listeners = new Map<string, Array<(message: MessageEvent<string>) => void>>();
+    const source: EventSourceLike = {
+      addEventListener: (type: string, listener: (message: MessageEvent<string>) => void) => {
+        listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+      },
+      close: (): void => {},
+    };
+    const fire = (type: string) => {
+      for (const listener of listeners.get(type) ?? [])
+        listener(new MessageEvent(type, { data: "" }));
+    };
+    const connection = vi.fn();
+    const refetch = vi.fn();
+    subscribeGlobal(() => source, "/api/events/global", {
+      tally: () => {},
+      stagingChanged: () => {},
+      refetch,
+      connection,
+    });
+    fire("open");
+    fire("error");
+    fire("open");
+    expect(connection.mock.calls.map(([state]) => state)).toEqual(["open", "lost", "open"]);
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+});

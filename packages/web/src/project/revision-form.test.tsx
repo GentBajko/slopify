@@ -71,7 +71,7 @@ it("reads an absent Document source as Off and writes the source and theme", asy
   );
   const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document source" });
   expect(source.value).toBe("off");
-  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document theme" });
+  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "PDF theme" });
   // A project saved with no theme was drawn with DiceMaster, and still is; the retired built-in
   // is shown as this project's look, not offered as a choice.
   expect(theme.value).toBe("builtin:dicemaster");

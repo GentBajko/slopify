@@ -91,7 +91,7 @@ export function EditChannel({
             ? "Saving moves the project to this channel and takes its cast as it is now. "
             : ""}
           {useKit
-            ? "The brand kit fills the caption font and colours, title style, end screen, intro, outro and document theme where they are at their default or were set by the old kit."
+            ? "The brand kit fills the caption font and colours, title style, end screen, intro, outro and PDF theme where they are at their default or were set by the old kit."
             : "What the old brand kit had set is taken off."}
         </p>
       ) : null}

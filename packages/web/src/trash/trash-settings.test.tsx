@@ -37,9 +37,108 @@ it("lists each item with its kind, deletion date and days left, and real buttons
   expect(within(list).getAllByRole("button", { name: "Delete now" })).toHaveLength(2);
 });
 
-it("says so when the trash is empty", async () => {
+it("says so when the trash is empty, and what never comes here", async () => {
   renderApp(<TrashSettings />, testDeps({ "GET /api/trash": jsonAnswer({ items: [] }) }));
   expect(await screen.findByText("The trash is empty")).not.toBeNull();
+  // F6: not "anything you delete": channels, cast, PDF themes and summaries are permanent.
+  expect(screen.queryByText(/Anything you delete/)).toBeNull();
+  expect(
+    screen.getByText(/Channels, cast members, PDF themes and episode summaries/),
+  ).not.toBeNull();
+  expect((screen.getByRole("button", { name: "Empty trash" }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
+});
+
+it("shows the exact deletion time and filters by kind", async () => {
+  renderApp(
+    <TrashSettings />,
+    testDeps({
+      "GET /api/trash": jsonAnswer({
+        items: [item({}), item({ kind: "template", id: "t1", name: "Weekly explainer" })],
+      }),
+    }),
+  );
+  const list = await screen.findByRole("list", { name: "Deleted items" });
+  const time = list.querySelector("time");
+  expect(time?.getAttribute("dateTime")).toBe("2026-09-27T10:00:00.000Z");
+  expect(time?.getAttribute("title")).toMatch(/^Deleted .+\. Removed for good .+\.$/);
+  await userEvent.click(screen.getByRole("button", { name: "Templates" }));
+  expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+  expect(within(list).getByText("Weekly explainer")).not.toBeNull();
+  expect(screen.getByRole("checkbox", { name: "Select all 1 shown" })).not.toBeNull();
+});
+
+it("restores the selected items in one go and says how many", async () => {
+  const bulk = vi.fn(
+    jsonAnswer({
+      restored: [
+        { kind: "project", id: "p1", name: "Cleopatra", renamedFrom: null },
+        { kind: "project", id: "p2", name: "Rome", renamedFrom: null },
+      ],
+      failed: [],
+    }),
+  );
+  renderApp(
+    <TrashSettings />,
+    testDeps({
+      "GET /api/trash": jsonAnswer({
+        items: [item({}), item({ id: "p2", name: "Rome" }), item({ id: "p3", name: "Troy" })],
+      }),
+      "POST /api/trash/bulk/restore": bulk,
+    }),
+  );
+  await userEvent.click(await screen.findByRole("checkbox", { name: "Select row: Cleopatra" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: "Select row: Rome" }));
+  expect(screen.getByText("2 of 3 items selected")).not.toBeNull();
+  const all = screen.getByRole("checkbox", { name: "Select all" }) as HTMLInputElement;
+  expect(all.indeterminate).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+  await waitFor(() => expect(bulk).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText("Restored 2 items.")).not.toBeNull();
+});
+
+it("clears the selection with Esc", async () => {
+  renderApp(
+    <TrashSettings />,
+    testDeps({
+      "GET /api/trash": jsonAnswer({ items: [item({}), item({ id: "p2", name: "Rome" })] }),
+    }),
+  );
+  const box = await screen.findByRole("checkbox", { name: "Select row: Rome" });
+  await userEvent.click(box);
+  expect(screen.getByText("1 of 2 items selected")).not.toBeNull();
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByText("1 of 2 items selected")).toBeNull();
+  expect((box as HTMLInputElement).checked).toBe(false);
+});
+
+it("asks before Empty trash, naming the count and that nothing comes back", async () => {
+  const bulk = vi.fn(
+    jsonAnswer({
+      deleted: [
+        { kind: "project", id: "p1" },
+        { kind: "project", id: "p2" },
+      ],
+      failed: [],
+    }),
+  );
+  renderApp(
+    <TrashSettings />,
+    testDeps({
+      "GET /api/trash": jsonAnswer({ items: [item({}), item({ id: "p2", name: "Rome" })] }),
+      "POST /api/trash/bulk/delete": bulk,
+    }),
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Empty trash" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText(/delete all 2 items for good/)).not.toBeNull();
+  expect(within(dialog).getByText(/2 projects and every file they produced/)).not.toBeNull();
+  expect(within(dialog).getByText(/cannot be undone/)).not.toBeNull();
+  expect(bulk).not.toHaveBeenCalled();
+  await userEvent.click(within(dialog).getByRole("button", { name: "Empty trash" }));
+  await waitFor(() => expect(bulk).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText("Deleted 2 items for good.")).not.toBeNull();
 });
 
 it("restores an item and says the name it came back under", async () => {

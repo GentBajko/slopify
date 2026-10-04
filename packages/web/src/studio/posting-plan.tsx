@@ -7,9 +7,12 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Input } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
+import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { schedulesQuery } from "@/schedules/api";
 
 // Settings → YouTube Studio → Release times: each schedule sets its own (Calendar → Schedules →
 // Edit), so here are only what holds for every release: how long before its release each upload
@@ -27,6 +30,7 @@ export function PostingPlanSettings({
   const client = useQueryClient();
   const notify = useToast();
   const saved = useQuery({ queryKey: planKey, queryFn: () => readPostingPlan(api) });
+  const schedules = useQuery(schedulesQuery(api));
   const remove = useMutation({
     mutationFn: (current: PostingPlan) => savePostingPlan(api, { ...current, rows: [] }),
     onSuccess: (body) => {
@@ -58,8 +62,24 @@ export function PostingPlanSettings({
     onError: (error: Error) => notify(`Not saved: ${error.message}`, "error"),
   });
   if (saved.data === undefined)
-    return <p className="text-small text-ink-3">Loading the release settings…</p>;
+    return (
+      <section aria-label="Release times" className="flex flex-col gap-3">
+        <SectionHead as="h3" title="Release times" />
+        {saved.error === null ? (
+          <LoadingBlock label="Loading the release settings…" rows={2} rowClassName="h-10" />
+        ) : (
+          <LoadFailed
+            what="The release settings"
+            error={saved.error}
+            onRetry={() => void saved.refetch()}
+            retrying={saved.isFetching}
+          />
+        )}
+      </section>
+    );
   const old = saved.data.plan;
+  // Each schedule by name, straight to the one whose release times to change.
+  const live = (schedules.data ?? []).filter((one) => one.deletedAt === null);
   return (
     <section aria-label="Release times" className="flex flex-col gap-3">
       <SectionHead as="h3" title="Release times" />
@@ -71,6 +91,15 @@ export function PostingPlanSettings({
         </Link>{" "}
         → Edit → Release times. See and move them in Calendar → Releases.
       </p>
+      {live.length === 0 ? null : (
+        <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-small">
+          {live.map((one) => (
+            <TextLink key={one.id} to="/calendar" search={{ tab: "schedules", schedule: one.id }}>
+              {one.name}
+            </TextLink>
+          ))}
+        </p>
+      )}
       {old.rows.length > 0 ? (
         <Callout
           tone="info"

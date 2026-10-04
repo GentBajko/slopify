@@ -49,7 +49,7 @@ When a CLI's plan is used up, the run waits instead of failing: the status reads
 
 ## After a run: the run cost line
 
-When a run has ended, one line at the top of its project page, under the title, sums it up: for example `This run cost $0.42 · ~$3.10 via API · 12 min of work`. A failed or cancelled run says **Spent so far**, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the full breakdown below. The line doesn't show while the run is going, or when it spent nothing.
+When a run has ended, one line at the top of its project page, under the title, sums it up: for example `This run cost $0.42 · ~$3.10 via API · 12 min of work`. A failed or canceled run says **Spent so far**, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the full breakdown below. The line doesn't show while the run is going, or when it spent nothing.
 
 ## After a run: the Run cost tab
 

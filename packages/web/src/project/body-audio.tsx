@@ -3,8 +3,10 @@ import type { Chunking } from "@app/slices/narration/chunk.js";
 import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
+import type { RefObject } from "react";
 import { useApp } from "@/app-context";
 import { Fact, Facts } from "@/components/kit/facts";
+import type { PlayerChapter } from "@/components/kit/player";
 import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
@@ -13,6 +15,7 @@ import { hasNarrationText, narrationFiles } from "./narration-downloads.js";
 import { NarrationText } from "./narration-text.js";
 import { useOutdated } from "./output-change.js";
 import { EngravedLabel, MetaLine, StageBody, StageFiles } from "./parts.js";
+import { useNarrationTiming } from "./review-narration.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
 import { WaveAudioPlayer } from "./waveform.js";
@@ -48,6 +51,7 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
     const report = levelled.find((one) => one.meta.segment === player.segment)?.meta.loudness;
     return report === undefined ? [] : [{ name: player.name, report }];
   });
+  const timing = useNarrationTiming(project, outputs, landed);
   const historical = landed.find((player) => player.output.meta.voice !== undefined)?.output.meta;
   const picked = landed.length > 0 ? historical?.voice : project.config.audio?.voice;
   const provider = landed.length > 0 ? historical?.provider : project.config.audio?.provider;
@@ -66,12 +70,15 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
             key={player.role}
             name={player.name}
             output={player.output}
+            audio={timing.refs[player.segment]}
+            marks={timing.marks[player.segment] ?? []}
             {...(player.plain === undefined ? {} : { plain: player.plain })}
           />
         ))
       )}
 
       <StageFiles
+        noteOlder={false}
         files={narrationFiles(
           mine,
           landed,
@@ -106,7 +113,7 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
         projectId={project.id}
         busy={busy}
       />
-      <NarrationText outputs={mine} />
+      <NarrationText outputs={mine} timing={timing} />
     </StageBody>
   );
 }
@@ -117,9 +124,15 @@ function Player({
   name,
   output,
   plain,
+  audio,
+  marks,
 }: {
   readonly name: string;
   readonly output: Output;
+  // The follow-along transcript plays and seeks this segment through it.
+  readonly audio: RefObject<HTMLAudioElement | null>;
+  // Where each narration chunk starts.
+  readonly marks: readonly PlayerChapter[];
   // The segment's join before levelling, when `output` is its levelled copy.
   readonly plain?: Output;
 }) {
@@ -131,7 +144,13 @@ function Player({
   return (
     <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-small">
       <EngravedLabel>{name}</EngravedLabel>
-      <WaveAudioPlayer label={`${name} narration`} src={media?.url} className="max-w-[640px]" />
+      <WaveAudioPlayer
+        ref={audio}
+        label={`${name} narration`}
+        src={media?.url}
+        marks={marks}
+        className="max-w-[640px]"
+      />
       {outdated ? (
         <p className="col-start-2 m-0 text-small text-ink-2">
           {newer === undefined

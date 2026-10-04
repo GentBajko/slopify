@@ -8,12 +8,15 @@ import {
 import { detectSlots, filledKeywords } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { Entry, Prompt } from "@/api";
 import { KeywordList } from "@/components/keyword-list";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Select, Textarea } from "@/components/kit/field";
+import { Field, Select } from "@/components/kit/field";
+import { useToast } from "@/components/kit/toast";
+import { reapplyEdit } from "./draft-merge.js";
+import { RawPromptField } from "./raw-prompt-field.js";
 import { editOfForm, setPrompt } from "./revision-form-state.js";
 export function RevisionPrompts({
   edit,
@@ -32,6 +35,22 @@ export function RevisionPrompts({
   readonly onChange: (edit: RevisionEdit) => void;
 }): import("react").ReactElement {
   const formId = useId();
+  const notify = useToast();
+  const latest = useRef(edit);
+  latest.current = edit;
+  // Taking the Library's wording or a saved template replaces the project's own copy; Undo
+  // puts that copy back, keeping whatever else changed in the draft since.
+  const replace = (next: RevisionEdit, done: string) => {
+    const before = edit;
+    onChange(next);
+    notify(done, "info", {
+      label: "Undo",
+      run: () => {
+        const reverted = reapplyEdit(next, before, latest.current);
+        onChange({ ...latest.current, config: reverted.config, content: reverted.content });
+      },
+    });
+  };
   const keys = [
     ...new Set([
       ...Object.keys(edit.config.rendered),
@@ -132,7 +151,9 @@ export function RevisionPrompts({
               label={name}
               raw={raw}
               library={libraryPrompt(edit, key, options, saved)}
-              onUse={(body) => onChange(setPrompt(edit, key, body))}
+              onUse={(body) =>
+                replace(setPrompt(edit, key, body), `${name} now uses the Library version.`)
+              }
             />
             <Field
               label={`Use saved template for ${name}`}
@@ -174,7 +195,7 @@ export function RevisionPrompts({
                                       reference: { ...next.config.reference, prompt: picked.name },
                                     }
                                   : next.config;
-                  onChange({ ...next, config });
+                  replace({ ...next, config }, `${name} now uses "${picked.name}".`);
                 }}
               >
                 <option value="">Choose a saved template</option>
@@ -185,17 +206,12 @@ export function RevisionPrompts({
                 ))}
               </Select>
             </Field>
-            <Field
-              label={`Raw prompt for ${name}`}
+            <RawPromptField
               id={`${formId}-raw-${key}`}
-              tip="project.prompts.raw"
-            >
-              <Textarea
-                rows={4}
-                value={raw ?? ""}
-                onChange={(event) => onChange(setPrompt(edit, key, event.target.value))}
-              />
-            </Field>
+              name={name}
+              value={raw ?? ""}
+              onChange={(text) => onChange(setPrompt(edit, key, text))}
+            />
             <details>
               <summary className="text-small text-ink-2">Saved rendered prompt</summary>
               <pre className="m-0 mt-2 whitespace-pre-wrap break-words text-small">

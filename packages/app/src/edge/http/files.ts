@@ -15,6 +15,9 @@ const projectParam = z.object({
     .max(64)
     .regex(/^[0-9A-Za-z_-]+$/),
 });
+const setParam = projectParam.extend({
+  set: z.enum(["images.zip", "thumbnails.zip", "shorts.zip"]),
+});
 const assetParam = projectParam.extend({
   asset: z
     .string()
@@ -31,17 +34,26 @@ export function fileRoutes(deps: AppDeps) {
   return (
     new Hono()
       // Declared before :asset so the zip is never read as an asset name.
-      .get("/files/:projectId/images.zip", zValidator("param", projectParam, onInvalid), (c) => {
-        const result = imagesZip(storage, c.req.valid("param").projectId);
-        if (!result.ok) {
-          return missing(c, result.reason);
-        }
-        return c.body(result.bytes, 200, {
-          "content-type": "application/zip",
-          "content-length": String(result.bytes.byteLength),
-          "content-disposition": disposition(result.filename),
-        });
-      })
+      .get(
+        "/files/:projectId/:set{(?:images|thumbnails|shorts)\\.zip}",
+        zValidator("param", setParam, onInvalid),
+        (c) => {
+          const { projectId, set } = c.req.valid("param");
+          const result = imagesZip(
+            storage,
+            projectId,
+            set === "images.zip" ? "images" : set === "thumbnails.zip" ? "thumbnails" : "shorts",
+          );
+          if (!result.ok) {
+            return missing(c, result.reason);
+          }
+          return c.body(result.bytes, 200, {
+            "content-type": "application/zip",
+            "content-length": String(result.bytes.byteLength),
+            "content-disposition": disposition(result.filename),
+          });
+        },
+      )
       .get("/files/:projectId/:asset", zValidator("param", assetParam, onInvalid), async (c) => {
         const { projectId, asset } = c.req.valid("param");
         const result = findDownload(storage, projectId, asset);

@@ -1,18 +1,22 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { type ReactElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { BatchQueueCount } from "@/components/batch-queue";
+import { useDocumentTitle } from "@/components/document-title";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Workspace } from "@/components/kit/layout";
-import { Rail, RailButton } from "@/components/kit/rail";
+import { Rail, RailLink } from "@/components/kit/rail";
 import { Lamp, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { copyText } from "@/fixes/fix-actions";
 import { intents, useIntent } from "@/lib/intents";
 import { shortcuts } from "@/lib/shortcuts";
+import { retryingWord } from "@/lib/state-words";
 import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
@@ -36,6 +40,7 @@ import {
   sectionForStage,
 } from "@/project/next-action";
 import { NextActionPanel, useNextAction } from "@/project/next-action-view";
+import { ProjectOutputs } from "@/project/project-outputs";
 import {
   EditRequestContext,
   RegenerateNowContext,
@@ -53,6 +58,7 @@ import {
 import { CostSoFar, RunSteps, runSteps, StageAnnouncements } from "@/project/run-aside";
 import { RunClock, RunCostPanel } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
+import { makesYoutubeVideo } from "@/project/sections";
 import { SectionEmpty, StageSection } from "@/project/stage-section";
 import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
@@ -62,6 +68,7 @@ import { projectQuery, promptsQuery, runCostQuery } from "@/queries";
 import { PrepareUploadDrawer } from "@/studio/prepare-upload";
 import { makeNextChapter } from "@/templates/api";
 import { useTutorialProjectStep } from "@/tutorial/context";
+import { ProjectMissing } from "./project-missing.js";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
 // Project identity resets the entire workspace so drafts cannot cross project boundaries.
@@ -81,6 +88,62 @@ interface RailItem {
   readonly label: string;
   readonly tone?: Tone | undefined;
   readonly meta?: string;
+}
+
+// The section open on a project page is its address (`?section=images`): it survives a reload,
+// opens in a new tab, and Back returns to the section before.
+const sectionIds: readonly SectionId[] = [
+  "outputs",
+  "article",
+  "narration",
+  "images",
+  "video",
+  "shorts",
+  "youtube",
+  "document",
+  "cost",
+  "live",
+  "settings",
+  "history",
+  "checkpoints",
+];
+
+export function projectSectionOf(value: unknown): SectionId | undefined {
+  return sectionIds.find((id) => id === value);
+}
+
+const sectionTitles: Readonly<Record<SectionId, string>> = {
+  outputs: "Outputs",
+  article: "Article",
+  narration: "Narration",
+  images: "Images",
+  video: "Video",
+  shorts: "Shorts",
+  youtube: "YouTube",
+  document: "PDF",
+  cost: "Cost",
+  live: "Live",
+  settings: "Settings",
+  history: "History",
+  checkpoints: "Checkpoints",
+};
+
+// A stage's state in words beside its lamp, so the rail does not speak in colour alone.
+export function stageStateWord(tone: Tone): string {
+  switch (tone) {
+    case "failed":
+      return "Failed";
+    case "running":
+      return "Running";
+    case "waiting":
+      return retryingWord;
+    case "done":
+      return "Done";
+    case "info":
+      return "Info";
+    case "off":
+      return "Not started";
+  }
 }
 
 const toneOf = (stages: readonly (Stage | undefined)[]): Tone | undefined => {
@@ -120,7 +183,22 @@ function ProjectWorkspace({
         : false,
   });
   const actions = useProjectActions(projectId);
-  const [chosen, setChosen] = useState<SectionId | undefined>();
+  const navigate = useNavigate();
+  const chosen = projectSectionOf(
+    useLocation({ select: (location) => (location.search as { section?: unknown }).section }),
+  );
+  // Opening a section is a step Back returns from; the page keeps its scroll.
+  const setChosen = useCallback(
+    (section: SectionId) => {
+      void navigate({
+        to: "/projects/$projectId",
+        params: { projectId },
+        search: { section },
+        resetScroll: false,
+      });
+    },
+    [navigate, projectId],
+  );
   const [uploadOpen, setUploadOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -140,7 +218,7 @@ function ProjectWorkspace({
     appliedTutorial.current = tutorialStep;
     if (tutorialStep === "download")
       setChosen(finalOutput(project.data.project.config) === "article" ? "article" : "video");
-  }, [tutorialStep, project.data]);
+  }, [tutorialStep, project.data, setChosen]);
 
   useLiveProject(projectId, revisionId);
   const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
@@ -161,7 +239,11 @@ function ProjectWorkspace({
   const summary = project.data?.project;
   const stages = project.data?.stages ?? [];
   const outputs = project.data?.outputs ?? [];
-  const uploadReady = outputs.some((output) => output.role === "video");
+  // Prepare upload is for a video made for YouTube; any other video keeps its downloads only.
+  const uploadReady =
+    summary !== undefined &&
+    outputs.some((output) => output.role === "video") &&
+    makesYoutubeVideo(summary.config, outputs);
   const openSection = (section: SectionId) => setChosen(section);
   const next = useNextAction({
     project: summary ?? placeholderProject,
@@ -196,6 +278,10 @@ function ProjectWorkspace({
   const inFlight = stages.some((stage) => stage.state === "running");
   const running = summary?.status === "running";
   const title = summary?.title ?? "";
+  // The browser tab names the project and, once one is picked, its section.
+  useDocumentTitle(
+    title === "" ? undefined : chosen === undefined ? title : `${title} · ${sectionTitles[chosen]}`,
+  );
 
   // Every project action is in the palette too (Ctrl+K), named for its result.
   const intent = next.next?.action;
@@ -318,11 +404,14 @@ function ProjectWorkspace({
         : notify("Only the sample project is copied this way.", "info"),
   });
 
-  if (project.error !== null) {
+  if (project.error !== null && project.data === undefined) {
     return (
-      <Callout tone="danger" title="The project could not be loaded.">
-        {`${project.error.message} Reload the page to try again, or go back to Projects.`}
-      </Callout>
+      <ProjectMissing
+        projectId={projectId}
+        error={project.error}
+        retry={() => void project.refetch()}
+        retrying={project.isFetching}
+      />
     );
   }
   if (project.data === undefined || summary === undefined) {
@@ -348,6 +437,8 @@ function ProjectWorkspace({
     outputs.some((output) => output.role === "youtube_description");
   const held = gateRows.filter((gate) => gate.state === "held" || gate.state === "pending-review");
   const stageItems: readonly RailItem[] = [
+    // Every output in one list, with its state and downloads, and Add another output.
+    { id: "outputs", label: "Outputs" },
     ...(on(article) || on(research)
       ? [{ id: "article" as const, label: "Article", tone: toneOf([article, research]) }]
       : []),
@@ -467,6 +558,20 @@ function ProjectWorkspace({
       run: () => setMoveOpen(true),
       disabled: isSample,
     },
+    // For a bug report, or a script that talks to /api/projects/<id>.
+    {
+      id: "copy-id",
+      label: "Copy project ID",
+      run: () =>
+        void copyText(projectId).then((copied) =>
+          notify(
+            copied
+              ? `Copied the project ID ${projectId}.`
+              : `The browser blocked copying. The project ID is ${projectId}.`,
+            copied ? "success" : "info",
+          ),
+        ),
+    },
     {
       id: "cancel",
       label: "Cancel the run…",
@@ -554,18 +659,18 @@ function ProjectWorkspace({
                       {railItems.map((item) => (
                         <SectionLink
                           key={item.id}
+                          projectId={projectId}
                           item={item}
                           selected={selected}
-                          onSelect={openSection}
                         />
                       ))}
                       <hr className="sl-rule my-2" />
                       {settingsItems.map((item) => (
                         <SectionLink
                           key={item.id}
+                          projectId={projectId}
                           item={item}
                           selected={selected}
-                          onSelect={openSection}
                         />
                       ))}
                     </Rail>
@@ -669,6 +774,16 @@ function ProjectWorkspace({
                       )}
                     </StageSection>
                   )}
+                  <View id="outputs" title="Outputs" selected={selected}>
+                    <ProjectOutputs
+                      projectId={projectId}
+                      revisionId={revisionId}
+                      config={config}
+                      stages={stages}
+                      outputs={outputs}
+                      controller={controller}
+                    />
+                  </View>
                   <View id="cost" title="Run cost" selected={selected}>
                     <RunCostPanel projectId={projectId} />
                   </View>
@@ -685,6 +800,7 @@ function ProjectWorkspace({
                   <View id="settings" title="Settings" selected={selected}>
                     <RevisionEditPanel
                       controller={controller}
+                      projectId={projectId}
                       active={selected === "settings"}
                       renderEditor={(props) => (
                         <RevisionForm
@@ -764,26 +880,35 @@ function ProjectWorkspace({
 const isStage = (stage: Stage | undefined): stage is Stage => stage !== undefined;
 
 function SectionLink({
+  projectId,
   item,
   selected,
-  onSelect,
 }: {
+  readonly projectId: string;
   readonly item: RailItem;
   readonly selected: SectionId;
-  readonly onSelect: (id: SectionId) => void;
 }): ReactElement {
+  // A stage that failed, runs or waits to retry says so in words; done and not started
+  // differ by the lamp's fill (a hollow ring until it starts), and every state is in the
+  // link's name for a screen reader.
+  const word = item.tone === undefined ? undefined : stageStateWord(item.tone);
+  const loud = item.tone === "failed" || item.tone === "running" || item.tone === "waiting";
+  const meta = [loud ? word : undefined, item.meta].filter(Boolean).join(" · ");
   return (
-    <RailButton
+    <RailLink
+      to={`/projects/${projectId}`}
+      search={{ section: item.id }}
+      resetScroll={false}
       // On phones the rail is a row of tabs, each as wide as its name.
       className="max-md:w-auto"
       data-tour={`project-rail-${item.id}`}
       current={item.id === selected}
-      onClick={() => onSelect(item.id)}
       {...(item.tone === undefined ? {} : { icon: <Lamp tone={item.tone} /> })}
-      {...(item.meta === undefined ? {} : { meta: item.meta })}
+      {...(meta === "" ? {} : { meta })}
     >
       {item.label}
-    </RailButton>
+      {word === undefined || loud ? null : <span className="sr-only">{`, ${word}`}</span>}
+    </RailLink>
   );
 }
 

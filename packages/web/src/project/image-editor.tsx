@@ -1,11 +1,12 @@
 import { imagesPerVideoMax } from "@app/slices/images/scale.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
-import { useId, useRef, useState } from "react";
+import { Fragment, useId, useRef, useState } from "react";
 import type { StagedFile } from "@/api";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ImagePreview } from "./image-preview.js";
+import { ImageFieldset, type RemovedImage, removeImage, restoreImage } from "./image-removal.js";
 import { setPrompt } from "./revision-form-state.js";
 import { RevisionUpload } from "./revision-upload.js";
 export function moveImage(
@@ -37,6 +38,8 @@ export function ImageEditor({
 }): import("react").ReactElement {
   const editorId = useId();
   const [promptEdits, setPromptEdits] = useState<Readonly<Record<string, number>>>({});
+  // The image last deleted from the draft, as it was, for Undo.
+  const [removed, setRemoved] = useState<RemovedImage | undefined>();
   const { content } = edit;
   // 60, or more for a project that scales its images with the narration's length.
   const imagesMax = imagesPerVideoMax(edit.config);
@@ -125,6 +128,21 @@ export function ImageEditor({
       ],
     });
   }
+  function undo(): void {
+    const gone = removed;
+    setRemoved(undefined);
+    const next = gone === undefined ? undefined : restoreImage(getEdit?.() ?? latest.current, gone);
+    if (next !== undefined) emit(next);
+  }
+  const undoLine =
+    removed === undefined ? null : (
+      <p role="status" className="flex flex-wrap items-center gap-2 text-small text-ink-2">
+        Image {removed.index + 1} is deleted from this draft; it goes when you save.
+        <Button type="button" variant="quiet" size="small" onClick={undo}>
+          Undo
+        </Button>
+      </p>
+    );
   return (
     <section aria-label="Edit images" className="space-y-3">
       <div className="flex items-center gap-1">
@@ -140,157 +158,147 @@ export function ImageEditor({
             </p>
           );
         return (
-          <fieldset key={key} className="space-y-2 rounded-control border border-line-strong p-3">
-            <legend>Image {index + 1}</legend>
-            <ImagePreview edit={edit} view={view} imageKey={key} index={index} />
-            {image.source !== "generate" ? null : (
-              <div {...helpScope}>
-                <div className="flex items-center gap-1">
-                  <label htmlFor={`${editorId}-${key}-prompt`}>Prompt for image {index + 1}</label>
-                  <InfoTip
-                    id="project.images.prompt"
-                    label={`prompt for image ${String(index + 1)}`}
+          <Fragment key={key}>
+            {removed?.index === index ? undoLine : null}
+            <ImageFieldset imageKey={key}>
+              <legend>Image {index + 1}</legend>
+              <ImagePreview edit={edit} view={view} imageKey={key} index={index} />
+              {image.source !== "generate" ? null : (
+                <div {...helpScope}>
+                  <div className="flex items-center gap-1">
+                    <label htmlFor={`${editorId}-${key}-prompt`}>
+                      Prompt for image {index + 1}
+                    </label>
+                    <InfoTip
+                      id="project.images.prompt"
+                      label={`prompt for image ${String(index + 1)}`}
+                    />
+                  </div>
+                  <Textarea
+                    id={`${editorId}-${key}-prompt`}
+                    value={
+                      image.templateKey === undefined || image.templateKey === null
+                        ? (image.prompt ?? "")
+                        : (content.promptTemplates[image.templateKey] ?? image.prompt ?? "")
+                    }
+                    onChange={(event) => changePrompt(key, event.target.value)}
                   />
                 </div>
-                <Textarea
-                  id={`${editorId}-${key}-prompt`}
-                  value={
-                    image.templateKey === undefined || image.templateKey === null
-                      ? (image.prompt ?? "")
-                      : (content.promptTemplates[image.templateKey] ?? image.prompt ?? "")
-                  }
-                  onChange={(event) => changePrompt(key, event.target.value)}
-                />
-              </div>
-            )}
-            {image.source === "generate" && image.templateKey == null ? (
-              <Button type="button" onClick={() => changePrompt(key, image.prompt ?? "")}>
-                Use saved wording as template for image {index + 1}
-              </Button>
-            ) : null}
-            <RevisionUpload
-              key={`${key}:${promptEdits[key] ?? 0}:${edit.config.sources.images === "off"}`}
-              label={`Replace image ${index + 1}`}
-              kind="images"
-              onPending={(pending) => onPending(`image:${key}`, pending)}
-              onReady={(file) => {
-                const edit = getEdit?.() ?? latest.current;
-                const content = edit.content;
-                const current = content.imageDefinitions[key];
-                if (current === undefined || !content.imageOrder.includes(key)) return;
-                emit({
-                  ...edit,
-                  regenerate: (edit.regenerate ?? []).filter((one) => one !== `image:${key}`),
-                  uploads: [
-                    ...(edit.uploads ?? []).filter(
-                      (one) => one.destination.kind !== "image" || one.destination.imageKey !== key,
-                    ),
-                    { stagedFileId: file.id, destination: { kind: "image", imageKey: key } },
-                  ],
-                  content: {
-                    ...content,
-                    imageDefinitions: {
-                      ...content.imageDefinitions,
-                      [key]: { ...current, source: "provide", prompt: null, templateKey: null },
+              )}
+              {image.source === "generate" && image.templateKey == null ? (
+                <Button type="button" onClick={() => changePrompt(key, image.prompt ?? "")}>
+                  Use saved wording as template for image {index + 1}
+                </Button>
+              ) : null}
+              <RevisionUpload
+                key={`${key}:${promptEdits[key] ?? 0}:${edit.config.sources.images === "off"}`}
+                label={`Replace image ${index + 1}`}
+                kind="images"
+                onPending={(pending) => onPending(`image:${key}`, pending)}
+                onReady={(file) => {
+                  const edit = getEdit?.() ?? latest.current;
+                  const content = edit.content;
+                  const current = content.imageDefinitions[key];
+                  if (current === undefined || !content.imageOrder.includes(key)) return;
+                  emit({
+                    ...edit,
+                    regenerate: (edit.regenerate ?? []).filter((one) => one !== `image:${key}`),
+                    uploads: [
+                      ...(edit.uploads ?? []).filter(
+                        (one) =>
+                          one.destination.kind !== "image" || one.destination.imageKey !== key,
+                      ),
+                      { stagedFileId: file.id, destination: { kind: "image", imageKey: key } },
+                    ],
+                    content: {
+                      ...content,
+                      imageDefinitions: {
+                        ...content.imageDefinitions,
+                        [key]: { ...current, source: "provide", prompt: null, templateKey: null },
+                      },
                     },
-                  },
-                });
-              }}
-            />
-            <Button
-              type="button"
-              disabled={index === 0}
-              onClick={() =>
-                emit({
-                  ...edit,
-                  content: {
-                    ...content,
-                    imageOrder: moveImage(content.imageOrder, index, -1),
-                  },
-                })
-              }
-            >
-              Move image {index + 1} earlier
-            </Button>
-            <Button
-              type="button"
-              disabled={index === content.imageOrder.length - 1}
-              onClick={() =>
-                emit({
-                  ...edit,
-                  content: {
-                    ...content,
-                    imageOrder: moveImage(content.imageOrder, index, 1),
-                  },
-                })
-              }
-            >
-              Move image {index + 1} later
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                const order = content.imageOrder.filter((one) => one !== key);
-                emit({
-                  ...edit,
-                  config:
-                    order.length === 0
-                      ? {
-                          ...edit.config,
-                          sources: { ...edit.config.sources, images: "off", video: "off" },
-                        }
-                      : edit.config,
-                  content: {
-                    ...content,
-                    imageOrder: order,
-                    imageDefinitions: Object.fromEntries(
-                      Object.entries(content.imageDefinitions).filter(([one]) => one !== key),
-                    ),
-                  },
-                  regenerate: (edit.regenerate ?? []).filter((one) => one !== `image:${key}`),
-                  uploads: (edit.uploads ?? []).filter(
-                    (one) => one.destination.kind !== "image" || one.destination.imageKey !== key,
-                  ),
-                });
-              }}
-            >
-              Delete image {index + 1}
-              {content.imageOrder.length === 1 ? " and turn Images and Video Off" : ""}
-            </Button>
-            {image.source === "generate" ? (
-              <span className="inline-flex items-center gap-1">
-                {/* Marked, the press takes the mark off again; the image's status says which. */}
-                {edit.regenerate?.includes(`image:${key}`) === true ? (
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      emit({
-                        ...edit,
-                        regenerate: (edit.regenerate ?? []).filter((one) => one !== `image:${key}`),
-                      })
-                    }
-                  >
-                    Keep image {index + 1}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      emit({
-                        ...edit,
-                        regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
-                      })
-                    }
-                  >
-                    Regenerate image {index + 1}
-                  </Button>
-                )}
-                <InfoTip id="project.images.regenerate" />
-              </span>
-            ) : null}
-          </fieldset>
+                  });
+                }}
+              />
+              <Button
+                type="button"
+                disabled={index === 0}
+                onClick={() =>
+                  emit({
+                    ...edit,
+                    content: {
+                      ...content,
+                      imageOrder: moveImage(content.imageOrder, index, -1),
+                    },
+                  })
+                }
+              >
+                Move image {index + 1} earlier
+              </Button>
+              <Button
+                type="button"
+                disabled={index === content.imageOrder.length - 1}
+                onClick={() =>
+                  emit({
+                    ...edit,
+                    content: {
+                      ...content,
+                      imageOrder: moveImage(content.imageOrder, index, 1),
+                    },
+                  })
+                }
+              >
+                Move image {index + 1} later
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const { next, removed: gone } = removeImage(edit, key);
+                  setRemoved(gone);
+                  emit(next);
+                }}
+              >
+                Delete image {index + 1}
+                {content.imageOrder.length === 1 ? " and turn Images and Video Off" : ""}
+              </Button>
+              {image.source === "generate" ? (
+                <span className="inline-flex items-center gap-1">
+                  {/* Marked, the press takes the mark off again; the image's status says which. */}
+                  {edit.regenerate?.includes(`image:${key}`) === true ? (
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        emit({
+                          ...edit,
+                          regenerate: (edit.regenerate ?? []).filter(
+                            (one) => one !== `image:${key}`,
+                          ),
+                        })
+                      }
+                    >
+                      Keep image {index + 1}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        emit({
+                          ...edit,
+                          regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
+                        })
+                      }
+                    >
+                      Regenerate image {index + 1}
+                    </Button>
+                  )}
+                  <InfoTip id="project.images.regenerate" />
+                </span>
+              ) : null}
+            </ImageFieldset>
+          </Fragment>
         );
       })}
+      {removed !== undefined && removed.index >= content.imageOrder.length ? undoLine : null}
       <Button
         type="button"
         disabled={content.imageOrder.length >= imagesMax}

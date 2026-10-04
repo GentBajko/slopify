@@ -19,3 +19,32 @@ export async function deleteTrashItem(api: Api, kind: TrashKind, id: string): Pr
   const response = await api.client.trash[":kind"][":id"].$delete({ param: { kind, id } });
   if (!response.ok) throw await failure(response);
 }
+
+export interface TrashRef {
+  readonly kind: TrashKind;
+  readonly id: string;
+}
+
+// One item a bulk action could not do, with the server's sentence saying why and what to do.
+export interface TrashFailure extends TrashRef {
+  readonly reason: string;
+  readonly detail: string;
+}
+
+// Restore selected / Restore all: each item on its own, so one refusal leaves the rest restored.
+export async function restoreTrashItems(
+  api: Api,
+  items: readonly TrashRef[],
+): Promise<{ readonly restored: readonly Restored[]; readonly failed: readonly TrashFailure[] }> {
+  const response = await api.client.trash.bulk.restore.$post({ json: { items: [...items] } });
+  return read<{ restored: Restored[]; failed: TrashFailure[] }>(response);
+}
+
+// Delete selected / Empty trash: removes each item for good.
+export async function deleteTrashItems(
+  api: Api,
+  items: readonly TrashRef[],
+): Promise<{ readonly deleted: readonly TrashRef[]; readonly failed: readonly TrashFailure[] }> {
+  const response = await api.client.trash.bulk.delete.$post({ json: { items: [...items] } });
+  return read<{ deleted: TrashRef[]; failed: TrashFailure[] }>(response);
+}

@@ -123,6 +123,28 @@ describe("changing a project's channel in Edit project", () => {
     expect(projectChannelId(h.deps.db, h.projectId)).toBe(defaultChannelId);
   });
 
+  it("knows the kit's colour when the project's colour box wrote it in lower case", async () => {
+    const h = fixture();
+    const moved = await save(h, { ...h.base.revision.config, channelId: h.lore });
+    const subtitles = moved.config.subtitles;
+    if (subtitles === undefined) throw new Error("Expected subtitles.");
+    const back = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: moved.id,
+      idempotencyKey: "back-lower",
+      edit: {
+        config: {
+          ...moved.config,
+          channelId: defaultChannelId,
+          subtitles: { ...subtitles, color: "#ffd700" },
+        },
+        content: moved.content,
+      },
+    });
+    if (!back.ok) throw new Error(JSON.stringify(back));
+    expect(back.view.revision.config.subtitles).not.toHaveProperty("color");
+  });
+
   it("changes nothing about the channel, cast or brand when the channel stays", async () => {
     const h = fixture();
     const revision = await save(h, { ...h.base.revision.config, title: "Renamed" });

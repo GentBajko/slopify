@@ -20,7 +20,7 @@ The page opens where the next action points: the failed step, the held review or
 
 ### The run cost line
 
-When a run has ended (done, done with problems, failed or cancelled), a line under the title sums it up, for example `This run cost $0.42 · ~$3.10 via API · 12 min of work`: only the time Slopify was working, never the time waiting on you, a review or a limit. A run that ended early says **Spent so far** instead, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the **Cost** section. The line is hidden while the run is going and when it spent nothing. While the run is going, a clock sits there instead: `Working for 9 min 30 s`, ticking while a step runs; while it is paused or waits on you it holds still and reads `9 min 30 s of work so far`. See [Costs and Run Cost](Costs-and-Run-Cost).
+When a run has ended (done, done with problems, failed or canceled), a line under the title sums it up, for example `This run cost $0.42 · ~$3.10 via API · 12 min of work`: only the time Slopify was working, never the time waiting on you, a review or a limit. A run that ended early says **Spent so far** instead, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the **Cost** section. The line is hidden while the run is going and when it spent nothing. While the run is going, a clock sits there instead: `Working for 9 min 30 s`, ticking while a step runs; while it is paused or waits on you it holds still and reads `9 min 30 s of work so far`. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Time left
 
@@ -38,7 +38,7 @@ The status beside the title reads one of:
 | **Done** | Every stage finished. |
 | **Done with problems** | The main output was made (the video, or the narration when there is no video, or the article when there is neither), but another step failed. Each failed step shows its error and its fix. |
 | **Failed** | A step failed and the main output was not made. |
-| **Canceled** | You cancelled the run. Finished outputs are kept. |
+| **Canceled** | You canceled the run. Finished outputs are kept. |
 
 ## The next action button
 
@@ -53,8 +53,8 @@ The right rail always shows at most one button, named for what it will do. It is
 | A CLI plan limit is used up | Waiting for limits | No button. The line says, for example, "Waiting for Codex limits (resets at 14:00)." and that the run carries on by itself. |
 | A step is waiting to retry | Waiting to try again | No button. The line says the time it tries again. |
 | Running | Running | **Pause** |
-| Stopped before it finished (for example after a restart) or cancelled | Stopped / Canceled | **Continue the run** (makes only what is missing) |
-| Queued | Queued | No button. It starts when the videos ahead of it are done. |
+| Stopped before it finished (for example after a restart) or canceled | Stopped / Canceled | **Continue the run** (makes only what is missing) |
+| Queued | Queued | No button. Videos queued together run one at a time, in the order they were added; this one starts by itself when those ahead of it are done, and Home shows which one is running now. |
 | An edit made outputs outdated | Outdated | **Remake the outdated narration**, **Remake 4 outdated images** and so on |
 | A 60-second short is finished | Done | **Make the full video on this topic** (opens Play set up for a long video on the same topic; see [Your First Short](Your-First-Short#make-the-full-video-next)) |
 | The video is finished | Done | **Prepare upload** |
@@ -84,7 +84,7 @@ A step that is waiting to retry or waiting for a CLI limit also stays held while
 2. Choose **Cancel the run…**.
 3. Confirm with **Cancel run**, or press **Keep running** to leave it alone.
 
-Cancelling stops every running stage; finished outputs are kept. You can continue a cancelled run later with **Continue the run**. A project has to be cancelled (not running) before you can delete it from Projects.
+Canceling stops every running stage; finished outputs are kept. You can continue a canceled run later with **Continue the run**. A project has to be canceled (not running) before you can delete it from Projects.
 
 ## The sections
 
@@ -92,8 +92,9 @@ Sections appear only when the run uses them. A section with outdated outputs sho
 
 | Section | What it shows |
 | --- | --- |
+| **Outputs** | Every output the project makes (article, narration or audiobook/podcast, images, thumbnails, video, shorts, PDF), each with a preview, its state in words (Current, Uses older material, In progress, Failed), which version of its source it was made from, its main download and **Other formats**. **Add another output** turns the project into narration, an audiobook, images, a video, a PDF or a podcast: it shows what is reused, what is made and the extra cost before saving, and only the new work runs. A podcast made from an article (**Adapt my article into a conversation**) keeps the article as written. |
 | **Article** | The article in a reading view, with tabs for **Research** notes, **Sources**, **Speakers** (multi-voice scripts) and **Pronunciation** when those exist. **Copy** copies the open tab as Markdown. |
-| **Narration** | A player for the intro, body and outro, the downloads, and the voice and chunking used. |
+| **Narration** | A player for the intro, body and outro, the downloads, and the voice and chunking used. The text plays along: press a line to play from there, and the pencil beside it opens Edit project → Narration at that passage. Podcasts and interviews show the conversation turn by turn with speaker names. |
 | **Images** | The establishing image (a reference that is not in the video), every slideshow image in order, on-screen cards for tables and figures, and the thumbnails. Press an image to see it full size (see [Images at full size](#images-at-full-size)). |
 | **Video** (or **Audio export** when Video is off) | The player, downloads, the file length and format, and what the loudness master measured. |
 | **Shorts** | The vertical clips picked from the video, each with its title and hashtags. See [Shorts](Shorts). |

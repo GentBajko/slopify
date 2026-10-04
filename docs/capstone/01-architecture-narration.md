@@ -223,7 +223,7 @@ Narration controls render inside the client-rendered React SPA (`createRoot` at 
 | Surface | Component |
 | --- | --- |
 | Play: glossary switch, aliases switch, preparation, loudness | `PronunciationGlossary` (`packages/web/src/play/pronunciation-glossary.tsx:4`), `NarrationAliasesToggle` (`packages/web/src/play/narration-aliases.tsx:6`), `PlayLoudness` (`packages/web/src/play/loudness.tsx:15`) |
-| Library → Aliases (`/narration-aliases` under the library layout) | `NarrationAliasesRoute` (`packages/web/src/routes/narration-aliases.tsx:28`, `packages/web/src/router.tsx:305`) |
+| Library → Narration aliases (`/narration-aliases` under the library layout) | `NarrationAliasesRoute` (`packages/web/src/routes/narration-aliases.tsx:28`, `packages/web/src/router.tsx:305`) |
 | Speakers, voices, per-speaker pronunciations, auditions | `SpeakersEditor` (`packages/web/src/voices/speakers-editor.tsx:46`) |
 | Volume control | `LoudnessControls` (`packages/web/src/video/loudness-controls.tsx:29`) |
 | Project narration editing and downloads | `NarrationEditor` (`packages/web/src/project/narration-editor.tsx:76`), `RevisionNarration` (`packages/web/src/project/revision-narration.tsx:7`), `narrationFiles` (`packages/web/src/project/narration-downloads.tsx:21`) |

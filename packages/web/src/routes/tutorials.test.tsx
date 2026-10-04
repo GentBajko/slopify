@@ -101,3 +101,10 @@ describe("Help → Tutorials", () => {
     expect(screen.getByRole("button", { name: "Try again" })).not.toBeNull();
   });
 });
+
+it("keeps a way back to the welcome screen", async () => {
+  renderRouted(<TutorialsRoute page="Install" anchor={undefined} words={undefined} />, deps());
+  expect((await screen.findByRole("link", { name: "Welcome screen" })).getAttribute("href")).toBe(
+    "/welcome",
+  );
+});

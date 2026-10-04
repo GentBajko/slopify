@@ -50,3 +50,32 @@ describe("Settings → Notifications", () => {
     expect(sent).toEqual({ url: "https://ntfy.sh/slopify-runs" });
   });
 });
+
+describe("Settings → Notifications save boundary", () => {
+  it("says a typed URL is unsaved, saves it on Enter, and Discard puts the saved one back", async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    renderApp(
+      <NotificationSettings />,
+      testDeps({
+        "GET /api/settings/notifications": jsonAnswer({ url: "https://ntfy.sh/old" }),
+        "PUT /api/settings/notifications": async (request) => {
+          sent = await request.json();
+          return jsonAnswer({ url: "https://ntfy.sh/new" })(request);
+        },
+      }),
+    );
+    const field = await screen.findByDisplayValue("https://ntfy.sh/old");
+    await user.clear(field);
+    await user.type(field, "https://ntfy.sh/mine");
+    expect(screen.getByText(/Unsaved changes/)).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    expect((field as HTMLInputElement).value).toBe("https://ntfy.sh/old");
+    expect(screen.queryByText(/Unsaved changes/)).toBeNull();
+    await user.clear(field);
+    await user.type(field, "https://ntfy.sh/new{Enter}");
+    await waitFor(() => {
+      expect(sent).toEqual({ url: "https://ntfy.sh/new" });
+    });
+  });
+});

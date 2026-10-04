@@ -145,7 +145,7 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 | **Edit** | Opens the **Edit schedule** form on the right. Only an active or paused schedule can change. Press **Save changes**. |
 | **Pause** / **Resume** | Stops runs until you resume. Only an active schedule can pause. |
 | **Cancel schedule** | Stops future runs for good. Existing projects and run history are kept. |
-| **Delete schedule** | Moves the schedule to **Settings → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
+| **Delete schedule** | Moves the schedule to **Settings → Backup & storage → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
 | **Filter schedules by channel** | Shows only one channel's schedules. |
 | **Switch to <model>** | Shown under a schedule whose template picks a retired model, with "<model> is retired." Switches that model to its replacement in one press, as in Settings → **Models**. See [Models](Models). |
 

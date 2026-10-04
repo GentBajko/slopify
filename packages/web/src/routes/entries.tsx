@@ -1,6 +1,6 @@
 import type { Entry, EntryCategory } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { removeEntry, saveEntry } from "@/api";
 import { useApp } from "@/app-context";
 import { Callout } from "@/components/kit/callout";
@@ -15,14 +15,18 @@ import { Segmented } from "@/components/kit/switch";
 import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { InlineName, refusedName } from "@/library/inline-name";
-import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
+import { LibraryItemDetail, plural } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { useLibraryItem } from "@/library/list-url";
 import { LibraryRowActions } from "@/library/row-actions";
+import { sortLibrary, useLibrarySort } from "@/library/sort";
+import { SortMenu } from "@/library/sort-menu";
+import { Stamp } from "@/library/time";
 import { entriesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
-// Every saved entry of one category, sorted by name by the list endpoint, beside the selected
-// one's text, what uses it and its latest change. The category lives in the URL, so switching
+// Every saved entry of one category, by name or last change, beside the selected one's text,
+// what uses it and its latest change; the selected row is `?item=` in the URL. The category lives in the URL, so switching
 // it is handed up to router.tsx rather than reaching for a router here - the same division
 // Prompts makes.
 export function EntriesRoute({
@@ -43,7 +47,8 @@ export function EntriesRoute({
   const [query, setQuery] = useState("");
   const search = useRef<HTMLInputElement>(null);
   const searchKeys = useSearchShortcut(search, "intros and outros");
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [selectedId, setSelectedId] = useLibraryItem();
+  const [sort, setSort] = useLibrarySort("entry");
   const [deleting, setDeleting] = useState<Entry | undefined>(undefined);
   const [history, setHistory] = useState<Entry | undefined>(undefined);
 
@@ -68,13 +73,14 @@ export function EntriesRoute({
 
   const ofCategory = entries.data?.entries.filter((entry) => entry.category === category);
   const needle = query.trim().toLowerCase();
-  const listed =
+  const matching =
     needle === ""
       ? ofCategory
       : ofCategory?.filter(
           (entry) =>
             entry.name.toLowerCase().includes(needle) || entry.body.toLowerCase().includes(needle),
         );
+  const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((entry) => entry.id === selectedId) ?? listed?.[0];
 
   return (
@@ -103,6 +109,7 @@ export function EntriesRoute({
           onChange={onCategory}
           tip="library.entry.category"
         />
+        <SortMenu what="intros and outros" sort={sort} onSort={setSort} />
       </LibraryToolbar>
 
       {entries.error === null ? null : (
@@ -188,7 +195,11 @@ export function EntriesRoute({
                 id={selected.id}
                 name={selected.name}
                 kicker={`${categoryLabel(selected.category)} · ${modeLabel(selected.mode)}`}
-                meta={`Updated ${updatedOn(selected.updatedAt)}`}
+                meta={
+                  <>
+                    Updated <Stamp iso={selected.updatedAt} />
+                  </>
+                }
                 body={selected.body}
                 slots={selected.slots}
                 actions={
@@ -238,8 +249,13 @@ export function EntriesRoute({
 
 // Mode first: it says what the row does with its body (narrated as written, or an
 // instruction whose answer is narrated).
-function entryMeta(entry: Entry): string {
-  return `${modeLabel(entry.mode)} · ${plural(entry.slots.length, "keyword")} · updated ${updatedOn(entry.updatedAt)}`;
+function entryMeta(entry: Entry): ReactElement {
+  return (
+    <>
+      {`${modeLabel(entry.mode)} · ${plural(entry.slots.length, "keyword")} · updated `}
+      <Stamp iso={entry.updatedAt} />
+    </>
+  );
 }
 
 // An empty category teaches what the thing is and where it lands in the run.

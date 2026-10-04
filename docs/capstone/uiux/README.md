@@ -36,7 +36,7 @@ The SPA has four top-level navigation destinations (Projects, Play, Library, Set
 | [screens/03-project.md](screens/03-project.md) | 08 Project, retained pronunciation, clean scripts and saved host paths | 01, 08, 09, 11, 12, 14, 17, 23 |
 | [screens/04-prompts.md](screens/04-prompts.md) | 04 Prompts (Library tab) | 15 |
 | [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | 05 Prompt editor | 03, 15 |
-| [screens/06-entries.md](screens/06-entries.md) | Intros & Outros (Library tab) | 08, 15 |
+| [screens/06-entries.md](screens/06-entries.md) | Intros & outros (Library tab) | 08, 15 |
 | [screens/07-entry-editor.md](screens/07-entry-editor.md) | Intro/outro editor | 03, 08, 15 |
 | [screens/08-settings.md](screens/08-settings.md) | 03 Settings; native paths and host-managed CLI status | 02, 16, 19-21 |
 | [screens/09-usage.md](screens/09-usage.md) | Usage (Settings section) | 16 |
@@ -46,6 +46,6 @@ The SPA has four top-level navigation destinations (Projects, Play, Library, Set
 | [screens/13-schedules.md](screens/13-schedules.md) | 09 Schedules (Library tab) | 24, 25 |
 | [screens/14-templates.md](screens/14-templates.md) | Templates (Library tab) | 22, 24 |
 
-Library is one destination holding four tabs: Prompts, Intros & Outros, Templates and Schedules. A pathless layout route (`_library`, `packages/web/src/routes/library.tsx`) draws the Library page bar and tab links, so each tab keeps its own URL; `/library` redirects to `/prompts`. Usage is the last Settings section; `/usage` redirects to `/settings?section=usage`.
+Library is one destination holding its tabs in three groups: Setups (Templates), Building blocks (Prompts, Intros & outros, PDF themes, Narration aliases) and Results (A/B results); Schedules are the Calendar's Schedules tab. A pathless layout route (`_library`, `packages/web/src/routes/library.tsx`) draws the Library page bar and tab links, so each tab keeps its own URL; `/library` redirects to `/prompts`. Usage is the last Settings section; `/usage` redirects to `/settings?section=usage`.
 
 `packages/web/src/components/shell.tsx` mounts the sticky header (with the updater and tutorial launcher), the routed screen centred at 1200 px, the footer, appearance controller, first-run notice and version prompt in one persistent shell. Screen chapters describe only behavior rendered by the cited source.

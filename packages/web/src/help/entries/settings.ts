@@ -203,9 +203,9 @@ export const settingsHelp = {
     tutorial: { page: "Where-Your-Files-Live", anchor: "export-and-import" },
   },
   "settings.storage.clean": {
-    title: "Clean orphan files",
+    title: "Clear leftover files",
     body: "Deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.",
-    tutorial: { page: "Where-Your-Files-Live", anchor: "clean-orphan-files" },
+    tutorial: { page: "Where-Your-Files-Live", anchor: "clear-leftover-files" },
   },
   "settings.storage.disk": {
     title: "Disk space",
@@ -268,7 +268,7 @@ export const settingsHelp = {
   // Trash
   "settings.trash": {
     title: "Trash",
-    body: "Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files. Restore puts one back; if its name was taken meanwhile it comes back renamed, and a schedule comes back paused. Delete now frees the space at once.",
+    body: "Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files. Restore puts one back; if its name was taken meanwhile it comes back renamed, and a schedule comes back paused. Delete now frees the space at once. Channels, cast members, PDF themes and episode summaries never come here: deleting one removes it permanently.",
     tutorial: { page: "Trash" },
   },
 
@@ -297,7 +297,7 @@ export const settingsHelp = {
   },
   "home.needs-you": {
     title: "Needs you",
-    body: "Runs held at a review before a step, topics a schedule suggested for you to accept or reject, and runs that failed with the fix to try. Nothing here moves on until you act; approving a review from here lets that run continue.",
+    body: "Runs held at a review before a step, paused runs, topics a schedule suggested for you to accept or reject, and runs that failed with the fix to try; then finished videos you have not marked uploaded. Nothing here moves on until you act: approving a review from here lets that run continue, and Mark uploaded takes a finished video off the list (Projects still has it).",
     tutorial: { page: "Home-and-Projects", anchor: "needs-you" },
   },
   "home.running": {
@@ -309,11 +309,6 @@ export const settingsHelp = {
     title: "Coming up",
     body: "The schedule runs due in the next 7 days, with the template and topic each will use. Paused schedules show too. Plan or move runs on the calendar.",
     tutorial: { page: "Home-and-Projects", anchor: "coming-up" },
-  },
-  "home.ready": {
-    title: "Ready to upload",
-    body: "Finished videos you have not marked uploaded. Prepare upload lists everything YouTube Studio asks for, with Copy buttons; Slopify never uploads for you. Mark uploaded takes the video off this list; Projects still has it.",
-    tutorial: { page: "Home-and-Projects", anchor: "ready-to-upload" },
   },
   "home.this-week": {
     title: "This week",

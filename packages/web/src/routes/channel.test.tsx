@@ -183,7 +183,7 @@ describe("Channels", () => {
     expect(seen[0]).toEqual({
       name: "My channel",
       seriesBrief: "",
-      brand: { captionColor: "#ffd700" },
+      brand: { captionColor: "#FFD700" },
       baseVersion: 3,
     });
   });

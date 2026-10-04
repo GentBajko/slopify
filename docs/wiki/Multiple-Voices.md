@@ -116,17 +116,17 @@ The speaker takes the member's name and voice. Every run started later, whether 
 
 ## Delivery tags
 
-With a **Narration Preparation** prompt picked (Narration row → **Audio Advanced**), each turn of a speaker on Inworld's TTS-2 model is prepared on its own before it is spoken. The text model sees the turn and who says it (for example `Rat (character)`) and adds cues:
+With a **Narration Preparation** prompt picked (Narration row → **More audio settings**), each turn of a speaker on Inworld's TTS-2 model is prepared on its own before it is spoken. The text model sees the turn and who says it (for example `Rat (character)`) and adds cues:
 
 - A spoken direction at the start of a sentence, such as `[say shyly and a little uncertainly]`, held until the next one or `[reset]`.
 - Non-verbal sounds where they happen: `[laugh]`, `[breathe]`, `[sigh]`, `[cough]`, `[clear throat]` and `[yawn]`.
 
-Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Play asks you to choose that model for a speaker or clear Narration Preparation under Narration → **Audio Advanced**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Play-Narration](Play-Narration) for Narration Preparation itself.
+Each turn is its own request, so a direction never leaks into the next speaker, and every speaker on TTS-2 gets cues of their own. Turns of speakers on other voices, or on TTS-2 Flash (which ignores directions), are spoken as written. At least one speaker must be on TTS-2, or Play asks you to choose that model for a speaker or clear Narration Preparation under Narration → **More audio settings**. The Narration row's own model (which reads the intro and outro) must be Inworld TTS-2 too. The tags are only in what the voice is sent: captions, word timing, the MP3/M4B chapters and the script download never show them. See [Play-Narration](Play-Narration) for Narration Preparation itself.
 
 ## How the audio is made
 
 - Every turn is its own request in its speaker's voice, then the turns are joined with the gap between turns.
-- Narration aliases (Library → Aliases) apply to every turn.
+- Narration aliases (Library → Narration aliases) apply to every turn.
 - Changing one speaker's voice remakes only that speaker's turns.
 - With **Level the volume** on (the default for new runs), each turn is brought to one common loudness before joining, so a quiet host and a loud guest sit at the same level. The MP3 and M4B are mastered to the audio files volume (−18 LUFS by default).
 - **Pause between sentences** lengthens the quiet between sentences inside a turn; the gap between turns stays the Gap between turns.

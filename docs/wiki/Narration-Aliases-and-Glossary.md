@@ -2,13 +2,13 @@
 
 Two tools control how the narrator says words without changing what is written. **Narration aliases** swap a written form for a spoken one, such as `Dr.` said as "Doctor", with any generated voice. The **Pronunciation Glossary** gives exact IPA pronunciations for names, such as `Arda: /ˈɑɹdə/`, with Inworld's TTS-2 voices. In both cases the article, the transcript and the captions keep the written words; only the audio changes.
 
-**Where to find it:** aliases in **Library → Aliases**. Both switches are on Play under **Narration → Change → Audio Advanced**, and in **Edit project**. A project's glossary is shown on its **Article** section, in the **Pronunciation** tab.
+**Where to find it:** aliases in **Library → Narration aliases**. Both switches are on Play under **Narration → Change → More audio settings**, and in **Edit project**. A project's glossary is shown on its **Article** section, in the **Pronunciation** tab.
 
 ## Narration aliases
 
 ### Add aliases
 
-1. Open **Library → Aliases**.
+1. Open **Library → Narration aliases**.
 2. Press **Add alias**. A new row appears in the list, titled **Alias N**, with its fields under it.
 3. Fill in the row:
 
@@ -45,7 +45,7 @@ Each row's title line sums it up, for example "Says Dr. as Doctor · whole word"
 
 ### Use aliases in a video
 
-1. On Play, open the **Narration** row with **Change**, then **Audio Advanced**.
+1. On Play, open the **Narration** row with **Change**, then **More audio settings**.
 2. Keep **Use narration aliases** on (the default for new drafts).
 3. Start the run.
 
@@ -86,7 +86,7 @@ A table with `Term | IPA` columns works too. If you paste your own article, add 
 
 ### Turn it on
 
-1. On Play, open **Narration → Change → Audio Advanced**.
+1. On Play, open **Narration → Change → More audio settings**.
 2. Keep **Use Pronunciation Glossary** on (the default).
 3. Optional: keep **Also use pronunciations from my other projects** on (the default). It adds every term from your other projects' glossaries, copied when this project starts. This project's own glossary wins where they differ. Turn it off to use only this article's glossary.
 

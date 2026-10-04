@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { referenceKey } from "../admission/model.js";
+import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { levelPieces } from "../loudness/level-pieces.js";
@@ -67,10 +67,11 @@ export async function executeLocalRecipe(
       createdAt: row.created_at,
       bytes: statSync(outputPath(deps.paths, row.project_id, row.path)).size,
     };
+    const variant = thumbnailVariant(piece.key);
     const role: OutputRole | undefined =
       piece.key === "audio:provided"
         ? "audio_body"
-        : piece.key === "thumbnail:image"
+        : variant !== undefined
           ? "thumbnail"
           : piece.key === referenceKey
             ? "reference"
@@ -81,7 +82,20 @@ export async function executeLocalRecipe(
       deps,
       context,
       piece,
-      role === undefined ? [] : [preparedResult(deps, context, piece, role, asset)],
+      role === undefined
+        ? []
+        : [
+            preparedResult(
+              deps,
+              context,
+              piece,
+              role,
+              asset,
+              null,
+              // The second and third thumbnails carry their number, as when they are drawn.
+              variant !== undefined && variant > 1 ? { index: variant } : {},
+            ),
+          ],
       {},
       asset,
     );

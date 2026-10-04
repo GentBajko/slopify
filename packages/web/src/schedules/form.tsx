@@ -6,24 +6,34 @@ import type {
 } from "@app/slices/schedules/model.js";
 import {
   briefMax,
-  queueMax,
   type ScheduleRelease,
   type TopicGeneration,
   topicGenerationOff,
 } from "@app/slices/schedules/schema.js";
 import { templateKeywords } from "@app/slices/schedules/topic-list.js";
 import { useQuery } from "@tanstack/react-query";
-import { type FormEvent, type ReactElement, useRef, useState } from "react";
+import { type FormEvent, type ReactElement, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { limitCount } from "@/lib/limit-count";
 import { keywordOrigins } from "@/play/admission";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
 import { createSchedule, updateSchedule } from "./api";
+import {
+  centsToDollars,
+  dollarsToCents,
+  firstProblem,
+  problemSummary,
+  type ScheduleProblems,
+  scheduleFieldIds,
+  scheduleProblems,
+  timeZoneNames,
+} from "./form-checks";
 import { ReleaseFields, releaseLines } from "./release-fields";
 import { localScheduleTime, scheduleInstant } from "./time";
 import { initialQueue, type QueueContext, queueResult, TopicFields } from "./topic-queue";
@@ -80,7 +90,8 @@ export function ScheduleForm({
   const [missedPolicy, setMissedPolicy] = useState<"skip" | "run-once">(
     editing?.missedPolicy ?? "skip",
   );
-  const [spendLimit, setSpendLimit] = useState(editing?.spendLimitCents?.toString() ?? "");
+  // Typed in US dollars; the server stores cents.
+  const [spendLimit, setSpendLimit] = useState(centsToDollars(editing?.spendLimitCents));
   const [queue, setQueue] = useState(() => initialQueue(editing?.items ?? []));
   const [topicKeyword, setTopicKeyword] = useState<string | null>(editing?.topicKeyword ?? null);
   const [fixed, setFixed] = useState<Readonly<Record<string, string>>>(editing?.values ?? {});
@@ -94,6 +105,10 @@ export function ScheduleForm({
   );
   const [saving, setSaving] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  // After a Save the form's own checks refused, every field shows its problem as it is typed,
+  // and the problem goes as soon as the field is fixed.
+  const [tried, setTried] = useState(false);
+  const zonesId = useId();
   const active = useRef(false);
   const attempt = useRef<ScheduleCreate | ScheduleUpdate | null>(null);
 
@@ -154,37 +169,35 @@ export function ScheduleForm({
       ? Math.max(0, Math.min(10, Number(form.shorts.count) || 0))
       : 0;
 
+  const check = (): ScheduleProblems =>
+    scheduleProblems({
+      name,
+      templateChosen: selectedTemplate !== undefined,
+      kind,
+      onceAt,
+      time,
+      days,
+      timezone,
+      spend: spendLimit,
+      topicProblems: topics.problems,
+      topicCount: topics.rows.length,
+      brief,
+      generationLlm: generation.llm,
+    });
+  const problems: ScheduleProblems = tried ? check() : {};
+
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (active.current || pending) return;
-    if (!selectedTemplate && !attempt.current) {
-      onError("Choose a template before saving the schedule.");
-      return;
-    }
-    if (!attempt.current && topics.problems.length > 0) {
-      onError(`Fix the topics first. ${topics.problems.slice(0, 3).join(" ")}`);
-      return;
-    }
-    if (topics.rows.length > queueMax) {
-      onError(`Keep the list to ${String(queueMax)} topics or fewer.`);
-      return;
-    }
-    if (brief.trim().length > briefMax) {
-      onError(`Keep the series brief to ${String(briefMax)} characters or fewer.`);
-      return;
-    }
-    if (
-      generation.llm !== null &&
-      (generation.llm.provider === "" || generation.llm.model === "")
-    ) {
-      onError(
-        "Pick both a provider and a model for topic generation, or choose Use the template's LLM.",
-      );
-      return;
-    }
-    if (kind === "weekly" && days.length === 0) {
-      onError("Choose at least one weekday for a weekly schedule.");
-      return;
+    if (!attempt.current) {
+      const found = check();
+      const first = firstProblem(found);
+      if (first !== undefined) {
+        setTried(true);
+        onError(problemSummary(found));
+        focusField(scheduleFieldIds[first]);
+        return;
+      }
     }
     active.current = true;
     setSaving(true);
@@ -201,10 +214,10 @@ export function ScheduleForm({
             : kind === "weekly"
               ? { kind, time, days }
               : { kind, time };
-        const limit = spendLimit.trim() === "" ? null : Number(spendLimit);
-        if (limit !== null && (!Number.isInteger(limit) || limit < 0))
+        const limit = dollarsToCents(spendLimit);
+        if (limit === undefined)
           throw new Error(
-            "Enter the spend limit as a whole number of cents, 0 or more (500 is $5.00), or leave it empty.",
+            "Enter the spend ceiling in US dollars, such as 5 or 2.50, or leave it empty.",
           );
         const input: ScheduleCreate = {
           id: editing?.id ?? crypto.randomUUID(),
@@ -247,6 +260,7 @@ export function ScheduleForm({
       }
       attempt.current = null;
       setUncertain(false);
+      setTried(false);
       setName("");
       setQueue(initialQueue([]));
       onCreated();
@@ -267,12 +281,14 @@ export function ScheduleForm({
           {error}
         </Callout>
       ) : null}
-      <form onSubmit={(event) => void submit(event)}>
+      {/* noValidate: the form's own checks mark each field in words and move focus to the first,
+          instead of the browser's bubble on one required field at a time. */}
+      <form noValidate onSubmit={(event) => void submit(event)}>
         <fieldset
           disabled={saving || uncertain || pending}
           className="m-0 grid min-w-0 gap-4 border-0 p-0 min-[700px]:grid-cols-2"
         >
-          <Field label="Name" id="schedule-name" tip="planning.schedule.name">
+          <Field label="Name" id="schedule-name" tip="planning.schedule.name" error={problems.name}>
             <Input
               required
               value={name}
@@ -280,7 +296,12 @@ export function ScheduleForm({
               placeholder="Monday morning stories"
             />
           </Field>
-          <Field label="Template" id="schedule-template" tip="planning.schedule.template">
+          <Field
+            label="Template"
+            id="schedule-template"
+            tip="planning.schedule.template"
+            error={problems.template}
+          >
             <Select
               required
               value={templateId}
@@ -314,7 +335,12 @@ export function ScheduleForm({
             </Select>
           </Field>
           {kind === "once" ? (
-            <Field label="Run at" id="schedule-once" tip="planning.schedule.once-at">
+            <Field
+              label="Run at"
+              id="schedule-once"
+              tip="planning.schedule.once-at"
+              error={problems.once}
+            >
               <Input
                 required
                 type="datetime-local"
@@ -323,7 +349,12 @@ export function ScheduleForm({
               />
             </Field>
           ) : (
-            <Field label="Local time" id="schedule-time" tip="planning.schedule.time">
+            <Field
+              label="Local time"
+              id="schedule-time"
+              tip="planning.schedule.time"
+              error={problems.time}
+            >
               <Input
                 required
                 type="time"
@@ -333,7 +364,15 @@ export function ScheduleForm({
             </Field>
           )}
           {kind === "weekly" ? (
-            <fieldset className="m-0 min-w-0 border-0 p-0" {...helpScope}>
+            <fieldset
+              id="schedule-weekdays"
+              className="m-0 min-w-0 border-0 p-0"
+              aria-invalid={problems.weekdays !== undefined}
+              aria-describedby={
+                problems.weekdays === undefined ? undefined : "schedule-weekdays-error"
+              }
+              {...helpScope}
+            >
               <legend className="sl-field__label mb-2 flex items-center gap-1">
                 Weekdays
                 <InfoTip id="planning.schedule.weekdays" className="-my-1" />
@@ -356,6 +395,11 @@ export function ScheduleForm({
                   </label>
                 ))}
               </div>
+              {problems.weekdays === undefined ? null : (
+                <p id="schedule-weekdays-error" className="sl-field__error m-0 mt-1">
+                  {problems.weekdays}
+                </p>
+              )}
             </fieldset>
           ) : (
             <div />
@@ -364,13 +408,23 @@ export function ScheduleForm({
             label="Timezone"
             id="schedule-timezone"
             tip={kind === "once" ? "planning.schedule.timezone-once" : "planning.schedule.timezone"}
+            help={`Start typing to pick from the list. This computer uses ${localZone}.`}
+            error={problems.timezone}
           >
             <Input
               value={timezone}
+              list={zonesId}
+              autoComplete="off"
+              spellCheck={false}
               onChange={(event) => setTimezone(event.target.value)}
               placeholder="Europe/Tirane"
             />
           </Field>
+          <datalist id={zonesId}>
+            {timeZoneNames().map((zone) => (
+              <option key={zone} value={zone} />
+            ))}
+          </datalist>
           <Field label="Missed run" id="schedule-missed" tip="planning.schedule.missed">
             <Select
               value={missedPolicy}
@@ -383,27 +437,34 @@ export function ScheduleForm({
             </Select>
           </Field>
           <Field
-            label="Spend ceiling (cents, optional)"
+            label="Spend ceiling per run (US$, optional)"
             id="schedule-spend"
             tip="planning.schedule.spend"
             tipLabel="Spend ceiling"
+            help="In dollars, such as 5 or 2.50. Empty means no ceiling."
+            error={problems.spend}
           >
             <Input
-              inputMode="numeric"
+              inputMode="decimal"
               value={spendLimit}
               onChange={(event) => setSpendLimit(event.target.value)}
-              placeholder="1000"
+              placeholder="10.00"
             />
           </Field>
-          <TopicFields
-            queue={queue}
-            onQueue={setQueue}
-            context={context}
-            onKeyword={setTopicKeyword}
-            onValue={(name, value) => setFixed((current) => ({ ...current, [name]: value }))}
-            loading={templateId !== "" && template.isPending}
-            exportName={name}
-          />
+          <div id="schedule-topics" tabIndex={-1} className="min-w-0 min-[700px]:col-span-2">
+            <TopicFields
+              queue={queue}
+              onQueue={setQueue}
+              context={context}
+              onKeyword={setTopicKeyword}
+              onValue={(name, value) => setFixed((current) => ({ ...current, [name]: value }))}
+              loading={templateId !== "" && template.isPending}
+              exportName={name}
+            />
+            {problems.topics === undefined ? null : (
+              <p className="sl-field__error m-0 mt-2">{problems.topics}</p>
+            )}
+          </div>
           <ReleaseFields
             releases={releases}
             onReleases={setReleases}
@@ -413,6 +474,7 @@ export function ScheduleForm({
             timezone={timezone}
           />
           <GenerationFields
+            problems={problems}
             brief={brief}
             onBrief={setBrief}
             generation={generation}
@@ -443,14 +505,30 @@ export function ScheduleForm({
   );
 }
 
+// Moves focus to a field the checks refused; a group (weekdays, topics) focuses its first box.
+function focusField(id: string): void {
+  const target = document.getElementById(id);
+  if (target === null) return;
+  const box =
+    target instanceof HTMLFieldSetElement
+      ? target.querySelector<HTMLElement>("input, select, textarea")
+      : target;
+  (box ?? target).focus();
+  target.scrollIntoView?.({ block: "center", behavior: "smooth" });
+}
+
+const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
 // The series brief and whether the schedule asks an LLM for its next topics.
 function GenerationFields({
+  problems,
   brief,
   onBrief,
   generation,
   onGeneration,
   templateLlm,
 }: {
+  readonly problems: ScheduleProblems;
   readonly brief: string;
   readonly onBrief: (text: string) => void;
   readonly generation: TopicGeneration;
@@ -471,6 +549,8 @@ function GenerationFields({
         id="schedule-brief"
         tip="planning.schedule.brief"
         tipLabel="Series brief"
+        help={limitCount(brief.length, briefMax, "characters")}
+        error={problems.brief}
       >
         <Textarea
           rows={3}
@@ -481,7 +561,12 @@ function GenerationFields({
         />
       </Field>
       <div className="grid gap-4 min-[700px]:grid-cols-2">
-        <Field label="New topics" id="schedule-generation" tip="planning.schedule.new-topics">
+        <Field
+          label="New topics"
+          id="schedule-generation"
+          tip="planning.schedule.new-topics"
+          error={problems.generation}
+        >
           <Select
             value={generation.mode}
             onChange={(event) => {

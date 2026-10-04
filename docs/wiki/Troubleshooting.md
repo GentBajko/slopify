@@ -95,7 +95,7 @@ See [Install](Install) for the command-line options.
 | "Slopify hit an unexpected error (*code*). Reload the page and try again." | Reload. If it keeps happening, download diagnostics and report it. |
 | "The project could not be loaded." | Reload, or go back to Projects. |
 | "The upload stopped before the file finished copying. Choose the file again." | Pick the file again and wait for "Waiting for uploads to finish…" to clear before saving. |
-| "A newer revision is available. Your unsaved changes are kept below." | The project was saved elsewhere (another tab, a remake). Press **Reload current revision and discard my draft**, or keep your draft and save it. |
+| "A newer revision is available. Your unsaved changes are kept below and in this browser." | The project was saved elsewhere (another tab, a remake). Press **Reload latest and re-apply my edit** to lay your changes over the newer revision, check them and press **Save changes**; **Copy my edit** puts your changes on the clipboard first. |
 
 ## Disk space
 
@@ -112,7 +112,7 @@ See [Where Your Files Live](Where-Your-Files-Live).
 | Topic | Native install | Docker |
 | --- | --- | --- |
 | Where it runs | Any system with Node 26 or newer | The installer is Linux only; Docker Desktop and remote Docker daemons are refused, and the installer must not be run with sudo |
-| Project files | `Documents/Slopify` for new installs (Settings → **Your files**); the database, settings and keys stay in the hidden data folder (`~/.slopify` by default, `--data-dir`) | `<Documents>/Slopify/Projects` on the host for new installs (`~/Slopify/Projects` on one from before 3.0); the database and keys stay in the `slopify-data` volume |
+| Project files | `Documents/Slopify` for new installs (Settings → **Backup & storage** → **Your files**); the database, settings and keys stay in the hidden data folder (`~/.slopify` by default, `--data-dir`) | `<Documents>/Slopify/Projects` on the host for new installs (`~/Slopify/Projects` on one from before 3.0); the database and keys stay in the `slopify-data` volume |
 | AI CLIs | Run directly with your logins | Run on the host through a small helper, `slopify-cli-bridge.service`, with your existing logins. Check it with `systemctl --user status slopify-cli-bridge.service`. Without it, Settings shows the CLIs as unavailable. |
 | **Open folder** | Opens your file manager | Opens it through the host helper; without the helper you get the path to copy, and "run the Docker launcher again ... so it sets up the host helper" |
 | Start at login | Settings → General → **Start Slopify when I log in** | Slopify starts whenever Docker does; Settings only shows Docker's own setting (with Docker Desktop, its **Start Docker Desktop when you sign in**) |

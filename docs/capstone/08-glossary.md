@@ -81,7 +81,7 @@ paths_covered:
 | Term | Meaning in Slopify | Defined at |
 |---|---|---|
 | Chunk mode | How narration text is split into TTS requests: `whole`, `paragraph`, `words` or `characters`. | `packages/app/src/slices/narration/chunk.ts:1` |
-| Narration alias | A written word or phrase and how the voice says it ("Dr." as "Doctor"). It changes only what the voice is sent; the article, transcript and captions keep the written form. It is kept in Library → Aliases and copied into a run. | `packages/app/src/kernel/ports/narration-aliases.ts:1-8`; `packages/app/src/slices/narration/aliases.ts:9-12`; `packages/app/src/slices/admission/model.ts:154-155` |
+| Narration alias | A written word or phrase and how the voice says it ("Dr." as "Doctor"). It changes only what the voice is sent; the article, transcript and captions keep the written form. It is kept in Library → Narration aliases and copied into a run. | `packages/app/src/kernel/ports/narration-aliases.ts:1-8`; `packages/app/src/slices/narration/aliases.ts:9-12`; `packages/app/src/slices/admission/model.ts:154-155` |
 | Pronunciation Glossary, shared glossary | Model-written IPA pronunciations for a project's terms. The shared glossary is every other project's copy, merged, taken at start. | `packages/app/src/slices/narration/pronunciation.ts:8-9`; `packages/app/src/slices/narration/shared-glossary.ts:7-10` |
 | Narration Preparation | A model pass that turns the clean text into what the voice is sent, aware of aliases, language and speaker. | `packages/app/src/slices/narration/preparation.ts:96-101` |
 | Pauses | A minimum silence between sentences, added in the join before word timing so captions, cuts and shorts stay in step. | `packages/app/src/slices/narration/pauses-model.ts:1-7` |

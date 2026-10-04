@@ -55,7 +55,12 @@ export function NarrationPreparation({
         <p id={`${id}-error`} className="text-small text-danger">
           {issue}
         </p>
-      ) : null}
+      ) : (
+        <p className="m-0 text-small text-ink-2">
+          Adds delivery directions, such as a sigh or a laugh, before the voice reads. The words
+          stay the same.
+        </p>
+      )}
       {libraryLinks ? (
         <div className="flex gap-4 text-small">
           <Link to="/prompts/new" search={{ kind: "narration" }}>

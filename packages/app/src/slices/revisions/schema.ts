@@ -112,6 +112,7 @@ export const revisionContentSchema = z
       )
       .optional(),
     ambientBed: id.optional(),
+    thumbnailOverrides: z.partialRecord(z.enum(["1", "2", "3"]), id).optional(),
   })
   .strict();
 export const revisionEditSchema = z
@@ -134,6 +135,9 @@ export const revisionEditSchema = z
               z.object({ kind: z.literal("image"), imageKey: id }).strict(),
               z.object({ kind: z.literal("narration"), key: workKey }).strict(),
               z.object({ kind: z.literal("shortsMusic") }).strict(),
+              z
+                .object({ kind: z.literal("thumbnail"), variant: z.number().int().min(1).max(3) })
+                .strict(),
             ]),
           })
           .strict(),

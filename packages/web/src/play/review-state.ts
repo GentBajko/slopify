@@ -258,7 +258,7 @@ export function createReviewOwner({
         publish({
           uncertain: true,
           valid: false,
-          error: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the start")} The run may already have started. Press Check Start result to find out before trying again.`,
+          error: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the start")} The run may already have started. Press Check whether it started to find out before trying again.`,
         });
       } finally {
         publish({ starting: false });
@@ -278,7 +278,7 @@ function videos(count: number): string {
 // the page's videos, so the button and Start count the same runs.
 export function startLabel(review: ReviewState, document: PlayDraftDocument): string {
   if (review.starting) return "Starting…";
-  if (review.uncertain) return "Check Start result";
+  if (review.uncertain) return "Check whether it started";
   const count = review.valid && review.receipt ? review.receipt.runs.length : pageVideos(document);
   if (count === 1) return "Start run";
   return queued(document) ? `Queue ${count} videos` : `Start ${count} videos`;

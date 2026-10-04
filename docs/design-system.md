@@ -49,7 +49,10 @@ stays only as the Radix parts `kit/dialog` is built on.
 ## Components
 
 `kit/button` (Button: primary, secondary, quiet, destructive, icon; small; `disabledReason`;
-IconButton; PlayKey; ButtonRow) · `kit/link` (ButtonLink and TextLink for router links,
+`focusableWhenDisabled` for a reason the person needs to go on ("Cancel the run first, then
+delete it."): the button stays in the tab order with `aria-disabled`, refuses presses, and its
+reason is its description and the tooltip on hover and keyboard focus; IconButton; PlayKey;
+ButtonRow) · `kit/link` (ButtonLink and TextLink for router links,
 FileLink for a download or a file opened in a new tab; see Links and buttons) · `kit/field` (Field wires label, help and error into its
 control's `id`, `aria-describedby` and `aria-invalid`, and `tip` puts the info button beside
 the label; Input, Select, Textarea, Code) · `kit/switch` (Switch, Segmented, both with `tip`) ·
@@ -63,11 +66,18 @@ and `actions` for the picture shown) · `kit/player` (Player, see below) · `kit
 RailButton) · `kit/steps` · `kit/next-action` · `kit/callout` (danger, waiting, info, with
 actions) · `kit/list-row` (List, ListRow with visible actions and an inline body; the whole row is its
 target; `hitArea` and `hitTarget` for a row or card made by hand) · `kit/stats` (Stats, Stat,
-Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, `dismissible={false}` for a one-action notice; ConfirmDialog) · `kit/toast`
-· `kit/empty-state` · `kit/reading-view` (contents from `##` headings, search that marks every
+Meter, DataTable; a Meter is a quantity in a range, a plan limit or disk space, and
+`progress` makes it a progress bar for a task moving towards done: a run, a copy, an upload) · `kit/command-palette` · `kit/dialog` (Dialog, `dismissible={false}` for a one-action notice; ConfirmDialog) · `kit/toast` (below)
+· `kit/query-state` (QueryState, LoadingBlock, LoadFailed, StaleNote: a region of fetched data
+is loading, failed with Retry in place and the fix, stale with when it last loaded, or loaded;
+a failed first load never reads as an empty list) · `kit/empty-state` · `kit/reading-view` (contents from `##` headings, search that marks every
 hit and steps through them, copy one section or all as Markdown; the one reading view, used by
 the project page too, where `regionLabel` puts the text in a scrolling region) · `kit/layout`
-(PageHeader, Workspace, ListDetail, Rule) · `kit/facts` (Facts and Fact: label left in ink-2,
+(PageHeader, Workspace, ListDetail, Rule) · `components/selection.tsx` (bulk selection for a
+collection: `useSelection`, RowCheck with a 24px target round its 16px box, Shift+click for a
+range, Space to toggle, Esc to clear; SelectionBar with an indeterminate Select all, "2 of 14
+projects selected", the bulk actions disabled until something is ticked, and Clear selection;
+used by Projects, Trash and the topic lists) · `kit/facts` (Facts and Fact: label left in ink-2,
 value right, a definition list for "Voice · Chunking" or a theme's details) · `kit/board` (Board and BoardColumn: `main-side`
 for Home, `aside` for the calendar beside its suggestions, `even`; stacked below 1024px).
 
@@ -136,7 +146,10 @@ while it is open.
 
 From anywhere (`components/global-commands.tsx`, searched only): "Open ‹project›", "Regenerate
 image N in ‹project›" (opens the project on Images and asks to regenerate that image, as the
-button does), New schedule and Add to calendar. A command that finishes on another screen
+button does), New schedule and Add to calendar. The Library and the plans by name
+(`components/entity-commands.tsx`): Open template ‹name› (Templates with it shown beside the
+list, `?item=`), Edit prompt ‹name›, Edit intro or outro ‹name›, Edit PDF theme ‹name›, Open
+schedule ‹name›, Open channel ‹name›. A command that finishes on another screen
 navigates there and leaves an intent that screen takes once loaded (`lib/intents.ts`).
 
 ### Keyboard shortcuts
@@ -152,9 +165,9 @@ keyboard shortcuts" lists every key that works on the current screen.
 | --- | --- |
 | Ctrl+K | Search or run a command |
 | ? | Show keyboard shortcuts |
-| C | New project |
+| C | Create (Play) |
 | G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings |
-| / | Search the list (Projects, Prompts, Intros and outros) |
+| / | Search the list (Projects, Prompts, Intros & outros) |
 | Shift+N | The project's next action (Soften and retry still asks at its button) |
 | Shift+D | Copy the YouTube description |
 | Ctrl+Enter | Play: review the whole setup |
@@ -162,19 +175,58 @@ keyboard shortcuts" lists every key that works on the current screen.
 
 ### Shell
 
-A 232px rail (wordmark, the palette button, Home `/`, Projects `/projects`, Calendar,
-Channels, Library, Settings, the channel picker and the New project key), a thin top bar, and the
-page up to 1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out) and
-Home carries the channel picker itself.
-
-The channel picker (`channels/current.tsx`) is the current channel: Home, the calendar and
-Projects show only its work, or every channel's. `useCurrentChannel().includes(channelId)`
-answers whether something is in view; the choice is kept per browser. Every destination, each
-channel ("Switch to …") and New project are Ctrl+K commands; each screen adds its own actions.
+A 232px rail (`--rail-width`: wordmark, the palette button, Home `/`, Projects `/projects`,
+Calendar, Channels, Library, Settings, the channel picker and the Create key), a thin top bar,
+and the page up to 1680px. Below 768px the rail becomes a bottom bar of all six destinations
+(Channels included, so nothing is reachable only through Ctrl+K on a phone) and Home carries the
+channel picker itself.
 
 The rail's surface and hairline are painted on the shell itself as well (`.sl-app`'s
 background), so on a long page the rail's column never ends at the first screen, even where
 `position: sticky` gives up.
+
+The channel picker (`channels/current.tsx`) is the current channel: Home, the calendar and
+Projects show only its work, or every channel's. `useCurrentChannel().includes(channelId)`
+answers whether something is in view; the choice is kept per browser. Every destination, each
+channel ("Switch to …") and Create are Ctrl+K commands; each screen adds its own actions.
+
+**Connection status** (`components/connection-status.tsx`). The page hears every change over
+one event stream; while it is down, counts and progress would look current. A drop longer than
+1.5 s shows "Reconnecting… Numbers on this page may be out of date." in one line pinned to the
+top of the window; after 20 s it says Slopify can't be reached and to check that it is still
+running; the browser going offline says Offline. When the stream is back the shell reloads every
+list and the line says "Back online. The page is up to date." for 4 s. The line is a polite
+live region, empty while live.
+
+**Library** groups its tabs: Setups (Templates), Building blocks (Prompts, Intros & outros, PDF
+themes, Narration aliases) and Results (A/B results), each tab at its own URL
+(`routes/library.tsx`). **Settings** is seven groups in its rail, a group with several sections
+showing them as tabs (`routes/settings-sections.ts`): Connections (Providers, Voices, Models),
+Production defaults, Notifications, Publishing (Channel links, YouTube Studio), Backup & storage
+(Backup & storage, Trash), General, About (About, Usage, Patch notes). An old `?section=` still
+opens the same place.
+
+**Projects** (`routes/projects.tsx`). Search, the Show filter and the order (Newest first,
+Recently changed, Name, Status) are in the address (`?q=`, `?show=`, `?sort=`). Fifty rows are
+drawn, then Show more. Each row has a checkbox; the selection bar above the list marks the
+ticked videos uploaded (or not), moves them to another channel and deletes them to the trash,
+each with Undo in its toast. There is no bulk re-run: re-running costs money per project and
+needs its own scope and cost review first. A row offers Undo upload mark for a day after Mark
+uploaded; after that the Uploaded badge stays and the selection bar's Mark not uploaded
+reverses it. A long name is cut short with its full text on hover.
+
+**Welcome.** `/welcome` is three steps in order (What you have, Pick a style, Make your first
+short), drawn as `kit/steps` with the current one marked and Back and Next in the action bar,
+not as tabs. After it is skipped it stays reachable from Help → Tutorials (Welcome screen) and
+Ctrl+K (Open the welcome screen).
+
+### Toasts
+
+Acknowledgements are toasts (`kit/toast`), bottom right, above the bottom bar on a phone. A
+plain toast stays 5 s; one with an action (Undo) stays 15 s; an error stays until it is
+dismissed. Nothing leaves while the pointer is over the toasts or focus is inside them. An
+action that can be taken back says so in its toast with Undo: a project or a selection moved to
+the trash (Undo restores it from the trash), Mark uploaded, a move to another channel.
 
 ### The project page
 
@@ -208,8 +260,10 @@ C captions, 0–9 jump to that tenth. Seek and volume are sliders whose value re
 ("12:40 of 2:04:11"). Props: `src`, `poster`, `label`, `portrait` (9:16), `captions`,
 `chapters` (`{ start, title }[]`), `ref` to the `<video>`, `className`, `children`. The screen is
 dark in both themes, so the bar's colours are fixed. A narrow player puts the track on its own
-row and drops time, volume and speed; the keys still do all of it. Making a whole stage again is rare, so it sits
-behind each section's More, confirmed first.
+row and drops time, volume and speed; the keys still do all of it. Making a whole stage again is a
+small secondary button in its section's head ("Make all images again"), named for its result and
+confirmed first with what it replaces and costs: a person who wants it should see how, not hunt
+behind a menu. The full review of outdated work (Choose what to remake…) stays in More.
 
 ### Controls that say what they do: the next action
 
@@ -237,7 +291,7 @@ The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI offers C
 command (`codex login`, `claude auth login`) and Check again, which asks that CLI alone whether
 it is signed in (`POST /api/providers/health?provider=`) and then tries the step again; a refused image prompt offers Soften and retry (confirmed); a
 refused text prompt and a retired model open the settings (Edit the prompt, Switch model); a
-rejected key links to Settings → Providers → the provider; a full disk to Settings → Storage.
+rejected key links to Settings → Providers → the provider; a full disk to Settings → Backup & storage.
 The same rules and buttons (`fixes/fix-actions.tsx`) serve a schedule's failed topic generation
 (Check again asks for topics again) and a cast picture that could not be made (Check again
 makes it again; a refused prompt offers Reword the picture). Home's Needs you offers Copy
@@ -301,7 +355,26 @@ The regenerate confirmation stays: it spends money on a paid model and cannot be
 ## Rules in short
 
 - **Voice.** Name actions for their result ("Remake 3 outdated images", never "Submit" or
-  "OK"). Errors say what failed, why, and the one thing that fixes it, with the fix as the
+  "OK").
+- **Action words.** *Regenerate* makes one piece again with its provider (an image, a
+  thumbnail, a narration chunk, a card) and costs a call. *Remake* brings outdated outputs up
+  to date after an edit (Remake 3 outdated images, Choose what to remake…). A whole stage made
+  from scratch says so in plain words ("Make all images again", "Write the article again").
+  *Render* assembles the video or PDF on this computer from what is already made, with no
+  provider call. A stopped run is *Continue the run*; a schedule is *Pause*/*Resume*.
+  *Delete* sends a thing to the trash or removes it for good (the dialog says which);
+  *Remove* takes an item out of a list or an unsaved form; *Discard* throws away unsaved edits.
+- **Confirm dialogs.** The title names the object ("Delete “Cleopatra”?"), the one sentence
+  names the consequence, the action button repeats the verb with its object (Delete project).
+  A destructive dialog's way out keeps the thing ("Keep it", "Keep them", "Keep running"),
+  which `ConfirmDialog` uses by default; a neutral dialog's way out is "Cancel".
+- **States.** One word per state everywhere (`lib/state-words.ts`): a project not started is
+  Queued, a held one is Waiting for your review, a finished one with a failed step is Done with
+  problems, a step a setting turned off is Off, a failed step retrying by itself is Waiting to
+  try again. Provider readiness reads as Settings → Providers says it: No key, Not found,
+  Signed out, Needs an update, Needs attention. Spelling is en-US: canceled.
+- **Dates.** `startedAt` (clock time today, the date otherwise, the year when not this year)
+  and `shortDate` from `lib/utils`; a short or relative time carries `exactTime` as its title. Errors say what failed, why, and the one thing that fixes it, with the fix as the
   button. Sentence case; "you" for the person; exact numbers with units; no emoji, no
   exclamation marks.
 - **Colour.** `ground` behind the page, one `surface` for the working area, `raised` only for

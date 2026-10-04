@@ -1,115 +1,72 @@
-import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { bookLabel } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
-import { type ReactElement, useRef, useState } from "react";
-import { moveProjectsToChannel, removeProject } from "@/api";
+import { PlusIcon, SearchIcon } from "lucide-react";
+import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
+import { List } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Meter, Stat, Stats } from "@/components/kit/stats";
-import { Badge, Status, type Tone } from "@/components/kit/status";
+import { Stat, Stats } from "@/components/kit/stats";
 import { Segmented } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { RowCheck, useSelection } from "@/components/selection";
 import { markUploaded } from "@/home/api";
-import { isWaiting } from "@/home/needs-you";
-import { isReadyToUpload } from "@/home/ready";
-import { isQueued } from "@/home/running-more";
-import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
-import { limitWaitLine } from "@/project/limit-wait";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
+import { ProjectsBulkBar, restoreProjects } from "./projects-bulk";
+import {
+  filters,
+  matches,
+  type ProjectFilter,
+  type ProjectSort,
+  projectsPage,
+  sortOptions,
+  sortProjects,
+} from "./projects-order";
+import { ProjectRow, SkeletonRows } from "./projects-row";
 
-// Every run ever started, newest first, for the channel picked in the rail. Each row says what
-// the run was made of, when it started and where it stands, with its actions visible on it.
+// Every run ever started, newest first unless another order is picked, for the channel picked
+// in the rail. Each row says what the run was made of, when it started and where it stands,
+// with its actions visible on it; ticked rows share a selection bar (projects-bulk.tsx).
 // Beside the list on a desktop: the counts per state, and where the video queue is (the
 // calendar, which shows it once for every screen).
 
-const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
-export type ProjectFilter = (typeof filterValues)[number];
-type Filter = ProjectFilter;
-
-// The `?show=` search value Home's links use ("See all 5 running"); anything else is All.
-export function projectFilterOf(value: unknown): ProjectFilter | undefined {
-  return filterValues.find((one) => one === value);
-}
-
-const filters: readonly { readonly value: Filter; readonly label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "running", label: "Running" },
-  { value: "queued", label: "Queued" },
-  { value: "waiting", label: "Needs you" },
-  { value: "ready", label: "Ready to upload" },
-  { value: "failed", label: "Failed" },
-];
-
-function matches(project: ProjectListing, filter: Filter): boolean {
-  switch (filter) {
-    case "all":
-      return true;
-    case "running":
-      return project.status === "running" || project.status === "paused";
-    case "queued":
-      return isQueued(project);
-    case "waiting":
-      return isWaiting(project);
-    case "ready":
-      return isReadyToUpload(project);
-    case "failed":
-      return project.status === "failed" || project.status === "partial";
-  }
-}
-
-// The state in words, with its lamp.
-export function stateOf(project: ProjectListing): { readonly tone: Tone; readonly word: string } {
-  const words: Readonly<Record<ProjectState, { readonly tone: Tone; readonly word: string }>> = {
-    running: { tone: "running", word: "Running" },
-    paused: { tone: "waiting", word: "Paused" },
-    pending: { tone: "off", word: "Queued" },
-    failed: { tone: "failed", word: "Failed" },
-    partial: { tone: "info", word: "Done with problems" },
-    done: { tone: "done", word: "Done" },
-    canceled: { tone: "off", word: "Canceled" },
-  };
-  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
-  if (project.status === "pending" && project.setAside === true)
-    return { tone: "done", word: "Kept as is" };
-  // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
-  const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
-  return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
-}
-
-// "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
-// generated no article from a template names only its format.
-export function madeOf(project: ProjectListing): string {
-  const prompt = project.config.articlePrompt;
-  const book = project.config.voices?.book;
-  return [
-    book === undefined ? undefined : bookLabel(book),
-    prompt === undefined || prompt === "" ? undefined : prompt,
-    project.format,
-  ]
-    .filter((part) => part !== undefined)
-    .join(" · ");
-}
+export {
+  type ProjectFilter,
+  type ProjectSort,
+  projectFilterOf,
+  projectSortOf,
+} from "./projects-order";
+export { madeOf, stateOf } from "./projects-row";
 
 export function ProjectsRoute({
   initialFilter = "all",
+  filter: shownFilter,
+  query,
+  sort: shownSort,
+  onFilter,
+  onQuery,
+  onSort,
 }: {
   readonly initialFilter?: ProjectFilter;
+  // The filter, search words and order from the address (router.tsx); left out, the list
+  // keeps its own.
+  readonly filter?: ProjectFilter;
+  readonly query?: string;
+  readonly sort?: ProjectSort;
+  readonly onFilter?: (filter: ProjectFilter) => void;
+  readonly onQuery?: (query: string) => void;
+  readonly onSort?: (sort: ProjectSort) => void;
 } = {}): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -117,18 +74,44 @@ export function ProjectsRoute({
   const current = useCurrentChannel();
   const projects = useQuery(projectsQuery(api));
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
-  const [filter, setFilter] = useState<Filter>(initialFilter);
+  const [ownFilter, setOwnFilter] = useState<ProjectFilter>(initialFilter);
+  const filter = shownFilter ?? ownFilter;
+  const setFilter = (next: ProjectFilter) => {
+    setOwnFilter(next);
+    onFilter?.(next);
+  };
   // The bundled sample projects carry a Sample badge.
   const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
   const samples = new Set(
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
-  const [search, setSearch] = useState("");
+  // Typed here at once; the address follows a moment later, so it is not rewritten per key.
+  const [search, setOwnSearch] = useState(query ?? "");
+  const queryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(queryTimer.current), []);
+  const setSearch = (next: string) => {
+    setOwnSearch(next);
+    if (onQuery === undefined) return;
+    clearTimeout(queryTimer.current);
+    queryTimer.current = setTimeout(() => onQuery(next), 300);
+  };
+  const [ownSort, setOwnSort] = useState<ProjectSort>("newest");
+  const sort = shownSort ?? ownSort;
+  const setSort = (next: ProjectSort) => {
+    setOwnSort(next);
+    onSort?.(next);
+  };
+  const [limit, setLimit] = useState(projectsPage);
   const searchBox = useRef<HTMLInputElement>(null);
   const searchKeys = useSearchShortcut(searchBox, "projects");
 
   const remove = useMutation({
-    mutationFn: (id: string) => removeProject(api, id),
+    mutationFn: (project: ProjectListing) => removeProject(api, project.id),
+    onSuccess: (_, project) =>
+      notify(`Moved "${project.title}" to the trash.`, "success", {
+        label: "Undo",
+        run: () => void restoreProjects(api, queryClient, notify, [project]),
+      }),
     onSettled: async () => {
       setDeleting(undefined);
       await queryClient.invalidateQueries({ queryKey: keys.projects });
@@ -137,6 +120,16 @@ export function ProjectsRoute({
   const uploaded = useMutation({
     mutationFn: (input: { readonly project: ProjectListing; readonly uploaded: boolean }) =>
       markUploaded(api, input.project.id, input.uploaded),
+    onSuccess: (_, input) =>
+      notify(
+        input.uploaded
+          ? `Marked uploaded: ${input.project.title}.`
+          : `${input.project.title} is back on Ready to upload.`,
+        "success",
+        input.uploaded
+          ? { label: "Undo", run: () => uploaded.mutate({ ...input, uploaded: false }) }
+          : undefined,
+      ),
     onError: (error: Error, input) =>
       notify(
         `${input.project.title} wasn't changed: ${error.message} Press the button again.`,
@@ -173,9 +166,20 @@ export function ProjectsRoute({
     current.includes(one.channelId),
   );
   const needle = search.trim().toLowerCase();
-  const shown = inChannel.filter(
-    (one) => matches(one, filter) && (needle === "" || one.title.toLowerCase().includes(needle)),
+  const matching = sortProjects(
+    inChannel.filter(
+      (one) => matches(one, filter) && (needle === "" || one.title.toLowerCase().includes(needle)),
+    ),
+    sort,
   );
+  // A new filter, search or order starts from the first page again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is keyed on what changed, not read inside.
+  useEffect(() => setLimit(projectsPage), [filter, needle, sort]);
+  const shown = matching.slice(0, limit);
+  // Keyed on the ids, so a refetch with the same rows keeps the selection's range anchor.
+  const shownIds = shown.map((one) => one.id).join("\n");
+  const shownKeys = useMemo(() => (shownIds === "" ? [] : shownIds.split("\n")), [shownIds]);
+  const selection = useSelection(shownKeys);
 
   return (
     <div>
@@ -189,7 +193,7 @@ export function ProjectsRoute({
         actions={
           <ButtonLink to="/play" variant="primary">
             <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-            New project
+            Create
           </ButtonLink>
         }
       />
@@ -245,6 +249,16 @@ export function ProjectsRoute({
                 onChange={setFilter}
                 className="max-w-full overflow-x-auto"
               />
+              <Select
+                aria-label="Sort projects"
+                className="w-auto"
+                value={sort}
+                onChange={(event) => {
+                  const next = sortOptions.find((one) => one.value === event.currentTarget.value);
+                  if (next !== undefined) setSort(next.value);
+                }}
+                options={sortOptions}
+              />
             </div>
             {shown.length === 0 ? (
               <p className="m-0 text-ink-2">
@@ -254,45 +268,71 @@ export function ProjectsRoute({
               </p>
             ) : (
               <>
-                <MoveShown projects={shown} />
-                {(current.channel === undefined && current.channels.length > 1
-                  ? current.channels
-                      .map((channel) => ({
-                        channel,
-                        projects: shown.filter(
-                          (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
-                        ),
-                      }))
-                      .filter((group) => group.projects.length > 0)
-                  : [{ channel: undefined, projects: shown }]
-                ).map((group) => (
-                  <section
-                    key={group.channel?.id ?? "all"}
-                    aria-label={group.channel?.name ?? "Projects"}
-                    className="flex flex-col gap-2"
-                  >
-                    {group.channel === undefined ? null : (
-                      <SectionHead
-                        as="h3"
-                        size="small"
-                        title={group.channel.name}
-                        meta={`${String(group.projects.length)} ${group.projects.length === 1 ? "project" : "projects"}`}
-                      />
-                    )}
-                    <List label={group.channel?.name ?? "Projects"}>
-                      {group.projects.map((project) => (
-                        <ProjectRow
-                          key={project.id}
-                          project={project}
-                          sample={samples.has(project.id)}
-                          onDelete={() => setDeleting(project)}
-                          onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
-                          busy={uploaded.isPending}
+                {/* biome-ignore lint/a11y/noStaticElementInteractions: Esc clears the selection anywhere in the list; each row keeps its own controls. */}
+                <div onKeyDown={selection.onKeyDown} className="flex flex-col gap-4">
+                  <ProjectsBulkBar
+                    selection={selection}
+                    rows={shown}
+                    {...(shown.length < inChannel.length
+                      ? { scope: `Select all ${String(shown.length)} shown` }
+                      : {})}
+                  />
+                  {(current.channel === undefined && current.channels.length > 1
+                    ? current.channels
+                        .map((channel) => ({
+                          channel,
+                          projects: shown.filter(
+                            (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
+                          ),
+                        }))
+                        .filter((group) => group.projects.length > 0)
+                    : [{ channel: undefined, projects: shown }]
+                  ).map((group) => (
+                    <section
+                      key={group.channel?.id ?? "all"}
+                      aria-label={group.channel?.name ?? "Projects"}
+                      className="flex flex-col gap-2"
+                    >
+                      {group.channel === undefined ? null : (
+                        <SectionHead
+                          as="h3"
+                          size="small"
+                          title={group.channel.name}
+                          meta={`${String(group.projects.length)} ${group.projects.length === 1 ? "project" : "projects"}`}
                         />
-                      ))}
-                    </List>
-                  </section>
-                ))}
+                      )}
+                      <List label={group.channel?.name ?? "Projects"}>
+                        {group.projects.map((project) => (
+                          <ProjectRow
+                            key={project.id}
+                            project={project}
+                            sample={samples.has(project.id)}
+                            check={
+                              <RowCheck
+                                selection={selection}
+                                value={project.id}
+                                label={project.title}
+                              />
+                            }
+                            onDelete={() => setDeleting(project)}
+                            onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
+                            busy={uploaded.isPending}
+                          />
+                        ))}
+                      </List>
+                    </section>
+                  ))}
+                </div>
+                {matching.length > shown.length ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button size="small" onClick={() => setLimit((now) => now + projectsPage)}>
+                      {`Show ${String(Math.min(projectsPage, matching.length - shown.length))} more`}
+                    </Button>
+                    <span className="text-small text-ink-2 tabular-nums">
+                      {`${String(shown.length)} of ${String(matching.length)} shown`}
+                    </span>
+                  </div>
+                ) : null}
               </>
             )}
           </BoardColumn>
@@ -336,194 +376,14 @@ export function ProjectsRoute({
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.title}"?`}
         // Settings → Trash puts it back, or removes the rows and the folder for good.
-        consequence="Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash."
+        consequence="Moves the project to the trash for 30 days. Undo brings it back, or restore it later in Settings → Backup & storage → Trash."
         confirmLabel="Delete project"
         cancelLabel="Keep it"
         pending={remove.isPending}
         onConfirm={() => {
-          if (deleting !== undefined) remove.mutate(deleting.id);
+          if (deleting !== undefined) remove.mutate(deleting);
         }}
         onCancel={() => setDeleting(undefined)}
-      />
-    </div>
-  );
-}
-
-function ProjectRow({
-  project,
-  sample,
-  onDelete,
-  onUploaded,
-  busy,
-}: {
-  readonly project: ProjectListing;
-  readonly sample: boolean;
-  readonly onDelete: () => void;
-  readonly onUploaded: (uploaded: boolean) => void;
-  readonly busy: boolean;
-}): ReactElement {
-  const state = stateOf(project);
-  // The server refuses a delete while the project is running, so the button says why instead.
-  const running = project.status === "running";
-  return (
-    <ListRow
-      title={
-        <span className="flex flex-wrap items-center gap-2">
-          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-            {project.title}
-          </Link>
-          {sample ? <Badge>Sample</Badge> : null}
-        </span>
-      }
-      meta={
-        <span className="flex flex-col gap-1">
-          <span>
-            {`${madeOf(project)} · started ${startedAt(project.createdAt)}`}
-            {project.views === undefined
-              ? ""
-              : ` · ${project.views.toLocaleString()} views${project.ctr === undefined ? "" : ` · ${String(project.ctr)}% CTR`}`}
-          </span>
-          {running ? (
-            <Meter
-              value={project.progress}
-              label={`${project.title} progress`}
-              valueText={`${String(Math.round(project.progress * 100))}% done`}
-              className="max-w-[240px]"
-            />
-          ) : null}
-        </span>
-      }
-      actions={
-        <>
-          <Status tone={state.tone}>
-            {state.word}
-            <span className="sr-only" role="status" aria-live="polite">
-              {`${project.title}: ${state.word}`}
-            </span>
-          </Status>
-          {isReadyToUpload(project) ? (
-            <Button
-              variant="quiet"
-              size="small"
-              disabled={busy}
-              disabledReason="Saving…"
-              onClick={() => onUploaded(true)}
-            >
-              Mark uploaded
-            </Button>
-          ) : null}
-          {isReadyToUpload(project) ? (
-            <InfoTip id="project.mark-uploaded" />
-          ) : project.uploadedAt !== null ? (
-            <>
-              <Badge>Uploaded</Badge>
-              <Button
-                variant="quiet"
-                size="small"
-                aria-label={`Mark ${project.title} not uploaded`}
-                disabled={busy}
-                disabledReason="Saving…"
-                onClick={() => onUploaded(false)}
-              >
-                Undo
-              </Button>
-            </>
-          ) : null}
-          <IconButton
-            label={`Delete ${project.title}`}
-            size="small"
-            disabled={running}
-            disabledReason="Cancel the run first, then delete it."
-            onClick={onDelete}
-          >
-            <Trash2Icon aria-hidden="true" strokeWidth={1.75} />
-          </IconButton>
-        </>
-      }
-    />
-  );
-}
-
-// Skeletons match the final layout's shape.
-function SkeletonRows(): ReactElement {
-  return (
-    <ul aria-label="Loading projects" className="sl-list m-0 list-none p-0">
-      {[0, 1, 2, 3, 4, 5].map((index) => (
-        <li key={index} className="sl-row" data-slot="skeleton-row">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <span className="h-3 w-2/5 rounded-control bg-sunken" />
-            <span className="h-[10px] w-1/4 rounded-control bg-sunken" />
-          </div>
-          <span className="h-[10px] w-16 rounded-control bg-sunken" />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// "Move the 67 shown to [channel]": every project the list shows now (a search such as
-// "ground." narrows it) goes to the chosen channel. Asks first when it is more than one.
-function MoveShown({
-  projects,
-}: {
-  readonly projects: readonly ProjectListing[];
-}): ReactElement | null {
-  const { api } = useApp();
-  const client = useQueryClient();
-  const notify = useToast();
-  const current = useCurrentChannel();
-  const [target, setTarget] = useState("");
-  const [asking, setAsking] = useState(false);
-  const move = useMutation({
-    mutationFn: () =>
-      moveProjectsToChannel(
-        api,
-        projects.map((one) => one.id),
-        target,
-      ),
-    onSuccess: (answer) => {
-      void client.invalidateQueries({ queryKey: keys.projects });
-      const name = current.channels.find((one) => one.id === target)?.name ?? "the channel";
-      notify(`Moved ${String(answer.moved)} projects to ${name}.`, "success");
-      setTarget("");
-    },
-    onError: (error: Error) => notify(`The projects weren't moved: ${error.message}`, "error"),
-  });
-  if (current.channels.length < 2 || projects.length === 0) return null;
-  const name = current.channels.find((one) => one.id === target)?.name ?? "";
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-small text-ink-2">
-      <span>{`Move the ${String(projects.length)} shown to`}</span>
-      <Select
-        aria-label="Channel to move the shown projects to"
-        className="w-[220px]"
-        value={target}
-        onChange={(event) => setTarget(event.currentTarget.value)}
-        options={[
-          { value: "", label: "Choose a channel" },
-          ...current.channels.map((one) => ({ value: one.id, label: one.name })),
-        ]}
-      />
-      <Button
-        type="button"
-        variant="secondary"
-        size="small"
-        disabled={target === "" || move.isPending}
-        onClick={() => (projects.length > 1 ? setAsking(true) : move.mutate())}
-      >
-        Move
-      </Button>
-      <ConfirmDialog
-        open={asking}
-        title={`Move ${String(projects.length)} projects to ${name}?`}
-        confirmLabel="Move them"
-        tone="primary"
-        consequence={`Every project the list shows now goes to ${name}, from ${projects[0]?.title ?? ""} to ${projects.at(-1)?.title ?? ""}. You can move them back the same way.`}
-        onConfirm={() => {
-          setAsking(false);
-          move.mutate();
-        }}
-        onCancel={() => setAsking(false)}
       />
     </div>
   );

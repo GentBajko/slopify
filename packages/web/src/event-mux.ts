@@ -40,11 +40,21 @@ interface StandIn {
   readonly opens: Set<() => void>;
 }
 
-export function createEventMux(open: OpenEvents): OpenEvents {
+// A stream the browser gave up on (`readyState` CLOSED: the server answered with an error, or
+// a proxy in front of a stopped app did) is never retried by the browser, so it is opened
+// again here, waiting longer each time up to half a minute.
+const closed = 2;
+const retryMs = (attempt: number): number => Math.min(30_000, 1000 * 2 ** attempt);
+
+export function createEventMux(
+  open: OpenEvents,
+  schedule: (run: () => void, ms: number) => unknown = (run, ms) => setTimeout(run, ms),
+): OpenEvents {
   const standIns = new Set<StandIn>();
   const previews = createPreviewCache();
   let source: EventSourceLike | undefined;
   let opened = false;
+  let attempts = 0;
 
   const deliver = (standIn: StandIn, name: string, data: string): void => {
     for (const listener of standIn.listeners.get(name) ?? [])
@@ -57,7 +67,22 @@ export function createEventMux(open: OpenEvents): OpenEvents {
     source = real;
     real.addEventListener("open", () => {
       opened = true;
+      attempts = 0;
       for (const standIn of [...standIns]) for (const listener of standIn.opens) listener();
+    });
+    // Every view hears that the connection dropped, so the page can say its numbers may be
+    // out of date until the next "open".
+    real.addEventListener("error", () => {
+      if (source !== real) return;
+      for (const standIn of [...standIns]) deliver(standIn, "error", "");
+      if (real.readyState !== closed) return;
+      real.close();
+      source = undefined;
+      const wait = retryMs(attempts);
+      attempts += 1;
+      schedule(() => {
+        if (source === undefined && standIns.size > 0) connect(wanted);
+      }, wait);
     });
     for (const name of names)
       real.addEventListener(name, (message) => {

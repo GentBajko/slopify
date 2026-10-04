@@ -140,3 +140,35 @@ describe("Existing videos tab", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });
+
+describe("Episodes tab search", () => {
+  it("finds episodes by title, cast or summary words", async () => {
+    const user = userEvent.setup();
+    const other: EpisodeMemory = {
+      ...memory,
+      id: "m2",
+      projectId: "p2",
+      title: "The Library Burns",
+      summary: "Scrolls on fire.",
+      cast: ["Hypatia"],
+    };
+    renderRouted(
+      <EpisodesTab channelId={id} />,
+      testDeps({
+        [`GET /api/channels/${id}/episodes`]: jsonAnswer({
+          enabled: true,
+          memories: [memory, other],
+        }),
+      }),
+    );
+    expect(await screen.findByText("Cleopatra Awakens")).not.toBeNull();
+    const search = screen.getByRole("searchbox", { name: "Search episode summaries" });
+    await user.type(search, "hypatia fire");
+    expect(screen.queryByText("Cleopatra Awakens")).toBeNull();
+    expect(screen.getByText("The Library Burns")).not.toBeNull();
+    expect(screen.getByText("1 of 2 match")).not.toBeNull();
+    await user.clear(search);
+    await user.type(search, "dragons");
+    expect(screen.getByText("No episode matches")).not.toBeNull();
+  });
+});

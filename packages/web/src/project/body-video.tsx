@@ -6,6 +6,7 @@ import { fitChapters } from "@app/slices/youtube/chapters.js";
 import { resolveFields, shownFields, splitDescription } from "@app/slices/youtube/edits.js";
 import { parseTimestamp } from "@app/slices/youtube/timestamps.js";
 import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
 import { readDescriptionEdits } from "@/api";
 import { useApp } from "@/app-context";
 import { useCommand } from "@/components/kit/command-palette";
@@ -17,6 +18,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { currentShorts, useShortClips } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import { MetaLine, StageBody, StageFiles, useOutputText } from "./parts.js";
+import { VideoReview } from "./review-video.js";
 import { useOutputMedia } from "./revision-media.js";
 import { activityText, capitalised, duration, percent, preparingSubtitles } from "./summary.js";
 import { WaveAudioPlayer } from "./waveform.js";
@@ -51,6 +53,11 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
   const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
+  // The transcript, chapter and omission times below play the file from there.
+  const played = useRef<HTMLMediaElement | null>(null);
+  const hold = (element: HTMLMediaElement | null) => {
+    played.current = element;
+  };
   const done = percent(stage.progressCurrent ?? 0, stage.progressTotal ?? 0);
   useCommand({
     id: "project.folder",
@@ -107,6 +114,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       ) : audioExport ? (
         <WaveAudioPlayer
           key={video.id}
+          ref={hold}
           label="Combined narration"
           src={media?.url}
           marks={chapters}
@@ -114,6 +122,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       ) : media === undefined ? null : (
         <Player
           key={video.id}
+          ref={hold}
           src={media.url}
           label="Generated video"
           {...(poster === undefined ? {} : { poster: poster.url })}
@@ -180,25 +189,15 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           {wordTimingUnavailable(project.config.language)}
         </p>
       )}
-      {video?.meta.subtitleOmissions?.length ? (
-        <details className="border-t border-line pt-3 text-small">
-          <summary className="cursor-pointer font-semibold">
-            Subtitles recovered after missing narration ({video.meta.subtitleOmissions.length})
-          </summary>
-          <p className="m-0 mt-2 text-ink-2">
-            These transcript passages could not be matched to the audio and were left out of the
-            captions. The audio is unchanged. Review these passages before sharing.
-          </p>
-          <ul className="m-0 mt-2 flex flex-col gap-2 pl-5">
-            {video.meta.subtitleOmissions.map((omission) => (
-              <li key={`${omission.start}-${omission.text}`}>
-                <strong>{new Date(omission.start * 1000).toISOString().slice(11, 19)}</strong> —{" "}
-                {omission.text}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      {video === undefined ? null : (
+        <VideoReview
+          project={project}
+          outputs={outputs}
+          media={played}
+          chapters={chapters}
+          omissions={video.meta.subtitleOmissions ?? []}
+        />
+      )}
       {subtitleControls ? (
         <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-small font-semibold">

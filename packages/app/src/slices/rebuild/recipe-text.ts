@@ -17,6 +17,7 @@ import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
+import { adaptationMessages } from "../voices/adaptation.js";
 import { attributionMessages } from "../voices/attribution.js";
 import { usesVoices } from "../voices/model.js";
 import { scriptMessages } from "../voices/script.js";
@@ -205,7 +206,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       ? undefined
       : {
           speakers: voices.speakers.map((speaker) => ({ id: speaker.id, name: speaker.name })),
-          attribute: !writesScript,
+          attribute: voices.source === "attribute",
         };
   // A pasted article, or with Article Off an empty one: nothing is written.
   const article =
@@ -259,7 +260,12 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   if (voices !== undefined && scriptCheck !== undefined) {
     if (writesScript) script = { text: endMatter?.body ?? null, dependsOn: [article.key] };
     else {
-      // An audiobook from a text: the text model hands the article's passages to speakers.
+      // An audiobook from a text: the text model hands the article's passages to speakers. Or,
+      // with `adapt`, it rewrites the article as a conversation; the article stays as written.
+      const spoken = (source: string) =>
+        voices.source === "adapt"
+          ? adaptationMessages(source, voices.format, voices.speakers)
+          : attributionMessages(source, voices.speakers);
       const attribute = recipe(
         context,
         "script:attribute",
@@ -271,17 +277,11 @@ export function textRecipes(context: RecipeContext): TextRecipes {
               operation: "script-attribution",
               template: [
                 article.fingerprint,
-                llmInputFingerprint(
-                  context,
-                  withLanguage(attributionMessages("", voices.speakers), config.language),
-                ),
+                llmInputFingerprint(context, withLanguage(spoken(""), config.language)),
               ],
             }
           : {
-              ...llmInput(
-                context,
-                withLanguage(attributionMessages(endMatter.body, voices.speakers), config.language),
-              ),
+              ...llmInput(context, withLanguage(spoken(endMatter.body), config.language)),
               script: scriptCheck,
             },
         [article.key],

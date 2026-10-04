@@ -204,7 +204,9 @@ function statusOf(
 ): string {
   if (readiness.issue !== undefined) return readiness.issue;
   if (!readiness.installed) {
-    return configured === null ? "Not found on PATH" : "Not found at saved path";
+    return configured === null
+      ? "Not found in the folders your terminal searches (PATH)"
+      : "Not found at the saved path";
   }
   return readiness.version === undefined ? "Installed" : `Installed, version ${readiness.version}`;
 }

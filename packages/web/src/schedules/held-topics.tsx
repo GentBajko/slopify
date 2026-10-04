@@ -1,42 +1,41 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
+import type { HeldTopic } from "@app/slices/schedules/schema.js";
 import { templateKeywords } from "@app/slices/schedules/topic-list.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Input } from "@/components/kit/field";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
-import { List, ListRow } from "@/components/kit/list-row";
+import { List } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { useToast } from "@/components/kit/toast";
+import { counted, SelectionBar, useSelection } from "@/components/selection";
 import { readProjectTemplate } from "@/templates/api";
 import {
   approveAllHeldTopics,
   approveHeldTopic,
+  approveHeldTopicsById,
   calendarKey,
   editHeldTopic,
   generateTopicsNow,
   heldTopicsKey,
   readHeldTopics,
-  rejectHeldTopic,
+  rejectHeldTopics,
+  restoreHeldTopics,
   type ScheduleReply,
   schedulesKey,
 } from "./api";
-import { formatScheduleDate } from "./time";
+import { type Editing, HeldTopicRow } from "./held-topic-row";
+import { formatScheduleDateZoned } from "./time";
 import { TopicFailure } from "./topic-failure";
 
-interface Editing {
-  readonly id: string;
-  readonly title: string;
-  readonly values: Readonly<Record<string, string>>;
-}
+export { heldValuesLine } from "./held-topic-row";
 
-// "Word Count: 12000 · Tone: calm": the keywords a held topic sets, under its title.
-export function heldValuesLine(values: Readonly<Record<string, string>>): string | undefined {
-  const set = Object.entries(values);
-  return set.length === 0 ? undefined : set.map(([name, value]) => `${name}: ${value}`).join(" · ");
-}
+const named = (topics: readonly HeldTopic[]): string =>
+  topics.length === 1 ? `“${topics[0]?.title ?? ""}”` : counted(topics.length, "topic", "topics");
 
 // A schedule's topic generation: what went wrong last, a button to ask now, and the topics
 // held for approval with a visible action on every row.
@@ -48,7 +47,9 @@ export function TopicGenerationPanel({
   const { api } = useApp();
   const client = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const notify = useToast();
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [confirmReject, setConfirmReject] = useState(false);
   const live =
     schedule.deletedAt === null && (schedule.status === "active" || schedule.status === "paused");
   const held = useQuery({
@@ -77,6 +78,8 @@ export function TopicGenerationPanel({
   );
   // What a keyword left empty falls back on: the schedule's every-run value, else the template's.
   const everyRun = (name: string): string => schedule.values[name] ?? form?.values[name] ?? "";
+  const rows = held.data ?? [];
+  const selection = useSelection(rows.map((topic) => topic.id));
   const action = useMutation({
     mutationFn: (job: () => Promise<ScheduleReply<unknown>>) => job(),
     onSuccess: (reply) => {
@@ -92,10 +95,54 @@ export function TopicGenerationPanel({
       ]);
     },
   });
+  const busy = action.isPending;
+  // A job whose success is announced, with Undo when it can be taken back.
+  const run = (
+    job: () => Promise<ScheduleReply<unknown>>,
+    done?: { readonly message: string; readonly undo?: () => void },
+  ) =>
+    action.mutate(job, {
+      onSuccess: (reply) => {
+        if (!reply.ok || done === undefined) return;
+        selection.clear();
+        notify(
+          done.message,
+          "success",
+          done.undo === undefined ? undefined : { label: "Undo", run: done.undo },
+        );
+      },
+    });
+  const reject = (topics: readonly HeldTopic[]) =>
+    run(
+      () =>
+        rejectHeldTopics(
+          api,
+          schedule.id,
+          topics.map((topic) => topic.id),
+        ),
+      {
+        message: `Turned down ${named(topics)}. Later generations won't suggest ${topics.length === 1 ? "it" : "them"} again.`,
+        undo: () =>
+          run(() => restoreHeldTopics(api, schedule.id, topics), {
+            message: `${named(topics)} ${topics.length === 1 ? "is" : "are"} waiting again.`,
+          }),
+      },
+    );
+  const approve = (topics: readonly HeldTopic[]) =>
+    run(
+      () =>
+        topics.length === 1 && topics[0] !== undefined
+          ? approveHeldTopic(api, schedule.id, topics[0].id)
+          : approveHeldTopicsById(
+              api,
+              schedule.id,
+              topics.map((topic) => topic.id),
+            ),
+      { message: `Approved ${named(topics)}: added to the end of the queue.` },
+    );
+  const picked = rows.filter((topic) => selection.has(topic.id));
   if (!live || schedule.topicGeneration.mode === "off") return null;
   const { topics } = schedule;
-  const busy = action.isPending;
-  const rows = held.data ?? [];
   return (
     <section aria-label="Topic generation">
       <Rule className="my-6" />
@@ -106,7 +153,7 @@ export function TopicGenerationPanel({
           topics.generatingSince !== null
             ? "Generating topics now…"
             : topics.generatedAt !== null
-              ? `Topics last generated ${formatScheduleDate(topics.generatedAt, schedule.timezone)}.`
+              ? `Topics last generated ${formatScheduleDateZoned(topics.generatedAt, schedule.timezone)}.`
               : "No topics generated yet."
         } Keeps at least ${String(schedule.topicGeneration.keepAtLeast)} ${
           schedule.topicGeneration.mode === "hold" ? "queued or waiting" : "queued"
@@ -146,9 +193,21 @@ export function TopicGenerationPanel({
               variant="primary"
               disabled={busy || rows.length === 0}
               disabledReason="Nothing is waiting"
-              onClick={() => action.mutate(() => approveAllHeldTopics(api, schedule.id))}
+              onClick={() =>
+                run(() => approveAllHeldTopics(api, schedule.id), {
+                  message: `Approved ${named(rows)}: added to the end of the queue.`,
+                })
+              }
             >
               Approve all
+            </Button>
+            <Button
+              variant="quiet"
+              disabled={busy || rows.length === 0}
+              disabledReason="Nothing is waiting"
+              onClick={() => setConfirmReject(true)}
+            >
+              Reject all
             </Button>
           </SectionHead>
           {held.error ? (
@@ -160,113 +219,86 @@ export function TopicGenerationPanel({
               Nothing is waiting. New topics appear here for you to approve.
             </p>
           ) : (
-            <List label="Topics waiting" className="mt-2 [&_.sl-row__actions]:flex-wrap">
-              {rows.map((topic) => (
-                <ListRow
-                  key={topic.id}
-                  title={
-                    editing?.id === topic.id ? (
-                      <div className="flex min-w-0 flex-col gap-2">
-                        <Input
-                          aria-label={`Edit ${topic.title}`}
-                          className="w-full"
-                          maxLength={200}
-                          value={editing.title}
-                          onChange={(event) =>
-                            setEditing({ ...editing, title: event.target.value })
-                          }
-                        />
-                        {keywords.length === 0 ? null : (
-                          <div className="grid grid-cols-1 gap-2 min-[600px]:grid-cols-2">
-                            {keywords.map((name) => (
-                              <Field key={name} label={name} tip="planning.schedule.held-keywords">
-                                <Input
-                                  maxLength={2000}
-                                  placeholder={everyRun(name) || "Not set"}
-                                  value={editing.values[name] ?? ""}
-                                  onChange={(event) =>
-                                    setEditing({
-                                      ...editing,
-                                      values: { ...editing.values, [name]: event.target.value },
-                                    })
-                                  }
-                                />
-                              </Field>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      topic.title
-                    )
-                  }
-                  meta={editing?.id === topic.id ? undefined : heldValuesLine(topic.values)}
+            // Esc anywhere in the list clears the ticked rows.
+            // biome-ignore lint/a11y/noStaticElementInteractions: Esc is handed down from the rows' own controls.
+            <div onKeyDown={selection.onKeyDown}>
+              {rows.length > 1 ? (
+                <SelectionBar
+                  className="mt-2"
+                  selection={selection}
+                  total={rows.length}
+                  noun={["topic waiting", "topics waiting"]}
                   actions={
-                    editing?.id === topic.id ? (
-                      <>
-                        <Button
-                          size="small"
-                          disabled={busy || editing.title.trim() === ""}
-                          onClick={() =>
-                            action.mutate(() =>
-                              editHeldTopic(
-                                api,
-                                schedule.id,
-                                topic.id,
-                                editing.title.trim(),
-                                Object.fromEntries(
-                                  Object.entries(editing.values).filter(
-                                    ([, value]) => value.trim() !== "",
-                                  ),
-                                ),
-                              ),
-                            )
-                          }
-                        >
-                          Save
-                        </Button>
-                        <Button variant="quiet" size="small" onClick={() => setEditing(null)}>
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="small"
-                          disabled={busy}
-                          onClick={() =>
-                            action.mutate(() => approveHeldTopic(api, schedule.id, topic.id))
-                          }
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          size="small"
-                          disabled={busy}
-                          onClick={() =>
-                            setEditing({ id: topic.id, title: topic.title, values: topic.values })
-                          }
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          size="small"
-                          disabled={busy}
-                          onClick={() =>
-                            action.mutate(() => rejectHeldTopic(api, schedule.id, topic.id))
-                          }
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )
+                    <>
+                      <Button
+                        size="small"
+                        disabled={busy || picked.length === 0}
+                        disabledReason="Tick the topics to approve"
+                        onClick={() => approve(picked)}
+                      >
+                        Approve selected
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="quiet"
+                        disabled={busy || picked.length === 0}
+                        disabledReason="Tick the topics to turn down"
+                        onClick={() => reject(picked)}
+                      >
+                        Reject selected
+                      </Button>
+                    </>
                   }
                 />
-              ))}
-            </List>
+              ) : null}
+              <List label="Topics waiting" className="mt-2 [&_.sl-row__actions]:flex-wrap">
+                {rows.map((topic) => (
+                  <HeldTopicRow
+                    key={topic.id}
+                    topic={topic}
+                    editing={editing?.id === topic.id ? editing : undefined}
+                    keywords={keywords}
+                    everyRun={everyRun}
+                    busy={busy}
+                    selection={selection}
+                    onEdit={setEditing}
+                    onCancel={() => setEditing(null)}
+                    onSave={() => {
+                      if (editing === null) return;
+                      action.mutate(() =>
+                        editHeldTopic(
+                          api,
+                          schedule.id,
+                          topic.id,
+                          editing.title.trim(),
+                          Object.fromEntries(
+                            Object.entries(editing.values).filter(
+                              ([, value]) => value.trim() !== "",
+                            ),
+                          ),
+                        ),
+                      );
+                    }}
+                    onApprove={() => approve([topic])}
+                    onReject={() => reject([topic])}
+                  />
+                ))}
+              </List>
+            </div>
           )}
+          <ConfirmDialog
+            open={confirmReject}
+            title={`Reject all ${counted(rows.length, "waiting topic", "waiting topics")}?`}
+            consequence={`Turns down the ${counted(rows.length, "topic", "topics")} waiting for ${schedule.name} now (topics generated after this list was shown are not included). Later generations won't suggest them again; Undo in the message that follows brings them back.`}
+            confirmLabel={`Reject ${counted(rows.length, "topic", "topics")}`}
+            cancelLabel="Keep them waiting"
+            pending={busy}
+            onCancel={() => setConfirmReject(false)}
+            onConfirm={() => {
+              setConfirmReject(false);
+              reject(rows);
+            }}
+          />
         </div>
       ) : null}
     </section>

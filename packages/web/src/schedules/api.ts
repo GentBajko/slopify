@@ -184,6 +184,45 @@ export async function approveAllHeldTopics(
   );
 }
 
+// Approve selected: the chosen held topics join the end of the queue in one save.
+export async function approveHeldTopicsById(
+  api: Api,
+  id: string,
+  ids: readonly string[],
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "held/approve"), json("POST", { ids })),
+    scheduleSummarySchema,
+  );
+}
+
+// Reject selected, and Reject all as the ids it showed: all of them or none.
+export async function rejectHeldTopics(
+  api: Api,
+  id: string,
+  ids: readonly string[],
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "held/reject"), json("POST", { ids })),
+    scheduleSummarySchema,
+  );
+}
+
+// Undo for a rejection: the topics wait again with the keywords they had.
+export async function restoreHeldTopics(
+  api: Api,
+  id: string,
+  topics: readonly Pick<HeldTopic, "id" | "values">[],
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(
+      topicPath(api, id, "held/restore"),
+      json("POST", { topics: topics.map((topic) => ({ id: topic.id, values: topic.values })) }),
+    ),
+    scheduleSummarySchema,
+  );
+}
+
 export async function rejectHeldTopic(
   api: Api,
   id: string,

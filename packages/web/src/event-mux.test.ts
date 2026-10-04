@@ -86,3 +86,46 @@ it("closes the connection when the last view goes, and opens other streams as as
   open("/api/something-else");
   expect(real.opened).toEqual(["/api/events/global", "/api/something-else"]);
 });
+
+it("tells every view the connection dropped, and opens a stream the browser gave up on again", () => {
+  const sources: { listeners: Map<string, (() => void)[]>; readyState: number; closed: boolean }[] =
+    [];
+  const open = (): EventSourceLike => {
+    const one = { listeners: new Map<string, (() => void)[]>(), readyState: 0, closed: false };
+    sources.push(one);
+    return {
+      addEventListener: (type: string, listener: () => void) => {
+        one.listeners.set(type, [...(one.listeners.get(type) ?? []), listener]);
+      },
+      close: () => {
+        one.closed = true;
+      },
+      get readyState() {
+        return one.readyState;
+      },
+    } as EventSourceLike;
+  };
+  const fire = (index: number, type: string) => {
+    for (const listener of sources[index]?.listeners.get(type) ?? []) listener();
+  };
+  const later: (() => void)[] = [];
+  const mux = createEventMux(open, (run) => later.push(run));
+  const seen: string[] = [];
+  const view = mux("/api/events/global");
+  view.addEventListener("open", () => seen.push("open"));
+  view.addEventListener("error", () => seen.push("error"));
+  fire(0, "open");
+  // The browser retries a dropped stream by itself: nothing to open again.
+  fire(0, "error");
+  expect(later).toHaveLength(0);
+  const first = sources[0];
+  if (first === undefined) throw new Error("no stream was opened");
+  first.readyState = 2;
+  fire(0, "error");
+  expect(first.closed).toBe(true);
+  expect(later).toHaveLength(1);
+  later[0]?.();
+  expect(sources).toHaveLength(2);
+  fire(1, "open");
+  expect(seen).toEqual(["open", "error", "error", "open"]);
+});

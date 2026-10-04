@@ -1,7 +1,7 @@
 import type { SampleId } from "@app/slices/onboarding/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type FormEvent, type ReactElement, useRef, useState } from "react";
+import { type FormEvent, type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { AutostartOffer } from "@/autostart/autostart-settings";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
@@ -13,7 +13,7 @@ import { ButtonLink, TextLink } from "@/components/kit/link";
 import { hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Lamp } from "@/components/kit/status";
-import { TabPanel, Tabs } from "@/components/kit/tabs";
+import { Steps } from "@/components/kit/steps";
 import { Input } from "@/components/ui/input";
 import {
   dismissFirstRun,
@@ -56,10 +56,69 @@ const samples: readonly {
 
 type Step = "found" | "style" | "make";
 const steps: readonly { readonly id: Step; readonly label: string }[] = [
-  { id: "found", label: "1 · What you have" },
-  { id: "style", label: "2 · Pick a style" },
-  { id: "make", label: "3 · Make your first short" },
+  { id: "found", label: "What you have" },
+  { id: "style", label: "Pick a style" },
+  { id: "make", label: "Make your first short" },
 ];
+
+// The three steps are a sequence, not independent tabs: an ordered list that says which step
+// this is ("Step 2 of 3"), with the ones before it done. Each name still opens its step.
+function StepList({
+  at,
+  onPick,
+}: {
+  readonly at: number;
+  readonly onPick: (step: Step) => void;
+}): ReactElement {
+  return (
+    <Steps
+      label="First-run steps"
+      dense
+      className="mb-6 max-w-md"
+      steps={steps.map((one, index) => ({
+        id: one.id,
+        tone: index < at ? "done" : index === at ? "info" : "off",
+        state: index < at ? "done" : index === at ? "current step" : "not yet",
+        name: (
+          <Button
+            variant="quiet"
+            size="small"
+            aria-current={index === at ? "step" : undefined}
+            onClick={() => onPick(one.id)}
+          >
+            {`${String(index + 1)} · ${one.label}`}
+          </Button>
+        ),
+        detail: index === at ? `Step ${String(index + 1)} of ${String(steps.length)}` : "",
+      }))}
+    />
+  );
+}
+
+// One step's content; only the current one is shown. It takes focus when the step changes, so
+// a keyboard or screen-reader user lands at its start.
+function StepPanel({
+  id,
+  active,
+  children,
+}: {
+  readonly id: Step;
+  readonly active: boolean;
+  readonly children: ReactNode;
+}): ReactElement {
+  const label = steps.find((one) => one.id === id)?.label ?? "";
+  return (
+    <section
+      id={`welcome-step-${id}`}
+      aria-label={label}
+      tabIndex={-1}
+      hidden={!active}
+      className="outline-none"
+    >
+      {children}
+    </section>
+  );
+}
 
 // "the text, the images or the narration"
 function keyless(parts: readonly string[]): string {
@@ -152,6 +211,10 @@ export function WelcomeRoute(): ReactElement {
           ? { tone: "info" as const, text: "Starting your short…" }
           : undefined;
   const at = steps.findIndex((one) => one.id === step);
+  const go = (to: Step): void => {
+    setStep(to);
+    requestAnimationFrame(() => document.getElementById(`welcome-step-${to}`)?.focus());
+  };
   const next = steps[at + 1];
   const back = steps[at - 1];
 
@@ -172,16 +235,9 @@ export function WelcomeRoute(): ReactElement {
         </Callout>
       ) : null}
 
-      <Tabs
-        items={steps.map((one) => ({ id: one.id, label: one.label }))}
-        value={step}
-        onChange={setStep}
-        label="First-run steps"
-        idPrefix="welcome"
-        className="mb-6"
-      />
+      <StepList at={at} onPick={go} />
 
-      <TabPanel idPrefix="welcome" id="found" active={step === "found"}>
+      <StepPanel id="found" active={step === "found"}>
         <SectionHead title="Found on this computer" info="welcome.found" />
         <List label="Tools found on this computer" className="mb-4">
           {(data?.clis ?? []).map((cli) => (
@@ -238,9 +294,9 @@ export function WelcomeRoute(): ReactElement {
             onCheck={() => void view.refetch()}
           />
         )}
-      </TabPanel>
+      </StepPanel>
 
-      <TabPanel idPrefix="welcome" id="style" active={step === "style"}>
+      <StepPanel id="style" active={step === "style"}>
         <SectionHead title="Pick a style" info="welcome.pack" />
         <List label="Styles" className="mb-3 [&_.sl-row__meta]:whitespace-normal">
           {[
@@ -291,9 +347,9 @@ export function WelcomeRoute(): ReactElement {
           Add to library keeps a pack's prompts and Play template for later videos.
           <InfoTip id="welcome.packs" className="-my-1" />
         </p>
-      </TabPanel>
+      </StepPanel>
 
-      <TabPanel idPrefix="welcome" id="make" active={step === "make"}>
+      <StepPanel id="make" active={step === "make"}>
         {made === undefined ? (
           <>
             <SectionHead title="Make a 60-second short" info="welcome.short" />
@@ -382,14 +438,14 @@ export function WelcomeRoute(): ReactElement {
         </List>
 
         <AutostartOffer />
-      </TabPanel>
+      </StepPanel>
 
       <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
         <TextLink to="/play">Set up a long video instead</TextLink>
-        {back === undefined ? null : <Button onClick={() => setStep(back.id)}>Back</Button>}
+        {back === undefined ? null : <Button onClick={() => go(back.id)}>Back</Button>}
         {next === undefined ? null : (
-          <Button variant="primary" onClick={() => setStep(next.id)}>
-            {`Next: ${next.label.replace(/^\d · /, "")}`}
+          <Button variant="primary" onClick={() => go(next.id)}>
+            {`Next: ${next.label}`}
           </Button>
         )}
       </ActionBar>

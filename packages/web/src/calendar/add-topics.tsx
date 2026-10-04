@@ -6,7 +6,9 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Dialog } from "@/components/kit/dialog";
 import { Field, Select, Textarea } from "@/components/kit/field";
+import { TextLink } from "@/components/kit/link";
 import { useToast } from "@/components/kit/toast";
+import { intents, requestIntent } from "@/lib/intents";
 import { calendarKey, schedulesKey, updateSchedule } from "@/schedules/api";
 
 // "Add to calendar": topics typed or pasted one per line join the end of a schedule's queue,
@@ -124,14 +126,36 @@ export function AddToCalendar({
       {usable.length === 0 ? (
         <p className="m-0 text-ink-2">
           Topics go on a schedule, and there is none yet.{" "}
-          <Link to="/calendar" search={{ tab: "schedules" }}>
+          <Link
+            to="/calendar"
+            search={{ tab: "schedules" }}
+            onClick={() => {
+              // Lands on the New schedule form itself, not just the Schedules tab.
+              requestIntent(intents.newSchedule);
+              onOpenChange(false);
+            }}
+          >
             Create a schedule
           </Link>{" "}
           first.
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          <Field label="Schedule" tip="planning.calendar.add-schedule">
+          <Field
+            label="Schedule"
+            tip="planning.calendar.add-schedule"
+            help={
+              picked === undefined ? undefined : (
+                <TextLink
+                  to="/calendar"
+                  search={{ tab: "schedules", schedule: picked.id }}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Open {picked.name} and its queue
+                </TextLink>
+              )
+            }
+          >
             <Select
               value={picked?.id ?? ""}
               onChange={(event) => setScheduleId(event.target.value)}

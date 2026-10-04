@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
 import { keyProbes } from "../../adapters/key-probes.js";
+import { catalogueModelInfo } from "../../catalog/model-info.js";
 import { videoModelsOf } from "../../catalog/schema.js";
 import { defaultSpeechVoice, detectSpeechCached } from "../../kernel/ports/system-speech.js";
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
@@ -195,12 +196,9 @@ export function providerRoutes(deps: AppDeps) {
           });
         if (deps.catalogue && !isUncataloguedProvider(id))
           return c.json({
-            models: deps.catalogue.models(id, providerById(id).family).map((m) => ({
-              ...m,
-              ...("llm" in m && m.llm.thinking
-                ? { thinkingModes: Object.keys(m.llm.thinking) }
-                : {}),
-            })),
+            models: deps.catalogue
+              .models(id, providerById(id).family)
+              .map((m) => ({ ...m, ...catalogueModelInfo(m) })),
             allowsCustom: false,
             notice:
               "Curated active models from models.yaml. Edit it locally or refresh in Settings.",

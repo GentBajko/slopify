@@ -247,6 +247,6 @@ it("shows persisted missing narration notes alongside downloadable subtitles", a
   );
   await screen.findByText(/Subtitles recovered after missing narration/);
   expect(screen.getByText(/The missing transcript passage\./)).not.toBeNull();
-  expect(screen.getByText("00:02:41")).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Play from 2:41" })).not.toBeNull();
   expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
 });

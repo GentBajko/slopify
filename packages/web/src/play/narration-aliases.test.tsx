@@ -59,7 +59,7 @@ it("copies Library → Aliases into a project when turned on in Edit project, an
   // A project from before aliases reads as off and carries none.
   expect((toggle as HTMLInputElement).checked).toBe(false);
   await user.click(toggle);
-  expect(await screen.findByText("1 alias copied from Library → Aliases.")).toBeTruthy();
+  expect(await screen.findByText("1 alias copied from Library → Narration aliases.")).toBeTruthy();
   expect(JSON.parse(screen.getByLabelText("Saved config").textContent ?? "")).toEqual({
     use: true,
     aliases: [doctor],
@@ -67,7 +67,9 @@ it("copies Library → Aliases into a project when turned on in Edit project, an
   // A Library edit reaches the project only when asked.
   aliases = [doctor, { ...doctor, written: "Ms.", spoken: "Miss" }];
   await user.click(screen.getByRole("button", { name: "Update from Library" }));
-  expect(await screen.findByText("2 aliases copied from Library → Aliases.")).toBeTruthy();
+  expect(
+    await screen.findByText("2 aliases copied from Library → Narration aliases."),
+  ).toBeTruthy();
   await user.click(toggle);
   expect(JSON.parse(screen.getByLabelText("Saved config").textContent ?? "")).toEqual({
     use: false,

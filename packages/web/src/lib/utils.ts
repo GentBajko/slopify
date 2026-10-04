@@ -39,11 +39,35 @@ export function cn(...inputs: readonly ClassValue[]): string {
 
 const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
 const day = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+const dayInYear = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+const exact = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "full",
+  timeStyle: "long",
+});
 
 // The "started 21:14" of the rundown header. Today's runs read as a time; older ones add
-// the date, because a bare clock time on a week-old project says nothing.
+// the date, because a bare clock time on a week-old project says nothing, and the year once
+// it is not this year's.
 export function startedAt(iso: string, now: Date = new Date()): string {
   const at = new Date(iso);
   const sameDay = at.toDateString() === now.toDateString();
-  return sameDay ? clock.format(at) : `${day.format(at)} ${clock.format(at)}`;
+  if (sameDay) return clock.format(at);
+  const date = at.getFullYear() === now.getFullYear() ? day.format(at) : dayInYear.format(at);
+  return `${date} ${clock.format(at)}`;
+}
+
+// "3 Oct" this year, "3 Oct 2025" otherwise: a date in a list where the time does not matter.
+export function shortDate(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  return at.getFullYear() === now.getFullYear() ? day.format(at) : dayInYear.format(at);
+}
+
+// The exact moment with its time zone, for a `title` behind a short or relative time:
+// "Saturday, 4 October 2026 at 21:14:05 CEST".
+export function exactTime(iso: string): string {
+  return exact.format(new Date(iso));
 }

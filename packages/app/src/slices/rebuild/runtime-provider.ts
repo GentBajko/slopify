@@ -296,6 +296,13 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
     );
     return checked.ok ? undefined : checked.reason;
   }
+  // A conversation adapted from the article is a rewrite: it has to read as a script.
+  if (piece.key === "script:attribute" && piece.input.kind === "llm" && piece.input.script) {
+    const checked = parseScript(answer.text, piece.input.script.speakers);
+    return checked.ok
+      ? undefined
+      : `The conversation the text model wrote can't be read as a script: ${checked.reason}`;
+  }
   return undefined;
 }
 function attributionSource(messages: readonly { readonly content: string }[]): string {

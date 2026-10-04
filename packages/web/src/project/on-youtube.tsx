@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
+import { shortDate } from "@/lib/utils";
 
 // On YouTube: the video each of the project's uploads became (the long video and each short),
 // as the Slopify Studio extension read it from Studio's upload dialog or as pasted here. A/B
@@ -48,7 +49,7 @@ function uploadName(short: number | null): string {
 
 function stateWords(video: YoutubeVideo): string {
   if (video.uploadState === "filled")
-    return "Filled in Studio, but not scheduled or published yet (cancelled, or left as a draft). Upload it again from the extension, or paste its link once it is up.";
+    return "Filled in Studio, but not scheduled or published yet (canceled, or left as a draft). Upload it again from the extension, or paste its link once it is up.";
   const parts = ["On YouTube."];
   if (video.finishState === "waiting")
     parts.push("Related video, end screen and captions are being set.");
@@ -236,8 +237,6 @@ function numbersOf(stats: VideoStats): string {
         : `${String(Math.floor(s / 60))}:${String(s % 60).padStart(2, "0")}`;
     parts.push(`${clock} average view`);
   }
-  parts.push(
-    `read ${new Date(stats.readAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`,
-  );
+  parts.push(`read ${shortDate(stats.readAt)}`);
   return parts.join(" · ");
 }

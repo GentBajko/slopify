@@ -102,7 +102,7 @@ When a tool says its allowance is used up, the run does not fail:
 3. The project's status reads **Waiting for limits**, with a line such as "Waiting for Codex limits (resets at 14:00)." The same words show on Home's Running now, the Projects row and the Calendar.
 4. When the reset passes, the run continues by itself.
 
-Other providers are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or cancelled meanwhile is left alone.
+Other providers are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or canceled meanwhile is left alone.
 
 Gemini's daily quota is handled the same way ("Slopify waits and tries again later by itself").
 

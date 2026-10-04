@@ -11,16 +11,18 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import { confirmationFor } from "./confirmations.js";
 import { canRerunSection } from "./controls.js";
+import { ErrorDetails } from "./error-details.js";
 import { LiveWriting } from "./live-writing.js";
 import { type SectionId, stageWords } from "./next-action.js";
 import { NextActionBeside, type NextActionState } from "./next-action-view.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
+import { rerunPrice, useRunCost } from "./stage-price.js";
 import { stageFraction, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
-// One section of the project page's main column: its head (title, one meta line, its rare
-// actions behind More), the next action when it concerns this section, what a refused press
+// One section of the project page's main column: its head (title, one meta line, a
+// button to make each stage again), the next action when it concerns this section, what a refused press
 // here said, and the body. Hidden sections stay mounted so an editor keeps its typing.
 
 // Re-running a whole stage replaces its outputs: named for its result, and confirmed first.
@@ -79,7 +81,7 @@ export function StageSection({
     ? actions.refusal?.message
     : undefined;
   // A failure the next action is not about (it names one step at a time) is still said here,
-  // with its own words; its retry is in the command palette until it is the next action.
+  // with its own words and its own Try again.
   const otherFailures = stages.filter(
     (stage) =>
       stage.state === "failed" &&
@@ -120,6 +122,7 @@ export function StageSection({
       ) : null}
       {progress === undefined || running === undefined ? null : (
         <Meter
+          progress
           value={progress}
           label={`${stageWords[running.kind]} progress`}
           valueText={summaryOf(running, outputs, project, resumable)}
@@ -131,15 +134,19 @@ export function StageSection({
           key={stage.id}
           tone="danger"
           title={`${stageWords[stage.kind]} stopped with an error.`}
+          actions={
+            <Button
+              size="small"
+              disabled={actions.pending}
+              disabledReason="Working on the last press"
+              onClick={() => actions.run({ kind: "retry", stage: stage.kind })}
+            >
+              Try {stageWords[stage.kind].toLowerCase()} again
+            </Button>
+          }
         >
-          {stage.failureReason === null ? undefined : (
-            <details>
-              <summary className="cursor-pointer">Error details</summary>
-              <pre className="m-0 mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-small">
-                {stage.failureReason}
-              </pre>
-            </details>
-          )}
+          Trying again keeps everything already made.
+          {stage.failureReason === null ? null : <ErrorDetails text={stage.failureReason} />}
         </Callout>
       ))}
       {refused === undefined ? null : (
@@ -205,6 +212,7 @@ export function SectionMore({
   const revisioned = useContext(RevisionControlContext);
   const view = useCurrentRevisionView();
   const [asking, setAsking] = useState<StageKind | undefined>();
+  const cost = useRunCost(project.id);
   const rerunnable = stages.filter(
     (stage) =>
       stage.state !== "skipped" &&
@@ -216,7 +224,10 @@ export function SectionMore({
     actions.pending ||
     project.status === "running" ||
     stages.some((stage) => stage.state === "running");
-  const copy = asking === undefined ? undefined : confirmationFor({ kind: "rerun", stage: asking });
+  const copy =
+    asking === undefined
+      ? undefined
+      : confirmationFor({ kind: "rerun", stage: asking, price: rerunPrice(cost, asking) });
   return (
     <>
       {rerunnable.map((stage) => (
@@ -224,6 +235,7 @@ export function SectionMore({
           key={stage.id}
           size="small"
           disabled={busy}
+          focusableWhenDisabled
           disabledReason="Wait until the work on this project is done"
           onClick={() => setAsking(stage.kind)}
         >

@@ -8,16 +8,22 @@ import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { cn } from "@/lib/utils";
 
-// Everything reusable lives in one place: the prompts and spoken entries a run is written from,
-// the saved setups it can start from, and the looks a project's PDF can take. Each tab keeps
-// its own URL, so a link to any of them still lands.
-export const libraryTabs = [
-  { to: "/prompts", label: "Prompts" },
-  { to: "/entries", label: "Intros & Outros" },
-  { to: "/templates", label: "Templates" },
-  { to: "/document-themes", label: "Documents" },
-  { to: "/narration-aliases", label: "Aliases" },
-  { to: "/ab-results", label: "A/B results" },
+// Everything reusable lives in one place: the saved setups a project can start from, the
+// building blocks those setups are made of (prompts, spoken intros and outros, PDF themes and
+// the narration aliases that say words a certain way), and A/B results. Each tab keeps its own
+// URL, so a link to any of them still lands.
+export const libraryGroups = [
+  { label: "Setups", tabs: [{ to: "/templates", label: "Templates" }] },
+  {
+    label: "Building blocks",
+    tabs: [
+      { to: "/prompts", label: "Prompts" },
+      { to: "/entries", label: "Intros & outros" },
+      { to: "/document-themes", label: "PDF themes" },
+      { to: "/narration-aliases", label: "Narration aliases" },
+    ],
+  },
+  { label: "Results", tabs: [{ to: "/ab-results", label: "A/B results" }] },
 ] as const;
 
 export function LibraryLayout(): ReactElement {
@@ -25,9 +31,16 @@ export function LibraryLayout(): ReactElement {
     <div>
       <PageHeader
         title="Library"
-        meta="Prompts, intros and outros, templates, document themes, narration aliases and A/B results"
+        meta="Templates to start from, and the prompts, intros and outros, PDF themes and narration aliases they use"
       />
-      <TabLinks items={libraryTabs} label="Library sections" className="mb-6" />
+      <div className="mb-6 flex min-w-0 flex-wrap items-end gap-x-8 gap-y-3 border-b border-line">
+        {libraryGroups.map((group) => (
+          <div key={group.label} className="min-w-0">
+            <div className="sl-kicker">{group.label}</div>
+            <TabLinks items={group.tabs} label={group.label} className="border-b-0" />
+          </div>
+        ))}
+      </div>
       <LibraryCommands />
       <Outlet />
     </div>
@@ -63,9 +76,9 @@ function LibraryCommands(): null {
   });
   useCommand({
     id: "library.new-document-theme",
-    title: "New document theme",
+    title: "New PDF theme",
     group: "Library",
-    keywords: ["create", "pdf", "theme"],
+    keywords: ["create", "pdf", "theme", "document"],
     run: () => {
       void navigate({ to: "/document-themes/new", search: { from: "plain" } });
     },
@@ -98,9 +111,9 @@ function LibraryCommands(): null {
   });
   useCommand({
     id: "library.open-document-themes",
-    title: "Open document themes",
+    title: "Open PDF themes",
     group: "Library",
-    keywords: ["pdf", "documents"],
+    keywords: ["pdf", "documents", "document themes"],
     run: () => {
       void navigate({ to: "/document-themes" });
     },

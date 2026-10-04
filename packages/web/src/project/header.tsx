@@ -4,14 +4,16 @@ import { bookLabel } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon, EllipsisIcon, SlidersHorizontalIcon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
+import { cameFrom } from "@/components/came-from";
 import { Button, IconButton } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
-import { Status, type Tone } from "@/components/kit/status";
+import { Status } from "@/components/kit/status";
+import { keptAsIs, projectStateLook } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
 
-// The project's title row: the way back to Projects, the title, one meta line, and the
+// The project's title row: the way back (to the list it was opened from), the title, one meta line, and the
 // page's quiet actions. The one action the project needs next is not here: it is in the
 // right rail (`next-action-view.tsx`). Rare actions sit behind More.
 export interface MoreAction {
@@ -53,14 +55,21 @@ export function ProjectHeader({
 }): ReactElement {
   const state =
     project.status === "pending" && project.setAside === true
-      ? { tone: "done" as const, word: "Kept as is" }
-      : statusOf(project.status);
+      ? keptAsIs
+      : projectStateLook[project.status];
+  // The way back goes where the project was opened from: Projects as it was filtered, Home,
+  // the calendar or the channel.
+  const origin = cameFrom();
   return (
     <PageHeader
       crumb={
-        <Link to="/projects" className="inline-flex items-center gap-1 text-ink-3 hover:text-ink">
+        <Link
+          to={origin.to}
+          search={origin.search}
+          className="inline-flex items-center gap-1 text-ink-3 hover:text-ink"
+        >
           <ChevronLeftIcon aria-hidden="true" strokeWidth={1.75} />
-          Projects
+          {origin.label}
         </Link>
       }
       title={project.title}
@@ -131,28 +140,6 @@ function MenuItemWithApart({ item }: { readonly item: MoreAction }): ReactElemen
       </MenuItem>
     </>
   );
-}
-
-function statusOf(status: ProjectSummary["status"]): {
-  readonly tone: Tone;
-  readonly word: string;
-} {
-  switch (status) {
-    case "running":
-      return { tone: "running", word: "Running" };
-    case "paused":
-      return { tone: "waiting", word: "Paused" };
-    case "failed":
-      return { tone: "failed", word: "Failed" };
-    case "partial":
-      return { tone: "waiting", word: "Done with problems" };
-    case "done":
-      return { tone: "done", word: "Done" };
-    case "canceled":
-      return { tone: "off", word: "Canceled" };
-    case "pending":
-      return { tone: "off", word: "Queued" };
-  }
 }
 
 // "Documentary dossier · 16:9 · started 21:14". The name is the run's own copy of it, so a

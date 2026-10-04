@@ -340,6 +340,15 @@ export function useDraftSession(): PlaySession {
         const document = withProviderDefaults(current.document, defaults);
         if (document !== current.document) publish({ document });
       },
+      // The channel picked in the sidebar becomes a fresh draft's channel, the same way and with
+      // the same guard: a draft somebody typed in, opened or made from a template keeps its own.
+      adoptChannel: (channelId: string) => {
+        const current = state.current;
+        if (current.id !== null || current.clock.edited > 0 || current.view !== null) return;
+        const document = current.document;
+        if (document.channelId !== undefined || document.templateSource !== undefined) return;
+        publish({ document: { ...document, channelId } });
+      },
       discard,
       saveAsNew,
       navigate,
@@ -393,6 +402,7 @@ export function useDraftSession(): PlaySession {
     generation: owner.generation,
     newDraft: owner.newDraft,
     adoptDefaults: owner.adoptDefaults,
+    adoptChannel: owner.adoptChannel,
     discard: owner.discard,
     saveAsNew: owner.saveAsNew,
     navigate: owner.navigate,

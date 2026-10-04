@@ -5,6 +5,7 @@ import type { Api } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/kit/popover";
+import { copyText } from "@/fixes/fix-actions";
 import { errorOf, problemOf } from "@/http";
 
 import { openRevisionFolder } from "./revision-api.js";
@@ -105,6 +106,7 @@ function FolderAction(props: Props) {
               onFocus={(event) => event.currentTarget.select()}
               className="sl-input w-full min-w-0 font-mono text-small"
             />
+            <CopyPath path={path} />
           </div>
         ) : null}
         {error !== undefined ? (
@@ -114,5 +116,21 @@ function FolderAction(props: Props) {
         ) : null}
       </PopoverContent>
     </Popover>
+  );
+}
+
+function CopyPath({ path }: { readonly path: string }): ReactElement {
+  const [copied, setCopied] = useState<boolean>();
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <Button variant="secondary" size="small" onClick={() => void copyText(path).then(setCopied)}>
+        Copy path
+      </Button>
+      {copied === undefined ? null : (
+        <span role="status" className="text-small text-ink-2">
+          {copied ? "Copied." : "The browser blocked copying. Select the path and copy it."}
+        </span>
+      )}
+    </span>
   );
 }

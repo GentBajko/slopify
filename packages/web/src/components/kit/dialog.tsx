@@ -62,7 +62,7 @@ export function ConfirmDialog({
   title,
   consequence,
   confirmLabel,
-  cancelLabel = "Cancel",
+  cancelLabel,
   tone = "destructive",
   pending = false,
   onConfirm,
@@ -73,7 +73,8 @@ export function ConfirmDialog({
   readonly consequence: ReactNode;
   // Named for its result: "Delete project", "Discard 3 changes".
   readonly confirmLabel: string;
-  // What the way out is called: "Keep it", "Keep running".
+  // What the way out is called: "Keep it", "Keep running". A destructive dialog's way out
+  // keeps the thing ("Keep it" unless named); a neutral one is "Cancel".
   readonly cancelLabel?: string;
   readonly tone?: "destructive" | "primary";
   readonly pending?: boolean;
@@ -91,7 +92,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" autoFocus onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? (tone === "destructive" ? "Keep it" : "Cancel")}
           </Button>
           <Button
             variant={tone}

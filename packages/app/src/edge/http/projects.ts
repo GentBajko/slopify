@@ -3,9 +3,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
+import { listProjectHeads } from "../../slices/admission/heads.js";
 import type { Project, ProjectListing, ProjectSummary } from "../../slices/admission/model.js";
 import {
-  listProjects,
   projectById,
   projectTrashed,
   runDraftSchema,
@@ -73,7 +73,9 @@ export function projectRoutes(deps: AppDeps) {
         );
       })
       // One statement for every project's stage standings, not one per row: the list needs
-      // a status word and a meter, and both come out of the same five columns.
+      // a status word and a meter, and both come out of the same five columns. Each row carries
+      // only the settings a list reads (`ListingConfig`); a project page reads the whole
+      // configuration from GET /:id.
       .get("/", (c) => {
         const standings = stageStandingsByProject(deps.db);
         const channels = projectChannels(deps.db);
@@ -81,7 +83,7 @@ export function projectRoutes(deps: AppDeps) {
         const aside = setAsideProjects(deps.db);
         const numbers = longVideoStats(deps.db);
         const waits = limitWaitsByProject(deps.db);
-        const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
+        const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           const waiting = waits.get(project.id);
           return {
@@ -159,7 +161,7 @@ export function projectRoutes(deps: AppDeps) {
               detail:
                 "That channel no longer exists. Reload the page and pick one from the list, or make it again in Channels.",
             });
-          const live = new Set(listProjects(deps.db).map((project) => project.id));
+          const live = new Set(listProjectHeads(deps.db).map((project) => project.id));
           const moving = [...new Set(projectIds)].filter((id) => live.has(id));
           transact(deps.db, () => {
             for (const id of moving) setProjectChannel(deps.db, id, channelId);

@@ -11,14 +11,14 @@ import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { faceFamilies } from "@/lib/document-theme-fields";
-import { updatedOn } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { useLibraryItem } from "@/library/list-url";
 import { LibraryRowActions } from "@/library/row-actions";
+import { sortLibrary, useLibrarySort } from "@/library/sort";
+import { SortMenu } from "@/library/sort-menu";
+import { Stamp } from "@/library/time";
 import { documentThemesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
-
-// A row picked for the detail column: one of your themes by id, or a built-in by name.
-type Picked = { readonly saved: string } | { readonly builtIn: string };
 
 // Library → Documents: the looks a project's PDF can take, beside the selected one's colours,
 // fonts and page. The built-ins can't be changed, only copied; a saved theme is edited here
@@ -27,7 +27,9 @@ export function DocumentThemesRoute() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const listing = useQuery(documentThemesQuery(api));
-  const [picked, setPicked] = useState<Picked | undefined>(undefined);
+  // The row in the detail column, `?item=` in the URL: one of yours by id, a built-in by name.
+  const [picked, setPicked] = useLibraryItem();
+  const [sort, setSort] = useLibrarySort("document-theme");
   const [deleting, setDeleting] = useState<SavedDocumentTheme | undefined>(undefined);
 
   const remove = useMutation({
@@ -39,17 +41,13 @@ export function DocumentThemesRoute() {
   });
 
   const data = listing.data;
-  const pickedSaved =
-    picked !== undefined && "saved" in picked
-      ? data?.themes.find((theme) => theme.id === picked.saved)
-      : undefined;
+  const yours = data === undefined ? [] : sortLibrary(data.themes, sort);
+  const pickedSaved = yours.find((theme) => theme.id === picked);
   const pickedBuiltIn =
-    picked !== undefined && "builtIn" in picked
-      ? data?.builtIns.find((theme) => theme.name === picked.builtIn)
-      : undefined;
+    pickedSaved === undefined ? data?.builtIns.find((theme) => theme.name === picked) : undefined;
   // Nothing picked (or the picked one is gone): the first of yours, else the first built-in.
   const fallbackSaved =
-    pickedSaved === undefined && pickedBuiltIn === undefined ? data?.themes[0] : undefined;
+    pickedSaved === undefined && pickedBuiltIn === undefined ? yours[0] : undefined;
   const shownSaved = pickedSaved ?? fallbackSaved;
   const shownBuiltIn = shownSaved === undefined ? (pickedBuiltIn ?? data?.builtIns[0]) : undefined;
 
@@ -69,7 +67,7 @@ export function DocumentThemesRoute() {
 
       {listing.error === null ? null : (
         <LoadError
-          what="document themes"
+          what="PDF themes"
           message={listing.error.message}
           onRetry={() => void listing.refetch()}
         />
@@ -77,7 +75,7 @@ export function DocumentThemesRoute() {
 
       {data === undefined ? (
         listing.error === null ? (
-          <ListSkeleton label="Document themes" />
+          <ListSkeleton label="PDF themes" />
         ) : null
       ) : (
         <ListDetail
@@ -90,22 +88,31 @@ export function DocumentThemesRoute() {
                   as="h3"
                   className="pb-0"
                   info="library.themes.yours"
-                />
+                >
+                  {yours.length > 1 ? (
+                    <SortMenu what="your themes" sort={sort} onSort={setSort} />
+                  ) : null}
+                </SectionHead>
                 {data.themes.length === 0 ? (
                   <p className="m-0 text-small text-ink-2">
                     No themes of your own yet. Copy a built-in below to start one.
                   </p>
                 ) : (
                   <List label="Your themes">
-                    {data.themes.map((theme) => (
+                    {yours.map((theme) => (
                       <ListRow
                         key={theme.id}
                         className={libraryRow}
                         lead={<Swatches colors={theme.values.colors} />}
                         title={theme.name}
-                        meta={`${themeMeta(theme.values)} · updated ${updatedOn(theme.updatedAt)}`}
+                        meta={
+                          <>
+                            {`${themeMeta(theme.values)} · updated `}
+                            <Stamp iso={theme.updatedAt} />
+                          </>
+                        }
                         selected={theme.id === shownSaved?.id}
-                        onSelect={() => setPicked({ saved: theme.id })}
+                        onSelect={() => setPicked(theme.id)}
                         actions={
                           <LibraryRowActions
                             name={theme.name}
@@ -156,7 +163,7 @@ export function DocumentThemesRoute() {
                       title={theme.label}
                       meta={themeMeta(theme.values)}
                       selected={theme.name === shownBuiltIn?.name}
-                      onSelect={() => setPicked({ builtIn: theme.name })}
+                      onSelect={() => setPicked(theme.name)}
                       actions={
                         <ButtonLink
                           to="/document-themes/new"
@@ -179,7 +186,11 @@ export function DocumentThemesRoute() {
               <ThemeDetail
                 name={shownSaved.name}
                 kicker="Your theme"
-                meta={`Updated ${updatedOn(shownSaved.updatedAt)}`}
+                meta={
+                  <>
+                    Updated <Stamp iso={shownSaved.updatedAt} />
+                  </>
+                }
                 values={shownSaved.values}
                 action={
                   <ButtonLink
@@ -220,9 +231,11 @@ export function DocumentThemesRoute() {
 
       <ConfirmDialog
         open={deleting !== undefined}
-        title={`Delete "${deleting?.name ?? ""}"?`}
-        consequence="Projects that used it keep their own copy of its settings."
-        confirmLabel="Delete theme"
+        title={`Delete the PDF theme “${deleting?.name ?? ""}”?`}
+        // Document themes have no Trash (slices/trash supports projects, prompts, intros and
+        // outros, templates and schedules), so this delete is final.
+        consequence={deleteConsequence}
+        confirmLabel="Delete theme permanently"
         pending={remove.isPending}
         onConfirm={() => {
           if (deleting !== undefined) remove.mutate(deleting.id);
@@ -232,6 +245,9 @@ export function DocumentThemesRoute() {
     </div>
   );
 }
+
+export const deleteConsequence =
+  "It is deleted permanently: PDF themes do not go to Settings → Trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";
 
 function themeMeta(values: DocumentTheme): string {
   return `${values.page.format === "a4" ? "A4" : "Letter"} · ${familyLabel(values.fonts.body.family)} body`;
@@ -255,7 +271,7 @@ function ThemeDetail({
 }: {
   readonly name: string;
   readonly kicker: string;
-  readonly meta: string;
+  readonly meta: ReactNode;
   readonly values: DocumentTheme;
   readonly action: ReactNode;
 }): ReactElement {

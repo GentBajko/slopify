@@ -3,13 +3,19 @@ import { type ReactElement, useCallback, useId, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { ReadingView } from "@/components/kit/reading-view";
 import { useOutputText } from "./parts.js";
+import type { NarrationTiming } from "./review-narration.js";
+import { Transcript } from "./review-transcript.js";
 
 // The Audio section's narration text - the clean text that was spoken, intro, body and outro -
-// in the reading view, so it can be read, searched and copied rather than only downloaded.
+// in the reading view, so it can be read, searched and copied rather than only downloaded. With
+// the caption timing current, it reads first as a transcript in step with the players above:
+// press a line to play from there, and the spoken line is marked.
 export function NarrationText({
   outputs,
+  timing,
 }: {
   readonly outputs: readonly Output[];
+  readonly timing?: NarrationTiming | undefined;
 }): ReactElement | null {
   const id = useId();
   const of = (segment: string) =>
@@ -44,21 +50,40 @@ export function NarrationText({
     present.length === 1
       ? (present[0]?.[1] ?? "").trim()
       : present.map(([name, text]) => `## ${name}\n\n${(text ?? "").trim()}`).join("\n\n");
+  const reading = (
+    <ReadingView
+      markdown={markdown}
+      label="Narration text"
+      regionLabel="Narration text"
+      anchorPrefix="narration-"
+      what="narration text"
+      onCopy={copy}
+    >
+      <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
+    </ReadingView>
+  );
+  const lines = timing?.lines ?? [];
   return (
     <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
       <h3 id={`${id}-title`} className="sl-kicker text-ink-3">
         Narration text
       </h3>
-      <ReadingView
-        markdown={markdown}
-        label="Narration text"
-        regionLabel="Narration text"
-        anchorPrefix="narration-"
-        what="narration text"
-        onCopy={copy}
-      >
-        <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
-      </ReadingView>
+      {lines.length === 0 ? (
+        reading
+      ) : (
+        <>
+          <p className="m-0 text-small text-ink-2">
+            Press a line to play from there; the line being spoken is marked.
+          </p>
+          <Transcript lines={lines} label="Narration transcript" onFix={timing?.fix} />
+          <details className="border-t border-line pt-2">
+            <summary className="cursor-pointer text-small font-semibold">
+              Read, search or copy the text
+            </summary>
+            {reading}
+          </details>
+        </>
+      )}
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
   );

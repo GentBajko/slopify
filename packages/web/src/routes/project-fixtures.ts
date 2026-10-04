@@ -188,7 +188,7 @@ const sectionNames: Readonly<Record<string, string>> = {
 export async function selectProjectStage(name: string): Promise<HTMLElement> {
   const section = sectionNames[name] ?? name;
   const navigation = await screen.findByRole("navigation", { name: "Project sections" });
-  const item = within(navigation).getByRole("button", { name: new RegExp(`^${section}`) });
-  if (item.getAttribute("aria-current") !== "true") await userEvent.click(item);
+  const item = within(navigation).getByRole("link", { name: new RegExp(`^${section}`) });
+  if (item.getAttribute("aria-current") !== "page") await userEvent.click(item);
   return screen.getByRole("region", { name: section });
 }

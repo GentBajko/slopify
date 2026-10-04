@@ -167,12 +167,18 @@ export function VideoSection(
 
 // What the run makes besides the long video: the thumbnail, the YouTube description, Shorts
 // and the PDF.
+// For an article, audiobook, podcast or images the publishing extras (thumbnail, YouTube
+// description, Shorts) fold away under one line, opened on request or when one is already on.
 export function ExtrasSection(
-  props: RailProps & { readonly entries: readonly Entry[]; readonly onSettings: () => void },
+  props: RailProps & {
+    readonly entries: readonly Entry[];
+    readonly onSettings: () => void;
+    readonly publishing?: boolean | undefined;
+  },
 ): ReactElement {
-  return (
+  const { form } = props;
+  const extras = (
     <>
-      <TextGenerationIn {...props} section="outputs" onSettings={props.onSettings} />
       <ThumbnailRail {...props} />
       <section className="border-b border-line py-4">
         <VideoExtras
@@ -185,6 +191,25 @@ export function ExtrasSection(
           {...(props.onReattachFile === undefined ? {} : { onReattachFile: props.onReattachFile })}
         />
       </section>
+    </>
+  );
+  const anyOn =
+    form.sources.thumbnail !== "off" ||
+    form.youtubeDescription === true ||
+    form.shorts?.enabled === true;
+  return (
+    <>
+      <TextGenerationIn {...props} section="outputs" onSettings={props.onSettings} />
+      {props.publishing === false ? (
+        <details open={anyOn} className="border-b border-line py-3">
+          <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
+            Publishing extras: thumbnail, YouTube description, Shorts
+          </summary>
+          {extras}
+        </details>
+      ) : (
+        extras
+      )}
       {/* The PDF is made from the article, so with Article Off it isn't offered. */}
       {props.form.sources.article === "off" ? null : <DocumentRail {...props} />}
     </>

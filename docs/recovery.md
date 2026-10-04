@@ -50,7 +50,7 @@ place, `packages/app/src/slices/fixes/rules.ts`:
 | --- | --- |
 | A CLI is signed out | **Copy sign-in command** (codex login, claude auth login or gemini), then **Check again** |
 | A key was rejected or none is saved | **Open Settings → Providers → <provider>** |
-| The disk is full | **Free space**, which opens Settings → Storage |
+| The disk is full | **Free space**, which opens Settings → Backup & storage |
 | A content filter refused an image prompt | **Soften and retry** |
 | A content filter refused any other prompt | **Edit the prompt**, which opens Edit |
 | The model was retired | **Switch model**, which opens Edit |
@@ -80,7 +80,7 @@ replaces the container (see [Docker](docker.md)).
 
 ## Keep outputs only
 
-Settings → Storage lists each project's size split into outputs (video, shorts, thumbnail,
+Settings → Backup & storage lists each project's size split into outputs (video, shorts, thumbnail,
 article, description, document, subtitles, exported audio) and working files. A finished
 project offers **Keep outputs only**, which removes the files its steps made and could make
 again: images, narration parts, subtitle timing and render settings, and reports the space it

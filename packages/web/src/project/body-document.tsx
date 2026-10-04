@@ -41,6 +41,7 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
       )}
       <Facts label="PDF details">
         <Fact label="Theme">{theme}</Fact>
+        <Fact label="Contents">Each entry is a link to the page its heading is on</Fact>
       </Facts>
     </StageBody>
   );

@@ -34,9 +34,9 @@ With **Provide**, the file is used as is: "Uploaded narration is used as-is; inc
 
 Under the voice is a **Speakers** disclosure. It reads "Narration, one voice" by default. Open it to pick an audiobook, podcast, radio drama or interview format with several speakers, each with their own voice. See [Multiple Voices](Multiple-Voices) for every speaker setting, and [Other Languages](Other-Languages) for narrating in another language.
 
-## Audio Advanced
+## More audio settings
 
-**Audio Advanced** is a disclosure under the voice. Its line says what is not at the default, for example `words · intro Welcome · glossary on`.
+**More audio settings** is a disclosure under the voice. Its line says what is not at the default, for example `words · intro Welcome · glossary on`.
 
 ### Chunking
 
@@ -78,7 +78,7 @@ To get a glossary, ask for one in your article prompt: a section in slash-delimi
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Use narration aliases** | Says the words listed in Library → Aliases the way they are written there, such as `Dr.` as `Doctor`, with any generated voice. They are copied when the project starts. The article and captions keep the written words. | On |
+| **Use narration aliases** | Says the words listed in Library → Narration aliases the way they are written there, such as `Dr.` as `Doctor`, with any generated voice. They are copied when the project starts. The article and captions keep the written words. | On |
 
 Manage the list in [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 

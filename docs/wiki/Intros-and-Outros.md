@@ -2,7 +2,7 @@
 
 Intros and outros are short narrated passages read before and after the body of a video, in the same voice: a greeting, a series tagline, a sign-off, a call to subscribe. Write one as fixed text, or as an instruction the text model answers fresh for each video.
 
-**Where to find it:** **Library → Intros & Outros**. Pick them on Play in the **Intro** and **Outro** pickers (Narration row → **Audio Advanced**), in **Edit project**, or as a channel default in the channel's brand kit.
+**Where to find it:** **Library → Intros & outros**. Pick them on Play in the **Intro** and **Outro** pickers (Narration row → **More audio settings**), in **Edit project**, or as a channel default in the channel's brand kit.
 
 ## Text or LLM
 
@@ -17,7 +17,7 @@ Either way the intro or outro is narrated as its own audio file with the run's v
 
 ## Write an intro or outro
 
-1. Open **Library → Intros & Outros**.
+1. Open **Library → Intros & outros**.
 2. Choose **Intros** or **Outros** with **Entry category**.
 3. Press **New intro or outro**.
 4. Fill in the editor:
@@ -46,7 +46,7 @@ the listener can think about tonight. Do not ask them to subscribe.
 
 **On Play:**
 
-1. Open the **Narration** row with **Change**, then open **Audio Advanced**.
+1. Open the **Narration** row with **Change**, then open **More audio settings**.
 2. Pick an entry in **Intro** and, if you like, in **Outro**. **Off** reads none.
 3. Fill in any new keyword fields the entry added.
 
@@ -66,7 +66,7 @@ Entries have the same row actions as prompts:
 | **Duplicate** | Opens the editor with a copy to rename and save. |
 | **Use in Play** | Picks the entry in the open Play draft. |
 | **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
-| **Delete** | Asks first, then moves it to **Settings → Trash** for 30 days. |
+| **Delete** | Asks first, then moves it to **Settings → Backup & storage → Trash** for 30 days. |
 
 Use **Search intros and outros** (`/`) to find one by name. The pencil beside a name renames the entry in its row, with **Undo** on the notice; see [Rename in the row](Library-Overview#rename-in-the-row).
 

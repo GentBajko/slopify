@@ -255,6 +255,13 @@ export function estimateRun(
           Math.round(articleChars * 1.1),
           "One LLM call hands the text's passages to the speakers.",
         );
+      if (draft.voices?.source === "adapt")
+        text(
+          "Conversation script",
+          articleChars + 1500,
+          Math.round(articleChars * 1.2),
+          "One LLM call rewrites the text as a conversation between the speakers; the article stays as written.",
+        );
     } else
       requests.push(
         generatedArticle || llmExtras > 0

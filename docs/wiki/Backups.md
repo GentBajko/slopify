@@ -2,7 +2,7 @@
 
 A backup is one `.tar` file with everything you made in Slopify: every project with its files and history, your library, templates, schedules, channels and settings. Make one by hand at any time with **Export everything**, or let Slopify write one every day. Bring one back with **Import a backup**. Provider keys are never included.
 
-**Where to find it:** **Settings → Backup & storage** (Export everything, Import a backup) and **Settings → Backups** (daily backups, Back up now).
+**Where to find it:** **Settings → Backup & storage**: daily backups and Back up now, Export everything and Import a backup.
 
 ## What a backup holds
 
@@ -54,7 +54,7 @@ If the import fails, Slopify says: "The backup wasn't imported. Check it is a fi
 
 Daily backups are off by default, because each backup holds every project's video and can fill a disk.
 
-1. Open **Settings → Backups**.
+1. Open **Settings → Backup & storage**.
 2. Turn **Back up automatically** on.
 3. Set **Time of day**, **Keep last** and optionally **Folder** (see below).
 4. Press **Save**.
@@ -78,7 +78,7 @@ The screen shows the last backup's time and size, the result of the last attempt
 
 ## Back up now
 
-1. Open **Settings → Backups**.
+1. Open **Settings → Backup & storage**.
 2. Press **Back up now**. Slopify says "Backup started. Its result shows here when it finishes."
 
 It writes the same file into the backup folder. It says which projects it is waiting for, if any, and is refused while another backup is being written.
@@ -97,11 +97,11 @@ It writes the same file into the backup folder. It says which projects it is wai
 - Free space is checked first. A backup that would not fit fails with the sizes.
 - Backup files are readable by your user only.
 - An update waits for a backup that is being written.
-- Every failure is explained on **Settings → Backups** with what to change, for example free space, lower **Keep last**, or pick another **Folder**.
+- Every failure is explained on **Settings → Backup & storage** with what to change, for example free space, lower **Keep last**, or pick another **Folder**.
 
 ## Other storage tools on Backup & storage
 
-- **Clean orphan files** deletes files that no project, draft or template uses any more. Slopify also does this each time it starts.
+- **Clear leftover files** deletes files that no project, draft or template uses any more. Slopify also does this each time it starts.
 - **Keep outputs only** on a finished project deletes its working files and keeps the finished outputs.
 
 Both are explained in [Where your files live](Where-Your-Files-Live).

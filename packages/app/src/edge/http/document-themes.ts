@@ -90,7 +90,7 @@ function refused(
         extensions: { fields: failure.fields },
       });
     case "duplicate-name": {
-      const message = "Another document theme already has this name. Choose a different name.";
+      const message = "Another PDF theme already has this name. Choose a different name.";
       return problem(c, {
         status: 409,
         title: titleOf(409),
@@ -103,7 +103,7 @@ function refused(
         status: 404,
         title: titleOf(404),
         detail:
-          "This document theme no longer exists; it may have been deleted in another tab. Go back to Library → Documents.",
+          "This PDF theme no longer exists; it may have been deleted in another tab. Go back to Library → PDF themes.",
       });
   }
 }

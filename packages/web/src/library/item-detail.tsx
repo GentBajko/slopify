@@ -7,6 +7,7 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { DiffColumns } from "./diff-view";
 import { useLibraryHistory, useLibraryUsedBy, versionMeta } from "./history-drawer";
+import { exactTime } from "./time";
 
 // The detail beside a Library list: the selected prompt or intro/outro's text and keywords,
 // what uses it now, and its latest change as a word diff. Every version and Restore are one
@@ -26,7 +27,7 @@ export function LibraryItemDetail({
   readonly id: string;
   readonly name: string;
   readonly kicker: string;
-  readonly meta: string;
+  readonly meta: ReactNode;
   readonly body: string;
   readonly slots: readonly string[];
   // Edit, as a link to the editor.
@@ -153,7 +154,11 @@ function LatestChange({
         {...(newer === undefined
           ? {}
           : {
-              meta: `${plural(versions.length, "version")} · latest ${versionMeta(newer)}`,
+              meta: (
+                <span title={exactTime(newer.createdAt)}>
+                  {`${plural(versions.length, "version")} · latest ${versionMeta(newer)}`}
+                </span>
+              ),
             })}
       >
         <Button size="small" aria-label={`Compare versions of ${name}`} onClick={onOpenHistory}>

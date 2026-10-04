@@ -1,39 +1,43 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
   BookIcon,
   BookOpenIcon,
   CalendarIcon,
   FilmIcon,
+  HeartIcon,
   HouseIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
   UsersIcon,
 } from "lucide-react";
-import { type ReactElement, useEffect, useState, useSyncExternalStore } from "react";
+import { type ReactElement, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
-import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
+import { ChannelPicker, CurrentChannelProvider } from "@/channels/current";
+import { ConnectionStatus } from "@/components/connection-status";
 import { GlobalCommands } from "@/components/global-commands";
 import { SupportGlyph } from "@/components/glyph";
-import { IconButton, PlayKey } from "@/components/kit/button";
+import { Button, IconButton, PlayKey } from "@/components/kit/button";
 import {
   ariaKeyShortcuts,
   CommandPaletteProvider,
-  useCommand,
   useCommandPalette,
 } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Lamp } from "@/components/kit/status";
 import { Logo } from "@/components/logo";
 import { FirstRunNotice } from "@/components/notice";
+import { ShellCommands } from "@/components/shell-commands";
+import { useShellLocation } from "@/components/shell-location";
 import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
-import { subscribeGlobal } from "@/events";
+import { type Connection, subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
 import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
@@ -49,9 +53,9 @@ import { UpdateWidget } from "@/updates/widget";
 import { WhatsNewTour } from "@/whats-new/tour";
 
 // The 3.0 shell (docs/design-system.md, Layout): a 232px left rail with the wordmark, the
-// command palette button, the six destinations, the channel picker and the New project key; a
+// command palette button, the six destinations, the channel picker and the Create key; a
 // thin top bar for the running tally, updates and help; the page below, full width up to
-// content-max. On phones the rail becomes a bottom bar of five.
+// content-max. On phones the rail becomes a bottom bar of six.
 //
 // `match` lists the paths a destination stays lit for. Schedules are the calendar's Schedules
 // tab; the old /schedules address redirects there.
@@ -61,7 +65,8 @@ interface Destination {
   readonly label: string;
   readonly icon: ReactElement;
   readonly match: readonly string[];
-  // Shown in the phone's bottom bar (five of the six fit).
+  // Shown in the phone's bottom bar (all six: Channels too, so nothing is reachable only
+  // through Ctrl+K on a phone).
   readonly phone: boolean;
 }
 
@@ -98,7 +103,7 @@ const destinations: readonly Destination[] = [
     label: "Channels",
     icon: <UsersIcon {...iconProps} />,
     match: ["/channels"],
-    phone: false,
+    phone: true,
   },
   {
     id: "library",
@@ -112,6 +117,7 @@ const destinations: readonly Destination[] = [
       "/templates",
       "/document-themes",
       "/narration-aliases",
+      "/ab-results",
     ],
     phone: true,
   },
@@ -124,6 +130,30 @@ const destinations: readonly Destination[] = [
     phone: true,
   },
 ];
+
+// On a phone the three support links are one menu, so the top bar keeps room for search,
+// updates and help.
+function SupportMenu(): ReactElement {
+  return (
+    <Menu modal={false}>
+      <MenuTrigger asChild>
+        <IconButton label="Support Slopify" className="shrink-0">
+          <HeartIcon {...iconProps} />
+        </IconButton>
+      </MenuTrigger>
+      <MenuContent>
+        {support.map((link) => (
+          <MenuItem key={link.href} asChild>
+            <a href={link.href} target="_blank" rel="noreferrer" className="no-underline">
+              <SupportGlyph name={link.glyph} className={link.tone} />
+              {link.label}
+            </a>
+          </MenuItem>
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+}
 
 // Help → Tutorials, beside the interactive tutorial's button: the guides to every screen.
 function TutorialsLink(): ReactElement {
@@ -179,126 +209,6 @@ export function Shell() {
   );
 }
 
-// Every destination, the New project key and the channel picker are commands too.
-function NavigationCommands() {
-  const navigate = useNavigate();
-  const current = useCurrentChannel();
-  const go = (to: string) => () => {
-    void navigate({ to });
-  };
-  useCommand({
-    id: "nav.home",
-    title: "Open home",
-    group: "Go to",
-    shortcut: shortcuts.goHome,
-    run: go("/"),
-  });
-  useCommand({
-    id: "nav.channels",
-    title: "Open channels",
-    group: "Go to",
-    run: go("/channels"),
-    keywords: ["cast", "brand"],
-    shortcut: shortcuts.goChannels,
-  });
-  useCommand({
-    id: "nav.schedules",
-    title: "Open schedules",
-    group: "Go to",
-    run: () => {
-      void navigate({ to: "/calendar", search: { tab: "schedules" } });
-    },
-    keywords: ["calendar", "topics"],
-    shortcut: shortcuts.goSchedules,
-  });
-  useCommand({
-    id: "channel.all",
-    title: "Show all channels",
-    group: "Channel",
-    run: () => current.setChannelId(null),
-    keywords: ["switch", "filter"],
-  });
-
-  useCommand({
-    id: "create.video",
-    title: "New project",
-    group: "Create",
-    run: go("/play"),
-    keywords: ["play", "make", "start"],
-    shortcut: shortcuts.newVideo,
-  });
-  useCommand({
-    id: "nav.projects",
-    title: "Open projects",
-    group: "Go to",
-    shortcut: shortcuts.goProjects,
-    run: go("/projects"),
-  });
-  useCommand({
-    id: "nav.calendar",
-    title: "Open calendar",
-    group: "Go to",
-    run: go("/calendar"),
-    keywords: ["schedules"],
-    shortcut: shortcuts.goCalendar,
-  });
-  useCommand({
-    id: "nav.library",
-    title: "Open library",
-    group: "Go to",
-    run: go("/prompts"),
-    keywords: ["prompts", "templates"],
-    shortcut: shortcuts.goLibrary,
-  });
-  useCommand({
-    id: "nav.settings",
-    title: "Open settings",
-    group: "Go to",
-    run: go("/settings"),
-    keywords: ["providers", "keys", "appearance"],
-    shortcut: shortcuts.goSettings,
-  });
-  useCommand({
-    id: "nav.tutorials",
-    title: "Open tutorials",
-    group: "Go to",
-    run: () => {
-      void navigate({ to: "/help/tutorials/$page", params: { page: "Home" } });
-    },
-    keywords: ["help", "guide", "wiki", "docs", "how"],
-  });
-  useCommand({
-    id: "nav.usage",
-    title: "Open usage and costs",
-    group: "Go to",
-    run: () => {
-      void navigate({ to: "/settings", search: { section: "usage" } });
-    },
-    keywords: ["cost", "limits"],
-  });
-  return null;
-}
-
-// One command per channel, as a component so the list can grow and shrink.
-function ChannelCommand({ id, name }: { readonly id: string; readonly name: string }) {
-  const current = useCurrentChannel();
-  useCommand({
-    id: `channel.${id}`,
-    title: `Switch to ${name}`,
-    group: "Channel",
-    run: () => current.setChannelId(id),
-    keywords: ["channel", "switch", "filter"],
-  });
-  return null;
-}
-
-function ChannelCommands() {
-  const current = useCurrentChannel();
-  return current.channels.map((channel) => (
-    <ChannelCommand key={channel.id} id={channel.id} name={channel.name} />
-  ));
-}
-
 // The sidebar shows from 768px up (shell.css hides it below). The update and tutorial
 // buttons are mounted in one place only, so an update is announced once, not twice.
 const wideQuery = "(min-width: 768px)";
@@ -317,6 +227,9 @@ function useWide(): boolean {
 
 function ShellContent() {
   const { api, openEvents, version } = useApp();
+  const main = useRef<HTMLElement>(null);
+  const [connection, setConnection] = useState<Connection | undefined>(undefined);
+  useShellLocation(main);
   const loadedVersion = useSyncExternalStore(version.subscribe, version.loadedAt, version.loadedAt);
   const wide = useWide();
   const queryClient = useQueryClient();
@@ -345,6 +258,7 @@ function ShellContent() {
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },
+      connection: setConnection,
       // A reconnect means the tally and every list may have moved on while the socket
       // was down, and nothing is replayed.
       refetch: (projectId) => {
@@ -360,11 +274,21 @@ function ShellContent() {
 
   return (
     <div className="sl-app">
-      <NavigationCommands />
+      {/* The first stop for the Tab key: past the rail, straight to the screen. */}
+      <Button
+        variant="primary"
+        className="sl-skip"
+        onClick={() => {
+          main.current?.focus();
+        }}
+      >
+        Skip to content
+      </Button>
+      <ShellCommands />
       <GlobalCommands />
       <PatchNotesCommand />
       <TutorialCommands />
-      <ChannelCommands />
+      <ConnectionStatus connection={connection} />
       <aside className="sl-app__rail" aria-label="App">
         <Link to="/" className="sl-wordmark">
           <Logo className="sl-wordmark__logo" />
@@ -412,7 +336,7 @@ function ShellContent() {
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play" aria-keyshortcuts={ariaKeyShortcuts(shortcuts.newVideo)}>
               <PlusIcon {...iconProps} />
-              New project
+              Create
             </Link>
           </PlayKey>
           <nav aria-label="Support Slopify" className="sl-rail__links">
@@ -471,19 +395,7 @@ function ShellContent() {
               )}
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-2 [&_button]:min-h-8 [&_button]:min-w-8">
-              {support.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={link.label}
-                  className="flex min-h-8 min-w-8 shrink-0 items-center justify-center text-ink-2 no-underline hover:text-ink"
-                >
-                  <SupportGlyph name={link.glyph} className={link.tone} />
-                  <span className="sr-only">{link.label}</span>
-                </a>
-              ))}
+              <SupportMenu />
               <UpdateWidget reload={() => window.location.reload()} />
               <TutorialsLink />
               <TutorialLauncher />
@@ -491,7 +403,7 @@ function ShellContent() {
           </header>
         )}
 
-        <main className="sl-app__content sl-page">
+        <main ref={main} id="main" tabIndex={-1} className="sl-app__content sl-page">
           <Outlet />
         </main>
       </div>

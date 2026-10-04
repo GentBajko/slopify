@@ -6,7 +6,11 @@ import {
   legacyDocumentTheme,
 } from "@app/slices/document/model.js";
 import { useQuery } from "@tanstack/react-query";
+import { EyeIcon } from "lucide-react";
+import { useState } from "react";
 import { useApp } from "@/app-context";
+import { DocumentThemePreview } from "@/components/document-theme-preview";
+import { Button } from "@/components/kit/button";
 import { Picker } from "@/components/ui/picker";
 import { documentThemesQuery } from "@/queries";
 
@@ -49,52 +53,79 @@ export function DocumentThemePicker({
       : kept
         ? "kept"
         : `custom:${custom.id}`;
+  const [previewing, setPreviewing] = useState(false);
+  const builtIn = listing.data?.builtIns.find((one) => one.name === documentThemeOf(value));
+  const shown =
+    custom !== undefined
+      ? { name: custom.name, values: custom.values }
+      : {
+          name: builtIn?.label ?? documentThemeLabels[documentThemeOf(value)],
+          values: builtIn?.values,
+        };
 
   return (
-    <Picker
-      id={id}
-      data-play-field={field}
-      className={className}
-      disabled={disabled}
-      value={selected}
-      onChange={(event) => {
-        const picked = event.target.value;
-        if (picked === "kept") return;
-        if (picked.startsWith("builtin:")) {
-          const theme = documentThemes.find((one) => `builtin:${one}` === picked);
-          if (theme !== undefined) onChange({ theme });
-          return;
-        }
-        const theme = saved.find((one) => `custom:${one.id}` === picked);
-        if (theme !== undefined)
-          onChange({
-            theme: documentThemeOf(value),
-            custom: { id: theme.id, name: theme.name, values: theme.values },
-          });
-      }}
-    >
-      <optgroup label="Built in">
-        {documentThemes.map((theme) => (
-          <option key={theme} value={`builtin:${theme}`}>
-            {documentThemeLabels[theme]}
-          </option>
-        ))}
-        {legacy ? (
-          <option value={`builtin:${legacyDocumentTheme}`}>
-            {`${documentThemeLabels[legacyDocumentTheme]} (retired, this project's look)`}
-          </option>
-        ) : null}
-      </optgroup>
-      {saved.length === 0 && !kept ? null : (
-        <optgroup label="Your themes">
-          {kept ? <option value="kept">{`${custom.name} (this project's copy)`}</option> : null}
-          {saved.map((theme) => (
-            <option key={theme.id} value={`custom:${theme.id}`}>
-              {kept && library?.id === theme.id ? `${theme.name} (current version)` : theme.name}
+    <span className="flex min-w-0 flex-wrap items-center gap-2">
+      <Picker
+        id={id}
+        data-play-field={field}
+        className={className}
+        disabled={disabled}
+        value={selected}
+        onChange={(event) => {
+          const picked = event.target.value;
+          if (picked === "kept") return;
+          if (picked.startsWith("builtin:")) {
+            const theme = documentThemes.find((one) => `builtin:${one}` === picked);
+            if (theme !== undefined) onChange({ theme });
+            return;
+          }
+          const theme = saved.find((one) => `custom:${one.id}` === picked);
+          if (theme !== undefined)
+            onChange({
+              theme: documentThemeOf(value),
+              custom: { id: theme.id, name: theme.name, values: theme.values },
+            });
+        }}
+      >
+        <optgroup label="Built in">
+          {documentThemes.map((theme) => (
+            <option key={theme} value={`builtin:${theme}`}>
+              {documentThemeLabels[theme]}
             </option>
           ))}
+          {legacy ? (
+            <option value={`builtin:${legacyDocumentTheme}`}>
+              {`${documentThemeLabels[legacyDocumentTheme]} (retired, this project's look)`}
+            </option>
+          ) : null}
         </optgroup>
-      )}
-    </Picker>
+        {saved.length === 0 && !kept ? null : (
+          <optgroup label="Your themes">
+            {kept ? <option value="kept">{`${custom.name} (this project's copy)`}</option> : null}
+            {saved.map((theme) => (
+              <option key={theme.id} value={`custom:${theme.id}`}>
+                {kept && library?.id === theme.id ? `${theme.name} (current version)` : theme.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </Picker>
+      <Button
+        variant="quiet"
+        size="small"
+        disabled={listing.data === undefined}
+        aria-label={`Preview the ${shown.name} theme`}
+        onClick={() => setPreviewing(true)}
+      >
+        <EyeIcon aria-hidden="true" strokeWidth={1.75} />
+        Preview
+      </Button>
+      <DocumentThemePreview
+        open={previewing}
+        name={shown.name}
+        values={shown.values}
+        onClose={() => setPreviewing(false)}
+      />
+    </span>
   );
 }

@@ -8,7 +8,7 @@ import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Field, Input } from "@/components/kit/field";
+import { Field } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -16,6 +16,7 @@ import { Status } from "@/components/kit/status";
 import { CliProviderDetail, cliState, providerTips } from "@/components/provider-cli";
 import { testKey } from "@/components/provider-upkeep-api";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
+import { SecretInput } from "@/components/secret-input";
 import { localState, SystemVoiceDetail } from "@/components/system-voices";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
@@ -298,12 +299,18 @@ function KeyDetail({
         help="Stored on this computer only. Never in backups or exports."
         error={failure}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            type="password"
+        {/* A form so Enter in the box saves, as the Save button does. */}
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (draft.trim() !== "" && !saving) void save();
+          }}
+        >
+          <SecretInput
             autoComplete="off"
             spellCheck={false}
-            className="min-w-0 flex-1 basis-[200px]"
+            className="flex-1 basis-[200px]"
             aria-describedby={described === "" ? undefined : described}
             placeholder={hasKey ? keyMask : "Paste API key"}
             value={draft}
@@ -312,16 +319,14 @@ function KeyDetail({
             }}
           />
           <Button
+            type="submit"
             variant="primary"
             aria-label={`Save ${provider.displayName} key`}
             disabled={draft.trim() === "" || saving}
-            onClick={() => {
-              void save();
-            }}
           >
             Save
           </Button>
-        </div>
+        </form>
       </Field>
       {hasKey ? (
         <span id={storedId} className="sr-only">

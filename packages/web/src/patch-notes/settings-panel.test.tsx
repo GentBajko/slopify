@@ -42,7 +42,12 @@ describe("Settings → Patch notes", () => {
     const onNote = vi.fn();
     renderRouted(<SettingsRoute section="patch-notes" onNote={onNote} />, routes());
     const rail = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(within(rail).getByRole("button", { name: "Patch notes" })).not.toBeNull();
+    expect(within(rail).getByRole("button", { name: "About" }).getAttribute("aria-current")).toBe(
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Patch notes" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
     expect(await screen.findByRole("heading", { name: "Everything that changed" })).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Latest version" })).not.toBeNull();
     expect(screen.getByText(/The version you are running\./)).not.toBeNull();

@@ -31,6 +31,7 @@ import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
+import { ArticleTextField } from "./article-text-field.js";
 import { EditChannel } from "./edit-channel.js";
 import { editPreviewImageOf } from "./edit-preview-image.js";
 import { EditAmbientBed, EditLoudness, EditPauses } from "./edit-sound-and-scale.js";
@@ -343,7 +344,7 @@ export function RevisionForm(
                 Images are Off. Video is also Off in these changes.
               </p>
             ) : null}
-            <Field label="Document theme" id={`${formId}-document-theme`} tip="play.document-theme">
+            <Field label="PDF theme" id={`${formId}-document-theme`} tip="play.document-theme">
               <DocumentThemePicker
                 id={`${formId}-document-theme`}
                 disabled={sourceOf(config.sources, "document") === "off"}
@@ -611,39 +612,26 @@ export function RevisionForm(
           ) : null}
         </section>
         <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
-          <Field
-            label="Article text"
-            tip="project.edit.article-text"
+          <ArticleTextField
             error={problem("content.articleMarkdown") ?? problem("provided.article")}
             help={
               edit.content.articleEdited
                 ? "Your edited article is kept when other settings change. Regenerating it replaces it after the rebuild review."
                 : undefined
             }
-          >
-            <Textarea
-              rows={12}
-              maxLength={500000}
-              value={
-                (edit.content.articleEdited
-                  ? edit.content.articleMarkdown
-                  : view.articleMarkdown) ??
-                edit.content.articleMarkdown ??
-                config.provided.article ??
-                ""
-              }
-              onChange={(event) =>
-                onChange({
-                  ...edit,
-                  content: {
-                    ...edit.content,
-                    articleMarkdown: event.target.value,
-                    articleEdited: true,
-                  },
-                })
-              }
-            />
-          </Field>
+            value={
+              (edit.content.articleEdited ? edit.content.articleMarkdown : view.articleMarkdown) ??
+              edit.content.articleMarkdown ??
+              config.provided.article ??
+              ""
+            }
+            onChange={(text) =>
+              onChange({
+                ...edit,
+                content: { ...edit.content, articleMarkdown: text, articleEdited: true },
+              })
+            }
+          />
           {config.sources.article === "generate" ? (
             <div className="flex items-center gap-1">
               <Button
@@ -725,6 +713,7 @@ export function RevisionForm(
             <SubtitleControls
               value={config.subtitles ?? defaultSubtitles}
               format={config.format}
+              language={config.language}
               audioEnabled={config.sources.audio !== "off"}
               videoEnabled={video}
               onChange={(subtitles) =>

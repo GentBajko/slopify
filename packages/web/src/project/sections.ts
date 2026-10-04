@@ -84,3 +84,21 @@ export function sectionSummary(
     ? `${stageNames[shown.kind]}: ${summary}`
     : summary;
 }
+
+// Whether the project makes a video for YouTube: it writes the YouTube description, makes
+// Shorts, or already holds YouTube text or Shorts. Only such a project shows Prepare upload
+// and the other YouTube controls; a video, audiobook or PDF made for anywhere else keeps its
+// downloads and nothing about YouTube.
+export function makesYoutubeVideo(config: RunConfig, outputs: readonly Output[]): boolean {
+  return (
+    config.sources.video !== "off" &&
+    (config.youtubeDescription === true ||
+      config.shorts?.enabled === true ||
+      outputs.some(
+        (output) =>
+          output.role === "youtube_description" ||
+          output.role === "youtube_tags" ||
+          output.role === "short_video",
+      ))
+  );
+}

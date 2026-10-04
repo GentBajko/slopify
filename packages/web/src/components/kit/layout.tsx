@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useScrollEdges } from "./scroll-edges.js";
 
 // The three page shapes of the app (docs/design-system.md, Layout). Each uses the full width
 // up to content-max and collapses to one column on phones.
@@ -82,13 +83,39 @@ export function Workspace({
         className,
       )}
     >
-      {sections === undefined ? null : <div className="sl-workspace__sections">{sections}</div>}
+      {sections === undefined ? null : <WorkspaceSections>{sections}</WorkspaceSections>}
       <div className="sl-workspace__main">{children}</div>
       {aside === undefined ? null : (
         <aside aria-label={asideLabel} className="sl-workspace__aside">
           {aside}
         </aside>
       )}
+    </div>
+  );
+}
+
+// On a phone the section rail is a row of tabs that scrolls sideways (shell.css): its edges
+// fade where more sections hide, and the current one is kept in view.
+function WorkspaceSections({ children }: { readonly children: ReactNode }): ReactElement {
+  const row = useRef<HTMLDivElement>(null);
+  const [current, setCurrent] = useState<string | undefined>(undefined);
+  useScrollEdges(row, current);
+  useEffect(() => {
+    const element = row.current;
+    if (element === null || typeof MutationObserver !== "function") return;
+    const read = () =>
+      setCurrent(
+        element.querySelector('[aria-current]:not([aria-current="false"])')?.textContent ??
+          undefined,
+      );
+    read();
+    const watch = new MutationObserver(read);
+    watch.observe(element, { subtree: true, attributes: true, attributeFilter: ["aria-current"] });
+    return () => watch.disconnect();
+  }, []);
+  return (
+    <div ref={row} className="sl-workspace__sections">
+      {children}
     </div>
   );
 }

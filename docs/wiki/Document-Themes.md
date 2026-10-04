@@ -2,7 +2,7 @@
 
 A document theme is the look of the PDF Slopify makes from the article: paper size, colours, fonts, spacing, the title page, contents, sources and closing pages, headers and page numbers. Slopify ships a built-in **Plain** theme. Copy it to make themes of your own, with a live preview as you edit.
 
-**Where to find it:** **Library → Documents**. Pick a theme on Play's **Document** row, in **Edit project**, or as a channel's default in its brand kit.
+**Where to find it:** **Library → PDF themes**. Pick a theme on Play's **Document** row, in **Edit project**, or as a channel's default in its brand kit.
 
 ## Built-in and your own themes
 
@@ -15,7 +15,7 @@ A project keeps its own copy of the theme's settings. Editing or deleting a them
 
 ## Make a theme
 
-1. Open **Library → Documents**.
+1. Open **Library → PDF themes**.
 2. Press **New theme** (it starts from Plain), or pick a built-in theme and press **Copy theme**, or press **Duplicate** on one of your themes.
 3. Type a **Name** (up to 80 characters). This is what the Document row on Play and Edit project shows.
 4. Open the groups on the left and change what you like (every setting is listed below). The first two groups start open.

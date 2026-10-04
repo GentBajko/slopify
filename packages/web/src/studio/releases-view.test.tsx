@@ -68,3 +68,36 @@ it("shows each release with its state, and puts a finished project into a free t
   await user.click(screen.getByRole("button", { name: "Put it here" }));
   await waitFor(() => expect(puts).toEqual([{ short: 0, at: calendar.entries[1]?.at, line: "2" }]));
 });
+
+it("pages through the coming weeks with Earlier and Later and comes back to this week", async () => {
+  const user = userEvent.setup();
+  const asked: string[] = [];
+  const far = {
+    ...calendar,
+    entries: [
+      ...calendar.entries,
+      { at: later(20 * 24), line: "3", series: "", project: null, items: [] },
+    ],
+  };
+  renderRouted(
+    <ReleasesView />,
+    testDeps({
+      "GET /api/studio/releases": (request) => {
+        asked.push(new URL(request.url).searchParams.get("weeks") ?? "");
+        return jsonAnswer(far)(request);
+      },
+    }),
+  );
+  expect(await screen.findByText("The next two weeks")).toBeTruthy();
+  const earlier = screen.getByRole("button", { name: "Earlier" });
+  expect(earlier.hasAttribute("disabled")).toBe(true);
+  expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Later" }));
+  await waitFor(() => expect(asked).toContain("4"));
+  // Weeks three and four: only the free time twenty days ahead.
+  await waitFor(() => expect(screen.queryByText("✓ Scheduled · checks clear")).toBeNull());
+  expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Back to this week" }));
+  expect(await screen.findByText("✓ Scheduled · checks clear")).toBeTruthy();
+  expect(screen.getByText("The next two weeks")).toBeTruthy();
+});

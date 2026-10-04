@@ -99,3 +99,65 @@ it("creates, reads and pauses a schedule through the HTTP contract", async () =>
     h.close();
   }
 });
+
+it("approves, rejects and restores several held topics through the HTTP contract", async () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    const document = {
+      ...h.document,
+      form: { ...h.document.form, title: "{{Topic}}", values: { Topic: "" } },
+    };
+    expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
+    const deps = { ...h.deps, template: (id: string) => templateById(h.deps.db, id) };
+    const app = new Hono().route("/api/schedules", scheduleRoutes(deps));
+    const id = randomUUID();
+    const post = (path: string, body: unknown) =>
+      app.request(`/api/schedules/${id}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const created = await app.request("/api/schedules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id,
+        name: "Lore",
+        templateId,
+        templateVersion: 1,
+        cadence: { kind: "daily", time: "00:01" },
+        timezone: "UTC",
+        topicKeyword: "Topic",
+        topicGeneration: { mode: "hold", keepAtLeast: 3, llm: null },
+      }),
+    });
+    expect(created.status).toBe(201);
+    const insert = h.deps.db.prepare(
+      `INSERT INTO schedule_topics (id,schedule_id,title,state,rank,created_at)
+       VALUES (?,?,?,'held',?,'2026-09-12T00:00:00.000Z')`,
+    );
+    const [a, b, c] = ["a", "b", "c"].map((name, rank) => {
+      const topicId = randomUUID();
+      insert.run(topicId, id, `Topic ${name}`, rank);
+      return topicId;
+    });
+
+    const rejected = await post("/topics/held/reject", { ids: [a, b] });
+    expect(rejected.status).toBe(200);
+    expect(await rejected.json()).toMatchObject({ topics: { held: 1 } });
+    const restored = await post("/topics/held/restore", { topics: [{ id: a }, { id: b }] });
+    expect(await restored.json()).toMatchObject({ topics: { held: 3 } });
+    const approved = await post("/topics/held/approve", { ids: [b, c] });
+    expect(await approved.json()).toMatchObject({
+      items: [{ title: "Topic b" }, { title: "Topic c" }],
+      topics: { held: 1 },
+    });
+    const stale = await post("/topics/held/reject", { ids: [a, c] });
+    expect(stale.status).toBe(404);
+    expect(await stale.json()).toMatchObject({ reason: "topic-not-found" });
+    expect((await post("/topics/held/reject", { ids: [] })).status).toBe(400);
+  } finally {
+    h.close();
+  }
+});

@@ -4,6 +4,7 @@ import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { cutModeLabels, videoEditOf } from "@app/slices/video/edit-settings.js";
 import { voiceFormatLabels } from "@app/slices/voices/model.js";
+import type { OutputKind } from "./output-kind";
 import type { PlaySection } from "./sections";
 import { type PlayFormState, shortsOn, sourceLabels } from "./state";
 
@@ -100,6 +101,11 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
   ["channel", ["channelId", "useBrandKit", "language"]],
 ];
 
+// The dotted fields a row holds, for comparing a draft with the template it came from.
+export function rowFields(row: SetupRowId): readonly string[] {
+  return owners.find(([id]) => id === row)?.[1] ?? [];
+}
+
 const owns = (prefixes: readonly string[], field: string): boolean =>
   prefixes.some((prefix) => field === prefix || field.startsWith(`${prefix}.`));
 
@@ -151,6 +157,8 @@ export interface SummaryContext {
   readonly fontName: string | undefined;
   readonly checkpoints: number;
   readonly reviews: number;
+  // What the person is making; absent reads as a video, as every draft did before the choice.
+  readonly kind?: OutputKind | undefined;
 }
 
 // Each row's one line: what the run will do, in the order a person would say it.
@@ -240,7 +248,10 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
           : false,
         form.sources.document === "generate" ? `PDF (${documentThemeLabel(form.document)})` : false,
       ];
-      return join(parts) || "Only the video";
+      return (
+        join(parts) ||
+        (context.kind === undefined || context.kind === "video" ? "Only the video" : "Nothing else")
+      );
     }
     case "reviews":
       return join([
@@ -257,6 +268,8 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
         context.brandKit ? "brand kit on" : "brand kit off",
         // Only a language picked here; otherwise the channel's (or English) applies.
         form.language === undefined ? undefined : languageInfo(form.language).name,
+        // Files are made without one; a channel only lends its defaults and keeps work together.
+        context.kind === undefined || context.kind === "video" ? undefined : "optional",
       ]);
   }
 }

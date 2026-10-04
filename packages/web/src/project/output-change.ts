@@ -6,6 +6,7 @@ import {
   RevisionControlContext,
 } from "./revision-action-context.js";
 import { useCurrentRevisionView } from "./revision-media.js";
+import { imagePrice, type Price, useRunCost } from "./stage-price.js";
 import type { ProjectActions } from "./use-actions.js";
 
 export type OutputChange = "regenerate-image" | "delete-image";
@@ -42,6 +43,8 @@ export function useOutputChange(
   readonly now: boolean;
   // Whether the project's revision has loaded, so `act` takes the path it will keep taking.
   readonly ready: boolean;
+  // What making it again is likely to cost, for the confirm dialog; undefined when unknown.
+  readonly price: string | undefined;
 } {
   const [asking, setAsking] = useState<OutputChange | undefined>();
   const revisioned = use(RevisionControlContext);
@@ -53,6 +56,11 @@ export function useOutputChange(
       ? undefined
       : view?.outputs.find((row) => row.output.id === output.id)?.workKey;
   const viaEdit = revisioned && workKey !== undefined;
+  const price = imagePrice(
+    useRunCost(output?.projectId),
+    output?.role === "thumbnail" ? "thumbnail" : "images",
+    1,
+  );
   const act = (kind: OutputChange): void => {
     if (output === undefined) return;
     if (!viaEdit || workKey === undefined || kind === "regenerate-image") {
@@ -85,7 +93,7 @@ export function useOutputChange(
       setAsking(undefined);
       if (kind === undefined || output === undefined) return;
       if (viaEdit && workKey !== undefined && kind === "regenerate-image")
-        regenerateNow?.([workKey]);
+        regenerateNow?.([workKey], { approvedUpTo: price?.approvedUpTo });
       else actions.run({ kind, outputId: output.id });
     },
     dismiss: () => setAsking(undefined),
@@ -97,6 +105,7 @@ export function useOutputChange(
     viaEdit,
     now: viaEdit,
     ready: !revisioned || view !== undefined,
+    price: price?.text,
   };
 }
 
@@ -114,27 +123,31 @@ export function useRegenerateAll(
       readonly confirm: () => void;
       readonly dismiss: () => void;
       readonly unavailable: boolean;
+      readonly price: Price | undefined;
     }
   | undefined {
   const [asking, setAsking] = useState(false);
   const revisioned = use(RevisionControlContext);
   const regenerateNow = use(RegenerateNowContext);
   const view = useCurrentRevisionView();
+  const cost = useRunCost(images[0]?.projectId);
   if (!revisioned || view === undefined) return undefined;
   const ids = new Set(images.map((image) => image.id));
   const workKeys = view.outputs.flatMap((row) =>
     ids.has(row.output.id) && row.workKey.startsWith("image:") ? [row.workKey] : [],
   );
   if (workKeys.length === 0) return undefined;
+  const price = imagePrice(cost, "images", workKeys.length);
   return {
     count: workKeys.length,
     asking,
     act: () => setAsking(true),
     confirm: () => {
       setAsking(false);
-      regenerateNow?.(workKeys);
+      regenerateNow?.(workKeys, { approvedUpTo: price?.approvedUpTo });
     },
     dismiss: () => setAsking(false),
     unavailable: busy || regenerateNow === undefined,
+    price,
   };
 }

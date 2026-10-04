@@ -328,8 +328,8 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
 
 const counted = new Intl.NumberFormat("en");
 
-// "18,281 words · 110,234 characters": the narrated body as read, without its markdown
-// (heading marks, emphasis, links' addresses) or the end matter.
+// "18,281 words · 110,234 characters · about 2 h 2 min read aloud": the narrated body as
+// read, without its markdown (heading marks, emphasis, links' addresses) or the end matter.
 export function textCount(markdown: string): string {
   const plain = markdown
     .replace(/\]\([^)]*\)/g, "]")
@@ -338,5 +338,15 @@ export function textCount(markdown: string): string {
     .trim();
   const words = plain.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
   const characters = plain.replace(/\s*\n\s*/g, " ").length;
-  return `${counted.format(words)} ${words === 1 ? "word" : "words"} · ${counted.format(characters)} characters`;
+  return `${counted.format(words)} ${words === 1 ? "word" : "words"} · ${counted.format(characters)} characters · ${spokenLength(words)}`;
+}
+
+// Read aloud at about 150 words a minute, the pace the cost estimate assumes: a planning
+// figure for the text, not how long the narration being made will take.
+export function spokenLength(words: number): string {
+  const minutes = Math.max(1, Math.round(words / 150));
+  if (minutes < 60) return `about ${String(minutes)} min read aloud`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `about ${String(hours)} h${rest === 0 ? "" : ` ${String(rest)} min`} read aloud`;
 }

@@ -10,6 +10,9 @@ export interface SetupListRow {
   readonly summary: string;
   // The first refusal the row holds: it needs attention, said on the row itself.
   readonly problem?: string | undefined;
+  // Where the row's values come from on a draft made from a template: "From Weekly lore" while
+  // they are the template's, "Changed here" once this project overrides them.
+  readonly origin?: string | undefined;
   // The editor under the row, or undefined for a row that opens the side panel instead.
   readonly editor?: ReactNode;
 }
@@ -36,7 +39,15 @@ export function SetupList({
               title={row.label}
               size="small"
               className="items-center py-3.5"
-              status={row.problem ? <Status tone="failed">Needs setup</Status> : undefined}
+              status={
+                row.problem ? (
+                  <Status tone="failed">Needs setup</Status>
+                ) : row.origin === undefined ? undefined : (
+                  <span data-row-origin className="shrink-0 text-label text-ink-3">
+                    {row.origin}
+                  </span>
+                )
+              }
               meta={
                 // Folded, the row says what holds it back; open, the field itself says so.
                 <span

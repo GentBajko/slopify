@@ -1,3 +1,4 @@
+import type { ModelInfo } from "@app/kernel/ports/model.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -50,6 +51,35 @@ const catalogue = (id = "new-model", name = "New model", allowsCustom = true) =>
   jsonAnswer({ models: [{ id, name }], allowsCustom });
 
 describe("provider model discovery", () => {
+  it("shows price and context, and filters a long list while keeping the pick", async () => {
+    const models: ModelInfo[] = Array.from({ length: 14 }, (_, index) => ({
+      id: `vendor/model-${String(index)}`,
+      name: `Model ${String(index)}`,
+    }));
+    models[0] = {
+      id: "vendor/model-0",
+      name: "Model 0",
+      price: { inputPerMillionTokens: 2, outputPerMillionTokens: 12 },
+      contextTokens: 1_000_000,
+    };
+    renderApp(
+      <Subject initialProvider="gemini" initialModel="vendor/model-0" />,
+      testDeps({
+        "GET /api/providers/gemini/models": jsonAnswer({ models, allowsCustom: false }),
+      }),
+    );
+    await screen.findByRole("option", {
+      name: "Model 0 · $2 in / $12 out per 1M tokens · 1M context",
+    });
+    await userEvent.type(screen.getByLabelText("Filter Model list"), "model 13");
+    expect(screen.getByRole("option", { name: "Model 13" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Model 5" })).toBeNull();
+    expect(screen.getByRole("option", { name: /^Model 0 ·/ })).toBeTruthy();
+    await userEvent.clear(screen.getByLabelText("Filter Model list"));
+    await userEvent.type(screen.getByLabelText("Filter Model list"), "zzz");
+    expect(screen.getByText('No model name contains "zzz".')).toBeTruthy();
+  });
+
   it("groups installed versions while submitting the exact model ID", async () => {
     renderApp(
       <Subject initialProvider="gemini" />,

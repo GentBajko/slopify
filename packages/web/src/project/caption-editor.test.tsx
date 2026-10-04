@@ -110,3 +110,36 @@ it("keeps each caption's speaker when its text or timing is edited", async () =>
     { id: "c2", text: "Hi", start: 1, end: 2 },
   ]);
 });
+
+it("plays a caption's own stretch as typed, before it is applied", async () => {
+  const user = userEvent.setup();
+  const play = vi.fn();
+  renderApp(
+    <CaptionEditor
+      cues={[{ id: "c1", text: "Hello", start: 1, end: 2 }]}
+      duration={5}
+      onChange={() => {}}
+      onPending={() => {}}
+      audition={{ element: null, play, stop: () => {}, playing: undefined }}
+    />,
+    testDeps({}),
+  );
+  const end = screen.getByRole("textbox", { name: "End for caption 1" });
+  await user.clear(end);
+  await user.type(end, "2.5");
+  await user.click(screen.getByRole("button", { name: "Play caption 1" }));
+  expect(play).toHaveBeenCalledWith(1, 2.5, "c1");
+});
+
+it("offers no Play without a finished file to hear", () => {
+  renderApp(
+    <CaptionEditor
+      cues={[{ id: "c1", text: "Hello", start: 1, end: 2 }]}
+      duration={5}
+      onChange={() => {}}
+      onPending={() => {}}
+    />,
+    testDeps({}),
+  );
+  expect(screen.queryByRole("button", { name: "Play caption 1" })).toBeNull();
+});

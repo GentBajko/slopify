@@ -66,7 +66,9 @@ describe("the intros and outros list", () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
     const row = await findRow("Cold open");
-    expect(within(row).getByText(/^Text · 1 keyword · updated /u)).not.toBeNull();
+    expect(row.querySelector(".sl-row__meta")?.textContent).toMatch(
+      /^Text · 1 keyword · updated /u,
+    );
   });
 
   it("shows the first row's text and keywords beside the list, and another row's once it is picked", async () => {
@@ -152,21 +154,16 @@ describe("the intros and outros list", () => {
 
     await findRow("Cold open");
     const actions = screen.getByRole("group", { name: "Actions for Cold open" });
-    // All visible on the row, in the Library's order; History and Delete are icon buttons.
+    // What the row is for stays on it; the occasional actions sit behind More.
     expect(
       [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
-    ).toEqual([
-      "Edit Cold open",
-      "Duplicate Cold open",
-      "Use Cold open in Play",
-      "History of Cold open",
-      "Delete Cold open",
-    ]);
+    ).toEqual(["Edit Cold open", "Use Cold open in Play", "More actions for Cold open"]);
+    await user.click(within(actions).getByRole("button", { name: "More actions for Cold open" }));
     expect(
-      within(actions).getByRole("link", { name: "Duplicate Cold open" }).getAttribute("href"),
+      (await screen.findByRole("menuitem", { name: "Duplicate Cold open" })).getAttribute("href"),
     ).toBe("/entries/new?category=intro&from=e1");
 
-    await user.click(within(actions).getByRole("button", { name: "Delete Cold open" }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete Cold open" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Cold open"?')).not.toBeNull();

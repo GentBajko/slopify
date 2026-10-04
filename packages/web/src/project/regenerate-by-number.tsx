@@ -104,7 +104,12 @@ function RequestedChange({
   const copy =
     change.asking === undefined
       ? undefined
-      : confirmationFor({ kind: change.asking, outputId: request.image.id, now: change.now });
+      : confirmationFor({
+          kind: change.asking,
+          outputId: request.image.id,
+          now: change.now,
+          price: change.price,
+        });
   return (
     <ConfirmDialog
       open={change.asking !== undefined}

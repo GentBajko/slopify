@@ -79,3 +79,15 @@ it("offers the channel only the built-in beds and holds the save on a bad number
     }),
   ).toEqual({ source: "fire", level: "-20", fadeIn: "0", tail: "4" });
 });
+
+it("says when the ambient level left its default and resets it", async () => {
+  const { update } = play({
+    ...video,
+    ambientBed: { source: "rain", level: "-10", fadeIn: "3", tail: "6" },
+  });
+  expect(screen.getByText("Changed · default -18 dB")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "Reset ambient level to -18 dB" }));
+  expect(update).toHaveBeenCalledWith({
+    ambientBed: { source: "rain", level: "-18", fadeIn: "3", tail: "6" },
+  });
+});

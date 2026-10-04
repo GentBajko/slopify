@@ -33,7 +33,7 @@ it.each([
     // Only the row that holds the count is opened; the rest of Play stays folded.
     const open = async () => {
       await openRow(kind === "images" ? "Images" : "Narration");
-      if (kind !== "images") await userEvent.click(screen.getByText(/Audio Advanced/));
+      if (kind !== "images") await userEvent.click(screen.getByText(/More audio settings/));
     };
     await open();
     for (const value of values) {

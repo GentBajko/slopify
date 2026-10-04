@@ -60,13 +60,13 @@ it.each([false, true])(
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     const id = harness.session().activeId;
     await userEvent.click(screen.getByRole("button", { name: "Start run" }));
-    await screen.findByRole("button", { name: "Check Start result" });
+    await screen.findByRole("button", { name: "Check whether it started" });
     expect(window.localStorage.getItem("slopify.play-draft")).toBe(id);
     if (reload) {
       await act(async () => {
         await harness.restart();
       });
-    } else await userEvent.click(screen.getByRole("button", { name: "Check Start result" }));
+    } else await userEvent.click(screen.getByRole("button", { name: "Check whether it started" }));
     await waitFor(() => expect(harness.created).toHaveBeenCalledExactlyOnceWith("p1"));
     expect(harness.requests.filter((request) => request.url.endsWith("/start"))).toHaveLength(1);
   },
@@ -90,7 +90,7 @@ it("retries an uncertain uncommitted Start with exactly the same identity", asyn
   await harness.prepare();
   await waitFor(() => expect(harness.session().review.valid).toBe(true));
   await userEvent.click(screen.getByRole("button", { name: "Start run" }));
-  await userEvent.click(await screen.findByRole("button", { name: "Check Start result" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Check whether it started" }));
   await waitFor(() => expect(harness.created).toHaveBeenCalledExactlyOnceWith("original"));
   const bodies = await Promise.all(
     harness.requests

@@ -15,7 +15,7 @@ paths_covered:
 
 ## Mode & job
 
-Operate surface: the Library's Intros & Outros tab at `/entries?category=intro|outro`, for finding, renaming, previewing, handing to Play, duplicating and deleting saved intro/outro entries. `entriesRoute` is a child of `libraryRoute` and validates `category` through `categoryOf`, which falls back to `intro` (`packages/web/src/router.tsx:280`, `packages/web/src/lib/entry-options.ts:58`). The category switch replaces the URL (`replace: true`) rather than pushing history (`packages/web/src/router.tsx:532`). The shell's Library nav item stays lit for `/entries` (`packages/web/src/components/shell.tsx:111`).
+Operate surface: the Library's Intros & outros tab at `/entries?category=intro|outro`, for finding, renaming, previewing, handing to Play, duplicating and deleting saved intro/outro entries. `entriesRoute` is a child of `libraryRoute` and validates `category` through `categoryOf`, which falls back to `intro` (`packages/web/src/router.tsx:280`, `packages/web/src/lib/entry-options.ts:58`). The category switch replaces the URL (`replace: true`) rather than pushing history (`packages/web/src/router.tsx:532`). The shell's Library nav item stays lit for `/entries` (`packages/web/src/components/shell.tsx:111`).
 
 ## Composition
 
@@ -24,7 +24,7 @@ Top to bottom, inside `LibraryLayout` (`packages/web/src/routes/library.tsx:23`)
 | Region | What renders | Source |
 |---|---|---|
 | Page header | kit `PageHeader` titled "Library", meta "Prompts, intros and outros, templates, document themes, narration aliases and A/B results" | `packages/web/src/routes/library.tsx:26` |
-| Tabs | kit `TabLinks` "Library sections": Prompts, Intros & Outros, Templates, Documents, Aliases, A/B results | `packages/web/src/routes/library.tsx:14`, `:30` |
+| Tabs | kit `TabLinks` in three groups (`libraryGroups` in `packages/web/src/routes/library.tsx`): Setups (Templates), Building blocks (Prompts, Intros & outros, PDF themes, Narration aliases), Results (A/B results) | `packages/web/src/routes/library.tsx:14`, `:30` |
 | Toolbar | `LibraryToolbar`: filters left, one action right (wraps under on a phone) | `packages/web/src/routes/library.tsx:113` |
 | Toolbar filters | kit `Input type="search"` "Search intros and outros" (width `sm:w-64`, keyboard shortcut from `useSearchShortcut`), then kit `Segmented` "Entry category" with Intros / Outros and an InfoTip `library.entry.category` | `packages/web/src/routes/entries.tsx:89`, `:99` |
 | Toolbar action | primary `ButtonLink` "New intro or outro" → `/entries/new?category=<current>` | `packages/web/src/routes/entries.tsx:84` |

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
-import { DocumentThemesRoute } from "./document-themes.js";
+import { DocumentThemesRoute, deleteConsequence } from "./document-themes.js";
 
 afterEach(cleanup);
 
@@ -29,15 +29,21 @@ function deps(themes: readonly SavedDocumentTheme[], extra: Readonly<Record<stri
 }
 
 describe("the document themes list", () => {
-  it("shows every action of a saved theme on its row, not in a menu", async () => {
+  it("keeps Edit on a saved theme's row and the occasional actions behind More", async () => {
+    const user = userEvent.setup();
     renderRouted(<DocumentThemesRoute />, deps([mine]));
 
     const actions = await screen.findByRole("group", { name: "Actions for Night reading" });
     expect(
       [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
-    ).toEqual(["Edit Night reading", "Duplicate Night reading", "Delete Night reading"]);
-    expect(screen.queryByRole("button", { name: /More for/u })).toBeNull();
+    ).toEqual(["Edit Night reading", "More actions for Night reading"]);
     expect(screen.getByRole("link", { name: "Copy Plain" })).not.toBeNull();
+    await user.click(
+      within(actions).getByRole("button", { name: "More actions for Night reading" }),
+    );
+    expect(
+      (await screen.findAllByRole("menuitem")).map((one) => one.getAttribute("aria-label")),
+    ).toEqual(["Duplicate Night reading", "Delete Night reading"]);
   });
 
   it("shows the first of your themes beside the list, and a built-in once it is picked", async () => {
@@ -69,12 +75,14 @@ describe("the document themes list", () => {
       }),
     );
 
-    await user.click(await screen.findByRole("button", { name: "Delete Night reading" }));
+    await user.click(await screen.findByRole("button", { name: "More actions for Night reading" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete Night reading" }));
     const dialog = await screen.findByRole("dialog");
-    expect(
-      within(dialog).getByText("Projects that used it keep their own copy of its settings."),
-    ).not.toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Delete theme" }));
+    // Themes have no Trash: the dialog says so before anything is lost.
+    expect(within(dialog).getByText("Delete the PDF theme “Night reading”?")).not.toBeNull();
+    expect(within(dialog).getByText(deleteConsequence)).not.toBeNull();
+    expect(deleteConsequence).toContain("cannot be restored");
+    await user.click(within(dialog).getByRole("button", { name: "Delete theme permanently" }));
     await waitFor(() => expect(deleted).toBe(true));
   });
 

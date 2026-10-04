@@ -222,6 +222,42 @@ it("says which projects need the person, which are ready to upload and which wai
   }
 });
 
+// Finished projects that ended before the range are left out by the query itself; work still
+// going, paused or not started yet stays however old it is.
+it("leaves out projects that finished before the range and keeps unfinished ones", () => {
+  const f = fixture();
+  try {
+    const db = f.h.deps.db;
+    f.project("Done long ago", "done", "2026-09-09T05:00:00.000Z");
+    f.project("Failed long ago", "failed", "2026-09-09T06:00:00.000Z");
+    f.project("Still running", "running", null);
+    f.project("Not started", "pending", null);
+    const paused = f.project("Paused long ago", "done", "2026-09-09T05:00:00.000Z");
+    db.prepare("INSERT INTO project_controls (project_id, paused) VALUES (?, 1)").run(paused);
+    const broken = f.project("Unreadable settings", "done", "2026-09-12T05:00:00.000Z");
+    db.prepare("UPDATE projects SET config='not json' WHERE id=?").run(broken);
+
+    const result = calendarRange(
+      f.deps,
+      new Date("2026-09-11T00:00:00.000Z"),
+      new Date("2026-09-15T00:00:00.000Z"),
+    );
+    if (!result.ok) throw new Error("calendar refused");
+    const byTitle = new Map(result.value.projects.map((project) => [project.title, project]));
+    expect([...byTitle.keys()].sort()).toEqual([
+      "Not started",
+      "Paused long ago",
+      "Still running",
+      "Unreadable settings",
+    ]);
+    expect(byTitle.get("Paused long ago")?.needs).toBe("paused");
+    // Settings that cannot be read count as a video, as projects saved before sources did.
+    expect(byTitle.get("Unreadable settings")?.readyToUpload).toBe(true);
+  } finally {
+    f.h.close();
+  }
+});
+
 it("refuses a backwards or overlong range", async () => {
   const f = fixture();
   try {

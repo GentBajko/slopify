@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/kit/toast";
 import { freshDraftDocument } from "@/play/draft-state";
 import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -166,4 +167,80 @@ it("shows the next run's project title from the calendar on the schedule's row",
     }),
   );
   expect(await screen.findByText(/Next: .* · “Lore: Cleopatra \(12000 words\)”/)).toBeTruthy();
+});
+
+const rowTitles = (table: HTMLElement): string[] =>
+  within(table)
+    .getAllByLabelText(/^Topic \d+ \{\{Topic\}\}$/)
+    .map((input) => (input as HTMLInputElement).value);
+
+it("reorders, inserts with Enter, splits a pasted list and removes ticked rows with Undo in the table", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <ToastProvider>
+      <SchedulesView />
+    </ToastProvider>,
+    testDeps({ ...routes, "GET /api/schedules": jsonAnswer({ schedules: [] }) }),
+  );
+  await openForm(user);
+  await user.type(screen.getByLabelText("One per line"), "Cleopatra{Enter}Hypatia");
+  await user.click(screen.getByRole("button", { name: "Table" }));
+  const table = screen.getByRole("table", { name: "Topics" });
+
+  // Alt+Down moves the row and its field keeps the focus.
+  within(table).getByLabelText("Topic 1 {{Topic}}").focus();
+  await user.keyboard("{Alt>}{ArrowDown}{/Alt}");
+  expect(rowTitles(table)).toEqual(["Hypatia", "Cleopatra"]);
+  expect((window.document.activeElement as HTMLInputElement).value).toBe("Cleopatra");
+
+  // Enter adds an empty row under this one and moves into it; a pasted list fills rows.
+  await user.keyboard("{Enter}");
+  expect(window.document.activeElement).toBe(within(table).getByLabelText("Topic 3 {{Topic}}"));
+  await user.paste("Nefertiti\nSphinx");
+  expect(rowTitles(table)).toEqual(["Hypatia", "Cleopatra", "Nefertiti", "Sphinx"]);
+
+  await user.click(within(table).getByRole("button", { name: "More for Sphinx" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Move to top" }));
+  expect(rowTitles(table)).toEqual(["Sphinx", "Hypatia", "Cleopatra", "Nefertiti"]);
+
+  await user.click(within(table).getByRole("checkbox", { name: "Select row: Hypatia" }));
+  await user.click(within(table).getByRole("checkbox", { name: "Select row: Nefertiti" }));
+  expect(screen.getByText("2 of 4 topics selected")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Remove selected" }));
+  expect(rowTitles(table)).toEqual(["Sphinx", "Cleopatra"]);
+  const toast = await screen.findByText("Removed 2 topics. Save the schedule to keep it.");
+  await user.click(
+    within(toast.closest("div") as HTMLElement).getByRole("button", { name: "Undo" }),
+  );
+  expect(rowTitles(table)).toEqual(["Sphinx", "Hypatia", "Cleopatra", "Nefertiti"]);
+});
+
+it("imports a file of topics after the ones already written, and names a file it can't read", async () => {
+  const user = userEvent.setup({ applyAccept: false });
+  const { container } = renderRouted(
+    <SchedulesView />,
+    testDeps({ ...routes, "GET /api/schedules": jsonAnswer({ schedules: [] }) }),
+  );
+  await openForm(user);
+  await user.type(screen.getByLabelText("One per line"), "Cleopatra");
+  const file = container.ownerDocument.querySelector<HTMLInputElement>("input[type=file]");
+  if (file === null) throw new Error("no import input");
+  await user.upload(file, new File(["- Hypatia\n- Topic: Nefertiti\n"], "more.yaml"));
+  expect(await screen.findByText(/Imported 2 topics from more.yaml/)).toBeTruthy();
+  expect(screen.getByLabelText<HTMLTextAreaElement>(/3 topics · next: Cleopatra/).value).toBe(
+    "Cleopatra\nHypatia\nNefertiti",
+  );
+  await user.upload(file, new File(["- Topic: [unclosed"], "bad.yaml"));
+  expect(await screen.findByText(/bad.yaml wasn't imported:/)).toBeTruthy();
+});
+
+it("counts the topics typed so far against the queue's limit", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <SchedulesView />,
+    testDeps({ ...routes, "GET /api/schedules": jsonAnswer({ schedules: [] }) }),
+  );
+  await openForm(user);
+  await user.type(screen.getByLabelText("One per line"), "Cleopatra{Enter}Hypatia");
+  expect(screen.getByText("2 of 500 topics.")).toBeTruthy();
 });

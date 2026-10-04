@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { calendarRange } from "../../slices/schedules/agenda.js";
+import { rejectHeldTopics, restoreRejectedTopics } from "../../slices/schedules/held-bulk.js";
 import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.js";
 import { preparedTopics, prepareTopic } from "../../slices/schedules/prepare.js";
 import {
@@ -42,6 +43,23 @@ import { onInvalid, problem, titleOf } from "./problem.js";
 
 const id = z.object({ id: z.uuid() });
 const topicParam = z.object({ id: z.uuid(), topicId: z.string().min(1).max(100) });
+const topicIds = z.array(z.string().min(1).max(100)).min(1).max(queueMax);
+const heldIds = z.object({ ids: topicIds }).strict();
+const heldRestore = z
+  .object({
+    topics: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(100),
+            values: z.record(z.string(), z.string()).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(queueMax),
+  })
+  .strict();
 function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false }>): Response {
   const status = ["not-found", "missing-template", "topic-not-found"].includes(result.reason)
     ? 404
@@ -275,6 +293,47 @@ function routes(deps: ScheduleDeps | undefined) {
         const result = approveHeldTopics(service(), c.req.valid("param").id, "all");
         return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
       })
+      // Approve selected, Reject selected (Reject all sends the ids it showed), and the Undo that
+      // puts turned-down topics back.
+      .post(
+        "/:id/topics/held/approve",
+        zValidator("param", id, onInvalid),
+        zValidator("json", heldIds, onInvalid),
+        (c) => {
+          const result = approveHeldTopics(
+            service(),
+            c.req.valid("param").id,
+            c.req.valid("json").ids,
+          );
+          return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
+        },
+      )
+      .post(
+        "/:id/topics/held/reject",
+        zValidator("param", id, onInvalid),
+        zValidator("json", heldIds, onInvalid),
+        (c) => {
+          const result = rejectHeldTopics(
+            service(),
+            c.req.valid("param").id,
+            c.req.valid("json").ids,
+          );
+          return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
+        },
+      )
+      .post(
+        "/:id/topics/held/restore",
+        zValidator("param", id, onInvalid),
+        zValidator("json", heldRestore, onInvalid),
+        (c) => {
+          const result = restoreRejectedTopics(
+            service(),
+            c.req.valid("param").id,
+            c.req.valid("json").topics,
+          );
+          return result.ok ? c.json(scheduleSummarySchema.parse(result.value)) : refused(c, result);
+        },
+      )
       .post(
         "/:id/topics/held/:topicId/approve",
         zValidator("param", topicParam, onInvalid),

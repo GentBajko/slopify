@@ -277,7 +277,10 @@ function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
 function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: FieldError[]): void {
   const { sources, provided } = draft;
   if (sources.research === "provide" && blank(provided.research)) {
-    fields.push({ field: "provided.research", message: "Paste the research notes." });
+    fields.push({
+      field: "provided.research",
+      message: "Paste the text to adapt, or your research notes.",
+    });
   }
   if (sources.article === "provide" && blank(provided.article)) {
     fields.push({ field: "provided.article", message: "Paste the article." });
@@ -413,6 +416,8 @@ export function llmUses(draft: RunDraft): readonly LlmUse[] {
     uses.push({ section: "article", label: "writing the article" });
   if (usesVoices(draft) && draft.voices?.source === "attribute")
     uses.push({ section: "narration", label: "working out who speaks each line" });
+  if (usesVoices(draft) && draft.voices?.source === "adapt")
+    uses.push({ section: "narration", label: "rewriting the text as a conversation" });
   if (usesNarrationPreparation(draft))
     uses.push({ section: "narration", label: "preparing the narration's delivery" });
   if (draft.intro?.mode === "llm") uses.push({ section: "narration", label: "writing the intro" });

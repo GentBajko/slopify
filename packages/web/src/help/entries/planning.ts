@@ -56,7 +56,7 @@ export const planningHelp = {
   },
   "planning.schedule.spend": {
     title: "Spend ceiling",
-    body: "The most one run may cost, in US cents: 500 is $5.00. Before each run Slopify estimates the project's cost; when the high estimate is over this, or a cost can't be estimated, the run fails instead of starting. Leave it empty for no ceiling. Default: empty.",
+    body: "The most one run may cost, in US dollars, such as 5 or 2.50. Before each run Slopify estimates the project's cost; when the high estimate is over this, or a cost can't be estimated, the run fails instead of starting. Leave it empty for no ceiling. Default: empty.",
     tutorial: { page: "Schedules", anchor: "when-it-runs" },
   },
   "planning.schedule.topics": {
@@ -170,7 +170,7 @@ export const planningHelp = {
   },
   "planning.channel.current": {
     title: "Current channel",
-    body: "Home, Projects and the calendar show only this channel's work. All channels shows everything. It only filters what you see; every project and schedule keeps its own channel. This browser remembers your choice.",
+    body: "Home, Projects and the calendar show only this channel's work. All channels shows everything. It only filters what you see; every project and schedule keeps its own channel. This browser remembers your choice, and every Slopify tab open in it follows the same pick.",
     tutorial: { page: "Channels", anchor: "show-one-channels-work" },
   },
   "planning.channel.name": {
@@ -195,7 +195,7 @@ export const planningHelp = {
   },
   "planning.channel.brand-kit": {
     title: "Brand kit",
-    body: "The look every template of this channel gets unless it sets its own: fonts, colours, end screen, intro, outro, document theme and ambient sound. It fills only what a template leaves at its default, and a blank field adds nothing. Turn it off for one video on Play or in Edit project.",
+    body: "The look every template of this channel gets unless it sets its own: fonts, colours, end screen, intro, outro, PDF theme and ambient sound. It fills only what a template leaves at its default, and a blank field adds nothing. Turn it off for one video on Play or in Edit project.",
     tutorial: { page: "Channels", anchor: "brand" },
   },
   "planning.channel.brand.caption-font": {
@@ -230,16 +230,16 @@ export const planningHelp = {
   },
   "planning.channel.brand.intro": {
     title: "Intro",
-    body: "An entry from Library → Intros & Outros, narrated before every video of this channel whose template has no intro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
+    body: "An entry from Library → Intros & outros, narrated before every video of this channel whose template has no intro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
     tutorial: { page: "Channels", anchor: "brand" },
   },
   "planning.channel.brand.outro": {
     title: "Outro",
-    body: "An entry from Library → Intros & Outros, narrated after every video of this channel whose template has no outro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
+    body: "An entry from Library → Intros & outros, narrated after every video of this channel whose template has no outro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
     tutorial: { page: "Channels", anchor: "brand" },
   },
   "planning.channel.brand.document-theme": {
-    title: "Document theme",
+    title: "PDF theme",
     body: "The look of the PDF document for videos of this channel whose template picks no theme: a built-in theme or one you saved. Not set leaves the template's choice alone. A saved theme that was deleted is skipped.",
     tutorial: { page: "Channels", anchor: "brand" },
   },

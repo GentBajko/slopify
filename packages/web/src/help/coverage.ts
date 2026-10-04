@@ -83,5 +83,6 @@ export function unexplainedControls(
 export const selfExplanatory: readonly (string | RegExp)[] = [
   /^Search\b/i,
   /^Filter\b/i,
+  /^Sort\b/i,
   /^Select (all|row|\S+ for)/i,
 ];

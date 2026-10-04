@@ -41,7 +41,7 @@ it("installs a known update with one click, without opening a panel", async () =
     testDeps({ "GET /api/update": jsonAnswer(available), "POST /api/update": install }),
   );
   await ready();
-  expect(control().title).toContain("Your version: 0.8.2 · Newest: 0.8.3");
+  expect(control().getAttribute("data-tip") ?? "").toContain("Your version: 0.8.2 · Newest: 0.8.3");
   expect(install).not.toHaveBeenCalled();
   await userEvent.click(control());
   expect(install).toHaveBeenCalledTimes(1);
@@ -66,7 +66,7 @@ it("a check discovers an update without installing until the next click", async 
     }),
   );
   await ready();
-  expect(control().title).toContain("Slopify 0.8.2");
+  expect(control().getAttribute("data-tip") ?? "").toContain("Slopify 0.8.2");
   await userEvent.click(control());
   await ready();
   expect(searches).toContain("?refresh=1");
@@ -105,7 +105,9 @@ it("waits for running work instead of refusing, says for what, and cancels on th
   await userEvent.click(control());
   expect(install).toHaveBeenCalledTimes(1);
   await waitFor(() =>
-    expect(control().title).toContain("Update to 0.8.3 will install when 'Cleopatra' finishes."),
+    expect(control().getAttribute("data-tip") ?? "").toContain(
+      "Update to 0.8.3 will install when 'Cleopatra' finishes.",
+    ),
   );
   expect(control().disabled).toBe(false);
   await userEvent.click(control());
@@ -122,7 +124,7 @@ it("shows installation failures without automatic retries", async () => {
   await ready();
   await userEvent.click(control());
   expect((await screen.findByRole("alert")).textContent).toContain("Disk is full.");
-  expect(control().title).toContain("Disk is full.");
+  expect(control().getAttribute("data-tip") ?? "").toContain("Disk is full.");
   expect(install).toHaveBeenCalledTimes(1);
 });
 
@@ -147,7 +149,7 @@ it("clears Updating for an idle server at the same version", async () => {
   fireEvent.click(control());
   await tick();
   expect(control().disabled).toBe(false);
-  expect(control().title).not.toContain("Updating…");
+  expect(control().getAttribute("data-tip") ?? "").not.toContain("Updating…");
   expect(reload).not.toHaveBeenCalled();
 });
 
@@ -180,7 +182,7 @@ it("reconnects through restart and reloads only after activation", async () => {
   fireEvent.click(control());
   await tick(10);
   await tick();
-  expect(control().title).toContain("Reconnecting");
+  expect(control().getAttribute("data-tip") ?? "").toContain("Reconnecting");
   await tick();
   expect(reload).not.toHaveBeenCalled();
   await tick();
@@ -208,7 +210,7 @@ it("stops presenting Updating when the replacement never reconnects", async () =
   expect(control().disabled).toBe(true);
   await tick(updateRecoveryTimeout);
   expect(control().disabled).toBe(false);
-  expect(control().title).toContain("The update did not finish");
+  expect(control().getAttribute("data-tip") ?? "").toContain("The update did not finish");
   expect(reload).not.toHaveBeenCalled();
 });
 
@@ -222,7 +224,7 @@ it("recovers a persisted install state after a reload", async () => {
   expect(control().disabled).toBe(true);
   await tick(updateRecoveryTimeout);
   expect(control().disabled).toBe(false);
-  expect(control().title).toContain("The update did not finish");
+  expect(control().getAttribute("data-tip") ?? "").toContain("The update did not finish");
 });
 
 it("polls every fifteen minutes without installing", async () => {

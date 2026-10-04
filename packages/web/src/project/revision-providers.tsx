@@ -91,7 +91,7 @@ function useSharedGlossary(
   };
 }
 
-// "Use narration aliases" in Edit project: turning it on copies Library → Aliases into this
+// "Use narration aliases" in Edit project: turning it on copies Library → Narration aliases into this
 // project, and the button copies them again, so a Library edit only reaches a project that
 // asks for it (and rebuilds only the narration the changed aliases touch).
 function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) {
@@ -133,10 +133,10 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
       audio?.useNarrationAliases === true ? (
         <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
           {state.error !== undefined
-            ? `Couldn't read Library → Aliases: ${state.error} Try Update from Library again.`
+            ? `Couldn't read Library → Narration aliases: ${state.error} Try Update from Library again.`
             : count === 0
-              ? "No aliases are copied yet. Add some in Library → Aliases."
-              : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Aliases.`}
+              ? "No aliases are copied yet. Add some in Library → Narration aliases."
+              : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Narration aliases.`}
           <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
             {state.busy ? "Copying…" : "Update from Library"}
           </Button>
@@ -173,7 +173,8 @@ export function RevisionProviders({
     config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||
-    (usesVoices(config) && config.voices?.source === "attribute") ||
+    (usesVoices(config) &&
+      (config.voices?.source === "attribute" || config.voices?.source === "adapt")) ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   const imagesNeeded =

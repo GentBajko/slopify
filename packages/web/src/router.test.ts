@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
-import { calendarSearchOf, createAppRouter } from "@/router";
+import { calendarSearchOf, createAppRouter, projectsSearchOf } from "@/router";
+import { projectSectionOf } from "@/routes/project";
 
 // Schedules are the calendar's Schedules tab. The addresses they had before, in old links,
 // bookmarks and notes, still land there.
@@ -33,5 +34,22 @@ describe("the old schedule addresses", () => {
     expect(calendarSearchOf({ schedule: scheduleId })).toEqual({});
     expect(calendarSearchOf({ tab: "nonsense" })).toEqual({});
     expect(calendarSearchOf({ tab: "schedules", schedule: "../x" })).toEqual({ tab: "schedules" });
+  });
+});
+
+describe("addresses that keep a place", () => {
+  it("keeps a project's section in its address, and drops one that is not a section", async () => {
+    expect(await land("/projects/p1?section=images")).toEqual({
+      pathname: "/projects/p1",
+      search: { section: "images" },
+    });
+    const odd = (await land("/projects/p1?section=nope")).search as { section?: unknown };
+    expect(projectSectionOf(odd.section)).toBe(undefined);
+  });
+
+  it("keeps Projects' filter and search words, and leaves All out", () => {
+    expect(projectsSearchOf({ show: "failed", q: "myth" })).toEqual({ show: "failed", q: "myth" });
+    expect(projectsSearchOf({ show: "all", q: "  " })).toEqual({});
+    expect(projectsSearchOf({ show: "nonsense" })).toEqual({});
   });
 });

@@ -424,8 +424,8 @@ describe("interactive spotlight", () => {
     await waitFor(() =>
       expect(document.querySelector<HTMLElement>('[data-tutorial="spotlight"]')?.hidden).toBe(true),
     );
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep it" }));
+    await user.click(screen.getByRole("button", { name: "Keep it" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() =>
       expect(document.querySelector<HTMLElement>('[data-tutorial="spotlight"]')?.hidden).toBe(

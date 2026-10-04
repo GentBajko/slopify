@@ -2,7 +2,13 @@ import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { withProjectControl } from "../../slices/control/lock.js";
-import { type TrashDeps, type TrashRefusal, trashKinds } from "../../slices/trash/model.js";
+import {
+  type Restored,
+  type TrashDeps,
+  type TrashKind,
+  type TrashRefusal,
+  trashKinds,
+} from "../../slices/trash/model.js";
 import { deleteNow, listTrash, restoreItem } from "../../slices/trash/service.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -15,6 +21,26 @@ const itemParam = z.object({
     .max(64)
     .regex(/^[0-9A-Za-z_-]+$/),
 });
+
+// Settings → Trash's Restore selected / Restore all and Delete selected / Empty trash: the
+// items named, each done on its own so one refusal leaves the rest done.
+const manySchema = z.object({ items: z.array(itemParam).min(1).max(5000) });
+
+// A template comes back before the schedules that run it, so restoring both at once works.
+const restoreOrder: Readonly<Record<TrashKind, number>> = {
+  template: 0,
+  prompt: 1,
+  entry: 1,
+  project: 1,
+  schedule: 2,
+};
+
+interface Failed {
+  readonly kind: TrashKind;
+  readonly id: string;
+  readonly reason: TrashRefusal;
+  readonly detail: string;
+}
 
 const status: Readonly<Record<TrashRefusal, 404 | 409 | 500>> = {
   "not-found": 404,
@@ -37,6 +63,15 @@ const details: Readonly<Record<TrashRefusal, string>> = {
     "This schedule's template was removed for good, so the schedule has nothing to run. It cannot be restored; Delete now removes it from the trash.",
 };
 
+function failedItem(kind: TrashKind, id: string, reason: TrashRefusal, detail?: string): Failed {
+  return {
+    kind,
+    id,
+    reason,
+    detail: detail === undefined ? details[reason] : `${details[reason]} (${detail})`,
+  };
+}
+
 function refused(c: Context, reason: TrashRefusal, detail?: string): Response {
   return problem(c, {
     status: status[reason],
@@ -46,7 +81,7 @@ function refused(c: Context, reason: TrashRefusal, detail?: string): Response {
   });
 }
 
-// Settings → Trash: the list, Restore and Delete now. The daily purge runs from main.ts.
+// Settings → Trash: the list, Restore and Delete now, one item or many. The daily purge runs from main.ts.
 export function trashRoutes(deps: AppDeps) {
   const trash: TrashDeps = {
     db: deps.db,
@@ -57,6 +92,36 @@ export function trashRoutes(deps: AppDeps) {
   };
   return new Hono()
     .get("/", (c) => c.json({ items: listTrash(trash) }))
+    .post("/bulk/restore", zValidator("json", manySchema, onInvalid), (c) => {
+      const items = [...c.req.valid("json").items].sort(
+        (a, b) => restoreOrder[a.kind] - restoreOrder[b.kind],
+      );
+      const restored: Restored[] = [];
+      const failed: Failed[] = [];
+      for (const { kind, id } of items) {
+        const result = restoreItem(trash, kind, id);
+        if (!result.ok) {
+          failed.push(failedItem(kind, id, result.reason));
+          continue;
+        }
+        restored.push(result.value);
+        if (kind === "project") deps.runner.tick(id);
+      }
+      return c.json({ restored, failed });
+    })
+    .post("/bulk/delete", zValidator("json", manySchema, onInvalid), async (c) => {
+      const deleted: { kind: TrashKind; id: string }[] = [];
+      const failed: Failed[] = [];
+      for (const { kind, id } of c.req.valid("json").items) {
+        const result =
+          kind === "project"
+            ? await withProjectControl(deps.db, id, () => deleteNow(trash, kind, id))
+            : deleteNow(trash, kind, id);
+        if (result.ok) deleted.push({ kind, id });
+        else failed.push(failedItem(kind, id, result.reason, result.detail));
+      }
+      return c.json({ deleted, failed });
+    })
     .post("/:kind/:id/restore", zValidator("param", itemParam, onInvalid), (c) => {
       const { kind, id } = c.req.valid("param");
       const result = restoreItem(trash, kind, id);

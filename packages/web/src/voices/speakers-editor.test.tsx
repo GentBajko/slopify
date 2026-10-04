@@ -358,3 +358,24 @@ it("makes an audiobook a chapter of a book and back", async () => {
   await user.click(screen.getByRole("switch", { name: "A chapter of a book" }));
   expect(saved()).not.toHaveProperty("book");
 });
+
+it("duplicates a speaker under it and moves speakers up and down from the row's menu", async () => {
+  const user = userEvent.setup();
+  renderRouted(<Subject />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "podcast");
+  const names = () => saved()?.speakers.map((speaker) => speaker.name);
+  await user.click(screen.getByRole("button", { name: "More for Alex" }));
+  expect(screen.getByRole("menuitem", { name: "Move up" }).getAttribute("aria-disabled")).toBe(
+    "true",
+  );
+  await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+  expect(names()).toEqual(["Alex", "Alex copy", "Sam"]);
+  const ids = saved()?.speakers.map((speaker) => speaker.id) ?? [];
+  expect(new Set(ids).size).toBe(3);
+  await user.click(screen.getByRole("button", { name: "More for Sam" }));
+  await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+  expect(names()).toEqual(["Alex", "Sam", "Alex copy"]);
+  await user.click(screen.getByRole("button", { name: "More for Alex" }));
+  await user.click(screen.getByRole("menuitem", { name: "Move down" }));
+  expect(names()).toEqual(["Sam", "Alex", "Alex copy"]);
+});

@@ -127,7 +127,8 @@ describe("every Library control has an info button", () => {
       expectExplained();
     }
     const last = prompts.at(-1) as Prompt;
-    await user.click(screen.getByRole("button", { name: `History of ${last.name}` }));
+    await user.click(screen.getByRole("button", { name: `More actions for ${last.name}` }));
+    await user.click(await screen.findByRole("menuitem", { name: `History of ${last.name}` }));
     const drawer = await screen.findByRole("dialog", { name: `History of ${last.name}` });
     await within(drawer).findByRole("button", { name: "Restore version 1" });
     expectExplained();
@@ -174,7 +175,8 @@ describe("every Library control has an info button", () => {
     expectExplained();
     await user.click(screen.getByRole("button", { name: "Outros" }));
     await screen.findByRole("region", { name: "Sign-off details" });
-    await user.click(screen.getByRole("button", { name: "History of Sign-off" }));
+    await user.click(screen.getByRole("button", { name: "More actions for Sign-off" }));
+    await user.click(await screen.findByRole("menuitem", { name: "History of Sign-off" }));
     await screen.findByRole("dialog", { name: "History of Sign-off" });
     expectExplained();
     cleanup();

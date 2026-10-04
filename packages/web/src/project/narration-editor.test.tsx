@@ -1,10 +1,11 @@
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { emptyAnswer, renderApp, testDeps } from "@/test-app";
 import { NarrationEditor, narrationGroups, orderedGroups } from "./narration-editor.js";
+import { focusPiece } from "./review-focus.js";
 import { deferred, narrationView, response, staged } from "./revision-editor-test-fixtures.js";
 import { revisionView } from "./revision-fixture.js";
 import { formOfRevision } from "./revision-form-state.js";
@@ -166,4 +167,33 @@ it("shows a chunk queued for regeneration and can take it back", async () => {
   expect(
     screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
   ).toBeTruthy();
+});
+
+it("brings the chunk a transcript line asked for into view and focus", async () => {
+  // jsdom lays nothing out: give the chunk's field a box, and somewhere to scroll.
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
+    new DOMRect(0, 0, 10, 10),
+  ] as unknown as DOMRectList);
+  const scroll = vi.fn();
+  const original = HTMLElement.prototype.scrollIntoView;
+  HTMLElement.prototype.scrollIntoView = scroll;
+  const view = narrationView();
+  renderApp(
+    <NarrationEditor
+      view={view}
+      edit={formOfRevision(view)}
+      onChange={() => {}}
+      onPending={() => {}}
+    />,
+    testDeps({}),
+  );
+  act(() => focusPiece("narration:audio:body:chunk1"));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Text for narration chunk 1" }),
+    ),
+  );
+  expect(scroll).toHaveBeenCalled();
+  HTMLElement.prototype.scrollIntoView = original;
+  vi.restoreAllMocks();
 });

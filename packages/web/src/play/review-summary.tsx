@@ -79,8 +79,8 @@ function readiness(provider: ProviderStatus | undefined): {
       ? { ok: true, text: `Built-in voice · ${provider.readiness.engine ?? "ready"}` }
       : { ok: false, text: provider.readiness.issue ?? "No speech program found" };
   return provider.readiness.hasKey
-    ? { ok: true, text: "API key saved" }
-    : { ok: false, text: "API key missing" };
+    ? { ok: true, text: "Key saved" }
+    : { ok: false, text: "No key" };
 }
 
 function requiredProviders(

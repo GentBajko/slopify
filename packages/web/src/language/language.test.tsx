@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LanguageSelect, languageHelp } from "./language-select";
 import { useVoicesForLanguage, VoiceLanguageNote } from "./voice-language";
-import { languagesOfText, voiceLanguagesText } from "./voice-languages-cell";
+import { languagesOfText, languagesReading, voiceLanguagesText } from "./voice-languages-cell";
 
 afterEach(cleanup);
 
@@ -79,5 +79,15 @@ describe("voices by language", () => {
     expect(languagesOfText(" ES, de;pt ")).toEqual(["es", "de", "pt"]);
     expect(voiceLanguagesText({ languages: ["es", "xx"] })).toBe("Spanish, xx");
     expect(voiceLanguagesText({})).toBe("Any (not known)");
+  });
+});
+
+describe("languagesReading", () => {
+  it("names known codes and lists the ones it does not know", () => {
+    expect(languagesReading("")).toBe("Codes such as es, de. Empty means any language.");
+    expect(languagesReading("es de")).toBe("Reads as: Spanish, German.");
+    expect(languagesReading("es, klingon")).toMatch(
+      /^Reads as: Spanish\. Not a language code Slopify knows: klingon\. Use one of en, es/,
+    );
   });
 });

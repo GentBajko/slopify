@@ -1,5 +1,6 @@
 import {
   type ComponentProps,
+  type CSSProperties,
   createContext,
   type ReactElement,
   type ReactNode,
@@ -111,9 +112,17 @@ export function Input({ className, ...props }: ComponentProps<"input">): ReactEl
   return <input className={cn("sl-input", className)} {...wired(field, props)} />;
 }
 
-export function Textarea({ className, ...props }: ComponentProps<"textarea">): ReactElement {
+// Grows with its text (see `.sl-textarea`); `rows` stays the height it starts at.
+export function Textarea({ className, style, ...props }: ComponentProps<"textarea">): ReactElement {
   const field = useField();
-  return <textarea className={cn("sl-textarea", className)} {...wired(field, props)} />;
+  const rows = { "--sl-rows": props.rows ?? 4 } as CSSProperties;
+  return (
+    <textarea
+      className={cn("sl-textarea", className)}
+      style={{ ...rows, ...style }}
+      {...wired(field, props)}
+    />
+  );
 }
 
 // A native select: the platform's own list, keyboard and screen-reader behaviour.

@@ -11,6 +11,8 @@ import { Switch } from "@/components/kit/switch";
 import { shortcuts } from "@/lib/shortcuts";
 import type { Blocker } from "./admission";
 import { usePlaySession } from "./draft-context";
+import { outputCount, outputKindOf, outputNoun } from "./output-kind";
+import { PlanAllowance } from "./plan-allowance";
 import { pageVideos, pendingReviewUpload, queued, startLabel } from "./review-state";
 import { RunReview } from "./run-review";
 
@@ -30,7 +32,7 @@ export function startReason({
   if (review.starting) return undefined;
   if (review.uncertain)
     return {
-      text: "Slopify didn't confirm the last start. Press Check Start result to find out before starting again.",
+      text: "Slopify didn't confirm the last start. Press Check whether it started to find out before starting again.",
     };
   if (blocker) return { text: blocker.hint, field: blocker.field };
   const refused = errors[0];
@@ -98,7 +100,7 @@ export function StartRail({
       {preview}
       <section aria-label="Start" className="flex min-w-0 flex-col gap-4 border-t border-line pt-5">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-ink-2">{count === 1 ? "1 video" : `${String(count)} videos`}</span>
+          <span className="text-ink-2">{outputCount(outputKindOf(document.form), count)}</span>
           {count > 1 ? (
             <Switch
               label="Queue"
@@ -122,8 +124,9 @@ export function StartRail({
                 : "The estimate appears once the setup is complete."}
             </p>
           )}
+          <PlanAllowance form={document.form} />
           <Field
-            label="Expected article words per video"
+            label={`Expected article words per ${outputNoun(outputKindOf(document.form))}`}
             tip="play.expected-words"
             className="mt-2"
           >

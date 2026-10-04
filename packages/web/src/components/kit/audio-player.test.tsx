@@ -152,3 +152,34 @@ it("keeps the thin rail without a waveform", () => {
   expect(seek().querySelector(".sl-player__rail")).not.toBeNull();
   expect(strip.querySelector("[data-slot='waveform']")).toBeNull();
 });
+
+it("pauses the other player when one starts, and carries speed and volume to the next", async () => {
+  const kept = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => kept.get(key) ?? null,
+    setItem: (key: string, value: string) => kept.set(key, value),
+    removeItem: (key: string) => kept.delete(key),
+  });
+  render(
+    <>
+      <AudioPlayer src="/one.mp3" label="One" />
+      <AudioPlayer src="/two.mp3" label="Two" />
+    </>,
+  );
+  const one = stubMedia(screen.getByLabelText("One", { selector: "audio" }) as HTMLAudioElement);
+  const two = stubMedia(screen.getByLabelText("Two", { selector: "audio" }) as HTMLAudioElement);
+  const strip = (name: string) => screen.getByRole("group", { name: `${name} controls` });
+  await userEvent.click(within(strip("One")).getByRole("button", { name: "Play" }));
+  await userEvent.click(within(strip("Two")).getByRole("button", { name: "Play" }));
+  expect(one.pause).toHaveBeenCalledTimes(1);
+  expect(two.pause).not.toHaveBeenCalled();
+  await userEvent.click(within(strip("Two")).getByRole("button", { name: /Mute/ }));
+  expect(JSON.parse(window.localStorage.getItem("slopify.playback") ?? "{}")).toMatchObject({
+    muted: true,
+  });
+  cleanup();
+  render(<AudioPlayer src="/three.mp3" label="Three" />);
+  const three = screen.getByLabelText("Three", { selector: "audio" }) as HTMLAudioElement;
+  expect(three.muted).toBe(true);
+  vi.unstubAllGlobals();
+});

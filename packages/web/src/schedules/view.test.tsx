@@ -2,6 +2,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
+import { ToastProvider } from "@/components/kit/toast";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, renderRouted, testDeps } from "../test-app";
 import { SchedulesView } from "./view";
@@ -209,4 +210,97 @@ it("edits a held topic's keywords beside its title, showing the every-run value 
   await user.click(within(waiting).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(edit).toHaveBeenCalledOnce());
   expect(body).toEqual({ title: "Pyramids", values: { "Word Count": "12000" } });
+});
+
+it("says a linked schedule wasn't found instead of showing another one", async () => {
+  const onPick = vi.fn();
+  renderRouted(
+    <SchedulesView pickedId="99999999-9999-4999-8999-999999999999" onPick={onPick} />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
+      "GET /api/project-templates": jsonAnswer({ templates: [] }),
+    }),
+  );
+  expect(await screen.findByText("This schedule wasn't found")).toBeTruthy();
+  expect(screen.getByText(/Pick one from the list, or press New schedule\./)).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "Morning stories detail" })).toBeNull();
+  // The list still offers the schedules there are.
+  await userEvent.click(screen.getByRole("button", { name: "Morning stories" }));
+  expect(onPick).toHaveBeenCalledWith(summary.id);
+});
+
+it("duplicates the picked schedule as a paused copy without its topics", async () => {
+  const user = userEvent.setup();
+  let sent: Record<string, unknown> | undefined;
+  const copy = {
+    ...summary,
+    id: "44444444-4444-4444-8444-444444444444",
+    name: "Morning stories (copy)",
+  };
+  const create = vi.fn(async (request: Request) => {
+    sent = (await request.json()) as Record<string, unknown>;
+    return jsonAnswer(copy, 201)(request);
+  });
+  const pause = vi.fn(jsonAnswer({ ...copy, status: "paused", version: 2 }));
+  renderRouted(
+    <ToastProvider>
+      <SchedulesView />
+    </ToastProvider>,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({
+        schedules: [{ ...summary, items: [{ title: "Pyramids", values: {} }] }],
+      }),
+      "GET /api/project-templates": jsonAnswer({ templates: [] }),
+      "POST /api/schedules": create,
+      [`POST /api/schedules/${copy.id}/pause`]: pause,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Duplicate Morning stories" }));
+  await waitFor(() => expect(pause).toHaveBeenCalledOnce());
+  expect(sent).toMatchObject({
+    name: "Morning stories (copy)",
+    templateId,
+    cadence: { kind: "daily", time: "09:00" },
+    items: [],
+  });
+  expect(sent?.id).not.toBe(summary.id);
+  expect(await screen.findByText(/^Duplicated as “Morning stories \(copy\)”: paused/)).toBeTruthy();
+});
+
+it("offers search and sort once there are several schedules", async () => {
+  const user = userEvent.setup();
+  const names = ["Evening myths", "Morning stories", "Noon facts", "Dawn legends", "Late tales"];
+  const many = names.map((name, index) => ({
+    ...summary,
+    id: `2222222${String(index)}-2222-4222-8222-222222222222`,
+    name,
+  }));
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: many }),
+      "GET /api/project-templates": jsonAnswer({ templates: [] }),
+    }),
+  );
+  const list = await screen.findByRole("list", { name: "Saved schedules" });
+  await user.selectOptions(screen.getByRole("combobox", { name: "Sort schedules" }), "name");
+  expect(
+    within(list)
+      .getAllByRole("button", { name: /^(Evening|Morning|Noon|Dawn|Late) \w+$/ })
+      .map((button) => button.textContent),
+  ).toEqual(["Dawn legends", "Evening myths", "Late tales", "Morning stories", "Noon facts"]);
+  await user.type(screen.getByRole("searchbox", { name: "Search schedules by name" }), "zzz");
+  expect(await screen.findByText("No schedule matches this search")).toBeTruthy();
+});
+
+it("has no search or sort for a short list", async () => {
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
+      "GET /api/project-templates": jsonAnswer({ templates: [] }),
+    }),
+  );
+  await screen.findByRole("list", { name: "Saved schedules" });
+  expect(screen.queryByRole("searchbox", { name: "Search schedules by name" })).toBeNull();
 });

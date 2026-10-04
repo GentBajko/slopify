@@ -118,6 +118,7 @@ function CurrentCheckpoints({
             )
           }
           reload={reload}
+          current={gate.revisionId === revisionId}
           {...(gate.checkpointId === approvedInRail ? { inRail: true } : {})}
         />
       ))}
@@ -132,11 +133,14 @@ function Gate({
   gate,
   disabled,
   reload,
+  current,
   inRail = false,
 }: {
   readonly gate: CheckpointGate;
   readonly disabled: boolean;
   readonly reload: () => Promise<boolean>;
+  // The gate belongs to the version of the project on screen.
+  readonly current: boolean;
   readonly inRail?: boolean;
 }): ReactElement {
   const { api } = useApp();
@@ -222,7 +226,12 @@ function Gate({
                 ? `${label(gate.stage)} is held for your review. Its dependent work waits for this approval; independent work can continue.`
                 : `Checkpoint ${gate.state}.`}
       </p>
-      <p className="m-0 text-small text-ink-3">Reviewed revision: {gate.revisionId}</p>
+      {/* The version's id stays on hover for a bug report; the line itself says which one. */}
+      <p className="m-0 text-small text-ink-3" title={`Version ${gate.revisionId}`}>
+        {current
+          ? "Applies to the project as it is now."
+          : "Set on an earlier version. Reload checkpoints to see the current one."}
+      </p>
       {gate.dependents.length ? (
         <ul aria-label="Dependent work" className="m-0 flex list-none flex-wrap gap-2 p-0">
           {gate.dependents.map((stage) => (

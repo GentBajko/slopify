@@ -31,7 +31,7 @@ The form has its own section list on the left. Some sections appear only when th
 
 At the bottom: **Save changes** saves a revision, **Discard changes** drops the draft. While a file is uploading the bar says "Waiting for uploads to finish…" and saving waits.
 
-If someone (or another tab) saved the project while you were editing, the bar says "A newer revision is available. Your unsaved changes are kept below." Press **Reload current revision and discard my draft** to start from the newer one.
+If someone (or another tab) saved the project while you were editing, the bar says "A newer revision is available. Your unsaved changes are kept below and in this browser." Press **Reload latest and re-apply my edit** to lay your changes over the newer revision (check them, then **Save changes**), or **Copy my edit** to keep a copy on the clipboard first.
 
 ## Change the article text
 
@@ -119,7 +119,7 @@ The project keeps its own copy of each prompt, so later Library edits reach it o
 | Control | What it does |
 | --- | --- |
 | **Also use pronunciations from my other projects** → **Update from other projects** | Copies your other projects' Pronunciation Glossary terms into this project again, picking up any added since the last copy. After you save, only the chunks whose words those terms change are spoken again, paid per character. |
-| **Use narration aliases** → **Update from Library** | Copies Library → Aliases into this project again. A Library edit reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
+| **Use narration aliases** → **Update from Library** | Copies Library → Narration aliases into this project again. A Library edit reaches the project only when you press this. After you save, only the chunks the changed aliases touch are spoken again. |
 | **Describe tables and figures in the narration** | The text model writes a short spoken passage for each table, figure, equation and code block. Turning it on costs one text call per block, and after you save the chunks that contain a block are spoken again (the whole narration when Chunking is the whole article). **Leave code out** skips code blocks. |
 
 **Show tables and figures on screen** (in **Inputs → Cuts and look**, when Describe tables and figures is on) shows each described block in the video while its description is spoken, as the article's picture or a card drawn on your computer at no cost. Turning it on or off renders the video again, and any Shorts that include a card; the narration is kept.

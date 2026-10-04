@@ -277,9 +277,10 @@ describe("Home", () => {
         }),
       }),
     );
-    await screen.findByRole("region", { name: "Ready to upload" });
+    await screen.findByRole("region", { name: "Needs you" });
     expect(screen.getByLabelText("Channel")).not.toBeNull();
-    for (const name of ["Needs you", "Running now", "Coming up", "Ready to upload", "This week"])
+    // Coming up shows once there are schedules; there are none here.
+    for (const name of ["Needs you", "Running now", "This week"])
       expect(screen.getByRole("button", { name: `About ${name}` })).not.toBeNull();
     expectExplained();
   });

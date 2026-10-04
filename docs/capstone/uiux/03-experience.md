@@ -32,8 +32,8 @@ Rules every screen applies rather than re-decides. `build` reads this beside `02
 
 - One sticky 48 px header on every app screen: mark and wordmark at left, then four destinations Projects, Play, Library, Settings. The active item carries a 2 px underline in the running-lamp colour. Library stays lit for `/prompts`, `/entries`, `/templates`, `/schedules` and their editors; Settings stays lit for `/settings` and `/usage` (`packages/web/src/components/shell.tsx`).
 - Right end of the header: a tally lamp with "N running" whenever any project is running (links to Projects), the three support links (GitHub, Patreon, Buy Me a Coffee; labels from 1100 px, icons below, hidden below 640 px), the update button and the Tutorial "?" button.
-- Library is one page bar with four route tabs (Prompts, Intros & Outros, Templates, Schedules); each tab keeps its URL and opens with a LibraryToolbar row of filters and its one action (`packages/web/src/routes/library.tsx`). Settings shows one section at a time from a left section list addressed by `?section=` (`packages/web/src/routes/settings.tsx`).
-- Every route starts with a PageBar. Back links ("< Projects", "< Prompts", "< Intros & Outros") sit at the left of a detail page's bar, before its title.
+- Library is one page bar with its route tabs in three groups (Setups: Templates; Building blocks: Prompts, Intros & outros, PDF themes, Narration aliases; Results: A/B results); each tab keeps its URL and opens with a LibraryToolbar row of filters and its one action (`packages/web/src/routes/library.tsx`). Settings shows one section at a time from a left section list addressed by `?section=` (`packages/web/src/routes/settings.tsx`).
+- Every route starts with a PageBar. Back links ("< Projects", "< Prompts", "< Intros & outros") sit at the left of a detail page's bar, before its title.
 - The marketing page has no app navigation; its header carries the wordmark, a GitHub link, and the donation links.
 
 ## Feedback thresholds
@@ -61,7 +61,7 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 ## Progressive disclosure
 
 - Play groups configuration into three editor tabs (Content, Outputs, Style); Review opens as a drawer over the last editor. The readiness rail summarizes each part; pressing a row reveals the blocking field. Active source controls disclose their inputs.
-- Audio keeps TTS, model and voice visible; one "Audio Advanced · …" disclosure, whose summary lists non-default choices, holds chunking, intro/outro, Narration Preparation, Pronunciation Glossary, the Choose Text Generation link and Settings. Text generation, Narration Preparation and Pronunciation Glossary help sit behind InfoTips.
+- Audio keeps TTS, model and voice visible; one "More audio settings · …" disclosure, whose summary lists non-default choices, holds chunking, intro/outro, Narration Preparation, Pronunciation Glossary, the Choose Text Generation link and Settings. Text generation, Narration Preparation and Pronunciation Glossary help sit behind InfoTips.
 - Review checkpoints (Before Audio, Images, Video / export) live in the Review drawer; the project page's Checkpoints tab shows dependents, revision identity, approval and cross-tab reload state.
 - Project page: the rundown strip is the summary; Output, Edit, History and Checkpoints are tabs; the batch queue is a Queue · N popover; rebuild review opens in a drawer. Edit uses a section sub-nav whose hidden sections stay mounted.
 - Templates and Schedules are Library tabs. Save a setup, New schedule and Edit schedule open drawers; a schedule's policy sits behind an InfoTip, its history stays collapsed until opened, and Pause/Resume, Cancel and Delete sit in its More menu (`packages/web/src/routes/templates.tsx`, `packages/web/src/routes/schedules.tsx`). Project page bars offer Save as template for the displayed current revision without rebuilding.

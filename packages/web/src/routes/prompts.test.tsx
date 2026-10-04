@@ -1,14 +1,34 @@
 import type { Prompt } from "@app/slices/library/model.js";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { type AnyRouter, useLocation, useRouter } from "@tanstack/react-router";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PromptKind } from "@/api";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { PromptsRoute } from "./prompts.js";
 
+// happy-dom here has no localStorage, so the remembered sort gets a plain one.
+const stored = new Map<string, string>();
+beforeEach(() => {
+  stored.clear();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => void stored.set(key, value),
+    },
+  });
+});
 afterEach(cleanup);
+
+// Shows the test router's address, and keeps the router so a test can change it.
+const probed: { router?: AnyRouter } = {};
+function UrlProbe() {
+  probed.router = useRouter();
+  return <output aria-label="URL">{useLocation().searchStr}</output>;
+}
 
 const dossier: Prompt = {
   id: "p1",
@@ -99,7 +119,54 @@ describe("the prompts list", () => {
     renderRouted(<Screen />, deps([dossier]));
 
     const row = await findRow("Documentary dossier");
-    expect(within(row).getByText(/^Article · 2 keywords · updated /u)).not.toBeNull();
+    const meta = row.querySelector(".sl-row__meta");
+    expect(meta?.textContent).toMatch(/^Article · 2 keywords · updated /u);
+    // The short date shows the whole moment on hover.
+    const stamp = meta?.querySelector("time");
+    expect(stamp?.getAttribute("dateTime")).toBe(dossier.updatedAt);
+    expect(stamp?.getAttribute("title")).toMatch(/2026/u);
+  });
+
+  it("sorts by name, or by last change from the Sort menu, and remembers it", async () => {
+    const user = userEvent.setup();
+    const older = { ...dossier, id: "a1", name: "Alpha", updatedAt: "2026-08-01T10:00:00.000Z" };
+    const newer = { ...dossier, id: "z1", name: "Zulu", updatedAt: "2026-09-20T10:00:00.000Z" };
+    renderRouted(<Screen />, deps([newer, older]));
+    const names = async () =>
+      within(await screen.findByRole("list", { name: "Prompts" }))
+        .getAllByRole("listitem")
+        .map((row) => row.querySelector(".sl-row__title")?.textContent ?? "");
+
+    expect((await names()).map((name) => name.slice(0, 4))).toEqual(["Alph", "Zulu"]);
+    await user.click(screen.getByRole("button", { name: "Sort prompts: Name" }));
+    await user.click(await screen.findByRole("menuitem", { name: /^Sort by last changed/u }));
+    expect((await names()).map((name) => name.slice(0, 4))).toEqual(["Zulu", "Alph"]);
+    expect(stored.get("slopify.library.sort.prompt")).toBe("changed");
+  });
+
+  it("keeps the shown prompt in the URL, and opens the one the URL names", async () => {
+    const user = userEvent.setup();
+    const second = { ...dossier, id: "p9", name: "Second dossier" };
+    renderRouted(
+      <>
+        <Screen />
+        <UrlProbe />
+      </>,
+      deps([dossier, second]),
+    );
+    expect(
+      await screen.findByRole("region", { name: "Documentary dossier details" }),
+    ).not.toBeNull();
+
+    await user.click(await screen.findByRole("button", { name: "Second dossier" }));
+    await waitFor(() => expect(screen.getByLabelText("URL").textContent).toContain("item=p9"));
+    expect(await screen.findByRole("region", { name: "Second dossier details" })).not.toBeNull();
+
+    // A link or a reload: the address alone picks the row.
+    act(() => probed.router?.history.push("/?item=p1"));
+    expect(
+      await screen.findByRole("region", { name: "Documentary dossier details" }),
+    ).not.toBeNull();
   });
 
   it("shows the selected prompt's text and keywords beside the list", async () => {
@@ -184,26 +251,28 @@ describe("the prompts list", () => {
 
     await findRow("Documentary dossier");
     const actions = screen.getByRole("group", { name: "Actions for Documentary dossier" });
-    // All visible on the row, no menu; History and Delete are icon buttons.
+    // What the row is for stays on it; the occasional actions sit behind More.
     expect(
       [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
     ).toEqual([
       "Edit Documentary dossier",
-      "Duplicate Documentary dossier",
       "Use Documentary dossier in Play",
-      "History of Documentary dossier",
-      "Delete Documentary dossier",
+      "More actions for Documentary dossier",
     ]);
     expect(
       within(actions).getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
     ).toBe("/prompts/p1");
+    await user.click(
+      within(actions).getByRole("button", { name: "More actions for Documentary dossier" }),
+    );
     expect(
-      within(actions)
-        .getByRole("link", { name: "Duplicate Documentary dossier" })
-        .getAttribute("href"),
+      (await screen.findByRole("menuitem", { name: "Duplicate Documentary dossier" })).getAttribute(
+        "href",
+      ),
     ).toBe("/prompts/new?kind=article&from=p1");
+    expect(screen.getByRole("menuitem", { name: "History of Documentary dossier" })).not.toBeNull();
 
-    await user.click(within(actions).getByRole("button", { name: "Delete Documentary dossier" }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete Documentary dossier" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Documentary dossier"?')).not.toBeNull();
@@ -290,7 +359,10 @@ describe("the prompts list", () => {
     expect((await within(detail).findByText("short")).tagName).toBe("DEL");
     expect(within(detail).getByText("long").tagName).toBe("INS");
 
-    await user.click(screen.getByRole("button", { name: "History of Documentary dossier" }));
+    await user.click(screen.getByRole("button", { name: "More actions for Documentary dossier" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "History of Documentary dossier" }),
+    );
     const drawer = await screen.findByRole("dialog", { name: "History of Documentary dossier" });
     expect(within(drawer).getByText("short").tagName).toBe("DEL");
     expect(within(drawer).getByText("long").tagName).toBe("INS");

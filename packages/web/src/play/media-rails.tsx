@@ -1,6 +1,7 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
 import { type ComponentProps, type ReactNode, useEffect } from "react";
 import type { CastMember } from "@/channels/api";
+import { Fold } from "@/components/kit/fold";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
@@ -15,6 +16,7 @@ import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
 import { ThinkingPicker } from "./thinking";
+import { VoiceSample } from "./voice-sample";
 
 // The two rails that carry a provider, and with it everything a provider decides: the
 // voice and the chunking of the narration, and the model and the ticked
@@ -141,16 +143,23 @@ export function AudioRail({
                     This voice reads only the intro and outro. Each speaker's voice is set under
                     Speakers.
                   </p>
-                ) : null}
+                ) : (
+                  <VoiceSample form={form} />
+                )}
               </>
             )}
-            <details className="col-span-full rounded-control border border-line px-3">
-              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-                Speakers ·{" "}
-                {form.voices === undefined
-                  ? "Narration, one voice"
-                  : `${voiceFormatLabel(form.voices.format)}, ${String(form.voices.speakers.length)} ${form.voices.speakers.length === 1 ? "speaker" : "speakers"}`}
-              </summary>
+            <Fold
+              className="col-span-full"
+              remember="play.speakers"
+              summary={
+                <>
+                  Speakers ·{" "}
+                  {form.voices === undefined
+                    ? "Narration, one voice"
+                    : `${voiceFormatLabel(form.voices.format)}, ${String(form.voices.speakers.length)} ${form.voices.speakers.length === 1 ? "speaker" : "speakers"}`}
+                </>
+              }
+            >
               <div className="pt-2 pb-3">
                 <SpeakersEditor
                   value={form.voices}
@@ -163,11 +172,12 @@ export function AudioRail({
                   onChange={(next) => update({ voices: next })}
                 />
               </div>
-            </details>
-            <details className="col-span-full rounded-control border border-line px-3">
-              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
-                Audio Advanced · {advancedSummary}
-              </summary>
+            </Fold>
+            <Fold
+              className="col-span-full"
+              remember="play.audio-more"
+              summary={<>More audio settings · {advancedSummary}</>}
+            >
               <div className="sl-fields pt-2 pb-3">
                 <div className="col-span-full">
                   <ChunkingControl
@@ -215,7 +225,7 @@ export function AudioRail({
                   onChange={(next) => update({ audio: { ...form.audio, ...next } })}
                 />
               </div>
-            </details>
+            </Fold>
           </>
         ) : null}
       </div>

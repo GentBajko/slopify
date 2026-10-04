@@ -77,6 +77,28 @@ const studioRoutes = (settings = pairedSettings, queue: unknown[] = []) => ({
 });
 
 describe("Prepare upload", () => {
+  it("says when YouTube would refuse the title the upload carries, and where to change it", async () => {
+    const user = userEvent.setup();
+    const long = "A".repeat(120);
+    const first = pack.items[0];
+    if (first === undefined) throw new Error("The pack has a long video.");
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        ...studioRoutes(),
+        "GET /api/studio/packs/p1": jsonAnswer({
+          ...pack,
+          items: [{ ...first, title: long, titles: [], pickable: undefined }],
+        }),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
+    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    expect(
+      (await within(drawer).findByText(/YouTube takes titles of up to 100 characters/)).textContent,
+    ).toContain("this one has 120. Shorten it. Change it in the project's YouTube section");
+  });
+
   it("lists Studio's steps in order and hands the chosen item to the extension", async () => {
     const user = userEvent.setup();
     const opened = vi.spyOn(window, "open").mockReturnValue(null);

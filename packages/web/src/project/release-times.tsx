@@ -45,18 +45,30 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
       ? []
       : [{ id: entry.project.id, title: entry.project.title, at: entry.at }],
   );
+  const [freePick, setFreePick] = useState("");
+  const [swapPick, setSwapPick] = useState("");
+  // Swapping back with the same video is the undo: the two times trade places again.
   const swap = useMutation({
-    mutationFn: (other: string) => swapRelease(api, projectId, other),
-    onSuccess: (_, other) => {
+    mutationFn: ({ other }: { readonly other: string; readonly undo: boolean }) =>
+      swapRelease(api, projectId, other),
+    onSuccess: (_, { other, undo }) => {
       void client.invalidateQueries({ queryKey: key });
       void client.invalidateQueries({ queryKey: ["studio", "releases"] });
       void client.invalidateQueries({ queryKey: ["studio", "project-releases", other] });
-      notify(
-        `Swapped release times with ${others.find((one) => one.id === other)?.title ?? "the other video"}; each one's shorts moved with it.`,
-        "success",
-      );
+      setSwapPick("");
+      const title = others.find((one) => one.id === other)?.title ?? "the other video";
+      if (undo) notify(`Swapped back: the times with ${title} are as they were.`, "success");
+      else
+        notify(`Swapped release times with ${title}; each one's shorts moved with it.`, "success", {
+          label: "Undo",
+          run: () => swap.mutate({ other, undo: true }),
+        });
     },
-    onError: (error: Error) => notify(`The times weren't swapped: ${error.message}`, "error"),
+    onError: (error: Error) =>
+      notify(
+        `The times weren't swapped: ${error.message} Pick the video under Swap with… and press Swap again.`,
+        "error",
+      ),
   });
   const save = useMutation({
     mutationFn: (change: { short: number; at: string | null; line?: string }) =>
@@ -68,6 +80,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
         const { [change.short]: _gone, ...rest } = all;
         return rest;
       });
+      if (change.line !== undefined) setFreePick("");
       notify(
         change.at === null
           ? "Not scheduled: set its time in Studio yourself, or pick one here."
@@ -121,41 +134,61 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                 </Button>
               ) : null}
               {item.short === 0 && free.length > 0 ? (
-                <Select
-                  aria-label="Take a free time of the posting plan"
-                  className="w-[230px]"
-                  value=""
-                  onChange={(event) => {
-                    const slot = free.find((one) => one.longAt === event.currentTarget.value);
-                    if (slot !== undefined)
-                      save.mutate({ short: 0, at: slot.longAt, line: slot.row });
-                  }}
-                  options={[
-                    { value: "", label: "Free plan times…" },
-                    ...free.map((slot) => ({
-                      value: slot.longAt,
-                      label: when.format(new Date(slot.longAt)),
-                    })),
-                  ]}
-                />
+                <span className="flex items-center gap-2">
+                  <Select
+                    aria-label="Take a free time of the posting plan"
+                    className="w-[230px]"
+                    value={freePick}
+                    onChange={(event) => setFreePick(event.currentTarget.value)}
+                    options={[
+                      { value: "", label: "Free plan times…" },
+                      ...free.map((slot) => ({
+                        value: slot.longAt,
+                        label: when.format(new Date(slot.longAt)),
+                      })),
+                    ]}
+                  />
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    disabled={freePick === "" || save.isPending}
+                    onClick={() => {
+                      const slot = free.find((one) => one.longAt === freePick);
+                      if (slot !== undefined)
+                        save.mutate({ short: 0, at: slot.longAt, line: slot.row });
+                    }}
+                  >
+                    Take this time
+                  </Button>
+                </span>
               ) : null}
               {item.at !== null && item.short === 0 && others.length > 0 ? (
-                <Select
-                  aria-label="Swap release times with another video"
-                  className="w-[260px]"
-                  value=""
-                  disabled={swap.isPending}
-                  onChange={(event) => {
-                    if (event.currentTarget.value !== "") swap.mutate(event.currentTarget.value);
-                  }}
-                  options={[
-                    { value: "", label: "Swap with…" },
-                    ...others.map((one) => ({
-                      value: one.id,
-                      label: `${one.title.split(" | ")[0] ?? one.title} · ${when.format(new Date(one.at))}`,
-                    })),
-                  ]}
-                />
+                <span className="flex items-center gap-2">
+                  <Select
+                    aria-label="Swap release times with another video"
+                    className="w-[260px]"
+                    value={swapPick}
+                    disabled={swap.isPending}
+                    onChange={(event) => setSwapPick(event.currentTarget.value)}
+                    options={[
+                      { value: "", label: "Swap with…" },
+                      ...others.map((one) => ({
+                        value: one.id,
+                        label: `${one.title.split(" | ")[0] ?? one.title} · ${when.format(new Date(one.at))}`,
+                      })),
+                    ]}
+                  />
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    disabled={swapPick === "" || swap.isPending}
+                    onClick={() => swap.mutate({ other: swapPick, undo: false })}
+                  >
+                    Swap
+                  </Button>
+                </span>
               ) : null}
               {item.at !== null && item.short === 0 ? (
                 <Button

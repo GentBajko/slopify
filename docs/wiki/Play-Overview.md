@@ -2,7 +2,7 @@
 
 Play is the screen where you set up a new video and start it. You pick a template (or none), type what the video is about, check the setup rows, and press the Play key. You get a project that writes the article, records the narration, draws the images and renders the video, plus any extra outputs you switched on.
 
-**Where to find it:** **New project** in the sidebar, **New project** on Home or Projects, `Ctrl+K` → **New project**, or press `C` anywhere. The page header reads **What's the video about?**
+**Where to find it:** **Create** in the sidebar (and the phone's bottom bar), **New project** on Home or Projects, `Ctrl+K` → **Create**, or press `C` anywhere. The page header reads **What's the video about?**
 
 ## How Play is laid out
 
@@ -90,7 +90,7 @@ All at once finishes sooner while the steps wait on providers (research, narrati
 
 ### The video queue
 
-Videos started together wait in the queue, shown on the Calendar under **Batch queue** (see [Calendar](Calendar#the-batch-queue)) and behind the **Queue · N** button in a project page's right rail. Projects has a **Queued** filter for them. Pausing a project holds the queue. When one fails or is cancelled, the next one starts.
+Videos started together wait in the queue, shown on the Calendar under **Batch queue** (see [Calendar](Calendar#the-batch-queue)) and behind the **Queue · N** button in a project page's right rail. Projects has a **Queued** filter for them. Pausing a project holds the queue. When one fails or is canceled, the next one starts.
 
 ## Drafts
 
@@ -116,7 +116,7 @@ If you have the same draft open in another tab or window and it was saved there,
 | --- | --- | --- |
 | **Title and keywords** | The title pattern and every keyword value | This page |
 | **Article** | Article source, article prompt, text generation (LLM, model, thinking) when the article or research is written, research | [Play Title and Article](Play-Title-and-Article) |
-| **Narration** | Narration source, TTS, model, voice, speakers, Audio Advanced (chunking, intro, outro, preparation, glossary, aliases, tables and figures) | [Play Narration](Play-Narration) |
+| **Narration** | Narration source, TTS, model, voice, speakers, More audio settings (chunking, intro, outro, preparation, glossary, aliases, tables and figures) | [Play Narration](Play-Narration) |
 | **Images** | Images source, provider, model, effort, image prompts, establishing image, more images for long videos | [Play Images](Play-Images) |
 | **Video and style** | Video source, seconds per image, zoom, motion, cuts, the Look, ambient sound, pauses and volume, silence, frame format, captions, preview text | [Play Video and Style](Play-Video-and-Style) |
 | **Outputs** | Thumbnail, YouTube description, Shorts, tables and figures on screen, PDF document | [Play Outputs](Play-Outputs) |
@@ -168,7 +168,7 @@ How long you expect each generated article to be. It drives the cost estimate an
 | **Start run** | One video |
 | **Queue N videos** | You added more topics |
 | **Starting…** | The start is being sent |
-| **Check Start result** | Slopify didn't confirm the last start. Press it to find out before starting again. |
+| **Check whether it started** | Slopify didn't confirm the last start. Press it to find out before starting again. |
 
 The line under the key says why it can't start yet (a missing field, an upload still running, the estimate still being checked), or "Nothing starts until you press it."
 

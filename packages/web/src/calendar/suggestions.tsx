@@ -28,16 +28,24 @@ import { TopicFailure } from "@/schedules/topic-failure";
 // The calendar's side panel: topics Slopify suggested from a schedule's series brief, held for
 // the person to queue or reject. One block per schedule that holds its suggestions.
 
+// The schedules that hold suggested topics; the calendar shows the panel only when one does.
+export function suggesting(schedules: readonly ScheduleSummary[]): readonly ScheduleSummary[] {
+  return schedules.filter(
+    (one) =>
+      one.deletedAt === null &&
+      one.topicGeneration.mode !== "off" &&
+      (one.status === "active" || one.status === "paused"),
+  );
+}
+
 export function SuggestedTopics({
   schedules,
 }: {
   readonly schedules: readonly ScheduleSummary[];
 }): ReactElement {
-  const holding = schedules.filter(
-    (one) =>
-      one.deletedAt === null &&
-      one.topicGeneration.mode !== "off" &&
-      (one.status === "active" || one.status === "paused"),
+  const holding = suggesting(schedules);
+  const live = schedules.filter(
+    (one) => one.deletedAt === null && (one.status === "active" || one.status === "paused"),
   );
   return (
     <div className="flex flex-col gap-6">
@@ -48,10 +56,23 @@ export function SuggestedTopics({
             No schedule suggests its own topics yet. Turn on topic generation in a schedule and its
             suggestions wait here for you.
           </p>
-          <div>
-            <TextLink to="/calendar" search={{ tab: "schedules" }}>
-              Open schedules
-            </TextLink>
+          {/* Straight to the schedule whose series brief and topic generation to set. */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {live.length === 0 ? (
+              <TextLink to="/calendar" search={{ tab: "schedules" }}>
+                Open schedules
+              </TextLink>
+            ) : (
+              live.slice(0, 4).map((one) => (
+                <TextLink
+                  key={one.id}
+                  to="/calendar"
+                  search={{ tab: "schedules", schedule: one.id }}
+                >
+                  Open {one.name}
+                </TextLink>
+              ))
+            )}
           </div>
         </>
       ) : (

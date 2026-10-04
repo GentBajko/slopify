@@ -129,7 +129,7 @@ describe("project pause and provider changes", () => {
     );
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
     await waitFor(() =>
-      expect(within(rail).getByRole("button", { name: /^Checkpoints/ }).textContent).toContain(
+      expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).toContain(
         "1 held",
       ),
     );

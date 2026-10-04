@@ -1,148 +1,40 @@
+import { queueMax } from "@app/slices/schedules/schema.js";
 import {
   formatTopicList,
-  linesFromRows,
-  parseTopicList,
   renderedTitle,
   rowsFromLines,
   type TopicRow,
-  topicRowProblems,
-  topicValueMax,
 } from "@app/slices/schedules/topic-list.js";
-import { CopyIcon, DownloadIcon, PlusIcon, XIcon } from "lucide-react";
-import { type ReactElement, useState } from "react";
+import { CopyIcon, DownloadIcon, UploadIcon } from "lucide-react";
+import { type ReactElement, useRef, useState } from "react";
 import { KeywordList, keywordFeeds } from "@/components/keyword-list";
-import { Button, IconButton } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
-import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Field, Select, Textarea } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
+import { limitCount } from "@/lib/limit-count";
+import {
+  importedRows,
+  modeLabels,
+  type QueueContext,
+  queueResult,
+  switchMode,
+  type TopicMode,
+  type TopicQueue,
+  withRows,
+} from "./topic-queue-state";
+import { TopicTable } from "./topic-table";
 
-// A schedule's topic queue, written three ways that convert into each other without losing
-// anything: one topic per line (it fills the topic keyword), a table with a column for each
-// keyword a topic sets itself, or a YAML / JSON list. Every other keyword keeps its every-run
-// value, which a topic's own value overrides for that one run.
-
-export type TopicMode = "lines" | "table" | "yaml";
-
-const modeLabels: Readonly<Record<TopicMode, string>> = {
-  lines: "One per line",
-  table: "Table",
-  yaml: "YAML / JSON",
-};
-
-export interface TopicQueue {
-  readonly mode: TopicMode;
-  readonly rows: readonly TopicRow[];
-  // The lines as typed, and the rows they were started from: a line matching one of those
-  // keeps its values.
-  readonly lines: string;
-  readonly base: readonly TopicRow[];
-  readonly yaml: string;
-  // Keywords a topic sets itself, beside the topic keyword: the table's columns.
-  readonly columns: readonly string[];
-}
-
-export function initialQueue(rows: readonly TopicRow[]): TopicQueue {
-  return {
-    mode: "lines",
-    rows,
-    lines: linesFromRows(rows),
-    base: rows,
-    yaml: "",
-    columns: columnsOf(rows, []),
-  };
-}
-
-function columnsOf(rows: readonly TopicRow[], columns: readonly string[]): readonly string[] {
-  return [...new Set([...columns, ...rows.flatMap((row) => Object.keys(row.values))])];
-}
-
-export interface QueueContext {
-  // The template's keywords; empty until the template is read.
-  readonly keywords: readonly string[];
-  readonly topicKeyword: string | null;
-  // The every-run values, for the title preview and for what a topic may leave out.
-  readonly everyRun: Readonly<Record<string, string>>;
-  readonly form:
-    | { readonly title: string; readonly values: Readonly<Record<string, string>> }
-    | undefined;
-  // The saved queue: its topics are not checked again.
-  readonly kept: readonly TopicRow[];
-  // What each keyword feeds (the title, the article prompt, an image prompt), for the same
-  // "Feeds …" line Play, Edit project and templates show.
-  readonly origins?: ReadonlyMap<string, readonly string[]>;
-}
-
-// A keyword with no every-run value must be set by every topic of a list or table.
-function requiredOf(context: QueueContext): readonly string[] {
-  return context.keywords.filter(
-    (name) => name !== context.topicKeyword && (context.everyRun[name] ?? "").trim() === "",
-  );
-}
-
-// The rows to save and what is wrong with them. A YAML list that doesn't read keeps the
-// schedule from saving rather than saving an older queue.
-export function queueResult(
-  queue: TopicQueue,
-  context: QueueContext,
-): { readonly rows: readonly TopicRow[]; readonly problems: readonly string[] } {
-  if (context.form === undefined) return { rows: queue.rows, problems: [] };
-  if (queue.mode === "yaml") {
-    const parsed = parseTopicList(queue.yaml, {
-      keywords: context.keywords,
-      topicKeyword: context.topicKeyword,
-      required: requiredOf(context),
-    });
-    return parsed.ok
-      ? { rows: parsed.rows, problems: [] }
-      : { rows: [], problems: parsed.problems };
-  }
-  const rows = queue.rows.map((row) => ({
-    title: row.title.trim(),
-    // A blank cell uses the every-run value.
-    values: Object.fromEntries(Object.entries(row.values).filter(([, value]) => value !== "")),
-  }));
-  return {
-    rows,
-    problems: topicRowProblems(rows, {
-      keywords: context.keywords,
-      topicKeyword: context.topicKeyword,
-      ...(queue.mode === "table" ? { required: requiredOf(context) } : {}),
-      kept: context.kept,
-    }),
-  };
-}
-
-// Leaving a mode turns what it holds into rows; a YAML list that doesn't read stays put so
-// nothing typed is lost.
-function switchMode(
-  queue: TopicQueue,
-  next: TopicMode,
-  context: QueueContext,
-): { readonly queue: TopicQueue; readonly problems: readonly string[] } {
-  if (next === queue.mode) return { queue, problems: [] };
-  let rows = queue.rows;
-  if (queue.mode === "yaml") {
-    const parsed = parseTopicList(queue.yaml, {
-      keywords: context.keywords.length === 0 ? Object.keys(context.everyRun) : context.keywords,
-      topicKeyword: context.topicKeyword,
-    });
-    if (!parsed.ok) return { queue, problems: parsed.problems };
-    rows = parsed.rows;
-  }
-  return {
-    queue: {
-      ...queue,
-      mode: next,
-      rows,
-      lines: next === "lines" ? linesFromRows(rows) : queue.lines,
-      base: next === "lines" ? rows : queue.base,
-      yaml: next === "yaml" ? formatTopicList(rows, context.topicKeyword) : queue.yaml,
-      columns: columnsOf(rows, queue.columns),
-    },
-    problems: [],
-  };
-}
+// A schedule's topic queue, written three ways (topic-queue-state.ts): one per line, a table,
+// or a YAML / JSON list.
+export {
+  initialQueue,
+  type QueueContext,
+  queueResult,
+  type TopicMode,
+  type TopicQueue,
+} from "./topic-queue-state";
 
 export function TopicFields({
   queue,
@@ -197,8 +89,26 @@ export function TopicFields({
     URL.revokeObjectURL(url);
     setExported(`Downloaded ${String(rows.length)} topics as YAML.`);
   };
-  const setRow = (index: number, row: TopicRow) =>
-    onQueue({ ...queue, rows: queue.rows.map((one, at) => (at === index ? row : one)) });
+  const importInput = useRef<HTMLInputElement>(null);
+  const importFile = async (file: File) => {
+    const read = importedRows(file.name, await file.text(), context);
+    if (!read.ok) {
+      setExported(
+        `${file.name} wasn't imported: ${read.problems.slice(0, 3).join(" ")} Fix the file and import it again, or paste its text under YAML / JSON to see every problem.`,
+      );
+      return;
+    }
+    if (read.rows.length === 0) {
+      setExported(
+        `${file.name} has no topics in it. Put one topic per line, or a YAML / JSON list.`,
+      );
+      return;
+    }
+    onQueue(withRows(queue, [...queueResult(queue, context).rows, ...read.rows], keyword));
+    setExported(
+      `Imported ${String(read.rows.length)} ${read.rows.length === 1 ? "topic" : "topics"} from ${file.name}, after the ones already here.`,
+    );
+  };
   const addable = keywords.filter((name) => name !== keyword && !queue.columns.includes(name));
   const problems = [...switchProblems, ...result.problems];
   return (
@@ -242,6 +152,21 @@ export function TopicFields({
           <DownloadIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
           Export as YAML
         </Button>
+        <Button variant="quiet" size="small" onClick={() => importInput.current?.click()}>
+          <UploadIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+          Import
+        </Button>
+        <input
+          ref={importInput}
+          type="file"
+          hidden
+          accept=".yaml,.yml,.json,.txt,text/plain,application/json,application/yaml"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file !== undefined) void importFile(file);
+          }}
+        />
         {exported === null ? null : (
           <span role="status" className="text-small text-ink-2">
             {exported}
@@ -260,7 +185,8 @@ export function TopicFields({
           }
         >
           <Textarea
-            rows={6}
+            // Grows with the list up to 16 lines, then scrolls.
+            rows={Math.min(16, Math.max(6, rows.length + 1))}
             value={queue.lines}
             onChange={(event) =>
               onQueue({
@@ -293,9 +219,13 @@ export function TopicFields({
           onQueue={onQueue}
           keyword={keyword}
           addable={addable}
-          setRow={setRow}
           titleOf={titleOf}
         />
+      )}
+      {result.rows.length === 0 ? null : (
+        <p className="m-0 text-small text-ink-2" aria-live="polite">
+          {`${limitCount(result.rows.length, queueMax, "topics")}.`}
+        </p>
       )}
       {problems.length === 0 ? null : (
         <Callout tone="danger" title="These topics can't be saved yet.">
@@ -377,143 +307,5 @@ export function TopicFields({
         </p>
       ) : null}
     </fieldset>
-  );
-}
-
-// A row per topic, a column per keyword it sets itself, and the project title it makes.
-function TopicTable({
-  queue,
-  onQueue,
-  keyword,
-  addable,
-  setRow,
-  titleOf,
-}: {
-  readonly queue: TopicQueue;
-  readonly onQueue: (next: TopicQueue) => void;
-  readonly keyword: string | null;
-  readonly addable: readonly string[];
-  readonly setRow: (index: number, row: TopicRow) => void;
-  readonly titleOf: (row: TopicRow) => string | undefined;
-}): ReactElement {
-  const topicName = keyword === null ? "Title" : `{{${keyword}}}`;
-  return (
-    <div className="flex flex-col gap-3" {...helpScope}>
-      <div className="overflow-x-auto">
-        <table className="sl-table" aria-label="Topics">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">
-                <span className="inline-flex items-center gap-1">
-                  {topicName}
-                  <InfoTip id="planning.schedule.topic-table" className="-my-1" />
-                </span>
-              </th>
-              {queue.columns.map((column) => (
-                <th key={column} scope="col">
-                  <span className="inline-flex items-center gap-1">
-                    {`{{${column}}}`}
-                    <IconButton
-                      label={`Use the every-run ${column} for all topics`}
-                      size="small"
-                      onClick={() =>
-                        onQueue({
-                          ...queue,
-                          columns: queue.columns.filter((one) => one !== column),
-                          rows: queue.rows.map((row) => ({
-                            title: row.title,
-                            values: Object.fromEntries(
-                              Object.entries(row.values).filter(([name]) => name !== column),
-                            ),
-                          })),
-                        })
-                      }
-                    >
-                      <XIcon aria-hidden="true" strokeWidth={1.75} />
-                    </IconButton>
-                  </span>
-                </th>
-              ))}
-              <th scope="col">Project title</th>
-              <th scope="col">
-                <span className="sr-only">Remove</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {queue.rows.map((row, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity but their place.
-              <tr key={index}>
-                <td className="num">{index + 1}</td>
-                <td>
-                  <Input
-                    aria-label={`Topic ${String(index + 1)} ${topicName}`}
-                    maxLength={200}
-                    value={row.title}
-                    onChange={(event) => setRow(index, { ...row, title: event.target.value })}
-                  />
-                </td>
-                {queue.columns.map((column) => (
-                  <td key={column}>
-                    <Input
-                      aria-label={`Topic ${String(index + 1)} ${column}`}
-                      maxLength={topicValueMax}
-                      placeholder="Every-run value"
-                      value={row.values[column] ?? ""}
-                      onChange={(event) =>
-                        setRow(index, {
-                          ...row,
-                          values: { ...row.values, [column]: event.target.value },
-                        })
-                      }
-                    />
-                  </td>
-                ))}
-                <td className="min-w-[180px] text-small text-ink-2">{titleOf(row) ?? "—"}</td>
-                <td>
-                  <IconButton
-                    label={`Remove topic ${String(index + 1)}`}
-                    size="small"
-                    onClick={() =>
-                      onQueue({ ...queue, rows: queue.rows.filter((_, at) => at !== index) })
-                    }
-                  >
-                    <XIcon aria-hidden="true" strokeWidth={1.75} />
-                  </IconButton>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="small"
-          onClick={() => onQueue({ ...queue, rows: [...queue.rows, { title: "", values: {} }] })}
-        >
-          <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          Add topic
-        </Button>
-        {addable.length === 0 ? null : (
-          <Select
-            aria-label="Set a keyword per topic"
-            value=""
-            className="w-auto"
-            onChange={(event) => {
-              const name = event.target.value;
-              if (name !== "") onQueue({ ...queue, columns: [...queue.columns, name] });
-            }}
-          >
-            <option value="">Set a keyword per topic…</option>
-            {addable.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
-    </div>
   );
 }

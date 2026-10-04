@@ -100,7 +100,7 @@ Use `--projects-dir <folder>` for another folder. The installer waits for runnin
 | --- | --- |
 | **Export everything** | Downloads one `.tar` file with every project and its files and history, your library, templates, schedules, Play drafts, fonts, settings and usage. Never provider keys. Keep Slopify running until your browser's download finishes. |
 | **Import a backup** | Adds a `.tar` (or `.zip`) backup to this install and replaces nothing. Projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. Afterwards a summary lists what was added and skipped. |
-| **Clean orphan files** | See below. |
+| **Clear leftover files** | See below. |
 
 After an import, enter your provider keys again in Settings → **Providers**. For daily automatic copies, see [Backups](Backups).
 
@@ -110,7 +110,7 @@ After an import, enter your provider keys again in Settings → **Providers**. F
 
 **Disk space** shows what Slopify stores on this computer: the total, project files (outputs plus the working files they were made from), staged uploads, and deleted projects still in the trash, for example "· 2.1 GB in the trash (3 deleted projects), freed when removed for good". Below it, every project is listed by size with its outputs and working files.
 
-Deleted projects free their space when the trash removes them after 30 days, or when you choose **Delete now** in Settings → **Trash**. See [Trash](Trash).
+Deleted projects free their space when the trash removes them after 30 days, or when you choose **Delete now** in Settings → **Backup & storage** → **Trash**. See [Trash](Trash).
 
 ### Keep outputs only
 
@@ -124,9 +124,9 @@ If you change that project later (edit an image, a caption style or the narratio
 
 A finished project's own page offers the same in its right rail: **Free space** with **Free 1.2 GB: keep the outputs, drop the working files** (see [Project Page](Project-Page#free-space)).
 
-### Clean orphan files
+### Clear leftover files
 
-**Clean orphan files** deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.
+**Clear leftover files** deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.
 
 Cleanup only looks inside `Projects`. It leaves `Backups` alone (only Slopify's own `slopify-backup-*.tar` files there are ever pruned, by the backup rules), leaves hidden files such as `.DS_Store` and `desktop.ini`, never removes loose files in a `Projects` folder outside the data folder, and never touches `Exports` or anything else in your files folder.
 

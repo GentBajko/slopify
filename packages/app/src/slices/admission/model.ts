@@ -342,11 +342,25 @@ export interface ProjectSummary extends Project {
   readonly setAside?: boolean;
 }
 
+// The part of a project's settings the list reads (`listProjectHeads`). The whole configuration
+// carries rendered prompts, provided text and episode memory; a project page reads that from
+// its own endpoint.
+export interface ListingConfig extends Pick<RunConfig, "sources" | "articlePrompt"> {
+  readonly voices?: { readonly book?: import("../voices/model.js").Book | undefined } | undefined;
+}
+
+// A live project with only its list settings, as `listProjectHeads` reads it.
+export interface ProjectHead extends Omit<Project, "config"> {
+  readonly config: ListingConfig;
+}
+
 // One row of 07 Projects. The list carries a share rather than the stage rows a project
 // page reads: the screen shows one thin meter per running row and nothing else of a
 // stage, so sending six stage rows per project to average them in the browser would be
 // six times the body for the same 2 px.
-export interface ProjectListing extends ProjectSummary {
+export interface ProjectListing extends ProjectHead {
+  readonly status: ProjectState;
+  readonly setAside?: boolean;
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so

@@ -1,12 +1,13 @@
-import { HistoryIcon, Trash2Icon } from "lucide-react";
+import { HistoryIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 import { Button, IconButton } from "@/components/kit/button";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { cn } from "@/lib/utils";
 
-// The actions of one Library row, all visible rather than behind a menu, in the same order on
-// every Library tab: Edit and Duplicate (links: they open the editor), Use in Play, then
-// History and Delete as icon buttons. A tab leaves out what its rows can't do (a document
-// theme has no Play or History), and the rest keep their order.
+// The actions of one Library row, in the same order on every Library tab. What a row is for
+// stays on it: Edit (a link to the editor) and Use in Play. The occasional ones (Duplicate,
+// History, Delete) sit behind one More button, so a long list doesn't repeat five controls on
+// every line. A tab leaves out what its rows can't do (a document theme has no Play or History).
 export function LibraryRowActions({
   name,
   edit,
@@ -37,7 +38,6 @@ export function LibraryRowActions({
       className={cn("flex flex-wrap items-center gap-0.5", className)}
     >
       {edit}
-      {duplicate}
       {play === undefined ? null : (
         <Button
           variant="quiet"
@@ -50,14 +50,27 @@ export function LibraryRowActions({
           Use in Play
         </Button>
       )}
-      {onHistory === undefined ? null : (
-        <IconButton size="small" label={`History of ${name}`} onClick={onHistory}>
-          <HistoryIcon aria-hidden="true" />
-        </IconButton>
-      )}
-      <IconButton size="small" label={`Delete ${name}`} onClick={onDelete}>
-        <Trash2Icon aria-hidden="true" />
-      </IconButton>
+      <Menu>
+        <MenuTrigger asChild>
+          <IconButton size="small" label={`More actions for ${name}`}>
+            <MoreHorizontalIcon aria-hidden="true" />
+          </IconButton>
+        </MenuTrigger>
+        <MenuContent>
+          <MenuItem asChild>{duplicate}</MenuItem>
+          {onHistory === undefined ? null : (
+            <MenuItem aria-label={`History of ${name}`} onSelect={onHistory}>
+              <HistoryIcon aria-hidden="true" className="size-4" />
+              History
+            </MenuItem>
+          )}
+          <MenuSeparator />
+          <MenuItem aria-label={`Delete ${name}`} onSelect={onDelete}>
+            <Trash2Icon aria-hidden="true" className="size-4" />
+            Delete
+          </MenuItem>
+        </MenuContent>
+      </Menu>
     </div>
   );
 }

@@ -9,7 +9,9 @@ import {
   CommandRegistry,
   fuzzyScore,
   matchCommands,
+  readRecent,
   useCommand,
+  withRecent,
 } from "./command-palette.js";
 
 afterEach(() => {
@@ -296,5 +298,48 @@ describe("keyboard shortcuts", () => {
     expect(ariaKeyShortcuts(["Shift", "N"])).toBe("Shift+N");
     expect(ariaKeyShortcuts(["/"])).toBe("/");
     expect(ariaKeyShortcuts(["G", "H"])).toBeUndefined();
+  });
+});
+
+describe("recent commands", () => {
+  it("come first under Recent while nothing is typed, and are not listed twice", () => {
+    const list = [
+      command("nav.home", "Open home"),
+      command("index.open.p1", "Open Cleopatra", { searchOnly: true }),
+      command("gone", "Gone"),
+    ];
+    const blank = withRecent(matchCommands(list, ""), list, ["index.open.p1", "nav.home", "x"], "");
+    expect(blank.map((one) => [one.group, one.title])).toEqual([
+      ["Recent", "Open Cleopatra"],
+      ["Recent", "Open home"],
+      ["Go to", "Gone"],
+    ]);
+    // Typing searches as before.
+    expect(withRecent(matchCommands(list, "home"), list, ["nav.home"], "home")[0]?.group).not.toBe(
+      "Recent",
+    );
+  });
+
+  it("remembers what was run from the palette", async () => {
+    const user = userEvent.setup();
+    try {
+      window.localStorage.removeItem("slopify.palette.recent");
+    } catch {
+      return;
+    }
+    const run = vi.fn();
+    function Register() {
+      useCommand({ id: "nav.calendar", title: "Open calendar", group: "Go to", run });
+      return null;
+    }
+    render(
+      <CommandPaletteProvider>
+        <Register />
+      </CommandPaletteProvider>,
+    );
+    await user.keyboard("{Control>}k{/Control}");
+    await user.type(await screen.findByRole("combobox"), "calendar{Enter}");
+    expect(run).toHaveBeenCalledOnce();
+    expect(readRecent()).toEqual(["nav.calendar"]);
   });
 });

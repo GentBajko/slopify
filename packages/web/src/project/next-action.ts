@@ -15,6 +15,7 @@ import { activityText, finalOutput } from "./summary.js";
 // The project page's places: the stage sections, the run's cost and live view, and the
 // settings views that replace the main column.
 export type SectionId =
+  | "outputs"
   | "article"
   | "narration"
   | "images"
@@ -347,7 +348,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       tone: "off",
       status: "Queued",
       title: "Waiting for its turn.",
-      why: "It starts by itself when the videos ahead of it are done.",
+      why: "Videos queued together run one at a time, in the order they were added. This one starts by itself when those ahead of it are done; Home shows which one is running now.",
     };
 
   const group = firstOutdated(input.outdated);
@@ -360,7 +361,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         group.count === 1 || group.singular
           ? `The ${group.noun} ${group.noun.endsWith("s") ? "are" : "is"} outdated after your edit.`
           : `${String(group.count)} ${group.plural} are outdated after your edit.`,
-      why: "They keep their current version until you remake them. Nothing else is made again.",
+      why: "They keep their current version until you remake them. Before anything charged starts, the remake shows what it makes again and its estimated cost; nothing else is made again.",
       action: {
         label:
           group.count === 1 || group.singular
@@ -555,6 +556,11 @@ const groups: readonly OutdatedGroup[] = [
     counted: ["document_pdf"],
   },
 ];
+
+// The outdated group a file belongs to, for what its status says (`output-status.ts`).
+export function outdatedGroupOf(role: OutputRole): string | undefined {
+  return groups.find((group) => group.roles.includes(role))?.id;
+}
 
 export function firstOutdated(outdated: readonly OutdatedOutput[]):
   | {

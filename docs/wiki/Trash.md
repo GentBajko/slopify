@@ -2,7 +2,7 @@
 
 Deleting something in Slopify does not remove it at once. Deleted projects, prompts, intros and outros, templates and schedules go to the trash for 30 days, where you can put them back or remove them for good.
 
-**Where to find it:** Settings → **Trash**.
+**Where to find it:** Settings → **Backup & storage** → **Trash**.
 
 ## What goes to the trash
 
@@ -10,7 +10,7 @@ Deleting something in Slopify does not remove it at once. Deleted projects, prom
 | --- | --- | --- |
 | Project | Project | Projects (the delete button on a project's row, then **Delete project**) |
 | Library prompt | Prompt · *type* (for example Prompt · article) | Library → Prompts |
-| Intro or outro | Intro or Outro | Library → Intros & Outros |
+| Intro or outro | Intro or Outro | Library → Intros & outros |
 | Template | Template | Templates |
 | Schedule | Schedule | Schedules |
 
@@ -20,7 +20,7 @@ Each row in the trash shows the item's name, its kind, when it was deleted and h
 
 ## Restore an item
 
-1. Open Settings → **Trash**.
+1. Open Settings → **Backup & storage** → **Trash**.
 2. Find the item under **Deleted items**.
 3. Press **Restore**.
 
@@ -36,7 +36,7 @@ It comes back as it was. A few kinds have their own rules:
 
 ## Delete an item for good
 
-1. Open Settings → **Trash**.
+1. Open Settings → **Backup & storage** → **Trash**.
 2. Press **Delete now** on the item.
 3. Confirm with **Delete for good**, or press **Keep it**.
 
@@ -52,7 +52,7 @@ There is no button to empty the whole trash at once; each item is deleted on its
 
 Anything in the trash for more than 30 days is removed for good by a daily clean-up, the same way as **Delete now**. Slopify checks hourly whether a day has passed since the last clean-up, so a computer that was asleep catches up. If one item cannot be removed (for example a project folder another program has open), it stays in the trash for the next pass and the rest still go.
 
-A project's disk space is freed only when it leaves the trash. Settings → **Storage** counts deleted projects still in the trash. See [Where Your Files Live](Where-Your-Files-Live).
+A project's disk space is freed only when it leaves the trash. Settings → **Backup & storage** counts deleted projects still in the trash. See [Where Your Files Live](Where-Your-Files-Live).
 
 ## What cannot be deleted
 

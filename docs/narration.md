@@ -6,7 +6,7 @@ the narration treats them differently.
 
 ## Describe tables and figures in the narration
 
-Play → Narration → Audio Advanced, and Edit project → Providers. On by default for new runs and
+Play → Narration → More audio settings, and Edit project → Providers. On by default for new runs and
 templates; a project saved before the setting is unchanged until you turn it on.
 
 With it on, the article is walked block by block (`packages/app/src/slices/narration/blocks.ts`)

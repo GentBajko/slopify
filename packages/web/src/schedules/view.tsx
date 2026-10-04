@@ -3,9 +3,10 @@ import { calendarMaxDays } from "@app/slices/schedules/schema.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { Fragment, type ReactElement, useRef, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
+import { useCurrentChannel } from "@/channels/current";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button, ButtonRow } from "@/components/kit/button";
@@ -14,29 +15,29 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { ListDetail, Rule } from "@/components/kit/layout";
-import { List, ListRow } from "@/components/kit/list-row";
+import { ListDetail } from "@/components/kit/layout";
 import { SectionHead } from "@/components/kit/section-head";
-import { Status, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
-import { RetiredModelRow } from "@/components/retired-models";
 import { intents, useIntent } from "@/lib/intents";
 import {
   calendarQuery,
   deleteSchedule,
-  readSchedule,
   scheduleAction,
   schedulesKey,
   schedulesQuery,
 } from "@/schedules/api";
 import { ScheduleForm } from "@/schedules/form";
-import { TopicGenerationPanel } from "@/schedules/held-topics";
-import { InlineTopics } from "@/schedules/inline-topics";
-import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
-
-type Reply = { readonly ok: true } | { readonly ok: false; readonly message: string };
-type Act = (job: () => Promise<Reply>) => void;
+import { duplicateSchedule } from "./duplicate";
+import {
+  arrangeSchedules,
+  listToolsFrom,
+  ScheduleListTools,
+  type ScheduleSort,
+} from "./list-tools";
+import { ScheduleDetail } from "./schedule-detail";
+import { ScheduleList } from "./schedule-list";
+import type { Act, Reply } from "./schedule-row";
 
 // Calendar → Schedules tab: the schedules as a list beside the picked one's detail (its topics,
 // policy and run history). New schedule and Edit open the form in place of the detail. Every
@@ -85,19 +86,33 @@ export function SchedulesView({
   for (const run of calendar.data?.runs ?? [])
     if (run.renderedTitle !== null && !nextTitles.has(run.scheduleId))
       nextTitles.set(run.scheduleId, run.renderedTitle);
-  // "" shows every channel's schedules; a schedule's channel is its template's.
-  const [channelFilter, setChannelFilter] = useState("");
+  const sidebarChannel = useCurrentChannel().channelId;
+  // Starts on the channel the sidebar shows, then is this list's own choice. "" shows every channel's schedules; a schedule's channel is its template's.
+  const [channelFilter, setChannelFilter] = useState(sidebarChannel ?? "");
   const inChannel = (schedule: ScheduleSummary): boolean => {
     if (channelFilter === "") return true;
     const template = templates.data?.find((one) => one.id === schedule.templateId);
     return (template ? channelOfTemplate(template) : defaultChannelId) === channelFilter;
   };
-  const liveSchedules =
-    schedules.data?.filter((schedule) => schedule.deletedAt === null && inChannel(schedule)) ?? [];
+  // Search and sort appear once there are several schedules to look through.
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<ScheduleSort>("newest");
+  const allLive = schedules.data?.filter((schedule) => schedule.deletedAt === null) ?? [];
+  const listTools = allLive.length >= listToolsFrom;
+  const channelSchedules = allLive.filter(inChannel);
+  const liveSchedules = listTools
+    ? arrangeSchedules(channelSchedules, query, sort)
+    : channelSchedules;
   const deletedSchedules = schedules.data?.filter((schedule) => schedule.deletedAt !== null) ?? [];
+  // A link naming a schedule that no longer exists says so rather than showing another one.
+  const missing =
+    picked !== null &&
+    schedules.data !== undefined &&
+    !schedules.data.some((schedule) => schedule.id === picked);
   // The detail shows the picked schedule, else the first live one.
-  const selected =
-    schedules.data?.find((schedule) => schedule.id === picked) ?? liveSchedules[0] ?? null;
+  const selected = missing
+    ? null
+    : (schedules.data?.find((schedule) => schedule.id === picked) ?? liveSchedules[0] ?? null);
   const mutation = useMutation({
     onError: (cause: Error) => setError(cause.message),
     onSettled: async () => {
@@ -134,6 +149,25 @@ export function SchedulesView({
     setCreating(true);
     setError(null);
   };
+  const duplicate = (schedule: ScheduleSummary) =>
+    act(async () => {
+      const reply = await duplicateSchedule(
+        api,
+        schedule,
+        (schedules.data ?? []).map((one) => one.name),
+      );
+      if (reply.ok) {
+        const copy = reply.value;
+        await queryClient.invalidateQueries({ queryKey: schedulesKey });
+        setPicked(copy.id);
+        notify(
+          `Duplicated as “${copy.name}”: paused, with an empty topic queue. Press Edit to change it, then Resume.`,
+          "success",
+          { label: "Edit", run: () => edit(copy) },
+        );
+      }
+      return reply;
+    });
   const edit = (schedule: ScheduleSummary) => {
     setCreating(false);
     setPicked(schedule.id);
@@ -228,70 +262,25 @@ export function SchedulesView({
       <ListDetail
         className="min-[768px]:grid-cols-[minmax(320px,460px)_minmax(0,1fr)]"
         list={
-          <>
-            {schedules.data && liveSchedules.length === 0 ? (
-              <EmptyState
-                title={
-                  channelFilter !== ""
-                    ? "No schedules run this channel's templates"
-                    : deletedSchedules.length === 0
-                      ? "No schedules yet"
-                      : "No active schedules"
-                }
-              >
-                {channelFilter !== ""
-                  ? "Pick All channels to see the others, or make one from this channel's templates."
-                  : deletedSchedules.length === 0
-                    ? "Your first one can be a one-off run or a recurring series. Press New schedule."
-                    : "Create one with New schedule, or review deleted history below."}
-              </EmptyState>
-            ) : null}
-            {liveSchedules.length > 0 ? (
-              <List label="Saved schedules" className="[&_.sl-row__actions]:flex-wrap">
-                {liveSchedules.map((schedule) => (
-                  <Fragment key={schedule.id}>
-                    <ScheduleRow
-                      schedule={schedule}
-                      nextTitle={nextTitles.get(schedule.id)}
-                      selected={!formOpen && selected?.id === schedule.id}
-                      pending={rowPending}
-                      onSelect={() => setPicked(schedule.id)}
-                      onEdit={() => edit(schedule)}
-                      onAction={act}
-                      onConfirm={(kind) => setConfirm({ kind, schedule })}
-                    />
-                    <RetiredModelRow kind="schedule" id={schedule.id} name={schedule.name} />
-                  </Fragment>
-                ))}
-              </List>
-            ) : null}
-            {deletedSchedules.length > 0 ? (
-              <details className="mt-6">
-                <summary className="cursor-pointer text-small font-semibold text-ink-2">
-                  Deleted schedules · {deletedSchedules.length}
-                </summary>
-                <p className="m-0 mt-2 mb-2 text-small text-ink-2">
-                  Deleted schedules stay in Settings → Trash for 30 days, where Restore brings one
-                  back paused. Pick one to see its run history.
-                </p>
-                <List label="Deleted schedules">
-                  {deletedSchedules.map((schedule) => (
-                    <ScheduleRow
-                      key={schedule.id}
-                      schedule={schedule}
-                      nextTitle={undefined}
-                      selected={!formOpen && selected?.id === schedule.id}
-                      pending={false}
-                      onSelect={() => setPicked(schedule.id)}
-                      onEdit={() => undefined}
-                      onAction={act}
-                      onConfirm={() => undefined}
-                    />
-                  ))}
-                </List>
-              </details>
-            ) : null}
-          </>
+          <ScheduleList
+            tools={
+              listTools ? (
+                <ScheduleListTools query={query} sort={sort} onQuery={setQuery} onSort={setSort} />
+              ) : null
+            }
+            loaded={schedules.data !== undefined}
+            live={liveSchedules}
+            hiddenBySearch={listTools ? channelSchedules.length - liveSchedules.length : 0}
+            channelFiltered={channelFilter !== ""}
+            deleted={deletedSchedules}
+            selectedId={formOpen ? undefined : selected?.id}
+            pending={rowPending}
+            nextTitles={nextTitles}
+            onPick={setPicked}
+            onEdit={edit}
+            onAction={act}
+            onConfirm={(kind, schedule) => setConfirm({ kind, schedule })}
+          />
         }
         detail={
           formOpen ? (
@@ -327,6 +316,11 @@ export function SchedulesView({
                 }}
               />
             </div>
+          ) : missing ? (
+            <EmptyState title="This schedule wasn't found">
+              The link names a schedule that is no longer here: a deleted schedule leaves Settings →
+              Trash after 30 days. Pick one from the list, or press New schedule.
+            </EmptyState>
           ) : selected ? (
             <ScheduleDetail
               key={selected.id}
@@ -334,6 +328,7 @@ export function SchedulesView({
               pending={rowPending}
               onAction={act}
               onConfirm={(kind) => setConfirm({ kind, schedule: selected })}
+              onDuplicate={() => duplicate(selected)}
             />
           ) : null
         }
@@ -368,304 +363,4 @@ export function SchedulesView({
       />
     </div>
   );
-}
-
-function cadenceOf(schedule: ScheduleSummary): string {
-  return schedule.cadence.kind === "once"
-    ? "One time"
-    : schedule.cadence.kind === "daily"
-      ? `Daily at ${schedule.cadence.time}`
-      : `Weekly at ${schedule.cadence.time}`;
-}
-
-const statusWords: Readonly<Record<ScheduleSummary["status"], string>> = {
-  active: "Active",
-  paused: "Paused",
-  completed: "Completed",
-  canceled: "Canceled",
-};
-const statusTones: Readonly<Record<ScheduleSummary["status"], Tone>> = {
-  active: "running",
-  paused: "waiting",
-  completed: "done",
-  canceled: "off",
-};
-
-function ScheduleStatus({ schedule }: { readonly schedule: ScheduleSummary }): ReactElement {
-  return schedule.deletedAt !== null ? (
-    <Status tone="off">Deleted</Status>
-  ) : (
-    <Status tone={statusTones[schedule.status]}>{statusWords[schedule.status]}</Status>
-  );
-}
-
-function ScheduleRow({
-  schedule,
-  nextTitle,
-  selected,
-  pending,
-  onSelect,
-  onEdit,
-  onAction,
-  onConfirm,
-}: {
-  readonly schedule: ScheduleSummary;
-  // The project title of the next run, when the calendar knows it.
-  readonly nextTitle: string | undefined;
-  readonly selected: boolean;
-  readonly pending: boolean;
-  readonly onSelect: () => void;
-  readonly onEdit: () => void;
-  readonly onAction: Act;
-  readonly onConfirm: (kind: "cancel" | "delete") => void;
-}): ReactElement {
-  const { api } = useApp();
-  const live = schedule.deletedAt === null;
-  const editable = live && (schedule.status === "active" || schedule.status === "paused");
-  const deletable = schedule.status === "canceled" || schedule.status === "completed";
-  return (
-    <ListRow
-      selected={selected}
-      onSelect={onSelect}
-      title={schedule.name}
-      meta={
-        <>
-          <ScheduleStatus schedule={schedule} />
-          {` · ${cadenceOf(schedule)} · ${
-            schedule.deletedAt !== null
-              ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
-              : schedule.nextRunAt === null
-                ? "No future run"
-                : `Next: ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}${
-                    nextTitle === undefined ? "" : ` · “${nextTitle}”`
-                  }`
-          }${schedule.topics.held > 0 ? ` · ${String(schedule.topics.held)} waiting for you` : ""}`}
-        </>
-      }
-      actions={
-        live ? (
-          <>
-            <Button
-              variant="quiet"
-              size="small"
-              aria-label={`Edit ${schedule.name}`}
-              disabled={pending || !editable}
-              disabledReason={
-                editable
-                  ? "Finish or cancel the open form first"
-                  : "Only a live schedule can change"
-              }
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
-            {schedule.status === "paused" ? (
-              <Button
-                variant="quiet"
-                size="small"
-                aria-label={`Resume ${schedule.name}`}
-                disabled={pending}
-                onClick={() =>
-                  onAction(() => scheduleAction(api, schedule.id, "resume", schedule.version))
-                }
-              >
-                Resume
-              </Button>
-            ) : (
-              <Button
-                variant="quiet"
-                size="small"
-                aria-label={`Pause ${schedule.name}`}
-                disabled={pending || schedule.status !== "active"}
-                disabledReason="Only an active schedule can pause"
-                onClick={() =>
-                  onAction(() => scheduleAction(api, schedule.id, "pause", schedule.version))
-                }
-              >
-                Pause
-              </Button>
-            )}
-            <Button
-              variant="quiet"
-              size="small"
-              aria-label={`Delete ${schedule.name}`}
-              disabled={pending || !deletable}
-              disabledReason="Cancel the schedule first; a completed or canceled one can be deleted"
-              onClick={() => onConfirm("delete")}
-            >
-              Delete
-            </Button>
-          </>
-        ) : undefined
-      }
-    />
-  );
-}
-
-// The picked schedule: its policy, topic generation and run history, with Cancel for a live
-// one (rare, so here rather than on every row).
-function ScheduleDetail({
-  schedule,
-  pending,
-  onAction,
-  onConfirm,
-}: {
-  readonly schedule: ScheduleSummary;
-  readonly pending: boolean;
-  readonly onAction: Act;
-  readonly onConfirm: (kind: "cancel" | "delete") => void;
-}): ReactElement {
-  const { api } = useApp();
-  const details = useQuery({
-    queryKey: ["schedule", schedule.id],
-    queryFn: async () => {
-      const reply = await readSchedule(api, schedule.id);
-      if (!reply.ok) throw new Error(reply.message);
-      return reply.value;
-    },
-    refetchInterval: 30_000,
-  });
-  const live = schedule.deletedAt === null;
-  const editable = live && (schedule.status === "active" || schedule.status === "paused");
-  const paused = schedule.status === "paused";
-  const facts: readonly (readonly [string, string])[] = [
-    [
-      "When",
-      schedule.cadence.kind === "once"
-        ? `Once, ${formatScheduleDate(schedule.cadence.at, schedule.timezone)}`
-        : schedule.cadence.kind === "daily"
-          ? `Every day at ${schedule.cadence.time}`
-          : `Selected weekdays at ${schedule.cadence.time}`,
-    ],
-    ["Timezone", schedule.timezone],
-    [
-      "Next run",
-      schedule.deletedAt !== null || schedule.nextRunAt === null
-        ? "None"
-        : formatScheduleDate(schedule.nextRunAt, schedule.timezone),
-    ],
-    [
-      "Topics",
-      schedule.items.length === 0
-        ? schedule.topicGeneration.mode === "off"
-          ? "Template as saved"
-          : "No topics queued"
-        : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`,
-    ],
-    ["Missed runs", schedule.missedPolicy === "skip" ? "Skip" : "Run once on reopening"],
-    ["Overlap", "Skip"],
-    [
-      "Spend ceiling",
-      schedule.spendLimitCents === null ? "Not set" : `${String(schedule.spendLimitCents)} cents`,
-    ],
-  ];
-  return (
-    <section aria-label={`${schedule.name} detail`}>
-      {live && editable ? (
-        <PauseCommand schedule={schedule} paused={paused} onAction={onAction} />
-      ) : null}
-      <SectionHead
-        kicker={<ScheduleStatus schedule={schedule} />}
-        title={schedule.name}
-        meta={
-          schedule.topics.held > 0
-            ? `${String(schedule.topics.held)} topics waiting for you`
-            : undefined
-        }
-      >
-        {live ? (
-          <Button
-            variant="quiet"
-            size="small"
-            aria-label={`Cancel ${schedule.name}`}
-            disabled={pending || !editable}
-            disabledReason="Only an active or paused schedule can be canceled"
-            onClick={() => onConfirm("cancel")}
-          >
-            Cancel schedule
-          </Button>
-        ) : null}
-      </SectionHead>
-      <dl className="m-0 mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-small min-[600px]:grid-cols-2">
-        {facts.map(([term, value]) => (
-          <div key={term} className="min-w-0">
-            <dt className="sl-kicker">{term}</dt>
-            <dd className="m-0 break-words text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {editable ? <InlineTopics schedule={schedule} /> : null}
-      <TopicGenerationPanel schedule={schedule} />
-      <Rule className="my-6" />
-      <SectionHead as="h3" title="Run history" />
-      <div className="mt-3">
-        {details.isPending ? (
-          <p className="m-0 text-small text-ink-3">Loading history…</p>
-        ) : details.error ? (
-          <p className="m-0 text-small text-danger">
-            {`The run history couldn't be loaded: ${details.error.message} It tries again every 30 seconds.`}
-          </p>
-        ) : details.data.runs.length === 0 ? (
-          <p className="m-0 text-small text-ink-3">No runs yet.</p>
-        ) : (
-          <List label={`Runs of ${schedule.name}`}>
-            {details.data.runs.map((run) => (
-              <ListRow
-                key={run.id}
-                title={
-                  <span className="capitalize">
-                    {`${run.status} · ${formatScheduleDate(run.scheduledFor, schedule.timezone)}`}
-                  </span>
-                }
-                meta={
-                  run.error ? (
-                    run.error
-                  ) : run.projectIds.length > 0 ? (
-                    <span className="inline-flex flex-wrap gap-x-3">
-                      {run.projectIds.map((projectId, index) => (
-                        <Link
-                          key={projectId}
-                          className="underline hover:text-ink"
-                          to="/projects/$projectId"
-                          params={{ projectId }}
-                        >
-                          Project {index + 1}
-                        </Link>
-                      ))}
-                    </span>
-                  ) : (
-                    "No projects"
-                  )
-                }
-              />
-            ))}
-          </List>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// Ctrl+K: pause or resume the schedule in the detail.
-function PauseCommand({
-  schedule,
-  paused,
-  onAction,
-}: {
-  readonly schedule: ScheduleSummary;
-  readonly paused: boolean;
-  readonly onAction: Act;
-}): null {
-  const { api } = useApp();
-  useCommand({
-    id: "schedules.pause-resume",
-    title: paused ? "Resume schedule" : "Pause schedule",
-    group: "Schedules",
-    context: schedule.name,
-    run: () =>
-      onAction(() =>
-        scheduleAction(api, schedule.id, paused ? "resume" : "pause", schedule.version),
-      ),
-  });
-  return null;
 }

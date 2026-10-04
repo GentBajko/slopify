@@ -83,7 +83,7 @@ The Document part lays out a PDF of the article and title on this computer, in t
 | Option | What it does | Default |
 | --- | --- | --- |
 | Document **Source** | **Off** or **Generate**. | Off |
-| **Theme** | How the PDF looks: the built-in **Plain** theme, or one of yours from Library → Documents. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit themes** opens the list. | Plain, or the channel's brand kit theme |
+| **Theme** | How the PDF looks: the built-in **Plain** theme, or one of yours from Library → PDF themes. A theme of yours is copied into the project, so editing it later leaves this project alone until you pick it again. **Edit themes** opens the list. | Plain, or the channel's brand kit theme |
 
 See [PDF Documents](PDF-Documents) and [Document Themes](Document-Themes).
 

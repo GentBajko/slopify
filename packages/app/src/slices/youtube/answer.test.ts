@@ -142,8 +142,8 @@ describe("checkDescriptionAnswer", () => {
       /hashtags broke YouTube's rules \(there must be at least one/,
     );
     expect(
-      reason({ ...good, hashtags: Array.from({ length: 16 }, (_, index) => `#Tag${index}`) }),
-    ).toMatch(/past 15, and it wrote 16/);
+      reason({ ...good, hashtags: Array.from({ length: 61 }, (_, index) => `#Tag${index}`) }),
+    ).toMatch(/past 60, and it wrote 61/);
     expect(reason({ ...good, hashtags: ["#Ancient Egypt"] })).toMatch(
       /"#Ancient Egypt" is not one word/,
     );

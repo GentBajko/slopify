@@ -16,6 +16,7 @@ import { Badge, Chip } from "@/components/kit/status";
 import { Switch } from "@/components/kit/switch";
 import { FixActions } from "@/fixes/fix-actions";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
+import { limitCount } from "@/lib/limit-count";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
 import {
@@ -34,6 +35,10 @@ import {
   saveCastMember,
   uploadCastImage,
 } from "./api";
+import { DuplicateCastButton } from "./cast-duplicate";
+
+// The longest picture description the server takes.
+const pictureMax = 4000;
 
 // The editor beside the cast that adds or edits one member: its kind, name, aliases and
 // description, and once it is saved, its reference pictures - uploaded, or made from a prompt.
@@ -106,6 +111,9 @@ export function CastEditor({
             : "Used whenever a title or an image brief names it or one of its aliases."
         }
       >
+        {member === undefined ? null : (
+          <DuplicateCastButton channelId={channelId} member={member} onCreated={onCreated} />
+        )}
         <Button variant="quiet" size="small" onClick={onClose}>
           Close
         </Button>
@@ -387,12 +395,16 @@ function Pictures({
             />
           </div>
         </div>
-        <Field label="Picture to make" tip="planning.cast.picture-prompt">
+        <Field
+          label="Picture to make"
+          tip="planning.cast.picture-prompt"
+          help={limitCount(prompt.length, pictureMax, "characters")}
+        >
           <Textarea
             ref={promptField}
             rows={3}
             value={prompt}
-            maxLength={4000}
+            maxLength={pictureMax}
             onChange={(event) => setPrompt(event.target.value)}
           />
         </Field>

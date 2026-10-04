@@ -129,7 +129,9 @@ describe("the API key rails", () => {
         ]),
       }),
     );
-    expect(await screen.findByText("Not found on PATH")).not.toBeNull();
+    expect(
+      await screen.findByText("Not found in the folders your terminal searches (PATH)"),
+    ).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Change path" }));
     expect(screen.getByRole("button", { name: "Save Codex CLI path" })).not.toBeNull();
 
@@ -216,6 +218,33 @@ describe("the API key rails", () => {
     }
   });
 
+  it("saves on Enter and shows the pasted key only while Show key is pressed", async () => {
+    const user = userEvent.setup();
+    let sent: string | undefined;
+    renderApp(
+      <ProviderKeys />,
+      testDeps({
+        "GET /api/providers": listing([keyed("openrouter", "llm", "OpenRouter", false)]),
+        "PUT /api/providers/openrouter/key": async (request) => {
+          sent = ((await request.json()) as { key: string }).key;
+          return jsonAnswer({ provider: "openrouter", hasKey: true, masked: "••••••••••••" })(
+            request,
+          );
+        },
+      }),
+    );
+    const field = await screen.findByLabelText("OpenRouter API key");
+    expect(field.getAttribute("type")).toBe("password");
+    await user.type(field, "sk-or-test");
+    await user.click(screen.getByRole("button", { name: "Show key" }));
+    expect(field.getAttribute("type")).toBe("text");
+    await user.click(screen.getByRole("button", { name: "Hide key" }));
+    expect(field.getAttribute("type")).toBe("password");
+    await user.type(field, "{Enter}");
+    expect(await screen.findByText("Saved")).not.toBeNull();
+    expect(sent).toBe("sk-or-test");
+  });
+
   it("names the problem when a save is refused", async () => {
     const user = userEvent.setup();
     renderApp(
@@ -267,7 +296,7 @@ describe("the API key rails", () => {
       ),
     ).not.toBeNull();
 
-    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await user.click(within(dialog).getByRole("button", { name: "Keep it" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });

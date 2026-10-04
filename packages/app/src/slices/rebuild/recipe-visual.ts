@@ -4,7 +4,7 @@ import { type RunConfig, subjectOf, thumbnailCountOf, thumbnailKey } from "../ad
 import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import { withoutScene, withScene } from "../images/scenes.js";
-import type { RevisionContent } from "../revisions/model.js";
+import { type RevisionContent, thumbnailOverrideOf } from "../revisions/model.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
 import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { castFor } from "./recipe-cast.js";
@@ -314,6 +314,18 @@ export function thumbnailRecipes(
   const withScenes = scenes !== undefined;
   const variants = Array.from({ length: thumbnailCountOf(config) }, (_, index) => index + 1);
   return variants.map((variant) => {
+    // A thumbnail the person replaced with their own file uses that file, not a drawing.
+    const slot = thumbnailOverrideOf(variant);
+    const own = slot === undefined ? undefined : content.thumbnailOverrides?.[slot];
+    if (own !== undefined)
+      return recipe(
+        context,
+        thumbnailKey(variant),
+        "thumbnail",
+        { kind: "provided", version: 1, assetId: own, semantic: null },
+        [],
+        { unresolved: false },
+      );
     const scene = sceneFor(variant);
     // With a scene the thumbnail waits for it; with the switch off a `{{Scene}}` line is left
     // out, as the images do.

@@ -269,6 +269,55 @@ export function matchCommands(commands: readonly Command[], query: string): read
   return scored.map((entry) => entry.command);
 }
 
+// Recent ------------------------------------------------------------------------------------
+
+// The last few commands run from the palette, shown first while nothing is typed ("Open
+// Cleopatra" again is two keys). Kept per browser; storage can be missing or throw.
+const recentKey = "slopify.palette.recent";
+const recentLimit = 5;
+
+export function readRecent(): readonly string[] {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(recentKey) ?? "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === "string").slice(0, recentLimit)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberRecent(id: string): void {
+  try {
+    const next = [id, ...readRecent().filter((one) => one !== id)].slice(0, recentLimit);
+    window.localStorage.setItem(recentKey, JSON.stringify(next));
+  } catch {
+    // Without storage the palette simply has no Recent group.
+  }
+}
+
+const recentPrefix = "recent:";
+
+// With nothing typed, the recent commands that still exist here come first under Recent, and
+// are not listed a second time below.
+export function withRecent(
+  matches: readonly Command[],
+  commands: readonly Command[],
+  recent: readonly string[],
+  query: string,
+): readonly Command[] {
+  if (query.trim() !== "" || recent.length === 0) return matches;
+  const byId = new Map(commands.map((command) => [command.id, command]));
+  const first = recent
+    .map((id) => byId.get(id))
+    .filter(
+      (command): command is Command => command !== undefined && command.numbered === undefined,
+    )
+    .map((command) => ({ ...command, id: `${recentPrefix}${command.id}`, group: "Recent" }));
+  const shown = new Set(recent);
+  return [...first, ...matches.filter((command) => !shown.has(command.id))];
+}
+
 // Shortcuts ---------------------------------------------------------------------------------
 
 const modifiers = new Set(["Ctrl", "Alt", "Shift"]);
@@ -525,7 +574,11 @@ function PaletteBody({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listId = useId();
-  const matches = useMemo(() => matchCommands(commands, query), [commands, query]);
+  const [recent] = useState(readRecent);
+  const matches = useMemo(
+    () => withRecent(matchCommands(commands, query), commands, recent, query),
+    [commands, query, recent],
+  );
   const current = Math.min(active, Math.max(0, matches.length - 1));
   const list = useRef<HTMLDivElement>(null);
 
@@ -552,6 +605,10 @@ function PaletteBody({
     (command: Command | undefined) => {
       if (command === undefined) return;
       close();
+      if (command.numbered === undefined)
+        rememberRecent(
+          command.id.startsWith(recentPrefix) ? command.id.slice(recentPrefix.length) : command.id,
+        );
       void command.run();
     },
     [close],

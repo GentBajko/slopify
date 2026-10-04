@@ -34,25 +34,43 @@ export function ChannelLinksEditor({
         </p>
       ) : (
         <ul aria-label="Channel links" className="sl-list m-0 list-none p-0">
+          {/* The column names, seen on a wide screen; a phone shows them above each box. */}
+          <li
+            aria-hidden="true"
+            className="hidden grid-cols-[220px_minmax(0,1fr)_auto] gap-2 border-b border-line pt-1 pb-2 text-label text-ink-2 md:grid"
+          >
+            <span>Name, used as {"{{Name}}"}</span>
+            <span>Address</span>
+          </li>
           {rows.map((row, index) => (
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: rows are edited in place and never reorder
               key={index}
               className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line py-3 md:grid-cols-[220px_minmax(0,1fr)_auto]"
             >
-              <Input
-                aria-label={`Name of link ${String(index + 1)}`}
-                placeholder="Patreon"
-                value={row.name}
-                onChange={(event) => change(index, { name: event.currentTarget.value })}
-              />
-              <Input
-                aria-label={`Address of link ${String(index + 1)}`}
-                type="url"
-                placeholder="https://"
-                value={row.url}
-                onChange={(event) => change(index, { url: event.currentTarget.value })}
-              />
+              <span className="grid gap-1">
+                <span aria-hidden="true" className="text-label text-ink-2 md:hidden">
+                  Name, used as {"{{Name}}"}
+                </span>
+                <Input
+                  aria-label={`Name of link ${String(index + 1)}`}
+                  placeholder="Patreon"
+                  value={row.name}
+                  onChange={(event) => change(index, { name: event.currentTarget.value })}
+                />
+              </span>
+              <span className="grid gap-1">
+                <span aria-hidden="true" className="text-label text-ink-2 md:hidden">
+                  Address
+                </span>
+                <Input
+                  aria-label={`Address of link ${String(index + 1)}`}
+                  type="url"
+                  placeholder="https://"
+                  value={row.url}
+                  onChange={(event) => change(index, { url: event.currentTarget.value })}
+                />
+              </span>
               <Button
                 variant="quiet"
                 size="small"

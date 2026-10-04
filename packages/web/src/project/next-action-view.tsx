@@ -17,6 +17,7 @@ import { copySample, fullVideoDraft } from "@/onboarding/api";
 import { useOptionalPlaySession } from "@/play/draft-context";
 import { keys } from "@/queries";
 import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
+import { ErrorDetails } from "./error-details.js";
 import { fixOf } from "./fix-it.js";
 import {
   type HeldGate,
@@ -225,7 +226,7 @@ function busyLabel(intent: NextIntent): string | undefined {
     case "approve":
       return "Approving…";
     case "remake":
-      return "Starting the remake…";
+      return "Checking the cost…";
     case "retry":
       return "Trying again…";
     case "soften":
@@ -382,14 +383,7 @@ export function NextActionBeside({
       {next.why === undefined && next.detail === undefined ? undefined : (
         <>
           {next.why === undefined ? null : <span className="block">{next.why}</span>}
-          {next.detail === undefined ? null : (
-            <details className="mt-1">
-              <summary className="cursor-pointer">Error details</summary>
-              <pre className="m-0 mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-small">
-                {next.detail}
-              </pre>
-            </details>
-          )}
+          {next.detail === undefined ? null : <ErrorDetails text={next.detail} />}
         </>
       )}
     </Callout>

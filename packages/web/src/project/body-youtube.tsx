@@ -1,31 +1,31 @@
-import { studioTitleMax } from "@app/slices/studio/model.js";
 import { tagsLength } from "@app/slices/youtube/answer.js";
 import { chapterNotice, fitChapters } from "@app/slices/youtube/chapters.js";
 import {
   composeDescription,
   type DescriptionField,
   type DescriptionFields,
-  type ResolvedField,
   resolveFields,
   shownFields,
   splitDescription,
 } from "@app/slices/youtube/edits.js";
 import {
   descriptionMaxCharacters,
+  hashtagNote,
   pinnedCommentMaxCharacters,
   tagsMaxCharacters,
+  titleMaxCharacters,
+  youtubeDescriptionProblem,
+  youtubeTitleProblem,
 } from "@app/slices/youtube/model.js";
 import {
-  type ChannelLink,
   fillPlaceholders,
   linkKey,
   mergeLinks,
-  placeholderParts,
   previousVideoLink,
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon, CopyIcon, PencilIcon, RefreshCwIcon } from "lucide-react";
+import { ChevronRightIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, use, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
@@ -39,13 +39,12 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
-import { Input, Textarea } from "@/components/kit/field";
+import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
 import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
-import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
@@ -53,6 +52,7 @@ import { OnYoutube } from "./on-youtube.js";
 import { useOutputText } from "./parts.js";
 import { ReleaseTimes } from "./release-times.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
+import { EditableField, Filled, splitTags, TagChips } from "./youtube-field.js";
 
 const labels: Readonly<Record<DescriptionField, string>> = {
   summary: "Summary",
@@ -63,14 +63,14 @@ const labels: Readonly<Record<DescriptionField, string>> = {
   titles: "Other titles",
 };
 
-const fieldTips = {
-  Summary: "project.youtube.summary",
-  Chapters: "project.youtube.chapters",
-  Hashtags: "project.youtube.hashtags",
-  Tags: "project.youtube.tags",
-  "Pinned comment": "project.youtube.pinned-comment",
-  "Other titles": "project.youtube.titles",
-} as const satisfies Readonly<Record<string, HelpId>>;
+const fieldTips: Readonly<Record<DescriptionField, HelpId>> = {
+  summary: "project.youtube.summary",
+  chapters: "project.youtube.chapters",
+  hashtags: "project.youtube.hashtags",
+  tags: "project.youtube.tags",
+  pinnedComment: "project.youtube.pinned-comment",
+  titles: "project.youtube.titles",
+};
 
 // The Video stage's YouTube part: the description (summary, chapters, hashtags), the tags and
 // the comment to pin under the video as written, each editable in place, and Write again to
@@ -112,6 +112,14 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     queryFn: () => readProjectChannelLinks(api, project.id),
   });
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  // What is being typed in each open field, so the counts and YouTube's checks follow the
+  // typing rather than the last save.
+  const [drafts, setDrafts] = useState<Partial<Record<DescriptionField, string>>>({});
+  const setDraft = (name: DescriptionField) => (text: string | undefined) =>
+    setDrafts((now) => {
+      const { [name]: _closed, ...rest } = now;
+      return text === undefined ? rest : { ...rest, [name]: text };
+    });
   const notify = useToast();
   const saved = (next: ProjectDescriptionEdits) =>
     queryClient.setQueryData(keys.youtubeEdits(project.id), next);
@@ -182,7 +190,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           titles: titlesText,
         });
   const resolved = resolveFields(generated, edits.data?.fields ?? {});
-  const shown = shownFields(resolved);
+  const shown = { ...shownFields(resolved), ...drafts };
   const links = mergeLinks(channelLinks.data?.links ?? [], edits.data?.links ?? []);
   // The chapters as YouTube will take them (`slices/youtube/chapters.ts`): shown and copied
   // fitted, with a note saying what changed; the stored text and the user's edit stay as they
@@ -212,6 +220,42 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     .split("\n")
     .map((one) => one.trim())
     .filter((one) => one !== "");
+  const titleProblem = titleList.map(youtubeTitleProblem).find((one) => one !== undefined);
+  const descriptionProblem = written
+    ? youtubeDescriptionProblem(filledDescription.text)
+    : undefined;
+  const hashtagLine = hashtagNote(shown.hashtags);
+  const notes: Partial<Record<DescriptionField, { text: string; warn: boolean }>> = {
+    ...(descriptionProblem === undefined
+      ? {}
+      : { summary: { text: descriptionProblem, warn: true } }),
+    ...(hashtagLine === undefined
+      ? {}
+      : { hashtags: { text: hashtagLine, warn: hashtagLine.includes("ignores") } }),
+    ...(titleProblem === undefined ? {} : { titles: { text: titleProblem, warn: true } }),
+  };
+  // Use generated drops the saved edit; its toast puts it back.
+  const followGenerated = (name: DescriptionField) => {
+    const before = edits.data?.fields[name];
+    const what = labels[name].toLowerCase();
+    save.mutate(
+      { field: name, edit: null, done: `The ${what} follows the generated text again.` },
+      {
+        onSuccess: () => {
+          if (before === undefined) return;
+          notify(`The ${what} follows the generated text again.`, "success", {
+            label: "Undo",
+            run: () =>
+              save.mutate({
+                field: name,
+                edit: { text: before.text, base: before.base },
+                done: `Put your ${what} back.`,
+              }),
+          });
+        },
+      },
+    );
+  };
 
   // Write again, on every part's head: one AI call writes all the parts anew.
   const again =
@@ -251,7 +295,11 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     <EditableField
       key={name}
       label={labels[name]}
+      tip={fieldTips[name]}
       value={resolved[name]}
+      draft={drafts[name]}
+      onDraft={setDraft(name)}
+      note={notes[name]}
       links={links}
       disabled={!written || save.isPending}
       multiline={name !== "hashtags"}
@@ -270,13 +318,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           done: `Saved your ${labels[name].toLowerCase()}.`,
         })
       }
-      onUseGenerated={() =>
-        save.mutate({
-          field: name,
-          edit: null,
-          done: `The ${labels[name].toLowerCase()} follows the generated text again.`,
-        })
-      }
+      onUseGenerated={() => followGenerated(name)}
       onKeepMine={(text, next) =>
         save.mutate({
           field: name,
@@ -377,7 +419,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
                 ? `${String(titleList.length + 1)} titles to test`
                 : undefined
             }
-            over={titleList.some((one) => one.length > studioTitleMax)}
+            over={titleList.some((one) => one.length > titleMaxCharacters)}
             again={again}
           />
           <div hidden={openPart !== "titles"} className="flex min-w-0 flex-col gap-3">
@@ -519,239 +561,6 @@ function PartHead({
         Copy
       </Button>
     </div>
-  );
-}
-
-// One field shown as text, with Edit to change it in place. The user's text is marked as theirs
-// with a way back to the generated one, and a regenerated text the user has not seen yet waits
-// beside it instead of replacing it.
-function EditableField({
-  label,
-  value,
-  links,
-  disabled,
-  multiline,
-  placeholder,
-  render,
-  onSave,
-  onUseGenerated,
-  onKeepMine,
-}: {
-  readonly label: string;
-  readonly value: ResolvedField;
-  readonly links: readonly ChannelLink[];
-  readonly disabled: boolean;
-  readonly multiline: boolean;
-  readonly placeholder: string;
-  readonly render?: ((text: string) => ReactNode) | undefined;
-  readonly onSave: (text: string) => void;
-  readonly onUseGenerated: () => void;
-  readonly onKeepMine: (text: string, next: string) => void;
-}): ReactElement {
-  const id = useId();
-  const [draft, setDraft] = useState<string | undefined>();
-  const [diff, setDiff] = useState(false);
-  const editing = draft !== undefined;
-  const lower = label.toLowerCase();
-  const tip = label in fieldTips ? fieldTips[label as keyof typeof fieldTips] : undefined;
-  return (
-    <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
-      <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1">
-          <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
-            {label}
-          </h5>
-          {tip === undefined ? null : <InfoTip id={tip} label={lower} className="-my-1" />}
-        </span>
-        {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
-        <span className="flex-1" />
-        {value.edited && !editing ? (
-          <Button
-            type="button"
-            variant="quiet"
-            size="small"
-            disabled={disabled}
-            aria-label={`Use the generated ${lower}`}
-            onClick={onUseGenerated}
-          >
-            Use generated
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="quiet"
-          size="small"
-          disabled={disabled || editing}
-          aria-label={`Edit ${lower}`}
-          onClick={() => setDraft(value.text)}
-        >
-          <PencilIcon aria-hidden="true" strokeWidth={1.75} />
-          Edit
-        </Button>
-      </div>
-      {value.pending === undefined ? null : (
-        <div className="flex flex-col gap-2 border-l-2 border-waiting pl-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-small text-ink">New generated version available.</p>
-            <Button
-              type="button"
-              disabled={disabled}
-              aria-label={`Use the new generated ${lower}`}
-              onClick={onUseGenerated}
-            >
-              Use it
-            </Button>
-            <Button
-              type="button"
-              disabled={disabled}
-              aria-label={`Keep my ${lower}`}
-              onClick={() => onKeepMine(value.text, value.pending ?? "")}
-            >
-              Keep mine
-            </Button>
-            <Button
-              type="button"
-              variant="quiet"
-              aria-expanded={diff}
-              aria-label={`${diff ? "Hide" : "View"} the ${lower} diff`}
-              onClick={() => setDiff((now) => !now)}
-            >
-              {diff ? "Hide diff" : "View diff"}
-            </Button>
-          </div>
-          {diff ? (
-            <DiffColumns
-              before={value.text}
-              after={value.pending}
-              beforeLabel="Yours"
-              afterLabel="New generated"
-            />
-          ) : null}
-        </div>
-      )}
-      {editing ? (
-        <div className="flex flex-col gap-2">
-          <label htmlFor={`${id}-edit`} className="sr-only">
-            {label}
-          </label>
-          {multiline ? (
-            <Textarea
-              id={`${id}-edit`}
-              rows={label === "Chapters" ? 8 : 5}
-              value={draft}
-              onChange={(event) => setDraft(event.currentTarget.value)}
-            />
-          ) : (
-            <Input
-              id={`${id}-edit`}
-              value={draft}
-              onChange={(event) => setDraft(event.currentTarget.value)}
-            />
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="primary"
-              disabled={disabled}
-              onClick={() => {
-                onSave(draft);
-                setDraft(undefined);
-              }}
-            >
-              Save {lower}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setDraft(undefined)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <section
-          aria-labelledby={`${id}-label`}
-          className={cn(
-            "min-w-0 whitespace-pre-wrap break-words text-small",
-            value.text === "" ? "text-ink-3" : "text-ink",
-          )}
-        >
-          {value.text === "" ? (
-            placeholder
-          ) : render === undefined ? (
-            <Filled text={value.text} links={links} />
-          ) : (
-            render(value.text)
-          )}
-        </section>
-      )}
-    </div>
-  );
-}
-
-// The text with its placeholders filled: a filled one shows its link, marked so it reads as
-// filled in; one without a link stays as typed and is highlighted.
-function Filled({
-  text,
-  links,
-}: {
-  readonly text: string;
-  readonly links: readonly ChannelLink[];
-}): ReactElement {
-  let at = 0;
-  return (
-    <>
-      {placeholderParts(text, links).map((part) => {
-        const key = String(at);
-        at += part.kind === "text" ? part.text.length : part.raw.length;
-        if (part.kind === "text") return <span key={key}>{part.text}</span>;
-        return part.url === undefined ? (
-          <mark
-            key={key}
-            title={`No link named ${part.name}`}
-            className="rounded-[2px] bg-waiting/25 px-0.5 text-ink"
-          >
-            {part.raw}
-          </mark>
-        ) : (
-          <span
-            key={key}
-            title={part.raw}
-            className="underline decoration-dotted underline-offset-[3px]"
-          >
-            {part.url}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-function splitTags(text: string): readonly string[] {
-  return text
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter((tag) => tag !== "");
-}
-
-// The tags as the chips they become on YouTube. Copy still copies them exactly as written,
-// commas and all, for YouTube's Tags field.
-function TagChips({
-  text,
-  links,
-}: {
-  readonly text: string;
-  readonly links: readonly ChannelLink[];
-}): ReactElement {
-  return (
-    <ul className="flex flex-wrap gap-2 whitespace-normal">
-      {splitTags(text).map((tag, index) => (
-        <li
-          // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
-          key={index}
-          className="rounded-full border border-line bg-raised px-2 py-0.5 text-small text-ink"
-        >
-          <Filled text={tag} links={links} />
-        </li>
-      ))}
-    </ul>
   );
 }
 

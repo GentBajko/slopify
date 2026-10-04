@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 import { z } from "zod";
-import { type RunConfig, referenceKey } from "../admission/model.js";
+import { type RunConfig, referenceKey, thumbnailCountOf } from "../admission/model.js";
 import { type FieldError, usesReference } from "../admission/rules.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { outputPath, stagingPath } from "../storage/layout.js";
@@ -15,6 +15,7 @@ import type {
   RevisionUpload,
   RevisionView,
 } from "./model.js";
+import { thumbnailOverrideOf } from "./model.js";
 
 export interface PreparedEditAsset extends PreparedOutput {
   readonly workKey: string;
@@ -36,6 +37,14 @@ export function bindUpload(
       narrationOverrides: { ...content.narrationOverrides, [to.key]: { kind: "asset", assetId } },
     };
   if (to.kind === "shortsMusic") return { ...content, shortsMusic: assetId };
+  if (to.kind === "thumbnail") {
+    const variant = thumbnailOverrideOf(to.variant);
+    if (variant === undefined) throw new Error("Validated thumbnail destination disappeared.");
+    return {
+      ...content,
+      thumbnailOverrides: { ...content.thumbnailOverrides, [variant]: assetId },
+    };
+  }
   const image = content.imageDefinitions[to.imageKey];
   if (image === undefined) throw new Error("Validated image destination disappeared.");
   return {
@@ -63,6 +72,15 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
         message:
           "This section is off or not set to use your own file. Change the section's setting first, then add the file.",
       });
+    if (
+      to.kind === "thumbnail" &&
+      (!generatesThumbnail(edit.config) || to.variant > thumbnailCountOf(edit.config))
+    )
+      fields.push({
+        field,
+        message:
+          "This thumbnail is no longer one the project draws, so it can't take your file. Reload the project page and use Replace with my file on a thumbnail shown there.",
+      });
     if (to.kind === "shortsMusic" && edit.config.shorts?.enabled !== true)
       fields.push({
         field,
@@ -85,7 +103,9 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
           : to.stage
         : to.kind === "image"
           ? "images"
-          : "audio";
+          : to.kind === "thumbnail"
+            ? "thumbnail"
+            : "audio";
     if (
       file === undefined ||
       file.state !== "staged" ||
@@ -127,6 +147,9 @@ export function validateAssetReferences(
   for (const [key, row] of Object.entries(content.narrationOverrides))
     if (row.kind === "asset")
       refs.push([`content.narrationOverrides.${key}.assetId`, row.assetId, "audio", true]);
+  for (const [variant, assetId] of Object.entries(content.thumbnailOverrides ?? {}))
+    if (assetId !== undefined)
+      refs.push([`content.thumbnailOverrides.${variant}`, assetId, "thumbnail", false]);
   const roles: Readonly<Record<ProvidedKind | "images", readonly OutputRole[]>> = {
     research: ["notes"],
     article: ["article_md", "article_txt"],
@@ -235,6 +258,11 @@ export function assetPath(deps: RevisionDeps, projectId: string, id: string): st
     ).path;
 }
 
+// A thumbnail step that draws its thumbnails, so each can be replaced by a file of one's own.
+export function generatesThumbnail(config: RunConfig): boolean {
+  return config.sources.thumbnail === "from_prompt" || config.sources.thumbnail === "prompt_by_llm";
+}
+
 // A stage whose own file the project uses: Provide for audio and the thumbnail, Upload for the
 // establishing image.
 export function providesOwnFile(
@@ -280,6 +308,7 @@ export function validateReplacementAvailability(
     ...Object.values(base.revision.content.narrationOverrides).flatMap((row) =>
       row.kind === "asset" ? [row.assetId] : [],
     ),
+    ...Object.values(base.revision.content.thumbnailOverrides ?? {}),
   ]);
   for (const kind of ["audio", "thumbnail", "reference"] as const) {
     const assetId = edit.content.provided[kind];
@@ -299,6 +328,7 @@ export function validateReplacementAvailability(
     ...Object.values(edit.content.narrationOverrides).flatMap((row) =>
       row.kind === "asset" ? [row.assetId] : [],
     ),
+    ...Object.values(edit.content.thumbnailOverrides ?? {}),
   ];
   return next.flatMap((id) =>
     id == null ||

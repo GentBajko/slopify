@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startOfWeek } from "@/home/api";
 import { spentLabel } from "@/home/week";
-import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
+import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { HomeRoute } from "./home.js";
 import { body, output, stage } from "./project-fixtures.js";
 
@@ -181,7 +181,7 @@ describe("home", () => {
       "/calendar",
     );
     expect(await within(needs).findByText("Failed · Images")).not.toBeNull();
-    expect(within(needs).getByText("3 things are waiting for you")).not.toBeNull();
+    expect(within(needs).getByText("3 decisions waiting · 1 ready to upload")).not.toBeNull();
   });
 
   it("approves a held review from Home", async () => {
@@ -256,15 +256,21 @@ describe("home", () => {
   });
 
   it("lists what is coming up, what is ready to upload and this week's numbers", async () => {
+    const user = userEvent.setup();
     renderRouted(<HomeRoute />, deps());
     const coming = await screen.findByRole("region", { name: "Coming up" });
     expect(await within(coming).findByText(/· Nefertiti$/)).not.toBeNull();
-    const ready = screen.getByRole("region", { name: "Ready to upload" });
+    // Finished videos share the work list with the decisions, after them.
+    const ready = await screen.findByRole("region", { name: "Needs you" });
     expect(within(ready).getByRole("link", { name: "Ashurbanipal" })).not.toBeNull();
+    expect(within(ready).getByText("Ready to upload")).not.toBeNull();
     // Marked uploaded: not listed.
     expect(within(ready).queryByRole("link", { name: "Hypatia" })).toBeNull();
     expect(within(ready).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
+    // The week's totals are on request.
     const week = screen.getByRole("region", { name: "This week" });
+    expect(within(week).queryByText("$9.40")).toBeNull();
+    await user.click(within(week).getByRole("button", { name: "Show totals" }));
     expect(await within(week).findByText("$9.40")).not.toBeNull();
     expect(within(week).getByText("spent · ~$31.00 via API")).not.toBeNull();
     expect(within(week).getByRole("meter", { name: "Weekly Codex limit" })).not.toBeNull();
@@ -283,12 +289,10 @@ describe("home", () => {
         }),
       }),
     );
-    const ready = await screen.findByRole("region", { name: "Ready to upload" });
+    const ready = await screen.findByRole("region", { name: "Needs you" });
     // Loaded (the projects and which of them are samples), and only then without the sample.
     await waitFor(() => {
-      expect(
-        within(ready).getByText("Finished videos you haven't marked uploaded show here"),
-      ).not.toBeNull();
+      expect(within(ready).getByText("3 decisions waiting")).not.toBeNull();
       expect(screen.getByText("Sargon")).not.toBeNull();
       expect(within(ready).queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
     });
@@ -361,9 +365,8 @@ describe("home", () => {
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByText("Paused")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Open to continue" })).not.toBeNull();
-    const running = screen.getByRole("region", { name: "Running now" });
-    expect(within(running).queryByText("Xerxes")).toBeNull();
-    expect(within(running).getByText("Nothing is running")).not.toBeNull();
+    // Nothing runs, so there is no Running now section at all.
+    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
   });
 
   it("links to every running run past the first three and names the queued ones", async () => {
@@ -414,7 +417,7 @@ describe("home", () => {
     const user = userEvent.setup();
     const put = vi.fn(jsonAnswer({ uploadedAt: "2026-09-27T10:00:00.000Z" }));
     renderRouted(<HomeRoute />, deps({ "PUT /api/projects/p-done/uploaded": put }));
-    const ready = await screen.findByRole("region", { name: "Ready to upload" });
+    const ready = await screen.findByRole("region", { name: "Needs you" });
     await user.click(await within(ready).findByRole("button", { name: "Mark uploaded" }));
     await waitFor(() => expect(put).toHaveBeenCalledOnce());
     expect(
@@ -422,6 +425,58 @@ describe("home", () => {
     ).toEqual({
       uploaded: true,
     });
+  });
+});
+
+describe("home's load states", () => {
+  it("says the projects didn't load, with Retry, instead of an empty Home", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const projects = vi.fn((request: Request) =>
+      fail
+        ? problemAnswer("The server stopped answering.", 503)(request)
+        : jsonAnswer({ projects: [listing("p-run", "Sargon", "running")] })(request),
+    );
+    renderRouted(<HomeRoute />, deps({ "GET /api/projects": projects }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Your projects didn't load");
+    expect(alert.textContent).toContain("The server stopped answering.");
+    expect(screen.queryByText("Nothing needs you and nothing is running")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
+    fail = false;
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByRole("region", { name: "Running now" })).not.toBeNull();
+    expect(screen.queryByText("Your projects didn't load", { exact: false })).toBeNull();
+  });
+
+  it("says once that nothing needs you when that is true, and hides empty sections", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({ projects: [] }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      }),
+    );
+    expect(await screen.findByText("Nothing needs you and nothing is running")).not.toBeNull();
+    expect(screen.queryByRole("region", { name: "Needs you" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
+    // No schedules: nothing to come up.
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Coming up" })).toBeNull());
+  });
+
+  it("says the calendar didn't load under Coming up, with Retry", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({ "GET /api/calendar": problemAnswer("The calendar query failed.", 500) }),
+    );
+    const coming = await screen.findByRole("region", { name: "Coming up" });
+    expect(
+      (await within(coming).findByRole("alert")).textContent?.startsWith(
+        "The calendar didn't load: The calendar query failed.",
+      ),
+    ).toBe(true);
+    expect(within(coming).getByRole("button", { name: "Retry" })).not.toBeNull();
+    expect(within(coming).queryByText("No scheduled runs in the next 7 days.")).toBeNull();
   });
 });
 

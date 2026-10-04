@@ -9,7 +9,9 @@ import { Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { UnsavedStatus } from "@/components/save-state";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
+import { fileSize } from "@/lib/format";
 
 export const backupsQueryKey = ["backups"] as const;
 const keepMin = 1;
@@ -87,6 +89,18 @@ export function BackupSettings() {
   const view = backups.data;
   const current = draft ?? (view === undefined ? undefined : draftOf(view));
   const keepError = current === undefined ? undefined : keepProblem(current.keep);
+  const dirty = draft !== undefined && view !== undefined && !sameDraft(draft, draftOf(view));
+  const submit = (): void => {
+    if (current === undefined || keepError !== undefined || save.isPending) return;
+    setSaved(false);
+    save.mutate({
+      enabled: current.enabled,
+      time: current.time,
+      timeZone: browserTimeZone(),
+      keep: Number(current.keep.trim()),
+      folder: current.folder.trim() === "" ? null : current.folder.trim(),
+    });
+  };
   const edit = (patch: Partial<Draft>): void => {
     if (current !== undefined) setDraft({ ...current, ...patch });
   };
@@ -94,8 +108,8 @@ export function BackupSettings() {
   return (
     <div>
       <SectionHead title="Daily backup" info="settings.backups">
+        {/* Secondary: the section's one primary is its form's Save. */}
         <Button
-          variant="primary"
           disabled={view === undefined || view.running || run.isPending}
           onClick={() => run.mutate()}
         >
@@ -133,7 +147,15 @@ export function BackupSettings() {
           The backup settings couldn't be read: {backups.error.message}
         </p>
       ) : (
-        <div className="flex flex-col gap-6">
+        // One form: the switch and the fields below it are kept together by Save (or Enter in a
+        // field), and the line beside Save says when something is waiting for it.
+        <form
+          className="flex flex-col gap-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
           <Switch
             label="Back up automatically"
             tip="settings.backups.auto"
@@ -190,32 +212,41 @@ export function BackupSettings() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
+              type="submit"
               variant="primary"
-              disabled={current === undefined || keepError !== undefined || save.isPending}
-              onClick={() => {
-                if (current === undefined) return;
-                setSaved(false);
-                save.mutate({
-                  enabled: current.enabled,
-                  time: current.time,
-                  timeZone: browserTimeZone(),
-                  keep: Number(current.keep.trim()),
-                  folder: current.folder.trim() === "" ? null : current.folder.trim(),
-                });
-              }}
+              disabled={!dirty || keepError !== undefined || save.isPending}
+              disabledReason={
+                keepError === undefined ? "Nothing changed since the last save." : keepError
+              }
             >
               Save
             </Button>
             <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+            <UnsavedStatus
+              dirty={dirty}
+              onDiscard={() => {
+                save.reset();
+                setDraft(undefined);
+              }}
+            />
             {save.error === null ? null : (
               <p role="alert" className="m-0 basis-full text-small text-danger">
                 {save.error.message}
               </p>
             )}
           </div>
-        </div>
+        </form>
       )}
     </div>
+  );
+}
+
+function sameDraft(a: Draft, b: Draft): boolean {
+  return (
+    a.enabled === b.enabled &&
+    a.time === b.time &&
+    a.keep.trim() === b.keep.trim() &&
+    a.folder.trim() === b.folder.trim()
   );
 }
 
@@ -250,15 +281,4 @@ function whereLine(view: BackupView): string {
   return `${empty}${view.hostFolder}. ${kept}`;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unit = units[0] ?? "KB";
-  for (const candidate of units) {
-    value /= 1024;
-    unit = candidate;
-    if (value < 1024 || candidate === units.at(-1)) break;
-  }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")} ${unit}`;
-}
+const formatBytes = fileSize;

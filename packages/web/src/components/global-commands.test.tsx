@@ -1,10 +1,12 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import { cleanup, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CommandPaletteProvider,
   CommandRegistry,
   matchCommands,
+  useCommandPalette,
 } from "@/components/kit/command-palette";
 import { intents, useIntent } from "@/lib/intents";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -108,6 +110,90 @@ describe("the palette from anywhere", () => {
       "New schedule",
     );
     expect(matchCommands(registry.list(), "add to cal")[0]?.title).toBe("Add to calendar");
+    expect(matchCommands(registry.list(), "").map((command) => command.id)).toEqual([
+      "help.shortcuts",
+    ]);
+  });
+});
+
+function OpenPalette() {
+  const palette = useCommandPalette();
+  useEffect(() => palette.setOpen(true), [palette]);
+  return null;
+}
+
+describe("the Library and plans by name", () => {
+  it("are read once the palette opens, and found by name", async () => {
+    const registry = new CommandRegistry();
+    renderRouted(
+      <CommandPaletteProvider registry={registry}>
+        <OpenPalette />
+        <GlobalCommands />
+      </CommandPaletteProvider>,
+      testDeps({
+        "GET /api/projects": jsonAnswer({ projects: [] }),
+        "GET /api/prompts": jsonAnswer({
+          prompts: [
+            {
+              id: "pr1",
+              kind: "article",
+              name: "Documentary dossier",
+              body: "",
+              slots: [],
+              updatedAt: "x",
+            },
+          ],
+        }),
+        "GET /api/entries": jsonAnswer({
+          entries: [
+            {
+              id: "e1",
+              category: "outro",
+              mode: "verbatim",
+              name: "Goodnight",
+              body: "",
+              slots: [],
+              updatedAt: "x",
+            },
+          ],
+        }),
+        "GET /api/document-themes": jsonAnswer({ builtIns: [], themes: [] }),
+        "GET /api/schedules": jsonAnswer({ schedules: [] }),
+        "GET /api/templates": jsonAnswer({ templates: [] }),
+        "GET /api/project-templates": jsonAnswer({
+          templates: [
+            {
+              id: "00000000-0000-4000-8000-0000000000a1",
+              name: "Weekly explainer",
+              version: 1,
+              updatedAt: "x",
+            },
+          ],
+        }),
+        "GET /api/channels": jsonAnswer({
+          channels: [{ id: "c2", name: "Night Myths", isDefault: false }],
+        }),
+      }),
+    );
+    await waitFor(() =>
+      expect(registry.list().map((command) => command.id)).toEqual(
+        expect.arrayContaining(["prompt.edit.pr1", "entry.edit.e1", "channel.open.c2"]),
+      ),
+    );
+    expect(matchCommands(registry.list(), "dossier")[0]?.title).toBe(
+      "Edit prompt Documentary dossier",
+    );
+    expect(matchCommands(registry.list(), "goodnight")[0]?.title).toBe("Edit outro Goodnight");
+    expect(matchCommands(registry.list(), "night myths")[0]?.title).toBe(
+      "Open channel Night Myths",
+    );
+    // A template opens itself on Templates (`?item=`), not just the list.
+    await waitFor(() =>
+      expect(matchCommands(registry.list(), "weekly explainer")[0]?.title).toBe(
+        "Open template Weekly explainer",
+      ),
+    );
+    // Searched only: an empty palette stays short.
     expect(matchCommands(registry.list(), "").map((command) => command.id)).toEqual([
       "help.shortcuts",
     ]);

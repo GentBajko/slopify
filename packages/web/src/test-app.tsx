@@ -207,8 +207,8 @@ export async function openEditSection(name: string): Promise<void> {
 // is one press away. "Edit" is the Settings view.
 export async function openProjectSection(name: string): Promise<void> {
   const rail = await screen.findByRole("navigation", { name: "Project sections" });
-  const item = within(rail).getByRole("button", { name: new RegExp(`^${name}`) });
-  if (item.getAttribute("aria-current") !== "true") await userEvent.click(item);
+  const item = within(rail).getByRole("link", { name: new RegExp(`^${name}`) });
+  if (item.getAttribute("aria-current") !== "page") await userEvent.click(item);
 }
 
 export async function openProjectTab(name: "Edit" | "History" | "Checkpoints" | "Cost" | "Live") {

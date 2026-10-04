@@ -28,6 +28,29 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/providers": jsonAnswer({ providers: [] }),
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
     "GET /api/settings": jsonAnswer(settings),
+    // Backup & storage shows the daily backups first.
+    "GET /api/backups": jsonAnswer({
+      config: { enabled: false, time: "03:00", timeZone: "UTC", keep: 5, folder: null },
+      folder: "/data/projects/Backups",
+      defaultFolder: "/data/projects/Backups",
+      hostFolder: null,
+      container: false,
+      running: false,
+      nextRunAt: null,
+      overdue: false,
+      status: {
+        lastAttemptAt: null,
+        lastResult: null,
+        lastTrigger: null,
+        lastSlot: null,
+        detail: null,
+        lastSuccessAt: null,
+        lastSuccessFile: null,
+        lastSuccessBytes: null,
+        lastDurationMs: null,
+      },
+      files: [],
+    }),
     "GET /api/storage": jsonAnswer({
       data: 1024,
       projects: 512,
@@ -123,33 +146,39 @@ describe("the settings screen", () => {
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual([
-      "General",
-      "Providers",
-      "Voices",
-      "Models",
-      "Playback & appearance",
+      "Connections",
+      "Production defaults",
       "Notifications",
-      "Channel links",
-      "YouTube Studio",
+      "Publishing",
       "Backup & storage",
-      "Backups",
-      "Trash",
-      "Usage",
-      "Patch notes",
+      "General",
       "About",
     ]);
     expect(
-      within(nav).getByRole("button", { name: "Providers" }).getAttribute("aria-current"),
+      within(nav).getByRole("button", { name: "Connections" }).getAttribute("aria-current"),
     ).toBe("true");
-    await user.click(within(nav).getByRole("button", { name: "Voices" }));
+    // What is connected comes first, then the sections of the group as tabs.
+    expect(screen.getByRole("list", { name: "What is connected" })).not.toBeNull();
+    const tabs = screen.getByRole("tablist", { name: "Connections sections" });
+    await user.click(within(tabs).getByRole("tab", { name: "Voices" }));
     expect(picked).toEqual(["voices"]);
     expect(screen.getByRole("heading", { level: 1, name: "Voices" })).not.toBeNull();
-    await user.click(within(nav).getByRole("button", { name: "Playback & appearance" }));
+    await user.click(within(nav).getByRole("button", { name: "Production defaults" }));
     expect(await screen.findByLabelText("Silence between segments")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Text" })).toBeNull();
     expect(
-      within(nav).getByRole("button", { name: "Providers" }).hasAttribute("aria-current"),
+      within(nav).getByRole("button", { name: "Connections" }).hasAttribute("aria-current"),
     ).toBe(false);
+    // Appearance is an app preference, under General with how Slopify starts.
+    await user.click(within(nav).getByRole("button", { name: "General" }));
+    expect(await screen.findByRole("button", { name: "System" })).not.toBeNull();
+  });
+
+  it("opens an old section id where its content went", async () => {
+    renderApp(<SettingsRoute section="backups" />, deps());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Backup & storage" }),
+    ).not.toBeNull();
   });
 
   it("keeps Download diagnostics a download link on every section, and Check all on Providers", async () => {
@@ -237,7 +266,7 @@ describe("the settings screen", () => {
       <SettingsRoute section="playback" />,
       deps({ "GET /api/settings": problemAnswer("The database is locked.", 500) }),
     );
-    expect(await screen.findByText("The database is locked.")).not.toBeNull();
+    expect(await screen.findByText(/The database is locked\./)).not.toBeNull();
   });
 
   it("shows disk usage while keeping backups and cleanup beside it", async () => {
@@ -261,7 +290,7 @@ describe("the settings screen", () => {
       ),
     ).not.toBeNull();
     expect(screen.getByText("A finished run")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Clean orphan files" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Clear leftover files" })).not.toBeNull();
   });
 
   it("refreshes every resource a portable backup can restore", async () => {
@@ -446,7 +475,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute section="playback" />
+        <SettingsRoute section="general" />
       </>,
       deps(),
     );
@@ -463,7 +492,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute section="playback" />
+        <SettingsRoute section="general" />
       </>,
       deps({ "PUT /api/settings": () => new Promise<Response>(() => {}) }),
     );
@@ -480,7 +509,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute section="playback" />
+        <SettingsRoute section="general" />
       </>,
       deps({
         "PUT /api/settings": async (request) => {
@@ -504,13 +533,13 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute section="playback" />
+        <SettingsRoute section="general" />
       </>,
       deps({ "PUT /api/settings": problemAnswer("The database is locked.", 500) }),
     );
 
     await user.click(await screen.findByRole("button", { name: "Light" }));
-    expect(await screen.findByText("The database is locked.")).not.toBeNull();
+    expect(await screen.findByText(/The database is locked\./)).not.toBeNull();
     await waitFor(() => {
       expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     });
@@ -558,7 +587,7 @@ describe("the settings commands", () => {
     await waitFor(() => expect(checks).toBe(1));
     await run("Back up now");
     await waitFor(() => expect(backups).toBe(1));
-    expect(picked).toEqual(["providers", "backups"]);
+    expect(picked).toEqual(["providers", "storage"]);
 
     const clicked: string[] = [];
     const click = HTMLAnchorElement.prototype.click;

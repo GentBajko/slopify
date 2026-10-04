@@ -120,6 +120,37 @@ describe("the voice list", () => {
     });
   });
 
+  it("adds a voice on Enter and reads the typed language codes back by name", async () => {
+    const user = userEvent.setup();
+    let posted: unknown;
+    renderApp(
+      <Voices />,
+      deps([], {
+        "POST /api/settings/voices": async (request) => {
+          posted = await request.json();
+          return jsonAnswer(narrator, 201)(request);
+        },
+      }),
+    );
+    const name = await screen.findByLabelText("Voice name");
+    await user.type(name, "Narrator M");
+    await user.type(screen.getByLabelText("Voice ID"), "abc123");
+    await user.type(screen.getByLabelText("Languages"), "es, xx");
+    expect(
+      screen.getByText(/Reads as: Spanish\. Not a language code Slopify knows: xx/),
+    ).not.toBeNull();
+    await user.clear(screen.getByLabelText("Languages"));
+    await user.type(screen.getByLabelText("Languages"), "de{Enter}");
+    await waitFor(() => {
+      expect(posted).toEqual({
+        provider: "elevenlabs",
+        name: "Narrator M",
+        voiceId: "abc123",
+        languages: ["de"],
+      });
+    });
+  });
+
   // The conflict is with a row that already exists, so the sentence goes
   // under the field that holds the duplicate and Add stops until it changes.
   it("marks a duplicate voice ID on its own field and holds Add", async () => {
@@ -225,7 +256,7 @@ describe("the voice list", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Remove Narrator M\?/)).not.toBeNull();
 
-    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await user.click(within(dialog).getByRole("button", { name: "Keep it" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
@@ -243,6 +274,7 @@ describe("the voice list", () => {
   it("offers the computer's own voices for the system voice, and names the one picked", async () => {
     const user = userEvent.setup();
     let posted: unknown;
+    let auditioned: unknown;
     renderApp(
       <Voices />,
       testDeps({
@@ -273,6 +305,10 @@ describe("the voice list", () => {
           posted = await request.json();
           return jsonAnswer(narrator, 201)(request);
         },
+        "POST /api/auditions": async (request) => {
+          auditioned = await request.json();
+          return new Response(new Blob(["mp3"]), { status: 200 });
+        },
       }),
     );
     await screen.findByRole("option", { name: "System voice" });
@@ -284,6 +320,16 @@ describe("the voice list", () => {
     expect((screen.getByLabelText("Voice name") as HTMLInputElement).value).toBe(
       "English (America)",
     );
+    // Listen speaks a sample in the picked voice before it is added.
+    await user.click(screen.getByRole("button", { name: "Listen" }));
+    await waitFor(() => {
+      expect(auditioned).toMatchObject({
+        provider: "system-voice",
+        model: "espeak-ng",
+        voice: "en-us",
+        confirmed: true,
+      });
+    });
     await user.click(screen.getByRole("button", { name: "Add voice" }));
     await waitFor(() => {
       expect(posted).toEqual({

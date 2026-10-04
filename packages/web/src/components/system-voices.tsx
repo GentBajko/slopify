@@ -1,11 +1,13 @@
 import type { SpeechVoice } from "@app/kernel/ports/system-speech.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
-import { useQuery } from "@tanstack/react-query";
-import { useId } from "react";
-import type { Api } from "@/api";
+import { systemVoiceProvider } from "@app/slices/settings/model.js";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Volume2Icon } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { type Api, speakAudition } from "@/api";
 import { useApp } from "@/app-context";
-import { ButtonRow } from "@/components/kit/button";
-import { Select } from "@/components/kit/field";
+import { Button, ButtonRow } from "@/components/kit/button";
+import { Input, Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { ButtonLink } from "@/components/kit/link";
 import { Lamp } from "@/components/kit/status";
@@ -101,7 +103,9 @@ export function SystemVoiceDetail({
   );
 }
 
-// Settings → Voices' Voice ID for the system voice: the voices found, grouped by program.
+// Settings → Voices' Voice ID for the system voice: the voices found, grouped by program, and
+// Listen beside them, which speaks one sentence in the picked voice before it is added. The
+// system voice costs nothing, so Listen needs no price first.
 export function SystemVoicePicker({
   value,
   onPick,
@@ -109,8 +113,41 @@ export function SystemVoicePicker({
   readonly value: string;
   readonly onPick: (voice: SpeechVoice) => void;
 }) {
+  const { api } = useApp();
   const voices = useSystemVoices();
   const engines = voices.data?.engines ?? [];
+  const engine = engines.find((one) => one.voices.some((voice) => voice.id === value));
+  // eSpeak NG alone brings over a hundred voices; past a short list a filter box narrows the
+  // select to the names typed, keeping the picked voice in it.
+  const [filter, setFilter] = useState("");
+  const filterId = useId();
+  const words = filter.trim().toLowerCase();
+  const total = engines.reduce((sum, one) => sum + one.voices.length, 0);
+  const matches = (voice: SpeechVoice): boolean =>
+    words === "" ||
+    voice.id === value ||
+    `${voice.name} ${voice.language ?? ""}`.toLowerCase().includes(words);
+  const [url, setUrl] = useState<string | undefined>(undefined);
+  useEffect(
+    () => () => {
+      if (url !== undefined) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
+  const listen = useMutation({
+    mutationFn: (voice: { readonly engine: string; readonly id: string }) =>
+      speakAudition(api, {
+        provider: systemVoiceProvider,
+        model: voice.engine,
+        voice: voice.id,
+        text: sampleLine,
+      }),
+    onSuccess: (blob) => {
+      const next = URL.createObjectURL(blob);
+      setUrl(next);
+      void new Audio(next).play().catch(() => {});
+    },
+  });
   if (voices.data !== undefined && engines.length === 0)
     return (
       <p role="alert" className="m-0 text-small text-danger">
@@ -118,25 +155,61 @@ export function SystemVoicePicker({
       </p>
     );
   return (
-    <Select
-      value={value}
-      onChange={(event) => {
-        for (const engine of engines) {
-          const voice = engine.voices.find((one) => one.id === event.target.value);
-          if (voice !== undefined) return onPick(voice);
-        }
-      }}
-    >
-      <option value="">{voices.data === undefined ? "Looking for voices…" : "Pick a voice"}</option>
-      {engines.map((engine) => (
-        <optgroup key={engine.id} label={engine.name}>
-          {engine.voices.map((voice) => (
-            <option key={voice.id} value={voice.id}>
-              {voice.language === undefined ? voice.name : `${voice.name} (${voice.language})`}
-            </option>
+    <div className="grid gap-1">
+      {total > 12 ? (
+        <Input
+          id={filterId}
+          type="search"
+          aria-label="Filter voices"
+          placeholder={`Filter ${String(total)} voices by name or language`}
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
+      ) : null}
+      <div className="flex min-w-0 items-center gap-2">
+        <Select
+          className="min-w-0 flex-1"
+          value={value}
+          onChange={(event) => {
+            listen.reset();
+            for (const one of engines) {
+              const voice = one.voices.find((option) => option.id === event.target.value);
+              if (voice !== undefined) return onPick(voice);
+            }
+          }}
+        >
+          <option value="">
+            {voices.data === undefined ? "Looking for voices…" : "Pick a voice"}
+          </option>
+          {engines.map((one) => (
+            <optgroup key={one.id} label={one.name}>
+              {one.voices.filter(matches).map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.language === undefined ? voice.name : `${voice.name} (${voice.language})`}
+                </option>
+              ))}
+            </optgroup>
           ))}
-        </optgroup>
-      ))}
-    </Select>
+        </Select>
+        <Button
+          variant="quiet"
+          disabled={engine === undefined || listen.isPending}
+          disabledReason="Pick a voice first."
+          onClick={() => {
+            if (engine !== undefined) listen.mutate({ engine: engine.id, id: value });
+          }}
+        >
+          <Volume2Icon aria-hidden="true" className="size-[14px]" />
+          {listen.isPending ? "Speaking…" : "Listen"}
+        </Button>
+      </div>
+      {listen.error === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {`The sample couldn't be spoken: ${listen.error.message}`}
+        </p>
+      )}
+    </div>
   );
 }
+
+const sampleLine = "This is how your narration will sound in this voice.";

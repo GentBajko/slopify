@@ -11,6 +11,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
+import { outputStateWords } from "./output-status.js";
 import { historyOf, revisionFileUrl, revisionImagesUrl, viewOf } from "./revision-api.js";
 import { WaveAudioPlayer } from "./waveform.js";
 
@@ -43,6 +44,14 @@ function retainedText(raw: string | null): string {
     return "Recorded text cannot be decoded.";
   }
 }
+// "4 Oct 2026, 14:05": when a version was saved, as a person reads it.
+function stamp(iso: string): string {
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime())
+    ? iso
+    : at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+
 export function RevisionHistory({
   projectId,
   pending,
@@ -79,6 +88,7 @@ export function RevisionHistory({
       output.available &&
       (output.output.role === "image" || output.output.role === "thumbnail"),
   );
+  const versionWhen = stamp(selectedView?.revision.createdAt ?? "");
   // The version's folder: the one its images are in, else its first saved file's.
   const folderOf = zipImage ?? selectedView?.outputs.find((output) => output.available);
   return (
@@ -89,7 +99,7 @@ export function RevisionHistory({
         {history.data?.map((revision) => (
           <li key={revision.id}>
             <Button type="button" onClick={() => setSelected(revision.id)}>
-              {revision.title} · {revision.createdAt}
+              {revision.title} · {stamp(revision.createdAt)}
               {revision.current ? " · Current" : ""}
             </Button>
           </li>
@@ -112,7 +122,7 @@ export function RevisionHistory({
             {zipImage === undefined ? null : (
               <FileLink href={revisionImagesUrl(api, projectId, selectedView.revision.id)} download>
                 <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                Download all images
+                {selectedView.current ? "Download all images" : "Download this version's images"}
               </FileLink>
             )}
             {folderOf === undefined ? null : (
@@ -133,8 +143,7 @@ export function RevisionHistory({
                   <span className="min-w-0">
                     <span className="font-semibold text-ink">{outputLabel(output.output)}</span>
                     <span className="text-small text-ink-2">
-                      {` · ${output.state}${output.selected ? "" : " · Earlier result"}`}
-                      {output.available ? "" : " · File missing"}
+                      {` · ${output.selected ? outputStateWords(output.state, output.output.role, output.available) : "Earlier result"}`}
                     </span>
                   </span>
                   {output.available ? (
@@ -147,10 +156,10 @@ export function RevisionHistory({
                       )}
                       download
                       size="small"
-                      aria-label={`Download ${outputLabel(output.output)}`}
+                      aria-label={`Download ${outputLabel(output.output)} from the version of ${versionWhen}`}
                     >
                       <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                      Download
+                      {selectedView.current ? "Download" : "Download this version"}
                     </FileLink>
                   ) : null}
                 </div>

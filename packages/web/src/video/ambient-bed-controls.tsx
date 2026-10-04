@@ -12,6 +12,7 @@ import {
 import type { ReactElement, ReactNode } from "react";
 import { Field, Input, Select } from "@/components/kit/field";
 import type { HelpId } from "@/help/catalog";
+import { ResetToDefault } from "./reset-to-default";
 
 // The ambient bed's settings: Play's (with None and My own file) and the channel brand kit's
 // (the built-in beds only). `value` undefined is the inherited choice `inherit` names: the
@@ -67,6 +68,14 @@ export function AmbientBedControls({
           value={value[field]}
           onChange={(event) => onChange({ ...value, [field]: event.target.value })}
         />
+        {field === "level" ? (
+          <ResetToDefault
+            changed={value.level.trim() !== String(defaultAmbientBed.levelDb)}
+            defaultText={`${String(defaultAmbientBed.levelDb)} dB`}
+            label="ambient level"
+            onReset={() => onChange({ ...value, level: String(defaultAmbientBed.levelDb) })}
+          />
+        ) : null}
       </Field>
     );
   return (

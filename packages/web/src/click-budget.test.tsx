@@ -138,7 +138,7 @@ describe("clicks from the landing screen to done", () => {
     const you = person();
 
     const rail = await screen.findByRole("navigation", { name: "Project sections" });
-    await you.click(within(rail).getByRole("button", { name: /^Images/ }));
+    await you.click(within(rail).getByRole("link", { name: /^Images/ }));
     await you.click(await screen.findByRole("button", { name: "Regenerate image 1" }));
     // Regenerating spends money on a paid model, so the one confirmation stays.
     const dialog = await screen.findByRole("dialog");
@@ -198,9 +198,9 @@ describe("clicks from the landing screen to done", () => {
     await waitFor(() =>
       expect(
         within(rail)
-          .getByRole("button", { name: /^Video/ })
+          .getByRole("link", { name: /^Video/ })
           .getAttribute("aria-current"),
-      ).toBe("true"),
+      ).toBe("page"),
     );
     const summary = await screen.findByRole("region", { name: "Summary" });
     await waitFor(() => expect(summary.textContent).toBe("How rope holds."));

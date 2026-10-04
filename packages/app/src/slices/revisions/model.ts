@@ -34,6 +34,10 @@ export type NarrationOverride =
       // are written: another chunk's delivery can change without re-tagging the whole narration.
       readonly direction?: string | undefined;
     };
+export type ThumbnailOverride = "1" | "2" | "3";
+export function thumbnailOverrideOf(variant: number): ThumbnailOverride | undefined {
+  return variant === 1 ? "1" : variant === 2 ? "2" : variant === 3 ? "3" : undefined;
+}
 export interface RevisionContent {
   readonly articleMarkdown?: string | undefined;
   readonly articleEdited?: boolean | undefined;
@@ -71,6 +75,9 @@ export interface RevisionContent {
   // The ambient bed's own file (`config.ambientBed.source` "upload"): the project asset copied
   // from Play's upload when the run started. Absent is none.
   readonly ambientBed?: string | undefined;
+  // A generated thumbnail the person replaced with their own file, by variant ("1" to "3"):
+  // that variant uses the project asset instead of being drawn. Remaking it drops the entry.
+  readonly thumbnailOverrides?: Readonly<Partial<Record<ThumbnailOverride, string>>> | undefined;
 }
 export interface RevisionUpload {
   readonly stagedFileId: string;
@@ -78,7 +85,8 @@ export interface RevisionUpload {
     | { readonly kind: "provided"; readonly stage: "audio" | "thumbnail" | "reference" }
     | { readonly kind: "image"; readonly imageKey: string }
     | { readonly kind: "narration"; readonly key: string }
-    | { readonly kind: "shortsMusic" };
+    | { readonly kind: "shortsMusic" }
+    | { readonly kind: "thumbnail"; readonly variant: number };
 }
 export interface RevisionEdit {
   readonly config: RunConfig;

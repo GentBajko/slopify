@@ -1,6 +1,6 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
-import { subtitlePositions } from "@app/slices/subtitles/model.js";
+import { defaultSubtitles, subtitlePositions } from "@app/slices/subtitles/model.js";
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validSubtitleStyle } from "./config";
 import { type ControlledFontUpload, FontPicker } from "./font-picker";
+import { subtitleFacts } from "./model-facts";
 import { SubtitlePreview } from "./style-preview";
 
 export function SubtitleControls({
@@ -25,7 +26,10 @@ export function SubtitleControls({
   showPreview = true,
   illustratedPositions = false,
   rawFontSize,
+  language,
 }: {
+  // The project's language: it decides which model times the captions and what it downloads.
+  readonly language?: string | undefined;
   readonly showPreview?: boolean;
   readonly illustratedPositions?: boolean;
   readonly rawFontSize?: { readonly value: string; readonly onChange: (value: string) => void };
@@ -54,6 +58,13 @@ export function SubtitleControls({
   const fontProblem = problem?.("subtitles.fontId");
   const sizeProblem = problem?.("subtitles.fontSize");
   const modeProblem = problem?.("subtitles.mode") ?? problem?.("subtitles");
+  const facts = subtitleFacts(language);
+  const sizeShown = rawFontSize?.value ?? String(value.fontSize);
+  const sizeChanged = sizeShown.trim() !== String(defaultSubtitles.fontSize);
+  const resetSize = (): void => {
+    if (rawFontSize) rawFontSize.onChange(String(defaultSubtitles.fontSize));
+    else onChange({ ...value, fontSize: defaultSubtitles.fontSize });
+  };
   return (
     <section className="flex min-w-0 flex-col gap-3" aria-label="Subtitles">
       <fieldset
@@ -85,14 +96,11 @@ export function SubtitleControls({
               </option>
             </select>
           </div>
-          <span className="pb-1 text-label text-ink-3">English · local · no paid API</span>
+          <span className="pb-1 text-label text-ink-3">{facts.tag}</span>
         </div>
         {value.mode !== "off" && audioEnabled ? (
           <>
-            <p className="text-small text-ink-2">
-              Timed from your narration on this computer. First use downloads an approximately 95 MB
-              speech model. Review the subtitles before publishing.
-            </p>
+            <p className="text-small text-ink-2">{facts.detail}</p>
             <div
               className="grid items-start gap-5"
               style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}
@@ -150,6 +158,22 @@ export function SubtitleControls({
                           : onChange({ ...value, fontSize: Number(event.target.value) })
                       }
                     />
+                  </div>
+                  <div className="mt-1 flex min-h-7 items-center gap-2 text-label text-ink-2">
+                    <span>
+                      {sizeChanged
+                        ? `Changed · default ${String(defaultSubtitles.fontSize)}`
+                        : "Default size"}
+                    </span>
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      disabled={!sizeChanged}
+                      aria-label={`Reset subtitle font size to ${String(defaultSubtitles.fontSize)}`}
+                      onClick={resetSize}
+                    >
+                      Reset
+                    </Button>
                   </div>
                   {!validSubtitleStyle(value) || sizeProblem ? (
                     <p role="alert" className="mt-1 text-label text-danger">

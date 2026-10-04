@@ -287,3 +287,14 @@ it("offers no remake outside a project that has versions", async () => {
   expect(screen.queryByRole("button", { name: "Pick different moments" })).toBeNull();
   expect(screen.queryByRole("button", { name: /again/ })).toBeNull();
 });
+
+it("shades where YouTube's buttons and text cover a short, on request", async () => {
+  mount([pick, first]);
+  const block = screen.getByRole("region", { name: "Shorts" });
+  await within(block).findByLabelText("Short 1");
+  expect(screen.queryByText("Title and channel")).toBeNull();
+  await userEvent.click(
+    screen.getByRole("switch", { name: "Show what YouTube covers on a phone" }),
+  );
+  expect(screen.getByText("Title and channel")).toBeDefined();
+});

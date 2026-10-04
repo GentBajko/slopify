@@ -10,8 +10,10 @@ export const minChapterSeconds = 10;
 // YouTube's limits on the Tags field: 500 characters in all, 100 for one tag.
 export const tagsMaxCharacters = 500;
 export const tagMaxCharacters = 100;
-// YouTube ignores every hashtag of a description that has more than 15.
-export const hashtagsMax = 15;
+// YouTube ignores every hashtag of a description that has more than 60 (YouTube Help,
+// "Use hashtags for YouTube videos"); the first three show above the title.
+export const hashtagsMax = 60;
+export const hashtagsShownByTitle = 3;
 // YouTube's limit on a description.
 export const descriptionMaxCharacters = 5000;
 // YouTube's title A/B test ("Test & compare") takes up to three titles: the video's own and
@@ -36,3 +38,34 @@ export const defaultDescriptionPrompt = [
 // The name Play, Edit project and the review summary show for the prompt used when none is
 // picked.
 export const defaultDescriptionPromptName = "Built-in";
+
+// YouTube's API refuses < and > in a title or a description.
+const forbidden = /[<>]/;
+
+// Why YouTube would refuse a title as typed, or undefined when it takes it: at most 100
+// characters, no < or >. The project's own title is not this; only the title sent to YouTube.
+export function youtubeTitleProblem(title: string): string | undefined {
+  const trimmed = title.trim();
+  if (trimmed.length > titleMaxCharacters)
+    return `YouTube takes titles of up to ${String(titleMaxCharacters)} characters; this one has ${String(trimmed.length)}. Shorten it.`;
+  if (forbidden.test(trimmed)) return "YouTube doesn't allow < or > in a title. Remove them.";
+  return undefined;
+}
+
+// The same for a description: at most 5,000 characters, no < or >.
+export function youtubeDescriptionProblem(description: string): string | undefined {
+  if (description.length > descriptionMaxCharacters)
+    return `YouTube takes descriptions of up to ${descriptionMaxCharacters.toLocaleString("en-US")} characters; this one has ${description.length.toLocaleString("en-US")}. Shorten it.`;
+  if (forbidden.test(description))
+    return "YouTube doesn't allow < or > in a description. Remove them.";
+  return undefined;
+}
+
+// The hashtags of a hashtag line, and a warning when YouTube would ignore them all.
+export function hashtagNote(line: string): string | undefined {
+  const count = line.split(/\s+/u).filter((word) => word.startsWith("#") && word.length > 1).length;
+  if (count === 0) return undefined;
+  if (count > hashtagsMax)
+    return `${String(count)} hashtags: YouTube ignores every hashtag when there are more than ${String(hashtagsMax)}. Remove ${String(count - hashtagsMax)}.`;
+  return `${String(count)} hashtag${count === 1 ? "" : "s"}; the first ${String(Math.min(count, hashtagsShownByTitle))} show above the title.`;
+}

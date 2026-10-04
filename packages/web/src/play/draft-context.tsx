@@ -47,6 +47,8 @@ export interface PlaySession extends PlayNavigation {
   readonly newDraft: () => Promise<void>;
   // Picks the providers the first launch found, on a fresh draft nobody has edited.
   readonly adoptDefaults?: (defaults: import("./draft-state").FreshProviderDefaults) => void;
+  // Makes the sidebar's channel a fresh, untouched draft's channel.
+  readonly adoptChannel?: (channelId: string) => void;
   readonly discard: (target: { readonly id: string; readonly version: number }) => Promise<void>;
   readonly saveAsNew: () => Promise<void>;
 }

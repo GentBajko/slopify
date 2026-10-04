@@ -132,7 +132,7 @@ Slopify: a self-hosted, single-user content pipeline for faceless YouTube channe
 | [uiux/screens/16-welcome.md](uiux/screens/16-welcome.md) | Observed: /welcome, starter packs, samples |
 | [uiux/screens/17-channels.md](uiux/screens/17-channels.md) | Observed: channels list and six channel tabs |
 | [uiux/screens/18-document-themes.md](uiux/screens/18-document-themes.md) | Observed: document themes and editor |
-| [uiux/screens/19-narration-aliases.md](uiux/screens/19-narration-aliases.md) | Observed: Library → Aliases |
+| [uiux/screens/19-narration-aliases.md](uiux/screens/19-narration-aliases.md) | Observed: Library → Narration aliases |
 | [uiux/screens/20-help-tutorials.md](uiux/screens/20-help-tutorials.md) | Observed: tutorials reader, search, info tips |
 | [uiux/screens/21-command-palette.md](uiux/screens/21-command-palette.md) | Observed: Ctrl+K palette and shortcuts |
 | [uiux/screens/22-announcements.md](uiux/screens/22-announcements.md) | Observed: What's new tour, patch notes, reminders, run notifications |

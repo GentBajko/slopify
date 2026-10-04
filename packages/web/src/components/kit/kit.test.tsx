@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Button } from "./button.js";
+import { Button, IconButton } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Field, Input, Select, Textarea } from "./field.js";
 import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
@@ -497,6 +497,50 @@ describe("buttons", () => {
     expect(button.getAttribute("type")).toBe("button");
     expect(button.getAttribute("title")).toBe("Codex is signed out. Sign in first.");
     expect(button.className).toContain("sl-btn--primary");
+  });
+
+  it("keep a reason that matters in reach: focusable, described, and refusing the press", async () => {
+    const user = userEvent.setup();
+    const press = vi.fn();
+    const submit = vi.fn((event: SubmitEvent) => event.preventDefault());
+    render(
+      <form onSubmit={(event) => submit(event.nativeEvent as SubmitEvent)}>
+        <Button
+          type="submit"
+          disabled
+          focusableWhenDisabled
+          disabledReason="Cancel the run first, then delete it."
+          onClick={press}
+        >
+          Delete
+        </Button>
+      </form>,
+    );
+    const button = screen.getByRole("button", { name: "Delete" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.hasAttribute("disabled")).toBe(false);
+    expect(button.getAttribute("data-tip")).toBe("Cancel the run first, then delete it.");
+    const described = button.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(described)?.textContent).toBe(
+      "Cancel the run first, then delete it.",
+    );
+    await user.tab();
+    expect(document.activeElement).toBe(button);
+    await user.keyboard("{Enter}");
+    await user.click(button);
+    expect(press).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("shows an icon button's name as the kit's tooltip, which keyboard focus shows too", () => {
+    render(
+      <IconButton label="More project actions">
+        <span />
+      </IconButton>,
+    );
+    const button = screen.getByRole("button", { name: "More project actions" });
+    expect(button.getAttribute("data-tip")).toBe("More project actions");
+    expect(button.hasAttribute("title")).toBe(false);
   });
 });
 

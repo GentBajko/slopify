@@ -2,26 +2,25 @@
 
 Every section of Settings, what each control does and its default. Sections with a page of their own are summarised here and linked for the details.
 
-**Where to find it:** **Settings** in the sidebar, or press `Ctrl+K` and run **Open settings**. Settings opens on **Providers**. Pick a section in the rail on the left; on a phone the rail is a row of tabs you can scroll sideways.
+**Where to find it:** **Settings** in the sidebar, or press `Ctrl+K` and run **Open settings** (or **Open Settings: <section>** for one section). Settings opens on **Connections → Providers**. The rail on the left has seven groups; a group with more than one section shows them as tabs across the top. On a phone the rail is a row of tabs you can scroll sideways. An old link to a section (`?section=backups`, for example) still opens where it went.
 
 ## Sections at a glance
 
-| Section | What it holds | Details |
-|---|---|---|
-| [General](#general) | Starting Slopify when you log in | [Start-at-Login](Start-at-Login) |
-| [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
-| [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
-| [Models](#models) | Model catalogue, retired models | [Models](Models) |
-| [Playback & appearance](#playback--appearance) | Silence gap, light or dark, volume levelling | This page |
-| [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
-| [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
-| [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
-| [Backup & storage](#backup--storage) | Your files folder, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live) |
-| [Backups](#backups) | The daily automatic backup | [Backups](Backups) |
-| [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
-| [Usage](#usage) | This install's counters | [Costs-and-Run-Cost](Costs-and-Run-Cost#your-usage-totals-settings--usage) |
-| [Patch notes](#patch-notes) | What changed in each version | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
-| [About](#about) | Updates, what's new, links | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
+| Group | Section | What it holds | Details |
+|---|---|---|---|
+| Connections | [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
+| Connections | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
+| Connections | [Models](#models) | Model catalogue, retired models | [Models](Models) |
+| Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
+| Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
+| Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
+| Publishing | [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
+| Backup & storage | [Backup & storage](#backup--storage) | Your files folder, daily backups, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live), [Backups](Backups) |
+| Backup & storage | [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
+| General | [General](#general) | Light or dark, and starting Slopify when you log in | [Start-at-Login](Start-at-Login) |
+| About | [About](#about) | Updates, what's new, links, the welcome screen | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
+| About | [Usage](#usage) | This install's counters | [Costs-and-Run-Cost](Costs-and-Run-Cost#your-usage-totals-settings--usage) |
+| About | [Patch notes](#patch-notes) | What changed in each version | [Updating-and-Patch-Notes](Updating-and-Patch-Notes) |
 
 ## Download diagnostics
 
@@ -35,7 +34,15 @@ You can also press `Ctrl+K` and run **Download diagnostics** from anywhere in Se
 
 ## General
 
-"How Slopify starts on this computer."
+"How Slopify looks and how it starts on this computer."
+
+### Appearance
+
+| Control | What it does | Default |
+|---|---|---|
+| **Appearance** | **System**, **Dark** or **Light** colours for Slopify on this computer. System follows your operating system and changes with it. It changes at once and does not affect your videos. | System |
+
+### Start at login
 
 | Control | What it does | Default |
 |---|---|---|
@@ -92,9 +99,9 @@ See [Providers-and-Keys](Providers-and-Keys#add-a-voice).
 
 Templates and schedules that pick a retired model are also flagged on their own rows, with the same **Switch to <model>**. See [Models](Models).
 
-## Playback & appearance
+## Production defaults
 
-"How narration is paced and how Slopify looks."
+"How new runs pace the narration and level the volume."
 
 ### Silence between segments
 
@@ -103,12 +110,6 @@ Templates and schedules that pick a retired model are also flagged on their own 
 | **Silence between segments** | Seconds of quiet between the intro and the narration, and between the narration and the outro, in every new video, unless Play sets a different gap for one video. It only matters when an intro or outro is set; 0 runs them together. Type a whole number and choose **Save**. | 3 seconds, 0 to 30 |
 
 Videos already started keep their own gap. A value that is not a whole number from 0 to 30 is refused with "The silence gap is a whole number of seconds between 0 and 30." See [Intros-and-Outros](Intros-and-Outros).
-
-### Appearance
-
-| Control | What it does | Default |
-|---|---|---|
-| **Appearance** | **System**, **Dark** or **Light** colours for Slopify on this computer. System follows your operating system and changes with it. It changes at once and does not affect your videos. | System |
 
 ### Level the volume for new runs
 
@@ -154,7 +155,7 @@ See [Studio-Extension](Studio-Extension) and [Publishing-to-YouTube](Publishing-
 
 ## Backup & storage
 
-"Export everything, import a backup, and see what uses disk space."
+"Daily backups, export and import, and what uses disk space." Its second tab is [Trash](#trash).
 
 ### Your files
 
@@ -172,7 +173,7 @@ In Docker, this shows the command to run on the computer running Docker, with **
 |---|---|
 | **Export everything** | Downloads one `.tar` file with every project (files and history), your library, templates, schedules, Play drafts, fonts, settings and usage. Never provider keys. Your browser's downloads show its progress; keep Slopify running until it finishes. |
 | **Import a backup** | Adds a `.tar` from Export everything (or a `.zip` from an older version's Export backup, up to 100 MB) to this install. It replaces nothing: projects already here are skipped, taken names arrive as "(imported)" and schedules arrive paused. Running projects must finish or pause first. A summary lists what was added and skipped. |
-| **Clean orphan files** | Deletes files in the projects folder that no project records any more, and uploaded files nothing uses. Your projects, outputs and library are never touched. Slopify also does this at each start. |
+| **Clear leftover files** | Deletes files in the projects folder that no project records any more, and uploaded files nothing uses. Your projects, outputs and library are never touched. Slopify also does this at each start. |
 
 After importing, enter your keys again in Settings → Providers. You can also run **Export everything** from `Ctrl+K`. See [Backups](Backups).
 
@@ -191,9 +192,9 @@ After importing, enter your keys again in Settings → Providers. You can also r
 | **Sample projects** | Lists the three samples that come with Slopify (a narrated video, an audiobook and a podcast), with **Open** for each one in your projects. |
 | **Restore samples** | Adds back any that were deleted and puts the others back as they shipped. Your own copies of them are not touched. |
 
-## Backups
+### Daily backups
 
-"A daily copy of everything, in a folder you choose."
+"A daily copy of everything, in a folder you choose." On the Backup & storage tab.
 
 | Control | What it does | Default / range |
 |---|---|---|
@@ -208,12 +209,13 @@ Each backup is the same file Export everything makes and can be many gigabytes. 
 
 ## Trash
 
-"Deleted projects, prompts, templates and schedules, kept for 30 days."
+"Deleted projects, prompts, templates and schedules, kept for 30 days." A tab of **Backup & storage**.
 
 | Control | What it does |
 |---|---|
 | **Restore** | Puts an item back. If its name was taken meanwhile it comes back renamed, and a schedule comes back paused. |
 | **Delete now** | Removes an item for good at once, freeing its space. You confirm first. |
+| Checkboxes and **Select all** | Pick several items; **Restore selected** and **Delete selected** above the list act on them. **Restore all** and **Empty trash** act on everything. |
 
 Deleted projects, prompts, intros and outros, templates and schedules stay 30 days, then are removed for good. See [Trash](Trash).
 
@@ -243,6 +245,8 @@ The notes ship with the app, so they work offline. After an update, the new vers
 | **Updates** | Points to the circular-arrows button (at the foot of the sidebar), which checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
 | **What's new in this version** | Opens the patch notes for the version you are running. When this version has no notes of its own, it opens the newest ones. |
 | Links | GitHub (code, issues, releases), Patreon, Buy Me a Coffee, and "How I run a channel with it". |
+
+The welcome screen (what this computer can do, the samples, a first short) opens again from **Help → Tutorials → Welcome screen** or `Ctrl+K` → **Open the welcome screen**.
 
 Slopify is made by Gent Bajko under the Apache License 2.0. See [Updating-and-Patch-Notes](Updating-and-Patch-Notes).
 

@@ -71,7 +71,7 @@ running Docker.
 
 ## What cleanup touches
 
-Storage cleanup (at start, and Clean orphan files) only looks inside `Projects`: it removes files
+Storage cleanup (at start, and Clear leftover files) only looks inside `Projects`: it removes files
 no project records and folders of projects that no longer exist. It leaves `Backups` (pruned only
 by its own `slopify-backup-*.tar` rules), hidden entries (`.DS_Store`) and `desktop.ini` alone, and
 in a `Projects` folder outside the data folder it never removes loose files. `Exports` and anything

@@ -19,5 +19,9 @@ export const EditRequestContext = createContext<((request: EditRequest) => void)
 // Makes the given pictures again now (`RevisionController.regenerateNow`). Undefined while
 // the workspace is busy or outside a project page, like `EditRequestContext`.
 export const RegenerateNowContext = createContext<
-  ((workKeys: readonly string[]) => void) | undefined
+  | ((
+      workKeys: readonly string[],
+      options?: { readonly approvedUpTo?: number | undefined },
+    ) => void)
+  | undefined
 >(undefined);

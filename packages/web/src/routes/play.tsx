@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
+import { useCurrentChannel } from "@/channels/current";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
@@ -22,6 +23,8 @@ import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { KeywordBlock } from "@/play/keywords";
+import { headingOf, outputKindOf, publishes, rowShown } from "@/play/output-kind";
+import { OutputPicker } from "@/play/output-picker";
 import {
   ExtrasSection,
   ImagesSection,
@@ -32,6 +35,7 @@ import { previewImageOf } from "@/play/preview-image";
 import { ReviewSection } from "@/play/review-section";
 import { pendingReviewUpload, startLabel } from "@/play/review-state";
 import { lookSummary } from "@/play/review-summary";
+import { rowOrigin, useTemplateOrigin } from "@/play/row-origin";
 import { SaveTemplateDialog } from "@/play/save-template-dialog";
 import type { PlaySection } from "@/play/sections";
 import { SeenBefore } from "@/play/seen-before";
@@ -86,6 +90,15 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const cast = useDraftCast();
   const session = usePlaySession();
   const { document } = session;
+  const kind = outputKindOf(form);
+  const sidebarChannel = useCurrentChannel().channelId;
+  const { adoptChannel } = session;
+  // A fresh draft starts in the channel the sidebar shows, not always the default one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: asked again for each new draft.
+  useEffect(() => {
+    if (sidebarChannel !== null) adoptChannel?.(sidebarChannel);
+  }, [sidebarChannel, adoptChannel, session.activeId, document.channelId]);
+  const origin = useTemplateOrigin(document.templateSource);
   const choices = templateLibrary(
     document.librarySnapshot,
     prompts.data?.prompts ?? [],
@@ -343,6 +356,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     fontName: fonts.data?.fonts.find((font) => font.id === form.subtitles.fontId)?.name,
     checkpoints: form.checkpoints?.length ?? 0,
     reviews,
+    kind,
   };
   const editors: Readonly<Record<SetupRowId, SetupListRow["editor"]>> = {
     title: (
@@ -400,6 +414,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     outputs: (
       <ExtrasSection
         {...controls}
+        publishing={publishes(kind)}
         entries={choices.entries}
         onSettings={() => {
           void library("/settings");
@@ -414,15 +429,27 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       </div>
     ),
   };
-  // With Article Off nothing is narrated, so the Narration row leaves Play.
+  // With Article Off nothing is narrated, so the Narration row leaves Play. The rest follow what
+  // is being made; a row that needs attention or is open stays whatever was picked.
   const visibleRows = setupRows.filter(
-    (row) => !(row.id === "narration" && form.sources.article === "off"),
+    (row) =>
+      !(row.id === "narration" && form.sources.article === "off") &&
+      rowShown(row.id, kind, {
+        problem: rowProblem(row.id, errors, topics, llmRow) !== undefined,
+        open: open.has(row.id),
+      }),
   );
   const rows: readonly SetupListRow[] = visibleRows.map((row) => ({
     id: row.id,
     label: row.label,
     summary: rowSummary(row.id, form, summaryContext),
     problem: rowProblem(row.id, errors, topics, llmRow)?.message,
+    origin:
+      origin === undefined
+        ? undefined
+        : rowOrigin(row.id, document, origin) === "template"
+          ? `From ${template?.name ?? "the template"}`
+          : "Changed here",
     editor: editors[row.id],
   }));
   const setRow = (row: SetupRowId, next: boolean): void => {
@@ -529,10 +556,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       className="min-w-0 max-[767px]:[&_button]:min-h-11 max-[767px]:[&_input:not([type=checkbox])]:min-h-11 max-[767px]:[&_select]:min-h-11 max-[767px]:[&_summary]:min-h-11"
     >
       <PageHeader
-        crumb="New project"
+        crumb="Create"
         title={
           <span ref={heading} tabIndex={-1}>
-            What's the video about?
+            {headingOf(kind)}
           </span>
         }
         meta={form.title.trim() === "" ? "Untitled draft" : form.title}
@@ -554,6 +581,22 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         }
         asideLabel="Review and start"
       >
+        <OutputPicker
+          form={form}
+          update={update}
+          // Choosing what to make folds away the open rows that work doesn't use; changing a
+          // stage inside a row never folds the row being edited.
+          onPicked={(picked) =>
+            setOpen(
+              (current) =>
+                new Set(
+                  [...current].filter((row) =>
+                    rowShown(row, picked, { problem: false, open: false }),
+                  ),
+                ),
+            )
+          }
+        />
         <div
           data-tour="play-options"
           className="grid min-w-0 grid-cols-1 items-start gap-4 min-[700px]:grid-cols-2"

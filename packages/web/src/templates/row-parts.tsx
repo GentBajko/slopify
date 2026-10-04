@@ -9,6 +9,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { DiffColumns } from "@/library/diff-view";
 import { when } from "@/library/history-drawer";
+import { Stamp } from "@/library/time";
 import {
   type ProjectTemplate,
   readProjectTemplate,
@@ -52,7 +53,18 @@ export function TemplateDetail({
     );
   return (
     <section aria-label={`Keywords of ${template.name}`} className="flex flex-col gap-4">
-      <SectionHead title={template.name} as="h3" info="templates.edit" className="pb-0" />
+      <SectionHead
+        title={template.name}
+        as="h3"
+        info="templates.edit"
+        className="pb-0"
+        meta={
+          <>
+            {`Version ${String(template.version)} · saved `}
+            <Stamp iso={template.updatedAt}>{when(template.updatedAt)}</Stamp>
+          </>
+        }
+      />
       <TemplateKeywords template={template} />
       <p className="m-0 text-small text-ink-2">
         To change the settings, press Use in Play, change the draft, then Save a setup.
@@ -127,7 +139,16 @@ export function TemplateHistoryDrawer({
                   title={`Version ${String(version)}`}
                   selected={version === picked}
                   onSelect={() => setPicked(version)}
-                  meta={one === undefined ? "Loading…" : `${one.name} · ${when(one.updatedAt)}`}
+                  meta={
+                    one === undefined ? (
+                      "Loading…"
+                    ) : (
+                      <>
+                        {`${one.name} · `}
+                        <Stamp iso={one.updatedAt}>{when(one.updatedAt)}</Stamp>
+                      </>
+                    )
+                  }
                   actions={
                     version === template.version ? (
                       <span className="text-small text-ink-2">Current</span>

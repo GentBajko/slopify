@@ -8,6 +8,7 @@ import { Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { UnsavedStatus } from "@/components/save-state";
 import {
   browserNotificationsOn,
   notificationPermission,
@@ -105,7 +106,9 @@ function BrowserNotifications() {
           Send test notification
         </Button>
       </div>
-      <p className="m-0 text-small text-ink-2">Works while any Slopify tab is open.</p>
+      <p className="m-0 text-small text-ink-2">
+        Works while any Slopify tab is open. The switch applies in this browser at once.
+      </p>
       {problem === undefined ? null : (
         <p role="alert" className="m-0 text-small text-danger">
           {problem}
@@ -137,7 +140,8 @@ function RunSounds() {
       </div>
       <p className="m-0 text-small text-ink-2">
         A chime when a run starts and a different one when it finishes, fails or waits for you.
-        Works while any Slopify tab is open; set your computer's volume for how loud.
+        Works while any Slopify tab is open; set your computer's volume for how loud. The switch
+        applies in this browser at once.
       </p>
     </div>
   );
@@ -179,13 +183,21 @@ function NotificationUrl() {
 
   const error = problem ?? save.error?.message ?? test.error?.message;
   const busy = save.isPending || test.isPending || saved.data === undefined;
+  const dirty = typed !== undefined && typed !== (saved.data?.url ?? "");
   return (
     <Field
       label="Notification URL"
       tip="settings.notifications.url"
-      help="Works with no tab open, for example an ntfy topic on your phone."
+      help="Works with no tab open, for example an ntfy topic on your phone. Saved only when you press Save."
     >
-      <div className="flex flex-wrap items-center gap-2">
+      {/* A form so Enter in the box saves, as Save does. */}
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!busy && problem === undefined && dirty) save.mutate(value);
+        }}
+      >
         <Input
           type="url"
           inputMode="url"
@@ -204,9 +216,10 @@ function NotificationUrl() {
           }}
         />
         <Button
+          type="submit"
           variant="primary"
-          disabled={busy || problem !== undefined || typed === undefined}
-          onClick={() => save.mutate(value)}
+          disabled={busy || problem !== undefined || !dirty}
+          disabledReason="Type a new address first, or fix the one shown."
         >
           Save
         </Button>
@@ -217,7 +230,15 @@ function NotificationUrl() {
         >
           Send test notification
         </Button>
-      </div>
+      </form>
+      <UnsavedStatus
+        dirty={dirty}
+        onDiscard={() => {
+          save.reset();
+          test.reset();
+          setTyped(undefined);
+        }}
+      />
       {saved.error === null ? null : (
         <p role="alert" className="m-0 text-small text-danger">
           The saved Notification URL couldn't be read: {saved.error.message}

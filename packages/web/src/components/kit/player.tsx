@@ -238,7 +238,7 @@ export function Player({
       </video>
 
       {started ? null : (
-        <IconButton label={`Play ${label}`} className="sl-player__big" onClick={toggle}>
+        <IconButton label={`Play ${label}`} tip={false} className="sl-player__big" onClick={toggle}>
           <PlayIcon aria-hidden="true" strokeWidth={1.75} />
         </IconButton>
       )}

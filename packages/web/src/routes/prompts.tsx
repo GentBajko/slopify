@@ -1,6 +1,6 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { removePrompt, savePrompt } from "@/api";
 import { useApp } from "@/app-context";
 import { Callout } from "@/components/kit/callout";
@@ -15,14 +15,18 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { InlineName, refusedName } from "@/library/inline-name";
-import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
+import { LibraryItemDetail, plural } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
+import { useLibraryItem } from "@/library/list-url";
 import { LibraryRowActions } from "@/library/row-actions";
+import { sortLibrary, useLibrarySort } from "@/library/sort";
+import { SortMenu } from "@/library/sort-menu";
+import { Stamp } from "@/library/time";
 import { keys, promptsQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
-// Every saved prompt of one kind, sorted by name by the list endpoint, beside the selected
-// one's text, what uses it and its latest change. The kind lives in the URL, so switching it
+// Every saved prompt of one kind, by name or last change, beside the selected one's text,
+// what uses it and its latest change; the selected row is `?item=` in the URL. The kind lives in the URL, so switching it
 // is handed up to router.tsx instead of reaching for a router here.
 export function PromptsRoute({
   kind,
@@ -42,7 +46,8 @@ export function PromptsRoute({
   const [query, setQuery] = useState("");
   const search = useRef<HTMLInputElement>(null);
   const searchKeys = useSearchShortcut(search, "prompts");
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [selectedId, setSelectedId] = useLibraryItem();
+  const [sort, setSort] = useLibrarySort("prompt");
   const [deleting, setDeleting] = useState<Prompt | undefined>(undefined);
   const [history, setHistory] = useState<Prompt | undefined>(undefined);
 
@@ -63,7 +68,7 @@ export function PromptsRoute({
 
   const ofKind = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
   const needle = query.trim().toLowerCase();
-  const listed =
+  const matching =
     needle === ""
       ? ofKind
       : ofKind?.filter(
@@ -71,6 +76,7 @@ export function PromptsRoute({
             prompt.name.toLowerCase().includes(needle) ||
             prompt.body.toLowerCase().includes(needle),
         );
+  const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((prompt) => prompt.id === selectedId) ?? listed?.[0];
 
   return (
@@ -99,6 +105,7 @@ export function PromptsRoute({
           />
           <InfoTip id="library.prompt.kind" />
         </span>
+        <SortMenu what="prompts" sort={sort} onSort={setSort} />
       </LibraryToolbar>
 
       {prompts.error === null ? null : (
@@ -186,7 +193,11 @@ export function PromptsRoute({
                 id={selected.id}
                 name={selected.name}
                 kicker={`${kindLabel(selected.kind)} prompt`}
-                meta={`Updated ${updatedOn(selected.updatedAt)}`}
+                meta={
+                  <>
+                    Updated <Stamp iso={selected.updatedAt} />
+                  </>
+                }
                 body={selected.body}
                 slots={selected.slots}
                 actions={
@@ -238,8 +249,13 @@ export function PromptsRoute({
   );
 }
 
-function promptMeta(prompt: Prompt): string {
-  return `${kindLabel(prompt.kind)} · ${plural(prompt.slots.length, "keyword")} · updated ${updatedOn(prompt.updatedAt)}`;
+function promptMeta(prompt: Prompt): ReactElement {
+  return (
+    <>
+      {`${kindLabel(prompt.kind)} · ${plural(prompt.slots.length, "keyword")} · updated `}
+      <Stamp iso={prompt.updatedAt} />
+    </>
+  );
 }
 
 function NewPromptButton({ kind }: { readonly kind: PromptKind }) {

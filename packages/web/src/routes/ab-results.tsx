@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { readAbResults } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { LoadingBlock, QueryState } from "@/components/kit/query-state";
 import { useToast } from "@/components/kit/toast";
 
 // Library → A/B results: every finished A/B test the extension read from Studio, the winner
@@ -38,6 +39,36 @@ function notesOf(results: readonly Result[]): string {
   ].join("\n");
 }
 
+function ResultList({ results }: { readonly results: readonly Result[] }): ReactElement {
+  return (
+    <ul className="m-0 flex list-none flex-col gap-4 p-0">
+      {results.map((result) => {
+        const sorted = [...result.variants].sort((a, b) => (b.share ?? 0) - (a.share ?? 0));
+        return (
+          <li
+            key={`${result.projectId}-${String(result.short ?? 0)}`}
+            className="flex flex-col gap-1"
+          >
+            <div className="sl-row__title">{result.projectTitle}</div>
+            <ol className="m-0 flex flex-col gap-1 pl-5 text-small">
+              {sorted.map((variant, index) => (
+                <li
+                  key={variantName(variant, index)}
+                  className={index === 0 ? "text-ink" : "text-ink-2"}
+                >
+                  {variantName(variant, index)}
+                  {variant.share === null ? "" : ` · ${String(variant.share)}% of watch time`}
+                  {index === 0 ? " · winner" : ""}
+                </li>
+              ))}
+            </ol>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function AbResultsRoute(): ReactElement {
   const { api } = useApp();
   const notify = useToast();
@@ -57,6 +88,11 @@ export function AbResultsRoute(): ReactElement {
           type="button"
           variant="secondary"
           disabled={list.length === 0}
+          disabledReason={
+            results.data === undefined
+              ? "The A/B results haven't loaded"
+              : "No finished A/B tests yet"
+          }
           onClick={() =>
             void navigator.clipboard?.writeText(notesOf(list)).then(
               () =>
@@ -72,40 +108,22 @@ export function AbResultsRoute(): ReactElement {
           Copy as prompt notes
         </Button>
       </div>
-      {results.isPending ? (
-        <p className="text-small text-ink-3">Loading…</p>
-      ) : list.length === 0 ? (
-        <p className="text-small text-ink-3">
-          No finished A/B tests yet. Start one from a project's Video section (On YouTube → A/B
-          test) or the extension; its result shows here once Studio has one.
-        </p>
-      ) : (
-        <ul className="m-0 flex list-none flex-col gap-4 p-0">
-          {list.map((result) => {
-            const sorted = [...result.variants].sort((a, b) => (b.share ?? 0) - (a.share ?? 0));
-            return (
-              <li
-                key={`${result.projectId}-${String(result.short ?? 0)}`}
-                className="flex flex-col gap-1"
-              >
-                <div className="sl-row__title">{result.projectTitle}</div>
-                <ol className="m-0 flex flex-col gap-1 pl-5 text-small">
-                  {sorted.map((variant, index) => (
-                    <li
-                      key={variantName(variant, index)}
-                      className={index === 0 ? "text-ink" : "text-ink-2"}
-                    >
-                      {variantName(variant, index)}
-                      {variant.share === null ? "" : ` · ${String(variant.share)}% of watch time`}
-                      {index === 0 ? " · winner" : ""}
-                    </li>
-                  ))}
-                </ol>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <QueryState
+        query={results}
+        what="The A/B results"
+        loading={<LoadingBlock label="Loading the A/B results…" rows={3} rowClassName="h-14" />}
+      >
+        {(loaded) =>
+          loaded.length === 0 ? (
+            <p className="m-0 text-small text-ink-3">
+              No finished A/B tests yet. Start one from a project's Video section (On YouTube → A/B
+              test) or the extension; its result shows here once Studio has one.
+            </p>
+          ) : (
+            <ResultList results={loaded} />
+          )
+        }
+      </QueryState>
     </div>
   );
 }

@@ -19,7 +19,12 @@ export interface EventSourceLike {
   addEventListener(type: "open", listener: () => void): void;
   addEventListener(type: string, listener: (event: MessageEvent<string>) => void): void;
   close(): void;
+  // The browser's EventSource has it; 2 is CLOSED, a stream it will not retry by itself.
+  readonly readyState?: number;
 }
+
+// Whether the live connection is up: "lost" from a dropped stream until the next open.
+export type Connection = "open" | "lost";
 
 export type OpenEvents = (url: string) => EventSourceLike;
 
@@ -52,6 +57,8 @@ export interface GlobalSink {
   readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
   // An automatic review kept an item flagged and waits for Overrule or Redo.
   readonly reviewFlagged?: (event: ReviewFlaggedEvent) => void;
+  // The connection dropped or came back (`components/connection-status.tsx`).
+  readonly connection?: (state: Connection) => void;
 }
 
 const projectEventNames = [
@@ -146,6 +153,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       }
       sink.stagingChanged();
     },
+    sink.connection,
   );
 }
 
@@ -155,6 +163,7 @@ function listen<Event extends ProjectEvent | GlobalEvent>(
   names: readonly Event["type"][],
   onReconnect: () => void,
   onEvent: (event: Event) => void,
+  onConnection?: (state: Connection) => void,
 ): () => void {
   const source = open(url);
   let opened = false;
@@ -164,7 +173,9 @@ function listen<Event extends ProjectEvent | GlobalEvent>(
       onReconnect();
     }
     opened = true;
+    onConnection?.("open");
   });
+  if (onConnection !== undefined) source.addEventListener("error", () => onConnection("lost"));
   for (const name of names) {
     source.addEventListener(name, (message) => {
       const event = parse<Event>(message.data);

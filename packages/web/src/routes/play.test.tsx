@@ -303,9 +303,9 @@ describe("the providers a run may use", () => {
     await section("Outputs");
     const cartesia = screen.getByRole("option", { name: /Cartesia/ });
 
-    expect(unkeyed.textContent).toBe("OpenRouter · Key Missing");
-    expect(absent.textContent).toBe("Codex CLI · CLI Missing");
-    expect(cartesia.textContent).toBe("Cartesia · Key Missing");
+    expect(unkeyed.textContent).toBe("OpenRouter · No key");
+    expect(absent.textContent).toBe("Codex CLI · Not found");
+    expect(cartesia.textContent).toBe("Cartesia · No key");
     expect(screen.getByRole("option", { name: "ElevenLabs" }).textContent).toBe("ElevenLabs");
   });
 
@@ -326,8 +326,10 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "research source" }).textContent).toBe(
       "OffGenerateProvide",
     );
+    // The article's source is said as the task: write it, read the person's text as written,
+    // or adapt that text with the article prompt.
     expect(screen.getByRole("radiogroup", { name: "article source" }).textContent).toBe(
-      "OffGenerateProvide",
+      "Write it for meUse my text as writtenAdapt my textNo text",
     );
     await section("Outputs");
     expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
@@ -353,7 +355,7 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "research source" })).not.toBeNull();
 
     await section("Content");
-    await userEvent.click(segment("article", "Provide"));
+    await userEvent.click(segment("article", "Use my text as written"));
 
     expect(screen.queryByLabelText("Article prompt")).toBeNull();
     expect(screen.getByLabelText("Article text")).not.toBeNull();
@@ -364,7 +366,7 @@ describe("the source switches", () => {
   it("takes away what reads the article when the article is Off", async () => {
     await mount();
     await section("Content");
-    await userEvent.click(segment("article", "Off"));
+    await userEvent.click(segment("article", "No text"));
 
     expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
     expect(screen.queryByRole("radiogroup", { name: "audio source" })).toBeNull();
@@ -405,7 +407,7 @@ describe("optional stages", () => {
     });
     await pick("Outro", "Sting");
     await section("Content");
-    await userEvent.click(segment("article", "Provide"));
+    await userEvent.click(segment("article", "Use my text as written"));
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "The full article.");
     await section("Outputs");
@@ -454,7 +456,7 @@ describe("optional stages", () => {
     await section("Content");
     expect(screen.getByLabelText("unused")).not.toBeNull();
     await section("Content");
-    await userEvent.click(segment("article", "Provide"));
+    await userEvent.click(segment("article", "Use my text as written"));
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "My finished article.");
     await section("Outputs");
@@ -501,7 +503,7 @@ describe("optional stages", () => {
   it("offers an image provider for a generated thumbnail with Images Off or Provide", async () => {
     await mount();
     await section("Content");
-    await userEvent.click(segment("article", "Provide"));
+    await userEvent.click(segment("article", "Use my text as written"));
     await section("Content");
     await fill(screen.getByLabelText("Article text"), "Ready article.");
     await section("Outputs");
@@ -561,7 +563,7 @@ describe("the thumbnail's two generate modes", () => {
     await userEvent.click(segment("thumbnail", "Prompt by LLM"));
     await pick("Thumbnail prompt", "Title card");
     await section("Content");
-    await userEvent.click(segment("article", "Provide"));
+    await userEvent.click(segment("article", "Use my text as written"));
 
     // The article is provided now, so nothing but the thumbnail asks for an LLM.
     expect(screen.getByLabelText("LLM")).not.toBeNull();
@@ -806,7 +808,7 @@ describe("subtitles on Play", () => {
 });
 
 describe("explicit review error navigation", () => {
-  it("opens Audio Advanced and focuses its native chunking control", async () => {
+  it("opens More audio settings and focuses its native chunking control", async () => {
     await mount(
       {
         "POST /api/projects": fieldsAnswer([
@@ -823,7 +825,7 @@ describe("explicit review error navigation", () => {
     await waitFor(() =>
       expect(document.activeElement?.getAttribute("data-play-field")).toBe("chunking.mode"),
     );
-    expect(screen.getByText(/Audio Advanced/).closest("details")?.open).toBe(true);
+    expect(screen.getByText(/More audio settings/).closest("details")?.open).toBe(true);
   });
   it("keeps unknown failures visible and focuses the Review heading", async () => {
     await mount(

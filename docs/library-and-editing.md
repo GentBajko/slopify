@@ -2,7 +2,7 @@
 
 ## Library rows
 
-Every row on **Library → Prompts** and **Library → Intros & Outros** shows its actions:
+Every row on **Library → Prompts** and **Library → Intros & outros** shows its actions:
 **Edit**, **Duplicate**, **Use in Play**, **History** and **Delete** (Delete asks first).
 **Use in Play** picks the prompt or intro/outro in the open Play draft and opens Play on the
 field that shows it: an article prompt switches the article to Generate, an image prompt is
@@ -12,7 +12,7 @@ Play is starting a run from its draft the button is off.
 
 ### Renaming in the list
 
-The pencil beside a name on **Library → Prompts**, **Intros & Outros** and **Templates** renames
+The pencil beside a name on **Library → Prompts**, **Intros & outros** and **Templates** renames
 it in the row (`library/inline-name.tsx`): Enter or **Save name** saves, Escape or **Cancel**
 keeps the old name, and the notice carries **Undo**. The text stays as it is. A prompt or
 intro/outro is saved through the same endpoint as its editor, so the rename is one version in
@@ -23,14 +23,14 @@ were made from. None of these rows has a description to edit.
 
 ## Narration aliases
 
-**Library → Aliases** lists words the narrator should say differently from how they are
+**Library → Narration aliases** lists words the narrator should say differently from how they are
 written: `Dr.` as `Doctor`, `Ms.` as `Miss`, or any word or phrase and how to read it. Each
 alias has **Whole word** (on: only where it stands as a word, not inside a longer one) and
 **Match case** (off: `DR.` and `dr.` match too). Where two could apply, the longer written
 form wins. **Save aliases** saves the whole list; a row it can't save is marked with the
 reason.
 
-Play's Narration → Audio Advanced and Edit project have **Use narration aliases** (on for new drafts; off,
+Play's Narration → More audio settings and Edit project have **Use narration aliases** (on for new drafts; off,
 and nothing copied, for projects from before aliases existed). A project copies the Library's
 aliases when it starts; editing the Library never changes a started project until you press
 **Update from Library** in Edit project. Aliases work with every generated voice.

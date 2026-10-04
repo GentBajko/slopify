@@ -382,7 +382,7 @@ function readHeldValues(db: ScheduleDeps["db"]): HeldValues {
 
 // Entries of topics that are no longer held (approved, turned down, or gone with their
 // schedule) are dropped on every write.
-function writeHeldValues(
+export function writeHeldValues(
   db: ScheduleDeps["db"],
   change: (values: HeldValues) => HeldValues = (values) => values,
 ): void {

@@ -1,5 +1,10 @@
 import { expect, it, vi } from "vitest";
-import { formatScheduleDate, localScheduleTime, scheduleInstant } from "./time";
+import {
+  formatScheduleDate,
+  formatScheduleDateZoned,
+  localScheduleTime,
+  scheduleInstant,
+} from "./time";
 
 it("resolves selected-zone time independently of the browser zone", () => {
   expect(scheduleInstant("2027-01-15T12:00", "America/New_York")).toBe("2027-01-15T17:00:00.000Z");
@@ -41,4 +46,11 @@ it("uses the bundled Temporal implementation when the browser has no native one"
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("names the timezone on a zoned time", () => {
+  expect(formatScheduleDateZoned("2026-09-12T07:00:00Z", "UTC")).toMatch(/07:00.*UTC/);
+  expect(formatScheduleDateZoned("2026-09-12T07:00:00Z", "Europe/Tirane")).toMatch(
+    /09:00.*GMT\+2|CEST/,
+  );
 });

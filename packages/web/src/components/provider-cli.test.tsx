@@ -58,7 +58,9 @@ describe("CLI executable settings", () => {
       expect(screen.queryByRole("textbox")).toBeNull();
       expect(screen.queryByRole("button", { name: /Save.*path/ })).toBeNull();
       if (kind !== "ready") expect(screen.getByText(`Host ${kind} guidance`)).not.toBeNull();
-      expect(screen.queryByText("Not found on PATH")).toBeNull();
+      expect(
+        screen.queryByText("Not found in the folders your terminal searches (PATH)"),
+      ).toBeNull();
     },
   );
   it.each([
@@ -156,7 +158,9 @@ describe("CLI executable settings", () => {
     expect((field as HTMLInputElement).value).toBe("/opt/codex/bin/codex");
     await user.clear(field);
     await user.click(screen.getByRole("button", { name: "Save Codex CLI path" }));
-    expect(await screen.findByText("Not found on PATH")).not.toBeNull();
+    expect(
+      await screen.findByText("Not found in the folders your terminal searches (PATH)"),
+    ).not.toBeNull();
     expect(sent).toEqual({ path: "" });
     expect((field as HTMLInputElement).value).toBe("");
     expect(screen.queryByText("/opt/codex/bin/codex")).toBeNull();
@@ -169,8 +173,8 @@ describe("CLI executable settings", () => {
         "GET /api/providers": jsonAnswer({ providers: [codex("/removed/codex", false)] }),
       }),
     );
-    expect(await screen.findByText("Not found at saved path")).not.toBeNull();
-    expect(screen.queryByText("Not found on PATH")).toBeNull();
+    expect(await screen.findByText("Not found at the saved path")).not.toBeNull();
+    expect(screen.queryByText("Not found in the folders your terminal searches (PATH)")).toBeNull();
     expect(screen.getByText("/removed/codex")).not.toBeNull();
   });
 
