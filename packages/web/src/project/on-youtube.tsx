@@ -131,6 +131,13 @@ function UploadRow({
     onSuccess: done,
     onError: (failure: Error) => setError(failure.message),
   });
+  // Deleted in Studio: Slopify forgets the video, so the upload can be made again.
+  const forget = useMutation({
+    mutationFn: () => saveProjectVideo(api, projectId, short, ""),
+    onSuccess: done,
+    onError: (failure: Error) =>
+      setError(`${failure.message} Press Deleted on YouTube again, or clear the link and save.`),
+  });
 
   return (
     <li className="flex flex-col gap-1">
@@ -154,6 +161,17 @@ function UploadRow({
             onClick={() => save.mutate()}
           >
             Save link
+          </Button>
+        )}
+        {video === undefined || shown.trim() !== saved ? null : (
+          <Button
+            type="button"
+            size="small"
+            variant="quiet"
+            disabled={forget.isPending}
+            onClick={() => forget.mutate()}
+          >
+            Deleted on YouTube
           </Button>
         )}
         {video === undefined || video.uploadState !== "done" || short !== null ? null : (

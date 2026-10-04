@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { templateById } from "../project-templates/repo.js";
 import { scheduleRows } from "../schedules/repo.js";
 import { readSetting, writeSetting } from "../settings/repo.js";
 
@@ -16,7 +17,7 @@ export {
   weekdays,
 } from "./plan-model.js";
 
-import { type PlanSlot, type PostingPlan, postingPlanSchema } from "./plan-model.js";
+import { type PlanSlot, type PostingPlan, postingPlanSchema, seriesOf } from "./plan-model.js";
 
 export const postingPlanKey = "studio.postingPlan";
 const key = postingPlanKey;
@@ -47,6 +48,17 @@ export function readStoredPlan(db: DatabaseSync): PostingPlan {
   return emptyPlan(localTimeZone());
 }
 
+// The series of a schedule's template, from its project title ("{{Topic}} | Stories" →
+// "Stories"); "" when the template is gone or its title names none.
+function templateSeries(db: DatabaseSync, templateId: string): string {
+  try {
+    const title = templateById(db, templateId)?.document.form.title;
+    return title === undefined ? "" : seriesOf({ title });
+  } catch {
+    return "";
+  }
+}
+
 // The lines every release is planned from: each schedule's release times (one line for each
 // day it runs), then the stored lines.
 export function readPlan(db: DatabaseSync): PostingPlan {
@@ -56,7 +68,7 @@ export function readPlan(db: DatabaseSync): PostingPlan {
     .flatMap((schedule) =>
       schedule.releases.map((release) => ({
         name: `s${schedule.id.slice(0, 8)}${String(release.day)}`,
-        series: "",
+        series: templateSeries(db, schedule.templateId),
         long: release.long,
         shorts: [...release.shorts],
         schedule: schedule.id,

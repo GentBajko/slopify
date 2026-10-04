@@ -234,7 +234,11 @@ it("gives a schedule's project its run day's line, in the schedule's zone, and n
     longAt: "2026-10-04T18:00:00.000Z",
     shortsAt: ["2026-10-05T10:00:00.000Z"],
   });
-  // A project from no schedule takes none of a schedule's lines.
-  planReleases(store, lines, { id: "p3", series: "", shorts: 0 }, now);
+  // A project from no schedule takes none of a schedule's lines, unless it is of the
+  // schedule's template's series.
+  planReleases(store, lines, { id: "p3", series: "Other", shorts: 0 }, now);
   expect(scheduleOf(store, "p3")).toBeUndefined();
+  const series = { ...lines, rows: lines.rows.map((row) => ({ ...row, series: "Tales" })) };
+  planReleases(store, series, { id: "p3", series: "Tales", shorts: 0 }, now);
+  expect(scheduleOf(store, "p3")?.longAt).toBe("2026-10-11T18:00:00.000Z");
 });

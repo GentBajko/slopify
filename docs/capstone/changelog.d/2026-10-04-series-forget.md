@@ -1,0 +1,1 @@
+- Schedule release lines carry the template's series (`templateSeries`) and `fits` takes same-series projects; On YouTube gets a Deleted on YouTube button (empty link forgets the video).

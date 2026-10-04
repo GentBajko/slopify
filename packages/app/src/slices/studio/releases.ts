@@ -100,10 +100,11 @@ export interface PlanWho {
 
 type Line = PostingPlan["rows"][number];
 
-// A schedule's line takes only that schedule's projects; a stored line takes its series (or any).
+// A schedule's line takes that schedule's projects and any other of its template's series (a
+// project queued by hand from its topics); a stored line takes its series, or any.
 const fits = (line: Line, who: PlanWho): boolean =>
   line.schedule !== undefined
-    ? line.schedule === who.schedule
+    ? line.schedule === who.schedule || (line.series !== "" && line.series === who.series)
     : line.series === "" || line.series === who.series;
 
 const zoneOf = (plan: PostingPlan, line: Line): string => line.timeZone ?? plan.timeZone;
