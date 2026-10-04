@@ -297,6 +297,19 @@ export async function readRunCost(api: Api, id: string): Promise<RunCost> {
 // `fields[]`, the way a refused template does. A creation that failed on this machine is
 // still thrown, and the key shows it. A refusal is a problem+json the screen shows where
 // the press happened; there is nothing to read back on success.
+// Moves projects to another channel (Projects → Move the shown, or a project's More menu).
+export async function moveProjectsToChannel(
+  api: Api,
+  projectIds: readonly string[],
+  channelId: string,
+): Promise<{ readonly moved: number }> {
+  return detailed<{ moved: number }>(
+    await api.client.projects["move-channel"].$post({
+      json: { projectIds: [...projectIds], channelId },
+    }),
+  );
+}
+
 export async function removeProject(api: Api, id: string): Promise<void> {
   const response = await api.client.projects[":id"].$delete({ param: { id } });
   if (!response.ok) {

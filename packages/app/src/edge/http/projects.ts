@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { transact } from "../../kernel/db/tx.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import type { Project, ProjectListing, ProjectSummary } from "../../slices/admission/model.js";
 import {
@@ -12,7 +13,7 @@ import {
   stagesOf,
 } from "../../slices/admission/repo.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
-import { projectChannels } from "../../slices/channels/repo.js";
+import { channelById, projectChannels, setProjectChannel } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
@@ -135,6 +136,37 @@ export function projectRoutes(deps: AppDeps) {
       })
       // Moves the project to the trash (Settings → Trash) for 30 days; removing it for good is
       // Delete now there, or the daily purge (`slices/trash`).
+      // Moves projects to another channel: one from its page, or every one the Projects list
+      // shows at once (a search like "ground." and Move).
+      .post(
+        "/move-channel",
+        zValidator(
+          "json",
+          z
+            .object({
+              projectIds: z.array(z.string().min(1).max(64)).min(1).max(2000),
+              channelId: z.string().min(1).max(64),
+            })
+            .strict(),
+          onInvalid,
+        ),
+        (c) => {
+          const { projectIds, channelId } = c.req.valid("json");
+          if (channelById(deps.db, channelId) === undefined)
+            return problem(c, {
+              status: 404,
+              title: titleOf(404),
+              detail:
+                "That channel no longer exists. Reload the page and pick one from the list, or make it again in Channels.",
+            });
+          const live = new Set(listProjects(deps.db).map((project) => project.id));
+          const moving = [...new Set(projectIds)].filter((id) => live.has(id));
+          transact(deps.db, () => {
+            for (const id of moving) setProjectChannel(deps.db, id, channelId);
+          });
+          return c.json({ moved: moving.length, channelId });
+        },
+      )
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
         const id = c.req.valid("param").id;
         return withProjectControl(deps.db, id, () => {

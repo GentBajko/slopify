@@ -1,0 +1,1 @@
+- Projects move between channels: `POST /api/projects/move-channel` (`setProjectChannel` in one transaction); Projects → "Move the N shown to" and the project More menu → Move to channel… (`project/move-channel.tsx`); with All channels the list groups by channel.

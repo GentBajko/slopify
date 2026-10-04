@@ -413,6 +413,37 @@ describe("POST /api/projects with library templates", () => {
   });
 });
 
+describe("POST /api/projects/move-channel", () => {
+  it("moves the projects to the channel, and refuses a channel that doesn't exist", async () => {
+    const { app, db } = harness();
+    const config = (title: string) =>
+      `'{"title":"${title}","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}'`;
+    db.exec(
+      `INSERT INTO projects VALUES ('p1','ground.one','16:9',${config("ground.one")},'2026-09-01','2026-09-01')`,
+    );
+    db.exec(
+      `INSERT INTO projects VALUES ('p2','A video','16:9',${config("A video")},'2026-09-02','2026-09-02')`,
+    );
+    db.exec(
+      "INSERT INTO channels (id,name,is_default,created_at,updated_at) VALUES ('assets','Assets',0,'x','x')",
+    );
+    const move = (body: unknown) =>
+      app.request("/api/projects/move-channel", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const moved = await move({ projectIds: ["p1", "gone"], channelId: "assets" });
+    expect(await moved.json()).toEqual({ moved: 1, channelId: "assets" });
+    const listed = (await (await app.request("/api/projects")).json()) as {
+      projects: { id: string; channelId: string }[];
+    };
+    expect(listed.projects.find((one) => one.id === "p1")?.channelId).toBe("assets");
+    expect(listed.projects.find((one) => one.id === "p2")?.channelId).toBe(defaultChannelId);
+    expect((await move({ projectIds: ["p2"], channelId: "nowhere" })).status).toBe(404);
+  });
+});
+
 describe("GET /api/projects", () => {
   it("lists what has been created, newest first, with the derived status", async () => {
     const { app, db } = harness();

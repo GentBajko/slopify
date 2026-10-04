@@ -28,6 +28,7 @@ import { OpenProjectTab } from "@/project/fix-it";
 import { FreeSpaceOffer } from "@/project/free-space";
 import { type MoreAction, ProjectHeader } from "@/project/header";
 import { LiveBuild } from "@/project/live-build";
+import { MoveToChannel } from "@/project/move-channel";
 import {
   type OutdatedOutput,
   outdatedGroups,
@@ -115,6 +116,7 @@ function ProjectWorkspace({
   const [chosen, setChosen] = useState<SectionId | undefined>();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const revisionId = project.data?.revisionId ?? null;
   const controller = useRevisionController(projectId, revisionId, {
@@ -453,6 +455,12 @@ function ProjectWorkspace({
       disabled: revisionId === null || isSample,
     },
     {
+      id: "channel",
+      label: "Move to channel…",
+      run: () => setMoveOpen(true),
+      disabled: isSample,
+    },
+    {
       id: "cancel",
       label: "Cancel the run…",
       run: () => setCancelling(true),
@@ -712,6 +720,12 @@ function ProjectWorkspace({
               {uploadOpen ? (
                 <PrepareUploadDrawer projectId={projectId} onClose={() => setUploadOpen(false)} />
               ) : null}
+              <MoveToChannel
+                projectId={projectId}
+                title={summary.title}
+                open={moveOpen}
+                onClose={() => setMoveOpen(false)}
+              />
               <SaveProjectTemplate
                 projectId={projectId}
                 revisionId={revisionId}

@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
-import { removeProject } from "@/api";
+import { moveProjectsToChannel, removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
@@ -13,6 +13,7 @@ import { Button, IconButton } from "@/components/kit/button";
 import { ariaKeyShortcuts, useCommand, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
+import { Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
@@ -252,18 +253,47 @@ export function ProjectsRoute({
                   : "No project matches. Clear the search or pick All."}
               </p>
             ) : (
-              <List label="Projects">
-                {shown.map((project) => (
-                  <ProjectRow
-                    key={project.id}
-                    project={project}
-                    sample={samples.has(project.id)}
-                    onDelete={() => setDeleting(project)}
-                    onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
-                    busy={uploaded.isPending}
-                  />
+              <>
+                <MoveShown projects={shown} />
+                {(current.channel === undefined && current.channels.length > 1
+                  ? current.channels
+                      .map((channel) => ({
+                        channel,
+                        projects: shown.filter(
+                          (one) => (one.channelId ?? current.channels[0]?.id) === channel.id,
+                        ),
+                      }))
+                      .filter((group) => group.projects.length > 0)
+                  : [{ channel: undefined, projects: shown }]
+                ).map((group) => (
+                  <section
+                    key={group.channel?.id ?? "all"}
+                    aria-label={group.channel?.name ?? "Projects"}
+                    className="flex flex-col gap-2"
+                  >
+                    {group.channel === undefined ? null : (
+                      <SectionHead
+                        as="h3"
+                        size="small"
+                        title={group.channel.name}
+                        meta={`${String(group.projects.length)} ${group.projects.length === 1 ? "project" : "projects"}`}
+                      />
+                    )}
+                    <List label={group.channel?.name ?? "Projects"}>
+                      {group.projects.map((project) => (
+                        <ProjectRow
+                          key={project.id}
+                          project={project}
+                          sample={samples.has(project.id)}
+                          onDelete={() => setDeleting(project)}
+                          onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
+                          busy={uploaded.isPending}
+                        />
+                      ))}
+                    </List>
+                  </section>
                 ))}
-              </List>
+              </>
             )}
           </BoardColumn>
           <BoardColumn as="aside" label="Projects at a glance">
@@ -428,5 +458,73 @@ function SkeletonRows(): ReactElement {
         </li>
       ))}
     </ul>
+  );
+}
+
+// "Move the 67 shown to [channel]": every project the list shows now (a search such as
+// "ground." narrows it) goes to the chosen channel. Asks first when it is more than one.
+function MoveShown({
+  projects,
+}: {
+  readonly projects: readonly ProjectListing[];
+}): ReactElement | null {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const notify = useToast();
+  const current = useCurrentChannel();
+  const [target, setTarget] = useState("");
+  const [asking, setAsking] = useState(false);
+  const move = useMutation({
+    mutationFn: () =>
+      moveProjectsToChannel(
+        api,
+        projects.map((one) => one.id),
+        target,
+      ),
+    onSuccess: (answer) => {
+      void client.invalidateQueries({ queryKey: keys.projects });
+      const name = current.channels.find((one) => one.id === target)?.name ?? "the channel";
+      notify(`Moved ${String(answer.moved)} projects to ${name}.`, "success");
+      setTarget("");
+    },
+    onError: (error: Error) => notify(`The projects weren't moved: ${error.message}`, "error"),
+  });
+  if (current.channels.length < 2 || projects.length === 0) return null;
+  const name = current.channels.find((one) => one.id === target)?.name ?? "";
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-small text-ink-2">
+      <span>{`Move the ${String(projects.length)} shown to`}</span>
+      <Select
+        aria-label="Channel to move the shown projects to"
+        className="w-[220px]"
+        value={target}
+        onChange={(event) => setTarget(event.currentTarget.value)}
+        options={[
+          { value: "", label: "Choose a channel" },
+          ...current.channels.map((one) => ({ value: one.id, label: one.name })),
+        ]}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="small"
+        disabled={target === "" || move.isPending}
+        onClick={() => (projects.length > 1 ? setAsking(true) : move.mutate())}
+      >
+        Move
+      </Button>
+      <ConfirmDialog
+        open={asking}
+        title={`Move ${String(projects.length)} projects to ${name}?`}
+        confirmLabel="Move them"
+        tone="primary"
+        consequence={`Every project the list shows now goes to ${name}, from ${projects[0]?.title ?? ""} to ${projects.at(-1)?.title ?? ""}. You can move them back the same way.`}
+        onConfirm={() => {
+          setAsking(false);
+          move.mutate();
+        }}
+        onCancel={() => setAsking(false)}
+      />
+    </div>
   );
 }
