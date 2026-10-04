@@ -205,6 +205,14 @@ function commit(input: HTMLInputElement): void {
       }),
     );
   input.dispatchEvent(new Event("change", { bubbles: true }));
+  // Studio ignores a synthetic Enter (only a real keypress counts), but its date field sits in a
+  // form whose submit commits the typed date; submitting it does what pressing Enter does.
+  // The page never navigates: the submit's default is cancelled, Studio's own handler still runs.
+  const form = input.closest("form");
+  if (form !== null) {
+    form.addEventListener("submit", (event) => event.preventDefault(), { once: true });
+    form.requestSubmit();
+  }
 }
 
 // The Visibility step: opens Schedule and types the date and time. The person presses Schedule.

@@ -158,3 +158,21 @@ describe("Settings → YouTube Studio", () => {
     ).toMatch(/^http:\/\/slopify\.test\/api\/studio\/extension\/(chrome|firefox)\.zip$/);
   });
 });
+
+describe("playlistsHint", () => {
+  it("flags a shorts playlist that also takes long videos, and is quiet once it is set", async () => {
+    const { playlistsHint } = await import("./settings-panel.js");
+    expect(
+      playlistsHint([
+        { name: "Dungeons & Dragons", byDefault: true },
+        { name: "D&D Shorts", byDefault: true },
+      ]),
+    ).toMatch(/^"D&D Shorts" takes long videos too/);
+    expect(
+      playlistsHint([
+        { name: "Dungeons & Dragons", byDefault: true, for: "long" },
+        { name: "D&D Shorts", byDefault: true, for: "shorts" },
+      ]),
+    ).toBeUndefined();
+  });
+});

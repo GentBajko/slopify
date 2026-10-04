@@ -201,6 +201,9 @@ function Playlists() {
             Save playlists
           </Button>
         </div>
+        {playlistsHint(rows) === undefined ? null : (
+          <p className="m-0 text-small text-waiting">{playlistsHint(rows)}</p>
+        )}
         <UnsavedStatus
           dirty={draft !== undefined}
           saveLabel="Save playlists"
@@ -217,6 +220,16 @@ function Playlists() {
       )}
     </Field>
   );
+}
+
+// A playlist named for shorts that also takes long videos is almost always a mistake: every
+// long video would go into it, and every short into the other playlists too.
+export function playlistsHint(rows: readonly StudioPlaylist[]): string | undefined {
+  const shortsNamed = rows.find(
+    (one) => /\bshorts?\b/i.test(one.name) && (one.for ?? "all") === "all",
+  );
+  if (shortsNamed === undefined) return undefined;
+  return `"${shortsNamed.name.trim()}" takes long videos too, and shorts also go into every playlist set to Videos and shorts. Set it to Shorts only, and your long-video playlists to Long videos only.`;
 }
 
 function playlistsProblem(rows: readonly StudioPlaylist[]): string | undefined {

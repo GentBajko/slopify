@@ -1,0 +1,1 @@
+- 3.10.1 / extension 1.2.2: fillSchedule commits the typed date with form.requestSubmit() (Studio ignores synthetic Enter; checked live 2026-10-04), submit default cancelled; Settings → YouTube Studio playlistsHint flags a shorts-named playlist set to Videos and shorts.
