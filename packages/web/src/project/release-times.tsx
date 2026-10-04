@@ -176,7 +176,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                 ) : late ? (
                   <Badge tone="failed">Late · upload now</Badge>
                 ) : (
-                  `Ready · upload any time before ${when.format(new Date(item.uploadBy))}`
+                  "Ready to upload"
                 )}
               </span>
             </li>

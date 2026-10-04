@@ -48,13 +48,8 @@ function look(item: CalendarItem): { readonly tone: BadgeTone; readonly word: st
     case "not-ready":
       return { tone: "neutral", word: "Not rendered yet" };
     default:
-      // Ready to upload now; the deadline is only the latest time, so it turns orange only in
-      // its last day.
-      return item.uploadBy === null
-        ? { tone: "neutral", word: "No time" }
-        : Date.parse(item.uploadBy) - Date.now() < 864e5
-          ? { tone: "waiting", word: `Upload soon · before ${when(item.uploadBy)}` }
-          : { tone: "neutral", word: `Ready · upload before ${when(item.uploadBy)}` };
+      // Ready: it can be uploaded and scheduled any time; only a late one is flagged.
+      return { tone: "neutral", word: "Ready to upload" };
   }
 }
 
