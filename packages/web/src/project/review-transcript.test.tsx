@@ -78,3 +78,35 @@ it("offers the passage's fix beside each line", async () => {
   );
   expect(fix).toHaveBeenCalledWith(expect.objectContaining({ key: "b" }));
 });
+
+it("draws a long transcript a page at a time and follows the spoken line", () => {
+  const media = createRef<HTMLAudioElement>();
+  const lines: TranscriptLine[] = Array.from({ length: 500 }, (_, index) => ({
+    key: `l${String(index)}`,
+    text: `Line ${String(index)}.`,
+    start: index * 2,
+    end: index * 2 + 1.9,
+    shownAt: index * 2,
+    media,
+  }));
+  renderApp(
+    <>
+      {/* biome-ignore lint/a11y/useMediaCaption: a test player. */}
+      <audio ref={media} />
+      <Transcript lines={lines} label="Narration transcript" />
+    </>,
+    testDeps({}),
+  );
+  const list = screen.getByRole("list", { name: "Narration transcript" });
+  expect(list.querySelectorAll("li")).toHaveLength(120);
+  expect(screen.getByRole("button", { name: "Later lines (380 more)" })).toBeTruthy();
+  const audio = media.current;
+  if (audio === null) throw new Error("Expected the audio element.");
+  stubMedia(audio);
+  act(() => {
+    audio.currentTime = 600;
+    audio.dispatchEvent(new Event("timeupdate"));
+  });
+  expect(list.querySelector('[aria-current="true"]')?.textContent).toContain("Line 300.");
+  expect(screen.getByRole("button", { name: /^Earlier lines \(280 before/ })).toBeTruthy();
+});

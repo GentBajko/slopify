@@ -72,6 +72,18 @@ export function Transcript({
   const mine = lines.filter((line) => line.media.current === clock.target);
   const at = lineAt(mine, clock.seconds);
   const current = at === -1 ? undefined : mine[at]?.key;
+  // A two-hour narration has thousands of lines; drawing them all froze the project page for
+  // seconds. Only a page of lines is drawn, and it follows the line being spoken.
+  const [start, setStart] = useState(0);
+  const playingAt = current === undefined ? -1 : lines.findIndex((line) => line.key === current);
+  useEffect(() => {
+    if (playingAt === -1) return;
+    setStart((from) =>
+      playingAt < from || playingAt >= from + windowSize ? Math.max(0, playingAt - lead) : from,
+    );
+  }, [playingAt]);
+  const shown = lines.slice(start, start + windowSize);
+  const later = lines.length - start - shown.length;
   // The spoken line stays in view inside the list's own scroll, never scrolling the page.
   useEffect(() => {
     const box = list.current;
@@ -85,23 +97,49 @@ export function Transcript({
       box.scrollTop = Math.max(0, row.offsetTop - box.clientHeight / 3);
   }, [current]);
   return (
-    <ol
-      ref={list}
-      aria-label={label}
-      className="relative m-0 flex max-h-[420px] list-none flex-col overflow-y-auto p-0"
-    >
-      {lines.map((line) => (
-        <Row
-          key={line.key}
-          line={line}
-          playing={line.key === current}
-          onFix={onFix}
-          fixLabel={fixLabel}
-        />
-      ))}
-    </ol>
+    <div className="flex min-w-0 flex-col gap-1">
+      {start > 0 ? (
+        <Button
+          variant="quiet"
+          size="small"
+          className="self-start"
+          onClick={() => setStart(Math.max(0, start - windowSize))}
+        >
+          {`Earlier lines (${String(start)} before ${playerTime(lines[start]?.shownAt ?? 0)})`}
+        </Button>
+      ) : null}
+      <ol
+        ref={list}
+        aria-label={label}
+        className="relative m-0 flex max-h-[420px] list-none flex-col overflow-y-auto p-0"
+      >
+        {shown.map((line) => (
+          <Row
+            key={line.key}
+            line={line}
+            playing={line.key === current}
+            onFix={onFix}
+            fixLabel={fixLabel}
+          />
+        ))}
+      </ol>
+      {later > 0 ? (
+        <Button
+          variant="quiet"
+          size="small"
+          className="self-start"
+          onClick={() => setStart(start + windowSize)}
+        >
+          {`Later lines (${String(later)} more)`}
+        </Button>
+      ) : null}
+    </div>
   );
 }
+
+const windowSize = 120;
+// Lines kept above the spoken one when the page moves to follow it.
+const lead = 20;
 
 // One line; only the rows whose playing state changed render again as the audio plays.
 const Row = memo(function Row({
