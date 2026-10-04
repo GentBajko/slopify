@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronRightIcon, UploadIcon } from "lucide-react";
 import { Fragment, type ReactElement, useRef, useState } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, IconButton } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { LineChart } from "@/components/kit/line-chart";
 import { SectionHead } from "@/components/kit/section-head";
@@ -573,15 +573,7 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                   const toggle = () => setOpened(open ? undefined : row.videoId);
                   return (
                     <Fragment key={row.videoId}>
-                      <tr
-                        className={report.chartMetric === null ? undefined : "cursor-pointer"}
-                        onClick={(event) => {
-                          // The checkbox and the project link keep their own clicks.
-                          if (report.chartMetric === null) return;
-                          if ((event.target as Element).closest("a, input, label, button")) return;
-                          toggle();
-                        }}
-                      >
+                      <tr>
                         {report.chartMetric === null ? null : (
                           <td>
                             <label className="flex items-center gap-2">
@@ -613,19 +605,18 @@ export function StudioReportSection({ channelId }: { readonly channelId: string 
                         <td className="max-w-[320px]">
                           <span className="flex min-w-0 items-center gap-1">
                             {report.chartMetric === null ? null : (
-                              <button
-                                type="button"
+                              <IconButton
+                                size="small"
                                 aria-expanded={open}
-                                aria-label={`${open ? "Hide" : "Show"} the chart of ${row.title}`}
-                                className="shrink-0 text-ink-3"
+                                label={`${open ? "Hide" : "Show"} the chart of ${row.title}`}
                                 onClick={toggle}
                               >
                                 {open ? (
-                                  <ChevronDownIcon aria-hidden="true" className="size-4" />
+                                  <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} />
                                 ) : (
-                                  <ChevronRightIcon aria-hidden="true" className="size-4" />
+                                  <ChevronRightIcon aria-hidden="true" strokeWidth={1.75} />
                                 )}
-                              </button>
+                              </IconButton>
                             )}
                             {project === undefined ? (
                               <span className="block truncate" title={row.title}>
