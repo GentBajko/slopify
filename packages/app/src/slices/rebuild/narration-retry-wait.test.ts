@@ -40,3 +40,28 @@ it("waits while the project's other steps run, then records the chunk again", as
     h.close();
   }
 });
+
+it("looks again by itself when the step that kicked it still counted as running", async () => {
+  const h = await mutationFixture();
+  vi.useFakeTimers({ toFake: ["setTimeout"], shouldAdvanceTime: true });
+  try {
+    const rebuild = createRebuildDeps(h.deps);
+    requestNarrationRetry(h.deps.db, {
+      projectId: h.projectId,
+      chunkKey: "audio:body:chunk-2",
+      now: "2026-09-30T00:00:00.000Z",
+    });
+    const retries = createNarrationRetries();
+    retries.bind(rebuild.deps);
+    answers.push({ ok: false, reason: "running" }, { ok: true });
+    retries.kick(h.projectId);
+    await expect.poll(() => rebuild.ticks).toContain(h.projectId);
+    expect(pendingNarrationRetries(h.deps.db, h.projectId)).toHaveLength(1);
+    // Nothing kicks it again: after the wait it starts on its own.
+    await vi.advanceTimersByTimeAsync(15_000);
+    await expect.poll(() => pendingNarrationRetries(h.deps.db, h.projectId)).toEqual([]);
+  } finally {
+    vi.useRealTimers();
+    h.close();
+  }
+});

@@ -92,6 +92,12 @@ export function createNarrationRetries(): {
       if (running.has(id)) continue;
       running.add(id);
       void recordAgain(deps, retry)
+        .then((waiting) => {
+          // The step that just finished may still count as running when it kicks this (the
+          // runner lets go of it after its `onFinished`), and nothing else finishes to kick
+          // again: look again shortly until the project is free.
+          if (waiting) setTimeout(() => kick(retry.projectId), retryWaitMs).unref?.();
+        })
         .catch((error: unknown) => {
           deps.log.write("error", "narration.retry", {
             projectId: retry.projectId,
@@ -117,11 +123,17 @@ export function createNarrationRetries(): {
   };
 }
 
-async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<void> {
+// How long a retry waiting for the project's other steps waits before it looks again.
+export const retryWaitMs = 15_000;
+// The waits already logged, so looking again doesn't log the same line every 15 seconds.
+const told = new Set<string>();
+
+// True when the project's other steps are still going and the retry waits for them.
+async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<boolean> {
   const base = currentRevisionId(deps.db, retry.projectId);
   if (base === undefined) {
     settle(deps.db, retry, "failed", "no project", deps.clock.now().toISOString());
-    return;
+    return false;
   }
   const result = await recoverProject(
     deps,
@@ -141,6 +153,9 @@ async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<vo
       detail: `Recording ${retry.chunkKey} again (try ${String(retry.tries)} of ${String(narrationRetryLimit)}).`,
     });
   } else if (result.reason === "running") {
+    const key = retryKey(retry);
+    if (told.has(key)) return true;
+    told.add(key);
     // Another step of the project is still going (its PDF, say): the retry waits for it and
     // starts when that step finishes, which kicks this again (`onFinished`). Giving up here
     // left the video failed with a message promising a retry that never came.
@@ -148,7 +163,7 @@ async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<vo
       projectId: retry.projectId,
       detail: `Recording ${retry.chunkKey} again once the project's running steps finish.`,
     });
-    return;
+    return true;
   } else {
     settle(deps.db, retry, "failed", refusal(result), now);
     deps.log.write("warn", "narration.retry", {
@@ -157,6 +172,7 @@ async function recordAgain(deps: RebuildDeps, retry: NarrationRetry): Promise<vo
     });
   }
   deps.emit(retry.projectId, { type: "project.updated", projectId: retry.projectId });
+  return false;
 }
 
 function refusal(result: Extract<RecoveryResult, { ok: false }>): string {
