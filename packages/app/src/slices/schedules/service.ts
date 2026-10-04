@@ -299,6 +299,7 @@ function summary(
     values: input.values,
     brief: input.brief === null || input.brief === "" ? null : input.brief,
     topicGeneration: input.topicGeneration,
+    releases: input.releases,
     topics,
     status,
     version,

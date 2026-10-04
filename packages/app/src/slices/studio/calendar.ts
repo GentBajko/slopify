@@ -73,8 +73,11 @@ export function releaseCalendar(
   const longs = allReleases(deps.db).filter(
     (release) => release.short === 0 && projects.has(release.projectId) && inWindow(release.at),
   );
-  const seriesOfLine = (line: string | null) =>
-    plan.rows.find((row) => row.name === line)?.series ?? "";
+  // A schedule's line shows the schedule's name; a stored line its series.
+  const seriesOfLine = (line: string | null) => {
+    const row = plan.rows.find((one) => one.name === line);
+    return row?.label ?? row?.series ?? "";
+  };
 
   const entries: CalendarEntry[] = longs.map((long) => {
     const project = projects.get(long.projectId);

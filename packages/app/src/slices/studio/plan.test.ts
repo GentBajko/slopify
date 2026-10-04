@@ -88,7 +88,7 @@ it("gives each finished project the next free long-video time, in time order", (
     "2026-10-06T18:00:00.000Z",
     "2026-10-08T18:00:00.000Z",
   ]);
-  expect(freeSlots(store, plan, "", now, 1)).toEqual([
+  expect(freeSlots(store, plan, { series: "" }, now, 1)).toEqual([
     { row: "1", longAt: "2026-10-11T18:00:00.000Z" },
   ]);
 });
@@ -197,4 +197,44 @@ it("swaps two videos' release times, and their shorts follow each", () => {
     Date.parse("2026-10-08T18:00:00.000Z"),
   );
   expect(swapReleases(store, "p1", "p3", now)).toBe(false);
+});
+
+it("gives a schedule's project its run day's line, in the schedule's zone, and no other project", () => {
+  const store = db();
+  const lines: PostingPlan = {
+    timeZone: "UTC",
+    rows: [
+      {
+        name: "sun",
+        series: "",
+        long: at(0, "20:00"),
+        shorts: [at(1, "12:00")],
+        schedule: "s1",
+        runDay: 5,
+        timeZone: "Europe/Berlin",
+      },
+      {
+        name: "tue",
+        series: "",
+        long: at(2, "20:00"),
+        shorts: [],
+        schedule: "s1",
+        runDay: 0,
+        timeZone: "Europe/Berlin",
+      },
+    ],
+  };
+  // Made by Sunday's run: it skips the earlier Sunday line for Tuesday's.
+  planReleases(store, lines, { id: "p1", series: "", schedule: "s1", runDay: 0, shorts: 0 }, now);
+  expect(scheduleOf(store, "p1")).toMatchObject({ row: "tue", longAt: "2026-10-06T18:00:00.000Z" });
+  // Friday's run: Sunday 20:00 Berlin, its short Monday noon Berlin.
+  planReleases(store, lines, { id: "p2", series: "", schedule: "s1", runDay: 5, shorts: 1 }, now);
+  expect(scheduleOf(store, "p2")).toMatchObject({
+    row: "sun",
+    longAt: "2026-10-04T18:00:00.000Z",
+    shortsAt: ["2026-10-05T10:00:00.000Z"],
+  });
+  // A project from no schedule takes none of a schedule's lines.
+  planReleases(store, lines, { id: "p3", series: "", shorts: 0 }, now);
+  expect(scheduleOf(store, "p3")).toBeUndefined();
 });

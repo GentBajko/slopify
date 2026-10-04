@@ -57,6 +57,7 @@ export function AddToCalendar({
         values: rest.values,
         brief: rest.brief,
         topicGeneration: rest.topicGeneration,
+        releases: rest.releases,
         baseVersion: rest.version,
         mutationId: crypto.randomUUID(),
       });

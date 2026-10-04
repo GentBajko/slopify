@@ -7,6 +7,7 @@ import type {
 import {
   briefMax,
   queueMax,
+  type ScheduleRelease,
   type TopicGeneration,
   topicGenerationOff,
 } from "@app/slices/schedules/schema.js";
@@ -23,6 +24,7 @@ import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
 import { createSchedule, updateSchedule } from "./api";
+import { ReleaseFields, releaseLines } from "./release-fields";
 import { localScheduleTime, scheduleInstant } from "./time";
 import { initialQueue, type QueueContext, queueResult, TopicFields } from "./topic-queue";
 
@@ -86,6 +88,10 @@ export function ScheduleForm({
   const [generation, setGeneration] = useState<TopicGeneration>(
     editing?.topicGeneration ?? topicGenerationOff,
   );
+  const [releases, setReleases] = useState<readonly ScheduleRelease[] | null>(
+    // A server from before release times sends none.
+    (editing?.releases ?? []).length === 0 ? null : (editing?.releases ?? null),
+  );
   const [saving, setSaving] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const active = useRef(false);
@@ -141,6 +147,12 @@ export function ScheduleForm({
     ...(origins === undefined ? {} : { origins }),
   };
   const topics = queueResult(queue, context);
+  // The days a run starts on (every day for a daily schedule), and how many shorts each makes.
+  const runDays = kind === "weekly" ? days : kind === "daily" ? [0, 1, 2, 3, 4, 5, 6] : [];
+  const shortCount =
+    form !== undefined && form.sources.audio !== "off" && form.shorts?.enabled === true
+      ? Math.max(0, Math.min(10, Number(form.shorts.count) || 0))
+      : 0;
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -210,6 +222,8 @@ export function ScheduleForm({
           values: everyRun,
           brief: brief.trim() === "" ? null : brief.trim(),
           topicGeneration: generation,
+          releases:
+            releases === null || kind === "once" ? [] : releaseLines(releases, runDays, shortCount),
         };
         attempt.current = editing
           ? { ...input, baseVersion: editing.version, mutationId: crypto.randomUUID() }
@@ -389,6 +403,14 @@ export function ScheduleForm({
             onValue={(name, value) => setFixed((current) => ({ ...current, [name]: value }))}
             loading={templateId !== "" && template.isPending}
             exportName={name}
+          />
+          <ReleaseFields
+            releases={releases}
+            onReleases={setReleases}
+            runDays={runDays}
+            shorts={shortCount}
+            once={kind === "once"}
+            timezone={timezone}
           />
           <GenerationFields
             brief={brief}

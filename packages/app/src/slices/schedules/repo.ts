@@ -39,13 +39,14 @@ const rowSchema = z.object({
   topics_generated_at: z.string().nullable(),
   topics_failed_at: z.string().nullable(),
   topics_error: z.string().nullable(),
+  releases_json: z.string().nullable(),
   held_topics: z.number(),
 });
 
 const scheduleColumns = `id,name,template_id,template_version,cadence_json,timezone,missed_policy,
   overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,
   created_at,updated_at,deleted_at,brief,topic_mode,topic_min,topic_llm_json,topics_generating_at,
-  topics_generated_at,topics_failed_at,topics_error,
+  topics_generated_at,topics_failed_at,topics_error,releases_json,
   (SELECT count(*) FROM schedule_topics AS held
    WHERE held.schedule_id=schedules.id AND held.state='held') AS held_topics`;
 
@@ -90,8 +91,9 @@ export function insertSchedule(
     `INSERT INTO schedules
       (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,
        spend_limit_cents,items_json,topic_keyword,values_json,status,version,creation_hash,
-       next_run_at,created_at,updated_at,deleted_at,brief,topic_mode,topic_min,topic_llm_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       next_run_at,created_at,updated_at,deleted_at,brief,topic_mode,topic_min,topic_llm_json,
+       releases_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
     schedule.id,
     schedule.name,
@@ -118,13 +120,14 @@ export function insertSchedule(
 
 function generationColumns(
   schedule: ScheduleSummary,
-): readonly [string | null, string, number, string | null] {
+): readonly [string | null, string, number, string | null, string | null] {
   const generation = schedule.topicGeneration;
   return [
     schedule.brief,
     generation.mode,
     generation.keepAtLeast,
     generation.llm === null ? null : JSON.stringify(generation.llm),
+    schedule.releases.length === 0 ? null : JSON.stringify(schedule.releases),
   ];
 }
 
@@ -141,7 +144,8 @@ export function updateScheduleRow(
        missed_policy=?,overlap_policy=?,spend_limit_cents=?,items_json=?,topic_keyword=?,
        values_json=?,status=?,version=?,
        next_run_at=?,updated_at=?,mutation_id=?,mutation_hash=?,
-       brief=?,topic_mode=?,topic_min=?,topic_llm_json=?,topics_failed_at=NULL,topics_error=NULL
+       brief=?,topic_mode=?,topic_min=?,topic_llm_json=?,releases_json=?,topics_failed_at=NULL,
+       topics_error=NULL
        WHERE id=? AND version=? AND deleted_at IS NULL`,
     )
     .run(
@@ -478,6 +482,7 @@ function parseSchedule(row: unknown): ScheduleSummary {
       keepAtLeast: value.topic_min,
       llm: value.topic_llm_json === null ? null : JSON.parse(value.topic_llm_json),
     },
+    releases: value.releases_json === null ? [] : JSON.parse(value.releases_json),
     topics: {
       held: value.held_topics,
       generatingSince: value.topics_generating_at,
@@ -550,4 +555,21 @@ const runErrors: Readonly<Record<string, string>> = {
 };
 function runErrorText(error: string): string {
   return Object.hasOwn(runErrors, error) ? (runErrors[error] ?? error) : error;
+}
+
+// The schedule run that made a project, and the time it was due; undefined for a project made
+// by hand.
+export function scheduleRunOfProject(
+  db: DatabaseSync,
+  projectId: string,
+): { readonly scheduleId: string; readonly scheduledFor: string } | undefined {
+  const row = db
+    .prepare(
+      `SELECT schedule_runs.schedule_id, schedule_runs.scheduled_for
+       FROM schedule_runs, json_each(schedule_runs.project_ids_json) AS admitted
+       WHERE admitted.value=? ORDER BY schedule_runs.started_at DESC LIMIT 1`,
+    )
+    .get(projectId);
+  if (row === undefined) return undefined;
+  return { scheduleId: String(row.schedule_id), scheduledFor: String(row.scheduled_for) };
 }

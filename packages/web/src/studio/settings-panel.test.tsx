@@ -1,7 +1,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { StudioSettings } from "./settings-panel.js";
 
 afterEach(cleanup);
@@ -23,7 +23,7 @@ describe("Settings → YouTube Studio", () => {
   it("edits a channel's own playlist list, showing the default it falls back to", async () => {
     const user = userEvent.setup();
     const saved: unknown[] = [];
-    renderApp(
+    renderRouted(
       <StudioSettings />,
       testDeps({
         "GET /api/channels": jsonAnswer({
@@ -77,7 +77,7 @@ describe("Settings → YouTube Studio", () => {
 
   it("refuses a playlist listed twice before saving", async () => {
     const user = userEvent.setup();
-    renderApp(
+    renderRouted(
       <StudioSettings />,
       testDeps({
         "GET /api/channels": jsonAnswer({ channels: [] }),
@@ -98,7 +98,7 @@ describe("Settings → YouTube Studio", () => {
   });
 
   it("offers the extension's download and install steps", async () => {
-    renderApp(
+    renderRouted(
       <StudioSettings />,
       testDeps({
         "GET /api/channels": jsonAnswer({ channels: [] }),

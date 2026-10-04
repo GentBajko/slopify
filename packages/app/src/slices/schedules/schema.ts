@@ -72,6 +72,26 @@ export const topicStateIdle: z.infer<typeof topicState> = {
   failedAt: null,
   error: null,
 };
+// When the project a run makes goes out on YouTube: for one day the schedule runs (`day`, 0 is
+// Sunday), the long video's weekday and time and each short's, in the schedule's time zone.
+// Each goes out the first time its day and hour come round after the one before it.
+const releaseTime = z
+  .object({
+    day: z.number().int().min(0).max(6),
+    time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  })
+  .strict()
+  .readonly();
+export const scheduleReleaseSchema = z
+  .object({
+    day: z.number().int().min(0).max(6),
+    long: releaseTime,
+    shorts: z.array(releaseTime).max(10).readonly(),
+  })
+  .strict()
+  .readonly();
+export type ScheduleRelease = z.infer<typeof scheduleReleaseSchema>;
+const releases = z.array(scheduleReleaseSchema).max(7).readonly();
 // Enough for a year of daily runs, pasted as one list.
 export const queueMax = 500;
 export const scheduleCreateSchema = z
@@ -98,6 +118,7 @@ export const scheduleCreateSchema = z
     // generation reads it.
     brief: z.string().trim().max(briefMax).nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
+    releases: releases.default([]),
   })
   .strict()
   .readonly();
@@ -130,6 +151,7 @@ export const scheduleSummarySchema = z
     values: values.default({}),
     brief: z.string().nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
+    releases: releases.default([]),
     // The generation's own state: how many topics wait for approval, whether an LLM is being
     // asked now, and the last failure's plain reason (cleared by the next success).
     topics: topicState.default(topicStateIdle),

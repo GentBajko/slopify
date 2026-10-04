@@ -90,8 +90,23 @@ function takenHours(db: DatabaseSync, exceptProject?: string): Set<number> {
   );
 }
 
-const fits = (line: PostingPlan["rows"][number], series: string): boolean =>
-  line.series === "" || line.series === series;
+// What a project brings to the plan: its series, and the schedule (and the weekday of the run)
+// that made it.
+export interface PlanWho {
+  readonly series: string;
+  readonly schedule?: string | undefined;
+  readonly runDay?: number | undefined;
+}
+
+type Line = PostingPlan["rows"][number];
+
+// A schedule's line takes only that schedule's projects; a stored line takes its series (or any).
+const fits = (line: Line, who: PlanWho): boolean =>
+  line.schedule !== undefined
+    ? line.schedule === who.schedule
+    : line.series === "" || line.series === who.series;
+
+const zoneOf = (plan: PostingPlan, line: Line): string => line.timeZone ?? plan.timeZone;
 
 // The plan's long-video times from `from` to `until`, in order, each with its line.
 export function lineSlots(
@@ -101,7 +116,7 @@ export function lineSlots(
 ): readonly (Slot & { readonly series: string })[] {
   return plan.rows
     .flatMap((line) =>
-      zonedTimes(plan.timeZone, line.long, from, until).map((at) => ({
+      zonedTimes(zoneOf(plan, line), line.long, from, until).map((at) => ({
         row: line.name,
         series: line.series,
         longAt: at.toISOString(),
@@ -110,12 +125,12 @@ export function lineSlots(
     .toSorted((left, right) => Date.parse(left.longAt) - Date.parse(right.longAt));
 }
 
-// The coming long-video times a project of `series` may take: far enough ahead to upload in
-// time, of a line that takes its series, in an hour no other release has.
+// The coming long-video times a project may take: far enough ahead to upload in time, of a
+// line that takes it, in an hour no other release has.
 export function freeSlots(
   db: DatabaseSync,
   plan: PostingPlan,
-  series: string,
+  who: PlanWho,
   now: Date,
   count: number,
   exceptProject?: string,
@@ -127,7 +142,7 @@ export function freeSlots(
       const line = plan.rows.find((one) => one.name === slot.row);
       return (
         line !== undefined &&
-        fits(line, series) &&
+        fits(line, who) &&
         !taken.has(Math.floor(Date.parse(slot.longAt) / hourMs))
       );
     })
@@ -141,13 +156,19 @@ export function freeSlots(
 export function planReleases(
   db: DatabaseSync,
   plan: PostingPlan,
-  project: { readonly id: string; readonly series: string; readonly shorts: number },
+  project: PlanWho & { readonly id: string; readonly shorts: number },
   now: Date,
 ): void {
   let releases = releasesOf(db, project.id);
   let long = releases.find((release) => release.short === 0);
   if (long === undefined) {
-    const slot = freeSlots(db, plan, project.series, now, 1, project.id)[0];
+    // The line of the day its schedule ran comes first, then any line that takes it.
+    const slots = freeSlots(db, plan, project, now, 30, project.id);
+    const own = (row: string) => {
+      const line = plan.rows.find((one) => one.name === row);
+      return line?.schedule !== undefined && line.runDay === project.runDay;
+    };
+    const slot = slots.find((one) => own(one.row)) ?? slots[0];
     if (slot === undefined) return;
     long = { short: 0, at: slot.longAt, line: slot.row, by: "plan" };
     write(db, project.id, long, now);
@@ -162,7 +183,12 @@ export function planReleases(
   const longAt = new Date(long.at);
   const times = line.shorts
     .flatMap((slot) =>
-      zonedTimes(plan.timeZone, slot, longAt, new Date(longAt.getTime() + 5 * 7 * 24 * hourMs)),
+      zonedTimes(
+        zoneOf(plan, line),
+        slot,
+        longAt,
+        new Date(longAt.getTime() + 5 * 7 * 24 * hourMs),
+      ),
     )
     .toSorted((left, right) => left.getTime() - right.getTime());
   let after = longAt.getTime();

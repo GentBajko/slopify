@@ -9,6 +9,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
+import { scheduleById, scheduleRunOfProject } from "../../slices/schedules/repo.js";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
 import { backfillVideos } from "../../slices/studio/backfill.js";
@@ -21,7 +22,13 @@ import {
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
 import { channelPerformance } from "../../slices/studio/performance.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
-import { postingPlanSchema, readPlan, writePlan } from "../../slices/studio/plan.js";
+import {
+  postingPlanSchema,
+  readPlan,
+  readStoredPlan,
+  weekdayIn,
+  writePlan,
+} from "../../slices/studio/plan.js";
 import { leadHoursMax, seriesOf } from "../../slices/studio/plan-model.js";
 import {
   enqueueFill,
@@ -33,6 +40,7 @@ import {
 import {
   allReleases,
   freeSlots,
+  type PlanWho,
   planReleases,
   readLeadHours,
   releasesOf,
@@ -212,6 +220,17 @@ export function studioRoutes(deps: AppDeps) {
         "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
     });
 
+  // A project's place in the plan: its series, and the schedule and run day that made it.
+  const whoOf = (projectId: string, series: string): PlanWho => {
+    const run = scheduleRunOfProject(deps.db, projectId);
+    if (run === undefined) return { series };
+    const schedule = scheduleById(deps.db, run.scheduleId);
+    return {
+      series,
+      schedule: run.scheduleId,
+      runDay: weekdayIn(schedule?.timezone ?? "UTC", new Date(run.scheduledFor)),
+    };
+  };
   // A project ready to upload gets its release times from the posting plan when its upload is
   // prepared (`releases.ts`); one whose long video is on YouTube already keeps what it has.
   const planned = (projectId: string): void => {
@@ -223,14 +242,15 @@ export function studioRoutes(deps: AppDeps) {
       readPlan(deps.db),
       {
         id: projectId,
-        series: result.pack.series,
+        ...whoOf(projectId, result.pack.series),
         shorts: result.pack.items.filter((item) => item.kind === "short").length,
       },
       deps.clock.now(),
     );
   };
+  // Settings shows only the lines saved there; each schedule shows its own.
   const planBody = () => ({
-    plan: readPlan(deps.db),
+    plan: readStoredPlan(deps.db),
     leadHours: readLeadHours(deps.db),
     series: [...new Set(listProjects(deps.db).map((project) => seriesOf(project.config)))]
       .filter((one) => one !== "")
@@ -264,7 +284,7 @@ export function studioRoutes(deps: AppDeps) {
     };
   };
   const slotChoices = (projectId: string, series: string) =>
-    freeSlots(deps.db, readPlan(deps.db), series, deps.clock.now(), 9);
+    freeSlots(deps.db, readPlan(deps.db), whoOf(projectId, series), deps.clock.now(), 9);
   // Finished projects not marked uploaded: the popup's list and the calendar's candidates.
   const finishedProjects = () => {
     const uploads = uploadedProjects(deps.db);

@@ -15,6 +15,13 @@ const rowSchema = z.object({
   series: z.string().trim().max(100).default(""),
   long: slotSchema,
   shorts: z.array(slotSchema).max(10),
+  // A line from a schedule's release times (never stored here): it takes only that schedule's
+  // projects, preferring the ones its run day (`runDay`) made, in the schedule's time zone, and
+  // the calendar shows the schedule's name (`label`).
+  schedule: z.string().optional(),
+  runDay: z.number().int().min(0).max(6).optional(),
+  timeZone: z.string().optional(),
+  label: z.string().optional(),
 });
 export const postingPlanSchema = z.object({
   timeZone: z.string().min(1).max(100),
