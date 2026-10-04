@@ -51,6 +51,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { OnYoutube } from "./on-youtube.js";
 import { useOutputText } from "./parts.js";
+import { ReleaseTimes } from "./release-times.js";
 import { RegenerateNowContext } from "./revision-action-context.js";
 
 const labels: Readonly<Record<DescriptionField, string>> = {
@@ -404,6 +405,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           {`${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
         </p>
       )}
+      <ReleaseTimes projectId={project.id} />
       <OnYoutube
         projectId={project.id}
         shorts={outputs.filter((output) => output.role === "short_video").length}

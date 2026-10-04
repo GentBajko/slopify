@@ -1052,6 +1052,12 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     const long = mine?.items.find((item) => item.short === 0);
     expect(Date.parse(long?.at ?? "") - Date.parse(long?.uploadBy ?? "")).toBe(48 * 3600_000);
     expect(calendar.entries.some((entry) => entry.project === null)).toBe(true);
+    // The project page reads the same times, with each one's upload-by.
+    const own = (await (await h.call("/releases/p1")).json()) as {
+      items: { short: number; at: string | null; uploadBy: string | null }[];
+    };
+    expect(own.items.find((item) => item.short === 0)?.at).toBe(long?.at);
+    expect(own.items.find((item) => item.short === 0)?.uploadBy).toBe(long?.uploadBy);
     // Moved by hand to "not scheduled": it leaves the calendar, and its time is free again.
     const moved = await h.call("/releases/p1", json({ short: 0, at: null }));
     expect(moved.status).toBe(200);

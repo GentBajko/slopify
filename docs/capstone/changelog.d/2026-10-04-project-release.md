@@ -1,0 +1,1 @@
+- The project Video section has a Release block (`project/release-times.tsx`, `GET /api/studio/releases/:projectId`): each item's release and upload-by, editable through `PUT /releases/:projectId`, with the plan's free times for the long video.

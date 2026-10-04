@@ -571,6 +571,25 @@ export async function readReleaseCalendar(api: Api, weeks = 2): Promise<ReleaseC
   );
 }
 
+export interface ProjectReleases {
+  readonly leadHours: number;
+  readonly items: readonly {
+    readonly short: number;
+    readonly title: string;
+    readonly at: string | null;
+    readonly uploadBy: string | null;
+    readonly onYoutube: boolean;
+  }[];
+  readonly free: readonly Slot[];
+}
+
+// One project's release times (the project page's Release block).
+export async function readProjectReleases(api: Api, projectId: string): Promise<ProjectReleases> {
+  return read<ProjectReleases>(
+    await api.client.studio.releases[":projectId"].$get({ param: { projectId } }),
+  );
+}
+
 // Moves one release, sets it to not scheduled (null), or puts a project into a free time.
 export async function saveRelease(
   api: Api,

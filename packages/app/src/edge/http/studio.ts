@@ -352,6 +352,33 @@ export function studioRoutes(deps: AppDeps) {
           );
         },
       )
+      // One project's release times (its long video and each short, with their upload-by), the
+      // plan's free times for its series, for the project page's Release block.
+      .get("/releases/:projectId", zValidator("param", projectParam, onInvalid), (c) => {
+        const { projectId } = c.req.valid("param");
+        planned(projectId);
+        const pack = uploadPack(deps, projectId);
+        if (!pack.ok) return unknownProject(c);
+        const leadMs = readLeadHours(deps.db) * 3_600_000;
+        const releases = releasesOf(deps.db, projectId);
+        return c.json({
+          leadHours: readLeadHours(deps.db),
+          items: pack.pack.items
+            .filter((item) => item.video !== null || item.kind === "video")
+            .map((item) => {
+              const short = item.short ?? 0;
+              const at = releases.find((release) => release.short === short)?.at ?? "";
+              return {
+                short,
+                title: item.title,
+                at: at === "" ? null : at,
+                uploadBy: at === "" ? null : new Date(Date.parse(at) - leadMs).toISOString(),
+                onYoutube: videoOf(deps.db, projectId, item.short ?? null)?.uploadState === "done",
+              };
+            }),
+          free: slotChoices(projectId, pack.pack.series),
+        });
+      })
       // Moves one release (a time), sets it to "not scheduled" (null), or puts a project into a
       // free time of the plan (short 0 with its line).
       .put(
