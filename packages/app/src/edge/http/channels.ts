@@ -18,6 +18,7 @@ import {
   deleteCastMember,
   deleteChannel,
   listChannels,
+  moveCastMember,
   moveTemplate,
   readChannel,
   setChannelAiDisclosure,
@@ -123,6 +124,11 @@ export function channelRoutes(deps: AppDeps) {
       .post("/:id/cast", zValidator("param", idParam, onInvalid), async (c) => {
         const result = createCastMember(service, c.req.valid("param").id, await body(c));
         return result.ok ? c.json(result.value, 201) : refused(c, result);
+      })
+      // Move up, Move down and their Undo: one member to a place in the cast's order.
+      .post("/:id/cast/move", zValidator("param", idParam, onInvalid), async (c) => {
+        const result = moveCastMember(service, c.req.valid("param").id, await body(c));
+        return result.ok ? c.json({ cast: result.value }) : refused(c, result);
       })
   );
 }

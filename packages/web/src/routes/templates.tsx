@@ -16,6 +16,8 @@ import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
+import { RowCheck, useSelection } from "@/components/selection";
+import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { InlineName } from "@/library/inline-name";
 import { ListSkeleton, libraryListDetail } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
@@ -34,6 +36,7 @@ import {
 import { TemplateDetail, TemplateHistoryDrawer } from "@/templates/row-parts";
 import { SaveTemplateDrawer } from "@/templates/save-drawer";
 import { useTemplateActions } from "@/templates/use-template-actions";
+import { useTemplatesBulk } from "@/templates/use-templates-bulk";
 import { LibraryToolbar } from "./library.js";
 
 // Library → Templates: saved Play setups, each used in Play as a fresh draft to review. The
@@ -71,6 +74,9 @@ export function TemplatesRoute({
           inChannel.filter((template) => template.name.toLowerCase().includes(needle)),
           sort,
         );
+  const selection = useSelection(shown?.map((template) => template.id) ?? []);
+  const chosen = shown?.filter((template) => selection.has(template.id)) ?? [];
+  const bulk = useTemplatesBulk(templates.data ?? [], selection);
   const channelName = (template: TemplateSummary): string | undefined =>
     channels.data?.find((channel) => channel.id === channelOfTemplate(template))?.name;
   const [pending, setPending] = useState(false);
@@ -230,75 +236,93 @@ export function TemplatesRoute({
         <ListDetail
           className={libraryListDetail}
           list={
-            <List label="Project templates">
-              {shown.map((template) => (
-                <Fragment key={template.id}>
-                  <ListRow
-                    className="max-md:grid-cols-1"
-                    title={
-                      <InlineName
-                        name={template.name}
-                        maxLength={templateNameMax}
-                        onSelect={() => setPicked(template.id)}
-                        onRename={async (next) => {
-                          const refused = await renameProjectTemplate(api, template.id, next);
-                          await client.invalidateQueries({ queryKey: templatesKey });
-                          return refused;
-                        }}
-                      />
-                    }
-                    selected={template.id === picked}
-                    meta={
-                      <>
-                        {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                        Version {template.version} · updated <Stamp iso={template.updatedAt} />
-                      </>
-                    }
-                    actions={
-                      <LibraryRowActions
-                        name={template.name}
-                        edit={
-                          <Button
-                            variant="quiet"
-                            size="small"
-                            aria-label={`Edit ${template.name}`}
-                            onClick={() => setPicked(template.id)}
-                          >
-                            Edit
-                          </Button>
-                        }
-                        duplicate={
-                          <Button
-                            variant="quiet"
-                            size="small"
-                            aria-label={`Duplicate ${template.name}`}
-                            disabled={pending}
-                            disabledReason="Working on the last press"
-                            onClick={() => void execute(() => duplicate(template))}
-                          >
-                            Duplicate
-                          </Button>
-                        }
-                        play={{
-                          run: () => void execute(() => apply(template)),
-                          blocked: blocked
-                            ? "A run is still starting in Play. Wait for it, then use the template."
-                            : pending
-                              ? "Working on the last press"
-                              : undefined,
-                        }}
-                        onHistory={() => setHistoryOf(template)}
-                        onDelete={() => {
-                          setDeleting(template);
-                          setError(null);
-                        }}
-                      />
-                    }
-                  />
-                  <RetiredModelRow kind="template" id={template.id} name={template.name} />
-                </Fragment>
-              ))}
-            </List>
+            <SelectionArea selection={selection}>
+              <LibraryBulkBar
+                selection={selection}
+                total={shown.length}
+                noun={["template", "templates"]}
+                scope={
+                  shown.length === templates.data?.length
+                    ? undefined
+                    : `Select all ${String(shown.length)} shown`
+                }
+                busy={bulk.busy || pending}
+                onDuplicate={() => bulk.duplicate(chosen)}
+                onDelete={() => bulk.remove(chosen)}
+              />
+              <List label="Project templates">
+                {shown.map((template) => (
+                  <Fragment key={template.id}>
+                    <ListRow
+                      className="max-md:grid-cols-1"
+                      lead={
+                        <RowCheck selection={selection} value={template.id} label={template.name} />
+                      }
+                      title={
+                        <InlineName
+                          name={template.name}
+                          maxLength={templateNameMax}
+                          onSelect={() => setPicked(template.id)}
+                          onRename={async (next) => {
+                            const refused = await renameProjectTemplate(api, template.id, next);
+                            await client.invalidateQueries({ queryKey: templatesKey });
+                            return refused;
+                          }}
+                        />
+                      }
+                      selected={template.id === picked}
+                      meta={
+                        <>
+                          {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                          Version {template.version} · updated <Stamp iso={template.updatedAt} />
+                        </>
+                      }
+                      actions={
+                        <LibraryRowActions
+                          name={template.name}
+                          edit={
+                            <Button
+                              variant="quiet"
+                              size="small"
+                              aria-label={`Edit ${template.name}`}
+                              onClick={() => setPicked(template.id)}
+                            >
+                              Edit
+                            </Button>
+                          }
+                          duplicate={
+                            <Button
+                              variant="quiet"
+                              size="small"
+                              aria-label={`Duplicate ${template.name}`}
+                              disabled={pending}
+                              disabledReason="Working on the last press"
+                              onClick={() => void execute(() => duplicate(template))}
+                            >
+                              Duplicate
+                            </Button>
+                          }
+                          play={{
+                            run: () => void execute(() => apply(template)),
+                            blocked: blocked
+                              ? "A run is still starting in Play. Wait for it, then use the template."
+                              : pending
+                                ? "Working on the last press"
+                                : undefined,
+                          }}
+                          onHistory={() => setHistoryOf(template)}
+                          onDelete={() => {
+                            setDeleting(template);
+                            setError(null);
+                          }}
+                        />
+                      }
+                    />
+                    <RetiredModelRow kind="template" id={template.id} name={template.name} />
+                  </Fragment>
+                ))}
+              </List>
+            </SelectionArea>
           }
           detail={<TemplateDetail template={templates.data?.find((one) => one.id === picked)} />}
         />

@@ -1,4 +1,4 @@
-import type { Entry, EntryCategory } from "@app/slices/library/model.js";
+import { type Entry, type EntryCategory, nameMax } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useRef, useState } from "react";
 import { removeEntry, saveEntry } from "@/api";
@@ -12,7 +12,9 @@ import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Segmented } from "@/components/kit/switch";
+import { RowCheck, useSelection } from "@/components/selection";
 import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
+import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail, plural } from "@/library/item-detail";
@@ -22,6 +24,9 @@ import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
+import { TransferMenu } from "@/library/transfer-menu";
+import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
+import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { entriesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
@@ -82,14 +87,62 @@ export function EntriesRoute({
         );
   const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((entry) => entry.id === selectedId) ?? listed?.[0];
+  const all = entries.data?.entries ?? [];
+  const selection = useSelection(listed?.map((entry) => entry.id) ?? []);
+  const chosen = listed?.filter((entry) => selection.has(entry.id)) ?? [];
+  const noun = [category, `${category}s`] as const;
+  const bulk = useLibraryBulk({
+    noun,
+    listKey: keys.entries,
+    all,
+    groupOf: (entry) => entry.category,
+    nameMax,
+    duplicate: async (entry, name) =>
+      refusalOf(
+        await saveEntry(
+          api,
+          { category: entry.category, mode: entry.mode, name, body: entry.body },
+          undefined,
+        ),
+      ),
+    remove: (entry) => removeEntry(api, entry.id),
+    trash: "entry",
+    selection,
+  });
+  const transfer = useLibraryTransfer({
+    section: "entries",
+    pack: (items) => ({ entries: items }),
+    stem: "intros-and-outros",
+    noun: ["intro or outro", "intros and outros"],
+    listKey: keys.entries,
+    existing: all,
+    groupOf: (entry) => entry.category,
+    nameMax,
+    save: (entry) => saveEntry(api, entry, undefined),
+  });
 
   return (
     <div>
       <LibraryToolbar
         action={
-          <ButtonLink to="/entries/new" search={{ category }} variant="primary">
-            New intro or outro
-          </ButtonLink>
+          <>
+            <TransferMenu
+              what="intros and outros"
+              disabled={entries.data === undefined || transfer.importing}
+              exports={[
+                {
+                  label: `Export all ${String(all.length)} intros and outros`,
+                  run: () => transfer.exportItems(all),
+                  disabled: all.length === 0,
+                },
+              ]}
+              accept=".json,application/json"
+              onFile={transfer.importFile}
+            />
+            <ButtonLink to="/entries/new" search={{ category }} variant="primary">
+              New intro or outro
+            </ButtonLink>
+          </>
         }
       >
         <Input
@@ -133,58 +186,71 @@ export function EntriesRoute({
             listed.length === 0 ? (
               <p className="m-0 py-3 text-small text-ink-2">{`No ${category}s match "${query.trim()}".`}</p>
             ) : (
-              <List label={`${categoryLabel(category)}s`}>
-                {listed.map((entry) => (
-                  <ListRow
-                    key={entry.id}
-                    className={libraryRow}
-                    title={
-                      <InlineName
-                        name={entry.name}
-                        onSelect={() => setSelectedId(entry.id)}
-                        onRename={(name) => rename(entry, name)}
-                      />
-                    }
-                    meta={entryMeta(entry)}
-                    selected={entry.id === selected?.id}
-                    actions={
-                      <LibraryRowActions
-                        name={entry.name}
-                        edit={
-                          <ButtonLink
-                            to="/entries/$entryId"
-                            params={{ entryId: entry.id }}
-                            aria-label={`Edit ${entry.name}`}
-                            variant="quiet"
-                            size="small"
-                          >
-                            Edit
-                          </ButtonLink>
-                        }
-                        // The copy is named "<name> copy" and opened for editing, so a name
-                        // that is already taken is renamed before it is ever saved.
-                        duplicate={
-                          <ButtonLink
-                            to="/entries/new"
-                            search={{ category: entry.category, from: entry.id }}
-                            aria-label={`Duplicate ${entry.name}`}
-                            variant="quiet"
-                            size="small"
-                          >
-                            Duplicate
-                          </ButtonLink>
-                        }
-                        play={{
-                          run: onUseInPlay === undefined ? undefined : () => onUseInPlay(entry),
-                          blocked: playBlocked,
-                        }}
-                        onHistory={() => setHistory(entry)}
-                        onDelete={() => setDeleting(entry)}
-                      />
-                    }
-                  />
-                ))}
-              </List>
+              <SelectionArea selection={selection}>
+                <LibraryBulkBar
+                  selection={selection}
+                  total={listed.length}
+                  noun={noun}
+                  scope={needle === "" ? undefined : `Select all ${String(listed.length)} shown`}
+                  busy={bulk.busy}
+                  onDuplicate={() => bulk.duplicate(chosen)}
+                  onExport={() => transfer.exportItems(chosen)}
+                  onDelete={() => bulk.remove(chosen)}
+                />
+                <List label={`${categoryLabel(category)}s`}>
+                  {listed.map((entry) => (
+                    <ListRow
+                      key={entry.id}
+                      className={libraryRow}
+                      lead={<RowCheck selection={selection} value={entry.id} label={entry.name} />}
+                      title={
+                        <InlineName
+                          name={entry.name}
+                          onSelect={() => setSelectedId(entry.id)}
+                          onRename={(name) => rename(entry, name)}
+                        />
+                      }
+                      meta={entryMeta(entry)}
+                      selected={entry.id === selected?.id}
+                      actions={
+                        <LibraryRowActions
+                          name={entry.name}
+                          edit={
+                            <ButtonLink
+                              to="/entries/$entryId"
+                              params={{ entryId: entry.id }}
+                              aria-label={`Edit ${entry.name}`}
+                              variant="quiet"
+                              size="small"
+                            >
+                              Edit
+                            </ButtonLink>
+                          }
+                          // The copy is named "<name> copy" and opened for editing, so a name
+                          // that is already taken is renamed before it is ever saved.
+                          duplicate={
+                            <ButtonLink
+                              to="/entries/new"
+                              search={{ category: entry.category, from: entry.id }}
+                              aria-label={`Duplicate ${entry.name}`}
+                              variant="quiet"
+                              size="small"
+                            >
+                              Duplicate
+                            </ButtonLink>
+                          }
+                          play={{
+                            run: onUseInPlay === undefined ? undefined : () => onUseInPlay(entry),
+                            blocked: playBlocked,
+                          }}
+                          onHistory={() => setHistory(entry)}
+                          onDelete={() => setDeleting(entry)}
+                        />
+                      }
+                    />
+                  ))}
+                </List>
+              </SelectionArea>
             )
           }
           detail={

@@ -113,6 +113,7 @@ describe("migrate", () => {
     expect(names(db, "index")).toEqual([
       "cast_images_member",
       "cast_members_channel",
+      "cast_members_order",
       "channel_videos_title",
       "channels_one_default",
       "document_themes_name",
@@ -202,6 +203,7 @@ describe("migrate", () => {
       { version: 49, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 50, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 51, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 52, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -211,16 +213,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 44 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 45 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(52, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(53, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 52 is newer than this app knows (51)",
+      "database schema 53 is newer than this app knows (52)",
     );
   });
 
@@ -630,4 +632,27 @@ it("keeps every project and its links when it widens the format to square", () =
   expect(() =>
     db.prepare("INSERT INTO projects VALUES ('p3','Three','4:3','{}','new','new')").run(),
   ).toThrow();
+});
+
+it("keeps each channel's cast in the alphabetical order it was shown in, per channel", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 51 });
+  db.exec("INSERT INTO channels (id, name, created_at, updated_at) VALUES ('c2','Other','a','a')");
+  const add = db.prepare(
+    "INSERT INTO cast_members (id, channel_id, kind, name, created_at, updated_at) VALUES (?,?,'character',?,'a','a')",
+  );
+  const main = "00000000-0000-4000-8000-000000000001";
+  add.run("m3", main, "zeno");
+  add.run("m1", main, "Ada");
+  add.run("m2", main, "ada");
+  add.run("m4", "c2", "Bram");
+  migrate(db, clock);
+  expect(
+    db.prepare("SELECT id, position FROM cast_members ORDER BY channel_id, position").all(),
+  ).toEqual([
+    { id: "m1", position: 0 },
+    { id: "m2", position: 1 },
+    { id: "m3", position: 2 },
+    { id: "m4", position: 0 },
+  ]);
 });

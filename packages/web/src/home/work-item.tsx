@@ -12,18 +12,28 @@ export function WorkItem({
   title,
   detail,
   action,
+  check,
 }: {
   readonly lead: ReactNode;
   readonly status: ReactNode;
   readonly title: ReactNode;
   readonly detail?: ReactNode;
   readonly action: ReactNode;
+  // A selection checkbox, beside the state so the grid keeps its columns.
+  readonly check?: ReactNode;
 }): ReactElement {
   return (
     <li className={cn("sl-home-item", hitArea)}>
       {lead}
       <div className="flex min-w-0 flex-col gap-1">
-        {status}
+        {check === undefined ? (
+          status
+        ) : (
+          <div className="flex items-center gap-2">
+            {check}
+            {status}
+          </div>
+        )}
         <div className="sl-row__title text-[17px]">{title}</div>
         {detail === undefined ? null : <div className="text-small text-ink-2">{detail}</div>}
       </div>

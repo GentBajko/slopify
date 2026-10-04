@@ -141,6 +141,11 @@ export const castMemberCreateSchema = castMemberInputSchema.extend({ id }).stric
 export const castMemberUpdateSchema = castMemberInputSchema
   .extend({ baseVersion: z.number().int().positive() })
   .strict();
+// Moves one member to a place in its channel's cast (0 is first); a place past the end is last.
+export const castMoveSchema = z
+  .object({ memberId: id, to: z.number().int().nonnegative() })
+  .strict()
+  .readonly();
 export const castGenerateSchema = z
   .object({
     prompt: z

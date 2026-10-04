@@ -1,4 +1,4 @@
-import type { Prompt, PromptKind } from "@app/slices/library/model.js";
+import { nameMax, type Prompt, type PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useRef, useState } from "react";
 import { removePrompt, savePrompt } from "@/api";
@@ -12,7 +12,9 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
+import { RowCheck, useSelection } from "@/components/selection";
 import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
+import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { HistoryDrawer } from "@/library/history-drawer";
 import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail, plural } from "@/library/item-detail";
@@ -22,6 +24,9 @@ import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
+import { TransferMenu } from "@/library/transfer-menu";
+import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
+import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { keys, promptsQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
@@ -78,10 +83,55 @@ export function PromptsRoute({
         );
   const listed = matching === undefined ? undefined : sortLibrary(matching, sort);
   const selected = listed?.find((prompt) => prompt.id === selectedId) ?? listed?.[0];
+  const all = prompts.data?.prompts ?? [];
+  const selection = useSelection(listed?.map((prompt) => prompt.id) ?? []);
+  const chosen = listed?.filter((prompt) => selection.has(prompt.id)) ?? [];
+  const bulk = useLibraryBulk({
+    noun: ["prompt", "prompts"],
+    listKey: keys.prompts,
+    all,
+    groupOf: (prompt) => prompt.kind,
+    nameMax,
+    duplicate: async (prompt, name) =>
+      refusalOf(await savePrompt(api, { kind: prompt.kind, name, body: prompt.body }, undefined)),
+    remove: (prompt) => removePrompt(api, prompt.id),
+    trash: "prompt",
+    selection,
+  });
+  const transfer = useLibraryTransfer({
+    section: "prompts",
+    pack: (items) => ({ prompts: items }),
+    stem: "prompts",
+    noun: ["prompt", "prompts"],
+    listKey: keys.prompts,
+    existing: all,
+    groupOf: (prompt) => prompt.kind,
+    nameMax,
+    save: (prompt) => savePrompt(api, prompt, undefined),
+  });
 
   return (
     <div>
-      <LibraryToolbar action={<NewPromptButton kind={kind} />}>
+      <LibraryToolbar
+        action={
+          <>
+            <TransferMenu
+              what="prompts"
+              disabled={prompts.data === undefined || transfer.importing}
+              exports={[
+                {
+                  label: `Export all ${plural(all.length, "prompt")}`,
+                  run: () => transfer.exportItems(all),
+                  disabled: all.length === 0,
+                },
+              ]}
+              accept=".json,application/json"
+              onFile={transfer.importFile}
+            />
+            <NewPromptButton kind={kind} />
+          </>
+        }
+      >
         <Input
           type="search"
           ref={search}
@@ -131,58 +181,73 @@ export function PromptsRoute({
             listed.length === 0 ? (
               <p className="m-0 py-3 text-small text-ink-2">{`No ${kindLabel(kind).toLowerCase()} prompts match "${query.trim()}".`}</p>
             ) : (
-              <List label="Prompts">
-                {listed.map((prompt) => (
-                  <ListRow
-                    key={prompt.id}
-                    className={libraryRow}
-                    title={
-                      <InlineName
-                        name={prompt.name}
-                        onSelect={() => setSelectedId(prompt.id)}
-                        onRename={(name) => rename(prompt, name)}
-                      />
-                    }
-                    meta={promptMeta(prompt)}
-                    selected={prompt.id === selected?.id}
-                    actions={
-                      <LibraryRowActions
-                        name={prompt.name}
-                        edit={
-                          <ButtonLink
-                            to="/prompts/$promptId"
-                            params={{ promptId: prompt.id }}
-                            aria-label={`Edit ${prompt.name}`}
-                            variant="quiet"
-                            size="small"
-                          >
-                            Edit
-                          </ButtonLink>
-                        }
-                        // The copy is named "<name> copy" and opened for editing, so a name
-                        // that is already taken is renamed before it is ever saved.
-                        duplicate={
-                          <ButtonLink
-                            to="/prompts/new"
-                            search={{ kind: prompt.kind, from: prompt.id }}
-                            aria-label={`Duplicate ${prompt.name}`}
-                            variant="quiet"
-                            size="small"
-                          >
-                            Duplicate
-                          </ButtonLink>
-                        }
-                        play={{
-                          run: onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt),
-                          blocked: playBlocked,
-                        }}
-                        onHistory={() => setHistory(prompt)}
-                        onDelete={() => setDeleting(prompt)}
-                      />
-                    }
-                  />
-                ))}
-              </List>
+              <SelectionArea selection={selection}>
+                <LibraryBulkBar
+                  selection={selection}
+                  total={listed.length}
+                  noun={["prompt", "prompts"]}
+                  scope={needle === "" ? undefined : `Select all ${String(listed.length)} shown`}
+                  busy={bulk.busy}
+                  onDuplicate={() => bulk.duplicate(chosen)}
+                  onExport={() => transfer.exportItems(chosen)}
+                  onDelete={() => bulk.remove(chosen)}
+                />
+                <List label="Prompts">
+                  {listed.map((prompt) => (
+                    <ListRow
+                      key={prompt.id}
+                      className={libraryRow}
+                      lead={
+                        <RowCheck selection={selection} value={prompt.id} label={prompt.name} />
+                      }
+                      title={
+                        <InlineName
+                          name={prompt.name}
+                          onSelect={() => setSelectedId(prompt.id)}
+                          onRename={(name) => rename(prompt, name)}
+                        />
+                      }
+                      meta={promptMeta(prompt)}
+                      selected={prompt.id === selected?.id}
+                      actions={
+                        <LibraryRowActions
+                          name={prompt.name}
+                          edit={
+                            <ButtonLink
+                              to="/prompts/$promptId"
+                              params={{ promptId: prompt.id }}
+                              aria-label={`Edit ${prompt.name}`}
+                              variant="quiet"
+                              size="small"
+                            >
+                              Edit
+                            </ButtonLink>
+                          }
+                          // The copy is named "<name> copy" and opened for editing, so a name
+                          // that is already taken is renamed before it is ever saved.
+                          duplicate={
+                            <ButtonLink
+                              to="/prompts/new"
+                              search={{ kind: prompt.kind, from: prompt.id }}
+                              aria-label={`Duplicate ${prompt.name}`}
+                              variant="quiet"
+                              size="small"
+                            >
+                              Duplicate
+                            </ButtonLink>
+                          }
+                          play={{
+                            run: onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt),
+                            blocked: playBlocked,
+                          }}
+                          onHistory={() => setHistory(prompt)}
+                          onDelete={() => setDeleting(prompt)}
+                        />
+                      }
+                    />
+                  ))}
+                </List>
+              </SelectionArea>
             )
           }
           detail={

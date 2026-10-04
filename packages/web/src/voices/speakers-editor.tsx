@@ -24,6 +24,7 @@ import { Field, Input } from "@/components/kit/field";
 import { Switch } from "@/components/kit/switch";
 import { OptionPicker } from "@/play/pickers";
 import { copyName, moveItem } from "./row-order.js";
+import { SpeakerSelectionBar, useSpeakerRemoval } from "./speaker-removal.js";
 import { SpeakerRow } from "./speaker-row.js";
 
 // Multiple voices, the same control on Play and in Edit project: the format, where the script
@@ -90,6 +91,7 @@ export function SpeakersEditor({
   const set = (patch: Partial<VoicesSettings>): void => {
     if (value !== undefined) onChange({ ...value, ...patch });
   };
+  const removal = useSpeakerRemoval(value, onChange);
   // Members with a voice who are not speakers yet.
   const voiced = cast.filter(
     (member) =>
@@ -157,7 +159,12 @@ export function SpeakersEditor({
           {problem?.("voices.speakers") === undefined ? null : (
             <p className="text-label text-danger">{problem("voices.speakers")}</p>
           )}
-          <ol aria-label="Speakers" className="divide-y divide-line border-y border-line">
+          <SpeakerSelectionBar removal={removal} total={value.speakers.length} />
+          <ol
+            aria-label="Speakers"
+            className="divide-y divide-line border-y border-line"
+            onKeyDown={removal.selection?.onKeyDown}
+          >
             {value.speakers.map((speaker, index) => (
               <SpeakerRow
                 key={speaker.id}
@@ -169,10 +176,9 @@ export function SpeakersEditor({
                 language={language}
                 problem={problem}
                 onChange={(next) => setSpeaker(index, next)}
+                selection={removal.selection}
                 onRemove={
-                  value.speakers.length > 1
-                    ? () => set({ speakers: value.speakers.filter((_one, at) => at !== index) })
-                    : undefined
+                  value.speakers.length > 1 ? () => removal.remove([speaker.id]) : undefined
                 }
                 onMoveUp={
                   index > 0

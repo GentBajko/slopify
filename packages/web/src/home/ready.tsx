@@ -1,7 +1,7 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
@@ -30,9 +30,12 @@ export function isReadyToUpload(project: ProjectListing): boolean {
 export function ReadyItem({
   project,
   primary = false,
+  check,
 }: {
   readonly project: ProjectListing;
   readonly primary?: boolean;
+  // The row's selection checkbox, when several are ready (work-list.tsx).
+  readonly check?: ReactNode;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -68,6 +71,7 @@ export function ReadyItem({
   });
   return (
     <WorkItem
+      {...(check === undefined ? {} : { check })}
       lead={<ProjectThumb projectId={project.id} />}
       status={<Status tone="done">Ready to upload</Status>}
       title={

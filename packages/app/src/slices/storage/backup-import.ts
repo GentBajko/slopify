@@ -1114,10 +1114,19 @@ function mergeChannels(
     ).run(image.sha256, image.mime, readFileSync(path), now);
   }
   const cast = { added: 0, renamed: 0, skipped: 0 };
-  for (const row of rowsOf(scratch, "SELECT * FROM cast_members ORDER BY rowid")) {
+  // In the backup's order (an older backup was given its alphabetical order by migration 0052),
+  // after any members the channel here already has.
+  const lastPlace = db.prepare(
+    "SELECT coalesce(max(position)+1,0) AS next FROM cast_members WHERE channel_id=?",
+  );
+  for (const row of rowsOf(
+    scratch,
+    "SELECT * FROM cast_members ORDER BY channel_id, position, lower(name), id",
+  )) {
     if (has("SELECT 1 FROM cast_members WHERE id=?", String(row.id))) cast.skipped += 1;
     else {
-      insertRow(db, "cast_members", row);
+      const next = lastPlace.get(String(row.channel_id))?.next;
+      insertRow(db, "cast_members", { ...row, position: typeof next === "number" ? next : 0 });
       cast.added += 1;
     }
   }

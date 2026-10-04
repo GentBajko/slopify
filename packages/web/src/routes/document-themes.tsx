@@ -1,8 +1,7 @@
-import type { SavedDocumentTheme } from "@app/slices/document/model.js";
-import type { DocumentTheme } from "@app/slices/document/theme.js";
+import { documentThemeNameMax, type SavedDocumentTheme } from "@app/slices/document/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useState } from "react";
-import { removeDocumentTheme } from "@/api";
+import { useState } from "react";
+import { removeDocumentTheme, saveDocumentTheme } from "@/api";
 import { useApp } from "@/app-context";
 import { Callout } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
@@ -10,13 +9,18 @@ import { ListDetail } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { faceFamilies } from "@/lib/document-theme-fields";
+import { counted, RowCheck, useSelection } from "@/components/selection";
+import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
+import { Swatches, ThemeDetail, themeMeta } from "@/library/document-theme-parts";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { useLibraryItem } from "@/library/list-url";
 import { LibraryRowActions } from "@/library/row-actions";
 import { sortLibrary, useLibrarySort } from "@/library/sort";
 import { SortMenu } from "@/library/sort-menu";
 import { Stamp } from "@/library/time";
+import { TransferMenu } from "@/library/transfer-menu";
+import { refusalOf, useLibraryBulk } from "@/library/use-library-bulk";
+import { useLibraryTransfer } from "@/library/use-library-transfer";
 import { documentThemesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
@@ -50,14 +54,55 @@ export function DocumentThemesRoute() {
     pickedSaved === undefined && pickedBuiltIn === undefined ? yours[0] : undefined;
   const shownSaved = pickedSaved ?? fallbackSaved;
   const shownBuiltIn = shownSaved === undefined ? (pickedBuiltIn ?? data?.builtIns[0]) : undefined;
+  // Only your own themes are ticked: a built-in can't be deleted or exported.
+  const selection = useSelection(yours.map((theme) => theme.id));
+  const chosen = yours.filter((theme) => selection.has(theme.id));
+  const [confirming, setConfirming] = useState(false);
+  const bulk = useLibraryBulk({
+    noun: themeNoun,
+    listKey: keys.documentThemes,
+    all: yours,
+    nameMax: documentThemeNameMax,
+    duplicate: async (theme, name) =>
+      refusalOf(await saveDocumentTheme(api, { name, values: theme.values }, undefined)),
+    remove: (theme) => removeDocumentTheme(api, theme.id),
+    trash: undefined,
+    selection,
+  });
+  const transfer = useLibraryTransfer({
+    section: "documentThemes",
+    pack: (items) => ({ documentThemes: items }),
+    stem: "pdf-themes",
+    noun: themeNoun,
+    listKey: keys.documentThemes,
+    existing: yours,
+    groupOf: () => "",
+    nameMax: documentThemeNameMax,
+    save: (theme) => saveDocumentTheme(api, theme, undefined),
+  });
 
   return (
     <div>
       <LibraryToolbar
         action={
-          <ButtonLink to="/document-themes/new" search={{ from: "plain" }} variant="primary">
-            New theme
-          </ButtonLink>
+          <>
+            <TransferMenu
+              what="PDF themes"
+              disabled={data === undefined || transfer.importing}
+              exports={[
+                {
+                  label: `Export all ${counted(yours.length, "theme", "themes")} of yours`,
+                  run: () => transfer.exportItems(yours),
+                  disabled: yours.length === 0,
+                },
+              ]}
+              accept=".json,application/json"
+              onFile={transfer.importFile}
+            />
+            <ButtonLink to="/document-themes/new" search={{ from: "plain" }} variant="primary">
+              New theme
+            </ButtonLink>
+          </>
         }
       >
         <p className="m-0 text-small text-ink-2">
@@ -98,52 +143,68 @@ export function DocumentThemesRoute() {
                     No themes of your own yet. Copy a built-in below to start one.
                   </p>
                 ) : (
-                  <List label="Your themes">
-                    {yours.map((theme) => (
-                      <ListRow
-                        key={theme.id}
-                        className={libraryRow}
-                        lead={<Swatches colors={theme.values.colors} />}
-                        title={theme.name}
-                        meta={
-                          <>
-                            {`${themeMeta(theme.values)} · updated `}
-                            <Stamp iso={theme.updatedAt} />
-                          </>
-                        }
-                        selected={theme.id === shownSaved?.id}
-                        onSelect={() => setPicked(theme.id)}
-                        actions={
-                          <LibraryRowActions
-                            name={theme.name}
-                            edit={
-                              <ButtonLink
-                                to="/document-themes/$themeId"
-                                params={{ themeId: theme.id }}
-                                aria-label={`Edit ${theme.name}`}
-                                variant="quiet"
-                                size="small"
-                              >
-                                Edit
-                              </ButtonLink>
-                            }
-                            duplicate={
-                              <ButtonLink
-                                to="/document-themes/new"
-                                search={{ from: theme.id }}
-                                aria-label={`Duplicate ${theme.name}`}
-                                variant="quiet"
-                                size="small"
-                              >
-                                Duplicate
-                              </ButtonLink>
-                            }
-                            onDelete={() => setDeleting(theme)}
-                          />
-                        }
-                      />
-                    ))}
-                  </List>
+                  <SelectionArea selection={selection}>
+                    <LibraryBulkBar
+                      selection={selection}
+                      total={yours.length}
+                      noun={themeNoun}
+                      busy={bulk.busy}
+                      onDuplicate={() => bulk.duplicate(chosen)}
+                      onExport={() => transfer.exportItems(chosen)}
+                      onDelete={() => setConfirming(true)}
+                    />
+                    <List label="Your themes">
+                      {yours.map((theme) => (
+                        <ListRow
+                          key={theme.id}
+                          className={libraryRow}
+                          lead={
+                            <>
+                              <RowCheck selection={selection} value={theme.id} label={theme.name} />
+                              <Swatches colors={theme.values.colors} />
+                            </>
+                          }
+                          title={theme.name}
+                          meta={
+                            <>
+                              {`${themeMeta(theme.values)} · updated `}
+                              <Stamp iso={theme.updatedAt} />
+                            </>
+                          }
+                          selected={theme.id === shownSaved?.id}
+                          onSelect={() => setPicked(theme.id)}
+                          actions={
+                            <LibraryRowActions
+                              name={theme.name}
+                              edit={
+                                <ButtonLink
+                                  to="/document-themes/$themeId"
+                                  params={{ themeId: theme.id }}
+                                  aria-label={`Edit ${theme.name}`}
+                                  variant="quiet"
+                                  size="small"
+                                >
+                                  Edit
+                                </ButtonLink>
+                              }
+                              duplicate={
+                                <ButtonLink
+                                  to="/document-themes/new"
+                                  search={{ from: theme.id }}
+                                  aria-label={`Duplicate ${theme.name}`}
+                                  variant="quiet"
+                                  size="small"
+                                >
+                                  Duplicate
+                                </ButtonLink>
+                              }
+                              onDelete={() => setDeleting(theme)}
+                            />
+                          }
+                        />
+                      ))}
+                    </List>
+                  </SelectionArea>
                 )}
               </section>
 
@@ -242,109 +303,25 @@ export function DocumentThemesRoute() {
         }}
         onCancel={() => setDeleting(undefined)}
       />
+
+      <ConfirmDialog
+        open={confirming}
+        title={`Delete ${counted(chosen.length, "PDF theme", "PDF themes")} permanently?`}
+        consequence={`${chosen.length === 1 ? `“${chosen[0]?.name ?? ""}” is` : `These ${String(chosen.length)} themes are`} deleted permanently: PDF themes do not go to Settings → Trash, so they cannot be restored. Projects that used them keep their own copy of the settings.`}
+        confirmLabel={`Delete ${counted(chosen.length, "theme", "themes")} permanently`}
+        cancelLabel="Keep them"
+        pending={bulk.busy}
+        onConfirm={() => {
+          bulk.remove(chosen);
+          setConfirming(false);
+        }}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   );
 }
 
+const themeNoun = ["PDF theme", "PDF themes"] as const;
+
 export const deleteConsequence =
   "It is deleted permanently: PDF themes do not go to Settings → Trash, so it cannot be restored. Projects that used it keep their own copy of its settings.";
-
-function themeMeta(values: DocumentTheme): string {
-  return `${values.page.format === "a4" ? "A4" : "Letter"} · ${familyLabel(values.fonts.body.family)} body`;
-}
-
-function familyLabel(family: string): string {
-  return faceFamilies.find((one) => one.value === family)?.label ?? family;
-}
-
-function hex(color: string): string {
-  return color.startsWith("#") ? color : `#${color}`;
-}
-
-// The selected theme at a glance: its colours, its fonts and its page.
-function ThemeDetail({
-  name,
-  kicker,
-  meta,
-  values,
-  action,
-}: {
-  readonly name: string;
-  readonly kicker: string;
-  readonly meta: ReactNode;
-  readonly values: DocumentTheme;
-  readonly action: ReactNode;
-}): ReactElement {
-  const colors: readonly (readonly [string, string])[] = [
-    ["Headings", values.colors.heading],
-    ["Text", values.colors.text],
-    ["Muted", values.colors.muted],
-    ["Header and page numbers", values.colors.faint],
-  ];
-  const fonts: readonly (readonly [string, DocumentTheme["fonts"]["body"]])[] = [
-    ["Body", values.fonts.body],
-    ["Headings", values.fonts.heading],
-    ["Drop cap", values.fonts.dropCap],
-  ];
-  return (
-    <section aria-label={`${name} details`} className="flex min-w-0 flex-col gap-6">
-      <SectionHead title={name} kicker={kicker} meta={meta} className="pb-0">
-        {action}
-      </SectionHead>
-      <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[max-content_minmax(0,1fr)]">
-        {colors.map(([label, color]) => (
-          <Pair key={label} label={label}>
-            <span className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="size-4 rounded-full border border-line"
-                style={{ backgroundColor: hex(color) }}
-              />
-              <span className="font-mono text-small">{hex(color)}</span>
-            </span>
-          </Pair>
-        ))}
-        {fonts.map(([label, face]) => (
-          <Pair key={`font-${label}`} label={`${label} font`}>
-            {`${familyLabel(face.family)}, ${face.style}`}
-          </Pair>
-        ))}
-        <Pair label="Page">
-          {`${values.page.format === "a4" ? "A4" : "Letter"}, ${
-            values.background.image === "parchment"
-              ? "parchment"
-              : `flat ${hex(values.background.color)}`
-          } background`}
-        </Pair>
-      </dl>
-    </section>
-  );
-}
-
-function Pair({ label, children }: { readonly label: string; readonly children: ReactNode }) {
-  return (
-    <>
-      <dt className="text-small text-ink-2">{label}</dt>
-      <dd className="m-0 min-w-0 text-body text-ink">{children}</dd>
-    </>
-  );
-}
-
-function Swatches({
-  colors,
-}: {
-  readonly colors: { readonly heading: string; readonly text: string; readonly muted: string };
-}) {
-  return (
-    <span aria-hidden="true" className="flex shrink-0 gap-1">
-      {[colors.heading, colors.text, colors.muted].map((color, index) => (
-        <span
-          // biome-ignore lint/suspicious/noArrayIndexKey: three fixed swatches
-          key={index}
-          className="size-3 rounded-full border border-line"
-          style={{ backgroundColor: hex(color) }}
-        />
-      ))}
-    </span>
-  );
-}

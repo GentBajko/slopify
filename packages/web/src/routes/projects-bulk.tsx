@@ -9,14 +9,16 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { Select } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { counted, type Selection, SelectionBar } from "@/components/selection";
-import { markUploaded } from "@/home/api";
+import { eachOf, useBulkMarkUploaded } from "@/home/bulk-uploaded";
 import { isReadyToUpload } from "@/home/ready";
 import { keys } from "@/queries";
 import { restoreTrashItems, trashKey } from "@/trash/api";
+import { RemakeOutdated } from "./projects-remake-review.js";
 
 // The Projects list's selection bar: Mark uploaded, Mark not uploaded, Move to a channel and
 // Delete for the ticked rows, each announced in a toast with Undo where it can be taken back.
-// No bulk re-run: a re-run costs money per project and needs its own scope and cost review.
+// Remake outdated checks the ticked projects and opens one scope and cost review first
+// (projects-remake-review.tsx).
 
 type Notify = ReturnType<typeof useToast>;
 
@@ -58,33 +60,15 @@ export async function restoreProjects(
   }
 }
 
-// Each project on its own, so one refusal leaves the rest done.
-async function eachOf(
-  projects: readonly ProjectListing[],
-  run: (project: ProjectListing) => Promise<unknown>,
-): Promise<{
-  readonly done: readonly ProjectListing[];
-  readonly failed: readonly { readonly project: ProjectListing; readonly reason: string }[];
-}> {
-  const done: ProjectListing[] = [];
-  const failed: { project: ProjectListing; reason: string }[] = [];
-  for (const project of projects) {
-    try {
-      await run(project);
-      done.push(project);
-    } catch (error) {
-      failed.push({ project, reason: error instanceof Error ? error.message : String(error) });
-    }
-  }
-  return { done, failed };
-}
-
 export function ProjectsBulkBar({
   selection,
   rows,
   scope,
+  samples,
 }: {
   readonly selection: Selection<string>;
+  // The bundled sample projects, which Remake outdated leaves out.
+  readonly samples: ReadonlySet<string>;
   // The rows the list draws, in order; Select all covers these.
   readonly rows: readonly ProjectListing[];
   // "Select all 12 shown" when a filter, a search or Show more leaves rows out.
@@ -132,29 +116,7 @@ export function ProjectsBulkBar({
     },
   });
 
-  const mark = useMutation({
-    mutationFn: (input: { readonly list: readonly ProjectListing[]; readonly on: boolean }) =>
-      eachOf(input.list, (one) => markUploaded(api, one.id, input.on)),
-    onSuccess: ({ done, failed }, input) => {
-      if (done.length > 0)
-        notify(
-          input.on
-            ? `Marked ${projectsWord(done.length)} uploaded.`
-            : `${projectsWord(done.length)} back on Ready to upload.`,
-          "success",
-          { label: "Undo", run: () => mark.mutate({ list: done, on: !input.on }) },
-        );
-      report(
-        failed,
-        input.on ? "marked uploaded" : "marked not uploaded",
-        "Press the button again.",
-      );
-    },
-    onSettled: async () => {
-      selection.clear();
-      await client.invalidateQueries({ queryKey: keys.projects });
-    },
-  });
+  const mark = useBulkMarkUploaded({ noun: ["project", "projects"], onSettled: selection.clear });
 
   const move = useMutation({
     mutationFn: async (input: { readonly list: readonly ProjectListing[]; readonly to: string }) =>
@@ -254,6 +216,12 @@ export function ProjectsBulkBar({
                 </Button>
               </span>
             )}
+            <RemakeOutdated
+              chosen={chosen}
+              samples={samples}
+              busy={busy}
+              onDone={selection.clear}
+            />
             <Button
               size="small"
               variant="destructive"

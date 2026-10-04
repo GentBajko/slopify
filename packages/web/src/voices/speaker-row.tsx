@@ -14,13 +14,15 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { RowCheck, type Selection } from "@/components/selection";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { usd } from "@/lib/format";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { RowMenu } from "./row-menu.js";
 
 // One speaker of the Multiple voices editor: name, role, voice, pace, pronunciations, an
-// Audition button, and Remove with the rarer Move up, Move down and Duplicate in its menu.
+// Audition button, and Remove with the rarer Move up, Move down and Duplicate in its menu. With
+// enough speakers a tick beside the name picks it for Remove selected.
 
 const roleLabels: Readonly<Record<SpeakerRole, string>> = {
   narrator: "Narrator",
@@ -37,6 +39,7 @@ export function SpeakerRow({
   voices,
   language,
   problem,
+  selection,
   onChange,
   onRemove,
   onMoveUp,
@@ -50,6 +53,8 @@ export function SpeakerRow({
   readonly voices: readonly Voice[];
   readonly language: string | undefined;
   readonly problem?: ((field: string) => string | undefined) | undefined;
+  // Ticks for Remove selected; absent while there are too few speakers to need them.
+  readonly selection?: Selection<string> | undefined;
   readonly onChange: (next: Speaker) => void;
   readonly onRemove: (() => void) | undefined;
   readonly onMoveUp?: (() => void) | undefined;
@@ -71,6 +76,14 @@ export function SpeakerRow({
   return (
     <li className="grid grid-cols-1 gap-3 py-3 min-[700px]:grid-cols-2" data-play-field={field}>
       <div className="flex min-w-0 items-end gap-2">
+        {selection === undefined ? null : (
+          <RowCheck
+            selection={selection}
+            value={speaker.id}
+            label={speaker.name.trim() || `speaker ${String(index + 1)}`}
+            className="mb-1"
+          />
+        )}
         <span
           aria-hidden="true"
           className="mb-2 size-3 shrink-0 rounded-full"

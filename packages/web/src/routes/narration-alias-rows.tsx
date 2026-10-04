@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { IconButton } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
+import { RowCheck, type Selection } from "@/components/selection";
 import { Input } from "@/components/ui/input";
 
 export interface AliasRow extends NarrationAlias {
@@ -24,12 +25,15 @@ export function AliasRows({
   idPrefix,
   update,
   remove,
+  selection,
 }: {
   readonly rows: readonly PlacedRow[];
   readonly errors: Readonly<Record<number, string>>;
   readonly idPrefix: string;
   readonly update: (key: number, change: Partial<NarrationAlias>) => void;
   readonly remove: (key: number) => void;
+  // Ticked rows by their key, for Remove selected and Export selected.
+  readonly selection: Selection<string>;
 }): ReactElement {
   return (
     // One info button per column, once above the rows rather than on every row.
@@ -61,6 +65,13 @@ export function AliasRows({
           return (
             <ListRow
               key={row.key}
+              lead={
+                <RowCheck
+                  selection={selection}
+                  value={String(row.key)}
+                  label={`Alias ${String(index + 1)}${written === "" ? "" : ` (${written})`}`}
+                />
+              }
               title={`Alias ${String(index + 1)}`}
               meta={
                 written === "" || spoken === ""

@@ -273,6 +273,7 @@ export function ProjectsRoute({
                   <ProjectsBulkBar
                     selection={selection}
                     rows={shown}
+                    samples={samples}
                     {...(shown.length < inChannel.length
                       ? { scope: `Select all ${String(shown.length)} shown` }
                       : {})}

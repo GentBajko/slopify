@@ -18,6 +18,7 @@ import {
   pictureUrl,
 } from "./api";
 import { CastEditor } from "./cast-editor";
+import { CastOrderMenu, castMoveKeys, useCastMove } from "./cast-order";
 import { castDeleteConsequence, castDeleteTitle } from "./delete-copy";
 
 // More members than this and a search box shows above the gallery.
@@ -57,6 +58,7 @@ export function CastTab({
     },
   });
   const member = cast.find((one) => one.id === selected);
+  const order = useCastMove(channelId, cast);
   // Each member's first ready picture, full size in the lightbox.
   const pictured = cast.flatMap((one) => {
     const first = one.images.find((image) => image.state === "ready")?.sha256;
@@ -149,6 +151,8 @@ export function CastTab({
                           size="small"
                           aria-label={`Edit ${one.name}`}
                           aria-pressed={one.id === selected}
+                          aria-keyshortcuts={castMoveKeys}
+                          onKeyDown={order.onKeyDown(one)}
                           onClick={() => select(one.id)}
                         >
                           Edit
@@ -164,6 +168,12 @@ export function CastTab({
                         >
                           Delete
                         </Button>
+                        <CastOrderMenu
+                          member={one}
+                          index={cast.indexOf(one)}
+                          count={cast.length}
+                          order={order}
+                        />
                       </>
                     }
                   />

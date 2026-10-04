@@ -48,6 +48,7 @@ const memberRow = z.object({
   description: z.string(),
   voice_json: z.string().nullable().optional(),
   host: z.number().optional(),
+  position: z.number().optional(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -132,7 +133,7 @@ function counts(db: DatabaseSync, sql: string): Map<string, number> {
 
 export function castOfChannel(db: DatabaseSync, channelId: string): readonly CastMember[] {
   const members = db
-    .prepare("SELECT * FROM cast_members WHERE channel_id=? ORDER BY lower(name), id")
+    .prepare("SELECT * FROM cast_members WHERE channel_id=? ORDER BY position, lower(name), id")
     .all(channelId)
     .map((row) => memberRow.parse(row));
   const images = new Map<string, CastImage[]>();

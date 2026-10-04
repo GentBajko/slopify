@@ -12,6 +12,7 @@ import { castMemberById, castOfChannel, channelById, channelSummaries } from "./
 import {
   castMemberCreateSchema,
   castMemberUpdateSchema,
+  castMoveSchema,
   channelAiDisclosureSchema,
   channelCreateSchema,
   channelUpdateSchema,
@@ -175,7 +176,7 @@ export function createCastMember(
     const at = deps.clock.now().toISOString();
     deps.db
       .prepare(
-        "INSERT INTO cast_members(id,channel_id,kind,name,aliases_json,description,voice_json,host,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO cast_members(id,channel_id,kind,name,aliases_json,description,voice_json,host,position,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,(SELECT coalesce(max(position)+1,0) FROM cast_members WHERE channel_id=?),?,?)",
       )
       .run(
         id,
@@ -186,6 +187,7 @@ export function createCastMember(
         description,
         voice === undefined || voice === null ? null : JSON.stringify(voice),
         host === true ? 1 : 0,
+        channelId,
         at,
         at,
       );
@@ -243,6 +245,28 @@ export function deleteCastMember(
   return Number(changed.changes) === 0
     ? { ok: false, reason: "not-found" }
     : { ok: true, value: { deleted: true } };
+}
+
+// Moves a member to a place in its channel's cast and numbers the whole cast again from 0, so
+// the order never depends on ties. Answers with the cast in its new order.
+export function moveCastMember(
+  deps: Pick<ChannelDeps, "db">,
+  channelId: string,
+  input: unknown,
+): ChannelResult<readonly CastMember[]> {
+  const parsed = castMoveSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "invalid-input" };
+  const { memberId, to } = parsed.data;
+  return transact(deps.db, () => {
+    const order = castOfChannel(deps.db, channelId).map((member) => member.id);
+    const from = order.indexOf(memberId);
+    if (from < 0) return { ok: false, reason: "not-found" };
+    order.splice(from, 1);
+    order.splice(Math.min(to, order.length), 0, memberId);
+    const place = deps.db.prepare("UPDATE cast_members SET position=? WHERE id=?");
+    for (const [index, id] of order.entries()) place.run(index, id);
+    return { ok: true, value: castOfChannel(deps.db, channelId) };
+  });
 }
 
 // Aliases compared without case, the name itself left out: matching ignores case anyway.

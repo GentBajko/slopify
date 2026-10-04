@@ -379,3 +379,45 @@ it("duplicates a speaker under it and moves speakers up and down from the row's 
   await user.click(screen.getByRole("menuitem", { name: "Move down" }));
   expect(names()).toEqual(["Sam", "Alex", "Alex copy"]);
 });
+
+it("removes the ticked speakers together and Undo puts them back in place", async () => {
+  const user = userEvent.setup();
+  renderRouted(<Subject />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "podcast");
+  const names = () => saved()?.speakers.map((speaker) => speaker.name);
+  // Two speakers: no ticks, each has its own Remove.
+  expect(screen.queryByRole("checkbox", { name: "Select row: Alex" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Add speaker" }));
+  await user.click(screen.getByRole("button", { name: "Add speaker" }));
+  expect(names()).toEqual(["Alex", "Sam", "Speaker 3", "Speaker 4"]);
+  const remove = screen.getByRole("button", { name: "Remove selected" });
+  expect(remove.hasAttribute("disabled")).toBe(true);
+  await user.click(screen.getByRole("checkbox", { name: "Select row: Alex" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select row: Speaker 3" }));
+  expect(screen.getByText("2 of 4 speakers selected")).toBeTruthy();
+  await user.click(remove);
+  expect(names()).toEqual(["Sam", "Speaker 4"]);
+  const toast = await screen.findByText("Removed 2 speakers.");
+  await user.click(
+    within(toast.closest("div") as HTMLElement).getByRole("button", { name: "Undo" }),
+  );
+  expect(names()).toEqual(["Alex", "Sam", "Speaker 3", "Speaker 4"]);
+  expect(screen.getByRole("checkbox", { name: "Select row: Alex" })).toHaveProperty(
+    "checked",
+    false,
+  );
+});
+
+it("keeps at least one speaker when every one is ticked", async () => {
+  const user = userEvent.setup();
+  renderRouted(<Subject />, testDeps({}));
+  await user.selectOptions(await screen.findByLabelText("Format"), "podcast");
+  await user.click(screen.getByRole("button", { name: "Add speaker" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select all" }));
+  const remove = screen.getByRole("button", { name: "Remove selected" });
+  expect(remove.hasAttribute("disabled")).toBe(true);
+  expect(remove.getAttribute("title")).toContain("pick Narration under Format");
+  await user.click(screen.getByRole("button", { name: "Remove Sam" }));
+  expect(saved()?.speakers.map((speaker) => speaker.name)).toEqual(["Alex", "Speaker 3"]);
+  await screen.findByText("Removed Sam.");
+});

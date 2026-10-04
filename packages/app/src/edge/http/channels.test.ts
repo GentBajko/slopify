@@ -147,4 +147,31 @@ describe("channel routes", () => {
       "Settings → Providers",
     );
   });
+
+  it("moves a cast member to a place and answers with the cast in its new order", async () => {
+    const app = harness();
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    for (const [index, name] of ["Ada", "Bram", "Cleo"].entries())
+      await send(app, "POST", `/api/channels/${defaultChannelId}/cast`, {
+        id: ids[index],
+        kind: "character",
+        name,
+      });
+    const moved = await send(app, "POST", `/api/channels/${defaultChannelId}/cast/move`, {
+      memberId: ids[2],
+      to: 0,
+    });
+    expect(moved.status).toBe(200);
+    const body = (await moved.json()) as { cast: { name: string }[] };
+    expect(body.cast.map((member) => member.name)).toEqual(["Cleo", "Ada", "Bram"]);
+    const read = (await (await send(app, "GET", `/api/channels/${defaultChannelId}`)).json()) as {
+      cast: { name: string }[];
+    };
+    expect(read.cast.map((member) => member.name)).toEqual(["Cleo", "Ada", "Bram"]);
+    const gone = await send(app, "POST", `/api/channels/${defaultChannelId}/cast/move`, {
+      memberId: randomUUID(),
+      to: 0,
+    });
+    expect(gone.status).toBe(404);
+  });
 });

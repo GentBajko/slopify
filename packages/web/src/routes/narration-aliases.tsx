@@ -13,10 +13,14 @@ import { Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { counted, useSelection } from "@/components/selection";
+import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
+import { TransferMenu } from "@/library/transfer-menu";
 import { keys, narrationAliasesQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 import { mergeAliases, PasteAliasesDialog } from "./narration-alias-paste.js";
 import { type AliasRow, AliasRows, matchingRows } from "./narration-alias-rows.js";
+import { aliasFileTypes, useAliasTransfer } from "./narration-alias-transfer.js";
 import { UnsavedLeaveGuard } from "./unsaved-leave-guard.js";
 
 const blank = { written: "", spoken: "", wholeWord: true, caseSensitive: false };
@@ -154,12 +158,66 @@ export function NarrationAliasesRoute(): ReactElement {
     });
   };
   const visible = matchingRows(shown, query);
+  const selection = useSelection(visible.map(({ row }) => String(row.key)));
+  const chosen = shown.filter((row) => selection.has(String(row.key)));
+  // Remove selected: the rows leave the list on screen; Undo puts each back where it was.
+  const removeChosen = () => {
+    const gone = shown.flatMap((row, at) => (selection.has(String(row.key)) ? [{ row, at }] : []));
+    if (gone.length === 0) return;
+    setRows(shown.filter((row) => !selection.has(String(row.key))));
+    selection.clear();
+    setErrors({});
+    setStatus(undefined);
+    notify(
+      `Removed ${counted(gone.length, "alias", "aliases")}. Press Save aliases to keep the change.`,
+      "info",
+      {
+        label: "Undo",
+        run: () =>
+          setRows((current) => {
+            const list = [...(current ?? [])];
+            for (const { row, at } of gone) list.splice(Math.min(at, list.length), 0, row);
+            return list;
+          }),
+      },
+    );
+  };
+  const transfer = useAliasTransfer({
+    onImport: (aliases) => {
+      const merged = mergeAliases(shown, aliases, (alias) => {
+        next.current += 1;
+        return { ...alias, key: next.current };
+      });
+      setRows(merged.rows);
+      setQuery("");
+      setStatus(undefined);
+      return merged;
+    },
+  });
 
   return (
     <div>
       <LibraryToolbar
         action={
           <>
+            <TransferMenu
+              what="aliases"
+              disabled={rows === undefined}
+              exports={[
+                {
+                  label: `Export all ${counted(shown.length, "alias", "aliases")}`,
+                  run: () => transfer.exportJson(plain(shown)),
+                  disabled: shown.length === 0,
+                },
+                {
+                  label: "Export all as CSV",
+                  run: () => transfer.exportCsv(plain(shown)),
+                  disabled: shown.length === 0,
+                },
+              ]}
+              accept={aliasFileTypes}
+              onFile={(file) => void transfer.importFile(file)}
+            />
             <Button type="button" onClick={() => setPasting(true)} disabled={rows === undefined}>
               <ClipboardPasteIcon aria-hidden="true" className="size-[14px]" />
               Paste many
@@ -203,13 +261,30 @@ export function NarrationAliasesRoute(): ReactElement {
               {`Nothing in the ${String(shown.length)} aliases contains “${query.trim()}”. Clear the search to see them all.`}
             </EmptyState>
           ) : (
-            <AliasRows
-              rows={visible}
-              errors={errors}
-              idPrefix={idPrefix}
-              update={update}
-              remove={remove}
-            />
+            <SelectionArea selection={selection}>
+              <LibraryBulkBar
+                selection={selection}
+                total={visible.length}
+                noun={["alias", "aliases"]}
+                scope={
+                  visible.length === shown.length
+                    ? undefined
+                    : `Select all ${String(visible.length)} shown`
+                }
+                busy={false}
+                onExport={() => transfer.exportJson(plain(chosen))}
+                onDelete={removeChosen}
+                deleteLabel="Remove selected"
+              />
+              <AliasRows
+                rows={visible}
+                errors={errors}
+                idPrefix={idPrefix}
+                update={update}
+                remove={remove}
+                selection={selection}
+              />
+            </SelectionArea>
           )}
         </BoardColumn>
         <BoardColumn as="aside" label="How aliases are used">

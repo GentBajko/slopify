@@ -112,6 +112,20 @@ export async function deleteCastMember(api: Api, id: string): Promise<void> {
   if (!response.ok) await read(response);
 }
 
+// Moves a member to a place in the cast's order (0 is first); answers with the cast in order.
+export async function moveCastMember(
+  api: Api,
+  channelId: string,
+  memberId: string,
+  to: number,
+): Promise<readonly CastMember[]> {
+  return (
+    await read<{ readonly cast: readonly CastMember[] }>(
+      await api.fetch(`${root(api)}/${channelId}/cast/move`, json("POST", { memberId, to })),
+    )
+  ).cast;
+}
+
 export async function uploadCastImage(api: Api, memberId: string, file: File): Promise<CastImage> {
   return read(
     await api.fetch(`${root(api)}/cast/${memberId}/images`, {
