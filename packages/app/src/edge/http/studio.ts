@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
+import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
 import { channelById } from "../../slices/channels/repo.js";
@@ -36,6 +37,7 @@ import {
   readLeadHours,
   releasesOf,
   setRelease,
+  swapReleases,
   writeLeadHours,
 } from "../../slices/studio/releases.js";
 import { parseStudioExport, readReport, saveReport } from "../../slices/studio/report.js";
@@ -379,6 +381,31 @@ export function studioRoutes(deps: AppDeps) {
           free: slotChoices(projectId, pack.pack.series),
         });
       })
+      // Swap with…: two videos trade their release times; their shorts follow each.
+      .post(
+        "/releases/:projectId/swap",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", z.object({ with: id }).strict(), onInvalid),
+        (c) => {
+          const denied = samePage(c);
+          if (denied !== undefined) return denied;
+          const { projectId } = c.req.valid("param");
+          const other = c.req.valid("json").with;
+          const swapped = transact(deps.db, () =>
+            swapReleases(deps.db, projectId, other, deps.clock.now()),
+          );
+          if (!swapped)
+            return problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "Both videos need a release time to swap. Give this one a time first, or reload the page and pick another video.",
+            });
+          planned(projectId);
+          planned(other);
+          return c.json({ releases: releasesOf(deps.db, projectId) });
+        },
+      )
       // Moves one release (a time), sets it to "not scheduled" (null), or puts a project into a
       // free time of the plan (short 0 with its line).
       .put(

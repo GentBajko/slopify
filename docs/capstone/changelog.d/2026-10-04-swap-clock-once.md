@@ -1,0 +1,1 @@
+- Releases swap (`swapReleases`, `POST /api/studio/releases/:projectId/swap`); the run clock ticks while the project runs and reads the server every 20 s; the extension adds one video per upload dialog (`addedTo`, `lastAdded`, extension 1.1.3).

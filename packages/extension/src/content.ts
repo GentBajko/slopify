@@ -502,6 +502,9 @@ function watch(): void {
 
 // The file input of the dialog whose video was put in, so each dialog gets it once.
 let picked: Element | undefined;
+// The upload dialog a video was added to; none is added again while it stays open.
+let addedTo: Element | null = null;
+let lastAdded: { readonly key: string; readonly at: number } | undefined;
 
 // Hands the waiting item's video to Studio's file input. The bytes come through a hidden frame
 // of the extension's own (`video-frame.ts`), which passes the downloaded File back in one
@@ -512,6 +515,11 @@ async function addVideo(input: HTMLInputElement): Promise<void> {
   if (!answer.ok) return;
   const { pack, item } = answer.value;
   if (item.video === null) return;
+  // The same upload twice within a minute and a half is Studio rebuilding its dialog, not a
+  // new upload: it is added once.
+  const key = `${pack.projectId}:${String(item.short ?? 0)}`;
+  if (lastAdded?.key === key && Date.now() - lastAdded.at < 90_000) return;
+  lastAdded = { key, at: Date.now() };
   const video = item.video;
   const size = `${(video.bytes / 1024 ** 3).toFixed(1)} GB`;
   toast(`Adding ${itemName(item)} (${video.filename}, ${size}) from Slopify…`, "info");
@@ -602,14 +610,20 @@ function look(): void {
   // The first step: the dialog's file input, before a video is in.
   const picker = dialog === null ? null : findField(dialog, videoInput);
   // Only in an open dialog: Studio may keep the dialog in the page while it is closed.
+  // One video per upload dialog: Studio rebuilds its file input while it starts the upload,
+  // and each rebuilt input is not a new dialog. A new one may take a video only once the
+  // dialog it was added to has closed.
+  if (addedTo !== null && !(addedTo.isConnected && shown(addedTo))) addedTo = null;
   if (
     dialog !== null &&
     shown(dialog) &&
+    addedTo === null &&
     picker instanceof HTMLInputElement &&
     picker !== picked &&
     findField(dialog ?? document, title) === null
   ) {
     picked = picker;
+    addedTo = dialog;
     void addVideo(picker).catch((error: unknown) => {
       toast(
         `The video couldn't be added: ${error instanceof Error ? error.message : String(error)} Drop it in by hand: Open folder in Slopify's Prepare upload shows it.`,

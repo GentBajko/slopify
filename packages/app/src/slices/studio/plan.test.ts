@@ -10,6 +10,7 @@ import {
   releasesOf,
   scheduleOf,
   setRelease,
+  swapReleases,
   writeLeadHours,
 } from "./releases.js";
 
@@ -178,4 +179,22 @@ it("reads Studio's clear checks as ok, and keeps any other words", async () => {
   ).toBe("ok");
   expect(checksWord("None")).toBe("ok");
   expect(checksWord("Copyright claim")).toBe("Copyright claim");
+});
+
+it("swaps two videos' release times, and their shorts follow each", () => {
+  const store = db();
+  setRelease(store, "p1", 0, "2026-10-04T18:00:00.000Z", "1", now);
+  planReleases(store, plan, { id: "p1", series: "", shorts: 1 }, now);
+  setRelease(store, "p2", 0, "2026-10-08T18:00:00.000Z", "3", now);
+  planReleases(store, plan, { id: "p2", series: "", shorts: 1 }, now);
+  expect(swapReleases(store, "p1", "p2", now)).toBe(true);
+  planReleases(store, plan, { id: "p1", series: "", shorts: 1 }, now);
+  planReleases(store, plan, { id: "p2", series: "", shorts: 1 }, now);
+  expect(scheduleOf(store, "p1")).toMatchObject({ row: "3", longAt: "2026-10-08T18:00:00.000Z" });
+  expect(scheduleOf(store, "p2")).toMatchObject({ row: "1", longAt: "2026-10-04T18:00:00.000Z" });
+  // Each short comes after its own video's new time.
+  expect(Date.parse(scheduleOf(store, "p1")?.shortsAt[0] ?? "")).toBeGreaterThan(
+    Date.parse("2026-10-08T18:00:00.000Z"),
+  );
+  expect(swapReleases(store, "p1", "p3", now)).toBe(false);
 });

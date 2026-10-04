@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
-import { readProjectReleases, saveRelease } from "@/api";
+import { readProjectReleases, readReleaseCalendar, saveRelease, swapRelease } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
@@ -35,6 +35,29 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
   const key = ["studio", "project-releases", projectId] as const;
   const read = useQuery({ queryKey: key, queryFn: () => readProjectReleases(api, projectId) });
   const [drafts, setDrafts] = useState<Readonly<Record<number, string>>>({});
+  // The other scheduled videos, for Swap with….
+  const calendar = useQuery({
+    queryKey: ["studio", "releases", "swap", 8],
+    queryFn: () => readReleaseCalendar(api, 8),
+  });
+  const others = (calendar.data?.entries ?? []).flatMap((entry) =>
+    entry.project === null || entry.project.id === projectId
+      ? []
+      : [{ id: entry.project.id, title: entry.project.title, at: entry.at }],
+  );
+  const swap = useMutation({
+    mutationFn: (other: string) => swapRelease(api, projectId, other),
+    onSuccess: (_, other) => {
+      void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({ queryKey: ["studio", "releases"] });
+      void client.invalidateQueries({ queryKey: ["studio", "project-releases", other] });
+      notify(
+        `Swapped release times with ${others.find((one) => one.id === other)?.title ?? "the other video"}; each one's shorts moved with it.`,
+        "success",
+      );
+    },
+    onError: (error: Error) => notify(`The times weren't swapped: ${error.message}`, "error"),
+  });
   const save = useMutation({
     mutationFn: (change: { short: number; at: string | null; line?: string }) =>
       saveRelease(api, projectId, change),
@@ -112,6 +135,24 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                     ...free.map((slot) => ({
                       value: slot.longAt,
                       label: when.format(new Date(slot.longAt)),
+                    })),
+                  ]}
+                />
+              ) : null}
+              {item.at !== null && item.short === 0 && others.length > 0 ? (
+                <Select
+                  aria-label="Swap release times with another video"
+                  className="w-[260px]"
+                  value=""
+                  disabled={swap.isPending}
+                  onChange={(event) => {
+                    if (event.currentTarget.value !== "") swap.mutate(event.currentTarget.value);
+                  }}
+                  options={[
+                    { value: "", label: "Swap with…" },
+                    ...others.map((one) => ({
+                      value: one.id,
+                      label: `${one.title.split(" | ")[0] ?? one.title} · ${when.format(new Date(one.at))}`,
                     })),
                   ]}
                 />

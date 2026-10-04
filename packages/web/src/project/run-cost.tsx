@@ -91,22 +91,33 @@ export function RunClock({
   readonly measuredAt: number;
 }): ReactElement | null {
   const run = cost?.run ?? null;
+  const running = status === "running";
   const on = run?.current === true && !ended.has(status);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!on) return;
+    if (!running) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [on]);
+  }, [running]);
   if (!on || run === null) return null;
-  const working = workDuration(run.workingMs + (run.running ? Math.max(0, now - measuredAt) : 0));
-  // Inline, at the end of the title's meta line: a row of its own cost the page its top.
+  // While the project runs the clock counts every second from the last reading; the page reads
+  // the server's figure again every 20 seconds, so it never drifts far.
+  const ms = run.workingMs + (running ? Math.max(0, now - measuredAt) : 0);
+  const working = running ? stopwatch(ms) : workDuration(ms);
   return (
     <>
       <span aria-hidden="true">·</span>
-      <span role="timer" aria-label="Run time" className="inline-flex items-center gap-1">
-        <TimerIcon aria-hidden="true" strokeWidth={1.75} className="size-3.5 shrink-0" />
-        {run.running ? `Working for ${working}` : `${working} of work so far`}
+      <span
+        role="timer"
+        aria-label="Run time"
+        className={
+          running
+            ? "inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-0.5 font-semibold text-ink tabular-nums"
+            : "inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 font-semibold text-ink-2 tabular-nums"
+        }
+      >
+        <TimerIcon aria-hidden="true" strokeWidth={2} className="size-3.5 shrink-0" />
+        {running ? `Working · ${working}` : `${working} of work so far`}
       </span>
     </>
   );
@@ -317,6 +328,13 @@ export function money(value: number): string {
   if (value === 0) return "$0";
   if (value < 0.01) return "<$0.01";
   return `$${value.toFixed(2)}`;
+}
+
+// "1:03:27": a clock that visibly counts, for a run in progress.
+export function stopwatch(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
 }
 
 export function workDuration(ms: number): string {

@@ -197,6 +197,19 @@ export function setRelease(
     db.prepare("DELETE FROM releases WHERE project_id=? AND short>0 AND by='plan'").run(projectId);
 }
 
+// Two projects trade their long videos' release times (and lines); each one's plan-placed
+// shorts are dropped, to be placed again after its new time. False when either has no time.
+export function swapReleases(db: DatabaseSync, first: string, second: string, now: Date): boolean {
+  const longOf = (projectId: string) =>
+    releasesOf(db, projectId).find((release) => release.short === 0 && release.at !== "");
+  const a = longOf(first);
+  const b = longOf(second);
+  if (a === undefined || b === undefined || first === second) return false;
+  setRelease(db, first, 0, b.at, b.line, now);
+  setRelease(db, second, 0, a.at, a.line, now);
+  return true;
+}
+
 export function scheduleOf(db: DatabaseSync, projectId: string): Schedule | undefined {
   const releases = releasesOf(db, projectId);
   const long = releases.find((release) => release.short === 0);

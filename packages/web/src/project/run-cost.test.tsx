@@ -188,7 +188,7 @@ describe("the Run cost tab", () => {
 });
 
 describe("the run clock", () => {
-  it("ticks only while a step runs, and holds still while the run waits", () => {
+  it("ticks every second while the project runs, and holds still while it waits", () => {
     vi.useFakeTimers({ now: Date.parse("2026-09-27T10:12:00.000Z") });
     try {
       const measuredAt = Date.now();
@@ -196,9 +196,9 @@ describe("the run clock", () => {
         ({ run: { current: true, running, workingMs: 5 * 60_000 } }) as RunCost;
       render(<RunClock cost={run(true)} status="running" measuredAt={measuredAt} />);
       const clock = screen.getByRole("timer", { name: "Run time" });
-      expect(clock.textContent).toBe("Working for 5 min 0 s");
+      expect(clock.textContent).toBe("Working · 0:05:00");
       act(() => vi.advanceTimersByTime(5000));
-      expect(clock.textContent).toBe("Working for 5 min 5 s");
+      expect(clock.textContent).toBe("Working · 0:05:05");
       cleanup();
       // Waiting on a review: no step runs, so no time counts.
       render(<RunClock cost={run(false)} status="paused" measuredAt={measuredAt} />);

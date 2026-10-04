@@ -111,7 +111,14 @@ function ProjectWorkspace({
   const nextChapter = useNextChapter(projectId, openDraft);
   const project = useQuery(projectQuery(api, projectId));
   const prompts = useQuery(promptsQuery(api));
-  const runCost = useQuery(runCostQuery(api, projectId));
+  const runCost = useQuery({
+    ...runCostQuery(api, projectId),
+    // The run's clock reads the server's working time again while the project runs.
+    refetchInterval: (query) =>
+      project.data?.project.status === "running" && query.state.status === "success"
+        ? 20_000
+        : false,
+  });
   const actions = useProjectActions(projectId);
   const [chosen, setChosen] = useState<SectionId | undefined>();
   const [uploadOpen, setUploadOpen] = useState(false);

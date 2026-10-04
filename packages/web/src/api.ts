@@ -583,6 +583,16 @@ export interface ProjectReleases {
   readonly free: readonly Slot[];
 }
 
+// Swap with…: two videos trade their release times.
+export async function swapRelease(api: Api, projectId: string, other: string): Promise<void> {
+  await detailed<unknown>(
+    await api.client.studio.releases[":projectId"].swap.$post({
+      param: { projectId },
+      json: { with: other },
+    }),
+  );
+}
+
 // One project's release times (the project page's Release block).
 export async function readProjectReleases(api: Api, projectId: string): Promise<ProjectReleases> {
   return read<ProjectReleases>(
