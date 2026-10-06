@@ -35,6 +35,9 @@ export const revisionContentSchema = z
   .object({
     articleMarkdown: z.string().max(500000).optional(),
     articleEdited: z.boolean().default(false),
+    // The article the pictures were drawn from, kept once the article is edited by hand so
+    // they are not drawn again (`rebuild/recipe-save.ts`).
+    picturesArticle: z.string().max(500000).optional(),
     provided: z
       .object({
         research: id.optional(),

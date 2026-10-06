@@ -131,6 +131,21 @@ const opened = "tasksOpened";
 const retryMs = 30 * 60 * 1000;
 const statsEveryMs = 24 * 60 * 60 * 1000;
 const checksEveryMs = 2 * 60 * 60 * 1000;
+// Whether the videos Slopify takes to be on YouTube still exist: every two hours, and when the
+// popup opens if the last check is older than this.
+const goneKey = "goneAt";
+const goneEveryMs = 2 * 60 * 60 * 1000;
+const goneOnPopupMs = 10 * 60 * 1000;
+
+// A Studio tab in the background reads each video's edit page (`content.ts`'s `runGone`).
+async function checkGone(olderThanMs: number): Promise<void> {
+  if (api.tabs === undefined || (await pairing()) === undefined) return;
+  const stored = await api.storage.local.get([goneKey]);
+  const at = typeof stored[goneKey] === "number" ? stored[goneKey] : 0;
+  if (Date.now() - at < olderThanMs) return;
+  await api.storage.local.set({ [goneKey]: Date.now() });
+  await api.tabs.create({ url: "https://studio.youtube.com/#slopify-gone", active: false });
+}
 
 async function isPublic(videoId: string): Promise<boolean> {
   try {
@@ -204,6 +219,7 @@ async function checkTasks(): Promise<void> {
       active: false,
     });
   }
+  await checkGone(goneEveryMs);
   await sweepStats();
 }
 
@@ -461,6 +477,21 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ),
       };
     if (request.type === "export-done") return { ok: true, value: true };
+    if (request.type === "gone-list") {
+      const { videos } = await getJson<{ videos: unknown }>(
+        "/api/studio/ext/recorded-videos",
+        "the videos on YouTube",
+      );
+      return { ok: true, value: videos };
+    }
+    if (request.type === "gone")
+      return {
+        ok: true,
+        value:
+          request.videos.length === 0
+            ? { forgotten: 0 }
+            : await post("/api/studio/ext/gone", { videos: request.videos }, "the deleted videos"),
+      };
     if (request.type === "backfill")
       return {
         ok: true,
@@ -470,6 +501,7 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
       return { ok: true, value: await sweepStats(true) };
     }
     if (request.type === "ready") {
+      void checkGone(goneOnPopupMs);
       const current = await paired();
       const response = await call("/api/studio/ext/ready", current);
       if (!response.ok) throw new Error(await failure(response, "the projects ready to upload"));
@@ -499,6 +531,7 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     if (tab === undefined) return;
     if (request.type === "task-result") void api.tabs?.remove(tab);
     if (request.type === "export-done") void api.tabs?.remove(tab);
+    if (request.type === "gone") void api.tabs?.remove(tab);
     if (request.type === "backfill" && request.close === true) void api.tabs?.remove(tab);
     if (request.type === "stats" && request.last) {
       void api.tabs?.remove(tab);

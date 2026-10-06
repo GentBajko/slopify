@@ -35,7 +35,7 @@ export const thumbnailScenesKey = "thumbnail:scenes";
 // `{{Scene}}` takes one scene per thumbnail; any other thumbnail is drawn as it always was.
 export function thumbnailScenes(
   context: RecipeContext,
-  text: { readonly articleText: string | null; readonly article: ResolvedWorkRecipe },
+  text: { readonly pictureText: string | null; readonly article: ResolvedWorkRecipe },
 ): ThumbnailScenes | undefined {
   const { config, content } = context;
   if (config.sources.images !== "generate" || config.imageScenes !== true) return undefined;
@@ -46,7 +46,7 @@ export function thumbnailScenes(
   const messages = withLanguage(
     sceneMessages({
       title: subjectOf(config),
-      article: text.articleText ?? "",
+      article: text.pictureText ?? "",
       pictures: [],
       thumbnails: count,
     }),
@@ -56,7 +56,7 @@ export function thumbnailScenes(
     context,
     thumbnailScenesKey,
     "thumbnail",
-    text.articleText === null
+    text.pictureText === null
       ? {
           kind: "deferred",
           version: 1,
@@ -69,13 +69,13 @@ export function thumbnailScenes(
   return {
     recipe: value,
     count,
-    scenes: text.articleText === null ? undefined : savedScenes(context, value, count),
+    scenes: text.pictureText === null ? undefined : savedScenes(context, value, count),
   };
 }
 
 export function imageScenes(
   context: RecipeContext,
-  text: { readonly articleText: string | null; readonly article: ResolvedWorkRecipe },
+  text: { readonly pictureText: string | null; readonly article: ResolvedWorkRecipe },
 ): ImageScenes | undefined {
   const { config, content } = context;
   if (config.sources.images !== "generate" || config.imageScenes !== true) return undefined;
@@ -96,14 +96,14 @@ export function imageScenes(
   }
   if (keys.length === 0) return undefined;
   const messages = withLanguage(
-    sceneMessages({ title: subjectOf(config), article: text.articleText ?? "", pictures }),
+    sceneMessages({ title: subjectOf(config), article: text.pictureText ?? "", pictures }),
     config.language,
   );
   const value = recipe(
     context,
     imageScenesKey,
     "images",
-    text.articleText === null
+    text.pictureText === null
       ? {
           kind: "deferred",
           version: 1,
@@ -116,7 +116,7 @@ export function imageScenes(
   return {
     recipe: value,
     keys,
-    scenes: text.articleText === null ? undefined : savedScenes(context, value, keys.length),
+    scenes: text.pictureText === null ? undefined : savedScenes(context, value, keys.length),
   };
 }
 

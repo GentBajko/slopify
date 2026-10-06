@@ -8,7 +8,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { listProjects, projectById, stagesOf } from "../../slices/admission/repo.js";
-import { channelById } from "../../slices/channels/repo.js";
+import { channelById, projectChannels } from "../../slices/channels/repo.js";
 import { scheduleById, scheduleRunOfProject } from "../../slices/schedules/repo.js";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { findDownload } from "../../slices/storage/downloads.js";
@@ -143,6 +143,7 @@ const extVideoBody = z.object({
   short: shortField,
   videoId: z.string().regex(videoIdPattern),
 });
+const goneBody = z.object({ videos: z.array(extVideoBody).max(1000) });
 const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
 const slotBody = z.object({
   slot: z.object({ row: z.string().min(1).max(20), longAt: z.string().max(40) }).nullable(),
@@ -1004,6 +1005,35 @@ export function studioRoutes(deps: AppDeps) {
               videoId: video.videoId,
             })),
         });
+      })
+      // Every video Slopify takes to be on YouTube, for the extension to ask Studio whether
+      // each still exists.
+      .get("/ext/recorded-videos", (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        const channels = projectChannels(deps.db);
+        return c.json({
+          videos: doneVideos(deps.db).map((video) => ({
+            projectId: video.projectId,
+            short: video.short,
+            videoId: video.videoId,
+            channelId: channels.get(video.projectId) ?? null,
+          })),
+        });
+      })
+      // Videos Studio says were deleted: each is forgotten, as Deleted on YouTube does, so it
+      // can be uploaded again. A slot that has since become another video keeps it.
+      .post("/ext/gone", zValidator("json", goneBody, onInvalid), (c) => {
+        allowOrigin(c, false);
+        if (!extAllowed(c)) return refused(c);
+        let forgotten = 0;
+        for (const { projectId, short, videoId } of c.req.valid("json").videos) {
+          if (videoOf(deps.db, projectId, short ?? null)?.videoId !== videoId) continue;
+          forgetVideo(deps.db, projectId, short ?? null);
+          deps.hub.emit(projectId, { type: "project.updated", projectId });
+          forgotten++;
+        }
+        return c.json({ forgotten });
       })
       .post("/ext/stats", zValidator("json", statsBody, onInvalid), (c) => {
         allowOrigin(c, false);

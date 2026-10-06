@@ -804,6 +804,33 @@ describe("YouTube videos and their A/B tests", () => {
     expect((await h.call("/ext/tasks")).status).toBe(401);
   });
 
+  it("forgets a video Studio says was deleted, but not a slot uploaded again since", async () => {
+    const h = harness();
+    finished(h.output);
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    await h.call("/ext/video/done", ext(token, upload));
+    expect(await (await h.call("/ext/recorded-videos", ext(token))).json()).toMatchObject({
+      videos: [upload],
+    });
+    // An older upload of the same slot reported gone leaves the current one alone.
+    const old = { ...upload, videoId: "AAAAAAAAAAA" };
+    expect(await (await h.call("/ext/gone", ext(token, { videos: [old] }))).json()).toEqual({
+      forgotten: 0,
+    });
+    expect(await (await h.call("/ext/gone", ext(token, { videos: [upload] }))).json()).toEqual({
+      forgotten: 1,
+    });
+    expect(await (await h.call("/videos/p1")).json()).toEqual({ videos: [] });
+    const unpaired = await h.call("/ext/gone", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ videos: [] }),
+    });
+    expect(unpaired.status).toBe(401);
+  });
+
   it("asks for the checks of a scheduled video until Studio's Content list clears them", async () => {
     const h = harness();
     finished(h.output);

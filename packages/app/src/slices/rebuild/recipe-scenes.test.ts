@@ -300,3 +300,17 @@ it("changes no step at all when the project is only renamed", () => {
     before,
   );
 });
+
+it("keeps drawing from the article the pictures came from after a hand edit", () => {
+  const before = plan();
+  const edited = { ...withScenes, articleMarkdown: "Edited paragraph.", articleEdited: true };
+  const after = plan([], "Edited paragraph.", {
+    ...edited,
+    picturesArticle: withScenes.articleMarkdown,
+  });
+  for (const key of ["images:scenes", "image:harbor", "image:hill"])
+    expect(find(after, key).fingerprint).toBe(find(before, key).fingerprint);
+  expect(find(plan([], "Edited paragraph.", edited), "images:scenes").fingerprint).not.toBe(
+    find(before, "images:scenes").fingerprint,
+  );
+});

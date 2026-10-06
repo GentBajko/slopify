@@ -1,5 +1,6 @@
 import { browserApi } from "./browser.js";
 import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
+import { checkVideos, type RecordedVideo } from "./gone.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
 import {
@@ -756,6 +757,23 @@ async function runExport(channelId: string): Promise<void> {
   await report(sent.ok, sent.ok ? `Exported ${String(sent.value.rows)} videos.` : sent.message);
 }
 
+// The extension opened Studio to check the videos Slopify takes to be on YouTube
+// ("#slopify-gone"): reads each one's edit page and reports the deleted ones (`gone.ts`).
+async function runGone(): Promise<void> {
+  const list = (await api.runtime.sendMessage({ type: "gone-list" })) as WorkerAnswer<
+    readonly RecordedVideo[]
+  >;
+  const videos = list.ok ? list.value : [];
+  const gone = await checkVideos(videos, async (videoId) => {
+    const response = await fetch(`/video/${encodeURIComponent(videoId)}/edit`, {
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error(`Studio answered ${String(response.status)}`);
+    return await response.text();
+  });
+  await api.runtime.sendMessage({ type: "gone", videos: gone });
+}
+
 async function waitFor<T>(look: () => T | null, ms: number): Promise<T | null> {
   for (let waited = 0; waited < ms; waited += 300) {
     const found = look();
@@ -790,6 +808,7 @@ const short = Number(params.get("s") ?? "0") || null;
 const ab = params.get("slopify-ab");
 const exportChannel = params.has("slopify-export") ? params.get("c") : null;
 if (exportChannel !== null) void runExport(exportChannel);
+else if (params.has("slopify-gone")) void runGone();
 else if (projectId !== null && (ab === "titles" || ab === "thumbnails" || ab === "both"))
   void runAb(ab, projectId, short);
 else if (projectId !== null && params.has("slopify-finish")) void runFinish(projectId, short);

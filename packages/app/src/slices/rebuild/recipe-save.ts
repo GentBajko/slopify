@@ -70,14 +70,47 @@ export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): 
     edit.content.articleEdited === true ||
     edit.content.articleMarkdown !== base.revision.content.articleMarkdown;
   const changed = submittedText && edit.content.articleMarkdown !== base.articleMarkdown;
+  const { picturesArticle: _submitted, ...content } = edit.content;
+  const pictures = restart ? undefined : picturesArticleOf(base, edit, changed);
   return {
-    ...edit.content,
+    ...content,
+    ...(pictures === undefined ? {} : { picturesArticle: pictures }),
     articleEdited: restart
       ? false
       : changed
         ? true
         : (base.revision.content.articleEdited ?? false),
   };
+}
+
+// The steps that draw from the article: each image's scene, the looks, the thumbnails' scenes
+// and the thumbnail prompt written from it.
+export const pictureWorkKeys = [
+  "images:scenes",
+  "thumbnail:scenes",
+  "images:appearance",
+  "thumbnail:prompt",
+] as const;
+
+// An article edited by hand keeps the pictures already drawn: the version remembers the article
+// they were drawn from and those steps go on reading it, until the edit asks for them again or
+// the article is written anew. Before any picture is drawn there is nothing to keep.
+function picturesArticleOf(
+  base: RevisionView,
+  edit: RevisionEdit,
+  changed: boolean,
+): string | undefined {
+  const keys: readonly string[] = pictureWorkKeys;
+  if (edit.regenerate?.some((key) => keys.includes(key)) === true) return undefined;
+  const kept = base.revision.content.picturesArticle;
+  if (kept !== undefined) return kept;
+  if (!changed || base.articleMarkdown === null) return undefined;
+  const drawn =
+    base.pieces.some(
+      (row) => row.selected && keys.includes(row.key) && row.piece.state === "done",
+    ) ||
+    base.outputs.some((row) => row.selected && keys.includes(row.workKey) && row.state === "ready");
+  return drawn ? base.articleMarkdown : undefined;
 }
 export function planRevision(
   base: RevisionView,

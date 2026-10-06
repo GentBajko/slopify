@@ -1,0 +1,3 @@
+- `RevisionContent.picturesArticle`: a hand edit of the article keeps the article the pictures were drawn from; `images:scenes`, `thumbnail:scenes`, `images:appearance` and `thumbnail:prompt` read it (`textRecipes().pictureText`) until it is regenerated.
+- Document-reading CLI instructions ask for an answer that opens with the requested text.
+- `GET /api/studio/ext/recorded-videos` and `POST /api/studio/ext/gone`; extension `gone.ts` reads each video's Studio edit page (`VIDEO_STATUS_DELETED`, prefetch failed) and reports deleted ones.

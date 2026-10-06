@@ -133,6 +133,46 @@ it("distinguishes retained generated text from explicit editing and regeneration
     normalizeArticleIntent({ ...base, articleMarkdown: "Published later." }, prompt).articleEdited,
   ).toBe(false);
 });
+it("keeps the article the pictures were drawn from when the article is edited by hand", () => {
+  const generated: RunConfig = { ...config, sources: { ...config.sources, article: "generate" } };
+  const drawn = {
+    ...emptyView(generated),
+    articleMarkdown: "Written article.",
+    pieces: [
+      {
+        key: "images:scenes",
+        stageKind: "images" as const,
+        assetId: null,
+        fingerprint: "scenes",
+        piece: {
+          id: "s",
+          stageId: "images",
+          kind: "article_written" as const,
+          idx: 1,
+          state: "done" as const,
+          payload: null,
+        },
+        recordId: "s",
+        publicationId: null,
+        selected: true,
+        available: true,
+      },
+    ],
+  };
+  const edit = { config: generated, content: { ...content, articleMarkdown: "Edited article." } };
+  expect(normalizeArticleIntent(drawn, edit).picturesArticle).toBe("Written article.");
+  // Nothing drawn yet: the pictures read the edited article.
+  expect(normalizeArticleIntent({ ...drawn, pieces: [] }, edit).picturesArticle).toBeUndefined();
+  // A later edit keeps the first article; asking for scenes or a new article drops it.
+  const kept = emptyView(generated, { ...content, picturesArticle: "Written article." });
+  expect(normalizeArticleIntent(kept, edit).picturesArticle).toBe("Written article.");
+  expect(
+    normalizeArticleIntent(kept, { ...edit, regenerate: ["images:scenes"] }).picturesArticle,
+  ).toBeUndefined();
+  expect(
+    normalizeArticleIntent(kept, { ...edit, regenerate: ["article:body"] }).picturesArticle,
+  ).toBeUndefined();
+});
 it.each([
   {
     name: "article only to audio",

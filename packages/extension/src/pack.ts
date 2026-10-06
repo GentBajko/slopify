@@ -109,6 +109,17 @@ export type WorkerRequest =
       readonly message: string;
     }
   | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }
+  // A Studio tab opened to check the videos on YouTube ("#slopify-gone") asks which, then
+  // reports the ones Studio says are deleted; the worker closes its tab.
+  | { readonly type: "gone-list" }
+  | {
+      readonly type: "gone";
+      readonly videos: readonly {
+        readonly projectId: string;
+        readonly short: number | null;
+        readonly videoId: string;
+      }[];
+    }
   // Studio said the upload was scheduled or published.
   | {
       readonly type: "video-done";

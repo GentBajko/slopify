@@ -61,6 +61,16 @@ it("rejects unsafe, duplicate and oversized documents before starting a provider
   expect(documentWorkspace([])).toBeUndefined();
 });
 
+it("asks for an answer that opens with the text itself, not a note about reading", () => {
+  const workspace = documentWorkspace([{ id: "research-1", title: "Report", content: "x" }]);
+  if (!workspace) throw new Error("workspace missing");
+  try {
+    expect(workspace.instructions).toContain("begin it with that text itself");
+  } finally {
+    workspace.remove();
+  }
+});
+
 it("refuses a report changed after its request was frozen", async () => {
   const workspace = documentWorkspace([
     { id: "research-1", title: "Original", content: "Untouched report." },

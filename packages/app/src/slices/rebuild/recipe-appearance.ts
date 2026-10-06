@@ -60,19 +60,19 @@ function pictureBodies(context: RecipeContext): readonly (string | null | undefi
 
 export function imageAppearance(
   context: RecipeContext,
-  text: { readonly articleText: string | null; readonly article: ResolvedWorkRecipe },
+  text: { readonly pictureText: string | null; readonly article: ResolvedWorkRecipe },
 ): ImageAppearance | undefined {
   const { config } = context;
   if (!pictureBodies(context).some(usesAppearance)) return undefined;
   const messages = withLanguage(
-    appearanceMessages({ title: subjectOf(config), article: text.articleText ?? "" }),
+    appearanceMessages({ title: subjectOf(config), article: text.pictureText ?? "" }),
     config.language,
   );
   const value = recipe(
     context,
     imageAppearanceKey,
     config.sources.images === "generate" ? "images" : "thumbnail",
-    text.articleText === null
+    text.pictureText === null
       ? {
           kind: "deferred",
           version: 1,
@@ -84,7 +84,7 @@ export function imageAppearance(
   );
   return {
     recipe: value,
-    value: text.articleText === null ? undefined : savedAppearance(context, value),
+    value: text.pictureText === null ? undefined : savedAppearance(context, value),
   };
 }
 

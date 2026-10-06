@@ -41,6 +41,8 @@ export function thumbnailOverrideOf(variant: number): ThumbnailOverride | undefi
 export interface RevisionContent {
   readonly articleMarkdown?: string | undefined;
   readonly articleEdited?: boolean | undefined;
+  // The article the pictures were drawn from, kept after a hand edit of the article.
+  readonly picturesArticle?: string | undefined;
   readonly provided: Readonly<Partial<Record<ProvidedKind, string | undefined>>>;
   readonly imageOrder: readonly string[];
   readonly imageDefinitions: Readonly<

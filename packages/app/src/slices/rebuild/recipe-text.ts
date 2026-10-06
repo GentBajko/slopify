@@ -95,6 +95,9 @@ type TextRecipe = { readonly recipe: ResolvedWorkRecipe; readonly text: string |
 export interface TextRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
   readonly articleText: string | null;
+  // The article text the pictures are drawn from: the article, or the one they were drawn
+  // from before it was edited by hand.
+  readonly pictureText: string | null;
   // The body as the single narration voice says it: the flattened article, or with
   // "Describe tables and figures" on, the article with each described block's passage in its
   // place (null until they have all answered). A multi-voice run describes within its turns.
@@ -256,6 +259,11 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     );
   const endMatter = articleMarkdown === null ? null : splitEndMatter(articleMarkdown);
   const articleText = endMatter === null ? null : plainText(endMatter.body);
+  // The pictures go on reading the article they were drawn from while the version keeps it.
+  const pictureText =
+    content.picturesArticle === undefined
+      ? articleText
+      : plainText(splitEndMatter(content.picturesArticle).body);
   let script: ScriptText | undefined;
   if (voices !== undefined && scriptCheck !== undefined) {
     if (writesScript) script = { text: endMatter?.body ?? null, dependsOn: [article.key] };
@@ -355,14 +363,14 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       title: subjectOf(config),
       values: config.values,
       format: config.format,
-      article: articleText ?? "",
+      article: pictureText ?? "",
     });
     recipes.push(
       recipe(
         context,
         "thumbnail:prompt",
         "thumbnail",
-        articleText === null
+        pictureText === null
           ? {
               kind: "deferred",
               version: 1,
@@ -377,6 +385,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   return {
     recipes,
     articleText,
+    pictureText,
     narrationText,
     descriptions,
     cards,
