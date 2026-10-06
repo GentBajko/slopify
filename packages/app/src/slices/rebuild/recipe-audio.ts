@@ -141,7 +141,12 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       if (group.length === 0) pending = true;
       parts.push(...group);
     }
-    if (transcripts.some((row) => row.effective !== row.original))
+    // A chunk with its own narration edit keeps the transcript in this form even once the article
+    // says the same (`bodyNarrationGroups`), so the word timing made from it stays current.
+    if (
+      transcripts.some((row) => row.effective !== row.original) ||
+      groups.some((group) => content.narrationOverrides[group.key]?.kind === "text")
+    )
       bodyTranscript = ["narration-transcript-v1", transcripts.map((row) => row.effective)];
     if (text.narrationText === null) {
       futurePronunciation.push(

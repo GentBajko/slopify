@@ -287,10 +287,14 @@ it("keeps a chunk's narration when an article edit makes it say what its narrati
     workFor(base, narrated, value)
       .recipes.filter((row) => row.input.kind === "tts")
       .map((row) => [row.key, row.fingerprint]);
-  // ...then left the article too: the chunk keeps its key and its narration.
-  expect(
-    spoken({ ...edited, articleMarkdown: "First part.\n\nSecond part.", articleEdited: true }),
-  ).toEqual(spoken(edited));
+  // ...then left the article too: the chunk keeps its key and its narration, and the word
+  // timing made from what was spoken stays current.
+  const after = { ...edited, articleMarkdown: "First part.\n\nSecond part.", articleEdited: true };
+  expect(spoken(after)).toEqual(spoken(edited));
+  const timing = (value: typeof edited) =>
+    workFor(base, narrated, value).recipes.find((row) => row.key === "subtitles:timing")
+      ?.fingerprint;
+  expect(timing(after)).toBe(timing(edited));
 });
 
 it("writes an outro from the article it was written from, after a hand edit of the article", () => {

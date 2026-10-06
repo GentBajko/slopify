@@ -2,3 +2,4 @@
 - `document/fonts.ts` `faceWidth` measures with `getStringUnitWidth(…, { doKerning: false })`.
 - `document/sources.ts` `tidySource`: site names (numbered repeats) for addresses, path-derived titles for bare links; `SourceItem.links`; `sourcesPage` links each label.
 - `bodyNarrationGroups`: a chunk whose text equals an orphaned text override takes that override's key. `pictureText` also feeds AI-written intro/outro; `pictureWorkKeys` includes `entry:intro:text`/`entry:outro:text`.
+- `audioRecipes`: the body transcript keeps its `narration-transcript-v1` form while any current chunk has a text override (3.11.2).
