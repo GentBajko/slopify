@@ -40,6 +40,8 @@ export const projectTables = [
   "project_controls",
   "stages",
   "attempts",
+  // Since 3.11.1: how long each local step (a render, the levelling) ran.
+  "local_work_times",
   "stage_pieces",
   "outputs",
   "project_revisions",
