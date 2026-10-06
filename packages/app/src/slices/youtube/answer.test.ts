@@ -201,6 +201,9 @@ it("sends the prompt, title, length and timed transcript, with the rules in the 
   expect(messages.map((message) => message.role)).toEqual(["system", "user"]);
   expect(messages[0]?.content).toContain('The first chapter starts at exactly "0:00"');
   expect(messages[0]?.content).toContain("before the video ends at 20:50");
+  // No made-up links, but a link the prompt asks for (a reading page, say) is kept.
+  expect(messages[0]?.content).toContain("except a link the instructions below ask for");
+  expect(messages[0]?.content).not.toContain("plain text without links");
   expect(messages[1]?.content).toBe(
     [
       "Write it for {{Topic}} fans.",

@@ -1,0 +1,1 @@
+- `descriptionMessages`: the summary and pinned comment may carry a link the instructions ask for (still no invented links).
