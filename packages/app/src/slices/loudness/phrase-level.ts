@@ -14,6 +14,9 @@ import type { FfmpegRun } from "./loudnorm.js";
 // out. Phrases at the usual level are left as they are, nothing moves in time, and the export's
 // own levelling then brings the narration to its target, so it is not made quieter.
 
+// How often the narration is taken phrase by phrase (`level-pieces.ts`): a second pass holds
+// what is still loud against the narration the first left.
+export const phrasePasses = 2;
 // ceiling: the most a phrase is lowered.
 const capDb = 8;
 // A momentary reading under this is a pause, not speech.
