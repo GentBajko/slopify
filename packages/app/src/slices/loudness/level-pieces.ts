@@ -2,10 +2,10 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { type FfmpegRun, levelFile, measurable } from "./loudnorm.js";
 import { type LoudnessReport, pieceLufs, pieceTruePeak, spreadOf } from "./model.js";
-import { lowerOpening } from "./opening-level.js";
+import { lowerLoudPhrases } from "./phrase-level.js";
 
 // Every narration piece brought to the one common loudness before the join (`levelFile`), its
-// louder opening lowered first (`opening-level.ts`), each
+// loud phrases lowered first (`phrase-level.ts`), each
 // written again as a WAV in `directory` for the join to read in their place. They come out in one format (44.1 kHz mono, which is what the
 // multi-voice join already brings every turn to), so the plain concat can join them too. A piece
 // too short or quiet to measure keeps its own level. Each levelled piece is measured again, so
@@ -27,11 +27,12 @@ export async function levelPieces(
   for (const [index, file] of files.entries()) {
     run.signal.throwIfAborted();
     const output = join(directory, `piece-${String(index + 1).padStart(4, "0")}.wav`);
-    // The voice starts each request louder than it keeps; that opening comes down first.
-    const opened = `${output}.opening.wav`;
-    const lowered = await lowerOpening(run, file, opened);
-    const measured = await levelFile(run, lowered ? opened : file, output, goal, format);
-    if (lowered) rmSync(opened, { force: true });
+    // A phrase that bursts out above the narration around it (most of all a request's first
+    // words) comes down first.
+    const phrased = `${output}.phrases.wav`;
+    const lowered = await lowerLoudPhrases(run, file, phrased);
+    const measured = await levelFile(run, lowered ? phrased : file, output, goal, format);
+    if (lowered) rmSync(phrased, { force: true });
     levelled.push(output);
     if (!measurable(measured.before)) {
       skipped += 1;
