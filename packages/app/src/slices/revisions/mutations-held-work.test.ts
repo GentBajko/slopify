@@ -100,3 +100,24 @@ it("keeps one held row per step however often a waiting edit is saved", async ()
   expect(rowCount(h, "image:second")).toBe(1);
   expect(reserved(h, view, "image:first")).toMatchObject({ state: "pending" });
 });
+
+it("drops a held step planned for a result the version no longer wants, rather than carry it", async () => {
+  const h = await imageFixture();
+  cleanups.push(h.close);
+  const changed = await withPrompt(h, h.base, "Changed", "changed");
+  const held = reserved(h, changed, "image:first") as { work_id: string } | undefined;
+  if (held === undefined) throw new Error("Expected a held step.");
+  // The held step was planned for another result than the version now asks for (a newer
+  // Slopify plans the same edit differently, say), and nobody started it.
+  h.deps.db
+    .prepare(
+      "UPDATE revision_work_reservations SET fingerprint='stale' WHERE work_id=? AND desired_fingerprint IS NULL",
+    )
+    .run(held.work_id);
+  h.deps.db.prepare("UPDATE revision_work SET fingerprint='stale' WHERE id=?").run(held.work_id);
+  h.deps.db
+    .prepare("UPDATE revision_work_pieces SET fingerprint='stale' WHERE work_id=?")
+    .run(held.work_id);
+  const again = await withPrompt(h, changed, "Changed", "again");
+  expect((reserved(h, again, "image:first") as { work_id: string }).work_id).not.toBe(held.work_id);
+});

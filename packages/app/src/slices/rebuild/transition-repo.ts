@@ -73,7 +73,18 @@ export function transitionRevisionWork(
         before !== undefined &&
         before === after &&
         (input.baseFingerprints !== undefined ||
-          before === (row.desired_fingerprint ?? row.fingerprint))
+          before === (row.desired_fingerprint ?? row.fingerprint)) &&
+        // A held step nobody started carries over only while it is for what is wanted now:
+        // one planned for a result an edit no longer asks for (the edit's narration turned out
+        // to be the one already made) kept the project waiting on work it doesn't need.
+        // A step reserved under its own key is for its own result; one unfolded under another
+        // key (a narration chunk's parts) is matched by what that key wanted.
+        !(
+          after !==
+            (logicalKey === row.work_key
+              ? row.fingerprint
+              : (row.desired_fingerprint ?? row.fingerprint)) && unstarted(db, row.work_id)
+        )
       ) {
         db.prepare(
           `INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,piece_id,fingerprint,logical_key,desired_fingerprint) VALUES (?,?,?,?,?,?,?,?)`,
@@ -172,6 +183,19 @@ export function transitionRevisionWork(
       ).run(input.projectId, input.revisionId, key, workId, pieceId, fp);
     }
   });
+}
+// Held and never begun: no attempt, nothing submitted, no planning context.
+function unstarted(db: RevisionDeps["db"], workId: string): boolean {
+  return (
+    db
+      .prepare(
+        `SELECT 1 FROM revision_work w WHERE w.id=? AND w.state='pending' AND w.dispatch_state='held'
+          AND w.recipe_context IS NULL
+          AND NOT EXISTS(SELECT 1 FROM attempts a WHERE a.work_id=w.id)
+          AND NOT EXISTS(SELECT 1 FROM revision_work_pieces p WHERE p.work_id=w.id AND p.submitted_at IS NOT NULL)`,
+      )
+      .get(workId) !== undefined
+  );
 }
 // A finished row wins over a held one. A held row counts only while nothing ran for it:
 // no attempt, nothing submitted, and no planning context (admission gives a row that).
