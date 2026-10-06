@@ -80,7 +80,8 @@ export function editPlan(
     values.push(["timing", resourceIdentity(context, timing)]);
     dependsOn.push(timing.key);
     if (fromDescription && description !== undefined) {
-      values.push(["chapters", resourceIdentity(context, description)]);
+      // A finished video keeps the description it was drawn from (`recipe-build.ts`).
+      values.push(["chapters", context.pinnedChapters ?? resourceIdentity(context, description)]);
       dependsOn.push(description.key);
     } else values.push(["chapters", "headings", headingsIdentity(context)]);
   }

@@ -25,7 +25,42 @@ function withLines(
     : { values: [...master.values, ...lines.values], keys: [...master.keys, ...lines.keys] };
 }
 
+// Every recipe of a version. A finished video whose only change is a description written again
+// keeps the description its chapter cards were drawn from: the video is never remade for a new
+// description, only when what it shows changes.
 export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecipe[] {
+  const built = buildEach(context);
+  const video = built.find((value) => value.key === "export:video");
+  const rendered = new Set(
+    context.manifest.pieces
+      .filter((one) => one.key === "export:video" && one.piece.state === "done")
+      .map((one) => one.fingerprint),
+  );
+  if (video === undefined || rendered.size === 0 || rendered.has(video.fingerprint)) return built;
+  if (!video.dependsOn.includes(descriptionKey)) return built;
+  const past = context.history ?? context.manifest;
+  const fingerprints = new Set(
+    past.pieces.filter((one) => one.key === descriptionKey).map((one) => one.fingerprint),
+  );
+  const assets = new Set<string | null>([
+    null,
+    ...past.outputs.filter((one) => one.workKey === descriptionKey).map((one) => one.assetId),
+    ...past.pieces.filter((one) => one.key === descriptionKey).map((one) => one.assetId),
+  ]);
+  for (const described of fingerprints)
+    for (const asset of assets) {
+      const kept = buildEach({ ...context, pinnedChapters: [described, asset] }).find(
+        (value) => value.key === "export:video",
+      );
+      if (kept !== undefined && rendered.has(kept.fingerprint))
+        return built.map((value) => (value.key === "export:video" ? kept : value));
+    }
+  return built;
+}
+
+const descriptionKey = "youtube:description";
+
+function buildEach(context: RecipeContext): readonly ResolvedWorkRecipe[] {
   const text = textRecipes(context);
   const audio = audioRecipes(context, text);
   const exports = exportRecipes(context, audio);

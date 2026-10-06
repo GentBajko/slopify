@@ -212,3 +212,72 @@ describe("the edit settings", () => {
     ]);
   });
 });
+
+describe("a finished video and its YouTube description", () => {
+  const c = edited({ ...narrated, youtubeDescription: true }, { chapterCards: true });
+  const done = (key: string, fingerprint: string, assetId: string | null): ManifestPiece => ({
+    key,
+    stageKind: "video",
+    assetId,
+    fingerprint,
+    piece: {
+      id: key,
+      stageId: "video",
+      kind: "article_written",
+      idx: 1,
+      state: "done",
+      payload: null,
+    },
+  });
+  const find = (recipes: readonly ResolvedWorkRecipe[], key: string) =>
+    recipes.find((one) => one.key === key);
+  const build = (
+    value: RevisionContent,
+    pieces: readonly ManifestPiece[],
+    history?: readonly ManifestPiece[],
+  ) =>
+    buildRecipes({
+      config: c,
+      content: value,
+      manifest: { outputs: [], pieces },
+      ...(history === undefined ? {} : { history: { outputs: [], pieces: history } }),
+      resolved: { articleMarkdown: emptyView(c, value).articleMarkdown, researchNotes: null },
+    });
+
+  it("keeps the video when only the description is written again", () => {
+    const first = build(content, []);
+    const description = find(first, "youtube:description");
+    const video = find(first, "export:video");
+    if (description === undefined || video === undefined) throw new Error("no recipes");
+    const oldDescription = done("youtube:description", description.fingerprint, null);
+    const rendered = done("export:video", video.fingerprint, "video-file");
+    // Written again: a new regeneration token gives the description a new fingerprint.
+    const again: RevisionContent = {
+      ...content,
+      regenerationTokens: { ...content.regenerationTokens, "youtube:description": "again" },
+    };
+    const rewritten = build(again, [rendered], [rendered, oldDescription]);
+    expect(find(rewritten, "youtube:description")?.fingerprint).not.toBe(description.fingerprint);
+    // The video keeps the description its chapter cards were drawn from.
+    expect(find(rewritten, "export:video")?.fingerprint).toBe(video.fingerprint);
+    // Without the earlier description to pin to, it would have been remade.
+    expect(find(build(again, [rendered]), "export:video")?.fingerprint).not.toBe(video.fingerprint);
+  });
+
+  it("still remakes the video when what it shows changes", () => {
+    const first = build(content, []);
+    const description = find(first, "youtube:description");
+    const video = find(first, "export:video");
+    if (description === undefined || video === undefined) throw new Error("no recipes");
+    const rendered = done("export:video", video.fingerprint, "video-file");
+    const history = [rendered, done("youtube:description", description.fingerprint, null)];
+    const recut = buildRecipes({
+      config: edited(c, { chapterCards: true, transition: "crossfade" }),
+      content,
+      manifest: { outputs: [], pieces: [rendered] },
+      history: { outputs: [], pieces: history },
+      resolved: { articleMarkdown: emptyView(c, content).articleMarkdown, researchNotes: null },
+    });
+    expect(find(recut, "export:video")?.fingerprint).not.toBe(video.fingerprint);
+  });
+});

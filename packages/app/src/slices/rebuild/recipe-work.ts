@@ -70,6 +70,7 @@ export function planRevisionWork(
     config: revision.config,
     content: revision.content,
     manifest: available,
+    history: manifest,
     resolved: { ...resolved, articleMarkdown: usableArticle ? resolved.articleMarkdown : null },
   };
   const logical = buildRecipes(logicalContext);

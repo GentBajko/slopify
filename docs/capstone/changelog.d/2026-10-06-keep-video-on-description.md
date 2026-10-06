@@ -1,0 +1,1 @@
+- `buildRecipes` pins a finished `export:video` to the description identity it was rendered with (`RecipeContext.history`, `pinnedChapters`) when only the description changed; `planRevisionWork` and `planRevision` pass every piece of the version as history.

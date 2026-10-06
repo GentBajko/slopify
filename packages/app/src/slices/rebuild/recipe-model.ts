@@ -180,6 +180,12 @@ export interface RecipeContext {
   readonly config: RunConfig;
   readonly content: RevisionContent;
   readonly manifest: RevisionManifest;
+  // Every output and piece the version holds, selected or not: what came before a step was done
+  // again (`recipe-edit.ts` keeps a finished video on the description it was drawn from).
+  readonly history?: RevisionManifest | undefined;
+  // The description identity a finished video's chapter cards came from, set while
+  // `buildRecipes` looks for the one that keeps the video as it is.
+  readonly pinnedChapters?: FingerprintValue | undefined;
   readonly resolved: ResolvedRevisionInputs;
   readonly catalogue?: Catalogue | undefined;
 }
