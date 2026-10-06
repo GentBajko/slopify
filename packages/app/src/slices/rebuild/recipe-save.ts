@@ -83,17 +83,19 @@ export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): 
   };
 }
 
-// The steps that draw from the article: each image's scene, the looks, the thumbnails' scenes
-// and the thumbnail prompt written from it.
+// The steps that are made from the article: each image's scene, the looks, the thumbnails'
+// scenes, the thumbnail prompt and an intro or outro the AI model writes from it.
 export const pictureWorkKeys = [
   "images:scenes",
   "thumbnail:scenes",
   "images:appearance",
   "thumbnail:prompt",
+  "entry:intro:text",
+  "entry:outro:text",
 ] as const;
 
-// An article edited by hand keeps the pictures already drawn: the version remembers the article
-// they were drawn from and those steps go on reading it, until the edit asks for them again or
+// An article edited by hand keeps the pictures already drawn, and an intro or outro already
+// written: the version remembers the article they were made from and those steps go on reading it, until the edit asks for them again or
 // the article is written anew. Before any picture is drawn there is nothing to keep.
 function picturesArticleOf(
   base: RevisionView,

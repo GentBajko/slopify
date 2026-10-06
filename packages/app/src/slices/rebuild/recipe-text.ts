@@ -259,7 +259,8 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     );
   const endMatter = articleMarkdown === null ? null : splitEndMatter(articleMarkdown);
   const articleText = endMatter === null ? null : plainText(endMatter.body);
-  // The pictures go on reading the article they were drawn from while the version keeps it.
+  // The pictures, and an intro or outro written from the article, go on reading the article
+  // they were made from while the version keeps it (`picturesArticle`).
   const pictureText =
     content.picturesArticle === undefined
       ? articleText
@@ -326,7 +327,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     const input: RecipeInput =
       choice.mode === "text"
         ? { kind: "local", version: 1, operation: "entry-text", values: prompt }
-        : articleText === null
+        : pictureText === null
           ? {
               kind: "deferred",
               version: 1,
@@ -341,7 +342,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
             }
           : llmInput(
               context,
-              withLanguage(segmentMessages(prompt, config, articleText), config.language),
+              withLanguage(segmentMessages(prompt, config, pictureText), config.language),
             );
     const value = recipe(
       context,

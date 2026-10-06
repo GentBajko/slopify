@@ -42,15 +42,31 @@ export function bodyNarrationGroups(
   context: RecipeContext,
   text: TextRecipes,
 ): ReturnType<typeof pronunciationChunks> {
-  return text.narrationText === null
-    ? []
-    : pronunciationChunks(
-        normalizeNarrationText(text.narrationText),
-        context.config.chunking ?? defaultChunking,
-        usesPronunciationGlossary(context.config) && text.glossary?.ok ? text.glossary.entries : [],
-        new Set(Object.keys(context.content.narrationOverrides)),
-        context.content.narrationSources,
-      );
+  if (text.narrationText === null) return [];
+  const groups = pronunciationChunks(
+    normalizeNarrationText(text.narrationText),
+    context.config.chunking ?? defaultChunking,
+    usesPronunciationGlossary(context.config) && text.glossary?.ok ? text.glossary.entries : [],
+    new Set(Object.keys(context.content.narrationOverrides)),
+    context.content.narrationSources,
+  );
+  // A chunk's key is its text's, so an article edit that makes a chunk say what its narration
+  // edit already said (a line dropped from both) would make a new chunk to voice again. It
+  // keeps the edited chunk's key instead, and with it the narration already made.
+  const overrides = context.content.narrationOverrides;
+  const present = new Set(groups.map((group) => group.key));
+  const orphans = new Map<string, string>();
+  for (const [key, override] of Object.entries(overrides))
+    if (override.kind === "text" && key.startsWith("audio:body:") && !present.has(key))
+      orphans.set(normalizeNarrationText(override.text), key);
+  if (orphans.size === 0) return groups;
+  return groups.map((group) => {
+    if (overrides[group.key] !== undefined || group.source !== undefined) return group;
+    const key = orphans.get(group.text);
+    if (key === undefined) return group;
+    orphans.delete(group.text);
+    return { ...group, key };
+  });
 }
 export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRecipes {
   const { config, content } = context;

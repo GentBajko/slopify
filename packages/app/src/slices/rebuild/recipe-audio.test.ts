@@ -270,3 +270,48 @@ it("keeps repeated logical overrides distinct and normalizes before occurrence k
     [second.key, "Second override."],
   ]);
 });
+
+it("keeps a chunk's narration when an article edit makes it say what its narration edit said", () => {
+  const article = { ...content, articleMarkdown: "A stray note. First part.\n\nSecond part." };
+  const base = readyView(narrated, article);
+  const first = workFor(base).recipes.find((row) => row.input.kind === "tts");
+  if (first?.input.kind !== "tts") throw new Error("Missing narration");
+  // The note left the narration first, by a narration edit of that chunk...
+  const edited = {
+    ...article,
+    narrationOverrides: {
+      [first.input.logicalKey]: { kind: "text" as const, text: "First part." },
+    },
+  };
+  const spoken = (value: typeof edited) =>
+    workFor(base, narrated, value)
+      .recipes.filter((row) => row.input.kind === "tts")
+      .map((row) => [row.key, row.fingerprint]);
+  // ...then left the article too: the chunk keeps its key and its narration.
+  expect(
+    spoken({ ...edited, articleMarkdown: "First part.\n\nSecond part.", articleEdited: true }),
+  ).toEqual(spoken(edited));
+});
+
+it("writes an outro from the article it was written from, after a hand edit of the article", () => {
+  const outro = {
+    ...narrated,
+    outro: { name: "Outro", mode: "llm" as const },
+    rendered: { ...narrated.rendered, outro: "Close the story." },
+  };
+  const article = { ...content, articleMarkdown: "A stray note. First part.\n\nSecond part." };
+  const recipe = (value: typeof article) =>
+    workFor(readyView(outro, article), outro, value).recipes.find(
+      (row) => row.key === "entry:outro:text",
+    );
+  const before = recipe(article);
+  // Written from the article, stray note and all.
+  expect(JSON.stringify(before?.input)).toContain("A stray note.");
+  // The outro is written already, so the edit keeps the article it was written from.
+  const after = recipe({
+    ...article,
+    articleMarkdown: "First part.\n\nSecond part.",
+    articleEdited: true,
+  });
+  expect(after?.fingerprint).toBe(before?.fingerprint);
+});
