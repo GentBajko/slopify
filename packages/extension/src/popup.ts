@@ -52,6 +52,28 @@ statsButton.addEventListener("click", () => {
   );
 });
 
+// The list's heading, with the button that checks Studio for deleted videos now: one Studio
+// already deleted shows "On YouTube" until the check forgets it (every two hours otherwise).
+function sectionRow(text: string): HTMLElement {
+  const row = el("div", "section section-row");
+  const check = el("button", "link", "Check for deleted videos");
+  check.type = "button";
+  check.addEventListener("click", () => {
+    check.disabled = true;
+    status.textContent = "Checking Studio for deleted videos in a background tab…";
+    void (api.runtime.sendMessage({ type: "gone-now" }) as Promise<WorkerAnswer<unknown>>).then(
+      (answer) => {
+        check.disabled = false;
+        status.textContent = answer.ok
+          ? "Checking Studio in a background tab; open this again in a minute to see the result."
+          : answer.message;
+      },
+    );
+  });
+  row.append(el("span", undefined, text), check);
+  return row;
+}
+
 function note(text: string, error = false): void {
   main.replaceChildren(el("p", error ? "note error" : "note", text));
 }
@@ -152,7 +174,7 @@ function showProjects(projects: readonly ReadyProject[]): void {
     li.append(button);
     list.append(li);
   }
-  main.replaceChildren(el("div", "section", `${String(projects.length)} projects`), list);
+  main.replaceChildren(sectionRow(`${String(projects.length)} projects`), list);
 }
 
 function showItems(project: ReadyProject, projects: readonly ReadyProject[]): void {

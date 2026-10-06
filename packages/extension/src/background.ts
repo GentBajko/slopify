@@ -477,6 +477,10 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ),
       };
     if (request.type === "export-done") return { ok: true, value: true };
+    if (request.type === "gone-now") {
+      await checkGone(0);
+      return { ok: true, value: true };
+    }
     if (request.type === "gone-list") {
       const { videos } = await getJson<{ videos: unknown }>(
         "/api/studio/ext/recorded-videos",

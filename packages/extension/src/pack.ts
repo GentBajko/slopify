@@ -112,6 +112,8 @@ export type WorkerRequest =
   // A Studio tab opened to check the videos on YouTube ("#slopify-gone") asks which, then
   // reports the ones Studio says are deleted; the worker closes its tab.
   | { readonly type: "gone-list" }
+  // The popup's Check for deleted videos: the check, at once.
+  | { readonly type: "gone-now" }
   | {
       readonly type: "gone";
       readonly videos: readonly {
