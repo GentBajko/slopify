@@ -41,9 +41,9 @@ it("forgets a missing video only when the same check found another of its channe
   ).toEqual(["b", "c"]);
 });
 
-it("checks each video's page and skips one that fails to load", async () => {
+it("checks each video in turn and counts one that fails to read as unread", async () => {
   const pages: Record<string, string> = { aaaaaaaaaaa: present, bbbbbbbbbbb: deleted };
-  const gone = await checkVideos(
+  const { gone, checked } = await checkVideos(
     ["aaaaaaaaaaa", "bbbbbbbbbbb", "ddddddddddd"].map((videoId) => ({
       projectId: "p",
       short: null,
@@ -52,8 +52,9 @@ it("checks each video's page and skips one that fails to load", async () => {
     async (videoId) => {
       const html = pages[videoId];
       if (html === undefined) throw new Error("offline");
-      return html;
+      return videoState(html, videoId);
     },
   );
   expect(gone.map((one) => one.videoId)).toEqual(["bbbbbbbbbbb"]);
+  expect(checked.map((one) => one.state)).toEqual(["present", "deleted", "unknown"]);
 });

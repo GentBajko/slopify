@@ -1,6 +1,6 @@
 import { browserApi } from "./browser.js";
 import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
-import { checkVideos, type RecordedVideo } from "./gone.js";
+import { checkVideos, type RecordedVideo, type VideoState } from "./gone.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
 import {
@@ -758,20 +758,49 @@ async function runExport(channelId: string): Promise<void> {
 }
 
 // The extension opened Studio to check the videos Slopify takes to be on YouTube
-// ("#slopify-gone"): reads each one's edit page and reports the deleted ones (`gone.ts`).
+// ("#slopify-gone"): asks Studio's own page for each one's state (`export-hook.ts`, which reads
+// the edit page signed in), reports the deleted ones, and says in the console what it found.
 async function runGone(): Promise<void> {
   const list = (await api.runtime.sendMessage({ type: "gone-list" })) as WorkerAnswer<
     readonly RecordedVideo[]
   >;
   const videos = list.ok ? list.value : [];
-  const gone = await checkVideos(videos, async (videoId) => {
-    const response = await fetch(`/video/${encodeURIComponent(videoId)}/edit`, {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error(`Studio answered ${String(response.status)}`);
-    return await response.text();
-  });
-  await api.runtime.sendMessage({ type: "gone", videos: gone });
+  if (!list.ok) console.warn(`Slopify couldn't list the videos to check: ${list.message}`);
+  let asked = 0;
+  const { gone, checked } = await checkVideos(
+    videos,
+    (videoId) =>
+      new Promise<VideoState>((resolve) => {
+        const id = String(asked++);
+        const listen = (event: MessageEvent): void => {
+          const data = event.data as { source?: unknown; id?: unknown; state?: unknown } | null;
+          if (event.source !== window || data?.source !== "slopify-gone-answer" || data.id !== id)
+            return;
+          window.removeEventListener("message", listen);
+          clearTimeout(timer);
+          resolve(
+            data.state === "present" || data.state === "deleted" || data.state === "missing"
+              ? data.state
+              : "unknown",
+          );
+        };
+        const timer = setTimeout(() => {
+          window.removeEventListener("message", listen);
+          resolve("unknown");
+        }, 30_000);
+        window.addEventListener("message", listen);
+        window.postMessage({ source: "slopify-gone-ask", id, videoId }, location.origin);
+      }),
+  );
+  const count = (state: VideoState) => checked.filter((one) => one.state === state).length;
+  console.info(
+    `Slopify checked ${String(checked.length)} videos in Studio: ${String(count("present"))} there, ${String(count("deleted"))} deleted, ${String(count("missing"))} missing, ${String(count("unknown"))} unread.${gone.length === 0 ? "" : ` Forgetting ${gone.map((one) => one.videoId).join(", ")}.`}`,
+  );
+  const sent = (await api.runtime.sendMessage({
+    type: "gone",
+    videos: gone,
+  })) as WorkerAnswer<unknown>;
+  if (!sent.ok) console.warn(`Slopify couldn't forget the deleted videos: ${sent.message}`);
 }
 
 async function waitFor<T>(look: () => T | null, ms: number): Promise<T | null> {

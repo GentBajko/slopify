@@ -43,20 +43,23 @@ export function goneOf(
     .map((one) => one.video);
 }
 
-// Each video's edit page, one after another, from a Studio tab (same origin, signed in).
+// Each video's state, one after another, as Studio's page reads it (`export-hook.ts`).
 export async function checkVideos(
   videos: readonly RecordedVideo[],
-  load: (videoId: string) => Promise<string>,
-): Promise<readonly RecordedVideo[]> {
+  stateOf: (videoId: string) => Promise<VideoState>,
+): Promise<{
+  readonly gone: readonly RecordedVideo[];
+  readonly checked: readonly { readonly video: RecordedVideo; readonly state: VideoState }[];
+}> {
   const checked: { video: RecordedVideo; state: VideoState }[] = [];
   for (const video of videos) {
     let state: VideoState = "unknown";
     try {
-      state = videoState(await load(video.videoId), video.videoId);
+      state = await stateOf(video.videoId);
     } catch {
       // A page that didn't load says nothing about the video.
     }
     checked.push({ video, state });
   }
-  return goneOf(checked);
+  return { gone: goneOf(checked), checked };
 }

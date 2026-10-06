@@ -498,6 +498,8 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         value: await post("/api/studio/ext/backfill", { videos: request.videos }, "Studio's list"),
       };
     if (request.type === "stats-now") {
+      // Read Studio now also checks at once which videos were deleted there.
+      await checkGone(0);
       return { ok: true, value: await sweepStats(true) };
     }
     if (request.type === "ready") {
