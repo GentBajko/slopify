@@ -121,6 +121,12 @@ export type WorkerRequest =
         readonly short: number | null;
         readonly videoId: string;
       }[];
+      // Uploads Studio has scheduled or published whose confirmation was missed.
+      readonly confirmed?: readonly {
+        readonly projectId: string;
+        readonly short: number | null;
+        readonly videoId: string;
+      }[];
     }
   // Studio said the upload was scheduled or published.
   | {

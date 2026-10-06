@@ -5,3 +5,4 @@
 - `audioRecipes`: the body transcript keeps its `narration-transcript-v1` form while any current chunk has a text override (3.11.2).
 - `transitionRevisionWork`: an unstarted held reservation carries only while its result (own-key: `fingerprint`; unfolded: `desired_fingerprint`) equals the new plan's (3.11.3).
 - Extension 1.3.1: `export-hook.ts` (MAIN world) answers `slopify-gone-ask` with `videoState` of the signed-in edit page; `runGone` logs counts; `stats-now` runs `checkGone(0)`.
+- Extension 1.3.2: `videoState` reports `draft`; `confirmedOf` sends started uploads Studio has scheduled; `/ext/gone` takes `confirmed` and runs `confirmVideoUpload` (shared with `/ext/video/done`); `/ext/recorded-videos` lists started uploads too (3.11.5).

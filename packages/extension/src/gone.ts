@@ -1,15 +1,18 @@
 // Whether each video Slopify takes to be on YouTube still exists, read from its Studio edit
 // page as the signed-in channel sees it. The page carries the video's data for its first
 // paint: a video deleted in Studio answers with status VIDEO_STATUS_DELETED, a video this
-// channel hasn't got (never there, or long gone) with "CreatorVideoData prefetch failed", and
-// any other video (public, private, scheduled) with its details.
+// channel hasn't got (never there, or long gone) with "CreatorVideoData prefetch failed", an
+// upload left as a draft with a draftStatus other than DRAFT_STATUS_NONE, and any other video
+// (public, private, scheduled) with its details.
 
-export type VideoState = "present" | "deleted" | "missing" | "unknown";
+export type VideoState = "present" | "draft" | "deleted" | "missing" | "unknown";
 
 export interface RecordedVideo {
   readonly projectId: string;
   readonly short: number | null;
   readonly videoId: string;
+  // "filled" while Slopify only saw the upload start, "done" once it is on YouTube.
+  readonly uploadState?: "filled" | "done";
   // The Slopify channel the video was made for, when known.
   readonly channelId?: string | null;
 }
@@ -19,7 +22,10 @@ export function videoState(html: string, videoId: string): VideoState {
   if (at >= 0) {
     // The status sits beside the id at the start of the object.
     const head = html.slice(at, at + 400);
-    return /"status":"VIDEO_STATUS_DELETED"/.test(head) ? "deleted" : "present";
+    if (/"status":"VIDEO_STATUS_DELETED"/.test(head)) return "deleted";
+    // The draft status follows the title and description, so the whole object is read.
+    const draft = /"draftStatus":"([A-Z_]+)"/.exec(html.slice(at, at + 200_000))?.[1];
+    return draft === undefined || draft === "DRAFT_STATUS_NONE" ? "present" : "draft";
   }
   return html.includes("CreatorVideoData prefetch failed") ? "missing" : "unknown";
 }
@@ -31,7 +37,7 @@ export function goneOf(
 ): readonly RecordedVideo[] {
   const seen = new Set(
     checked
-      .filter((one) => one.state === "present" || one.state === "deleted")
+      .filter((one) => one.state === "present" || one.state === "draft" || one.state === "deleted")
       .flatMap((one) => (one.video.channelId == null ? [] : [one.video.channelId])),
   );
   return checked
@@ -40,6 +46,16 @@ export function goneOf(
         one.state === "deleted" ||
         (one.state === "missing" && one.video.channelId != null && seen.has(one.video.channelId)),
     )
+    .map((one) => one.video);
+}
+
+// Uploads Slopify only saw start that Studio has scheduled or published: the upload dialog's
+// confirmation was missed (closed early, or the next short opened), and they are on YouTube.
+export function confirmedOf(
+  checked: readonly { readonly video: RecordedVideo; readonly state: VideoState }[],
+): readonly RecordedVideo[] {
+  return checked
+    .filter((one) => one.state === "present" && one.video.uploadState === "filled")
     .map((one) => one.video);
 }
 

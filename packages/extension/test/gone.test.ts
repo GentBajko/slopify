@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { checkVideos, goneOf, videoState } from "../src/gone.js";
+import { checkVideos, confirmedOf, goneOf, videoState } from "../src/gone.js";
 
 const page = (data: string) =>
   `<script>window.chunkedPrefetchResolvers['id-0'].resolve({"channelId":"UC1"});</script><script>${data}</script>`;
@@ -57,4 +57,28 @@ it("checks each video in turn and counts one that fails to read as unread", asyn
   );
   expect(gone.map((one) => one.videoId)).toEqual(["bbbbbbbbbbb"]);
   expect(checked.map((one) => one.state)).toEqual(["present", "deleted", "unknown"]);
+});
+
+it("tells a draft from a scheduled video, and confirms only a started upload Studio has scheduled", () => {
+  const scheduled = page(
+    `window.chunkedPrefetchResolvers['id-1'].resolve({"videoId":"eeeeeeeeeee","title":"E","description":"${"x".repeat(2000)}","status":"SCHEDULED_PUBLISHING_STATUS_SCHEDULED","draftStatus":"DRAFT_STATUS_NONE"});`,
+  );
+  const draft = page(
+    `window.chunkedPrefetchResolvers['id-1'].resolve({"videoId":"fffffffffff","title":"F","draftStatus":"DRAFT_STATUS_DRAFT"});`,
+  );
+  expect(videoState(scheduled, "eeeeeeeeeee")).toBe("present");
+  expect(videoState(draft, "fffffffffff")).toBe("draft");
+  const video = (videoId: string, uploadState: "filled" | "done") => ({
+    projectId: "p",
+    short: null,
+    videoId,
+    uploadState,
+  });
+  expect(
+    confirmedOf([
+      { video: video("e", "filled"), state: "present" },
+      { video: video("f", "filled"), state: "draft" },
+      { video: video("g", "done"), state: "present" },
+    ]).map((one) => one.videoId),
+  ).toEqual(["e"]);
 });

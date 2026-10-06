@@ -1,6 +1,6 @@
 import { browserApi } from "./browser.js";
 import { type AbMode, type FieldResult, fillStudio, openAbTest, setFiles } from "./fill.js";
-import { checkVideos, type RecordedVideo, type VideoState } from "./gone.js";
+import { checkVideos, confirmedOf, type RecordedVideo, type VideoState } from "./gone.js";
 import { type ActivePack, type FillPayload, packText, type WorkerAnswer } from "./pack.js";
 import { findField, title, uploadDialog, videoInput } from "./selectors.js";
 import {
@@ -779,7 +779,10 @@ async function runGone(): Promise<void> {
           window.removeEventListener("message", listen);
           clearTimeout(timer);
           resolve(
-            data.state === "present" || data.state === "deleted" || data.state === "missing"
+            data.state === "present" ||
+              data.state === "draft" ||
+              data.state === "deleted" ||
+              data.state === "missing"
               ? data.state
               : "unknown",
           );
@@ -792,15 +795,18 @@ async function runGone(): Promise<void> {
         window.postMessage({ source: "slopify-gone-ask", id, videoId }, location.origin);
       }),
   );
+  const confirmed = confirmedOf(checked);
   const count = (state: VideoState) => checked.filter((one) => one.state === state).length;
+  const ids = (videos: readonly RecordedVideo[]) => videos.map((one) => one.videoId).join(", ");
   console.info(
-    `Slopify checked ${String(checked.length)} videos in Studio: ${String(count("present"))} there, ${String(count("deleted"))} deleted, ${String(count("missing"))} missing, ${String(count("unknown"))} unread.${gone.length === 0 ? "" : ` Forgetting ${gone.map((one) => one.videoId).join(", ")}.`}`,
+    `Slopify checked ${String(checked.length)} videos in Studio: ${String(count("present"))} there, ${String(count("draft"))} drafts, ${String(count("deleted"))} deleted, ${String(count("missing"))} missing, ${String(count("unknown"))} unread.${gone.length === 0 ? "" : ` Forgetting ${ids(gone)}.`}${confirmed.length === 0 ? "" : ` Confirming ${ids(confirmed)} as on YouTube.`}`,
   );
   const sent = (await api.runtime.sendMessage({
     type: "gone",
     videos: gone,
+    confirmed,
   })) as WorkerAnswer<unknown>;
-  if (!sent.ok) console.warn(`Slopify couldn't forget the deleted videos: ${sent.message}`);
+  if (!sent.ok) console.warn(`Slopify couldn't take in what Studio said: ${sent.message}`);
 }
 
 async function waitFor<T>(look: () => T | null, ms: number): Promise<T | null> {

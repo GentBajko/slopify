@@ -83,6 +83,7 @@ import {
   doneVideos,
   forgetVideo,
   projectVideos,
+  recordedVideos,
   recordVideo,
   setChecks,
   setTaskState,
@@ -143,7 +144,10 @@ const extVideoBody = z.object({
   short: shortField,
   videoId: z.string().regex(videoIdPattern),
 });
-const goneBody = z.object({ videos: z.array(extVideoBody).max(1000) });
+const goneBody = z.object({
+  videos: z.array(extVideoBody).max(1000),
+  confirmed: z.array(extVideoBody).max(1000).optional(),
+});
 const videoLinkBody = z.object({ short: shortField, link: z.string().max(500) });
 const slotBody = z.object({
   slot: z.object({ row: z.string().min(1).max(20), longAt: z.string().max(40) }).nullable(),
@@ -1006,34 +1010,46 @@ export function studioRoutes(deps: AppDeps) {
             })),
         });
       })
-      // Every video Slopify takes to be on YouTube, for the extension to ask Studio whether
-      // each still exists.
+      // Every video Slopify takes to be on YouTube, and every upload it saw start, for the
+      // extension to ask Studio whether each still exists and which Studio has scheduled.
       .get("/ext/recorded-videos", (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const channels = projectChannels(deps.db);
         return c.json({
-          videos: doneVideos(deps.db).map((video) => ({
+          videos: recordedVideos(deps.db).map((video) => ({
             projectId: video.projectId,
             short: video.short,
             videoId: video.videoId,
+            uploadState: video.uploadState,
             channelId: channels.get(video.projectId) ?? null,
           })),
         });
       })
       // Videos Studio says were deleted: each is forgotten, as Deleted on YouTube does, so it
-      // can be uploaded again. A slot that has since become another video keeps it.
+      // can be uploaded again. Uploads Studio has scheduled or published whose confirmation
+      // the upload dialog missed are confirmed. A slot that has since become another video
+      // keeps it.
       .post("/ext/gone", zValidator("json", goneBody, onInvalid), (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
+        const body = c.req.valid("json");
         let forgotten = 0;
-        for (const { projectId, short, videoId } of c.req.valid("json").videos) {
+        for (const { projectId, short, videoId } of body.videos) {
           if (videoOf(deps.db, projectId, short ?? null)?.videoId !== videoId) continue;
           forgetVideo(deps.db, projectId, short ?? null);
           deps.hub.emit(projectId, { type: "project.updated", projectId });
           forgotten++;
         }
-        return c.json({ forgotten });
+        let confirmed = 0;
+        for (const { projectId, short, videoId } of body.confirmed ?? []) {
+          const video = videoOf(deps.db, projectId, short ?? null);
+          if (video?.videoId !== videoId || video.uploadState !== "filled") continue;
+          confirmVideoUpload(deps, projectId, short ?? null, videoId);
+          deps.hub.emit(projectId, { type: "project.updated", projectId });
+          confirmed++;
+        }
+        return c.json({ forgotten, confirmed });
       })
       .post("/ext/stats", zValidator("json", statsBody, onInvalid), (c) => {
         allowOrigin(c, false);
@@ -1094,27 +1110,7 @@ export function studioRoutes(deps: AppDeps) {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         const { projectId, short, videoId } = c.req.valid("json");
-        if (!confirmUpload(deps.db, projectId, short ?? null, videoId))
-          recordVideo(deps.db, projectId, short ?? null, videoId, deps.clock.now().toISOString());
-        // The Details touches (a short's related video, the long video's end screen and
-        // captions) wait for the extension now, and the comment for the video to be public.
-        const confirmedPack = uploadPack(deps, projectId);
-        const confirmedItem = confirmedPack.ok
-          ? packItem(confirmedPack.pack, short ?? undefined)
-          : undefined;
-        if (
-          confirmedItem !== undefined &&
-          (confirmedItem.relatedVideoId !== undefined ||
-            confirmedItem.endScreenVideoId !== undefined ||
-            confirmedItem.captions !== undefined)
-        )
-          setTaskState(deps.db, "finish", projectId, short ?? null, "waiting", null);
-        if (
-          confirmedItem?.kind === "video" &&
-          confirmedItem.pinnedComment !== undefined &&
-          readSetting(deps.db, autoCommentKey) === "on"
-        )
-          setTaskState(deps.db, "comment", projectId, short ?? null, "waiting", null);
+        confirmVideoUpload(deps, projectId, short ?? null, videoId);
         return c.json({ confirmed: true });
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
@@ -1155,6 +1151,36 @@ export function studioRoutes(deps: AppDeps) {
         });
       })
   );
+}
+
+// Studio said the upload was scheduled or published: it is on YouTube, and the Details touches
+// (a short's related video, the long video's end screen and captions) wait for the extension,
+// the pinned comment for the video to be public.
+function confirmVideoUpload(
+  deps: AppDeps,
+  projectId: string,
+  short: number | null,
+  videoId: string,
+): void {
+  if (!confirmUpload(deps.db, projectId, short, videoId))
+    recordVideo(deps.db, projectId, short, videoId, deps.clock.now().toISOString());
+  const confirmedPack = uploadPack(deps, projectId);
+  const confirmedItem = confirmedPack.ok
+    ? packItem(confirmedPack.pack, short ?? undefined)
+    : undefined;
+  if (
+    confirmedItem !== undefined &&
+    (confirmedItem.relatedVideoId !== undefined ||
+      confirmedItem.endScreenVideoId !== undefined ||
+      confirmedItem.captions !== undefined)
+  )
+    setTaskState(deps.db, "finish", projectId, short, "waiting", null);
+  if (
+    confirmedItem?.kind === "video" &&
+    confirmedItem.pinnedComment !== undefined &&
+    readSetting(deps.db, autoCommentKey) === "on"
+  )
+    setTaskState(deps.db, "comment", projectId, short, "waiting", null);
 }
 
 function unknownProject(c: Context): Response {

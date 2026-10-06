@@ -488,14 +488,19 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
       );
       return { ok: true, value: videos };
     }
-    if (request.type === "gone")
+    if (request.type === "gone") {
+      const strip = (rows: typeof request.videos) =>
+        rows.map(({ projectId, short, videoId }) => ({ projectId, short, videoId }));
+      const videos = strip(request.videos);
+      const confirmed = strip(request.confirmed ?? []);
       return {
         ok: true,
         value:
-          request.videos.length === 0
-            ? { forgotten: 0 }
-            : await post("/api/studio/ext/gone", { videos: request.videos }, "the deleted videos"),
+          videos.length === 0 && confirmed.length === 0
+            ? { forgotten: 0, confirmed: 0 }
+            : await post("/api/studio/ext/gone", { videos, confirmed }, "what Studio said"),
       };
+    }
     if (request.type === "backfill")
       return {
         ok: true,

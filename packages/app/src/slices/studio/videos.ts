@@ -157,6 +157,11 @@ export function waitingTasks(
 }
 
 // Every video on YouTube, for the numbers the extension reads from Studio.
+// Every video recorded, on YouTube or only started (`filled`), newest first.
+export function recordedVideos(db: DatabaseSync): readonly YoutubeVideo[] {
+  return db.prepare("SELECT * FROM youtube_videos ORDER BY recorded_at DESC").all().map(rowOf);
+}
+
 export function doneVideos(db: DatabaseSync): readonly YoutubeVideo[] {
   return db
     .prepare("SELECT * FROM youtube_videos WHERE upload_state='done' ORDER BY recorded_at DESC")

@@ -818,9 +818,11 @@ describe("YouTube videos and their A/B tests", () => {
     const old = { ...upload, videoId: "AAAAAAAAAAA" };
     expect(await (await h.call("/ext/gone", ext(token, { videos: [old] }))).json()).toEqual({
       forgotten: 0,
+      confirmed: 0,
     });
     expect(await (await h.call("/ext/gone", ext(token, { videos: [upload] }))).json()).toEqual({
       forgotten: 1,
+      confirmed: 0,
     });
     expect(await (await h.call("/videos/p1")).json()).toEqual({ videos: [] });
     const unpaired = await h.call("/ext/gone", {
@@ -829,6 +831,30 @@ describe("YouTube videos and their A/B tests", () => {
       body: JSON.stringify({ videos: [] }),
     });
     expect(unpaired.status).toBe(401);
+  });
+
+  it("confirms a started upload Studio has scheduled, and only one still waiting", async () => {
+    const h = harness();
+    finished(h.output);
+    h.output("subtitles_srt", "captions.srt", "1\n00:00:00,000 --> 00:00:02,000\nA fox.\n");
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    expect(await (await h.call("/ext/recorded-videos", ext(token))).json()).toMatchObject({
+      videos: [{ ...upload, uploadState: "filled" }],
+    });
+    // Another video in the slot by now is left alone.
+    const other = { ...upload, videoId: "AAAAAAAAAAA" };
+    expect(
+      await (await h.call("/ext/gone", ext(token, { videos: [], confirmed: [other] }))).json(),
+    ).toEqual({ forgotten: 0, confirmed: 0 });
+    expect(
+      await (await h.call("/ext/gone", ext(token, { videos: [], confirmed: [upload] }))).json(),
+    ).toEqual({ forgotten: 0, confirmed: 1 });
+    // On YouTube now, and its captions wait for the Details page.
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ uploadState: "done", finishState: "waiting" }],
+    });
   });
 
   it("asks for the checks of a scheduled video until Studio's Content list clears them", async () => {
