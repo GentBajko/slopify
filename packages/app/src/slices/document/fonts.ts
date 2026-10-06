@@ -73,9 +73,14 @@ export function useFace(doc: jsPDF, face: FontFace, size: number): void {
   doc.setCharSpace(face.letterSpacing);
 }
 
+// Measured as drawn: `getTextWidth` takes off the kerning between pairs like "Ve" for the
+// standard fonts, but `text` draws without it, so a word starting "V" or "T" came out wider than
+// measured and ran into the next one ("Vecna.Later").
 export function faceWidth(doc: jsPDF, face: FontFace, size: number, text: string): number {
   useFace(doc, face, size);
-  return doc.getTextWidth(text) + face.letterSpacing * [...text].length;
+  const width =
+    (doc.getStringUnitWidth(text, { doKerning: false }) * size) / doc.internal.scaleFactor;
+  return width + face.letterSpacing * [...text].length;
 }
 
 function styleFor(face: FontFace): string {

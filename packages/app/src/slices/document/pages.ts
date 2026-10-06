@@ -184,14 +184,25 @@ export function sourcesPage(w: Writer, items: readonly SourceItem[]): ContentsEn
     const lines = doc.splitTextToSize(item.text, w.contentWidth - bullet - 5) as string[];
     w.ensure(sources.line);
     w.write("•", w.left, w.y, fonts.body, sizes.body, "muted");
-    // The entry reads as text; only its addresses are links, each in the link colour and
-    // pointing at itself. An entry whose address isn't in its words (a titled link) is
+    // The entry reads as text; only its site names (or addresses, when it wasn't tidied) are
+    // links, each in the link colour and pointing at its page. An entry with neither is
     // clickable as a whole, still in text colour.
-    const addresses = [...item.text.matchAll(/https?:\/\/[^\s)>\]]+/g)].map((match) => ({
-      from: match.index,
-      to: match.index + match[0].replace(/[.,;:]+$/, "").length,
-      url: match[0].replace(/[.,;:]+$/, ""),
-    }));
+    const addresses: { from: number; to: number; url: string }[] = [];
+    if (item.links !== undefined) {
+      let from = 0;
+      for (const link of item.links) {
+        const at = item.text.indexOf(link.label, from);
+        if (at < 0) continue;
+        addresses.push({ from: at, to: at + link.label.length, url: link.href });
+        from = at + link.label.length;
+      }
+    } else
+      for (const match of item.text.matchAll(/https?:\/\/[^\s)>\]]+/g))
+        addresses.push({
+          from: match.index,
+          to: match.index + match[0].replace(/[.,;:]+$/, "").length,
+          url: match[0].replace(/[.,;:]+$/, ""),
+        });
     const width = (text: string) => faceWidth(doc, fonts.body, sizes.body, text);
     let cursor = 0;
     for (const line of lines) {

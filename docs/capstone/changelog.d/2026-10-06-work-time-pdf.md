@@ -1,0 +1,3 @@
+- `local_work_times` (migration 0053): `runRevisionInvocation` records each local step's run; `projectTiming` unions it with `attempts`. `RunClock` ticks only while `run.running`.
+- `document/fonts.ts` `faceWidth` measures with `getStringUnitWidth(…, { doKerning: false })`.
+- `document/sources.ts` `tidySource`: site names (numbered repeats) for addresses, path-derived titles for bare links; `SourceItem.links`; `sourcesPage` links each label.

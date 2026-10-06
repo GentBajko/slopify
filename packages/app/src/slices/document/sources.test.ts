@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { markdownBlocks } from "./blocks.js";
-import { documentText } from "./sources.js";
+import { documentText, tidySource } from "./sources.js";
 
 describe("markdownBlocks", () => {
   it("keeps headings, emphasis, links, lists and quotes as the article wrote them", () => {
@@ -78,7 +78,11 @@ describe("documentText", () => {
     ]);
     expect(text.sources).toEqual([
       { text: "Book", href: "https://example.com/book" },
-      { text: "A magazine, https://example.com/mag", href: "https://example.com/mag" },
+      {
+        text: "A magazine, example.com",
+        href: "https://example.com/mag",
+        links: [{ label: "example.com", href: "https://example.com/mag" }],
+      },
       { text: "the wiki", href: "https://example.com/wiki" },
     ]);
   });
@@ -92,10 +96,49 @@ it("reads one source per line when the model left no blank lines between them", 
   const article = `# T\n\nBody.\n\n## Sources Consulted\n\nWikipedia, "Kish" — https://en.wikipedia.org/wiki/Kish\nOxford, *Ancient Egypt* (1977)\n- [Antiquity #26](https://example.com/26)\n  continued on the next line\n`;
   expect(documentText(article, null).sources).toEqual([
     {
-      text: 'Wikipedia, "Kish" — https://en.wikipedia.org/wiki/Kish',
+      text: 'Wikipedia, "Kish" — en.wikipedia.org',
       href: "https://en.wikipedia.org/wiki/Kish",
+      links: [{ label: "en.wikipedia.org", href: "https://en.wikipedia.org/wiki/Kish" }],
     },
     { text: "Oxford, Ancient Egypt (1977)", href: null },
     { text: "Antiquity #26 continued on the next line", href: "https://example.com/26" },
   ]);
+});
+
+describe("tidySource", () => {
+  it("gives a bare address a title from its path and the site's name, linking to it", () => {
+    const address =
+      "https://www.example.com/posts/1700-how-the-old-lighthouse-was-built?comment=51";
+    expect(tidySource({ text: address, href: address })).toMatchObject({
+      text: "How the old lighthouse was built — example.com",
+      href: address,
+    });
+    // A path of ids and kinds of page says nothing: the site's name alone.
+    const card = "https://cards.example.org/card/abc/91";
+    expect(tidySource({ text: card, href: card }).text).toBe("cards.example.org");
+  });
+
+  it("puts the site's name in place of an entry's long address, keeping the link", () => {
+    expect(
+      tidySource({
+        text: "A. Writer, *A Book* (1976) — first edition — https://en.wikipedia.org/wiki/A_Book.",
+        href: null,
+      }),
+    ).toMatchObject({
+      text: "A. Writer, *A Book* (1976) — first edition — en.wikipedia.org.",
+      href: "https://en.wikipedia.org/wiki/A_Book",
+    });
+  });
+
+  it("numbers a site cited more than once in an entry, each linking to its own page", () => {
+    const item = tidySource({
+      text: "Fan wiki — https://wiki.example.com/a ; https://wiki.example.com/b",
+      href: null,
+    });
+    expect(item.text).toBe("Fan wiki — wiki.example.com ; wiki.example.com (2)");
+    expect(item.links).toEqual([
+      { label: "wiki.example.com", href: "https://wiki.example.com/a" },
+      { label: "wiki.example.com (2)", href: "https://wiki.example.com/b" },
+    ]);
+  });
 });
