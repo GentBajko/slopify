@@ -3,8 +3,8 @@ import { z } from "zod";
 import { type StageKind, stageKinds } from "../../kernel/pipeline.js";
 import { currentRevisionId } from "../revisions/repo.js";
 
-// How long a project's steps spent working, from the attempts they made: only the time some
-// attempt was running, with steps side by side counted once, so waiting on a review, a plan
+// How long a project's steps spent working, from the attempts their provider calls made and the
+// times its local steps (renders, levelling) ran: only the time something was running, with steps side by side counted once, so waiting on a review, a plan
 // limit or a pause never counts. A run is one revision's work: each save that remakes something starts a
 // new one. The latest run is the current revision's, or, when that one reused everything and
 // ran nothing, the last revision that ran something; `current` says which.
@@ -55,9 +55,14 @@ export function projectTiming(db: DatabaseSync, projectId: string, now: number):
          a.started_at AS started_at, a.ended_at AS ended_at, w.state AS work_state
        FROM attempts a JOIN stages s ON s.id = a.stage_id
        LEFT JOIN revision_work w ON w.id = a.work_id
-       WHERE s.project_id = ?`,
+       WHERE s.project_id = ?
+       UNION ALL
+       SELECT s.kind, t.revision_id, t.work_id, t.started_at, t.ended_at, w.state
+       FROM local_work_times t JOIN stages s ON s.id = t.stage_id
+       LEFT JOIN revision_work w ON w.id = t.work_id
+       WHERE t.project_id = ?`,
     )
-    .all(projectId)
+    .all(projectId, projectId)
     .map((row) => attemptRow.parse(row));
   const head = currentRevisionId(db, projectId);
   // Work an edit carried over to the current revision is still its run's work: a video

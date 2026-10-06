@@ -55,6 +55,23 @@ describe("how long a project took", () => {
     expect(timing.byStage.get("images")).toBe(0);
   });
 
+  it("counts a local step's running time, a render say, and keeps the clock going while it runs", () => {
+    const db = running();
+    db.exec(`
+      INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s3','p1','video','generate','running');
+      INSERT INTO revision_work (id, project_id, revision_id, stage_id, kind, fingerprint, state,
+        dispatch_state, created_at) VALUES ('w3','p1','r1','s3','video','f','running','allowed','2026-09-27');
+      UPDATE attempts SET ended_at='2026-09-27T10:05:00.000Z' WHERE id='a1';
+      UPDATE revision_work SET state='done' WHERE id='w1';
+      INSERT INTO local_work_times (id, project_id, stage_id, revision_id, work_id, started_at, ended_at)
+        VALUES ('t1','p1','s3','r1','w3','2026-09-27T10:10:00.000Z',NULL);
+    `);
+    const timing = projectTiming(db, "p1", at("10:30"));
+    // Five minutes of audio, then the render running for twenty.
+    expect(timing.run).toEqual({ current: true, running: true, workingMs: 25 * 60_000 });
+    expect(timing.byStage.get("video")).toBe(20 * 60_000);
+  });
+
   it("falls back to the last run that ran something when the current revision reused it all", () => {
     const db = running();
     db.exec(`

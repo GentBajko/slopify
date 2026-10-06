@@ -200,6 +200,12 @@ describe("the run clock", () => {
       act(() => vi.advanceTimersByTime(5000));
       expect(clock.textContent).toBe("Working · 0:05:05");
       cleanup();
+      // The project runs but only waits (a plan limit): the server's figure holds, no ticking
+      // up to snap back at the next reading.
+      render(<RunClock cost={run(false)} status="running" measuredAt={measuredAt} />);
+      act(() => vi.advanceTimersByTime(5000));
+      expect(screen.getByRole("timer").textContent).toBe("Working · 0:05:00");
+      cleanup();
       // Waiting on a review: no step runs, so no time counts.
       render(<RunClock cost={run(false)} status="paused" measuredAt={measuredAt} />);
       act(() => vi.advanceTimersByTime(5000));

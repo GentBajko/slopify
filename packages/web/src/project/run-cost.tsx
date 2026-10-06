@@ -101,9 +101,11 @@ export function RunClock({
     return () => clearInterval(timer);
   }, [running]);
   if (!on || run === null) return null;
-  // While the project runs the clock counts every second from the last reading; the page reads
-  // the server's figure again every 20 seconds, so it never drifts far.
-  const ms = run.workingMs + (running ? Math.max(0, now - measuredAt) : 0);
+  // While a step runs the clock counts every second from the last reading; the page reads the
+  // server's figure again every 20 seconds, so it never drifts far. While the project only waits
+  // (a plan limit, a review) the server's figure holds, and so does the clock, rather than
+  // counting up and snapping back at each reading.
+  const ms = run.workingMs + (running && run.running ? Math.max(0, now - measuredAt) : 0);
   const working = running ? stopwatch(ms) : workDuration(ms);
   return (
     <>

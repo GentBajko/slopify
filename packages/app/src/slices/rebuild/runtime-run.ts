@@ -25,6 +25,16 @@ export async function runRevisionInvocation(
   for (const piece of pieces) {
     if (piece.state === "done") continue;
     if (piece.input.kind === "deferred") return "held";
+    // A step Slopify does itself (no provider call) records how long it ran, for the working
+    // time; a provider call records its own attempts.
+    const local =
+      /^(subtitles|export|document|voices):/.test(piece.key) ||
+      /^shorts:\d+:render$/.test(piece.key) ||
+      (!/^(review|youtube|shorts|animate):/.test(piece.key) &&
+        piece.input.kind !== "llm" &&
+        piece.input.kind !== "tts" &&
+        piece.input.kind !== "image");
+    const timed = local ? startLocalTime(deps, context) : undefined;
     try {
       const outcome = piece.key.startsWith("subtitles:")
         ? await executeSubtitleRecipe(deps, context, piece)
@@ -62,6 +72,8 @@ export async function runRevisionInvocation(
         // The error itself matters more than its label.
       }
       throw label === undefined ? error : new Error(`${label}: ${error.message}`, { cause: error });
+    } finally {
+      if (timed !== undefined) endLocalTime(deps, timed);
     }
   }
   deps.db
@@ -70,4 +82,27 @@ export async function runRevisionInvocation(
     )
     .run(context.work.workId);
   return "done";
+}
+
+function startLocalTime(deps: ExportExecutionDeps, context: StageContext): string {
+  const id = deps.ids.next();
+  deps.db
+    .prepare(
+      "INSERT INTO local_work_times(id,project_id,stage_id,revision_id,work_id,started_at) VALUES (?,?,?,?,?,?)",
+    )
+    .run(
+      id,
+      context.work.projectId,
+      context.work.stageId,
+      context.work.revisionId,
+      context.work.workId,
+      deps.clock.now().toISOString(),
+    );
+  return id;
+}
+
+function endLocalTime(deps: ExportExecutionDeps, id: string): void {
+  deps.db
+    .prepare("UPDATE local_work_times SET ended_at=? WHERE id=?")
+    .run(deps.clock.now().toISOString(), id);
 }
