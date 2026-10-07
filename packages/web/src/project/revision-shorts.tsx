@@ -23,6 +23,7 @@ import { StylePreview } from "@/video/style-preview";
 import { type Audition, useAudition } from "./review-audition.js";
 import { ClipAudition } from "./review-clip-audition.js";
 import { editOfForm, setPrompt } from "./revision-form-state";
+import { KeepShorts } from "./revision-shorts-keep.js";
 import { RevisionUpload } from "./revision-upload.js";
 
 // The pick: asking for it again picks the moments again. A clip whose sentences come back
@@ -345,6 +346,17 @@ function PickedClips({
           These settings pick the moments again after you save and press Remake, so the clips below
           can be adjusted once the new ones are picked.
         </p>
+      ) : null}
+      {repicking && !again ? (
+        <KeepShorts
+          edit={edit}
+          view={view}
+          picked={pick.picked}
+          clips={clips}
+          count={settings.count}
+          problem={problem("content.shortsKeep")}
+          onChange={onChange}
+        />
       ) : null}
       {audition.element}
       <ol className="space-y-3">

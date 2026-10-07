@@ -161,6 +161,7 @@ export async function saveRevision(
           prepared.map((row) => row.asset),
         ),
         ...validateProposedCues(fresh, finalEdit, plan, prepared, durations),
+        ...replacedUploads(deps, input.projectId, plan.shortMoves),
       ];
       if (fields.length > 0)
         return { ok: false, reason: "invalid-edit", currentRevisionId: fresh.revision.id, fields };
@@ -171,8 +172,9 @@ export async function saveRevision(
             fresh,
             {
               ...finalEdit,
+              // From the edit as sent, so the plan decides the kept shorts the same way again.
               content: {
-                ...plan.content,
+                ...finalEdit.content,
                 subtitleCues: {
                   ...plan.content.subtitleCues,
                   audioFingerprint: timing.logicalFingerprint,
@@ -213,6 +215,7 @@ export async function saveRevision(
         recipes: plan.recipes,
       });
       carryCheckpointGates(deps, input.baseRevisionId, revision);
+      moveShortRecords(deps, input.projectId, plan.shortMoves);
       projectSelected(deps.db, revision);
       projectStandings(deps, revision.projectId);
       insertReceipt(deps, identity, revision.id);
@@ -365,4 +368,50 @@ export function logicalKeys(
     else if (input.kind === "tts") values[z.string().parse(row.work_key)] = `${input.logicalKey}:1`;
   }
   return values;
+}
+
+// A short already on YouTube can't make way for a kept short moving into its number: its
+// upload record would be lost. The person keeps it, or lowers the count past it.
+function replacedUploads(
+  deps: RevisionDeps,
+  projectId: string,
+  moves: readonly (readonly [number, number])[],
+): readonly FieldError[] {
+  const from = new Set(moves.map(([number]) => number));
+  return moves.flatMap(([, to]) => {
+    if (from.has(to)) return [];
+    const uploaded = deps.db
+      .prepare("SELECT 1 FROM youtube_videos WHERE project_id=? AND short=?")
+      .get(projectId, to);
+    return uploaded === undefined
+      ? []
+      : [
+          {
+            field: "content.shortsKeep",
+            message: `Short ${String(to)} is on YouTube, and another kept short would take its number. Keep short ${String(to)} too, or lower the count so it isn't needed.`,
+          },
+        ];
+  });
+}
+
+// Kept shorts that changed number take their upload record and release time with them.
+// Moved in two steps, through numbers out of the way, so swaps don't collide.
+function moveShortRecords(
+  deps: RevisionDeps,
+  projectId: string,
+  moves: readonly (readonly [number, number])[],
+): void {
+  if (moves.length === 0) return;
+  const aside = 1000;
+  for (const table of ["youtube_videos", "releases"]) {
+    for (const [from, to] of moves)
+      deps.db
+        .prepare(`UPDATE ${table} SET short=? WHERE project_id=? AND short=?`)
+        .run(to + aside, projectId, from);
+    for (const [, to] of moves)
+      deps.db.prepare(`DELETE FROM ${table} WHERE project_id=? AND short=?`).run(projectId, to);
+    deps.db
+      .prepare(`UPDATE ${table} SET short=short-? WHERE project_id=? AND short>=?`)
+      .run(aside, projectId, aside);
+  }
 }

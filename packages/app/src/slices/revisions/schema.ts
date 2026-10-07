@@ -31,6 +31,19 @@ const cue = z
     path: ["end"],
     message: "The end time must be after the start time.",
   });
+const keptShortSchema = z
+  .object({
+    from: z.number().int().positive().max(99),
+    opening: z.string().min(1).max(20000),
+    closing: z.string().min(1).max(20000),
+    sentences: z.number().int().positive().max(10000),
+    title: z.string().max(200),
+    description: z.string().max(5000),
+    hashtags: z.array(z.string().max(100)).max(30),
+    why: z.string().max(2000),
+    seed: z.string().max(128).nullable().optional(),
+  })
+  .strict();
 export const revisionContentSchema = z
   .object({
     articleMarkdown: z.string().max(500000).optional(),
@@ -114,6 +127,8 @@ export const revisionContentSchema = z
           .strict(),
       )
       .optional(),
+    // The shorts kept through a change of their moments, in order (`shorts/keep.ts`).
+    shortsKeep: z.array(keptShortSchema).max(20).optional(),
     ambientBed: id.optional(),
     thumbnailOverrides: z.partialRecord(z.enum(["1", "2", "3"]), id).optional(),
   })

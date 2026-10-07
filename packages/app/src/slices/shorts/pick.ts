@@ -18,6 +18,8 @@ export interface PickBrief {
   readonly maxSeconds: number;
   // `sentencesText`: one numbered, timed sentence per line.
   readonly sentences: string;
+  // Sentence ranges already used by kept shorts, which new clips may not touch.
+  readonly taken?: readonly { readonly first: number; readonly last: number }[] | undefined;
 }
 
 export interface ShortPick {
@@ -132,6 +134,11 @@ export function pickMessages(brief: PickBrief): readonly Message[] {
         '- "first" and "last" are sentence numbers from the transcript. A clip runs from the start of sentence "first" to the end of sentence "last", both included.',
         `- Each clip lasts between ${String(brief.minSeconds)} and ${String(brief.maxSeconds)} seconds, measured from the start time of its first sentence to the end time of its last one.`,
         "- No two clips share a sentence.",
+        ...(brief.taken === undefined || brief.taken.length === 0
+          ? []
+          : [
+              `- These sentences are already shorts and no clip may use any of them: ${brief.taken.map((range) => (range.first === range.last ? String(range.first) : `${String(range.first)}-${String(range.last)}`)).join(", ")}.`,
+            ]),
         `- "title" is at most ${String(shortTitleMax)} characters, one line, without hashtags.`,
         '- "description" is one line.',
         `- "hashtags" holds ${String(shortHashtagsMin)} to ${String(shortHashtagsMax)} single words, each starting with #.`,
@@ -204,6 +211,8 @@ export interface PickLimits {
   readonly minSeconds: number;
   readonly maxSeconds: number;
   readonly durationSeconds: number;
+  // Sentence ranges kept shorts already use.
+  readonly taken?: readonly { readonly first: number; readonly last: number }[] | undefined;
 }
 
 // Timing noise: the length rules are checked to the hundredth of a second.
@@ -250,6 +259,13 @@ export function checkPicks(
     if (seconds < limits.minSeconds - tolerance || seconds > limits.maxSeconds + tolerance) {
       problems.push(
         `${label} (sentences ${String(first)}-${String(last)}) lasts ${String(Math.round(seconds))} seconds, and each clip must last ${String(limits.minSeconds)}-${String(limits.maxSeconds)} seconds.`,
+      );
+      continue;
+    }
+    const used = (limits.taken ?? []).find((one) => first <= one.last && last >= one.first);
+    if (used !== undefined) {
+      problems.push(
+        `${label} (sentences ${String(first)}-${String(last)}) uses sentences ${String(used.first)}-${String(used.last)}, which are already a short.`,
       );
       continue;
     }

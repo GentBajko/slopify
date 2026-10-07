@@ -77,6 +77,26 @@ export function shortsRecipes(
         subjectOf(config),
         // The project language, only when it is not English, so English keeps its fingerprint.
         ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
+        // The shorts kept through a change of their moments, only when there are any, so
+        // every other project keeps its fingerprint (`shorts/keep.ts`).
+        ...(context.content.shortsKeep === undefined
+          ? []
+          : [
+              [
+                "keep-v1",
+                context.content.shortsKeep.map((short) => [
+                  short.from,
+                  short.opening,
+                  short.closing,
+                  short.sentences,
+                  short.title,
+                  short.description,
+                  [...short.hashtags],
+                  short.why,
+                  short.seed ?? null,
+                ]),
+              ],
+            ]),
       ],
     },
     [timing.key],

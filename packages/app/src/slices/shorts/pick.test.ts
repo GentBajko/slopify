@@ -110,6 +110,34 @@ describe("checkPicks", () => {
   });
 });
 
+describe("picking around kept shorts", () => {
+  it("refuses a new clip on sentences a kept short already uses, and tells the model which", () => {
+    const checked = checkPicks(JSON.stringify([clip(3, 4), clip(6, 7)]), sentences, {
+      ...limits,
+      taken: [{ first: 4, last: 5 }],
+    });
+    if (!checked.ok) throw new Error(checked.reason);
+    expect(checked.picks.map((one) => [one.first, one.last])).toEqual([[6, 7]]);
+    expect(checked.problems[0]).toMatch(/uses sentences 4-5, which are already a short/);
+    const [system] = pickMessages({
+      instruction: "Pick hooks.",
+      title: "Harbors",
+      durationSeconds: 100,
+      count: 1,
+      minSeconds: 20,
+      maxSeconds: 40,
+      sentences: "[1] (0:00-0:09) Sentence 1.",
+      taken: [
+        { first: 4, last: 5 },
+        { first: 9, last: 9 },
+      ],
+    });
+    expect(system?.content).toContain(
+      "These sentences are already shorts and no clip may use any of them: 4-5, 9.",
+    );
+  });
+});
+
 describe("the pick's messages", () => {
   const brief = {
     instruction: "Pick hooks.",

@@ -13,6 +13,7 @@ import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { clipWords } from "../shorts/captions.js";
 import { effectiveClips, pickedShortsOf } from "../shorts/clips.js";
+import { anchorKept, lostMessage, withNewPicks } from "../shorts/keep.js";
 import {
   defaultShortsPrompt,
   musicVolumeOf,
@@ -106,11 +107,30 @@ async function pick(
     );
   const audio = await revisionAudio(deps, context, view);
   const durationSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
+  // Kept shorts are found again in this timing; the model is asked only for the rest.
+  const keep = view.revision.content.shortsKeep;
+  const anchored =
+    keep === undefined
+      ? undefined
+      : anchorKept(keep.slice(0, shorts.count), sentences, durationSeconds);
+  if (anchored !== undefined && anchored.lost.length > 0)
+    throw new Error(lostMessage(anchored.lost, keep ?? []));
+  const keptPicks = anchored?.picks ?? [];
+  const wanted = shorts.count - keptPicks.length;
+  const taken = keptPicks.map(({ first, last }) => ({ first, last }));
+  const seed = view.revision.content.regenerationTokens[shortsPickKey] ?? null;
+  if (anchored !== undefined && wanted <= 0) {
+    await publishPicks(deps, context, piece, keptPicks, durationSeconds, sentences);
+    return "done";
+  }
   const limits: PickLimits = {
-    count: shorts.count,
+    count: anchored === undefined ? shorts.count : shorts.count - anchored.picks.length,
     minSeconds: shorts.minSeconds,
     maxSeconds: shorts.maxSeconds,
     durationSeconds,
+    ...(anchored === undefined
+      ? {}
+      : { taken: anchored.picks.map(({ first, last }) => ({ first, last })) }),
   };
   // Nothing to ask the model for, and nothing to pay for.
   if (durationSeconds < shorts.minSeconds) throw new Error(noPicksMessage([], limits));
@@ -119,9 +139,10 @@ async function pick(
     instruction: typeof saved === "string" && saved.trim() !== "" ? saved : defaultShortsPrompt,
     title: config.title,
     durationSeconds,
-    count: shorts.count,
+    count: limits.count,
     minSeconds: shorts.minSeconds,
     maxSeconds: shorts.maxSeconds,
+    ...(taken.length === 0 ? {} : { taken }),
     sentences: sentencesText(
       sentences,
       usesVoices(config) && config.voices !== undefined
@@ -143,7 +164,7 @@ async function pick(
   if (!checked.ok) throw new Error(checked.reason);
   // One more ask when clips were missing or broke the rules, with what was wrong; then
   // whichever answer held more usable clips.
-  if (checked.picks.length < shorts.count && checked.problems.length > 0) {
+  if (checked.picks.length < limits.count && checked.problems.length > 0) {
     if (!context.maySubmit(piece.id)) return "held";
     const second = await providers
       .forPiece(piece.id)
@@ -160,16 +181,31 @@ async function pick(
     if (again.ok && again.picks.length >= checked.picks.length) checked = again;
   }
   if (checked.picks.length === 0) throw new Error(noPicksMessage(checked.problems, limits));
-  // A clip picked again with the same sentences keeps its number and seed, so its prompts,
-  // images and render are reused; the new ones carry this pick's token.
+  // With kept shorts, they stay 1…k and the new ones follow. Otherwise a clip picked again
+  // with the same sentences keeps its number and seed, so its prompts, images and render are
+  // reused; the new ones carry this pick's token.
   const previous = pickedShortsOf(
     view.pieces.find((row) => row.key === shortsPickKey && row.selected)?.piece.payload,
   );
-  const picks = keepNumbers(
-    checked.picks,
-    previous?.shorts ?? [],
-    view.revision.content.regenerationTokens[shortsPickKey] ?? null,
-  );
+  const picks =
+    anchored === undefined
+      ? keepNumbers(checked.picks, previous?.shorts ?? [], seed)
+      : withNewPicks(keptPicks, checked.picks, seed);
+  await publishPicks(deps, context, piece, picks, durationSeconds, sentences);
+  return "done";
+}
+
+// The pick's answer saved: the clips (shorts.json) and, for planning, the numbered
+// transcript's times a range set by hand is measured against. Work for shorts past the new
+// count is dropped.
+async function publishPicks(
+  deps: ExportExecutionDeps,
+  context: StageContext,
+  piece: WorkPiece,
+  picks: readonly ShortPick[],
+  durationSeconds: number,
+  sentences: readonly { readonly start: number; readonly end: number; readonly text: string }[],
+): Promise<void> {
   await publishResult(
     deps,
     context,
@@ -197,7 +233,6 @@ async function pick(
     // The shorts past the new count, from a pick that made more.
     (key) => Number(/^shorts:(\d+):/.exec(key)?.[1] ?? 0) > picks.length,
   );
-  return "done";
 }
 
 async function prompts(

@@ -23,7 +23,9 @@ import type {
 import { effectiveClips, pickedShortsOf, rangeProblem } from "../shorts/clips.js";
 import { buildRecipes } from "./recipe-build.js";
 import { type RecipeContext, type ResolvedWorkRecipe, selectedReference } from "./recipe-model.js";
+import { shortsPickKey } from "./recipe-shorts.js";
 import { validateRecipeInputs } from "./recipe-validation.js";
+import { finishedShorts, keepChosen, movedShorts, withKeep } from "./shorts-keep-save.js";
 
 export type RevisionPlanResult =
   | {
@@ -34,6 +36,8 @@ export type RevisionPlanResult =
       readonly manifest: RevisionManifest;
       readonly baseFingerprints: Readonly<Record<string, string>>;
       readonly recipes: readonly ResolvedWorkRecipe[];
+      // Kept shorts that change number in this save (from, to): their upload records follow.
+      readonly shortMoves: readonly (readonly [number, number])[];
     }
   | { readonly ok: false; readonly fields: readonly FieldError[] };
 // A range set by hand for a short is checked against the pick it was set on, while that is
@@ -114,13 +118,67 @@ function picturesArticleOf(
     base.outputs.some((row) => row.selected && keys.includes(row.workKey) && row.state === "ready");
   return drawn ? base.articleMarkdown : undefined;
 }
+// A save's plan. Shorts already finished are kept when the edit would pick them again (a new
+// count, intro or narration moving the timing), unless the edit asks for new moments (Pick
+// new moments) or chose its own keep list (Edit project → Shorts): `shorts/keep.ts`.
 export function planRevision(
   base: RevisionView,
   edit: RevisionEdit,
   prepared: RevisionManifest = { outputs: [], pieces: [] },
   inspected: readonly ManifestOutput[] = [],
 ): RevisionPlanResult {
-  const content = normalizeImages(normalizeArticleIntent(base, edit));
+  if (edit.regenerate?.includes(shortsPickKey) === true) {
+    const { shortsKeep: _dropped, ...content } = edit.content;
+    return planEdit(base, { ...edit, content }, prepared, inspected, false);
+  }
+  if (keepChosen(base, edit) && edit.content.shortsKeep !== undefined) {
+    const count = edit.config.shorts?.count ?? 0;
+    if (edit.content.shortsKeep.length > count)
+      return {
+        ok: false,
+        fields: [
+          {
+            field: "content.shortsKeep",
+            message: `Tick at most ${String(count)} ${count === 1 ? "short" : "shorts"} to keep, the number of shorts set above.`,
+          },
+        ],
+      };
+    return planEdit(base, edit, prepared, inspected, true);
+  }
+  const first = planEdit(base, edit, prepared, inspected, false);
+  if (!first.ok) return first;
+  const before = base.pieces.find(
+    (row) => row.key === shortsPickKey && row.selected && row.piece.state === "done",
+  )?.fingerprint;
+  const after = first.fingerprints[shortsPickKey];
+  if (before === undefined || after === undefined || after === before) return first;
+  const finished = finishedShorts(base);
+  if (finished.length === 0) return first;
+  return planEdit(
+    base,
+    { ...edit, content: { ...edit.content, shortsKeep: finished } },
+    prepared,
+    inspected,
+    true,
+  );
+}
+
+function planEdit(
+  base: RevisionView,
+  edit: RevisionEdit,
+  prepared: RevisionManifest,
+  inspected: readonly ManifestOutput[],
+  keeping: boolean,
+): RevisionPlanResult {
+  const normal = normalizeImages(normalizeArticleIntent(base, edit));
+  // A keep list chosen in this save: kept shorts numbered by their place, their work moved
+  // with them.
+  const kept =
+    keeping && normal.shortsKeep !== undefined
+      ? withKeep(normal, normal.shortsKeep, edit.config.shorts?.count ?? normal.shortsKeep.length)
+      : undefined;
+  const content = kept?.content ?? normal;
+  const moves = kept?.moves ?? new Map<number, number>();
   const fields = [
     ...validateRevisionEdit(edit.config, content),
     ...shortModeFields(edit.config),
@@ -156,6 +214,7 @@ export function planRevision(
     outputs: base.outputs.filter(selectedReference),
     pieces: base.pieces.filter(selectedReference),
   };
+  const carried = movedShorts(manifest, moves);
   const oldContext: RecipeContext = {
     config: base.revision.config,
     content: base.revision.content,
@@ -170,7 +229,7 @@ export function planRevision(
   const replacementKeys = new Set(prepared.outputs.map((row) => row.workKey));
   const proposedManifest: RevisionManifest = {
     outputs: [
-      ...manifest.outputs
+      ...carried.outputs
         .filter((row) => !replacementKeys.has(row.workKey))
         .map(
           (row) =>
@@ -179,7 +238,7 @@ export function planRevision(
       ...prepared.outputs,
     ],
     pieces: [
-      ...manifest.pieces.filter((row) => !prepared.pieces.some((one) => one.key === row.key)),
+      ...carried.pieces.filter((row) => !prepared.pieces.some((one) => one.key === row.key)),
       ...prepared.pieces,
     ],
   };
@@ -258,6 +317,7 @@ export function planRevision(
     manifest: { outputs, pieces: proposedManifest.pieces },
     baseFingerprints: Object.fromEntries(old.map((row) => [row.key, row.fingerprint])),
     recipes: desired,
+    shortMoves: [...moves.entries()],
   };
 }
 function normalizeImages(content: RevisionContent): RevisionContent {

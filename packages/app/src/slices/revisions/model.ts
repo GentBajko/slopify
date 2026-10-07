@@ -38,6 +38,23 @@ export type ThumbnailOverride = "1" | "2" | "3";
 export function thumbnailOverrideOf(variant: number): ThumbnailOverride | undefined {
   return variant === 1 ? "1" : variant === 2 ? "2" : variant === 3 ? "3" : undefined;
 }
+// A short kept through a change of its moments: remembered by its sentences' text, so a new
+// intro or narration edit finds it again however the timing moved.
+export interface KeptShort {
+  // Its number in the pick it was kept from.
+  readonly from: number;
+  // Its first and last sentence, and how many sentences it runs.
+  readonly opening: string;
+  readonly closing: string;
+  readonly sentences: number;
+  readonly title: string;
+  readonly description: string;
+  readonly hashtags: readonly string[];
+  readonly why: string;
+  // The token its prompts, images and render carry (`clipToken`).
+  readonly seed?: string | null | undefined;
+}
+
 export interface RevisionContent {
   readonly articleMarkdown?: string | undefined;
   readonly articleEdited?: boolean | undefined;
@@ -71,6 +88,9 @@ export interface RevisionContent {
   readonly shortsMusic?: string | undefined;
   // Ranges of sentences set by hand for some shorts, by short number, in place of the
   // model's pick (`slices/shorts/clips.ts`).
+  // The shorts kept through a change of their moments, in order: kept short N is the one
+  // listed Nth (`shorts/keep.ts`).
+  readonly shortsKeep?: readonly KeptShort[] | undefined;
   readonly shortsRanges?:
     | Readonly<Record<string, import("../shorts/clips.js").ShortRange>>
     | undefined;
