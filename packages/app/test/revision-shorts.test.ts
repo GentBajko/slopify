@@ -338,8 +338,8 @@ it("picks the clips, writes their prompts, makes vertical images and renders eve
     [2, [4, 7]],
   ]);
 
-  // Fewer shorts: the one left is sentences 1-3 again, and short 2's files leave the
-  // project's selection with the pick that dropped them.
+  // Fewer shorts: the finished short 1 (sentences 1-3) is kept without asking the model, and
+  // short 2's files leave the project's selection with the pick that dropped them.
   repick = [clip(1, 3)];
   const fewer = edit();
   await save(h.deps, h.projectId, {
@@ -350,7 +350,7 @@ it("picks the clips, writes their prompts, makes vertical images and renders eve
     },
   });
   await rebuild();
-  expect(model.calls()).toBe(8);
+  expect(model.calls()).toBe(7);
   expect(images.calls()).toBe(10);
   expect(Object.keys(files()).sort()).toEqual([
     "shorts:1:image:1",
