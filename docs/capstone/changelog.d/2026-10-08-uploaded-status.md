@@ -1,0 +1,1 @@
+- `uploadedAndSettled` (`slices/uploads/repo.ts`): uploaded projects with no admitted pending/running work; `edge/http/projects.ts` reports their derived `paused`/`pending` status as `done` in the list and project summary.

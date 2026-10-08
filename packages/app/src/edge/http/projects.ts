@@ -25,7 +25,11 @@ import { outputsOf } from "../../slices/storage/repo.js";
 import { longVideoStats } from "../../slices/studio/stats.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
-import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
+import {
+  setAsideProjects,
+  uploadedAndSettled,
+  uploadedProjects,
+} from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 import { createProject } from "./project-create.js";
@@ -48,9 +52,18 @@ export function projectRoutes(deps: AppDeps) {
     log: deps.log,
     hasInflight: deps.runner.hasInflight,
   };
+  // An uploaded project with nothing admitted reads as done (`uploadedAndSettled`).
+  const statusOf = (
+    status: ReturnType<typeof derive>,
+    settled: boolean,
+  ): ReturnType<typeof derive> =>
+    settled && (status === "paused" || status === "pending") ? "done" : status;
   const summarise = (project: Project): ProjectSummary => ({
     ...project,
-    status: derive(stagesOf(deps.db, project.id), project.paused),
+    status: statusOf(
+      derive(stagesOf(deps.db, project.id), project.paused),
+      uploadedAndSettled(deps.db).has(project.id),
+    ),
   });
 
   return (
@@ -81,6 +94,7 @@ export function projectRoutes(deps: AppDeps) {
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
+        const settled = uploadedAndSettled(deps.db);
         const numbers = longVideoStats(deps.db);
         const waits = limitWaitsByProject(deps.db);
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
@@ -88,7 +102,7 @@ export function projectRoutes(deps: AppDeps) {
           const waiting = waits.get(project.id);
           return {
             ...project,
-            status: derive(stages, project.paused),
+            status: statusOf(derive(stages, project.paused), settled.has(project.id)),
             progress: progressOf(stages),
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,

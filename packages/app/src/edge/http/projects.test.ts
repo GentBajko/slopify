@@ -501,6 +501,24 @@ describe("GET /api/projects", () => {
     expect(body.projects[0]?.progress).toBeCloseTo(1.25 / 3, 10);
   });
 
+  // An uploaded video left paused, with only leftover steps nobody admitted, is finished.
+  it("lists an uploaded, paused project with nothing admitted as done", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s3','p1','video','generate','pending')",
+    );
+    db.exec("INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1)");
+    const status = async () =>
+      ((await (await app.request("/api/projects")).json()) as { projects: { status: string }[] })
+        .projects[0]?.status;
+    expect(await status()).toBe("paused");
+    db.exec("INSERT INTO project_uploads (project_id, uploaded_at) VALUES ('p1','2026-09-01')");
+    expect(await status()).toBe("done");
+  });
+
   it("carries no stage rows in the list, because the screen reads none", async () => {
     const { app } = harness();
     const audio = await stage(app, "audio", "narration");

@@ -38,6 +38,22 @@ export function uploadedProjects(db: DatabaseSync): ReadonlyMap<string, string> 
   );
 }
 
+// Uploaded projects with nothing admitted still to run: their leftover steps (a placeholder
+// from an edit after the upload, a pause from a bulk Pause) are not work the person is
+// waiting for, so the listing calls them done rather than "Paused" or "Waiting".
+export function uploadedAndSettled(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare(
+        `SELECT u.project_id FROM project_uploads u WHERE NOT EXISTS(
+           SELECT 1 FROM revision_work w WHERE w.project_id=u.project_id
+             AND w.state IN ('pending','running') AND w.dispatch_state!='held')`,
+      )
+      .all()
+      .map((row) => String(row.project_id)),
+  );
+}
+
 // "Keep as is": a waiting run the person leaves as it is, until the project's next edit. Set on
 // the current head revision; the listing counts it only while that revision is still the head.
 export function setAside(
