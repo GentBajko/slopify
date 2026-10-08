@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Chunking } from "./chunk.js";
-import { chunkNarration, defaultChunkWords, wordsIn } from "./chunk.js";
+import { anchoredChunks, chunkNarration, defaultChunkWords, wordsIn } from "./chunk.js";
 
 // The whole chunking rule: whole text is one request, per paragraph is one request per
 // paragraph, and every ~N words is consecutive chunks each ending at the last sentence
@@ -202,5 +202,38 @@ describe("other languages", () => {
       "今日は晴れです。",
       "明日は雨です。",
     ]);
+  });
+});
+
+describe("anchoredChunks", () => {
+  const chunking: Chunking = { mode: "characters", characters: 60 };
+  const sentences = Array.from(
+    { length: 12 },
+    (_, at) => `Sentence number ${String(at + 1)} here. `,
+  );
+  it("cuts only the edited stretch again and keeps every later chunk", () => {
+    const before = sentences.join("").trim();
+    const old = chunkNarration(before, chunking);
+    const after = sentences.slice(1).join("").trim();
+    // Cut afresh, every boundary after the removed sentence moves.
+    expect(chunkNarration(after, chunking).filter((chunk) => old.includes(chunk))).toEqual([]);
+    const kept = anchoredChunks(after, chunking, old);
+    expect(kept.slice(1)).toEqual(old.slice(1));
+    expect(kept.join(" ")).toBe(after);
+  });
+  it("cuts an inserted stretch on its own and is the plain cut without anchors", () => {
+    const before = sentences.join("").trim();
+    const old = chunkNarration(before, chunking);
+    const middle = old.length >> 1;
+    const after = [...old.slice(0, middle), "A brand new sentence.", ...old.slice(middle)].join(
+      " ",
+    );
+    expect(anchoredChunks(after, chunking, old)).toEqual([
+      ...old.slice(0, middle),
+      "A brand new sentence.",
+      ...old.slice(middle),
+    ]);
+    expect(anchoredChunks(after, chunking, undefined)).toEqual(chunkNarration(after, chunking));
+    expect(anchoredChunks(before, chunking, old)).toEqual(old);
   });
 });

@@ -1,14 +1,59 @@
 import { isDeepStrictEqual } from "node:util";
 import type { FieldError } from "../admission/rules.js";
-import { narrationRegenerationKey } from "../narration/plan.js";
+import { defaultChunking } from "../narration/chunk.js";
+import { narrationRegenerationKey, normalizeNarrationText } from "../narration/plan.js";
+import {
+  chunkingFingerprintOf,
+  type NarrationAnchors,
+  narrationChunkTexts,
+} from "../narration/pronunciation-chunks.js";
 import { bodyNarrationGroups } from "../rebuild/recipe-audio.js";
 import { buildRecipes } from "../rebuild/recipe-build.js";
 import { normalizeArticleIntent, validateRevisionEdit } from "../rebuild/recipe-save.js";
 import { textRecipes } from "../rebuild/recipe-text.js";
-import type { ManualCue, RevisionEdit, RevisionView } from "./model.js";
+import type { ManualCue, RevisionContent, RevisionEdit, RevisionView } from "./model.js";
+
+// The chunks to keep through this save: when the narration text changes, the chunks it had
+// before (themselves kept from earlier edits), so only the edited stretches are cut and voiced
+// again; when it doesn't, the ones already kept. None once the chunk size changes.
+function narrationAnchorsFor(
+  base: RevisionView,
+  edit: RevisionEdit,
+  content: RevisionContent,
+): NarrationAnchors | undefined {
+  const before = base.revision.config.chunking ?? defaultChunking;
+  const after = edit.config.chunking ?? defaultChunking;
+  const chunkingFingerprint = chunkingFingerprintOf(after);
+  if (chunkingFingerprint !== chunkingFingerprintOf(before)) return undefined;
+  const previous = {
+    config: base.revision.config,
+    content: base.revision.content,
+    manifest: base,
+    resolved: {
+      articleMarkdown: base.articleMarkdown,
+      researchNotes: base.revision.config.provided.research ?? null,
+    },
+  };
+  const old = textRecipes(previous).narrationText;
+  const next = textRecipes({ ...previous, config: edit.config, content }).narrationText;
+  if (old === null || next === null) return undefined;
+  const kept = base.revision.content.narrationAnchors;
+  if (normalizeNarrationText(old) === normalizeNarrationText(next))
+    return kept?.chunkingFingerprint === chunkingFingerprint ? kept : undefined;
+  return {
+    chunkingFingerprint,
+    texts: narrationChunkTexts(normalizeNarrationText(old), before, kept),
+  };
+}
 
 export function bindNarrationSources(base: RevisionView, edit: RevisionEdit): RevisionEdit {
-  const { narrationSources: _submitted, ...content } = normalizeArticleIntent(base, edit);
+  const {
+    narrationSources: _submitted,
+    narrationAnchors: _sent,
+    ...intent
+  } = normalizeArticleIntent(base, edit);
+  const anchors = narrationAnchorsFor(base, edit, intent);
+  const content = anchors === undefined ? intent : { ...intent, narrationAnchors: anchors };
   const keys = new Set([
     ...Object.keys(content.narrationOverrides),
     ...Object.keys(base.revision.content.regenerationTokens),

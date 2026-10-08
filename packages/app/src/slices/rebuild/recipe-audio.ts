@@ -49,6 +49,7 @@ export function bodyNarrationGroups(
     usesPronunciationGlossary(context.config) && text.glossary?.ok ? text.glossary.entries : [],
     new Set(Object.keys(context.content.narrationOverrides)),
     context.content.narrationSources,
+    context.content.narrationAnchors,
   );
   // A chunk's key is its text's, so an article edit that makes a chunk say what its narration
   // edit already said (a line dropped from both) would make a new chunk to voice again. It

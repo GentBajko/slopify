@@ -105,6 +105,17 @@ export const revisionContentSchema = z
         "Narration source bindings exceed the article limit.",
       )
       .optional(),
+    narrationAnchors: z
+      .object({
+        chunkingFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
+        texts: z.array(z.string().min(1).max(500000)).max(10000),
+      })
+      .strict()
+      .refine(
+        (row) => row.texts.reduce((length, text) => length + text.length, 0) <= 500000,
+        "Narration anchors exceed the article limit.",
+      )
+      .optional(),
     subtitleCues: z
       .object({
         audioFingerprint: z.string().min(1),

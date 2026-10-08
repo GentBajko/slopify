@@ -36,6 +36,30 @@ export function chunkNarration(text: string, chunking: Chunking): readonly strin
   }
 }
 
+// The chunks of an edited text, keeping the previous version's chunks wherever their text is
+// still there unchanged: only the stretches between them are cut again. Cutting the whole text
+// afresh packs sentences greedily from the start, so one sentence removed near the top moved
+// every boundary after it and every chunk was voiced again (a 3,800-character edit re-voiced
+// 113,000). `anchors` are the previous chunks in order; without them this is `chunkNarration`.
+export function anchoredChunks(
+  text: string,
+  chunking: Chunking,
+  anchors: readonly string[] | undefined,
+): readonly string[] {
+  if (anchors === undefined || anchors.length === 0) return chunkNarration(text, chunking);
+  const chunks: string[] = [];
+  let offset = 0;
+  for (const anchor of anchors) {
+    if (anchor === "") continue;
+    const at = text.indexOf(anchor, offset);
+    if (at < 0) continue;
+    chunks.push(...chunkNarration(text.slice(offset, at), chunking), anchor);
+    offset = at + anchor.length;
+  }
+  chunks.push(...chunkNarration(text.slice(offset), chunking));
+  return chunks;
+}
+
 // What "N words" counts: runs of non-space. Exported because it is half of the rule -
 // a test that asserts a chunk fits in N has to count the same way the cut did. Chinese,
 // Japanese, Thai and the other scripts written without spaces are counted by the platform's

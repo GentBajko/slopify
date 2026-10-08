@@ -1,7 +1,7 @@
 import { fingerprint } from "../../kernel/runner/work.js";
 import {
+  anchoredChunks,
   type Chunking,
-  chunkNarration,
   defaultChunkCharacters,
   defaultChunkWords,
 } from "./chunk.js";
@@ -12,6 +12,34 @@ export interface NarrationSource {
   readonly start: number;
   readonly bodyFingerprint: string;
   readonly chunkingFingerprint: string;
+}
+// The chunks of the version an edit started from (`anchoredChunks`), kept while the chunk
+// size stays the same.
+export interface NarrationAnchors {
+  readonly chunkingFingerprint: string;
+  readonly texts: readonly string[];
+}
+export function chunkingFingerprintOf(chunking: Chunking): string {
+  return fingerprint([
+    chunking.mode,
+    chunking.mode === "words"
+      ? (chunking.words ?? defaultChunkWords)
+      : chunking.mode === "characters"
+        ? (chunking.characters ?? defaultChunkCharacters)
+        : null,
+  ]);
+}
+// The plain chunks of a narration text, before pronunciation merges: what anchors record.
+export function narrationChunkTexts(
+  source: string,
+  chunking: Chunking,
+  anchors: NarrationAnchors | undefined,
+): readonly string[] {
+  return anchoredChunks(
+    source,
+    chunking,
+    anchors?.chunkingFingerprint === chunkingFingerprintOf(chunking) ? anchors.texts : undefined,
+  );
 }
 export interface PronunciationChunk {
   readonly key: string;
@@ -24,6 +52,7 @@ export function pronunciationChunks(
   entries: readonly GlossaryEntry[],
   overriddenKeys: ReadonlySet<string> = new Set(),
   sources: Readonly<Record<string, NarrationSource>> = {},
+  anchors?: NarrationAnchors,
 ): readonly PronunciationChunk[] {
   const occurrences = new Map<string, number>();
   const usedKeys = new Set<string>();
@@ -37,7 +66,7 @@ export function pronunciationChunks(
     return key;
   };
   let offset = 0;
-  const chunks = chunkNarration(source, chunking).map((text) => {
+  const chunks = narrationChunkTexts(source, chunking, anchors).map((text) => {
     const start = source.indexOf(text, offset);
     if (start < 0)
       throw new Error(
@@ -47,14 +76,7 @@ export function pronunciationChunks(
     return { key: nextKey(text), text, start, end: offset };
   });
   const bodyFingerprint = fingerprint(source);
-  const chunkingFingerprint = fingerprint([
-    chunking.mode,
-    chunking.mode === "words"
-      ? (chunking.words ?? defaultChunkWords)
-      : chunking.mode === "characters"
-        ? (chunking.characters ?? defaultChunkCharacters)
-        : null,
-  ]);
+  const chunkingFingerprint = chunkingFingerprintOf(chunking);
   const starts = new Map(chunks.map((chunk, index) => [chunk.start, index]));
   const ends = new Map(chunks.map((chunk, index) => [chunk.end, index]));
   const pinned = new Map<number, { key: string; source: NarrationSource; last: number }>();
