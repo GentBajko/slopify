@@ -1,3 +1,5 @@
+import { remembered } from "../../kernel/remembered.js";
+
 export const chunkModes = ["whole", "paragraph", "words", "characters"] as const;
 export type ChunkMode = (typeof chunkModes)[number];
 
@@ -19,7 +21,13 @@ export const defaultChunking: Chunking = { mode: "whole" };
 // spaces between two paragraphs is still a break: strip-markdown output is full of both.
 const paragraphBreak = /\r?\n[ \t\r]*(?:\r?\n[ \t\r]*)+/;
 
-export function chunkNarration(text: string, chunking: Chunking): readonly string[] {
+// Remembered (`kernel/remembered.ts`): every plan rebuild cuts the whole narration again.
+export const chunkNarration = remembered(
+  16,
+  (text: string, chunking: Chunking) => `${JSON.stringify(chunking)}\u0000${text}`,
+  cutNarration,
+);
+function cutNarration(text: string, chunking: Chunking): readonly string[] {
   switch (chunking.mode) {
     case "whole":
       return nonEmpty([text]);

@@ -34,6 +34,12 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
       .all(projectId, head)
       .map((row) => reservation.parse(row));
     const origins = new Map(reservations.map((row) => [row.origin_revision, row]));
+    // The head's view, read once: each narration part used to read the whole version again.
+    let headView: ReturnType<typeof getRevisionView> | null = null;
+    const headOnce = () => {
+      if (headView === null) headView = getRevisionView(deps, projectId, head);
+      return headView;
+    };
     for (const origin of origins.values()) {
       const view = executionView(deps, projectId, origin.origin_revision);
       if (view === undefined) continue;
@@ -43,7 +49,7 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
         if (!plan.work.some((row) => row.key === recipe.key)) continue;
         if (recipe.deferred || recipe.unresolved) continue;
         if (recipe.input.kind === "tts") {
-          const current = getRevisionView(deps, projectId, head);
+          const current = headOnce();
           const desired = current?.revision.fingerprints[`${recipe.input.logicalKey}:1`];
           if (desired !== undefined && desired !== recipe.logicalFingerprint) continue;
         }

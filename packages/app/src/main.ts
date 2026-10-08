@@ -93,7 +93,6 @@ import { createReviewRedos, reviewHold } from "./slices/rebuild/review-redo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
-  executionStages,
   executionStandings,
   invocationReady,
   projectStandings,
@@ -909,8 +908,7 @@ export function wireRunner({
     stages: {
       stagesOf: (projectId) => {
         materializeAdmittedWork(execution, projectId);
-        projectStandings(execution, projectId);
-        return executionStages(execution, projectId);
+        return projectStandings(execution, projectId);
       },
       standingsOf: (projectId) => executionStandings(execution, projectId),
       ready: (work) => invocationReady(execution, work),

@@ -1,5 +1,6 @@
 import { remark } from "remark";
 import remarkGfm from "remark-gfm";
+import { remembered } from "../../kernel/remembered.js";
 
 export interface GlossaryEntry {
   readonly term: string;
@@ -75,10 +76,12 @@ function termIdentity(term: string): string {
 }
 // `language` is the project's (`kernel/ports/languages.ts`): absent or English accepts the
 // standard-English IPA Inworld asks for, as it always did; any other accepts full IPA.
-export function parsePronunciationGlossary(
-  markdown: string,
-  language?: string | undefined,
-): GlossaryResult {
+export const parsePronunciationGlossary = remembered(
+  8,
+  (markdown: string, language?: string | undefined) => `${language ?? ""}\u0000${markdown}`,
+  parseGlossary,
+);
+function parseGlossary(markdown: string, language?: string | undefined): GlossaryResult {
   const english = language === undefined || language === "en";
   const symbols = english ? ipaSymbols : worldSymbols;
   const kind = english ? "standard-English IPA" : "IPA";
@@ -189,7 +192,14 @@ export interface PronunciationMatch {
   readonly end: number;
   readonly entry: GlossaryEntry;
 }
-export function pronunciationMatches(
+// Remembered (`kernel/remembered.ts`): every plan rebuild matches the whole narration again.
+export const pronunciationMatches = remembered(
+  1024,
+  (source: string, entries: readonly GlossaryEntry[]) =>
+    `${source}\u0000${JSON.stringify(entries)}`,
+  matchPronunciations,
+);
+function matchPronunciations(
   source: string,
   entries: readonly GlossaryEntry[],
 ): readonly PronunciationMatch[] {

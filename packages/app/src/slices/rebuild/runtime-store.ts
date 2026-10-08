@@ -57,7 +57,9 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
         )
           return false;
         if (piece.input.kind === "deferred" && piece.key.endsWith(":future")) {
-          const cacheKey = String(row.id);
+          // One plan per version and saved catalogue: every placeholder of the same version
+          // asked for the same plan again, a whole-project rebuild each time.
+          const cacheKey = `${String(row.revision_id)}\u0000${String(row.recipe_context)}`;
           let deferred = futureKeys.get(cacheKey);
           if (deferred === undefined) {
             const origin = executionView(deps, projectId, String(row.revision_id));
@@ -241,7 +243,9 @@ function latestRetry(deps: RevisionDeps, group: readonly RunnerStage[]): string 
   return latest;
 }
 
-export function projectStandings(deps: RevisionDeps, projectId: string): void {
+// The stage rows brought up to date, and the steps they were derived from, so the runner's
+// tick uses them rather than deriving the whole plan again.
+export function projectStandings(deps: RevisionDeps, projectId: string): readonly RunnerStage[] {
   // One derivation serves every stage: each builds the whole execution plan.
   const work = executionStages(deps, projectId);
   const standings = executionStandings(deps, projectId, work);
@@ -285,6 +289,7 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
       );
   }
   settleScheduleRunsForProject(deps.db, projectId, deps.clock.now().toISOString());
+  return work;
 }
 
 // Progress moves one number and nothing else. The stage row already counts this invocation's
