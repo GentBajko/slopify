@@ -1,0 +1,1 @@
+- Finished narration parts are matched by `logical_fingerprint` too: `existingWork` (`rebuild/transition-repo.ts`) reserves the done piece instead of minting a held placeholder, and `executionStandings` (`rebuild/runtime-store.ts`, `madeFrom`) counts a placeholder retained when its key's selected piece was made from its planned fingerprint.

@@ -184,7 +184,8 @@ export function executionStandings(
                   output.selected &&
                   output.available &&
                   output.piece.state === "done" &&
-                  output.fingerprint === piece.fingerprint,
+                  (output.fingerprint === piece.fingerprint ||
+                    madeFrom(deps, projectId, piece.key, output.fingerprint, piece.fingerprint)),
               ),
           );
         // Save can bind an existing asset without granting its placeholder invocation.
@@ -206,6 +207,25 @@ export function executionStandings(
         : "pending";
     return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
   });
+}
+
+// A finished piece whose request was planned under this fingerprint: a placeholder is planned
+// under the logical fingerprint, the finished piece carries the one its request resolved to.
+function madeFrom(
+  deps: RevisionDeps,
+  projectId: string,
+  key: string,
+  done: string,
+  planned: string,
+): boolean {
+  return (
+    deps.db
+      .prepare(
+        `SELECT 1 FROM revision_work_pieces p JOIN revision_work w ON w.id=p.work_id
+        WHERE w.project_id=? AND p.work_key=? AND p.state='done' AND p.fingerprint=? AND p.logical_fingerprint=? LIMIT 1`,
+      )
+      .get(projectId, key, done, planned) !== undefined
+  );
 }
 
 // The latest wait among a stage's steps that went back to wait after a failure time can fix.
