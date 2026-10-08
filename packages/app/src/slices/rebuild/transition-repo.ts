@@ -209,15 +209,15 @@ function existingWork(
     .prepare(
       `SELECT w.id AS work_id,p.id AS piece_id FROM revision_work w
       JOIN revision_work_pieces p ON p.work_id=w.id
-      WHERE w.project_id=? AND p.work_key=? AND (
-        (w.state='done' AND p.state='done' AND (p.fingerprint=? OR p.logical_fingerprint=?)) OR
-        (w.state='pending' AND w.dispatch_state='held' AND p.state='held' AND p.fingerprint=?
+      WHERE w.project_id=? AND p.work_key=? AND p.fingerprint=? AND (
+        (w.state='done' AND p.state='done') OR
+        (w.state='pending' AND w.dispatch_state='held' AND p.state='held'
           AND p.submitted_at IS NULL AND w.recipe_context IS NULL
           AND NOT EXISTS(SELECT 1 FROM attempts a WHERE a.work_id=w.id))
       )
       ORDER BY CASE w.state WHEN 'done' THEN 0 ELSE 1 END, w.rowid DESC LIMIT 1`,
     )
-    .get(projectId, key, fingerprint, fingerprint, fingerprint);
+    .get(projectId, key, fingerprint);
   return row === undefined
     ? undefined
     : { workId: z.string().parse(row.work_id), pieceId: z.string().parse(row.piece_id) };
