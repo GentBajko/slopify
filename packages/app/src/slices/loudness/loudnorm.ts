@@ -58,6 +58,11 @@ export function measureArgs(input: readonly string[], goal: LoudnessGoal, chain 
     "info",
     "-nostats",
     ...input,
+    // Only the sound is measured: a finished video's picture was decoded too, 20 minutes and
+    // more of a CPU's time for a two-hour export, while the next render waited for it.
+    "-vn",
+    "-sn",
+    "-dn",
     "-af",
     `${chain === "" ? "" : `${chain},`}${measureFilter(goal)}`,
     "-f",

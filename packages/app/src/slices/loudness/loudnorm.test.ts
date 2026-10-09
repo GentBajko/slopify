@@ -8,7 +8,14 @@ import { joinNarration } from "../narration/concat.js";
 import { joinTurns } from "../rebuild/runtime-local.js";
 import { resolveFfmpeg } from "../video/ffmpeg.js";
 import { levelPieces } from "./level-pieces.js";
-import { gainFilter, masterFile, masterReport, measureFile, parseMeasured } from "./loudnorm.js";
+import {
+  gainFilter,
+  masterFile,
+  masterReport,
+  measureArgs,
+  measureFile,
+  parseMeasured,
+} from "./loudnorm.js";
 import { pieceLufs, pieceTruePeak, videoTruePeak } from "./model.js";
 
 // Level the volume with the bundled ffmpeg: pieces made at very different loudness (a quiet
@@ -227,4 +234,45 @@ describe.skipIf(!present)("levelling with the bundled ffmpeg", () => {
     expect(levelled.report.skipped).toBe(1);
     expect(levelled.report.spreadAfter).toBe(0);
   }, 30_000);
+});
+
+// A finished video's loudness is read from its sound alone: the picture is never decoded.
+describe.skipIf(!present)("measuring a video", () => {
+  it("measures the same with the picture as the sound alone, and skips the picture", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slopify-measure-video-"));
+    try {
+      const video = join(dir, "video.mp4");
+      execFileSync(bin, [
+        "-v",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=size=320x240:rate=25:duration=4",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=330:duration=4:sample_rate=48000",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-c:a",
+        "aac",
+        "-shortest",
+        video,
+      ]);
+      const sound = join(dir, "sound.wav");
+      execFileSync(bin, ["-v", "error", "-y", "-i", video, "-vn", sound]);
+      const fromVideo = await measureFile(run, video, goal);
+      const fromSound = await measureFile(run, sound, goal);
+      expect(Math.abs(fromVideo.integrated - fromSound.integrated)).toBeLessThan(0.2);
+      expect(measureArgs(["-i", video], goal)).toEqual(
+        expect.arrayContaining(["-vn", "-sn", "-dn"]),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30000);
 });

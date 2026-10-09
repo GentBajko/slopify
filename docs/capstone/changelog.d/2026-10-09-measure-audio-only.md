@@ -1,0 +1,1 @@
+- `measureArgs` (`loudness/loudnorm.ts`) passes `-vn -sn -dn`: the master report on a finished export measured loudness while decoding the whole video stream (20+ min for a 2 h video).
