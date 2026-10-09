@@ -14,6 +14,22 @@ export interface Paths {
   readonly staging: string;
   readonly logs: string;
   readonly lock: string;
+  // Where each project's folder and files are on disk (`slices/storage/places.ts`), set once
+  // the database is open. Without it a project's folder is its id and every file is at its
+  // stored path: the layout before 3.14 and the one tests use.
+  readonly places?: Places;
+}
+
+// A project's readable folder and the place of each of its files. Stored paths never change;
+// these say where one is on disk now (`slices/storage/places.ts`).
+export interface Places {
+  // The project's folder under the projects root, or undefined while it is still its id.
+  folderOf(projectId: string): string | undefined;
+  // Where a stored path is, relative to the project folder; undefined when it is where its
+  // stored path says.
+  placeOf(projectId: string, path: string): string | undefined;
+  // The stored path of the file at this place, if one was moved there.
+  storedAt(projectId: string, place: string): string | undefined;
 }
 
 // Where the user-visible files go. Without one, everything stays inside the data dir: the
@@ -41,6 +57,11 @@ export function layout(dataDir: string, files?: FilesLayout): Paths {
     logs: join(root, "logs"),
     lock: join(root, ".lock"),
   };
+}
+
+// Gives a running install's Paths the places of moved project folders and files.
+export function attachPlaces(paths: Paths, places: Places): void {
+  Object.assign(paths as { -readonly [K in keyof Paths]: Paths[K] }, { places });
 }
 
 // Points a running install's Paths at moved files. The one object every slice was handed is

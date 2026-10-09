@@ -21,6 +21,27 @@ Slopify keeps two kinds of files apart:
 
 Settings → Backup & storage → **Your files** shows the folders, with **Open folder**.
 
+## Inside a project folder (3.14)
+
+A project's folder is named after its title (`slices/storage/arrange.ts`, `folderName`), and its
+files are sorted into `Upload/` (the current version's publishable files), `Working/` (what they
+were made from) and `History/<date>/` (older versions). Nothing is copied and no stored path
+changes: `project_assets.path`, `outputs.path`, descriptors, payloads and backup archives keep
+`assets/<id>/<file>`. Two tables say where each one is now (`project_folders`, `file_places`,
+migration 0054), loaded into memory (`slices/storage/places.ts`) and consulted by `projectDir`
+and `outputPath` (`slices/storage/layout.ts`).
+
+- **When:** a background pass (`main.ts`, every 5 s, at most 250 ms of work) arranges each
+  project whose title, head version or files changed, only while nothing of it runs or waits to
+  run (`projectSettled`), never while files move or an update installs, and never while an
+  update is on trial (an older version would remove readable folders).
+- **Crash safety:** a move is recorded as `moving` before the rename and `placed` after;
+  `recoverPlaces` settles any left `moving` at start from what is on disk.
+- **Marker:** `.slopify-project` in each folder names the project and lists every file's place,
+  so a folder (and its files) is matched again if the database lost those rows (`adoptMarked`).
+- **Backups** list files by stored path, so any version restores them; the importing install
+  arranges them itself. The marker and the two tables are not carried.
+
 ## Which Documents folder
 
 | System | Documents is |
@@ -72,7 +93,9 @@ running Docker.
 ## What cleanup touches
 
 Storage cleanup (at start, and Clear leftover files) only looks inside `Projects`: it removes files
-no project records and folders of projects that no longer exist. It leaves `Backups` (pruned only
+no project records and folders of projects that no longer exist (named by their id, or marked as
+theirs). It never removes a file in a project's `Upload/`, `Working/` or `History/`, nor a folder
+it did not make. It leaves `Backups` (pruned only
 by its own `slopify-backup-*.tar` rules), hidden entries (`.DS_Store`) and `desktop.ini` alone, and
 in a `Projects` folder outside the data folder it never removes loose files. `Exports` and anything
 else in the files folder are never touched.

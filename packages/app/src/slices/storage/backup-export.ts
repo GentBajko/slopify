@@ -7,6 +7,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
+import { projectMarker } from "./arrange.js";
 import {
   type BackupManifest,
   type BackupRow,
@@ -29,7 +30,7 @@ import {
   type UsagePart,
   usageMember,
 } from "./backup-format.js";
-import { projectDir, stagingPath } from "./layout.js";
+import { outputPath, projectDir, stagingPath } from "./layout.js";
 import { exportableSettings, installedUploadedFontFiles } from "./portable.js";
 import { tarEnd, tarHeader, tarMemberBytes, tarPadding } from "./tar.js";
 
@@ -133,7 +134,7 @@ export function planBackup(deps: BackupDeps): BackupPlan {
       files.push({
         name: projectFileMember(project.part.id, file.path),
         kind: "file",
-        path: join(projectDir(deps.paths, project.part.id), file.path),
+        path: outputPath(deps.paths, project.part.id, file.path),
         size: file.bytes,
       });
   for (const font of snapshot.library.part.fonts)
@@ -299,7 +300,13 @@ function projectSnapshot(
     const rows = projectRows(deps.db, table, id);
     if (rows.length > 0) tables[table] = rows;
   }
-  return { title, part: { id, tables, files: projectFiles(projectDir(deps.paths, id)) } };
+  // Files go in by their stored paths, as every version before readable folders wrote them:
+  // a moved file (`places.ts`) is named by the path its rows hold, and the import puts it
+  // there for its own arranging to move. The marker names this install's places; it stays.
+  const files = projectFiles(projectDir(deps.paths, id))
+    .filter((file) => file.path !== projectMarker)
+    .map((file) => ({ ...file, path: deps.paths.places?.storedAt(id, file.path) ?? file.path }));
+  return { title, part: { id, tables, files } };
 }
 
 // Every plain file under the project's folder, symlinks and all else left out. Not only the

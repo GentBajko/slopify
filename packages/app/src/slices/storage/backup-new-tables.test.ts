@@ -51,6 +51,10 @@ const leftOut = new Set([
   "project_set_aside",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
+  // Where this install put each project's folder and files: a backup carries every file by
+  // its stored path, and the importing install arranges them itself.
+  "project_folders",
+  "file_places",
 ]);
 
 function install(): BackupDeps & { readonly db: DatabaseSync; readonly paths: Paths } {

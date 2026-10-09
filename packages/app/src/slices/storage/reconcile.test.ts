@@ -74,8 +74,8 @@ describe("reconcileStorage", () => {
     writeFileSync(join(paths.projects, "p1", "images", "1.png"), "png");
     writeFileSync(join(paths.projects, "p1", "images", "2.png"), "orphan");
     writeFileSync(join(paths.projects, "p1", "stray.txt"), "orphan");
-    mkdirSync(join(paths.projects, "p-deleted"), { recursive: true });
-    writeFileSync(join(paths.projects, "p-deleted", "video.mp4"), "orphan");
+    mkdirSync(join(paths.projects, "01JZZZZZZZZZZZZZZZZZZZZZZZ"), { recursive: true });
+    writeFileSync(join(paths.projects, "01JZZZZZZZZZZZZZZZZZZZZZZZ", "video.mp4"), "orphan");
     writeFileSync(join(paths.projects, "loose.tmp"), "orphan");
     writeFileSync(join(paths.staging, "abandoned.mp3"), "orphan");
 
@@ -85,7 +85,7 @@ describe("reconcileStorage", () => {
     expect(existsSync(join(paths.projects, "p1", "images", "1.png"))).toBe(true);
     expect(existsSync(join(paths.projects, "p1", "images", "2.png"))).toBe(false);
     expect(existsSync(join(paths.projects, "p1", "stray.txt"))).toBe(false);
-    expect(existsSync(join(paths.projects, "p-deleted"))).toBe(false);
+    expect(existsSync(join(paths.projects, "01JZZZZZZZZZZZZZZZZZZZZZZZ"))).toBe(false);
     expect(existsSync(join(paths.projects, "loose.tmp"))).toBe(false);
     expect(existsSync(join(paths.staging, "abandoned.mp3"))).toBe(false);
     expect(db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
@@ -331,12 +331,26 @@ describe("reconcileStorage in a Projects folder outside the data dir", () => {
       writeFileSync(join(paths.projects, "desktop.ini"), "os");
       mkdirSync(join(paths.projects, "Backups"));
       writeFileSync(join(paths.projects, "Backups", "old.tar"), "archive");
-      mkdirSync(join(paths.projects, "gone"));
-      writeFileSync(join(paths.projects, "gone", "video.mp4"), "orphan");
-      expect(reconcileStorage(db, paths)).toEqual({ orphanFiles: 1, stagedFiles: 0 });
-      for (const kept of ["notes.txt", ".DS_Store", "desktop.ini", "Backups/old.tar"])
+      // A deleted project's folder: by its id, or by the marker in a readable one.
+      const gone = "01JZZZZZZZZZZZZZZZZZZZZZZZ";
+      mkdirSync(join(paths.projects, gone));
+      writeFileSync(join(paths.projects, gone, "video.mp4"), "orphan");
+      mkdirSync(join(paths.projects, "Old title"));
+      writeFileSync(join(paths.projects, "Old title", ".slopify-project"), '{"project":"p-gone"}');
+      // A folder of the person's own.
+      mkdirSync(join(paths.projects, "Ideas"));
+      writeFileSync(join(paths.projects, "Ideas", "list.txt"), "user");
+      expect(reconcileStorage(db, paths)).toEqual({ orphanFiles: 2, stagedFiles: 0 });
+      for (const kept of [
+        "notes.txt",
+        ".DS_Store",
+        "desktop.ini",
+        "Backups/old.tar",
+        "Ideas/list.txt",
+      ])
         expect(existsSync(join(paths.projects, kept))).toBe(true);
-      expect(existsSync(join(paths.projects, "gone"))).toBe(false);
+      expect(existsSync(join(paths.projects, gone))).toBe(false);
+      expect(existsSync(join(paths.projects, "Old title"))).toBe(false);
       expect(existsSync(join(root, "Documents", "Slopify", "Exports", "mine.mp4"))).toBe(true);
     } finally {
       db.close();

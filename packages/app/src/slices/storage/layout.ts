@@ -2,8 +2,9 @@ import { extname, isAbsolute, relative, resolve } from "node:path";
 import type { Paths } from "../../kernel/paths.js";
 import type { OutputRole, StageKind } from "./model.js";
 
+// A project's folder: its readable name once it has one (`places.ts`), its id until then.
 export function projectDir(paths: Paths, projectId: string): string {
-  return contained(paths.projects, projectId);
+  return contained(paths.projects, paths.places?.folderOf(projectId) ?? projectId);
 }
 
 // The clips of each project's last render (`slices/video/clip-cache.ts`). Hidden, so
@@ -15,8 +16,12 @@ export function renderCacheDir(paths: Paths, projectId: string): string {
   return contained(paths.projects, `${renderCacheFolder}/${projectId}`);
 }
 
+// A stored path on disk: where it was moved to (`places.ts`), or the stored path itself.
 export function outputPath(paths: Paths, projectId: string, relativePath: string): string {
-  return contained(projectDir(paths, projectId), relativePath);
+  return contained(
+    projectDir(paths, projectId),
+    paths.places?.placeOf(projectId, relativePath) ?? relativePath,
+  );
 }
 
 // Scheduled backups (slices/backups) land in paths.backups unless the user picks another

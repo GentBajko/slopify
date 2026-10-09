@@ -216,14 +216,16 @@ describe("boot", { timeout: 30_000 }, () => {
       { version: 51 },
       { version: 52 },
       { version: 53 },
+      { version: 54 },
     ]);
     db.close();
   });
 
   it("leaves project files untouched until a provisional update is committed", async () => {
     const dir = dataDir();
-    const orphan = join(dir, "projects", "orphan", "media.wav");
-    mkdirSync(join(dir, "projects", "orphan"), { recursive: true });
+    // A deleted project's folder (named by its id), which cleanup removes once committed.
+    const orphan = join(dir, "projects", "01JZZZZZZZZZZZZZZZZZZZZZZZ", "media.wav");
+    mkdirSync(join(dir, "projects", "01JZZZZZZZZZZZZZZZZZZZZZZZ"), { recursive: true });
     writeFileSync(orphan, "must survive a failed candidate");
     vi.stubEnv("SLOPIFY_UPDATE_TOKEN", "a".repeat(64));
     vi.stubEnv("SLOPIFY_UPDATE_PENDING", "1");

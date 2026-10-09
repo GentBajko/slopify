@@ -7,6 +7,7 @@ import { executionPlan } from "../rebuild/runtime-plan.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
+import { projectMarker } from "../storage/arrange.js";
 import { projectRows } from "../storage/backup-export.js";
 import { type BackupRow, projectTables } from "../storage/backup-format.js";
 import { projectDir } from "../storage/layout.js";
@@ -64,7 +65,10 @@ export function copyProject(
   const at = deps.clock.now().toISOString();
   try {
     for (const file of listFiles(source)) {
-      const to = join(target, remap(file));
+      if (file === projectMarker) continue;
+      // The copy is a new project, laid out by its stored paths until it is arranged.
+      const stored = deps.paths.places?.storedAt(sourceId, file) ?? file;
+      const to = join(target, remap(stored));
       mkdirSync(dirname(to), { recursive: true, mode: 0o700 });
       copyFileSync(join(source, file), to);
     }

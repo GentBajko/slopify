@@ -43,7 +43,14 @@ import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
-import { ensureDataDirs, ensureDirs, layout, repoint, subtitleModelDir } from "./kernel/paths.js";
+import {
+  attachPlaces,
+  ensureDataDirs,
+  ensureDirs,
+  layout,
+  repoint,
+  subtitleModelDir,
+} from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import type { SubtitleAligner } from "./kernel/ports/subtitles.js";
@@ -108,14 +115,18 @@ import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
+import { readSetting } from "./slices/settings/repo.js";
+import { arrangeChanged } from "./slices/storage/arrange.js";
 import { busyProjects } from "./slices/storage/backup-export.js";
 import { documentsDir, nodeDocumentsHost } from "./slices/storage/documents.js";
 import {
   createFilesService,
   ensureFilesFolders,
   filesLayoutOf,
+  filesMoveKey,
   settleFilesLocation,
 } from "./slices/storage/files-location.js";
+import { createPlaces, recoverPlaces } from "./slices/storage/places.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { previewPictures } from "./slices/style-preview/images.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
@@ -270,6 +281,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     repoint(paths, files);
     if (files.exports === null) ensureDirs(paths, { mode: 0o700 });
     else await ensureFilesFolders(files);
+    // Readable project folders (`slices/storage/places.ts`): settle a move a crash cut short,
+    // then every file is looked up where it is, before anything reads one.
+    recoverPlaces(db, paths);
+    const places = createPlaces(db);
+    attachPlaces(paths, places);
     const runtimeDb = db;
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
@@ -395,6 +411,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       throw new Error("The server is not ready.");
     };
     let listeningPort = config.port;
+    // Folders are renamed only by a version that is committed: an update on trial can still be
+    // rolled back to a version that knows only id-named folders.
+    let arrangeAllowed = !pendingActivation;
     const updater = createUpdater({
       ...(isUpdateToken(candidateToken)
         ? {
@@ -406,6 +425,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
                   ? updateCommitted(paths.dataDir, version, candidateToken)
                   : dockerActivationCommitted(dockerState, candidateToken),
               settle: () => {
+                arrangeAllowed = true;
                 try {
                   const settled = reconcileStorage(updateDb, paths);
                   log.write("info", "update", {
@@ -726,6 +746,22 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     };
     purgeTrash();
     const trashTimer = setInterval(purgeTrash, 60 * 60_000);
+    // Each project whose title, version or files changed is arranged into its readable folder
+    // (`slices/storage/arrange.ts`) once nothing of it runs: a quarter second of it at a time,
+    // so the server keeps answering, and never while files move or an update installs.
+    const arrange = (): void => {
+      if (!arrangeAllowed || readSetting(updateDb, filesMoveKey) !== undefined) return;
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        arrangeChanged({ db: updateDb, paths, places, now: () => clock.now() }, 250);
+      } catch (error) {
+        log.write("error", "storage.arrange", { detail: causedBy(error) });
+      } finally {
+        release();
+      }
+    };
+    const arrangeTimer = setInterval(arrange, 5_000);
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -757,6 +793,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(retryTimer);
         clearInterval(backupTimer);
         clearInterval(trashTimer);
+        clearInterval(arrangeTimer);
         clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();

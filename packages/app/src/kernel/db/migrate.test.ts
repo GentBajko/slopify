@@ -49,6 +49,7 @@ describe("migrate", () => {
       "document_themes",
       "entries",
       "episode_memories",
+      "file_places",
       "image_blobs",
       "library_versions",
       "local_work_times",
@@ -67,6 +68,7 @@ describe("migrate", () => {
       "project_channels",
       "project_control_receipts",
       "project_controls",
+      "project_folders",
       "project_heads",
       "project_queue",
       "project_recovery_requests",
@@ -121,6 +123,7 @@ describe("migrate", () => {
       "entries_name",
       "episode_memories_channel",
       "episode_memories_project",
+      "file_places_place",
       "local_work_times_project",
       "narration_retries_pending",
       "outputs_project",
@@ -129,6 +132,7 @@ describe("migrate", () => {
       "play_draft_attachment_owner",
       "play_start_receipt_draft",
       "prepared_videos_title",
+      "project_folders_folder",
       "project_queue_state",
       "project_revisions_project",
       "prompts_name",
@@ -207,6 +211,7 @@ describe("migrate", () => {
       { version: 51, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 52, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 53, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 54, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -216,16 +221,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 46 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 47 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(54, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(55, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 54 is newer than this app knows (53)",
+      "database schema 55 is newer than this app knows (54)",
     );
   });
 

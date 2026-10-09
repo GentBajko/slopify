@@ -2,6 +2,7 @@ import { readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
+import { adoptMarked, markerProject, projectMarker } from "./arrange.js";
 import { backupsFolderName, outputPath, stagingPath } from "./layout.js";
 import { stagedFiles as stagedRows } from "./repo.js";
 import { stagedFileReferenced } from "./staging-refs.js";
@@ -13,6 +14,11 @@ export interface Reconciled {
 
 export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   const projects = idsOf(db, "SELECT id FROM projects", "id");
+  const folders = new Map<string, string>();
+  for (const project of projects) {
+    const folder = paths.places?.folderOf(project);
+    if (folder !== undefined) folders.set(folder.toLowerCase(), project);
+  }
   const kept = new Set<string>();
   for (const row of db
     .prepare(
@@ -23,7 +29,7 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     const path = row.path;
     if (typeof projectId === "string" && typeof path === "string") {
       outputPath(paths, projectId, path);
-      kept.add(`${projectId}/${slashed(path)}`);
+      kept.add(`${projectId}/${slashed(placed(paths, projectId, path))}`);
     }
   }
 
@@ -40,7 +46,7 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     const projectId = row.project_id;
     const file = pieceFile(row.payload);
     if (typeof projectId === "string" && file !== undefined) {
-      kept.add(`${projectId}/${slashed(file)}`);
+      kept.add(`${projectId}/${slashed(placed(paths, projectId, file))}`);
     }
   }
 
@@ -61,15 +67,22 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
       orphanFiles += 1;
       continue;
     }
-    if (!projects.has(entry.name)) {
+    // A folder is a project's by its readable name (`places.ts`), its id, or the marker
+    // arranging left in it (`arrange.ts`). A deleted project's folder goes; a folder that is
+    // none of these is the person's own and stays.
+    const owner = folderOwner(db, paths, projects, folders, entry.name, path);
+    if (owner === "foreign") continue;
+    if (owner === "deleted") {
       orphanFiles += filesUnder(path).length;
       rmSync(path, { recursive: true, force: true });
       continue;
     }
     for (const file of filesUnder(path)) {
-      if (kept.has(`${entry.name}/${slashed(file)}`)) {
-        continue;
-      }
+      const name = slashed(file);
+      if (kept.has(`${owner}/${name}`)) continue;
+      // The marker, and anything in the folders a person browses: a note or a file dropped
+      // next to the video is theirs. Only Slopify's own leftovers elsewhere are removed.
+      if (name === projectMarker || arrangedArea.test(name)) continue;
       unlinkSync(join(path, file));
       orphanFiles += 1;
     }
@@ -125,6 +138,46 @@ export function pieceFile(payload: unknown): string | undefined {
   }
   const file: unknown = parsed.file;
   return typeof file === "string" && file !== "" ? file : undefined;
+}
+
+// Where a stored path is on disk now, relative to its project folder.
+function placed(paths: Paths, projectId: string, path: string): string {
+  return paths.places?.placeOf(projectId, path) ?? path;
+}
+
+// The folders arranging makes (`arrange.ts`): a file in them that no record names is the
+// person's, not a leftover.
+const arrangedArea = /^(Upload|Working|History)\//u;
+
+const ulid = /^[0-9A-HJKMNP-TV-Z]{26}$/u;
+
+// Whose a folder in the projects root is: a project's id, "deleted" (a project that no longer
+// exists: its id, or its marker's), or "foreign" (not Slopify's).
+function folderOwner(
+  db: DatabaseSync,
+  paths: Paths,
+  projects: ReadonlySet<string>,
+  folders: ReadonlyMap<string, string>,
+  name: string,
+  path: string,
+): string {
+  const named = folders.get(name.toLowerCase());
+  if (named !== undefined) return named;
+  const marked = markerProject(path);
+  if (marked !== undefined) {
+    if (!projects.has(marked)) return "deleted";
+    // The database lost this folder's record (restored from before it was arranged): its
+    // marker says whose it is, and where its files went.
+    if (paths.places !== undefined && paths.places.folderOf(marked) === undefined) {
+      adoptMarked(db, paths, marked, name, path);
+      return marked;
+    }
+    return paths.places?.folderOf(marked)?.toLowerCase() === name.toLowerCase()
+      ? marked
+      : "foreign";
+  }
+  if (projects.has(name)) return paths.places?.folderOf(name) === undefined ? name : "foreign";
+  return ulid.test(name) ? "deleted" : "foreign";
 }
 
 function idsOf(db: DatabaseSync, sql: string, column: string): Set<string> {

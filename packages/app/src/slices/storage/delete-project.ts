@@ -5,6 +5,7 @@ import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { stagesOf } from "../admission/repo.js";
 import { projectDir, renderCacheDir } from "./layout.js";
+import type { ProjectPlaces } from "./places.js";
 
 // Removing a project for good is refused while it is `running`; otherwise it removes the
 // database rows and the folder. Delete on 07 Projects only moves a project to the trash
@@ -67,6 +68,8 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   // ON DELETE CASCADE on the project, and the connection runs with foreign keys on
   // (kernel/db/index.ts). A deleted project leaves no files and no rows.
   deps.db.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
+  const places = deps.paths.places;
+  if (places !== undefined && "forget" in places) (places as ProjectPlaces).forget(projectId);
   return { ok: true };
 }
 

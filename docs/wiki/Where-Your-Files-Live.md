@@ -25,6 +25,24 @@ The terminal prints both places when Slopify starts (`Slopify data directory:` a
 
 The folder is created if it is missing.
 
+## Inside a project folder
+
+Each project has one folder in `Projects/`, named after its title (`Lolth | D&D Lore To Sleep To` becomes `Lolth - D&D Lore To Sleep To`). Inside it:
+
+| Folder | What is in it | Safe to delete? |
+| --- | --- | --- |
+| `Upload/` | The current version, ready to publish: `video.mp4`, `thumbnail.png` (and `thumbnail 2.png`…), `subtitles.srt` and `.vtt`, `description.txt`, `tags.txt`, `titles.txt`, `pinned comment.txt`, `document.pdf`, `article.md`, and `Shorts/1 - <title>.mp4`… | No: it is what you upload. |
+| `Working/` | What the current version was made from: `Images/`, `Narration/` (each chunk, the joined and levelled narration), `Research/`, `Article/`, `Subtitles/`, `Render/`, `Shorts/` (each short's images). | Only to free space on a finished video: changing that project later makes these again, which takes time and provider credits. **Keep outputs only** does it for you. |
+| `History/<date>/` | Files of older versions, by the day they were made (an earlier render, the narration before a voice change). | Yes. Delete a day's folder, or all of `History/`, to free its space. Going back to that version in History makes its files again. |
+
+A hidden `.slopify-project` file tells Slopify which project the folder holds and where its files went. Leave it there.
+
+Slopify sorts a project's files into these folders when nothing of it is running, so a project shows them a little after it finishes (or after an edit). While a run is going, its new files sit in `assets/` until then. Renaming a project renames its folder the same way.
+
+Files you add yourself to `Upload/`, `Working/` or `History/` (a note, a reworked thumbnail) are never removed by Slopify. A folder in `Projects/` that Slopify did not make is left alone.
+
+**After this change, don't go back to a Slopify older than 3.14:** older versions only know folders named by project id, and remove the readable ones when they start.
+
 ## New and existing installs
 
 Slopify decides once, the first time 3.0 starts, and remembers it:
@@ -126,7 +144,7 @@ A finished project's own page offers the same in its right rail: **Free space** 
 
 ### Clear leftover files
 
-**Clear leftover files** deletes files in the projects folder that no project records any more, and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.
+**Clear leftover files** deletes files in the projects folder that no project records any more (never anything in a project's `Upload/`, `Working/` or `History/`, and never a folder Slopify did not make), and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.
 
 Cleanup only looks inside `Projects`. It leaves `Backups` alone (only Slopify's own `slopify-backup-*.tar` files there are ever pruned, by the backup rules), leaves hidden files such as `.DS_Store` and `desktop.ini`, never removes loose files in a `Projects` folder outside the data folder, and never touches `Exports` or anything else in your files folder.
 

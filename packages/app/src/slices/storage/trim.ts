@@ -4,7 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
-import { backupsFolderName, projectDir } from "./layout.js";
+import { backupsFolderName, outputPath, projectDir } from "./layout.js";
 import type { OutputRole } from "./model.js";
 import { pieceFile } from "./reconcile.js";
 
@@ -90,7 +90,7 @@ export function keepOutputsOnly(deps: TrimDeps, projectId: string): TrimResult {
   for (const path of removable) {
     const bytes = files.get(path);
     if (bytes === undefined) continue;
-    unlinkSync(join(projectDir(deps.paths, projectId), path));
+    unlinkSync(outputPath(deps.paths, projectId, path));
     count += 1;
     bytesFreed += bytes;
   }
@@ -111,7 +111,7 @@ function finished(deps: TrimDeps, projectId: string): boolean {
   );
 }
 
-// Every file under the project folder, by project-relative path with forward slashes.
+// Every file under the project folder, by stored path with forward slashes.
 function filesOf(paths: Paths, projectId: string): ReadonlyMap<string, number> {
   const files = new Map<string, number>();
   if (projectId === backupsFolderName) return files;
@@ -120,7 +120,9 @@ function filesOf(paths: Paths, projectId: string): ReadonlyMap<string, number> {
   for (const entry of readdirSync(root, { withFileTypes: true, recursive: true })) {
     if (!entry.isFile()) continue;
     const full = join(entry.parentPath, entry.name);
-    files.set(relative(root, full).split(sep).join("/"), statSync(full).size);
+    const place = relative(root, full).split(sep).join("/");
+    // Keyed by stored path: a file moved by arranging (`places.ts`) is found by where it is.
+    files.set(paths.places?.storedAt(projectId, place) ?? place, statSync(full).size);
   }
   return files;
 }
