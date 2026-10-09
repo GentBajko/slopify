@@ -142,6 +142,16 @@ If you change that project later (edit an image, a caption style or the narratio
 
 A finished project's own page offers the same in its right rail: **Free space** with **Free 1.2 GB: keep the outputs, drop the working files** (see [Project Page](Project-Page#free-space)).
 
+### Delete old versions and Clean up everything
+
+**Delete old versions** removes a project's `History/` folder: the files of earlier versions, such as a previous render or the narration before a voice change. The current version in `Upload/` and `Working/`, your uploads and anything you put in History yourself stay. Going back to one of those versions makes its files again, which takes time and provider credits.
+
+- **One project:** the **Delete old versions** button on its row in **Disk space**, or under **Free space** on its project page. It says how much it frees.
+- **Every project:** **Delete all old versions** above the **Disk space** list.
+- **Clean up everything** does Delete old versions for every project and **Keep outputs only** for every finished one. Projects that are running or not finished keep everything.
+
+Each asks first. Deleting the files in your file manager works the same way.
+
 ### Clear leftover files
 
 **Clear leftover files** deletes files in the projects folder that no project records any more (never anything in a project's `Upload/`, `Working/` or `History/`, and never a folder Slopify did not make), and uploaded files that no draft, template or project uses. Your projects, outputs and library are never touched. Slopify also does this each time it starts; use it after a crash or to free space now.

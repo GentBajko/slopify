@@ -14,6 +14,8 @@ const storage = (over: Record<string, unknown> = {}): Answer =>
     workingBytes: 1.2 * gb,
     removableFiles: 42,
     removableBytes: 1.2 * gb,
+    historyFiles: 0,
+    historyBytes: 0,
     finished: true,
     ...over,
   });

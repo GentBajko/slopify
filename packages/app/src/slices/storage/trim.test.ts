@@ -63,6 +63,8 @@ it("splits a project's size into outputs and working files", () => {
     workingBytes: 300 + 700 + 2 + 90 + 7,
     removableFiles: 3,
     removableBytes: 300 + 700 + 2,
+    historyFiles: 0,
+    historyBytes: 0,
     finished: true,
   });
   expect(storageUsage(h.deps).byProject[0]).toMatchObject({ id: "p1", removableBytes: 1002 });

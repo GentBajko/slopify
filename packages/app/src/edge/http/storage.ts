@@ -15,7 +15,13 @@ import {
   storageUsage,
 } from "../../slices/storage/portable.js";
 import { reconcileStorage } from "../../slices/storage/reconcile.js";
-import { keepOutputsOnly, projectStorage } from "../../slices/storage/trim.js";
+import {
+  cleanUpAll,
+  deleteAllOldVersions,
+  deleteOldVersions,
+  keepOutputsOnly,
+  projectStorage,
+} from "../../slices/storage/trim.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -85,6 +91,43 @@ export function storageRoutes(deps: AppDeps) {
                 "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Storage.",
             });
       })
+      // Delete old versions: one project's History files (`slices/storage/trim.ts`).
+      .post("/projects/:id/old-versions/delete", zValidator("param", idParam, onInvalid), (c) => {
+        const result = deleteOldVersions(
+          { db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight },
+          c.req.valid("param").id,
+        );
+        if (result.ok) return c.json(result);
+        return result.reason === "no-project"
+          ? problem(c, {
+              status: 404,
+              title: titleOf(404),
+              detail:
+                "This project no longer exists. Reload Settings → Backup & storage to see the current list.",
+            })
+          : problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "This project is running or has steps waiting to run, and its files stay where they are until then. Let it finish, or cancel its run on its project page, then press Delete old versions again.",
+            });
+      })
+      // Every project's old versions; ones that are running are left for later.
+      .post("/old-versions/delete", (c) =>
+        c.json(
+          deleteAllOldVersions({
+            db: deps.db,
+            paths: deps.paths,
+            hasInflight: deps.runner.hasInflight,
+          }),
+        ),
+      )
+      // Clean up: old versions everywhere and working files of every finished project.
+      .post("/cleanup", (c) =>
+        c.json(
+          cleanUpAll({ db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight }),
+        ),
+      )
       // What Export everything would write, asked before the download starts: a download
       // link cannot show a refusal, the browser would save it as the file.
       .get("/export/summary", (c) => {

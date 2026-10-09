@@ -273,6 +273,8 @@ it("reports project folder usage alongside aggregate storage totals", () => {
         workingBytes: 7,
         removableFiles: 0,
         removableBytes: 0,
+        historyFiles: 0,
+        historyBytes: 0,
         finished: false,
       },
     ]);

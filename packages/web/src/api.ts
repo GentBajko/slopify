@@ -134,6 +134,9 @@ export interface StorageUsage {
     readonly workingBytes: number;
     readonly removableFiles: number;
     readonly removableBytes: number;
+    // Older versions' files in History/, which Delete old versions removes.
+    readonly historyFiles: number;
+    readonly historyBytes: number;
     readonly finished: boolean;
   }[];
 }
@@ -367,6 +370,35 @@ export async function openFilesFolder(
 export async function readProjectStorage(api: Api, projectId: string): Promise<ProjectStorage> {
   return read<ProjectStorage>(
     await api.fetch(`${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}`),
+  );
+}
+
+interface Freed {
+  readonly files: number;
+  readonly bytesFreed: number;
+}
+
+// Delete old versions: a project's History files.
+export async function deleteOldVersions(api: Api, projectId: string): Promise<Freed> {
+  return read<Freed>(
+    await api.fetch(
+      `${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}/old-versions/delete`,
+      { method: "POST" },
+    ),
+  );
+}
+
+// Every project's old versions; running ones are counted in `busy` and left.
+export async function deleteAllOldVersions(api: Api): Promise<Freed & { readonly busy: number }> {
+  return read<Freed & { readonly busy: number }>(
+    await api.fetch(`${api.origin}/api/storage/old-versions/delete`, { method: "POST" }),
+  );
+}
+
+// Clean up: every project's old versions and every finished project's working files.
+export async function cleanUpStorage(api: Api): Promise<Freed & { readonly skipped: number }> {
+  return read<Freed & { readonly skipped: number }>(
+    await api.fetch(`${api.origin}/api/storage/cleanup`, { method: "POST" }),
   );
 }
 

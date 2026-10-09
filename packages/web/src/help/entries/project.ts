@@ -310,7 +310,7 @@ export const projectHelp = {
   },
   "project.free-space": {
     title: "Free space",
-    body: "Once a project has finished, it can drop the working files it was made from (images, narration parts, subtitle timing, render settings) and keep what gets published: the video, shorts, thumbnail, article, description, document and anything you uploaded. The button says how much space that frees. Changing the project later makes those files again first, which takes time and provider credits. Settings → Storage offers the same for every project.",
+    body: "Once a project has finished, Free drops the working files it was made from (images, narration parts, timing, render settings) and keeps what gets published and anything you uploaded. Delete old versions removes its History folder (earlier renders and narration). Each button says how much it frees. Changing the project or going back to an old version makes those files again.",
     tutorial: { page: "Project-Page", anchor: "free-space" },
   },
   "project.mark-uploaded": {

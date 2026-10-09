@@ -15,6 +15,8 @@ const project = (over: Partial<StorageUsage["byProject"][number]>) => ({
   workingBytes: 2 * 1024 * 1024,
   removableFiles: 12,
   removableBytes: 2 * 1024 * 1024,
+  historyFiles: 0,
+  historyBytes: 0,
   finished: true,
   ...over,
 });
@@ -63,4 +65,30 @@ it("offers nothing on a project that has not finished or has nothing left to rem
   );
   for (const button of screen.getAllByRole("button", { name: "Keep outputs only" }))
     expect(button.hasAttribute("disabled")).toBe(true);
+});
+
+it("deletes one project's old versions after asking, and offers both clean-ups for every project", async () => {
+  const old = vi.fn(jsonAnswer({ ok: true, files: 3, bytesFreed: 5 * 1024 * 1024 }));
+  renderApp(
+    <ProjectStorageList
+      projects={[project({ historyFiles: 3, historyBytes: 5 * 1024 * 1024 })]}
+      queryKey={["storage-usage"]}
+    />,
+    testDeps({ "POST /api/storage/projects/p1/old-versions/delete": old }),
+  );
+  expect(
+    screen
+      .getByRole("button", { name: /Delete all old versions \(5 MB\)/ })
+      .hasAttribute("disabled"),
+  ).toBe(false);
+  expect(
+    screen.getByRole("button", { name: /Clean up everything \(7 MB\)/ }).hasAttribute("disabled"),
+  ).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Delete old versions" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText(/3 file\(s\) of older versions/)).not.toBeNull();
+  expect(old).not.toHaveBeenCalled();
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete old versions" }));
+  await waitFor(() => expect(old).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText(/Freed 5 MB from "Cleopatra"/)).not.toBeNull();
 });

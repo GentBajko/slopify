@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join, relative, sep } from "node:path";
 import { expect, it } from "vitest";
 import { attachPlaces } from "../../kernel/paths.js";
@@ -10,7 +17,7 @@ import { planBackup } from "./backup-export.js";
 import { outputPath, projectDir } from "./layout.js";
 import { createPlaces, recoverPlaces } from "./places.js";
 import { reconcileStorage } from "./reconcile.js";
-import { keepOutputsOnly, projectStorage } from "./trim.js";
+import { cleanUpAll, deleteOldVersions, keepOutputsOnly, projectStorage } from "./trim.js";
 
 function filesUnder(root: string): string[] {
   return readdirSync(root, { withFileTypes: true, recursive: true })
@@ -279,6 +286,70 @@ it("keeps outputs only on an arranged project by where its files are", async () 
     expect(result).toMatchObject({ ok: true, files: before.removableFiles });
     expect(projectStorage(h.deps, h.projectId).removableFiles).toBe(0);
     // Nothing outside the project folder's own files went, and cleanup still finds nothing.
+    expect(reconcileStorage(h.deps.db, h.deps.paths).orphanFiles).toBe(0);
+  } finally {
+    h.close();
+  }
+}, 30000);
+
+it("deletes old versions: History's made files go, the person's own file and the current version stay", async () => {
+  const { h, deps } = await arranged();
+  try {
+    arrangeProject(deps, h.projectId);
+    const base = h.view();
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: base.revision.id,
+      idempotencyKey: "voice-history",
+      edit: {
+        config: {
+          ...base.revision.config,
+          audio: { provider: "openai-tts", model: "tts", voice: "other" },
+        },
+        content: base.revision.content,
+      },
+    });
+    if (!saved.ok) throw new Error(JSON.stringify(saved));
+    admitPendingRevision(h.deps, saved.view, narrationCatalogue);
+    await h.pump();
+    settle(h);
+    arrangeProject(deps, h.projectId);
+    const root = projectDir(h.deps.paths, h.projectId);
+    const day = readdirSync(join(root, "History"))[0] ?? "";
+    writeFileSync(join(root, "History", day, "my notes.txt"), "mine");
+    const before = projectStorage(h.deps, h.projectId);
+    expect(before.historyFiles).toBeGreaterThan(0);
+    expect(deleteOldVersions(h.deps, h.projectId)).toEqual({
+      ok: true,
+      files: before.historyFiles,
+      bytesFreed: before.historyBytes,
+    });
+    expect(filesUnder(join(root, "History"))).toEqual([`${day}/my notes.txt`]);
+    expect(projectStorage(h.deps, h.projectId).historyFiles).toBe(0);
+    expect(
+      h
+        .view()
+        .outputs.filter((row) => row.selected)
+        .every((row) => row.available),
+    ).toBe(true);
+    expect(reconcileStorage(h.deps.db, h.deps.paths).orphanFiles).toBe(0);
+  } finally {
+    h.close();
+  }
+}, 30000);
+
+it("cleans up every finished project's old versions and working files at once", async () => {
+  const { h, deps } = await arranged();
+  try {
+    arrangeProject(deps, h.projectId);
+    h.deps.db.exec("UPDATE stages SET state='done'");
+    const before = projectStorage(h.deps, h.projectId);
+    expect(before.removableFiles).toBeGreaterThan(0);
+    const result = cleanUpAll(h.deps);
+    expect(result.files).toBe(before.removableFiles);
+    expect(result.skipped).toBe(0);
+    const after = projectStorage(h.deps, h.projectId);
+    expect([after.removableFiles, after.historyFiles]).toEqual([0, 0]);
     expect(reconcileStorage(h.deps.db, h.deps.paths).orphanFiles).toBe(0);
   } finally {
     h.close();
