@@ -19,6 +19,13 @@ export interface ExtensionApi {
     getURL(path: string): string;
     readonly onStartup: { addListener(listener: () => void): void };
     readonly onInstalled: { addListener(listener: () => void): void };
+    // The manifest it is running, and reloading from disk (`self-update.ts`).
+    getManifest(): { readonly version: string };
+    reload(): void;
+  };
+  // How it was installed: "development" when loaded unpacked from a folder.
+  readonly management?: {
+    getSelf(): Promise<{ readonly installType?: string }>;
   };
   // The check for public videos with an A/B test waiting, every 15 minutes.
   readonly alarms?: {

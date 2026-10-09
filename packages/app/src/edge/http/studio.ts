@@ -331,6 +331,7 @@ export function studioRoutes(deps: AppDeps) {
           channelPlaylists: readChannelPlaylists(deps.db),
           pairing: studioPairing(deps.db),
           autoComment: readSetting(deps.db, autoCommentKey) === "on",
+          unpacked: deps.unpackedExtension ?? null,
         });
       })
       // Post and pin each video's comment once it is public (opt-in: it posts in your name).

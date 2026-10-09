@@ -7,6 +7,7 @@ import type {
   WorkerAnswer,
   WorkerRequest,
 } from "./pack.js";
+import { reloadIfUpdated } from "./self-update.js";
 
 // The background worker: the only part of the extension that talks to Slopify. It keeps the
 // Slopify address and the pairing token, reads upload packs and their files and hands them to
@@ -533,7 +534,11 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
   }
 }
 
+// When anything last went through the worker (a fill's steps, a check, the popup), kept in
+// storage: the worker is stopped between messages, and a fill can wait minutes on an upload.
+const activityKey = "slopify-last-activity";
 api.runtime.onMessage.addListener((message, sender, respond) => {
+  void api.storage.local.set({ [activityKey]: Date.now() });
   const request = message as WorkerRequest;
   void answer(request).then((reply) => {
     respond(reply);
@@ -560,7 +565,20 @@ api.action?.onClicked.addListener(() => {
 
 api.alarms?.onAlarm.addListener((alarm) => {
   if (alarm.name === "slopify-ab-tests") void checkTasks();
-  if (alarm.name === "slopify-stats-watch") void unstickStats();
+  if (alarm.name === "slopify-stats-watch") {
+    void unstickStats();
+    // Loaded from the folder Slopify keeps current: run its new build once it's quiet.
+    void api.storage.local
+      .get([activityKey])
+      .then((stored) =>
+        reloadIfUpdated(
+          api,
+          typeof stored[activityKey] === "number" ? stored[activityKey] : 0,
+          Date.now(),
+        ),
+      )
+      .catch(() => undefined);
+  }
 });
 const schedule = (): void => {
   api.alarms?.create("slopify-ab-tests", { periodInMinutes: 15, delayInMinutes: 1 });

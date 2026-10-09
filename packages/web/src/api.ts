@@ -495,6 +495,8 @@ export interface StudioSettingsBody {
   readonly pairing: StudioPairingView;
   // Post and pin each video's comment once it is public.
   readonly autoComment?: boolean;
+  // The Chrome extension unpacked in a folder Slopify keeps current; null in Docker.
+  readonly unpacked?: { readonly path: string; readonly version: string } | null;
 }
 
 export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> {

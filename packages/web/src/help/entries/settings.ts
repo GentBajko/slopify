@@ -187,7 +187,7 @@ export const settingsHelp = {
   },
   "settings.studio.install": {
     title: "Install the Studio extension",
-    body: "The extension comes with Slopify: Download saves it for the browser picked, nothing is fetched from a store. Chrome, Edge and Brave load the unzipped folder with Load unpacked (Developer mode); Firefox 128 or newer loads the zip as a temporary add-on, which it forgets on restart. Then pair it with the token above. A new Slopify may bring a new extension: download and load it again after updating.",
+    body: "The extension comes with Slopify, nothing is fetched from a store. Chrome, Edge and Brave load it once with Load unpacked (Developer mode) from the folder shown here: Slopify puts each new version there when it updates, and the extension switches to it by itself after 45 minutes without use. Firefox 128 or newer loads the downloaded zip as a temporary add-on, which it forgets on restart. Then pair it with the token above.",
     tutorial: { page: "Studio-Extension", anchor: "get-the-extension" },
   },
   "settings.studio.pairing": {

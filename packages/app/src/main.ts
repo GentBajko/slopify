@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import type { ServerType } from "@hono/node-server";
@@ -128,6 +129,11 @@ import {
 } from "./slices/storage/files-location.js";
 import { createPlaces, recoverPlaces } from "./slices/storage/places.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import {
+  installUnpackedExtension,
+  type UnpackedExtension,
+  unpackedExtensionDir,
+} from "./slices/studio/unpacked.js";
 import { previewPictures } from "./slices/style-preview/images.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
 import { createStylePreviews, stylePreviewDir } from "./slices/style-preview/service.js";
@@ -615,6 +621,20 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       void autostart.refresh().catch((error: unknown) => {
         log.write("warn", "autostart.refresh", { detail: causedBy(error) });
       });
+    // The Chrome extension, unpacked in a folder this install keeps current; loaded from there
+    // it reloads itself after each update (`slices/studio/unpacked.ts`). A container's data
+    // folder isn't the host's, so there it stays a download.
+    const extensionDist = fileURLToPath(new URL("../dist/extension", import.meta.url));
+    let unpackedExtension: UnpackedExtension | undefined;
+    if (!container)
+      try {
+        unpackedExtension = installUnpackedExtension(
+          join(extensionDist, "slopify-studio-chrome.zip"),
+          unpackedExtensionDir(paths.dataDir),
+        );
+      } catch (error) {
+        log.write("warn", "studio.extension", { detail: causedBy(error) });
+      }
     const app = createApp({
       autostart,
       rebuild,
@@ -659,7 +679,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       log,
       version,
       webDist: fileURLToPath(new URL("../dist/web", import.meta.url)),
-      extensionDist: fileURLToPath(new URL("../dist/extension", import.meta.url)),
+      extensionDist,
+      unpackedExtension,
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,

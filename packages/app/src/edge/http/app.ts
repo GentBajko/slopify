@@ -18,6 +18,7 @@ import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
 import type { RebuildDeps } from "../../slices/rebuild/service.js";
 import type { ScheduleDeps } from "../../slices/schedules/model.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
+import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
@@ -144,6 +145,9 @@ export interface AppDeps {
   // Where the build put the Slopify Studio extension's zips (`scripts/copy-extension.mjs`);
   // absent, Settings' Download answers that this copy doesn't include them.
   readonly extensionDist?: string | undefined;
+  // The Chrome extension unpacked in this install's own folder, kept current at each start
+  // (`slices/studio/unpacked.ts`); absent in a container or when it couldn't be written.
+  readonly unpackedExtension?: UnpackedExtension | undefined;
   // Runs a local agent CLI to learn whether it is installed. Handed in so a test can answer for
   // both branches without depending on this machine's PATH.
   readonly probe: CliProbe;
