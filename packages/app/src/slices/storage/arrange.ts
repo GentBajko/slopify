@@ -70,7 +70,10 @@ export function arrangeKeys(db: DatabaseSync): ReadonlyMap<string, string> {
 export function projectSettled(db: DatabaseSync, projectId: string): boolean {
   const busy = db
     .prepare(
-      `SELECT 1 FROM revision_work WHERE project_id=? AND (state='running' OR (state='pending' AND dispatch_state!='held'))
+      `SELECT 1 FROM revision_work w WHERE w.project_id=? AND (w.state='running' OR (w.state='pending' AND w.dispatch_state!='held'
+         -- A deferred "…:future" stand-in stays pending after its real steps have run; the run
+         -- leaves it out (rebuild/runtime-store.ts executionStages), so it is not work to wait for.
+         AND EXISTS(SELECT 1 FROM revision_work_pieces p WHERE p.work_id=w.id AND p.work_key NOT LIKE '%:future')))
        UNION ALL SELECT 1 FROM stages WHERE project_id=? AND state='running'
        UNION ALL SELECT 1 FROM project_trash WHERE project_id=? LIMIT 1`,
     )

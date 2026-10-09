@@ -133,6 +133,27 @@ it("moves the replaced version to History and gives the new one the current name
   }
 }, 30000);
 
+it("arranges a finished project whose only waiting rows are deferred stand-ins", async () => {
+  const { h, deps } = await arranged();
+  try {
+    // A finished run keeps its "…:future" stand-ins pending; they never run.
+    const work = h.deps.db
+      .prepare(
+        "SELECT w.id FROM revision_work w JOIN revision_work_pieces p ON p.work_id=w.id WHERE w.project_id=? LIMIT 1",
+      )
+      .get(h.projectId);
+    h.deps.db
+      .prepare("UPDATE revision_work SET state='pending',dispatch_state='allowed' WHERE id=?")
+      .run(String(work?.id));
+    h.deps.db
+      .prepare("UPDATE revision_work_pieces SET work_key='shorts:future' WHERE work_id=?")
+      .run(String(work?.id));
+    expect(arrangeProject(deps, h.projectId).skipped).toBeUndefined();
+  } finally {
+    h.close();
+  }
+}, 30000);
+
 it("leaves a project alone while any of it may run", async () => {
   const { h, deps } = await arranged();
   try {

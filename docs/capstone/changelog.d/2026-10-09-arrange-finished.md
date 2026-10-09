@@ -1,0 +1,1 @@
+- `projectSettled` (`storage/arrange.ts`) ignores pending deferred `…:future` stand-ins, which stay allowed after a run finishes, so new projects are arranged when done.
