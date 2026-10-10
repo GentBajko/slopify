@@ -4,6 +4,7 @@
 // last. Browser-safe: Play, Edit project and the project page read these names and limits too.
 
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
+import type { Actor } from "../agents/model.js";
 
 export const reviewStages = ["article", "images", "narration", "thumbnail", "shorts"] as const;
 export type ReviewStage = (typeof reviewStages)[number];
@@ -193,6 +194,11 @@ export interface ReviewRecord extends ReviewVerdict {
   // An automatic redo: waiting to start, started, or refused (with the reason).
   readonly redoState: "pending" | "started" | "failed" | null;
   readonly redoError: string | null;
+  // Who gave the verdict: the reviewer model, an external agent, the person (through the
+  // verdict route), or nobody when the review passed at its deadline.
+  readonly answeredBy: "model" | "agent" | "person" | "nobody";
+  // Who overruled it or had it made again.
+  readonly actionBy: Actor | null;
   readonly createdAt: string;
 }
 

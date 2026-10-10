@@ -118,6 +118,8 @@ export async function executeReviewRecipe(
     actionAt: null,
     redoState: outcome === "redo" ? "pending" : null,
     redoError: null,
+    answeredBy: "model",
+    actionBy: null,
     createdAt: deps.clock.now().toISOString(),
   });
   await publishResult(deps, context, piece, [], {
@@ -168,13 +170,17 @@ function spokenText(deps: ExportExecutionDeps, snapshot: ExportSnapshot): string
   return plainText(snapshot.view.articleMarkdown ?? "");
 }
 
-interface Material {
+export interface Material {
   readonly request: ReviewMaterial;
-  readonly images: readonly { readonly path: string; readonly name: string }[];
+  readonly images: readonly {
+    readonly path: string;
+    readonly stored: string;
+    readonly name: string;
+  }[];
   readonly itemFingerprint: string;
 }
 
-function reviewMaterial(
+export function reviewMaterial(
   deps: ExportExecutionDeps,
   context: StageContext,
   snapshot: ExportSnapshot,
@@ -258,11 +264,18 @@ function reviewMaterial(
         images: [
           {
             path: path(image),
+            stored: image.output.path,
             name: stage === "images" ? "the image to review" : "the thumbnail to review",
           },
           ...(reference === undefined
             ? []
-            : [{ path: path(reference), name: "the establishing image it must match" }]),
+            : [
+                {
+                  path: path(reference),
+                  stored: reference.output.path,
+                  name: "the establishing image it must match",
+                },
+              ]),
         ],
         itemFingerprint: image.fingerprint,
       };
@@ -328,6 +341,7 @@ function reviewMaterial(
         request: request([{ label: "Title of the short", text: title }], names),
         images: stills.map((row, index) => ({
           path: path(row),
+          stored: row.output.path,
           name: names[index] ?? "an image of the short",
         })),
         itemFingerprint: render.fingerprint,

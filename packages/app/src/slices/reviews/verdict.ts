@@ -6,10 +6,18 @@ import type { ReviewStage, ReviewVerdict } from "./model.js";
 // at least one reason, since a reason is what the person reads beside it.
 export const reviewReasonMax = 500;
 export const reviewReasonsMax = 10;
-const answerSchema = z
+export const verdictAnswerSchema = z
   .object({
     verdict: z.enum(["pass", "fail"]),
-    reasons: z.array(z.string().trim().min(1).max(reviewReasonMax)).max(reviewReasonsMax),
+    reasons: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, "a reason can't be empty")
+          .max(reviewReasonMax, `a reason is at most ${String(reviewReasonMax)} characters`),
+      )
+      .max(reviewReasonsMax, `at most ${String(reviewReasonsMax)} reasons`),
   })
   .strict()
   .refine((answer) => answer.verdict === "pass" || answer.reasons.length > 0, {
@@ -78,7 +86,7 @@ export function parseVerdict(text: string): ParsedVerdict {
       reason: `The reviewer's answer was not the JSON verdict Slopify asked for. ${retryHint}`,
     };
   }
-  const parsed = answerSchema.safeParse(value);
+  const parsed = verdictAnswerSchema.safeParse(value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const where =

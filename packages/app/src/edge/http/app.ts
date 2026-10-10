@@ -36,6 +36,7 @@ import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
 import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
+import { externalReviewRoutes } from "./external-reviews.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
@@ -198,6 +199,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))
       .route("/projects", reviewRoutes(deps))
+      .route("/projects", externalReviewRoutes(deps))
       .route("/projects", revisionRoutes(deps))
       .route("/projects", outputRoutes(deps))
       .route("/projects", revisionFolderRoutes(deps))

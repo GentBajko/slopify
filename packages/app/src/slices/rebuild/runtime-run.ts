@@ -1,6 +1,7 @@
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { executeAgentReviewRecipe } from "./runtime-agent-review.js";
 import { executeAnimateRecipe } from "./runtime-animate.js";
 import { executeDocumentRecipe } from "./runtime-document.js";
 import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.js";
@@ -22,6 +23,7 @@ export async function runRevisionInvocation(
   const pieces = workPieces(deps.db, context.work.workId).filter(
     (piece) => !piece.key.startsWith("article:continuation:"),
   );
+  let waiting = false;
   for (const piece of pieces) {
     if (piece.state === "done") continue;
     if (piece.input.kind === "deferred") return "held";
@@ -43,7 +45,9 @@ export async function runRevisionInvocation(
           : piece.key.startsWith("document:")
             ? await executeDocumentRecipe(deps, context, piece)
             : piece.key.startsWith("review:")
-              ? await executeReviewRecipe(deps, context, providers, piece)
+              ? piece.input.kind === "local" && piece.input.operation === "review-agent-v1"
+                ? await executeAgentReviewRecipe(deps, context, piece)
+                : await executeReviewRecipe(deps, context, providers, piece)
               : piece.key.startsWith("voices:")
                 ? await executeVoicesRecipe(deps, context, piece)
                 : piece.key.startsWith("youtube:")
@@ -57,6 +61,11 @@ export async function runRevisionInvocation(
                           piece.input.kind === "image"
                         ? await executeProviderRecipe(deps, context, providers, piece)
                         : await executeLocalRecipe(deps, context, piece);
+      // An agent's review waits without stopping the stage's other pieces.
+      if (outcome === "waiting") {
+        waiting = true;
+        continue;
+      }
       if (outcome === "held") return outcome;
     } catch (error) {
       deps.db
@@ -81,7 +90,7 @@ export async function runRevisionInvocation(
       "UPDATE revision_work_pieces SET state='done' WHERE work_id=? AND result_json IS NOT NULL",
     )
     .run(context.work.workId);
-  return "done";
+  return waiting ? "held" : "done";
 }
 
 function startLocalTime(deps: ExportExecutionDeps, context: StageContext): string {

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { actors } from "../agents/model.js";
 import { type ReviewRecord, reviewStages } from "./model.js";
 
 const rowSchema = z.object({
@@ -18,6 +19,8 @@ const rowSchema = z.object({
   action_at: z.string().nullable(),
   redo_state: z.enum(["pending", "started", "failed"]).nullable(),
   redo_error: z.string().nullable(),
+  answered_by: z.enum(["model", "agent", "person", "nobody"]),
+  action_by: z.enum(actors).nullable(),
   created_at: z.string(),
 });
 
@@ -39,6 +42,8 @@ function recordOf(value: unknown): ReviewRecord {
     actionAt: row.action_at,
     redoState: row.redo_state,
     redoError: row.redo_error,
+    answeredBy: row.answered_by,
+    actionBy: row.action_by,
     createdAt: row.created_at,
   };
 }
@@ -47,12 +52,13 @@ function recordOf(value: unknown): ReviewRecord {
 // saved but not published) replaces the earlier answer rather than adding a second one.
 export function saveVerdict(db: DatabaseSync, record: ReviewRecord): ReviewRecord {
   db.prepare(
-    `INSERT INTO review_verdicts(id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,action,action_at,redo_state,redo_error,created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `INSERT INTO review_verdicts(id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,action,action_at,redo_state,redo_error,answered_by,action_by,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(project_id,review_fingerprint) DO UPDATE SET revision_id=excluded.revision_id,
        item_fingerprint=excluded.item_fingerprint,passed=excluded.passed,reasons=excluded.reasons,
-       outcome=excluded.outcome,attempt=excluded.attempt,action=NULL,action_at=NULL,
-       redo_state=excluded.redo_state,redo_error=NULL,created_at=excluded.created_at`,
+       outcome=excluded.outcome,attempt=excluded.attempt,action=NULL,action_at=NULL,action_by=NULL,
+       redo_state=excluded.redo_state,redo_error=NULL,answered_by=excluded.answered_by,
+       created_at=excluded.created_at`,
   ).run(
     record.id,
     record.projectId,
@@ -69,6 +75,8 @@ export function saveVerdict(db: DatabaseSync, record: ReviewRecord): ReviewRecor
     record.actionAt,
     record.redoState,
     record.redoError,
+    record.answeredBy,
+    record.actionBy,
     record.createdAt,
   );
   const saved = verdictByReview(db, record.projectId, record.reviewFingerprint);

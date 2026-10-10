@@ -168,6 +168,13 @@ const decisions: readonly RouteTool[] = [
     title: "Redo a flagged item",
     description: `Makes a flagged item again, like Redo beside it. ${control}`,
   },
+  {
+    name: "submit_review_verdict",
+    route: "POST /api/projects/:id/external-reviews/:reviewId/verdict",
+    title: "Answer an external review",
+    description:
+      'Your verdict on a review waiting for an agent (read it first with get_external_review). Body: {verdict: "pass" | "fail", reasons: [one short sentence per problem]}: a fail needs at least one reason, at most 10, each 1 to 500 characters. The first verdict saved is kept.',
+  },
 ];
 
 export const projectTools: readonly RouteTool[] = [...projects, ...outputs, ...decisions];

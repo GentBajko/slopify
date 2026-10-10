@@ -23,6 +23,8 @@ const flagged: Review = {
   actionAt: null,
   redoState: null,
   redoError: null,
+  answeredBy: "model",
+  actionBy: null,
   createdAt: "2026-09-27T10:00:00.000Z",
   current: true,
   outputId: "o1",

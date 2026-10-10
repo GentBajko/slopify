@@ -49,6 +49,8 @@ const leftOut = new Set([
   "narration_retries",
   "prepared_videos",
   "project_set_aside",
+  // What agents were asked on this install: a restored project asks its waiting reviews again.
+  "external_reviews",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
   // Where this install put each project's folder and files: a backup carries every file by

@@ -98,6 +98,7 @@ import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { waitToRetry, wakeRetries } from "./slices/rebuild/retry.js";
 import { createReviewRedos, reviewHold } from "./slices/rebuild/review-redo.js";
+import { agentReviewHold } from "./slices/rebuild/runtime-agent-review.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
@@ -949,7 +950,9 @@ export function wireRunner({
     // A review waiting to send its item back holds the item's dependents like a checkpoint.
     decide: (work) => {
       const review = reviewHold(execution, work);
-      return review.kind === "held" ? review : checkpointDecisionForWork(execution, work);
+      if (review.kind === "held") return review;
+      const agent = agentReviewHold(execution, work);
+      return agent.kind === "held" ? agent : checkpointDecisionForWork(execution, work);
     },
     approve: (projectId, checkpointId, identity) =>
       approveCheckpoint(db, {

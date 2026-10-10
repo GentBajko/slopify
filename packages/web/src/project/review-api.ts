@@ -20,6 +20,8 @@ const reviewSchema = z.object({
   actionAt: z.string().nullable(),
   redoState: z.enum(["pending", "started", "failed"]).nullable(),
   redoError: z.string().nullable(),
+  answeredBy: z.enum(["model", "agent", "person", "nobody"]),
+  actionBy: z.enum(["person", "agent"]).nullable(),
   createdAt: z.string(),
   current: z.boolean(),
   outputId: z.string().nullable(),
