@@ -100,6 +100,7 @@ export function projectRoutes(deps: AppDeps) {
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           const waiting = waits.get(project.id);
+          const holding = holds.holding.get(project.id);
           return {
             ...project,
             status: statusOf(derive(stages, project.paused), settled.has(project.id)),
@@ -110,6 +111,7 @@ export function projectRoutes(deps: AppDeps) {
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
+            ...(holding === undefined ? {} : { holding }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };
         });

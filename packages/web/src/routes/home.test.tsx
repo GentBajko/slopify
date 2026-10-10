@@ -26,6 +26,16 @@ function listing(
   return { ...base, id, title, status, progress: 0, channelId: channel, uploadedAt: null, ...over };
 }
 
+// The checkpoint holding Cleopatra's run for the person, as the project list carries it.
+const videoHold = {
+  checkpointId: "video-gate",
+  stage: "video",
+  waitsFor: "person",
+  revisionId: "r1",
+  fingerprint: "a".repeat(64),
+  since: "2026-09-13T00:00:00.000Z",
+} as const;
+
 const checkpoints = (state: string) =>
   jsonAnswer({
     revisionId: "r1",
@@ -78,7 +88,7 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/projects": jsonAnswer({
       projects: [
         listing("p-run", "Sargon", "running", { progress: 0.4 }),
-        listing("p-wait", "Cleopatra", "pending", { progress: 0.6 }),
+        listing("p-wait", "Cleopatra", "pending", { progress: 0.6, holding: [videoHold] }),
         listing("p-fail", "Imhotep", "failed", { progress: 0.3 }),
         listing("p-done", "Ashurbanipal", "done", { progress: 1 }),
         listing("p-up", "Hypatia", "done", { progress: 1, uploadedAt: "2026-09-26T10:00:00.000Z" }),
@@ -96,16 +106,6 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/projects/p-wait": jsonAnswer({
       ...waiting,
       project: { ...waiting.project, id: "p-wait" },
-      holding: [
-        {
-          checkpointId: "video-gate",
-          stage: "video",
-          waitsFor: "person",
-          revisionId: "r1",
-          fingerprint: "a".repeat(64),
-          since: "2026-09-13T00:00:00.000Z",
-        },
-      ],
     }),
     "GET /api/projects/p-wait/checkpoints": checkpoints("held"),
     "GET /api/schedules": jsonAnswer({
@@ -276,24 +276,9 @@ describe("home", () => {
       dependents: [],
       workKeys: [],
     });
-    const waiting = body({ status: "pending", stages: [], outputs: [] });
     renderRouted(
       <HomeRoute />,
       deps({
-        "GET /api/projects/p-wait": jsonAnswer({
-          ...waiting,
-          project: { ...waiting.project, id: "p-wait" },
-          holding: [
-            {
-              checkpointId: "video-gate",
-              stage: "video",
-              waitsFor: "person",
-              revisionId: "r1",
-              fingerprint: "a".repeat(64),
-              since: "2026-09-13T00:00:00.000Z",
-            },
-          ],
-        }),
         "GET /api/projects/p-wait/checkpoints": jsonAnswer({
           revisionId: "r1",
           checkpoints: [gate("audio-gate", "audio"), gate("video-gate", "video")],

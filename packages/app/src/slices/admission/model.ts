@@ -2,6 +2,7 @@ import type { Format, ProjectState, StageKind, StageState } from "../../kernel/p
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import type { DocumentSettings } from "../document/model.js";
 import type { Chunking } from "../narration/chunk.js";
+import type { CheckpointHold } from "../reviews/holds.js";
 import type { SubtitleConfig } from "../subtitles/model.js";
 
 export type { Format } from "../../kernel/pipeline.js";
@@ -380,6 +381,9 @@ export interface ProjectListing
   // Stages waiting for a CLI plan's limits to reset (`slices/run-cost/limits.ts`), so the
   // row can say "Waiting for Codex limits (resets at 14:00)". Left out when nothing waits.
   readonly limitWaits?: readonly ListingLimitWait[];
+  // The checkpoints holding the run now (`reviews/holds.ts`), as a project's page has them, so
+  // Home's Needs you offers the right one. Left out when none holds it.
+  readonly holding?: readonly CheckpointHold[];
 }
 
 export interface ListingLimitWait {

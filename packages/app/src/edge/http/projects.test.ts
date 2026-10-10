@@ -533,13 +533,17 @@ describe("GET /api/projects", () => {
     );
     const read = async () => {
       const list = (await (await app.request("/api/projects")).json()) as {
-        projects: ProjectSummary[];
+        projects: (ProjectSummary & {
+          holding?: readonly { checkpointId: string; waitsFor: string }[];
+        })[];
       };
       const page = (await (await app.request("/api/projects/p1")).json()) as {
         project: ProjectSummary;
         resumable: boolean;
         holding: readonly { checkpointId: string; waitsFor: string }[];
       };
+      // The list carries the same holds, so Home needs no project read per item.
+      expect(list.projects[0]?.holding ?? []).toEqual(page.holding);
       const pick = (project: ProjectSummary | undefined) => ({
         prepared: project?.prepared,
         waitingForAgent: project?.waitingForAgent,

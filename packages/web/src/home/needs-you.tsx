@@ -111,22 +111,18 @@ export function WaitingItem({
       return reply.value;
     },
   });
-  const body = useQuery({
-    queryKey: keys.project(project.id),
-    queryFn: () => readProject(api, project.id),
-  });
   // The gate the run is stopped at: one the server says holds it for the person (`holding`,
   // reached and not a schedule's own hold), still about the work as it stands (an edit since
   // would need the project page's review).
   const theirs = new Set(
-    (body.data?.holding ?? [])
+    (project.holding ?? [])
       .filter((hold) => hold.waitsFor === "person")
       .map((hold) => hold.checkpointId),
   );
   const gate = status.data?.checkpoints.find(
     (one) => theirs.has(one.checkpointId) && one.fingerprint === one.currentFingerprint,
   );
-  const unread = status.error ?? body.error;
+  const unread = status.error;
   const approve = useMutation({
     mutationFn: async (held: CheckpointGate) => {
       identity.current ??= {
