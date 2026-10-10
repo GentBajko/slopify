@@ -21,10 +21,11 @@ export interface RouteTool {
   };
   // A POST that only looks, checks or prices (a preview, an estimate, a test send): it changes
   // nothing in Slopify, so it is not recorded as an agent's change.
-  readonly readOnly?: true;
-  // It acts outside Slopify (a test message really goes out), so the agent's client is told it
-  // is neither read-only nor closed-world, recorded or not.
-  readonly reachesOut?: true;
+  readonly unrecorded?: true;
+  // It reaches outside Slopify, so the agent's client is told it is open-world: it only asks
+  // there (a provider check, the published catalogue), or it sends something that really goes
+  // out (a test message), which is no read-only call, recorded or not.
+  readonly reachesOut?: "asks" | "sends";
   // A route that takes a file: multipart like the page's file pickers, or the bytes themselves.
   readonly upload?: "multipart" | "raw";
   // What the agent is shown instead of the route's own answer: state words added, or a

@@ -122,12 +122,12 @@ it("asks for confirmed: true on every tool whose page confirms first", () => {
   ).toEqual(["delete_cast_picture", "delete_staged_file", "remove_channel_video"]);
 });
 
-it("marks the POST tools that only look or price as read-only", () => {
-  const readOnly = routeTools
-    .filter((tool) => tool.route.startsWith("POST ") && tool.readOnly === true)
+it("leaves the POST tools that only look, price or test unrecorded as an agent's change", () => {
+  const unrecorded = routeTools
+    .filter((tool) => tool.route.startsWith("POST ") && tool.unrecorded === true)
     .map((tool) => tool.name)
     .sort();
-  expect(readOnly).toEqual(
+  expect(unrecorded).toEqual(
     [
       "check_providers",
       "estimate_run",
@@ -151,6 +151,9 @@ it("tells the agent's client a test send goes out and a catalogue check can chan
     readOnlyHint: false,
     openWorldHint: true,
   });
-  expect(hints("check_catalogue")).toMatchObject({ readOnlyHint: false });
+  expect(hints("check_catalogue")).toMatchObject({ readOnlyHint: false, openWorldHint: true });
+  expect(hints("refresh_catalogue")).toMatchObject({ readOnlyHint: false, openWorldHint: true });
+  // It asks each provider whether it answers: it looks outside, and changes nothing.
+  expect(hints("check_providers")).toMatchObject({ readOnlyHint: true, openWorldHint: true });
   expect(hints("preview_rebuild")).toMatchObject({ readOnlyHint: true, openWorldHint: false });
 });

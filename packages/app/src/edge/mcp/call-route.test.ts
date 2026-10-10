@@ -207,7 +207,7 @@ it("records a change by agent, but not a POST that only looks", async () => {
     route: "POST /api/projects/:id/rebuild/preview",
     title: "Preview",
     description: "",
-    readOnly: true,
+    unrecorded: true,
   };
   await callRoute(fake, preview, { id: "p1", body: {} });
   expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([]);

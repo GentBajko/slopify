@@ -103,8 +103,8 @@ const settings: readonly RouteTool[] = [
     route: "POST /api/settings/notifications/test",
     title: "Send a test notification",
     description: "Body: {url}.",
-    readOnly: true,
-    reachesOut: true,
+    unrecorded: true,
+    reachesOut: "sends",
   },
   {
     name: "list_voices",
@@ -143,7 +143,7 @@ const settings: readonly RouteTool[] = [
     title: "Price a voice sample",
     description:
       "Try a sample's price, as Play shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
-    readOnly: true,
+    unrecorded: true,
   },
   {
     name: "get_usage",
@@ -208,7 +208,8 @@ const providers: readonly RouteTool[] = [
     title: "Check providers",
     description:
       "Settings → Providers' Check all: which providers answer and which CLIs are signed in.",
-    readOnly: true,
+    unrecorded: true,
+    reachesOut: "asks",
   },
   {
     name: "get_catalogue",
@@ -222,12 +223,14 @@ const providers: readonly RouteTool[] = [
     title: "Check the model catalogue",
     description:
       "Checks the published model catalogue and merges what changed into models.yaml (Settings → Models, Check now).",
+    reachesOut: "asks",
   },
   {
     name: "refresh_catalogue",
     route: "POST /api/providers/catalogue/refresh",
     title: "Refresh the model catalogue",
     description: "Downloads the newest model catalogue.",
+    reachesOut: "asks",
   },
   {
     name: "list_retired_models",

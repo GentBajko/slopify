@@ -134,7 +134,7 @@ export const channelTools: readonly RouteTool[] = [
     route: "POST /api/channels/:id/videos/preview",
     title: "Preview an existing-videos import",
     description: formBody("the Existing videos import"),
-    readOnly: true,
+    unrecorded: true,
   },
   {
     name: "import_channel_videos",

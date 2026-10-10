@@ -58,7 +58,7 @@ const projects: readonly RouteTool[] = [
     title: "Estimate a run",
     description:
       "The cost estimate Play shows before Start. Body: {draft: a run draft, expectedWords?: 1-100000, items?}. For a Play draft, review_draft returns the same estimate.",
-    readOnly: true,
+    unrecorded: true,
   },
   {
     name: "get_run_cost",
@@ -133,7 +133,7 @@ const outputs: readonly RouteTool[] = [
     title: "Preview another output",
     description:
       "Add another output, first step: what the new output reuses, makes and is estimated to cost, and any choice the project lacks for it. Body: {baseRevisionId, kind: narration | audiobook | images | video | pdf | podcast}.",
-    readOnly: true,
+    unrecorded: true,
   },
   {
     name: "add_output",
