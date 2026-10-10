@@ -73,7 +73,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
     ["external reviews", () => externalReviews(db, skip)],
     ["flagged verdicts", () => flaggedVerdicts(db, skip)],
-    ["review checkpoints", () => heldCheckpoints(db)],
+    ["review checkpoints", () => heldCheckpoints(db, skip)],
     ["failed steps", () => failedSteps(db, skip)],
     ["paused runs", () => pausedRuns(db, skip)],
     ["held topics", () => heldTopics(db, skip)],
@@ -184,9 +184,12 @@ function flaggedVerdicts(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
 // Only a checkpoint that holds the run for the person (`reviews/holds.ts`): one whose stage's
 // inputs aren't made yet holds nothing, and a Before Video hold a schedule added waits for its
 // scheduled day, not for anyone.
-function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
+function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
   const named = titles(db);
-  return [...projectHolds(db).holding].flatMap(([projectId, holds]) =>
+  const { holding } = projectHolds(db, {
+    skip: (value, error) => skip("review checkpoints", value, error),
+  });
+  return [...holding].flatMap(([projectId, holds]) =>
     holds
       .filter((hold) => hold.waitsFor === "person")
       .map(

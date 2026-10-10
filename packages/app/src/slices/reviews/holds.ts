@@ -46,12 +46,15 @@ const gateRow = z.object({
 const projectRow = z.object({ project_id: z.string() });
 
 // Every project's holds, or one project's alone when `projectId` is given. A caller that has
-// already read the stage standings (`stageStandingsByProject`) passes them.
+// already read the stage standings (`stageStandingsByProject`) passes them; one that lists
+// what it can read passes `skip`, given each checkpoint row that can't be read instead of
+// failing them all.
 export function projectHolds(
   db: DatabaseSync,
   scope: {
     readonly projectId?: string | undefined;
     readonly standings?: ReadonlyMap<string, readonly StageProgress[]> | undefined;
+    readonly skip?: ((value: unknown, error: unknown) => void) | undefined;
   } = {},
 ): ProjectHolds {
   const { projectId } = scope;
@@ -61,10 +64,17 @@ export function projectHolds(
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${onlyOne}`;
   const scoped = projectId === undefined ? [] : [projectId];
+  const { skip } = scope;
   const gates = db
     .prepare(gateSql)
     .all(...scoped)
-    .map((row) => gateRow.parse(row));
+    .flatMap((row) => {
+      if (skip === undefined) return [gateRow.parse(row)];
+      const gate = gateRow.safeParse(row);
+      if (gate.success) return [gate.data];
+      skip(row, gate.error);
+      return [];
+    });
   const standings = scope.standings ?? stageStandingsByProject(db, projectId);
   // A checkpoint holds the run once the stages its step needs are made; before that the run
   // is held by whatever those stages wait on.

@@ -280,6 +280,28 @@ it("skips a row it can't read, logs it, and lists the others", () => {
   ]);
 });
 
+it("lists the other checkpoints when one can't be read, and logs that one", () => {
+  const f = everything();
+  const { db } = f.h.deps;
+  db.exec("PRAGMA ignore_check_constraints=ON");
+  db.prepare(
+    "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'odd-gate','sound','images-work',?,'held','2026-09-10T00:02:30.000Z')",
+  ).run(f.revisionId, "e".repeat(64));
+  db.exec("PRAGMA ignore_check_constraints=OFF");
+  const { deps, lines } = logged(f);
+  expect(
+    needsAttention(deps, now)
+      .filter((entry) => entry.kind === "checkpoint")
+      .map((entry) => entry.ids.checkpointId),
+  ).toEqual(["images-gate"]);
+  expect(lines).toEqual([
+    {
+      event: "attention.row",
+      fields: { projectId: "p1", detail: expect.stringContaining("review checkpoints") },
+    },
+  ]);
+});
+
 it("gives a failed redo's error as the reason, and lists only each item's latest verdict", () => {
   const f = everything();
   const { db } = f.h.deps;
