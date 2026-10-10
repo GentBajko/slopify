@@ -3,10 +3,11 @@ import ffmpegStatic from "ffmpeg-static";
 import { fakeImage } from "../src/adapters/fake/image.js";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
-import { createHub } from "../src/edge/events/hub.js";
+import { createHub, observedHub } from "../src/edge/events/hub.js";
 import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
+import type { ProjectEvent } from "../src/kernel/events.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { SubtitleAligner } from "../src/kernel/ports/subtitles.js";
 import { wireRunner } from "../src/main.js";
@@ -74,7 +75,12 @@ export async function composedFixture(
   const compose = (base: RevisionDeps) => {
     const service = createRebuildDeps({ ...base, clock: systemClock }, catalogue);
     const audioPreviews = createAudioPreviewStore();
-    const hub = createHub({ ...base, acceptEvent: (event) => currentProjectEvent(base.db, event) });
+    // Every event the runner and the slices hand the hub, as the notifier sees them.
+    const events: ProjectEvent[] = [];
+    const hub = observedHub(
+      createHub({ ...base, acceptEvent: (event) => currentProjectEvent(base.db, event) }),
+      (event) => void events.push(event),
+    );
     const runner = wireRunner({
       ...service.deps,
       ffmpeg: resolveFfmpeg({}, ffmpegStatic),
@@ -89,6 +95,7 @@ export async function composedFixture(
       deps: { ...service.deps, runner },
       runner,
       audioPreviews,
+      events,
       setCatalogue: service.setCatalogue,
     };
   };

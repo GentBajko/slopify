@@ -29,7 +29,9 @@ export async function settleUntil(runner: Runner, done: () => boolean): Promise<
 // agent's review.
 export async function narratingWhileAgentsReview(closers: (() => void)[]) {
   const audio = fakeTts({ bytesFor: () => [tone()] });
-  const call = { blocks: true };
+  const refusing = fakeTts({ refuse: "The narration was refused." });
+  // `blocks` holds each narration call until it is aborted; `refuses` has the provider refuse it.
+  const call = { blocks: true, refuses: false };
   const h = await composedFixture({
     tts: () => ({
       ...audio,
@@ -38,7 +40,7 @@ export async function narratingWhileAgentsReview(closers: (() => void)[]) {
           await new Promise((_resolve, reject) =>
             request.signal.addEventListener("abort", () => reject(new Error("aborted"))),
           );
-        return audio.synthesize(request);
+        return (call.refuses ? refusing : audio).synthesize(request);
       },
     }),
   });

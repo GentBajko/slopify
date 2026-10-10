@@ -94,6 +94,18 @@ describe("derive", () => {
     ).toBe("pending");
   });
 
+  // Taken up again and failed, the run failed; a stage that failed before the cancel was canceled
+  // with it, so its work is no longer admitted in that state.
+  it("reads failed when a stage taken up again after a cancel failed", () => {
+    const canceled = stages({ audio: "failed", images: "canceled" });
+    expect(derive(canceled)).toBe("canceled");
+    expect(
+      derive(
+        canceled.map((stage) => (stage.kind === "audio" ? { ...stage, admitted: true } : stage)),
+      ),
+    ).toBe("failed");
+  });
+
   it("reads failed when a stage failed and none was canceled", () => {
     expect(derive(stages({ audio: "failed", video: "pending" }))).toBe("failed");
   });

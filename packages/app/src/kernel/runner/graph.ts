@@ -80,10 +80,12 @@ export function derive(stages: readonly StageStanding[], paused = false): Projec
 }
 
 // A stage taken up again after a Cancel, by Retry, Resume or Continue the run: beside a canceled
-// stage, it waits to run with its work admitted again. The run goes on while one does.
+// stage, it waits to run with its work admitted again, or that work failed. Cancel cancels every
+// unfinished step, so failed work beside a canceled stage was taken up after it. While one is,
+// the run reads by what it does: going on, or failed.
 export function readmitted(stage: StageStanding, stages: readonly StageStanding[]): boolean {
   return (
-    stage.state === "pending" &&
+    (stage.state === "pending" || stage.state === "failed") &&
     stage.admitted === true &&
     stages.some((other) => other.state === "canceled")
   );
