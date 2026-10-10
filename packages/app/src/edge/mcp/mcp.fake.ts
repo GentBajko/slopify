@@ -5,14 +5,16 @@ import type { Hono } from "hono";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
+import { createRebuildDeps } from "../../slices/rebuild/service.fake.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { revisionFixture } from "../../slices/revisions/revision.fake.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "../http/app.js";
 import type { RouteCallDeps } from "./call-route.js";
 
-// The whole app over a temporary database with one project ("Saved", p1), as an agent reaches it.
-export function mcpFixture(): {
+// The whole app over a temporary database with one project ("Saved", p1), as an agent reaches it;
+// `rebuild` wires the rebuild service, which Redo needs.
+export function mcpFixture(options: { readonly rebuild?: boolean } = {}): {
   readonly app: Hono;
   readonly deps: RevisionDeps;
   readonly projectId: string;
@@ -37,6 +39,7 @@ export function mcpFixture(): {
     probe: async () => ({ ran: false, stdout: "" }),
     flushSoon: () => undefined,
     host: "127.0.0.1",
+    ...(options.rebuild === true ? { rebuild: createRebuildDeps(h.deps).deps } : {}),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }

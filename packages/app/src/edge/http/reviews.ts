@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
-import { redoStarting } from "../../slices/rebuild/review-redo.js";
+import {
+  claimRedoStart,
+  redoStarting,
+  releaseRedoStart,
+} from "../../slices/rebuild/review-redo.js";
 import type { ReviewRecord } from "../../slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, verdictById } from "../../slices/reviews/repo.js";
 import { latestReviews } from "../../slices/reviews/view.js";
@@ -115,29 +119,42 @@ export function reviewRoutes(deps: AppDeps) {
             detail:
               "Redo is not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
           });
-        if (verdict.redoState === "pending" || verdict.redoState === "started")
-          return problem(c, {
+        const already = () =>
+          problem(c, {
             status: 409,
             title: titleOf(409),
             detail:
               "Slopify is already making this item again. Wait for it to land, then reload the project page.",
             extensions: { reason: "conflict" },
           });
-        const result = await recoverProject(deps.rebuild, projectId, {
-          ...c.req.valid("json"),
-          action: { kind: "redo", item: verdict.itemKey },
-        });
-        if (!result.ok) return refused(c, result, projectId);
-        actOnVerdict(
-          deps.db,
-          projectId,
-          verdictId,
-          "redone",
-          deps.clock.now().toISOString(),
-          actorOf(c),
-        );
-        notify(projectId);
-        return c.json(result, 202);
+        if (verdict.redoState === "pending" || verdict.redoState === "started") return already();
+        // Claimed before the rebuild is awaited, so Overrule cannot decide the verdict meanwhile.
+        if (!claimRedoStart(verdictId)) return already();
+        try {
+          const result = await recoverProject(deps.rebuild, projectId, {
+            ...c.req.valid("json"),
+            action: { kind: "redo", item: verdict.itemKey },
+          });
+          if (!result.ok) return refused(c, result, projectId);
+          const acted = actOnVerdict(
+            deps.db,
+            projectId,
+            verdictId,
+            "redone",
+            deps.clock.now().toISOString(),
+            actorOf(c),
+          );
+          if (!acted.ok)
+            return acted.reason === "not-found"
+              ? gone(c)
+              : acted.reason === "decided"
+                ? decided(c, acted.value)
+                : already();
+          notify(projectId);
+          return c.json(result, 202);
+        } finally {
+          releaseRedoStart(verdictId);
+        }
       },
     );
 

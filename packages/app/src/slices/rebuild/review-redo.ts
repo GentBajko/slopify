@@ -97,6 +97,19 @@ export function redoStarting(verdictId: string): boolean {
   return starting.has(verdictId);
 }
 
+// Redo pressed by a person or an agent: claimed synchronously, before anything is awaited, so an
+// Overrule arriving while the item is being made again is refused instead of landing in between.
+// False when a redo of this verdict is already being started.
+export function claimRedoStart(verdictId: string): boolean {
+  if (starting.has(verdictId)) return false;
+  starting.add(verdictId);
+  return true;
+}
+
+export function releaseRedoStart(verdictId: string): void {
+  starting.delete(verdictId);
+}
+
 export async function startRedo(deps: RebuildDeps, verdict: ReviewRecord): Promise<void> {
   starting.add(verdict.id);
   try {
