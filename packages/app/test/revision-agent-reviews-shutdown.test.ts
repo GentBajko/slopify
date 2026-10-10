@@ -1,15 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { afterEach, expect, it, vi } from "vitest";
-import { fakeTts } from "../src/adapters/fake/tts.js";
+import { afterEach, expect, it } from "vitest";
 import { derive, progressOf } from "../src/kernel/runner/graph.js";
-import type { Runner } from "../src/kernel/runner/index.js";
 import { stageStandingsByProject, stagesOf } from "../src/slices/admission/repo.js";
 import { projectStateWord, runningNow } from "../src/slices/admission/state-words.js";
-import { cancelProject } from "../src/slices/cancel/index.js";
-import {
-  recoverCheckpointWork,
-  settleReleasedCheckpoints,
-} from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
 import { externalReviewWaitMs } from "../src/slices/reviews/external-model.js";
@@ -20,102 +13,20 @@ import {
 import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import { projectHolds } from "../src/slices/reviews/holds.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
-import { composedFixture, current, save, start, tone } from "./revision-rebuild.fake.js";
+import { boot, cancel, narratingWhileAgentsReview, settleUntil } from "./agent-reviews-run.fake.js";
+import { current } from "./revision-rebuild.fake.js";
 
 const closers: (() => void)[] = [];
 afterEach(() => {
   for (const close of closers.splice(0)) close();
 });
 
-async function settleUntil(runner: Runner, done: () => boolean): Promise<void> {
-  await vi.waitFor(
-    async () => {
-      await runner.settled();
-      expect(done(), "The run never reached the expected state.").toBe(true);
-    },
-    { timeout: 4_000, interval: 20 },
-  );
-}
-
-// Narration in flight, held on its provider call, while both images wait for an External
-// agent's review.
-async function narratingWhileAgentsReview() {
-  const audio = fakeTts({ bytesFor: () => [tone()] });
-  const call = { blocks: true };
-  const h = await composedFixture({
-    tts: () => ({
-      ...audio,
-      synthesize: async (request) => {
-        if (call.blocks)
-          await new Promise((_resolve, reject) =>
-            request.signal.addEventListener("abort", () => reject(new Error("aborted"))),
-          );
-        return audio.synthesize(request);
-      },
-    }),
-  });
-  closers.push(() => h.audioPreviews.close());
-  const base = current(h.deps, h.projectId);
-  await save(h.deps, h.projectId, {
-    config: {
-      ...base.revision.config,
-      sources: { ...base.revision.config.sources, audio: "generate" },
-      audio: { provider: "openai-tts", model: "tts", voice: "first" },
-      provided: { article: "abcd" },
-      reviews: {
-        provider: "",
-        model: "",
-        reviewer: "agent",
-        retries: 1,
-        stages: { images: { mode: "flag" } },
-      },
-    },
-    content: base.revision.content,
-  });
-  await start(h.deps, h.projectId, Object.keys(current(h.deps, h.projectId).revision.fingerprints));
-  await vi.waitFor(
-    () => {
-      expect(waitingExternalReviews(h.deps.db, h.projectId)).toHaveLength(2);
-      expect(stagesOf(h.deps.db, h.projectId).find((stage) => stage.kind === "audio")?.state).toBe(
-        "running",
-      );
-    },
-    { timeout: 4_000 },
-  );
-  return { h, call };
-}
-
-// What boot does before anything runs (`main.ts`): recover the work, then wire a new runner.
-function boot(h: Awaited<ReturnType<typeof narratingWhileAgentsReview>>["h"]) {
-  recoverCheckpointWork(h.deps.db);
-  const next = h.compose(h.deps);
-  closers.push(() => next.audioPreviews.close());
-  return next;
-}
-
-// Cancel on the project's page (`POST /api/projects/:id/cancel`).
-async function cancel(h: Awaited<ReturnType<typeof narratingWhileAgentsReview>>["h"]) {
-  expect(
-    await cancelProject(
-      {
-        ...h.deps,
-        abort: (id) => h.runner.abortProject(id),
-        settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
-        emit: () => undefined,
-      },
-      h.projectId,
-      { baseRevisionId: current(h.deps, h.projectId).revision.id, idempotencyKey: randomUUID() },
-    ),
-  ).toMatchObject({ ok: true, state: "canceled" });
-  await h.runner.settled();
-}
-
 it("reads a run quit mid-way as Stopped after boot, its reviews live, and Continue goes on", async () => {
-  const { h, call } = await narratingWhileAgentsReview();
+  const { h, call } = await narratingWhileAgentsReview(closers);
   // The shutdown `main.ts` runs on Ctrl-C or an update install.
   await h.runner.abortAll();
   expect(stagesOf(h.deps.db, h.projectId).map((stage) => stage.state)).not.toContain("canceled");
-  const next = boot(h);
+  const next = boot(h, closers);
   next.runner.tick(h.projectId);
   await next.runner.settled();
   expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("pending");
@@ -149,9 +60,9 @@ it("reads a run quit mid-way as Stopped after boot, its reviews live, and Contin
 });
 
 it("keeps a run canceled mid-way canceled after boot, its reviews closed", async () => {
-  const { h } = await narratingWhileAgentsReview();
+  const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
-  const next = boot(h);
+  const next = boot(h, closers);
   next.runner.tick(h.projectId);
   await next.runner.settled();
   expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("canceled");
@@ -163,7 +74,7 @@ it("keeps a run canceled mid-way canceled after boot, its reviews closed", async
 });
 
 it("lets the agent review images retried after a cancel, and the images step goes on", async () => {
-  const { h } = await narratingWhileAgentsReview();
+  const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
   // Try images again on the canceled run's page.
   expect(
@@ -207,7 +118,7 @@ it("lets the agent review images retried after a cancel, and the images step goe
 // again and its reviews wait their whole two hours from the retry.
 for (const action of [{ kind: "retry", stage: "images" }, { kind: "resume" }] as const)
   it(`gives reviews of a run taken up after a cancel (${action.kind}) two hours from then`, async () => {
-    const { h, call } = await narratingWhileAgentsReview();
+    const { h, call } = await narratingWhileAgentsReview(closers);
     await cancel(h);
     // The cancel was three hours ago: the old deadlines are long past.
     h.deps.db
@@ -237,7 +148,7 @@ for (const action of [{ kind: "retry", stage: "images" }, { kind: "resume" }] as
 // its retried images wait for the agent (the header, Projects, Home, the calendar and the MCP
 // tools read the stage rows; the runner announces from its own standings).
 it("reads a run retried after a cancel by what it does while its images wait for the agent", async () => {
-  const { h } = await narratingWhileAgentsReview();
+  const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
   expect(
     await recoverProject(h.deps, h.projectId, {
