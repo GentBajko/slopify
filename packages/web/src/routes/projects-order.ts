@@ -1,8 +1,7 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { waitsForPerson } from "@app/slices/admission/state-words.js";
+import { queuedRun, waitsForPerson } from "@app/slices/admission/state-words.js";
 import { isReadyToUpload } from "@/home/ready";
-import { isQueued } from "@/home/running-more";
 
 const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
 export type ProjectFilter = (typeof filterValues)[number];
@@ -28,7 +27,7 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
     case "running":
       return project.status === "running" || project.status === "paused";
     case "queued":
-      return isQueued(project);
+      return queuedRun(project);
     case "waiting":
       return waitsForPerson(project);
     case "ready":

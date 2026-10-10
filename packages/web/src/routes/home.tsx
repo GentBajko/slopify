@@ -1,4 +1,4 @@
-import { parkedOnAgent, waitsForPerson } from "@app/slices/admission/state-words.js";
+import { parkedOnAgent, queuedRun, waitsForPerson } from "@app/slices/admission/state-words.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
@@ -14,7 +14,7 @@ import { LoadFailed, LoadingBlock, QueryState, StaleNote } from "@/components/ki
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
 import { isReadyToUpload } from "@/home/ready";
-import { isQueued, RunningMore } from "@/home/running-more";
+import { RunningMore } from "@/home/running-more";
 import { RunningProject } from "@/home/running-now";
 import { WeekTotals } from "@/home/week";
 import { type Decision, WorkList } from "@/home/work-list";
@@ -91,7 +91,7 @@ export function HomeRoute(): ReactElement {
   // on an agent's review goes on by itself, so it sits here.
   const running = mine.filter((one) => one.status === "running" || parkedOnAgent(one));
   // Started and waiting their turn: they show as one line under Running now.
-  const queued = mine.filter(isQueued);
+  const queued = mine.filter(queuedRun);
   // The bundled samples are finished videos too, but nobody uploads them.
   const samples = new Set(
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
