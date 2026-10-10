@@ -200,3 +200,33 @@ it("lets the agent review images retried after a cancel, and the images step goe
       .sort(),
   ).toEqual(["auto-passed", "passed"]);
 });
+
+// A canceled run's reviews wait for nobody, so their two hours stop: retried, the step asks
+// again and its reviews wait their whole two hours from the retry.
+for (const action of [{ kind: "retry", stage: "images" }, { kind: "resume" }] as const)
+  it(`gives reviews of a run taken up after a cancel (${action.kind}) two hours from then`, async () => {
+    const { h, call } = await narratingWhileAgentsReview();
+    await cancel(h);
+    // The cancel was three hours ago: the old deadlines are long past.
+    h.deps.db
+      .prepare(
+        "UPDATE external_reviews SET waiting_since='2026-01-01T00:00:00.000Z', deadline_at='2026-01-01T02:00:00.000Z'",
+      )
+      .run();
+    call.blocks = false;
+    const retried = Date.now();
+    expect(
+      await recoverProject(h.deps, h.projectId, {
+        baseRevisionId: current(h.deps, h.projectId).revision.id,
+        idempotencyKey: randomUUID(),
+        action,
+      }),
+    ).toMatchObject({ ok: true });
+    await settleUntil(h.runner, () => waitingExternalReviews(h.deps.db, h.projectId).length === 2);
+    for (const review of waitingExternalReviews(h.deps.db, h.projectId))
+      expect(Date.parse(review.deadlineAt)).toBeGreaterThanOrEqual(retried + externalReviewWaitMs);
+    expect(settleExternalReviews(h.deps.db, new Date())).toEqual([]);
+    expect(
+      settleExternalReviews(h.deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
+    ).toHaveLength(2);
+  });

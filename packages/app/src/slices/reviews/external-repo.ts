@@ -126,6 +126,14 @@ export function openExternalReview(
   return saved;
 }
 
+// Cancel stops a run's reviews waiting. Retried, its step asks again (`openExternalReview`) and
+// each review waits its whole two hours from then, not from before the cancel.
+export function stopWaitingReviews(db: DatabaseSync, projectId: string): void {
+  db.prepare(
+    "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND state='waiting'",
+  ).run(projectId);
+}
+
 export function externalReviewByFingerprint(
   db: DatabaseSync,
   projectId: string,

@@ -25,6 +25,7 @@ import {
   type RevisionControlRefusal,
   rememberRevisionControl,
 } from "../control/revision-control.js";
+import { stopWaitingReviews } from "../reviews/external-repo.js";
 import { settleScheduleRunsForProject } from "../schedules/repo.js";
 
 // Cancel on the project header. Every in-flight call of this project is aborted at once, every
@@ -120,6 +121,7 @@ async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult
         "UPDATE review_checkpoints SET state='canceled',approved_at=NULL WHERE project_id=? AND revision_id=(SELECT revision_id FROM project_heads WHERE project_id=?) AND state IN ('configured','pending-review','held')",
       )
       .run(projectId, projectId);
+    stopWaitingReviews(deps.db, projectId);
     deps.settleCheckpoints(projectId);
 
     // The invariant: after cancel commits no stage of the project is `running`.
