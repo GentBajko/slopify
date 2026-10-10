@@ -96,17 +96,38 @@ export async function revisionAudio(
     throw new Error(
       "The narration audio isn't finished yet. Let the Narration stage finish (Resume, or Try again on it), then retry this stage.",
     );
+  return narrationTimeline(config, {
+    body,
+    intro: speaksPart(config, "intro") ? await input("audio_intro") : undefined,
+    outro: speaksPart(config, "outro") ? await input("audio_outro") : undefined,
+  });
+}
+
+type RevisionConfig = RevisionView["revision"]["config"];
+interface NarrationPart {
+  readonly path: string;
+  readonly seconds: number;
+}
+
+// Only generated narration has a spoken intro and outro.
+export function speaksPart(config: RevisionConfig, part: "intro" | "outro"): boolean {
+  return config.sources.audio === "generate" && config[part] !== undefined;
+}
+
+// The narration in its order on the export timeline, the clock the word timing is on.
+export function narrationTimeline(
+  config: RevisionConfig,
+  parts: {
+    readonly body: NarrationPart;
+    readonly intro: NarrationPart | undefined;
+    readonly outro: NarrationPart | undefined;
+  },
+): readonly AudioSegment[] {
   return audioTimeline(
     {
-      body,
-      intro:
-        config.sources.audio === "generate" && config.intro !== undefined
-          ? await input("audio_intro")
-          : undefined,
-      outro:
-        config.sources.audio === "generate" && config.outro !== undefined
-          ? await input("audio_outro")
-          : undefined,
+      body: parts.body,
+      intro: speaksPart(config, "intro") ? parts.intro : undefined,
+      outro: speaksPart(config, "outro") ? parts.outro : undefined,
       gapSeconds: config.silenceGapSeconds,
       edgeSeconds: config.edgeSilenceSeconds,
     },
