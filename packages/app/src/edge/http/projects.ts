@@ -12,6 +12,7 @@ import {
   stageStandingsByProject,
   stagesOf,
 } from "../../slices/admission/repo.js";
+import { lastStarter } from "../../slices/agents/repo.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { channelById, projectChannels, setProjectChannel } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
@@ -136,6 +137,7 @@ export function projectRoutes(deps: AppDeps) {
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
           resumable: resumable(deps.db, project.id),
+          startedBy: lastStarter(deps.db, project.id),
           project: {
             ...summarise(project),
             ...(setAsideProjects(deps.db).has(project.id) ? { setAside: true } : {}),

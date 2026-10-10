@@ -71,6 +71,7 @@ import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectById, projectPaused, projectTrashed } from "./slices/admission/repo.js";
+import { lastStarter } from "./slices/agents/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
@@ -318,7 +319,11 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         const project = projectById(eventDb, projectId);
         return project === undefined
           ? undefined
-          : { title: project.title, makesVideo: project.config.sources.video !== "off" };
+          : {
+              title: project.title,
+              makesVideo: project.config.sources.video !== "off",
+              startedBy: lastStarter(eventDb, projectId),
+            };
       },
       // Read when a notification goes out, by which time the server is listening.
       link: (projectId) => projectLink(config.host, listeningPort, projectId),

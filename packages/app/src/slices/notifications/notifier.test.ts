@@ -18,6 +18,7 @@ function harness(
     readonly answer?: () => Promise<SendResult>;
     readonly makesVideo?: boolean;
     readonly link?: boolean;
+    readonly startedBy?: "person" | "agent";
   } = {},
 ) {
   const posted: Posted[] = [];
@@ -35,7 +36,11 @@ function harness(
     url: () => (options.url === undefined ? "https://ntfy.example/topic" : options.url),
     subject: (projectId) =>
       projectId === "p1"
-        ? { title: "Black holes", makesVideo: options.makesVideo ?? true }
+        ? {
+            title: "Black holes",
+            makesVideo: options.makesVideo ?? true,
+            ...(options.startedBy === undefined ? {} : { startedBy: options.startedBy }),
+          }
         : undefined,
     ...(options.link === true
       ? { link: (projectId: string) => projectLink("0.0.0.0", 6969, projectId) }
@@ -217,6 +222,26 @@ describe("createRunNotifier", () => {
     await notifier.settled();
     expect(posted.map((one) => one.body)).toEqual([
       "Passed without review: no agent answered in 2 h\nBlack holes: an image went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.\n",
+    ]);
+  });
+
+  it("says a run was started by an agent, and a verdict was an agent's", async () => {
+    const { notifier, posted } = harness({ startedBy: "agent" });
+    notifier.observe(state("running"));
+    notifier.observe(state("done"));
+    notifier.observe({
+      type: "review.flagged",
+      projectId: "p1",
+      verdictId: "v9",
+      stage: "article",
+      itemKey: "article:body",
+      reason: "A section repeats another.",
+      byAgent: true,
+    });
+    await notifier.settled();
+    expect(posted.map((one) => one.body.split("\n")[0])).toEqual([
+      "Video ready: Black holes · started by agent",
+      "Review needs a decision: Black holes — A section repeats another. · by agent",
     ]);
   });
 });

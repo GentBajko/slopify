@@ -1,10 +1,19 @@
+import type { DatabaseSync } from "node:sqlite";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import type { Clock } from "../../kernel/clock.js";
+import type { Ids } from "../../kernel/ids.js";
+import { recordAgentAction } from "../../slices/agents/repo.js";
+import { revisionIdOf, subjectsOf } from "./attribution.js";
 import { fileArg, type RouteTool, routeOf } from "./route-tool.js";
 
 export interface RouteCallDeps {
   // The API, called in-process as the agent (`http/actor.ts`).
   readonly api: (request: Request) => Promise<Response>;
+  // Where an agent's changes are recorded "by agent".
+  readonly db: DatabaseSync;
+  readonly ids: Ids;
+  readonly clock: Clock;
 }
 
 const problemSchema = z
@@ -46,7 +55,26 @@ export async function callRoute(
   if (query.success)
     for (const [key, value] of Object.entries(query.data)) url.searchParams.set(key, value);
   const response = await deps.api(new Request(url, { method, ...payloadOf(tool, args) }));
-  return answerOf(tool, response);
+  const type = response.headers.get("content-type") ?? "";
+  const value: unknown =
+    response.ok && type.includes("json") && !type.includes("problem")
+      ? await response.clone().json()
+      : undefined;
+  const result = await answerOf(tool, response);
+  if (method !== "GET" && response.ok) {
+    const { projectIds, scheduleId } = subjectsOf(tool, args, value);
+    for (const projectId of projectIds.length === 0 ? [null] : projectIds)
+      recordAgentAction(deps.db, {
+        id: deps.ids.next(),
+        projectId,
+        scheduleId,
+        tool: tool.name,
+        title: tool.title,
+        revisionId: revisionIdOf(value),
+        createdAt: deps.clock.now().toISOString(),
+      });
+  }
+  return result;
 }
 
 function payloadOf(

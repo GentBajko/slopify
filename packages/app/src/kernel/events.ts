@@ -80,6 +80,8 @@ export interface ReviewFlaggedEvent extends EventOrigin {
   readonly itemKey: string;
   // The reviewer's first reason, when it gave one.
   readonly reason?: string;
+  // The verdict was an external agent's.
+  readonly byAgent?: boolean;
 }
 
 // An external agent's review got no verdict in its two hours: the item passed without review

@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { actors } from "../agents/model.js";
+import { type Actor, actors } from "../agents/model.js";
 import { type ReviewRecord, reviewStages } from "./model.js";
 
 const rowSchema = z.object({
@@ -173,6 +173,7 @@ export function actOnVerdict(
   id: string,
   action: "overruled" | "redone",
   at: string,
+  by: Actor = "person",
 ): VerdictActionResult {
   const record = verdictById(db, projectId, id);
   if (record === undefined) return { ok: false, reason: "not-found" };
@@ -184,14 +185,16 @@ export function actOnVerdict(
     if (action !== "overruled") return { ok: false, reason: "conflict" };
     const called = db
       .prepare(
-        "UPDATE review_verdicts SET action=?, action_at=?, redo_state=NULL WHERE id=? AND redo_state='pending' AND action IS NULL",
+        "UPDATE review_verdicts SET action=?, action_at=?, action_by=?, redo_state=NULL WHERE id=? AND redo_state='pending' AND action IS NULL",
       )
-      .run(action, at, id);
+      .run(action, at, by, id);
     if (Number(called.changes) !== 1) return { ok: false, reason: "conflict" };
   } else {
     const changed = db
-      .prepare("UPDATE review_verdicts SET action=?, action_at=? WHERE id=? AND action IS NULL")
-      .run(action, at, id);
+      .prepare(
+        "UPDATE review_verdicts SET action=?, action_at=?, action_by=? WHERE id=? AND action IS NULL",
+      )
+      .run(action, at, by, id);
     if (Number(changed.changes) !== 1) {
       const now = verdictById(db, projectId, id);
       return now === undefined

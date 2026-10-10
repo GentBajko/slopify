@@ -72,6 +72,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
       title: subject.title,
       stage: event.stage,
       reason: event.reason,
+      ...(event.byAgent === true ? { byAgent: true } : {}),
     });
     post(url, { ...text, link: deps.link?.(event.projectId) }, "review", {
       projectId: event.projectId,

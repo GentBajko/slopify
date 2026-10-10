@@ -123,6 +123,7 @@ export async function executeAgentReviewRecipe(
       stage: saved.stage,
       itemKey: saved.itemKey,
       ...(saved.reasons[0] === undefined ? {} : { reason: saved.reasons[0] }),
+      ...(saved.answeredBy === "agent" ? { byAgent: true } : {}),
     });
   return "done";
 }

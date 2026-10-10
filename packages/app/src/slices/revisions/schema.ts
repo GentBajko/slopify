@@ -243,6 +243,7 @@ export const revisionSummarySchema = z.object({
   title: z.string(),
   createdAt: z.string(),
   current: z.boolean(),
+  byAgent: z.boolean().optional(),
 });
 export const revisionMutationSuccessSchema = z.object({
   ok: z.literal(true),

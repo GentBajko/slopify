@@ -1,15 +1,16 @@
 import { expect, it } from "vitest";
 import { callRoute } from "./call-route.js";
+import { routeCallDeps } from "./mcp.fake.js";
 import type { RouteTool } from "./route-tool.js";
 
 function answering(response: Response) {
   const seen: Request[] = [];
   return {
     seen,
-    api: async (request: Request): Promise<Response> => {
+    ...routeCallDeps(async (request: Request): Promise<Response> => {
       seen.push(request);
       return response.clone();
-    },
+    }),
   };
 }
 const problem = (status: number, body: Record<string, unknown>): Response =>

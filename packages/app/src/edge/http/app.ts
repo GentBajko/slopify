@@ -60,6 +60,7 @@ import { runCostRoutes } from "./run-cost.js";
 import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
+import { startRecorder } from "./starts.js";
 import { storageRoutes } from "./storage.js";
 import { filesRoutes } from "./storage-files.js";
 import { studioRoutes } from "./studio.js";
@@ -305,6 +306,7 @@ export function createApp(deps: AppDeps): Hono {
         extensions: { reason: "sample-read-only" },
       });
     })
+    .use("/api/*", startRecorder(deps))
     .onError((error, c) => problemFromError(c, error, deps))
     .notFound(missing)
     .route("/api", apiRoutes(deps, startedAt))

@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 import { z } from "zod";
 import { callRoute } from "./call-route.js";
-import { connectAgent, mcpFixture } from "./mcp.fake.js";
+import { connectAgent, mcpFixture, routeCallDeps } from "./mcp.fake.js";
 import { routeTools } from "./tools.js";
 
 const open: { readonly close: () => void }[] = [];
@@ -79,7 +79,7 @@ it("reports each provider as configured or missing, with nothing about keys or p
         },
       ],
     });
-  const result = await callRoute({ api }, toolNamed("list_providers"), {});
+  const result = await callRoute(routeCallDeps(api), toolNamed("list_providers"), {});
   expect(result.content).toEqual([
     {
       type: "text",
@@ -103,7 +103,7 @@ it("leaves the pairing token and the unpacked extension folder out of the Studio
       unpacked: { folder: "/home/you/.slopify/extension", version: "1.3.3" },
     });
   const said = JSON.stringify(
-    (await callRoute({ api }, toolNamed("get_studio_settings"), {})).content,
+    (await callRoute(routeCallDeps(api), toolNamed("get_studio_settings"), {})).content,
   );
   expect(said).not.toContain("a".repeat(64));
   expect(said).not.toContain("/home/you/.slopify/extension");

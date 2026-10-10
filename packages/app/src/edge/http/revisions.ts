@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { projectExists } from "../../slices/admission/repo.js";
 import type { FieldError } from "../../slices/admission/rules.js";
+import { agentActionsOf } from "../../slices/agents/repo.js";
 import { previewRebuildSchema, startRebuildSchema } from "../../slices/rebuild/model.js";
 import { narrationChunkOrder } from "../../slices/rebuild/runtime-narration-text.js";
 import { previewRebuild, startRebuild } from "../../slices/rebuild/service.js";
@@ -94,7 +95,10 @@ export function revisionRoutes(deps: AppDeps) {
       .get("/:id/revisions", zValidator("param", projectParam, onInvalid), (c) => {
         const projectId = c.req.valid("param").id;
         return projectExists(deps.db, projectId)
-          ? c.json({ revisions: listRevisionHistory(deps.db, projectId) })
+          ? c.json({
+              revisions: listRevisionHistory(deps.db, projectId),
+              agentActions: agentActionsOf(deps.db, projectId),
+            })
           : refused(c, deps, projectId, { reason: "no-project" });
       })
       .get("/:id/revisions/:revisionId", zValidator("param", revisionParam, onInvalid), (c) => {

@@ -1,4 +1,5 @@
 import type { ProjectState } from "../../kernel/pipeline.js";
+import type { Actor } from "../agents/model.js";
 
 // The run notifications' rules, shared by the server's Notification URL and the SPA's browser
 // notifications so both say the same thing about the same transition. Pure: the web bundle
@@ -43,6 +44,7 @@ export interface ReviewNoticeSubject {
   // `reviews/model.ts` reviewStages.
   readonly stage: string;
   readonly reason?: string | undefined;
+  readonly byAgent?: boolean | undefined;
 }
 
 const reviewItemNames: Readonly<Record<string, string>> = {
@@ -59,8 +61,8 @@ export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
   const item = reviewItemNames[subject.stage] ?? "an item";
   const headline = `Review needs a decision: ${title}`;
   return {
-    headline: reason === undefined ? headline : `${headline} — ${reason}`,
-    detail: `The automatic review flagged ${item} and kept it. Open the project and press Overrule to keep it or Redo to make it again.`,
+    headline: `${reason === undefined ? headline : `${headline} — ${reason}`}${subject.byAgent === true ? " · by agent" : ""}`,
+    detail: `${subject.byAgent === true ? "An agent's review" : "The automatic review"} flagged ${item} and kept it. Open the project and press Overrule to keep it or Redo to make it again.`,
   };
 }
 
@@ -82,6 +84,8 @@ export interface NoticeSubject {
   // Whether the run makes a video at all: an audio-only run is "finished", not "ready".
   readonly makesVideo: boolean;
   readonly reason?: string | undefined;
+  // Who started the run; an agent's run says so.
+  readonly startedBy?: Actor | null | undefined;
 }
 
 const reasonMax = 140;
@@ -97,6 +101,13 @@ export function shortReason(reason: string | null | undefined): string | undefin
 }
 
 export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText {
+  const text = runNoticeText(kind, subject);
+  return subject.startedBy === "agent"
+    ? { ...text, headline: `${text.headline} · started by agent` }
+    : text;
+}
+
+function runNoticeText(kind: RunNotice, subject: NoticeSubject): NoticeText {
   const title = subject.title.trim() === "" ? "Untitled project" : subject.title.trim();
   switch (kind) {
     case "ready":

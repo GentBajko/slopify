@@ -10,6 +10,7 @@ import { actOnVerdict, listVerdicts, verdictById } from "../../slices/reviews/re
 import { latestReviews } from "../../slices/reviews/view.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { getRevisionView } from "../../slices/revisions/view.js";
+import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -81,6 +82,7 @@ export function reviewRoutes(deps: AppDeps) {
         verdictId,
         "overruled",
         deps.clock.now().toISOString(),
+        actorOf(c),
       );
       if (!result.ok)
         return result.reason === "not-found"
@@ -126,7 +128,14 @@ export function reviewRoutes(deps: AppDeps) {
           action: { kind: "redo", item: verdict.itemKey },
         });
         if (!result.ok) return refused(c, result, projectId);
-        actOnVerdict(deps.db, projectId, verdictId, "redone", deps.clock.now().toISOString());
+        actOnVerdict(
+          deps.db,
+          projectId,
+          verdictId,
+          "redone",
+          deps.clock.now().toISOString(),
+          actorOf(c),
+        );
         notify(projectId);
         return c.json(result, 202);
       },

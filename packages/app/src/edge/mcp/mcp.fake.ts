@@ -1,10 +1,15 @@
+import type { DatabaseSync } from "node:sqlite";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Hono } from "hono";
+import { fixedClock } from "../../kernel/clock.fake.js";
+import { openDb } from "../../kernel/db/index.js";
+import { migrate } from "../../kernel/db/migrate.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { revisionFixture } from "../../slices/revisions/revision.fake.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "../http/app.js";
+import type { RouteCallDeps } from "./call-route.js";
 
 // The whole app over a temporary database with one project ("Saved", p1), as an agent reaches it.
 export function mcpFixture(): {
@@ -49,4 +54,15 @@ export async function connectAgent(
     }),
   );
   return client;
+}
+
+// The executor's deps over a fake API and an empty database, for tests of one call.
+export function routeCallDeps(
+  api: (request: Request) => Promise<Response>,
+): RouteCallDeps & { readonly db: DatabaseSync } {
+  const clock = fixedClock("2026-09-10T00:00:00.000Z");
+  const db = openDb(":memory:");
+  migrate(db, clock);
+  let next = 0;
+  return { api, db, clock, ids: { next: () => `a${String(++next)}` } };
 }
