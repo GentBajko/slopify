@@ -8,12 +8,8 @@ import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
-import {
-  setAsideProjects,
-  settledStatus,
-  uploadedAndSettled,
-  uploadedProjects,
-} from "../uploads/repo.js";
+import { setAsideProjects, uploadedAndSettled, uploadedProjects } from "../uploads/repo.js";
+import { settledStatus } from "../uploads/rules.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
 import { preparedProject } from "./prepare.js";

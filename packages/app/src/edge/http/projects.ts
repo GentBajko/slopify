@@ -27,10 +27,10 @@ import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
 import {
   setAsideProjects,
-  settledStatus,
   uploadedAndSettled,
   uploadedProjects,
 } from "../../slices/uploads/repo.js";
+import { settledStatus } from "../../slices/uploads/rules.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 import { createProject } from "./project-create.js";

@@ -1,5 +1,4 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { ProjectState } from "../../kernel/pipeline.js";
 import { admittedUnfinished, oneProject } from "../admission/repo.js";
 
 // "Mark uploaded": the person's own note that a finished video is on YouTube. Slopify never
@@ -58,12 +57,6 @@ export function uploadedAndSettled(db: DatabaseSync, projectId?: string): Readon
       .all(...one.params)
       .map((row) => String(row.project_id)),
   );
-}
-
-// An uploaded, settled project reads done where its run would read paused or pending: the
-// Projects list, a project's page and the calendar.
-export function settledStatus(status: ProjectState, settled: boolean): ProjectState {
-  return settled && (status === "paused" || status === "pending") ? "done" : status;
 }
 
 // "Keep as is": a waiting run the person leaves as it is, until the project's next edit. Set on
