@@ -136,6 +136,10 @@ it("applies a template under StrictMode effect replay", async () => {
   await waitFor(() => expect(apply).toHaveBeenCalledOnce());
 });
 
+// The real Play session loads and saves its draft between steps: past the 1 s default wait
+// under a loaded full suite.
+const playSession = { timeout: 5_000 };
+
 it("opens an applied template through the real Play session", async () => {
   const user = userEvent.setup();
   let opened = false;
@@ -162,9 +166,11 @@ it("opens an applied template through the real Play session", async () => {
         Response.json({ draft: draftView }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
-  await waitFor(() => expect(opened).toBe(true));
-});
+  await user.click(
+    await screen.findByRole("button", { name: `Use ${template.name} in Play` }, playSession),
+  );
+  await waitFor(() => expect(opened).toBe(true), playSession);
+}, 20_000);
 
 it("does not install a template after the route unmounts during draft loading", async () => {
   const user = userEvent.setup();
@@ -199,13 +205,15 @@ it("does not install a template after the route unmounts during draft loading", 
         Response.json({ draft: draftView }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
-  await screen.findByRole("button", { name: "Refresh templates" });
+  await user.click(
+    await screen.findByRole("button", { name: `Use ${template.name} in Play` }, playSession),
+  );
+  await screen.findByRole("button", { name: "Refresh templates" }, playSession);
   leave();
-  await screen.findByText("Templates left");
+  await screen.findByText("Templates left", {}, playSession);
   draftResponse.resolve(Response.json(draftView));
-  await waitFor(() => expect(opened).toBe(false));
-});
+  await waitFor(() => expect(opened).toBe(false), playSession);
+}, 20_000);
 
 it("confirms deletion and keeps the template visible when the server refuses", async () => {
   const user = userEvent.setup();
