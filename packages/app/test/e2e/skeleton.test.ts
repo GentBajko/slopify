@@ -8,6 +8,7 @@ import type { Config } from "../../src/kernel/config/index.js";
 import type { Paths } from "../../src/kernel/paths.js";
 import { boot } from "../../src/main.js";
 import type { RunDraft } from "../../src/slices/admission/model.js";
+import { outputPath } from "../../src/slices/storage/layout.js";
 import { resolveFfmpeg } from "../../src/slices/video/ffmpeg.js";
 
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
@@ -211,8 +212,10 @@ describe("a project whose every stage is provided renders an mp4", () => {
     const completed = (await (await fetch(`${url}/api/projects/${project.id}`)).json()) as {
       outputs: Array<{ role: string; path: string }>;
     };
-    const video = join(
-      paths.projects,
+    // Arranging may have moved the files since the run finished: each is read where it is now
+    // (`outputPath`), in one synchronous stretch no arranging can run in.
+    const video = outputPath(
+      paths,
       project.id,
       completed.outputs.find((row) => row.role === "video")?.path ?? "missing",
     );
@@ -223,8 +226,8 @@ describe("a project whose every stage is provided renders an mp4", () => {
     // test/video-render.test.ts.
     const plan = JSON.parse(
       readFileSync(
-        join(
-          paths.projects,
+        outputPath(
+          paths,
           project.id,
           completed.outputs.find((row) => row.role === "render_params")?.path ?? "missing",
         ),

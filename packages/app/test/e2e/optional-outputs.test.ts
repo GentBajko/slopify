@@ -6,6 +6,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Boot, boot } from "../../src/main.js";
 import type { ProjectSummary, RunDraft, Stage } from "../../src/slices/admission/model.js";
+import { outputPath } from "../../src/slices/storage/layout.js";
 import type { Output } from "../../src/slices/storage/model.js";
 import { resolveFfmpeg } from "../../src/slices/video/ffmpeg.js";
 
@@ -117,6 +118,9 @@ function fixture(kind: "audio" | "images"): string {
   return path;
 }
 
+// Background arranging may have moved a finished project's files since the stored path was
+// read: callers resolve it where it is now (`outputPath`) in the same synchronous step as this
+// probe, which blocks the process, so no arranging can run in between.
 function probe(path: string): string {
   try {
     execFileSync(ffmpeg, ["-hide_banner", "-i", path], { windowsHide: true, stdio: "pipe" });
@@ -162,8 +166,8 @@ describe("optional outputs through the real app", () => {
     // The Windows ffmpeg build labels stereo WAV streams as "2 channels".
     expect(
       probe(
-        join(
-          app.paths.projects,
+        outputPath(
+          app.paths,
           id,
           view.outputs.find((output) => output.role === "audio_export")?.path ?? "missing",
         ),
@@ -184,8 +188,8 @@ describe("optional outputs through the real app", () => {
     );
     const view = await finished(app, id);
     const report = probe(
-      join(
-        app.paths.projects,
+      outputPath(
+        app.paths,
         id,
         view.outputs.find((output) => output.role === "video")?.path ?? "missing",
       ),

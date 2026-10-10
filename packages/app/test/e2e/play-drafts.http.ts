@@ -13,6 +13,7 @@ import {
   draftViewSchema,
   playReviewSchema,
 } from "../../src/slices/play-drafts/schema.js";
+import { outputPath } from "../../src/slices/storage/layout.js";
 import { stagedFiles } from "../../src/slices/storage/repo.js";
 import { outputSchema } from "../../src/slices/storage/schema.js";
 import { resolveFfmpeg } from "../../src/slices/video/ffmpeg.js";
@@ -227,7 +228,8 @@ export async function originalOutputs(
     .toSorted((a, b) => (a.meta.index ?? 0) - (b.meta.index ?? 0));
   expect(images).toHaveLength(2);
   for (const [index, image] of images.entries()) {
-    expect(readFileSync(join(app.paths.projects, id, image.path))).toEqual(fixture.images[index]);
+    // Where arranging put it now (`outputPath`), read in the same synchronous step.
+    expect(readFileSync(outputPath(app.paths, id, image.path))).toEqual(fixture.images[index]);
     expect(await bytes(app, `/files/${id}/image-${index + 1}`)).toEqual(fixture.images[index]);
   }
 }
