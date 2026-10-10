@@ -309,15 +309,15 @@ export interface ReviewReleaseDeps {
   readonly log: Pick<Log, "write">;
 }
 
-// At boot and every few seconds: each review past its deadline passes, says so, and the run
-// goes on. The deadline is a row, so a restart in between loses nothing.
 function itemName(db: DatabaseSync, review: SettledReview): string | undefined {
   const revision = revisionById(db, review.projectId, review.revisionId);
   return reviewItemName(review.itemKey, revision?.content.imageOrder ?? []);
 }
 
-// Each passed review is announced and woken on its own: one that throws is logged, and the
-// others still go on (the passing itself is already saved).
+// At boot and every few seconds: each review past its deadline passes, says so, and the run
+// goes on. The deadline is a row, so a restart in between loses nothing. Each passed review is
+// announced and woken on its own: one that throws is logged, and the others still go on (the
+// passing itself is already saved).
 export function releaseDueReviews(deps: ReviewReleaseDeps): number {
   const passed = settleExternalReviews(deps.db, deps.now());
   for (const review of passed) {
