@@ -122,6 +122,68 @@ it("counts a run that waits again at a new point since the page last looked", ()
   expect(awaySummary(snapshotOf(0, [paused]), [at("cp-article")])).toMatchObject({ waiting: 1 });
 });
 
+const holdAt = (
+  checkpointId: string,
+  fingerprint = "f1",
+  waitsFor: "person" | "day" = "person",
+) => ({
+  checkpointId,
+  stage: "audio" as const,
+  waitsFor,
+  revisionId: "r1",
+  fingerprint,
+  since: "2026-10-10T00:00:00.000Z",
+});
+const heldAt = (...holding: ReturnType<typeof holdAt>[]) => ({
+  id: "a",
+  status: "pending" as const,
+  progress: 0.5,
+  holding,
+});
+
+// A point the run did not wait at before is news; one of its points approved while away is not.
+it("counts a run that waits at a new checkpoint, not one with a checkpoint approved", () => {
+  const before = snapshotOf(0, [heldAt(holdAt("cp-audio"), holdAt("cp-video"))]);
+  expect(awaySummary(before, [heldAt(holdAt("cp-video"))])).toMatchObject({ waiting: 0 });
+  expect(awaySummary(before, [heldAt(holdAt("cp-video"), holdAt("cp-images"))])).toMatchObject({
+    waiting: 1,
+  });
+  // The same checkpoint for a remade item (a new fingerprint) asks again.
+  expect(awaySummary(before, [heldAt(holdAt("cp-audio", "f2"))])).toMatchObject({ waiting: 1 });
+  // Only the person's checkpoints count: a schedule's own hold for its day asks nothing of them.
+  expect(
+    awaySummary(before, [heldAt(holdAt("cp-audio"), holdAt("cp-day", "f1", "day"))]),
+  ).toMatchObject({ waiting: 0 });
+});
+
+// Continued and paused again, or continued and stopped again by a restart, while away: news.
+it("counts a run paused or stopped again since the page looked", () => {
+  const paused = (updatedAt: string) => ({
+    id: "a",
+    status: "paused" as const,
+    progress: 0.5,
+    updatedAt,
+  });
+  const before = snapshotOf(0, [paused("2026-10-10T08:00:00.000Z")]);
+  expect(awaySummary(before, [paused("2026-10-10T08:00:00.000Z")])).toMatchObject({ waiting: 0 });
+  expect(awaySummary(before, [paused("2026-10-10T09:00:00.000Z")])).toMatchObject({ waiting: 1 });
+  const stopped = (progress: number) => ({
+    id: "a",
+    status: "pending" as const,
+    progress,
+    stopped: true,
+  });
+  const restarted = snapshotOf(0, [stopped(0.4)]);
+  expect(awaySummary(restarted, [stopped(0.4)])).toMatchObject({ waiting: 0 });
+  expect(awaySummary(restarted, [stopped(0.7)])).toMatchObject({ waiting: 1 });
+  // Kept before points carried when they began, a pause or a stop is the same one as now.
+  const legacy = { at: 0, states: { a: "paused" as const }, waiting: { a: "paused" } };
+  expect(awaySummary(legacy, [paused("2026-10-10T09:00:00.000Z")])).toMatchObject({ waiting: 0 });
+  expect(awaySummary({ ...legacy, waiting: { a: "stopped" } }, [stopped(0.7)])).toMatchObject({
+    waiting: 0,
+  });
+});
+
 // An agent may fix a failed run, or remake a finished one, while the page is away: the run's
 // new end is news either way.
 it("tells a failed run that finished, and a finished one that failed, since the page looked", () => {
