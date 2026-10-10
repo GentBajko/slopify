@@ -52,7 +52,7 @@ export function projectHolds(db: DatabaseSync): ProjectHolds {
     if (reached(gate.project_id, gate.stage)) reachedTheirs.add(gate.project_id);
   }
   const scheduled = db
-    .prepare(`SELECT v.project_id FROM prepared_videos v WHERE ${heldForItsDay("v")}`)
+    .prepare("SELECT project_id FROM prepared_videos WHERE added_checkpoint=1")
     .all()
     .map((row) => projectRow.parse(row).project_id);
   const agents = waitingExternalReviewRows(db).map((row) => projectRow.parse(row).project_id);
