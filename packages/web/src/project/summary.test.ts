@@ -102,6 +102,15 @@ describe("the summary in a rundown row", () => {
     );
   });
 
+  // Kept as is speaks only of a waiting run: once the run goes on again, or a step of it
+  // failed, its steps say what they wait for.
+  it("says a stage of a resumed or failed run waits for the stages above, Kept as is or not", () => {
+    for (const status of ["running", "failed"] as const)
+      expect(summaryOf(stage("video", "pending"), [], { ...project, status, setAside: true })).toBe(
+        "Waits for the stages above",
+      );
+  });
+
   it("names the file behind a provided stage", () => {
     const outputs = [output("audio_body", "audio", { originalFilename: "body.mp3" })];
     expect(summaryOf(stage("audio", "provided"), outputs, project)).toBe("body.mp3");
