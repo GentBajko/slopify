@@ -306,3 +306,15 @@ it("says a replaced review of a canceled step is canceled", () => {
   if (review === undefined) throw new Error("the review row stays");
   expect(reviewStanding(db, review)).toBe("canceled");
 });
+
+// Only a review of the same item takes its place: another item's waiting review doesn't.
+it("says a replaced review with no new one for its item is replaced-pending", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  addUnreadableReview(f);
+  db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("replaced-pending");
+});

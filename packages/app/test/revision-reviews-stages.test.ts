@@ -32,7 +32,7 @@ import {
   settleExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
 import { externalReviewById } from "../src/slices/reviews/external-rows.js";
-import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
+import { reviewStanding, waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";
@@ -570,8 +570,12 @@ it("holds the video while an agent's reviews wait, opens new ones after Re-run, 
 
     // The few-seconds settle (`main.ts` releaseReviews) marks the replaced ones.
     settleExternalReviews(deps.db, new Date());
-    for (const old of first)
-      expect(externalReviewById(deps.db, h.projectId, old.id)?.state).toBe("superseded");
+    for (const old of first) {
+      const replaced = externalReviewById(deps.db, h.projectId, old.id);
+      expect(replaced?.state).toBe("superseded");
+      // Its item's new review waits, so the old one says it was replaced (`replacementWaits`).
+      if (replaced !== undefined) expect(reviewStanding(deps.db, replaced)).toBe("superseded");
+    }
     for (const review of second)
       answerExternalReview(deps.db, {
         projectId: h.projectId,
