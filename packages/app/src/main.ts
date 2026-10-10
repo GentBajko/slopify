@@ -70,8 +70,7 @@ import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/ru
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import { projectById, projectPaused, projectTrashed } from "./slices/admission/repo.js";
-import { lastStarter } from "./slices/agents/repo.js";
+import { projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
@@ -91,6 +90,7 @@ import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { projectLink } from "./slices/notifications/rules.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
+import { noticeSubject } from "./slices/notifications/subject.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
@@ -110,7 +110,6 @@ import {
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
 import { releaseDueReviews } from "./slices/reviews/external.js";
-import { projectHolds } from "./slices/reviews/holds.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
@@ -316,17 +315,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const sendNotification = createNotificationSender(globalThis.fetch);
     const notifier = createRunNotifier({
       url: () => readNotificationUrl(eventDb),
-      subject: (projectId) => {
-        const project = projectById(eventDb, projectId);
-        return project === undefined
-          ? undefined
-          : {
-              title: project.title,
-              makesVideo: project.config.sources.video !== "off",
-              startedBy: lastStarter(eventDb, projectId),
-              waitingForAgent: projectHolds(eventDb, { projectId }).waitingForAgent.has(projectId),
-            };
-      },
+      subject: (projectId) => noticeSubject(eventDb, projectId),
       // Read when a notification goes out, by which time the server is listening.
       link: (projectId) => projectLink(config.host, listeningPort, projectId),
       send: sendNotification,
