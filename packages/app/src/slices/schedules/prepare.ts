@@ -205,15 +205,15 @@ export function preparedTopics(
 // A project a schedule prepared ahead whose Before Video hold is the schedule's own, so it
 // waits for its day, not for anyone (decided 2026-10-10). A hold its template had anyway is
 // the person's to approve, prepared or not. The day deletes the row (`continuePrepared`).
-export function heldForItsDay(projectId: string): string {
-  return `EXISTS (SELECT 1 FROM prepared_videos p WHERE p.project_id=${projectId} AND p.added_checkpoint=1)`;
+export function heldForItsDay(alias: string, column = "project_id"): string {
+  return `EXISTS (SELECT 1 FROM prepared_videos p WHERE p.project_id=${alias}.${column} AND p.added_checkpoint=1)`;
 }
 
 // The projects `heldForItsDay`: the lists and pages read them as Prepared (`heldStateWord`).
 export function preparedProjectIds(db: DatabaseSync): ReadonlySet<string> {
   return new Set(
     db
-      .prepare(`SELECT v.project_id FROM prepared_videos v WHERE ${heldForItsDay("v.project_id")}`)
+      .prepare(`SELECT v.project_id FROM prepared_videos v WHERE ${heldForItsDay("v")}`)
       .all()
       .map((row) => z.object({ project_id: z.string() }).parse(row).project_id),
   );

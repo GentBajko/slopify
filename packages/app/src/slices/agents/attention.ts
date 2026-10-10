@@ -199,7 +199,7 @@ function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
        JOIN projects p ON p.id=c.project_id
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}
-         AND NOT (c.stage='video' AND ${heldForItsDay("c.project_id")})`,
+         AND NOT (c.stage='video' AND ${heldForItsDay("c")})`,
     )
     .all();
   return rowsOf(rows, "review checkpoints", skip, (value) => {

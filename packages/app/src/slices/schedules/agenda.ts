@@ -147,7 +147,7 @@ function awaitingReview(db: DatabaseSync): ReadonlySet<string> {
       `SELECT c.project_id AS id FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL
-         AND NOT (c.stage='video' AND ${heldForItsDay("c.project_id")})
+         AND NOT (c.stage='video' AND ${heldForItsDay("c")})
        UNION
        SELECT v.project_id AS id FROM review_verdicts v
        JOIN project_heads h ON h.project_id=v.project_id AND h.revision_id=v.revision_id
