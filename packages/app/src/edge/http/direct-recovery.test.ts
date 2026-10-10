@@ -81,3 +81,33 @@ it("validates routes, owns one action UUID, and returns exact receipts", async (
     h.close();
   }
 });
+
+// A control's answer carries the page's own resumable, read after the action: a stopped run,
+// once paused, offers Continue the run as a paused one, not as a stopped one.
+it("answers Pause with the run's resumable as it stands after the pause", async () => {
+  const h = await paidServiceFixture();
+  try {
+    const app = createApp({
+      ...h.deps,
+      rebuild: h.deps,
+      hub: createHub(h.deps),
+      version: "test",
+      webDist: "/unused",
+      flushSoon: () => undefined,
+      probe: async () => ({ ran: false, stdout: "" }),
+    });
+    const page = async () =>
+      (await (await app.request(`/api/projects/${h.projectId}`)).json()) as { resumable: unknown };
+    expect((await page()).resumable).toBe(true);
+    const paused = await app.request(`/api/projects/${h.projectId}/pause`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ baseRevisionId: h.base.revision.id, idempotencyKey: randomUUID() }),
+    });
+    expect(paused.status).toBe(200);
+    expect(((await paused.json()) as { resumable: unknown }).resumable).toBe(false);
+    expect((await page()).resumable).toBe(false);
+  } finally {
+    h.close();
+  }
+});
