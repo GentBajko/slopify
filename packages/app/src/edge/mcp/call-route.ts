@@ -48,7 +48,7 @@ export async function callRoute(
   const { method, path } = routeOf(tool);
   const named = paramsOf(path).find((name) => !pathParam.safeParse(args[name]).success);
   if (named !== undefined) return strayPath(tool, named);
-  const filled = path.replace(/:(\w+)/g, (_, name: string) => String(args[name]));
+  const filled = filledPath(path, args);
   const url = new URL(filled, "http://localhost");
   // The URL must still be the tool's own route once resolved, or it would reach another one.
   if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
@@ -90,7 +90,7 @@ async function confirmText(
   args: Readonly<Record<string, unknown>>,
 ): Promise<string | undefined> {
   if (tool.confirmFrom === undefined) return undefined;
-  const path = tool.confirmFrom.route.replace(/:(\w+)/g, (_, name: string) => String(args[name]));
+  const path = filledPath(tool.confirmFrom.route, args);
   try {
     const response = await deps.api(new Request(new URL(path, "http://localhost")));
     return response.ok ? tool.confirmFrom.text(await response.json()) : undefined;
@@ -100,6 +100,11 @@ async function confirmText(
     });
     return undefined;
   }
+}
+
+// The route's path with this call's (already checked) parameters in place.
+function filledPath(path: string, args: Readonly<Record<string, unknown>>): string {
+  return path.replace(/:(\w+)/g, (_, name: string) => String(args[name]));
 }
 
 function strayPath(tool: RouteTool, named: string): CallToolResult {

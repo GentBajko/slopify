@@ -180,12 +180,15 @@ export function ProjectStorageList({
         }
         consequence={
           asking?.kind === "old"
-            ? oldVersionsConsequence(asking.project.historyFiles, asking.project.historyBytes)
+            ? oldVersionsConsequence({
+                files: asking.project.historyFiles,
+                bytes: asking.project.historyBytes,
+              })
             : asking?.kind === "trim"
               ? keepOutputsConsequence(asking.project.removableFiles, asking.project.removableBytes)
               : asking?.kind === "all-old"
-                ? oldVersionsConsequence(historyFiles, history)
-                : `${oldVersionsConsequence(historyFiles, history)} ${keepOutputsConsequence(workingFiles, working)} Projects that are running or not finished keep everything.`
+                ? oldVersionsConsequence({ files: historyFiles, bytes: history })
+                : `${oldVersionsConsequence({ files: historyFiles, bytes: history })} ${keepOutputsConsequence(workingFiles, working)} Projects that are running or not finished keep everything.`
         }
         confirmLabel={
           asking?.kind === "trim"

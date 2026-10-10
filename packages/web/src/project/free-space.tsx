@@ -127,7 +127,7 @@ export function FreeSpaceOffer({
       <ConfirmDialog
         open={askingOld}
         title={`Delete the old versions of "${title}"?`}
-        consequence={oldVersionsConsequence(data.historyFiles, data.historyBytes)}
+        consequence={oldVersionsConsequence({ files: data.historyFiles, bytes: data.historyBytes })}
         confirmLabel={`Free ${history}`}
         cancelLabel="Keep the old versions"
         pending={old.isPending}

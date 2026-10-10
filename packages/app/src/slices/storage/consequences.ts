@@ -16,7 +16,15 @@ export function fileSize(bytes: number): string {
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")} ${unit}`;
 }
 
-// What Delete old versions removes and what it costs later.
-export function oldVersionsConsequence(files: number, bytes: number): string {
-  return `This deletes ${String(files)} file(s) of older versions and frees ${fileSize(bytes)}: what is in the projects' History folders (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything you uploaded or put there yourself. Going back to one of those older versions makes its files again, which takes time and uses provider credits.`;
+// What Delete old versions removes and what it costs later; without the numbers when they
+// can't be read.
+export function oldVersionsConsequence(size?: {
+  readonly files: number;
+  readonly bytes: number;
+}): string {
+  const what =
+    size === undefined
+      ? "the older versions"
+      : `${String(size.files)} file(s) of older versions and frees ${fileSize(size.bytes)}`;
+  return `This deletes ${what}: what is in the projects' History folders (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything you uploaded or put there yourself. Going back to one of those older versions makes its files again, which takes time and uses provider credits.`;
 }
