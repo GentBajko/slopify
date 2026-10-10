@@ -612,15 +612,15 @@ describe("home", () => {
     );
     const region = await screen.findByRole("region", { name: "Running now" });
     const all = await within(region).findByRole("link", { name: "See all 4 running" });
-    expect(all.getAttribute("href")).toBe("/projects?show=now");
+    expect(all.getAttribute("href")).toBe("/projects?show=running");
     expect(within(region).getByText("Hypatia, Cleopatra and 1 more")).not.toBeNull();
     expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
       "/projects?show=queued",
     );
   });
 
-  // Paused runs sit under Needs you on Home but under Running on Projects, so the link opens the
-  // Running now filter: the runs Home counts, and no others.
+  // Paused runs sit under Needs you on both screens, so the link's Running filter holds the runs
+  // Home counts, and no others.
   it("links to a Projects filter with as many runs as Home counts", async () => {
     const projects = [
       ...["r1", "r2", "r3", "r4"].map((id) => listing(id, `Run ${id}`, "running")),

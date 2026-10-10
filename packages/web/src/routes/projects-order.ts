@@ -1,14 +1,9 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import {
-  parkedOnAgent,
-  queuedRun,
-  runningNow,
-  waitsForPerson,
-} from "@app/slices/admission/state-words.js";
+import { queuedRun, runningNow, waitsForPerson } from "@app/slices/admission/state-words.js";
 import { isReadyToUpload } from "@/home/ready";
 
-const filterValues = ["all", "running", "now", "queued", "waiting", "ready", "failed"] as const;
+const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
 export type ProjectFilter = (typeof filterValues)[number];
 
 // The `?show=` search value Home's links use ("See all 5 running"); anything else is All.
@@ -19,7 +14,6 @@ export function projectFilterOf(value: unknown): ProjectFilter | undefined {
 export const filters: readonly { readonly value: ProjectFilter; readonly label: string }[] = [
   { value: "all", label: "All" },
   { value: "running", label: "Running" },
-  { value: "now", label: "Running now" },
   { value: "queued", label: "Queued" },
   { value: "waiting", label: "Needs you" },
   { value: "ready", label: "Ready to upload" },
@@ -30,10 +24,8 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
   switch (filter) {
     case "all":
       return true;
+    // Home's Running now: a paused run waits for the person, under Needs you.
     case "running":
-      return project.status === "running" || project.status === "paused" || parkedOnAgent(project);
-    // Home's Running now, without the paused runs Home lists under Needs you.
-    case "now":
       return runningNow(project);
     case "queued":
       return queuedRun(project);

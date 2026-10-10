@@ -220,6 +220,35 @@ describe("needs you", () => {
     expect(matches(stopped, "waiting")).toBe(true);
   });
 
+  // One Running filter, Home's count: what goes on by itself. A paused run waits for the
+  // person, under Needs you on both screens.
+  it("offers one Running filter, with the runs Home counts and no paused one", async () => {
+    renderRouted(
+      <ProjectsRoute />,
+      deps([
+        listing("p1", "Going", "running", { progress: 0.5 }),
+        listing("p2", "Agent one", "pending", { progress: 0.5, waitingForAgent: true }),
+        listing("p3", "Paused one", "paused", { progress: 0.5 }),
+      ]),
+    );
+    const show = await screen.findByRole("group", { name: "Show" });
+    expect(
+      within(show)
+        .getAllByRole("button")
+        .map((one) => one.textContent),
+    ).toEqual(["All", "Running", "Queued", "Needs you", "Ready to upload", "Failed"]);
+    const glance = screen.getByRole("complementary", { name: "Projects at a glance" });
+    expect(
+      within(glance)
+        .getAllByRole("term")
+        .map((one) => one.textContent),
+    ).toEqual(["Running", "Queued", "Needs you", "Ready to upload", "Failed"]);
+    expect(within(glance).getByText("Running").nextElementSibling?.textContent).toBe("2");
+    expect(matches(listing("p3", "Paused one", "paused", { progress: 0.5 }), "running")).toBe(
+      false,
+    );
+  });
+
   // A run parked on an agent's review goes on by itself: it is among the running ones, as on
   // Home's Running now.
   it("counts a run waiting for the agent as running", () => {

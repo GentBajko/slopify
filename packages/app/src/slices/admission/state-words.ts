@@ -91,7 +91,7 @@ export function parkedOnAgent(
 }
 
 // Going on by itself: running, or parked on an agent's review. Home's Running now and the
-// Projects filter of the same name.
+// Projects Running filter.
 export function runningNow(
   project: Pick<ProjectStanding, "status" | "setAside" | "waitingForAgent">,
 ): boolean {
