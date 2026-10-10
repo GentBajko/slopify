@@ -108,6 +108,18 @@ it("counts a run that waits again at a new point since the page last looked", ()
   expect(awaySummary(snapshotOf(0, [paused]), [at("cp-article")])).toMatchObject({ waiting: 1 });
 });
 
+// An agent may fix a failed run, or remake a finished one, while the page is away: the run's
+// new end is news either way.
+it("tells a failed run that finished, and a finished one that failed, since the page looked", () => {
+  expect(
+    awaySummary({ at: 0, states: { a: "failed", b: "done", c: "failed" }, waiting: {} }, [
+      { id: "a", status: "done", progress: 1 },
+      { id: "b", status: "failed", progress: 1 },
+      { id: "c", status: "failed", progress: 1 },
+    ]),
+  ).toEqual({ finished: 1, failed: 1, waiting: 0 });
+});
+
 describe("the stored snapshot", () => {
   // This runner has no localStorage, so the tests bring their own.
   const stored = new Map<string, string>();

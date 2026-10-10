@@ -30,8 +30,6 @@ const key = "slopify.away.snapshot";
 // Shorter absences than this are a glance at another tab, not time away.
 export const awayAfterMs = 2 * 60_000;
 
-const going: ReadonlySet<ProjectState> = new Set(["running", "pending", "paused"]);
-
 export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
   return {
     at,
@@ -57,10 +55,9 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
   let failed = 0;
   let waiting = 0;
   for (const project of now) {
-    const was = before.states[project.id];
-    // A project started while away (a schedule's) counts once it ended.
-    if (was !== undefined && !going.has(was)) continue;
-    const changed = was !== project.status;
+    // A run that ended differently since the page looked: one started while away (a
+    // schedule's), or a failed or finished one an agent took up again.
+    const changed = before.states[project.id] !== project.status;
     if (changed && (project.status === "done" || project.status === "partial")) finished += 1;
     else if (changed && project.status === "failed") failed += 1;
     // Stopped to wait for a review or a decision since the page last looked, or at another one.
