@@ -16,8 +16,8 @@ import { externalReviewWaitMs } from "../src/slices/reviews/external-model.js";
 import {
   answerExternalReview,
   settleExternalReviews,
-  waitingExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
+import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import { projectHolds } from "../src/slices/reviews/holds.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
 import { composedFixture, current, save, start, tone } from "./revision-rebuild.fake.js";

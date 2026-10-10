@@ -6,7 +6,8 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
 import { closedReviewSentences } from "../../slices/reviews/external-model.js";
-import { externalReviewById, reviewStanding } from "../../slices/reviews/external-repo.js";
+import { externalReviewById } from "../../slices/reviews/external-rows.js";
+import { reviewStanding } from "../../slices/reviews/external-waiting.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { refusal } from "./call-route.js";
 

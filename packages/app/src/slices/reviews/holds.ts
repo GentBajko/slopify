@@ -17,7 +17,7 @@ import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
 import { uploadedAndSettled } from "../uploads/repo.js";
-import { projectsWaitingOnAgents } from "./external-repo.js";
+import { projectsWaitingOnAgents } from "./external-waiting.js";
 
 // What a held run waits for when it isn't the person: the one rule the Projects list, a
 // project's page, the calendar, Home and the MCP tools read (`admission/state-words.ts`).

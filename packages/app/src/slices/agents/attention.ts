@@ -4,7 +4,8 @@ import { causedBy } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
-import { externalReviewOf, waitingExternalReviewRows } from "../reviews/external-repo.js";
+import { externalReviewOf } from "../reviews/external-rows.js";
+import { waitingExternalReviewRows } from "../reviews/external-waiting.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {

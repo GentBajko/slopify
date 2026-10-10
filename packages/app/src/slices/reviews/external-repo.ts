@@ -1,92 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
-import { liveProject, oneProject, projectTrashed } from "../admission/repo.js";
-import { type Actor, actors } from "../agents/model.js";
-import {
-  type ExternalAnswerResult,
-  type ExternalReview,
-  externalReviewStates,
-  type ReviewStanding,
-  type SettledReview,
-} from "./external-model.js";
+import { liveProject } from "../admission/repo.js";
+import type { Actor } from "../agents/model.js";
+import type { ExternalAnswerResult, ExternalReview, SettledReview } from "./external-model.js";
+import { externalReviewByFingerprint, externalReviewById } from "./external-rows.js";
+import { liveWork, reviewStanding, wantedBy } from "./external-waiting.js";
 import { type ReviewVerdict, reviewStages } from "./model.js";
-
-const materialSchema = z.object({
-  request: z.object({
-    stage: z.enum(reviewStages),
-    instruction: z.string(),
-    sections: z.array(z.object({ label: z.string(), text: z.string() })),
-    images: z.array(z.string()),
-  }),
-  images: z.array(z.object({ stored: z.string(), name: z.string() })),
-});
-const verdictSchema = z.object({ passed: z.boolean(), reasons: z.array(z.string()) });
-const rowSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  revision_id: z.string(),
-  work_id: z.string(),
-  piece_id: z.string(),
-  work_key: z.string(),
-  item_key: z.string(),
-  stage: z.enum(reviewStages),
-  item_fingerprint: z.string(),
-  review_fingerprint: z.string(),
-  material: z.string(),
-  state: z.enum(externalReviewStates),
-  waiting_since: z.string(),
-  deadline_at: z.string(),
-  verdict: z.string().nullable(),
-  answered_by: z.enum(actors).nullable(),
-  answered_at: z.string().nullable(),
-});
-
-// One stored review as the slice speaks of it; throws for a row that can't be read back.
-export function externalReviewOf(value: unknown): ExternalReview {
-  const row = rowSchema.parse(value);
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    revisionId: row.revision_id,
-    workId: row.work_id,
-    pieceId: row.piece_id,
-    workKey: row.work_key,
-    itemKey: row.item_key,
-    stage: row.stage,
-    itemFingerprint: row.item_fingerprint,
-    reviewFingerprint: row.review_fingerprint,
-    material: materialSchema.parse(JSON.parse(row.material)),
-    state: row.state,
-    waitingSince: row.waiting_since,
-    deadlineAt: row.deadline_at,
-    verdict: row.verdict === null ? null : verdictSchema.parse(JSON.parse(row.verdict)),
-    answeredBy: row.answered_by,
-    answeredAt: row.answered_at,
-  };
-}
-
-// A review the project still wants: its step is reserved by the project's current version with
-// the same fingerprint. A rerun or an edit that replaced the item leaves it unwanted.
-function wantedBy(table: string): string {
-  return `EXISTS (SELECT 1 FROM revision_work_reservations r
-    JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
-    WHERE r.project_id=${table}.project_id AND r.work_id=${table}.work_id
-      AND r.work_key=${table}.work_key AND r.fingerprint=${table}.review_fingerprint)`;
-}
-
-// Nothing of a canceled run goes ahead on its own: the review's work, or its own step, is
-// canceled. Another step canceled is not enough: retrying one step (`recoverProject`) admits
-// it again while the rest stay canceled, and its reviews wait for their verdict.
-function liveWork(table: string): string {
-  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND NOT ${canceledStep("w")})`;
-}
-
-// The step reads canceled by its stage too, whatever the work row says: a restart before
-// canceled work was kept canceled (`recoverWork`) held it pending.
-function canceledStep(work: string): string {
-  return `(${work}.state='canceled' OR EXISTS (SELECT 1 FROM stages s WHERE s.id=${work}.stage_id AND s.state='canceled'))`;
-}
 
 // A step asked again for the same review keeps its row; one whose earlier wait was superseded
 // waits again from now.
@@ -132,28 +52,6 @@ export function stopWaitingReviews(db: DatabaseSync, projectId: string): void {
   db.prepare(
     "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND state='waiting'",
   ).run(projectId);
-}
-
-export function externalReviewByFingerprint(
-  db: DatabaseSync,
-  projectId: string,
-  reviewFingerprint: string,
-): ExternalReview | undefined {
-  const row = db
-    .prepare("SELECT * FROM external_reviews WHERE project_id=? AND review_fingerprint=?")
-    .get(projectId, reviewFingerprint);
-  return row === undefined ? undefined : externalReviewOf(row);
-}
-
-export function externalReviewById(
-  db: DatabaseSync,
-  projectId: string,
-  id: string,
-): ExternalReview | undefined {
-  const row = db
-    .prepare("SELECT * FROM external_reviews WHERE project_id=? AND id=?")
-    .get(projectId, id);
-  return row === undefined ? undefined : externalReviewOf(row);
 }
 
 // The step that waited ended its stage as held, which parks the work (`finishWork`); a settled
@@ -214,72 +112,6 @@ export function answerExternalReview(
       },
     };
   });
-}
-
-// Where a review stands, in the one order get_external_review and a refused verdict both say
-// it: a verdict already kept, its step canceled (no new one waits), its item replaced or its
-// step gone (`superseded` or `outdated`), then its project in the Trash - said last, as only
-// then would Restore bring it back. It waits only when none holds, exactly when `stillWaiting`
-// lists it.
-export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
-  if (review.state === "answered" || review.state === "auto-passed") return review.state;
-  if (
-    db
-      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledStep("w")}`)
-      .get(review.workId) !== undefined
-  )
-    return "canceled";
-  const wanted =
-    review.state === "waiting" &&
-    db
-      .prepare(
-        `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")} AND ${liveWork("e")}`,
-      )
-      .get(review.projectId, review.id) !== undefined;
-  if (!wanted) return replacementWaits(db, review) ? "superseded" : "outdated";
-  return projectTrashed(db, review.projectId) ? "trashed" : "waiting";
-}
-
-// Whether another review of the same item waits in its place.
-function replacementWaits(db: DatabaseSync, review: ExternalReview): boolean {
-  return (
-    db
-      .prepare(
-        `SELECT 1 FROM external_reviews e WHERE ${stillWaiting} AND e.project_id=? AND e.item_key=? AND e.id!=?`,
-      )
-      .get(review.projectId, review.itemKey, review.id) !== undefined
-  );
-}
-
-// A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the
-// Trash.
-const stillWaiting = `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}`;
-
-// Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.
-export function waitingExternalReviews(
-  db: DatabaseSync,
-  projectId?: string,
-): readonly ExternalReview[] {
-  return waitingExternalReviewRows(db, projectId).map(externalReviewOf);
-}
-
-// The same rows unread, for a caller that skips one it can't read instead of failing them all.
-export function waitingExternalReviewRows(db: DatabaseSync, projectId?: string): unknown[] {
-  const one = oneProject("e", projectId);
-  return db
-    .prepare(
-      `SELECT e.* FROM external_reviews e WHERE ${stillWaiting}${one.sql} ORDER BY e.waiting_since, e.rowid`,
-    )
-    .all(...one.params);
-}
-
-// The projects with a review waiting for an agent, as `waitingExternalReviewRows` finds them.
-export function projectsWaitingOnAgents(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
-  const one = oneProject("e", projectId);
-  const rows = db
-    .prepare(`SELECT DISTINCT e.project_id FROM external_reviews e WHERE ${stillWaiting}${one.sql}`)
-    .all(...one.params);
-  return new Set(rows.map((row) => z.string().parse(row.project_id)));
 }
 
 const dueRow = z.object({

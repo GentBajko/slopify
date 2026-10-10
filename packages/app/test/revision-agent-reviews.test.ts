@@ -26,8 +26,8 @@ import { releaseDueReviews } from "../src/slices/reviews/external-release.js";
 import {
   answerExternalReview,
   settleExternalReviews,
-  waitingExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
+import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import { projectHolds } from "../src/slices/reviews/holds.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";

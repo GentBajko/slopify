@@ -29,10 +29,10 @@ import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
 import {
   answerExternalReview,
-  externalReviewById,
   settleExternalReviews,
-  waitingExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
+import { externalReviewById } from "../src/slices/reviews/external-rows.js";
+import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";

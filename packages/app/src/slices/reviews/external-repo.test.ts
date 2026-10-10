@@ -6,12 +6,11 @@ import {
 } from "./external-repo.fake.js";
 import {
   answerExternalReview,
-  externalReviewById,
   openExternalReview,
-  reviewStanding,
   settleExternalReviews,
-  waitingExternalReviews,
 } from "./external-repo.js";
+import { externalReviewById } from "./external-rows.js";
+import { reviewStanding, waitingExternalReviews } from "./external-waiting.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {

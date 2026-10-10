@@ -3,7 +3,8 @@ import type { ProjectEvent } from "../../kernel/events.js";
 import type { LogFields } from "../../kernel/log.js";
 import { releaseDueReviews } from "./external-release.js";
 import { waitingReviewFixture } from "./external-repo.fake.js";
-import { externalReviewById, openExternalReview } from "./external-repo.js";
+import { openExternalReview } from "./external-repo.js";
+import { externalReviewById } from "./external-rows.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
