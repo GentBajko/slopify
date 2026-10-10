@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { ButtonRow } from "@/components/kit/button";
 import { hitArea } from "@/components/kit/list-row";
@@ -39,5 +40,17 @@ export function WorkItem({
       </div>
       <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
     </li>
+  );
+}
+
+// A row's title: the project, opening its page.
+export function projectLink(project: {
+  readonly id: string;
+  readonly title: string;
+}): ReactElement {
+  return (
+    <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+      {project.title}
+    </Link>
   );
 }

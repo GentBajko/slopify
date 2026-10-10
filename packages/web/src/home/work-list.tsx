@@ -6,8 +6,10 @@ import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { RowCheck, SelectionBar, useSelection } from "@/components/selection";
 import { useBulkMarkUploaded } from "./bulk-uploaded.js";
-import { FailedItem, HeldTopicsItem, PausedItem, StoppedItem, WaitingItem } from "./needs-you.js";
+import { FailedItem } from "./failed-item.js";
+import { HeldTopicsItem, PausedItem, StoppedItem } from "./needs-you.js";
 import { ReadyItem } from "./ready.js";
+import { WaitingItem } from "./waiting-item.js";
 
 // Home's work list: the decisions waiting for the person first (held reviews, stopped and
 // paused runs, suggested topics, failures), then the finished videos ready to upload. Only the
