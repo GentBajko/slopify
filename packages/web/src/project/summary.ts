@@ -1,6 +1,10 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
-import { parkedOnAgent, waitingForAgentWord } from "@app/slices/admission/state-words.js";
+import {
+  keptAsIsWord,
+  parkedOnAgent,
+  waitingForAgentWord,
+} from "@app/slices/admission/state-words.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 
@@ -61,8 +65,8 @@ const segments: Readonly<Record<string, string>> = {
 };
 
 // `resumable` is the project body's own word: nothing is running and the work left is held
-// until Resume, as it is after a save or a restart. Those stages wait on the button, not on
-// the stages above them.
+// until Resume, as it is after a restart. Those stages wait on the button, not on the stages
+// above them, unless the run is Kept as is: then nothing offers the button.
 export function summaryOf(
   stage: Stage,
   outputs: readonly Output[],
@@ -74,7 +78,9 @@ export function summaryOf(
     case "skipped":
       return "Not part of this run";
     case "pending":
-      if (project.status === "paused" || resumable) return "Waits until you continue the run";
+      if (project.status === "paused") return "Waits until you continue the run";
+      if (project.status === "pending" && project.setAside === true) return keptAsIsWord;
+      if (resumable) return "Waits until you continue the run";
       if (parkedOnAgent(project)) return waitingForAgentWord;
       if (stage.retryAt !== undefined) return `Trying again at ${clockTime(stage.retryAt)}`;
       if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))

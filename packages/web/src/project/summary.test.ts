@@ -87,7 +87,18 @@ describe("the summary in a rundown row", () => {
     expect(summaryOf(stage("video", "pending"), [], parked)).toBe("Waiting for the agent");
     // Kept as is wins, as on every list: what is left won't run.
     expect(summaryOf(stage("images", "pending"), [], { ...parked, setAside: true })).toBe(
-      "Ready to run",
+      "Kept as is",
+    );
+  });
+
+  // A stopped run Kept as is offers no Continue the run, so its steps don't promise one.
+  it("says a stage of a run Kept as is is kept as is, stopped or not", () => {
+    const aside = { ...project, status: "pending" as const, setAside: true };
+    expect(summaryOf(stage("video", "pending"), [], aside, true)).toBe("Kept as is");
+    expect(summaryOf(stage("audio", "pending"), [], aside)).toBe("Kept as is");
+    // A paused run offers Continue the run, Kept as is or not.
+    expect(summaryOf(stage("video", "pending"), [], { ...aside, status: "paused" }, true)).toBe(
+      "Waits until you continue the run",
     );
   });
 
