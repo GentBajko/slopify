@@ -86,42 +86,79 @@ export function failedSteps(db: DatabaseSync, skip: SkipRow): readonly Attention
   });
 }
 
-const pausedRow = z.object({
+const runRow = z.object({
   id: z.string(),
   title: z.string(),
   updated_at: z.string(),
   head: z.string().nullable(),
 });
 
-// No pause reason is stored: any paused run is the agent's to continue once nothing in the
-// project still needs fixing, whoever paused it.
-export function pausedRuns(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+// A run nothing moves on but Continue the run (resume_project), which the agent may give once
+// nothing in the project still needs fixing: the runs `which` picks among the live projects.
+function runsToContinue(
+  db: DatabaseSync,
+  skip: SkipRow,
+  run: {
+    readonly kind: "paused-run" | "stopped-run";
+    readonly source: string;
+    readonly which: string;
+    readonly params: readonly string[];
+    readonly reason: string;
+  },
+): readonly AttentionEntry[] {
   const rows = db
     .prepare(
       `SELECT p.id, p.title, p.updated_at, h.revision_id AS head FROM projects p
-       JOIN project_controls c ON c.project_id=p.id AND c.paused=1
        LEFT JOIN project_heads h ON h.project_id=p.id
-       WHERE ${liveProject("p")}`,
+       WHERE ${liveProject("p")} AND ${run.which}`,
     )
-    .all();
-  return rowsOf(rows, "paused runs", skip, (value) => {
-    const row = pausedRow.parse(value);
+    .all(...run.params);
+  return rowsOf(rows, run.source, skip, (value) => {
+    const row = runRow.parse(value);
     return [
       {
-        kind: "paused-run",
+        kind: run.kind,
         since: row.updated_at,
         projectId: row.id,
         title: row.title,
         stage: null,
         itemKey: null,
-        reason:
-          "Paused: nothing runs until Continue the run (resume_project). Read get_project first: continue it once nothing it shows still needs fixing.",
+        reason: run.reason,
         autoRetryInFlight: false,
         agentCanAct: true,
         ids: { id: row.id, ...(row.head === null ? {} : { baseRevisionId: row.head }) },
         tools: ["get_project", "resume_project"],
       } satisfies AttentionEntry,
     ];
+  });
+}
+
+// No pause reason is stored: any paused run is the agent's to continue, whoever paused it.
+export function pausedRuns(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  return runsToContinue(db, skip, {
+    kind: "paused-run",
+    source: "paused runs",
+    which: "EXISTS (SELECT 1 FROM project_controls c WHERE c.project_id=p.id AND c.paused=1)",
+    params: [],
+    reason:
+      "Paused: nothing runs until Continue the run (resume_project). Read get_project first: continue it once nothing it shows still needs fixing.",
+  });
+}
+
+// A run a restart stopped before it finished (`reviews/holds.ts`): like a paused one, nothing
+// goes on until Continue the run, and the agent may give it.
+export function stoppedRuns(
+  db: DatabaseSync,
+  stopped: ReadonlySet<string>,
+  skip: SkipRow,
+): readonly AttentionEntry[] {
+  return runsToContinue(db, skip, {
+    kind: "stopped-run",
+    source: "stopped runs",
+    which: "p.id IN (SELECT value FROM json_each(?))",
+    params: [JSON.stringify([...stopped])],
+    reason:
+      "Stopped before it finished, as a restart leaves a run: nothing goes on until Continue the run (resume_project). Read get_project first: continue it once nothing it shows still needs fixing.",
   });
 }
 

@@ -16,6 +16,7 @@ import {
   pausedRuns,
   rowsOf,
   type SkipRow,
+  stoppedRuns,
 } from "./attention-work.js";
 
 export const attentionKinds = [
@@ -83,7 +84,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     ["review checkpoints", () => heldCheckpoints(db, holds())],
     ["failed steps", () => failedSteps(db, skip)],
     ["paused runs", () => pausedRuns(db, skip)],
-    ["stopped runs", () => stoppedRuns(db, holds(), skip)],
+    ["stopped runs", () => stoppedRuns(db, holds().stopped, skip)],
     ["held topics", () => heldTopics(db, skip)],
     ["late uploads", () => lateUploads(deps, now)],
     ["extension failures", () => extensionFailures(db, skip)],
@@ -219,46 +220,4 @@ function heldCheckpoints(db: DatabaseSync, { holding }: ProjectHolds): readonly 
           }) satisfies AttentionEntry,
       ),
   );
-}
-
-const stoppedRow = z.object({
-  project_id: z.string(),
-  title: z.string(),
-  updated_at: z.string(),
-  head: z.string(),
-});
-
-// A run a restart stopped before it finished (`reviews/holds.ts`): like a paused one, nothing
-// goes on until Continue the run, and the agent may give it.
-function stoppedRuns(
-  db: DatabaseSync,
-  { stopped }: ProjectHolds,
-  skip: SkipRow,
-): readonly AttentionEntry[] {
-  const rows = db
-    .prepare(
-      `SELECT p.id AS project_id, p.title, p.updated_at, h.revision_id AS head FROM projects p
-       JOIN project_heads h ON h.project_id=p.id WHERE ${liveProject("p")}`,
-    )
-    .all()
-    .filter((row) => stopped.has(String(row.project_id)));
-  return rowsOf(rows, "stopped runs", skip, (value) => {
-    const row = stoppedRow.parse(value);
-    return [
-      {
-        kind: "stopped-run",
-        since: row.updated_at,
-        projectId: row.project_id,
-        title: row.title,
-        stage: null,
-        itemKey: null,
-        reason:
-          "Stopped before it finished, as a restart leaves a run: nothing goes on until Continue the run (resume_project). Read get_project first: continue it once nothing it shows still needs fixing.",
-        autoRetryInFlight: false,
-        agentCanAct: true,
-        ids: { id: row.project_id, baseRevisionId: row.head },
-        tools: ["get_project", "resume_project"],
-      } satisfies AttentionEntry,
-    ];
-  });
 }
