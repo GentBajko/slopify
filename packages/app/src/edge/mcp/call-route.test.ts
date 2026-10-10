@@ -217,6 +217,20 @@ it("records a change by agent, but not a POST that only looks", async () => {
   ]);
 });
 
+it("logs a refusal it could not read, with what was called, and still says what to do", async () => {
+  const fake = answering(
+    new Response("{not json", {
+      status: 409,
+      headers: { "content-type": "application/problem+json" },
+    }),
+  );
+  const result = await callRoute(fake, resume, { id: "p1", body: {} });
+  expect(JSON.stringify(result.content)).toContain("the refusal could not be read");
+  expect(fake.logged).toEqual([
+    expect.stringMatching(/^mcp\.refusal \[p1\]: .*POST \/api\/projects\/p1\/resume.*HTTP 409/),
+  ]);
+});
+
 it("states the files and space Delete old versions frees, as the page does, before asking", async () => {
   const fake = answering(Response.json({ historyFiles: 3, historyBytes: 5 * 1024 * 1024 }));
   const tool = routeTools.find((one) => one.name === "delete_old_versions");
@@ -239,5 +253,7 @@ it("falls back to the fixed consequence when the page's numbers can't be read, a
   if (tool === undefined) throw new Error("no delete_old_versions tool");
   const asked = await callRoute(fake, tool, { id: "p1" });
   expect(JSON.stringify(asked.content)).toContain(tool.confirm ?? "missing");
-  expect(fake.logged).toEqual([expect.stringMatching(/^mcp\.confirm: .*storage read failed/)]);
+  expect(fake.logged).toEqual([
+    expect.stringMatching(/^mcp\.confirm \[p1\]: .*storage read failed/),
+  ]);
 });

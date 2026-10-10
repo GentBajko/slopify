@@ -66,7 +66,10 @@ export async function callRoute(
     response.ok && type.includes("json") && !type.includes("problem")
       ? await response.json()
       : undefined;
-  const result = await answerOf(tool, response, value);
+  const result = await answerOf(deps, tool, response, value, {
+    called: `${method} ${url.pathname}`,
+    ...projectOf(tool, args),
+  });
   if (method !== "GET" && tool.unrecorded !== true && response.ok) {
     const { projectIds, scheduleId } = subjectsOf(tool, args, value);
     for (const projectId of projectIds.length === 0 ? [null] : projectIds)
@@ -97,10 +100,20 @@ async function confirmText(
     return response.ok ? tool.confirmFrom.text(await response.json()) : undefined;
   } catch (error) {
     deps.log.write("warn", "mcp.confirm", {
+      ...projectOf(tool, args),
       detail: `${tool.name} asked with its fixed consequence: reading ${path} for the numbers failed: ${causedBy(error)}`,
     });
     return undefined;
   }
+}
+
+// The project a call is about, for its log lines.
+function projectOf(
+  tool: RouteTool,
+  args: Readonly<Record<string, unknown>>,
+): { readonly projectId?: string } {
+  const [projectId] = subjectsOf(tool, args, undefined).projectIds;
+  return projectId === undefined ? {} : { projectId };
 }
 
 // The route's path with this call's (already checked) parameters in place.
@@ -134,13 +147,15 @@ function payloadOf(
 }
 
 async function answerOf(
+  deps: Pick<RouteCallDeps, "log">,
   tool: RouteTool,
   response: Response,
   value: unknown,
+  call: Call,
 ): Promise<CallToolResult> {
   const type = response.headers.get("content-type") ?? "";
   if (!response.ok || type.startsWith("application/problem+json"))
-    return refusal((await failureOf(tool, response)).message);
+    return refusal((await failureOf(deps, tool, response, call)).message);
   if (response.status === 204 || response.body === null) return text("Done.");
   if (type.startsWith("image/"))
     return {
@@ -193,13 +208,26 @@ export async function callApi(
   );
   if (response.ok)
     return { ok: true, value: response.body === null ? undefined : await response.json() };
-  return { ok: false, status: response.status, ...(await failureOf(tool, response)) };
+  return {
+    ok: false,
+    status: response.status,
+    ...(await failureOf(deps, tool, response, { called: `${method} ${path}` })),
+  };
 }
 
-// What failed and why, with what to do next, from a refused or failed answer.
+// The call an answer came from, for the log: "POST /api/projects/p1/resume" and its project.
+interface Call {
+  readonly called: string;
+  readonly projectId?: string;
+}
+
+// What failed and why, with what to do next, from a refused or failed answer. A refusal that
+// can't be read is logged with the call and the status.
 async function failureOf(
+  deps: Pick<RouteCallDeps, "log">,
   tool: Named,
   response: Response,
+  call: Call,
 ): Promise<{ readonly message: string; readonly fields: readonly Field[] }> {
   const type = response.headers.get("content-type") ?? "";
   if (!type.startsWith("application/problem+json"))
@@ -207,12 +235,23 @@ async function failureOf(
       message: `${tool.title} failed: Slopify answered HTTP ${String(response.status)} without saying why. Call ${tool.name} again; if it keeps failing, use Download diagnostics in Settings and report it.`,
       fields: [],
     };
-  const problem = problemSchema.safeParse(await response.json().catch(() => undefined));
-  if (!problem.success)
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch (error) {
+    body = error;
+  }
+  const problem = problemSchema.safeParse(body);
+  if (!problem.success) {
+    deps.log.write("warn", "mcp.refusal", {
+      ...(call.projectId === undefined ? {} : { projectId: call.projectId }),
+      detail: `${tool.name}: ${call.called} answered HTTP ${String(response.status)} with a refusal that could not be read: ${body instanceof Error ? causedBy(body) : problem.error.message}`,
+    });
     return {
       message: `${tool.title} was refused, and the refusal could not be read. Call ${tool.name} again; if it keeps happening, use Download diagnostics in Settings and report it.`,
       fields: [],
     };
+  }
   return { message: problemText(tool, problem.data), fields: problem.data.fields ?? [] };
 }
 

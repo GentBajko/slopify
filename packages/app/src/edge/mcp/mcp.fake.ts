@@ -74,7 +74,10 @@ export function routeCallDeps(
     clock,
     ids: { next: () => `a${String(++next)}` },
     log: {
-      write: (_level, event, fields) => void logged.push(`${event}: ${fields?.detail ?? ""}`),
+      write: (_level, event, fields) =>
+        void logged.push(
+          `${event}${fields?.projectId === undefined ? "" : ` [${fields.projectId}]`}: ${fields?.detail ?? ""}`,
+        ),
     },
     logged,
   };
