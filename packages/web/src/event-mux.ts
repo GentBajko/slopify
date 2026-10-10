@@ -31,6 +31,7 @@ const names = [
   "project.state",
   "project.updated",
   "review.flagged",
+  "review.auto-passed",
 ] as const;
 
 interface StandIn {

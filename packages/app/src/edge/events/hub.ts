@@ -4,6 +4,7 @@ import type {
   ProjectEvent,
   ProjectStateEvent,
   ProjectUpdatedEvent,
+  ReviewAutoPassedEvent,
   ReviewFlaggedEvent,
   RunningCountEvent,
   ScheduleTopicsEvent,
@@ -21,6 +22,7 @@ export type {
   ImageLandedEvent,
   ProjectEvent,
   ProjectStateEvent,
+  ReviewAutoPassedEvent,
   ReviewFlaggedEvent,
   RunningCountEvent,
   ScheduleTopicsEvent,
@@ -38,7 +40,8 @@ export type GlobalEvent =
   | StagingEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent
-  | ReviewFlaggedEvent;
+  | ReviewFlaggedEvent
+  | ReviewAutoPassedEvent;
 
 export interface SseMessage {
   readonly event: string;

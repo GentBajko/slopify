@@ -1,9 +1,21 @@
-import type { ProjectEvent, ReviewFlaggedEvent, ScheduleTopicsEvent } from "../../kernel/events.js";
+import type {
+  ProjectEvent,
+  ReviewAutoPassedEvent,
+  ReviewFlaggedEvent,
+  ScheduleTopicsEvent,
+} from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { NoticeSubject, NoticeText } from "./rules.js";
-import { noticeOf, noticeText, reviewNoticeText, topicsNoticeText, webhookBody } from "./rules.js";
+import {
+  autoPassNoticeText,
+  noticeOf,
+  noticeText,
+  reviewNoticeText,
+  topicsNoticeText,
+  webhookBody,
+} from "./rules.js";
 import type { SendNotification } from "./send.js";
 import { sendFailureText } from "./send.js";
 
@@ -66,6 +78,21 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     });
   };
 
+  // Once per review. ceiling: one id per auto-passed review since boot.
+  const passed = new Set<string>();
+  const notifyAutoPass = (event: ReviewAutoPassedEvent): void => {
+    if (passed.has(event.reviewId)) return;
+    passed.add(event.reviewId);
+    const url = deps.url();
+    if (url === null) return;
+    const subject = deps.subject(event.projectId);
+    if (subject === undefined) return;
+    const text = autoPassNoticeText({ title: subject.title, stage: event.stage });
+    post(url, { ...text, link: deps.link?.(event.projectId) }, "auto-pass", {
+      projectId: event.projectId,
+    });
+  };
+
   const post = (
     url: string,
     text: NoticeText,
@@ -106,6 +133,10 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         }
         if (event.type === "review.flagged") {
           notifyReview(event);
+          return;
+        }
+        if (event.type === "review.auto-passed") {
+          notifyAutoPass(event);
           return;
         }
         if (event.type !== "project.state") return;

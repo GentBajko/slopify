@@ -14,7 +14,7 @@ const reviewSchema = z.object({
   reviewFingerprint: z.string(),
   passed: z.boolean(),
   reasons: z.array(z.string()),
-  outcome: z.enum(["passed", "flagged", "redo"]),
+  outcome: z.enum(["passed", "flagged", "redo", "auto-passed"]),
   attempt: z.number(),
   action: z.enum(["overruled", "redone"]).nullable(),
   actionAt: z.string().nullable(),

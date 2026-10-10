@@ -11,7 +11,12 @@ import type { Registry } from "../src/kernel/ports/registry.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { wireRunner } from "../src/main.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
-import { answerExternalReview, waitingExternalReviews } from "../src/slices/reviews/external.js";
+import {
+  answerExternalReview,
+  externalReviewWaitMs,
+  settleExternalReviews,
+  waitingExternalReviews,
+} from "../src/slices/reviews/external.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { current, save, start, tone } from "./revision-rebuild.fake.js";
@@ -102,5 +107,21 @@ it("waits for an agent on every image without asking a model, then keeps its ver
       [two.itemKey, "passed", "agent"],
     ].sort(),
   );
+  expect(reviewer.calls()).toBe(0);
+});
+
+it("passes both images without review after two hours with no agent, and the run goes on", async () => {
+  const { h, deps, runner, reviewer } = await agentReviewedRun();
+  expect(
+    settleExternalReviews(deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
+  ).toHaveLength(2);
+  runner.tick(h.projectId);
+  await settleUntil(runner, () => listVerdicts(deps.db, h.projectId).length === 2);
+  expect(
+    listVerdicts(deps.db, h.projectId).map((row) => [row.outcome, row.passed, row.answeredBy]),
+  ).toEqual([
+    ["auto-passed", true, "nobody"],
+    ["auto-passed", true, "nobody"],
+  ]);
   expect(reviewer.calls()).toBe(0);
 });

@@ -81,9 +81,13 @@ export async function executeAgentReviewRecipe(
     context.emit({ type: "project.updated", projectId });
     return "waiting";
   }
-  if (known.state === "waiting" || known.verdict === null) return "waiting";
+  const autoPassed = known.state === "auto-passed";
+  const verdict = autoPassed ? { passed: true, reasons: [] } : known.verdict;
+  if (known.state === "waiting" || verdict === null) return "waiting";
   const attempt = nextAttempt(latestVerdict(deps.db, projectId, itemKey), known.itemFingerprint);
-  const outcome = reviewOutcome({ passed: known.verdict.passed, mode, attempt, retries });
+  const outcome = autoPassed
+    ? "auto-passed"
+    : reviewOutcome({ passed: verdict.passed, mode, attempt, retries });
   const saved = saveVerdict(deps.db, {
     id: deps.ids.next(),
     projectId,
@@ -92,15 +96,15 @@ export async function executeAgentReviewRecipe(
     stage,
     itemFingerprint: known.itemFingerprint,
     reviewFingerprint: piece.fingerprint,
-    passed: known.verdict.passed,
-    reasons: known.verdict.reasons,
+    passed: verdict.passed,
+    reasons: verdict.reasons,
     outcome,
     attempt,
     action: null,
     actionAt: null,
     redoState: outcome === "redo" ? "pending" : null,
     redoError: null,
-    answeredBy: known.answeredBy ?? "agent",
+    answeredBy: autoPassed ? "nobody" : (known.answeredBy ?? "agent"),
     actionBy: null,
     createdAt: deps.clock.now().toISOString(),
   });

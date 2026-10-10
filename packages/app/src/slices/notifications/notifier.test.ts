@@ -202,4 +202,21 @@ describe("createRunNotifier", () => {
       "5 new topics are waiting for you\nOpen Calendar → Suggested topics → Ancient history to queue or reject them. 7 are waiting in all.\n",
     );
   });
+
+  it("says once that an item passed without review when no agent answered", async () => {
+    const { notifier, posted } = harness();
+    const passed: ProjectEvent = {
+      type: "review.auto-passed",
+      projectId: "p1",
+      reviewId: "er1",
+      stage: "images",
+      itemKey: "image:one",
+    };
+    notifier.observe(passed);
+    notifier.observe(passed);
+    await notifier.settled();
+    expect(posted.map((one) => one.body)).toEqual([
+      "Passed without review: no agent answered in 2 h\nBlack holes: an image went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.\n",
+    ]);
+  });
 });

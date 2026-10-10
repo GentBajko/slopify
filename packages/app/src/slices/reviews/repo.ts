@@ -13,7 +13,7 @@ const rowSchema = z.object({
   review_fingerprint: z.string(),
   passed: z.number(),
   reasons: z.string(),
-  outcome: z.enum(["passed", "flagged", "redo"]),
+  outcome: z.enum(["passed", "flagged", "redo", "auto-passed"]),
   attempt: z.number().int(),
   action: z.enum(["overruled", "redone"]).nullable(),
   action_at: z.string().nullable(),

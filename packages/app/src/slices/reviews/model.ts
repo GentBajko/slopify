@@ -169,7 +169,7 @@ export function reviewSettingsFromForm(
   };
 }
 
-export type ReviewOutcome = "passed" | "flagged" | "redo";
+export type ReviewOutcome = "passed" | "flagged" | "redo" | "auto-passed";
 
 export interface ReviewVerdict {
   readonly passed: boolean;

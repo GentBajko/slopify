@@ -64,6 +64,19 @@ export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
   };
 }
 
+// An external review's two hours ran out with no agent's verdict (`review.auto-passed`).
+export function autoPassNoticeText(subject: {
+  readonly title: string;
+  readonly stage: string;
+}): NoticeText {
+  const title = subject.title.trim() === "" ? "Untitled project" : subject.title.trim();
+  const item = reviewItemNames[subject.stage] ?? "an item";
+  return {
+    headline: "Passed without review: no agent answered in 2 h",
+    detail: `${title}: ${item} went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.`,
+  };
+}
+
 export interface NoticeSubject {
   readonly title: string;
   // Whether the run makes a video at all: an audio-only run is "finished", not "ready".

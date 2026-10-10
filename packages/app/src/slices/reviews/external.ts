@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import type { ProjectEvent } from "../../kernel/events.js";
 import { type Actor, actors } from "../agents/model.js";
 import { type ReviewStage, type ReviewVerdict, reviewStages } from "./model.js";
 import type { ReviewMaterial } from "./verdict.js";
@@ -175,9 +176,18 @@ export type ExternalAnswerResult =
       readonly value: ExternalReview;
     };
 
+// The step that waited ended its stage as held, which parks the work (`finishWork`); a settled
+// review lets it be claimed again while the current version still wants it. A paused project
+// stays put: the runner claims nothing for it until Resume.
+function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
+  db.prepare(
+    `UPDATE revision_work SET dispatch_state='allowed' WHERE state='pending' AND dispatch_state='held'
+     AND id=(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`,
+  ).run(projectId, id);
+}
+
 // The first verdict saved wins: one guarded UPDATE, so two agents answering at once cannot
-// both succeed. The step that waited ended its stage as held, which parks the work
-// (`finishWork`); the answer lets it be claimed again while the current version still wants it.
+// both succeed.
 export function answerExternalReview(
   db: DatabaseSync,
   input: {
@@ -194,11 +204,7 @@ export function answerExternalReview(
         "UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting'",
       )
       .run(JSON.stringify(input.verdict), input.by, input.at, input.projectId, input.id);
-    if (Number(answered.changes) === 1)
-      db.prepare(
-        `UPDATE revision_work SET dispatch_state='allowed' WHERE state='pending' AND dispatch_state='held'
-         AND id=(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`,
-      ).run(input.projectId, input.id);
+    if (Number(answered.changes) === 1) releaseParkedWork(db, input.projectId, input.id);
     return answered;
   });
   const row = externalReviewById(db, input.projectId, input.id);
@@ -217,4 +223,56 @@ export function waitingExternalReviews(
     ${projectId === undefined ? "" : "AND e.project_id=?"} ORDER BY e.waiting_since, e.rowid`;
   const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
   return rows.map(reviewOf);
+}
+
+// Replaced reviews stop waiting; waiting ones past their deadline pass without review. A
+// paused project's review passes too (nothing runs until Resume); a canceled run's never does.
+export function settleExternalReviews(db: DatabaseSync, now: Date): readonly ExternalReview[] {
+  const at = now.toISOString();
+  return transact(db, () => {
+    db.prepare(
+      `UPDATE external_reviews SET state='superseded' WHERE state='waiting' AND NOT ${wantedBy("external_reviews")}`,
+    ).run();
+    const due = db
+      .prepare(
+        `SELECT e.id, e.project_id FROM external_reviews e WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")}`,
+      )
+      .all(at)
+      .map((row) => z.object({ id: z.string(), project_id: z.string() }).parse(row));
+    return due.flatMap((row) => {
+      db.prepare(
+        "UPDATE external_reviews SET state='auto-passed', answered_at=? WHERE id=? AND state='waiting'",
+      ).run(at, row.id);
+      releaseParkedWork(db, row.project_id, row.id);
+      const passed = externalReviewById(db, row.project_id, row.id);
+      return passed === undefined ? [] : [passed];
+    });
+  });
+}
+
+export interface ReviewReleaseDeps {
+  readonly db: DatabaseSync;
+  readonly now: () => Date;
+  readonly emit: (projectId: string, event: ProjectEvent) => void;
+  readonly tick: (projectId: string) => void;
+}
+
+// At boot and every few seconds: each review past its deadline passes, says so, and the run
+// goes on. The deadline is a row, so a restart in between loses nothing.
+export function releaseDueReviews(deps: ReviewReleaseDeps): number {
+  const passed = settleExternalReviews(deps.db, deps.now());
+  for (const review of passed) {
+    deps.emit(review.projectId, {
+      type: "review.auto-passed",
+      projectId: review.projectId,
+      reviewId: review.id,
+      stage: review.stage,
+      itemKey: review.itemKey,
+      revisionId: review.revisionId,
+      workId: review.workId,
+    });
+    deps.emit(review.projectId, { type: "project.updated", projectId: review.projectId });
+    deps.tick(review.projectId);
+  }
+  return passed.length;
 }

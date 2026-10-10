@@ -82,6 +82,17 @@ export interface ReviewFlaggedEvent extends EventOrigin {
   readonly reason?: string;
 }
 
+// An external agent's review got no verdict in its two hours: the item passed without review
+// and what depends on it runs. The notifications slice says "Passed without review".
+export interface ReviewAutoPassedEvent extends EventOrigin {
+  readonly type: "review.auto-passed";
+  readonly projectId: string;
+  readonly reviewId: string;
+  // `reviews/model.ts` reviewStages.
+  readonly stage: string;
+  readonly itemKey: string;
+}
+
 export interface ProjectUpdatedEvent extends EventOrigin {
   readonly type: "project.updated";
   readonly projectId: string;
@@ -113,6 +124,7 @@ export type ProjectEvent =
   | NarrationPieceEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent
-  | ReviewFlaggedEvent;
+  | ReviewFlaggedEvent
+  | ReviewAutoPassedEvent;
 
 export type EmitProject = (event: ProjectEvent) => void;

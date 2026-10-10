@@ -108,6 +108,7 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
+import { releaseDueReviews } from "./slices/reviews/external.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
@@ -696,6 +697,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
     const server = await listen(app, config, log);
+    // An agent's review past its two hours passes without review; the deadline is a row, so
+    // the ones a restart left waiting are settled here first.
+    const releaseReviews = (): void => {
+      try {
+        releaseDueReviews({
+          db: updateDb,
+          now: () => clock.now(),
+          emit: hub.emit,
+          tick: runner.tick,
+        });
+      } catch (error) {
+        log.write("error", "review.deadline", { detail: causedBy(error) });
+      }
+    };
+    releaseReviews();
     const queueTimer = setInterval(() => {
       const release = updater.beginMutation();
       if (!release) return;
@@ -717,6 +733,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       if (!release) return;
       try {
         wakeRetries(updateDb, clock, runner);
+        releaseReviews();
       } catch (error) {
         log.write("error", "stage.retry", { detail: causedBy(error) });
       } finally {

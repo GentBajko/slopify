@@ -71,6 +71,7 @@ const projectEventNames = [
   "project.state",
   "project.updated",
   "review.flagged",
+  "review.auto-passed",
 ] as const;
 
 const globalEventNames = [
@@ -81,6 +82,7 @@ const globalEventNames = [
   "project.state",
   "schedule.topics",
   "review.flagged",
+  "review.auto-passed",
   // A step starting, finishing or moving on: the lists, meters and cards showing the
   // project refresh, not only its own page.
   "stage.state",
@@ -105,7 +107,8 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
     if (
       event.type === "image.landed" ||
       event.type === "project.updated" ||
-      event.type === "review.flagged"
+      event.type === "review.flagged" ||
+      event.type === "review.auto-passed"
     ) {
       // The frame names an output id and an index, not the row or the file behind them,
       // so this is the one event the page cannot paint without asking.
@@ -148,6 +151,10 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       }
       if (event.type === "review.flagged") {
         sink.reviewFlagged?.(event);
+        sink.refetch(event.projectId);
+        return;
+      }
+      if (event.type === "review.auto-passed") {
         sink.refetch(event.projectId);
         return;
       }
