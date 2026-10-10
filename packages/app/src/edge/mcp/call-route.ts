@@ -63,7 +63,7 @@ export async function callRoute(
       ? await response.clone().json()
       : undefined;
   const result = await answerOf(tool, response);
-  if (method !== "GET" && response.ok) {
+  if (method !== "GET" && tool.readOnly !== true && response.ok) {
     const { projectIds, scheduleId } = subjectsOf(tool, args, value);
     for (const projectId of projectIds.length === 0 ? [null] : projectIds)
       recordAgentAction(deps.db, {

@@ -198,3 +198,20 @@ it("refuses a path parameter that would leave the tool's route, and sends nothin
   }
   expect(fake.seen).toHaveLength(0);
 });
+
+it("records a change by agent, but not a POST that only looks", async () => {
+  const fake = answering(Response.json({ ok: true }));
+  const preview: RouteTool = {
+    name: "preview_rebuild",
+    route: "POST /api/projects/:id/rebuild/preview",
+    title: "Preview",
+    description: "",
+    readOnly: true,
+  };
+  await callRoute(fake, preview, { id: "p1", body: {} });
+  expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([]);
+  await callRoute(fake, resume, { id: "p1", body: {} });
+  expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([
+    { tool: "resume_project" },
+  ]);
+});

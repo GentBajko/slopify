@@ -91,6 +91,7 @@ const settings: readonly RouteTool[] = [
     route: "POST /api/settings/notifications/test",
     title: "Send a test notification",
     description: "Body: {url}.",
+    readOnly: true,
   },
   {
     name: "list_voices",
@@ -129,6 +130,7 @@ const settings: readonly RouteTool[] = [
     title: "Price a voice sample",
     description:
       "Try a sample's price, as Play shows it before playing one. Body: {lines: [{speaker, provider, model, text}]}.",
+    readOnly: true,
   },
   {
     name: "get_usage",
@@ -193,6 +195,7 @@ const providers: readonly RouteTool[] = [
     title: "Check providers",
     description:
       "Settings → Providers' Check all: which providers answer and which CLIs are signed in.",
+    readOnly: true,
   },
   {
     name: "get_catalogue",
@@ -205,6 +208,7 @@ const providers: readonly RouteTool[] = [
     route: "POST /api/providers/catalogue/check",
     title: "Check the model catalogue",
     description: "Checks for a newer model catalogue.",
+    readOnly: true,
   },
   {
     name: "refresh_catalogue",

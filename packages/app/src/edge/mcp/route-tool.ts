@@ -13,6 +13,9 @@ export interface RouteTool {
   readonly description: string;
   // The consequence the web page's confirm dialog states; the tool then needs confirmed: true.
   readonly confirm?: string;
+  // A POST that only looks, checks or prices (a preview, an estimate, a test send): it changes
+  // nothing, so it is not recorded as an agent's change.
+  readonly readOnly?: true;
   // A route that takes a file: multipart like the page's file pickers, or the bytes themselves.
   readonly upload?: "multipart" | "raw";
   // What the agent is shown instead of the route's own answer: state words added, or a

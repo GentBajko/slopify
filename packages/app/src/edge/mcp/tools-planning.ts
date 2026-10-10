@@ -46,6 +46,7 @@ const drafts: readonly RouteTool[] = [
     title: "Review a Play draft",
     description:
       "Play's Review step: readiness, warnings and the cost estimate the person sees before Start. Body: {baseVersion}. start_draft needs this review's id.",
+    readOnly: true,
   },
   {
     name: "start_draft",

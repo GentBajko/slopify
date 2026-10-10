@@ -83,3 +83,61 @@ it("reads a project's release times through the same route as the project page's
   expect(read.isError).toBeUndefined();
   expect(JSON.stringify(read.content)).toContain("leadHours");
 });
+
+it("asks for confirmed: true on every tool whose page confirms first", () => {
+  const confirmed = new Set(
+    routeTools.filter((tool) => tool.confirm !== undefined).map((tool) => tool.name),
+  );
+  for (const name of [
+    "delete_old_versions",
+    "delete_from_trash",
+    "delete_from_trash_many",
+    "rerun_stage",
+    "soften_stage",
+    "cancel_project",
+    "trash_project",
+    "keep_project_outputs",
+    "reset_description_field",
+    "discard_draft",
+    "delete_template",
+    "cancel_schedule",
+    "delete_schedule",
+    "delete_channel",
+    "delete_cast_member",
+    "delete_episode_memory",
+    "remove_channel_videos",
+    "delete_prompt",
+    "delete_entry",
+    "delete_document_theme",
+    "remove_voice",
+    "move_files_folder",
+  ])
+    expect(confirmed.has(name), name).toBe(true);
+  // The pages remove these in one press, so the tools don't ask either.
+  expect(
+    routeTools
+      .filter((tool) => tool.route.startsWith("DELETE ") && tool.confirm === undefined)
+      .map((tool) => tool.name)
+      .sort(),
+  ).toEqual(["delete_cast_picture", "delete_staged_file", "remove_channel_video"]);
+});
+
+it("marks the POST tools that only look or price as read-only", () => {
+  const readOnly = routeTools
+    .filter((tool) => tool.route.startsWith("POST ") && tool.readOnly === true)
+    .map((tool) => tool.name)
+    .sort();
+  expect(readOnly).toEqual(
+    [
+      "check_catalogue",
+      "check_providers",
+      "estimate_run",
+      "preview_added_output",
+      "preview_channel_videos",
+      "preview_rebuild",
+      "quote_voice_sample",
+      "review_draft",
+      "send_test_notification",
+    ].sort(),
+  );
+});

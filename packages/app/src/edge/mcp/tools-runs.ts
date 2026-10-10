@@ -93,6 +93,7 @@ const revisions: readonly RouteTool[] = [
     title: "Choose what to remake",
     description:
       'Choose what to remake: what a remake makes again, reuses or leaves blocked, each output\'s estimate and the total, like the project\'s Choose what to remake. Body: {baseRevisionId, request: {kind: "allAffected"} | {kind: "selected", workKeys: [...]}}. Nothing starts; start_rebuild does, with this preview\'s id.',
+    readOnly: true,
   },
   {
     name: "start_rebuild",
