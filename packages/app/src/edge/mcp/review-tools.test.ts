@@ -72,3 +72,38 @@ it("says an answered review takes no other verdict", () => {
   expect(said.explanation).toContain("already answered");
   expect(said).not.toHaveProperty("answer");
 });
+
+// Its item made again, the review is replaced at once, before the next settle marks it so.
+it("says a review its item was made again for is replaced, while it is still marked waiting", () => {
+  const said = read((db) => {
+    db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
+  });
+  expect(said).toMatchObject({
+    state: "superseded",
+    explanation:
+      "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
+  });
+  expect(said).not.toHaveProperty("answer");
+});
+
+it("says a replaced review takes no verdict and points to the new one", () => {
+  const said = read((db) => {
+    db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
+  });
+  expect(said).toMatchObject({
+    state: "superseded",
+    explanation:
+      "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
+  });
+});
+
+it("says a review that passed at its deadline takes no verdict now", () => {
+  const said = read((db) => {
+    db.prepare("UPDATE external_reviews SET state='auto-passed' WHERE id='er1'").run();
+  });
+  expect(said).toMatchObject({
+    state: "auto-passed",
+    explanation:
+      "This review passed at its 2-hour deadline with no verdict, so it takes none now. Call needs_attention to see what is waiting now.",
+  });
+});
