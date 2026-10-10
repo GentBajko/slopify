@@ -49,7 +49,8 @@ const leftOut = new Set([
   "narration_retries",
   "prepared_videos",
   "project_set_aside",
-  // What agents were asked and did on this install, and who started a run: a restored project asks its waiting reviews again.
+  // What agents were asked and did on this install, and who started a run: a restored project
+  // asks its waiting reviews again.
   "external_reviews",
   "agent_actions",
   "project_starts",

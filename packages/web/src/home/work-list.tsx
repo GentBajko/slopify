@@ -10,9 +10,9 @@ import { FailedItem, HeldTopicsItem, PausedItem, StoppedItem, WaitingItem } from
 import { ReadyItem } from "./ready.js";
 
 // Home's work list: the decisions waiting for the person first (held reviews, stopped and
-// paused runs, suggested topics, failures), then the finished videos ready to upload. Only the first row's
-// action is primary. With two or more videos ready, they can be ticked and marked uploaded
-// together, with Undo.
+// paused runs, suggested topics, failures), then the finished videos ready to upload. Only the
+// first row's action is primary. With two or more videos ready, they can be ticked and marked
+// uploaded together, with Undo.
 
 export type Decision =
   | {

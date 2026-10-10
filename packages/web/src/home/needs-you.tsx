@@ -33,8 +33,8 @@ import { ProjectThumb } from "./project-thumb.js";
 import { WorkItem } from "./work-item.js";
 
 // Home's "Needs you": runs holding for a review or stopped before they finished, schedules
-// holding suggested topics, and runs that failed with the one thing that fixes them. Only the first item's action is primary;
-// the accent is spent once in the area.
+// holding suggested topics, and runs that failed with the one thing that fixes them. Only the
+// first item's action is primary; the accent is spent once in the area.
 
 export function needsYouCount(
   waiting: readonly ProjectListing[],
