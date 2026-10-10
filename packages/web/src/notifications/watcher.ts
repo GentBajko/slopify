@@ -13,8 +13,8 @@ import {
 
 // Turns the global event stream's `project.state` frames into at most one browser notification
 // per transition. The rule is the server's own (`slices/notifications/rules.ts`): only a run
-// seen running can finish, fail or stop to wait, so a project that was already done when the
-// page loaded says nothing.
+// seen running or waiting can finish, fail or stop to wait, so a project that was already done
+// when the page loaded says nothing.
 
 export interface ShownNotice {
   readonly projectId: string;

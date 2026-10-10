@@ -8,6 +8,7 @@ const flags = {
   prepared: z.boolean().optional(),
   waitingForAgent: z.boolean().optional(),
   stopped: z.boolean().optional(),
+  stepFailed: z.boolean().optional(),
 };
 const listSchema = z
   .object({

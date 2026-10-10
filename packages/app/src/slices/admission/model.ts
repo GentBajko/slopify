@@ -331,6 +331,8 @@ export interface Stage {
   // Work of the current version admitted in this stage's own state (`admittedInItsState`), which
   // tells a stage taken up again after a Cancel (`kernel/runner/graph.ts` readmitted).
   readonly admitted?: boolean;
+  // Parked on a review someone answers (`parkedOnReview`): an External agent's, or a checkpoint's.
+  readonly parked?: boolean;
   // A running step's time left (`slices/eta`), as the server saw it when it answered: seconds
   // and what they rest on. The page recomputes it every second from `typicalSeconds`, how
   // long such a step usually takes in all, when finished runs give one.
@@ -352,6 +354,9 @@ export interface ProjectSummary extends Project {
   readonly waitingForAgent?: boolean;
   // Stopped before it finished, as a restart leaves a run: only Continue the run goes on.
   readonly stopped?: boolean;
+  // A step failed while another still waits for the agent or the person: the run reads by that
+  // wait (`derive`) and is listed as failed too (`failedRun`).
+  readonly stepFailed?: boolean;
 }
 
 // The part of a project's settings the list reads (`listProjectHeads`). The whole configuration
@@ -372,7 +377,10 @@ export interface ProjectHead extends Omit<Project, "config"> {
 // six times the body for the same 2 px.
 export interface ProjectListing
   extends ProjectHead,
-    Pick<ProjectSummary, "status" | "setAside" | "prepared" | "waitingForAgent" | "stopped"> {
+    Pick<
+      ProjectSummary,
+      "status" | "setAside" | "prepared" | "waitingForAgent" | "stopped" | "stepFailed"
+    > {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so

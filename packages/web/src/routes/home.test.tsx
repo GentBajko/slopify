@@ -235,6 +235,41 @@ describe("home", () => {
     expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
   });
 
+  // A step failed while images wait for the agent: the run goes on, under Running now, and the
+  // failure is listed under Needs you with its fix.
+  it("lists a failed step beside a run waiting for the agent as a failure", async () => {
+    const parked = body({
+      status: "pending",
+      stages: [
+        stage("audio", "failed", { failureReason: "The narration was refused." }),
+        stage("images", "pending"),
+      ],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-agent", "Hatshepsut", "pending", {
+              progress: 0.3,
+              waitingForAgent: true,
+              stepFailed: true,
+            }),
+          ],
+        }),
+        "GET /api/projects/p-agent": jsonAnswer({
+          ...parked,
+          project: { ...parked.project, id: "p-agent", waitingForAgent: true, stepFailed: true },
+        }),
+      }),
+    );
+    const running = await screen.findByRole("region", { name: "Running now" });
+    expect(await within(running).findByText("Waiting for the agent")).not.toBeNull();
+    const needs = screen.getByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText("Failed · Audio")).not.toBeNull();
+  });
+
   // Parked on an agent's review before anything was made: it goes on by itself once the agent
   // answers, so it is listed once, under Running now, and not as queued.
   it("lists a run waiting for the agent at its start once, under Running now", async () => {

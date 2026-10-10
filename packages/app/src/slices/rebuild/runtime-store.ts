@@ -5,7 +5,7 @@ import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import { optionalDeps, type StageStanding } from "../../kernel/runner/graph.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
-import { admittedStates } from "../admission/admitted-work.js";
+import { admittedStates, parkedKinds } from "../admission/admitted-work.js";
 import { sourceOf } from "../admission/model.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { reviewsNarration } from "../reviews/rules.js";
@@ -211,9 +211,12 @@ export function executionStandings(
     return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
   });
   const admitted = admittedStates(deps.db, projectId);
-  return standings.map((stage) =>
-    admitted.has(`${stage.kind}:${stage.state}`) ? { ...stage, admitted: true } : stage,
-  );
+  const parked = parkedKinds(deps.db, projectId);
+  return standings.map((stage) => ({
+    ...stage,
+    ...(admitted.has(`${stage.kind}:${stage.state}`) ? { admitted: true } : {}),
+    ...(parked.has(stage.kind) ? { parked: true } : {}),
+  }));
 }
 
 // A finished piece whose request was planned under this fingerprint: a placeholder is planned

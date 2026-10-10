@@ -38,3 +38,27 @@ export function admittedStates(db: DatabaseSync, projectId: string): ReadonlySet
       .map((row) => `${String(row.kind)}:${String(row.state)}`),
   );
 }
+
+// Whether stage `s` is parked on a review someone answers, so it can still move on: work of it
+// waits for an External agent's review, or a checkpoint of the current version on its stage is
+// not approved yet (the person's, or a schedule's own hold for its day). `derive` reads it
+// beside a failed stage.
+export function parkedOnReview(s: string): string {
+  return `(EXISTS (SELECT 1 FROM revision_work w JOIN external_reviews e ON e.work_id=w.id
+      WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id AND e.state='waiting'
+        AND ${pendingAdmitted("w")})
+    OR EXISTS (SELECT 1 FROM review_checkpoints c
+      JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
+      WHERE c.project_id=${s}.project_id AND c.stage=${s}.kind
+        AND c.state IN ('held','pending-review') AND c.approved_at IS NULL))`;
+}
+
+// The same fact for each stage of a project, by kind, for the runner's own standings.
+export function parkedKinds(db: DatabaseSync, projectId: string): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare(`SELECT s.kind FROM stages s WHERE s.project_id=? AND ${parkedOnReview("s")}`)
+      .all(projectId)
+      .map((row) => String(row.kind)),
+  );
+}

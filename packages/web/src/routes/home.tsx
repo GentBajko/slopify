@@ -1,4 +1,9 @@
-import { queuedRun, runningNow, waitsForPerson } from "@app/slices/admission/state-words.js";
+import {
+  failedRun,
+  queuedRun,
+  runningNow,
+  waitsForPerson,
+} from "@app/slices/admission/state-words.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
@@ -97,7 +102,9 @@ export function HomeRoute(): ReactElement {
     Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
   );
   const ready = mine.filter((one) => isReadyToUpload(one) && !samples.has(one.id));
-  const failed = mine.filter((one) => one.status === "failed");
+  // A step that failed beside another still waiting is listed here too, while the run reads by
+  // that wait.
+  const failed = mine.filter(failedRun);
   const mySchedules = (schedules.data ?? []).filter(
     (one) => one.deletedAt === null && current.includes(templateChannel.get(one.templateId)),
   );

@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider } from "@/components/kit/toast";
+import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
 import { projectsSearchOf } from "@/router";
 import type { Answer } from "@/test-app";
@@ -272,6 +273,25 @@ describe("needs you", () => {
         "running",
       ),
     ).toBe(false);
+  });
+
+  // A step failed beside another that still waits: the run reads by that wait (Running for the
+  // agent's, Needs you for the person's) and is listed under Failed too.
+  it("lists a run whose step failed beside a wait by that wait and under Failed", () => {
+    const agent = listing("p1", "Agent one", "pending", {
+      waitingForAgent: true,
+      stepFailed: true,
+    });
+    expect(projectStateOf(agent).word).toBe("Waiting for the agent");
+    expect(matches(agent, "running")).toBe(true);
+    expect(matches(agent, "waiting")).toBe(false);
+    expect(matches(agent, "failed")).toBe(true);
+    const person = listing("p2", "Held one", "pending", { stepFailed: true });
+    expect(projectStateOf(person).word).toBe("Waiting for your review");
+    expect(matches(person, "waiting")).toBe(true);
+    expect(matches(person, "queued")).toBe(false);
+    expect(matches(person, "failed")).toBe(true);
+    expect(matches(listing("p3", "Held two", "pending", { progress: 0.4 }), "failed")).toBe(false);
   });
 
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.

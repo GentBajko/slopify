@@ -63,14 +63,18 @@ describe("notificationUrlProblem", () => {
 });
 
 describe("noticeOf", () => {
-  it("speaks only for a run seen running", () => {
+  it("speaks only for a run seen running or waiting", () => {
     expect(noticeOf("running", "done")).toBe("ready");
     expect(noticeOf("running", "failed")).toBe("failed");
     expect(noticeOf("running", "partial")).toBe("partial");
     expect(noticeOf("running", "pending")).toBe("waiting");
     expect(noticeOf("running", "paused")).toBeUndefined();
     expect(noticeOf(undefined, "done")).toBeUndefined();
-    expect(noticeOf("pending", "failed")).toBeUndefined();
+    expect(noticeOf("pending", "failed")).toBe("failed");
+    expect(noticeOf("pending", "done")).toBe("ready");
+    expect(noticeOf("pending", "pending")).toBeUndefined();
+    expect(noticeOf("paused", "failed")).toBeUndefined();
+    expect(noticeOf("canceled", "failed")).toBeUndefined();
   });
 });
 

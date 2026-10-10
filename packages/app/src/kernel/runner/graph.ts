@@ -47,6 +47,9 @@ export interface StageStanding {
   // Set when the stage has work of the current version admitted in the stage's own state
   // (`admission/admitted-work.ts`): beside a canceled stage, it was taken up again (`readmitted`).
   readonly admitted?: boolean | undefined;
+  // Set when the stage is parked on a review someone answers (`admission/admitted-work.ts`
+  // parkedOnReview): an External agent's, or a checkpoint's not approved yet.
+  readonly parked?: boolean | undefined;
 }
 
 // What a run is for, in order: the first of these the run asks for is the one that has to be
@@ -70,6 +73,10 @@ export function derive(stages: readonly StageStanding[], paused = false): Projec
     return "canceled";
   }
   if (stages.some((stage) => stage.state === "failed")) {
+    // A failed step ends the run only once nothing else can go on: while a step it doesn't
+    // depend on waits for the agent or the person, the run reads by that wait (`reviews/holds.ts`
+    // says which), the failed step still shown and listed as failed.
+    if (stages.some((stage) => movesOnWhenAnswered(stage, stages))) return "pending";
     return headlineMade(stages) ? "partial" : "failed";
   }
   if (stages.length > 0 && stages.every((stage) => satisfied(stage.state))) {
@@ -88,6 +95,18 @@ export function readmitted(stage: StageStanding, stages: readonly StageStanding[
     (stage.state === "pending" || stage.state === "failed") &&
     stage.admitted === true &&
     stages.some((other) => other.state === "canceled")
+  );
+}
+
+// A stage parked on a review that its own inputs let it reach: answered, it goes on.
+function movesOnWhenAnswered(stage: StageStanding, stages: readonly StageStanding[]): boolean {
+  return (
+    stage.state === "pending" &&
+    stage.parked === true &&
+    deps[stage.kind].every((kind) => {
+      const dependency = stages.find((other) => other.kind === kind);
+      return dependency === undefined || releases(stage.kind, kind, dependency.state);
+    })
   );
 }
 

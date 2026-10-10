@@ -40,6 +40,20 @@ describe("awaySummary", () => {
   });
 });
 
+// A step failed beside one held for the person: the run waits for them, and is a failure only
+// once nothing else can go on.
+it("counts a run whose step failed beside the person's wait as waiting, then as failed", () => {
+  const before = { at: 0, states: { a: "running" as const }, waiting: {} };
+  expect(
+    awaySummary(before, [{ id: "a", status: "pending", progress: 0, stepFailed: true }]),
+  ).toEqual({ finished: 0, failed: 0, waiting: 1 });
+  expect(awaySummary(before, [{ id: "a", status: "failed", progress: 0 }])).toEqual({
+    finished: 0,
+    failed: 1,
+    waiting: 0,
+  });
+});
+
 // The same rule as Home's Needs you (`waitsForPerson`): a run waiting for the agent or prepared
 // for its day waits for nobody, and one already waiting when the page last looked is not news.
 it("counts as waiting for you only the runs that newly wait for the person", () => {

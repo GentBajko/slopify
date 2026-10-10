@@ -12,6 +12,7 @@ import {
   stageStandingsByProject,
   stagesOf,
 } from "../../slices/admission/repo.js";
+import { stepFailedBesideWait } from "../../slices/admission/state-words.js";
 import { lastStarter } from "../../slices/agents/repo.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { channelById, projectChannels, setProjectChannel } from "../../slices/channels/repo.js";
@@ -53,13 +54,18 @@ export function projectRoutes(deps: AppDeps) {
     log: deps.log,
     hasInflight: deps.runner.hasInflight,
   };
-  const summarise = (project: Project): ProjectSummary => ({
-    ...project,
-    status: settledStatus(
-      derive(stagesOf(deps.db, project.id), project.paused),
+  const summarise = (project: Project): ProjectSummary => {
+    const stages = stagesOf(deps.db, project.id);
+    const status = settledStatus(
+      derive(stages, project.paused),
       uploadedAndSettled(deps.db, project.id).has(project.id),
-    ),
-  });
+    );
+    return {
+      ...project,
+      status,
+      ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+    };
+  };
 
   return (
     new Hono()
@@ -96,9 +102,10 @@ export function projectRoutes(deps: AppDeps) {
           const stages = standings.get(project.id) ?? [];
           const waiting = waits.get(project.id);
           const holding = holds.holding.get(project.id);
+          const status = settledStatus(derive(stages, project.paused), settled.has(project.id));
           return {
             ...project,
-            status: settledStatus(derive(stages, project.paused), settled.has(project.id)),
+            status,
             progress: progressOf(stages),
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
@@ -106,6 +113,7 @@ export function projectRoutes(deps: AppDeps) {
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
+            ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
             ...(holding === undefined ? {} : { holding }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };

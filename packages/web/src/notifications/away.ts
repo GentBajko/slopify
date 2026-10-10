@@ -17,7 +17,15 @@ export interface AwaySnapshot {
 
 type Standing = Pick<
   ProjectListing,
-  "id" | "status" | "progress" | "setAside" | "prepared" | "waitingForAgent" | "stopped" | "holding"
+  | "id"
+  | "status"
+  | "progress"
+  | "setAside"
+  | "prepared"
+  | "waitingForAgent"
+  | "stopped"
+  | "holding"
+  | "stepFailed"
 >;
 
 export interface AwaySummary {

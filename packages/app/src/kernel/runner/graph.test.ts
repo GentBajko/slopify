@@ -106,6 +106,31 @@ describe("derive", () => {
     ).toBe("failed");
   });
 
+  // The person's decision: a failed step ends the run only once nothing else can go on. A step
+  // parked on a review it has reached can still go on; one whose inputs failed can't.
+  it("reads pending while a stage parked on a review it reached can still go on", () => {
+    const parked = (failed: Partial<Record<StageKind, StageState>>, kind: StageKind) =>
+      stages(failed).map((stage) => (stage.kind === kind ? { ...stage, parked: true } : stage));
+    expect(derive(parked({ audio: "failed", images: "pending", video: "pending" }, "images"))).toBe(
+      "pending",
+    );
+    // The thumbnail is a cover the document can do without (`optionalDeps`).
+    expect(
+      derive(
+        parked(
+          { article: "done", thumbnail: "failed", video: "done", document: "pending" },
+          "document",
+        ),
+      ),
+    ).toBe("pending");
+    expect(
+      derive(
+        parked({ article: "done", audio: "failed", images: "done", video: "pending" }, "video"),
+      ),
+    ).toBe("failed");
+    expect(derive(parked({ audio: "failed", images: "done" }, "images"))).toBe("failed");
+  });
+
   it("reads failed when a stage failed and none was canceled", () => {
     expect(derive(stages({ audio: "failed", video: "pending" }))).toBe("failed");
   });

@@ -8,15 +8,18 @@ import type { CheckpointHold } from "../reviews/holds.js";
 
 export type RunNotice = "ready" | "partial" | "failed" | "waiting";
 
-// Only a run seen running can finish, fail or stop to wait: a project first seen already done
-// was done before anyone was watching. Paused and canceled are what the user just pressed, so
-// they say nothing. `pending` after `running` is the runner finding nothing it may start: a
-// review checkpoint holding the next step, or held work waiting for Resume.
+// Only a run seen running or waiting can finish, fail or stop to wait: a project first seen
+// already done was done before anyone was watching. Paused and canceled are what the user just
+// pressed, so they say nothing. `pending` after `running` is the runner finding nothing it may
+// start: a review checkpoint holding the next step, or held work waiting for Resume. A run seen
+// waiting can end without being seen running again: an answered review's step may finish in
+// the tick that releases it, or a failed step beside it may leave nothing else to go on.
 export function noticeOf(
   previous: ProjectState | undefined,
   next: ProjectState,
 ): RunNotice | undefined {
-  if (previous !== "running") return undefined;
+  if (previous !== "running" && previous !== "pending") return undefined;
+  if (previous === "pending" && next === "pending") return undefined;
   switch (next) {
     case "done":
       return "ready";

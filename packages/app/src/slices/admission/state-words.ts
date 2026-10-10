@@ -48,6 +48,7 @@ export type HeldStateWord = (typeof heldStateWords)[number];
 interface ProjectStanding {
   readonly status: ProjectState;
   readonly progress: number;
+  readonly stepFailed?: boolean | undefined;
   readonly setAside?: boolean | undefined;
   readonly prepared?: boolean | undefined;
   readonly waitingForAgent?: boolean | undefined;
@@ -57,12 +58,15 @@ interface ProjectStanding {
 type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent" | "stopped">;
 
 // A run that ran and is held: a waiting project with some of its run done (`progress` is the
-// run's share done, `progressOf`), or one stopped or parked on an agent's review before it got
-// going. One with none done that waits for neither is Queued, waiting its turn.
+// run's share done, `progressOf`) or a step failed, or one stopped or parked on an agent's review
+// before it got going. One with none done that waits for neither is Queued, waiting its turn.
 export function heldRun(project: ProjectStanding): boolean {
   return (
     project.status === "pending" &&
-    (project.progress > 0 || project.stopped === true || project.waitingForAgent === true)
+    (project.progress > 0 ||
+      project.stepFailed === true ||
+      project.stopped === true ||
+      project.waitingForAgent === true)
   );
 }
 
@@ -113,4 +117,19 @@ export function projectStateWord(project: ProjectStanding): string {
 // "Needs you" filter and its waiting-first sort.
 export function waitsForPerson(project: ProjectStanding): boolean {
   return project.status === "paused" || (heldRun(project) && heldForPerson(project));
+}
+
+// A step failed while another waits for the agent or the person, so the run reads by that wait
+// (`derive`): what `stepFailed` says on the Projects list and a project's page.
+export function stepFailedBesideWait(
+  status: ProjectState,
+  stages: readonly { readonly state: StageState }[],
+): boolean {
+  return status === "pending" && stages.some((stage) => stage.state === "failed");
+}
+
+// A run listed as failed, on Home's Needs you and under the Projects Failed filter: it failed, or
+// a step failed while the run still waits for the agent or the person (`stepFailed`).
+export function failedRun(project: Pick<ProjectStanding, "status" | "stepFailed">): boolean {
+  return project.status === "failed" || project.stepFailed === true;
 }

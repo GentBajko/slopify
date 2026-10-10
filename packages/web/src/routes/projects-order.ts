@@ -1,6 +1,11 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { queuedRun, runningNow, waitsForPerson } from "@app/slices/admission/state-words.js";
+import {
+  failedRun,
+  queuedRun,
+  runningNow,
+  waitsForPerson,
+} from "@app/slices/admission/state-words.js";
 import { isReadyToUpload } from "@/home/ready";
 
 const filterValues = ["all", "running", "queued", "waiting", "ready", "failed"] as const;
@@ -34,7 +39,7 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
     case "ready":
       return isReadyToUpload(project);
     case "failed":
-      return project.status === "failed" || project.status === "partial";
+      return failedRun(project) || project.status === "partial";
   }
 }
 

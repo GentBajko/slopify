@@ -1,5 +1,12 @@
 import { expect, it } from "vitest";
-import { parkedOnAgent, projectStateWord, queuedRun, waitsForPerson } from "./state-words.js";
+import {
+  failedRun,
+  parkedOnAgent,
+  projectStateWord,
+  queuedRun,
+  stepFailedBesideWait,
+  waitsForPerson,
+} from "./state-words.js";
 
 it.each([
   [{ status: "pending", progress: 0 }, "Queued"],
@@ -14,6 +21,13 @@ it.each([
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
   [{ status: "pending", progress: 0, waitingForAgent: true }, "Waiting for the agent"],
   [{ status: "pending", progress: 0.5, stopped: true }, "Stopped"],
+  // A step failed beside one held at the person's checkpoint before anything was made: the run
+  // started, so it waits for the person, not its turn.
+  [{ status: "pending", progress: 0, stepFailed: true }, "Waiting for your review"],
+  [
+    { status: "pending", progress: 0, stepFailed: true, waitingForAgent: true },
+    "Waiting for the agent",
+  ],
   // Stopped before anything was made: it isn't waiting its turn, it needs Continue the run.
   [{ status: "pending", progress: 0, stopped: true }, "Stopped"],
   [{ status: "pending", progress: 0.5, stopped: true, setAside: true }, "Kept as is"],
@@ -63,4 +77,17 @@ it.each([
   [{ status: "pending" }, false],
 ] as const)("counts %o as parked on an agent: %s", (project, parked) => {
   expect(parkedOnAgent(project)).toBe(parked);
+});
+
+// A step failed beside another that waits: the run reads by the wait and is listed as failed too.
+it("lists a run failed, or waiting beside a failed step, as failed", () => {
+  expect(failedRun({ status: "failed" })).toBe(true);
+  expect(failedRun({ status: "pending", stepFailed: true })).toBe(true);
+  expect(failedRun({ status: "pending" })).toBe(false);
+  expect(failedRun({ status: "partial" })).toBe(false);
+  expect(stepFailedBesideWait("pending", [{ state: "failed" }, { state: "pending" }])).toBe(true);
+  expect(stepFailedBesideWait("pending", [{ state: "pending" }])).toBe(false);
+  expect(stepFailedBesideWait("failed", [{ state: "failed" }])).toBe(false);
+  expect(waitsForPerson({ status: "pending", progress: 0, stepFailed: true })).toBe(true);
+  expect(queuedRun({ status: "pending", progress: 0, stepFailed: true })).toBe(false);
 });
