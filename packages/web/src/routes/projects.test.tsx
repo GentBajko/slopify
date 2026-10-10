@@ -125,12 +125,19 @@ describe("the projects list", () => {
     expect(screen.queryByRole("progressbar", { name: "Knots progress" })).toBeNull();
   });
 
-  it("says a run that stopped for a review is waiting for you", async () => {
+  it("says a stopped run's state in the words the agent tools use", async () => {
     renderRouted(
       <ProjectsRoute />,
-      deps([listing("p1", "Rope Tricks", "pending", { progress: 0.5 })]),
+      deps([
+        listing("p1", "Rope Tricks", "pending", { progress: 0.5 }),
+        listing("p2", "Knots", "pending", { progress: 0.5, prepared: true }),
+        listing("p3", "Hitches", "pending", { progress: 0 }),
+      ]),
     );
-    expect(await screen.findByText("Waiting for you")).not.toBeNull();
+    expect(await screen.findByText("Waiting for your review")).not.toBeNull();
+    expect(screen.getByText("Prepared")).not.toBeNull();
+    expect(screen.getByText("Hitches").closest("li")?.textContent).toContain("Queued");
+    expect(screen.queryByText("Waiting for you")).toBeNull();
   });
 
   it("offers a new video", async () => {

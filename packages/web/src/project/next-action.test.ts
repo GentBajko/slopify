@@ -217,7 +217,7 @@ describe("the next action", () => {
     );
     expect(next).toMatchObject({
       situation: "held",
-      status: "Waiting for you",
+      status: "Waiting for your review",
       title: "The images are ready for your review.",
       section: "images",
       action: { label: "Approve and render the video", intent: { kind: "approve", gate } },

@@ -1,5 +1,5 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
-import { keptAsIsWord, projectStateWords } from "@app/slices/admission/state-words.js";
+import { projectStateWord, projectStateWords } from "@app/slices/admission/state-words.js";
 import type { Tone } from "@/components/kit/status";
 
 // One word per state, everywhere a state is shown: Projects, the calendar, the project
@@ -22,7 +22,20 @@ export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
   canceled: { tone: "off", word: projectStateWords.canceled },
 };
 
-export const keptAsIs: StateLook = { tone: "done", word: keptAsIsWord };
+// A project's state with its lamp, in the words the MCP tools say it (`projectStateWord`): a
+// waiting project with some of its run done is held (Waiting for your review), prepared by a
+// schedule (Prepared) or set aside (Kept as is). `progress` is the run's share done.
+export function projectStateOf(project: {
+  readonly status: ProjectState;
+  readonly progress: number;
+  readonly setAside?: boolean | undefined;
+  readonly prepared?: boolean | undefined;
+}): StateLook {
+  const word = projectStateWord(project);
+  if (project.status !== "pending" || project.progress <= 0)
+    return projectStateLook[project.status];
+  return { tone: project.setAside === true ? "done" : "waiting", word };
+}
 
 // A failed step that will try again by itself.
 export const retryingWord = "Waiting to try again";

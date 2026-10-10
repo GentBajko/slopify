@@ -175,7 +175,7 @@ describe("home", () => {
     renderRouted(<HomeRoute />, deps());
     const needs = await screen.findByRole("region", { name: "Needs you" });
     expect(await within(needs).findByRole("button", { name: "Approve and render" })).not.toBeNull();
-    expect(within(needs).getByText("Waiting for you · review before the video")).not.toBeNull();
+    expect(within(needs).getByText("Waiting for your review · before the video")).not.toBeNull();
     expect(within(needs).getByText("5 new topics")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Review topics" }).getAttribute("href")).toBe(
       "/calendar",

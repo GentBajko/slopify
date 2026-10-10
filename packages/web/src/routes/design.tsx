@@ -1,3 +1,4 @@
+import { heldWord } from "@app/slices/admission/state-words.js";
 import {
   CopyIcon,
   DownloadIcon,
@@ -113,7 +114,7 @@ const tones: readonly Tone[] = ["running", "done", "waiting", "failed", "info", 
 const toneWord: Readonly<Record<Tone, string>> = {
   running: "Running",
   done: "Done",
-  waiting: "Waiting for you",
+  waiting: heldWord,
   failed: "Failed",
   info: "Flagged by review",
   off: "Not started",
@@ -470,7 +471,7 @@ export function DesignRoute(): ReactElement {
             <>
               <NextAction
                 tone="waiting"
-                status="Waiting for you"
+                status={heldWord}
                 title="The review before the export is ready."
                 why="Approve to render the 2 h video and 3 shorts. About 25 min."
                 action={<Button variant="primary">Approve and render</Button>}
@@ -508,7 +509,7 @@ export function DesignRoute(): ReactElement {
                       id: "r",
                       name: "Review",
                       tone: "waiting",
-                      state: "Waiting for you",
+                      state: heldWord,
                       detail: "Held for you",
                     },
                     { id: "v", name: "Video", tone: "off", state: "Not started" },

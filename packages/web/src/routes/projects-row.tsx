@@ -8,21 +8,16 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { ListRow } from "@/components/kit/list-row";
 import { Meter } from "@/components/kit/stats";
 import { Badge, Status } from "@/components/kit/status";
-import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
-import { keptAsIs, projectStateLook, type StateLook } from "@/lib/state-words";
+import { projectStateOf, type StateLook } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
 import { limitWaitLine } from "@/project/limit-wait";
 
 // The state in words, with its lamp.
 export function stateOf(project: ProjectListing): StateLook {
-  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
-  if (project.status === "pending" && project.setAside === true) return keptAsIs;
   // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
   const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
-  return limits === undefined
-    ? projectStateLook[project.status]
-    : { tone: "waiting", word: limits };
+  return limits === undefined ? projectStateOf(project) : { tone: "waiting", word: limits };
 }
 
 // "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that

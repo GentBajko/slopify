@@ -29,6 +29,7 @@ it("offers Make the next chapter on a finished audiobook and names its book", as
       onEdit={() => {}}
       more={[]}
       nextChapter={{ run, pending: false }}
+      progress={1}
     />,
     testDeps({}),
   );
@@ -47,6 +48,7 @@ it("has no next chapter for a running audiobook or a video", async () => {
         onEdit={() => {}}
         more={[]}
         nextChapter={{ run: () => {}, pending: false }}
+        progress={1}
       />
       <ProjectHeader
         project={plain}
@@ -55,10 +57,46 @@ it("has no next chapter for a running audiobook or a video", async () => {
         onEdit={() => {}}
         more={[]}
         nextChapter={{ run: () => {}, pending: false }}
+        progress={1}
       />
     </>,
     testDeps({}),
   );
   expect(await screen.findAllByText("Rope Tricks")).toHaveLength(2);
   expect(screen.queryByRole("button", { name: "Make the next chapter" })).toBeNull();
+});
+
+it("says a held or prepared project's state as Projects and the agent tools do", async () => {
+  renderRouted(
+    <>
+      <ProjectHeader
+        project={{ ...plain, status: "pending" }}
+        prompts={undefined}
+        editing={false}
+        onEdit={() => {}}
+        more={[]}
+        progress={0.5}
+      />
+      <ProjectHeader
+        project={{ ...plain, status: "pending", prepared: true }}
+        prompts={undefined}
+        editing={false}
+        onEdit={() => {}}
+        more={[]}
+        progress={0.5}
+      />
+      <ProjectHeader
+        project={{ ...plain, status: "pending" }}
+        prompts={undefined}
+        editing={false}
+        onEdit={() => {}}
+        more={[]}
+        progress={0}
+      />
+    </>,
+    testDeps({}),
+  );
+  expect(await screen.findByText("Waiting for your review")).not.toBeNull();
+  expect(screen.getByText("Prepared")).not.toBeNull();
+  expect(screen.getByText("Queued")).not.toBeNull();
 });

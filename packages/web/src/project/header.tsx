@@ -10,7 +10,7 @@ import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
 import { Status } from "@/components/kit/status";
-import { keptAsIs, projectStateLook } from "@/lib/state-words";
+import { projectStateOf } from "@/lib/state-words";
 import { startedAt } from "@/lib/utils";
 
 // The project's title row: the way back (to the list it was opened from), the title, one meta line, and the
@@ -33,8 +33,12 @@ export function ProjectHeader({
   more,
   nextChapter,
   clock,
+  progress,
 }: {
   readonly project: ProjectSummary;
+  // The run's share done (`progressOf` over its steps), which tells a held project from a
+  // queued one.
+  readonly progress: number;
   // A finished audiobook's "Make the next chapter"; absent hides the button.
   readonly nextChapter?:
     | {
@@ -53,10 +57,7 @@ export function ProjectHeader({
   // The run clock, at the end of the meta line while a run goes.
   readonly clock?: ReactNode;
 }): ReactElement {
-  const state =
-    project.status === "pending" && project.setAside === true
-      ? keptAsIs
-      : projectStateLook[project.status];
+  const state = projectStateOf({ ...project, progress });
   // The way back goes where the project was opened from: Projects as it was filtered, Home,
   // the calendar or the channel.
   const origin = cameFrom();

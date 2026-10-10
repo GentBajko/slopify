@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
+import { heldWord } from "@app/slices/admission/state-words.js";
 import { shortReason } from "@app/slices/notifications/rules.js";
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,9 +64,9 @@ const approveWords: Readonly<Record<CheckpointGate["stage"], string>> = {
 };
 
 const heldWords: Readonly<Record<CheckpointGate["stage"], string>> = {
-  audio: "review before the narration",
-  images: "review before the images",
-  video: "review before the video",
+  audio: "before the narration",
+  images: "before the images",
+  video: "before the video",
 };
 
 export function WaitingItem({
@@ -165,7 +166,7 @@ export function WaitingItem({
       lead={<ProjectThumb projectId={project.id} />}
       status={
         <Status tone="waiting">
-          {gate === undefined ? "Waiting for you" : `Waiting for you · ${heldWords[gate.stage]}`}
+          {gate === undefined ? heldWord : `${heldWord} · ${heldWords[gate.stage]}`}
         </Status>
       }
       title={projectLink(project)}

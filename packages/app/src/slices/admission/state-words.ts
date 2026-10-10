@@ -1,9 +1,8 @@
 import type { ProjectState, StageState } from "../../kernel/pipeline.js";
 
-// One word per state: the MCP tools say a project's and a step's state with these, and the
-// web's lists and pages (`web/src/lib/state-words.ts`) take their base words from here. The
-// web still derives a waiting project's word on its own (Projects says "Waiting for you", the
-// project header "Queued"), so those can differ from projectStateWord's. Browser-safe.
+// One word per state, everywhere a state is said: the MCP tools, and the web's lists and pages
+// (`web/src/lib/state-words.ts` projectStateOf, Home's Needs you, the project's next action).
+// Browser-safe.
 
 // A project that has not started yet is Queued: it waits its turn, not for the person.
 export const projectStateWords: Readonly<Record<ProjectState, string>> = {

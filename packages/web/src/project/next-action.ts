@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import { heldWord } from "@app/slices/admission/state-words.js";
 import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
@@ -118,7 +119,7 @@ export type Situation =
 export interface NextAction {
   readonly situation: Situation;
   readonly tone: Tone;
-  // The state in words, beside the lamp: "Waiting for you".
+  // The state in words, beside the lamp: "Waiting for your review".
   readonly status: string;
   // What is ready or what happened, one sentence.
   readonly title: string;
@@ -254,7 +255,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     return {
       situation: "held",
       tone: "waiting",
-      status: "Waiting for you",
+      status: heldWord,
       title: `The ${lower(heldName)} ${isAre(heldName)} ready for your review.`,
       why:
         held.dependents.length === 0

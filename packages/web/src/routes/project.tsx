@@ -1,3 +1,4 @@
+import { progressOf } from "@app/kernel/runner/graph.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -638,6 +639,7 @@ function ProjectWorkspace({
                 <div data-tour="project-controls">
                   <ProjectHeader
                     project={summary}
+                    progress={progressOf(stages)}
                     prompts={prompts.data?.prompts}
                     editing={selected === "settings"}
                     onEdit={() => setChosen("settings")}
