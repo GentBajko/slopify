@@ -213,6 +213,13 @@ describe("needs you", () => {
     expect(sortProjects(projects, "status")[0]?.title).toBe("Stopped one");
   });
 
+  // Stopped before anything was made, it needs Continue the run: it isn't waiting its turn.
+  it("counts a run stopped at its start as needing the person, not as Queued", () => {
+    const stopped = listing("p1", "Stopped early", "pending", { stopped: true });
+    expect(matches(stopped, "queued")).toBe(false);
+    expect(matches(stopped, "waiting")).toBe(true);
+  });
+
   it("keeps prepared runs and runs waiting for the agent out of Needs you and its sort", async () => {
     const projects = [
       listing("p1", "Prepared one", "pending", { progress: 0.9, prepared: true }),

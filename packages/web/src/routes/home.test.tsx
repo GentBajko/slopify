@@ -545,6 +545,21 @@ describe("home", () => {
     );
   });
 
+  it("lists a run stopped at its start under Needs you, not as queued under Running now", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("s1", "Hypatia", "pending", { stopped: true })],
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText("Hypatia")).not.toBeNull();
+    // Nothing runs or waits its turn, so Running now has nothing to show.
+    expect(screen.queryByRole("region", { name: "Running now" })).toBeNull();
+  });
+
   it("shows queued runs instead of the empty state when nothing runs yet", async () => {
     renderRouted(
       <HomeRoute />,

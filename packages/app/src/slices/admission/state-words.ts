@@ -87,6 +87,12 @@ export function parkedOnAgent(
   );
 }
 
+// Started and waiting its turn: pending with none of its run done and not stopped. Projects'
+// Queued filter and Home's queued line under Running now.
+export function queuedRun(project: ProjectStanding): boolean {
+  return project.status === "pending" && !held(project);
+}
+
 // An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
 export function projectStateWord(project: ProjectStanding): string {
   return held(project) ? heldStateWord(project) : projectStateWords[project.status];

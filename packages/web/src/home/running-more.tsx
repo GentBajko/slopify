@@ -1,12 +1,13 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
+import { queuedRun } from "@app/slices/admission/state-words.js";
 import type { ReactElement } from "react";
 import { TextLink } from "@/components/kit/link";
 
 // Started but not begun: waiting its turn behind the runs ahead of it (a batch or a schedule
-// queues its runs one after another). A run that has made progress and stopped is held
-// instead (`projectStateWord`).
+// queues its runs one after another). A run that has made progress, or that a restart stopped,
+// is held instead (`projectStateWord`).
 export function isQueued(project: ProjectListing): boolean {
-  return project.status === "pending" && project.progress === 0;
+  return queuedRun(project);
 }
 
 // How many queued titles the line names before it says "and 3 more".
