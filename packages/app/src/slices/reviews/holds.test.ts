@@ -245,6 +245,18 @@ it("is not Stopped while it waits its turn in a batch, or while a step's call is
   expect([...projectHolds(f.db).stopped]).toEqual([]);
 });
 
+// A failed step is the person's to try again (its own fix-it), not Continue the run's, and a
+// canceled run continues only through Choose what to remake: neither offers Continue the run.
+it("is not Stopped once a step failed or the run was canceled", () => {
+  const f = stoppedBehindVideoGate();
+  f.stage("audio", "failed");
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  f.stage("audio", "canceled");
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  f.stage("audio", "done");
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
+});
+
 it("reads a prepared project a restart stopped as Stopped, not Prepared", () => {
   const f = stoppedBehindVideoGate();
   f.prepared(true);

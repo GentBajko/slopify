@@ -72,6 +72,15 @@ describe("the summary in a rundown row", () => {
     );
   });
 
+  // The server never calls a failed run resumable (`reviews/holds.ts`): its next action is Try
+  // again, so the steps after the failed one wait for it, not for a Continue the page lacks.
+  it("says a failed run's later steps wait for the stages above", () => {
+    const failed = { ...project, status: "failed" as const };
+    expect(summaryOf(stage("video", "pending"), [], failed, false)).toBe(
+      "Waits for the stages above",
+    );
+  });
+
   it("says a stage of a run parked on an agent's review waits for the agent", () => {
     const parked = { ...project, status: "pending" as const, waitingForAgent: true };
     expect(summaryOf(stage("images", "pending"), [], parked)).toBe("Waiting for the agent");
