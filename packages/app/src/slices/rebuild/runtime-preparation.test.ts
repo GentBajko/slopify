@@ -298,4 +298,6 @@ it("retains preparation with a resolved thinking configuration", async () => {
   } finally {
     h.close();
   }
-});
+  // ceiling: a narration run, a save and its readmission, as its peers above; a loaded suite
+  // took it to 55% of the 5 s default.
+}, 30_000);
