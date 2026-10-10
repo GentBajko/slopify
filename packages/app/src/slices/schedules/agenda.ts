@@ -175,11 +175,17 @@ function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
 }
 
 // What a project on the calendar asks of the person, if anything. The same readings Home's
-// Needs you uses: a failed or paused run, or one waiting for a review.
-function needsOf(state: ProjectState, reviewing: boolean): CalendarNeed | undefined {
+// Needs you uses: a failed or paused run, one a restart stopped (Continue the run), or one
+// waiting for a review. One Kept as is asks nothing.
+function needsOf(
+  state: ProjectState,
+  ask: { readonly stopped: boolean; readonly reviewing: boolean; readonly aside: boolean },
+): CalendarNeed | undefined {
   if (state === "failed") return "failed";
   if (state === "paused") return "paused";
-  if (reviewing && state !== "canceled") return "review";
+  if (ask.aside) return undefined;
+  if (ask.stopped) return "stopped";
+  if (ask.reviewing && state !== "canceled") return "review";
   return undefined;
 }
 
@@ -231,7 +237,11 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
       // One Kept as is waits for nobody. A run parked on an agent's review holds no checkpoint
       // of the person's, but an item already flagged still waits for their Overrule or Redo.
       const waitingForAgent = holds.waitingForAgent.has(project.id);
-      const needs = needsOf(state, reviewing.has(project.id) && !aside.has(project.id));
+      const needs = needsOf(state, {
+        stopped: holds.stopped.has(project.id),
+        reviewing: reviewing.has(project.id),
+        aside: aside.has(project.id),
+      });
       const ready =
         (state === "done" || state === "partial") &&
         makesVideo(project.video_source) &&

@@ -145,6 +145,6 @@ export const scheduleTools: readonly RouteTool[] = [
     route: "GET /api/calendar",
     title: "Read the calendar",
     description:
-      "Upcoming scheduled runs (each with its prepared project, if any) and projects, each with needs (failed, paused, review) and readyToUpload. Query: {from, to: ISO times at most 92 days apart}.",
+      "Upcoming scheduled runs (each with its prepared project, if any) and projects, each with needs (failed, paused, stopped, review) and readyToUpload. Query: {from, to: ISO times at most 92 days apart}.",
   },
 ];

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { type CalendarProject, projectLook } from "./attention";
+import { attentionMeta, type CalendarProject, needingAttention, projectLook } from "./attention";
 
 const project: CalendarProject = {
   id: "p1",
@@ -23,4 +23,16 @@ it.each([
   [{}, "waiting", "Waiting for your review"],
 ] as const)("says %o as %s %s", (over, tone, word) => {
   expect(projectLook({ ...project, ...over })).toEqual({ tone, word });
+});
+
+// A run a restart stopped needs the person's Continue the run, as on Home's Needs you.
+it("asks the person to open a stopped run to continue it, and counts it as waiting", () => {
+  const stopped = { ...project, stopped: true, needs: "stopped" } as const;
+  expect(projectLook(stopped)).toEqual({
+    tone: "waiting",
+    word: "Stopped",
+    action: { kind: "open", label: "Open to continue" },
+  });
+  expect(attentionMeta([stopped])).toBe("1 waiting for you");
+  expect(needingAttention([project, stopped])).toEqual([stopped]);
 });

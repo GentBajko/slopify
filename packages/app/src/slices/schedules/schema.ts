@@ -6,7 +6,7 @@ import { cadenceSchema, validTimeZone } from "./calendar.js";
 const id = z.uuid();
 // What a project on the calendar waits on the person for: a failed or paused run, or a review
 // (a checkpoint holding the run, or an automatic review's failed item).
-export const calendarNeeds = ["failed", "paused", "review"] as const;
+export const calendarNeeds = ["failed", "paused", "stopped", "review"] as const;
 export type CalendarNeed = (typeof calendarNeeds)[number];
 const keywordName = z
   .string()

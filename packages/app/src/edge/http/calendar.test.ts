@@ -337,7 +337,7 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Aside")).toMatchObject({ setAside: true });
     expect(byTitle.get("Aside")?.needs).toBeUndefined();
     expect(byTitle.get("Agent")).toMatchObject({ waitingForAgent: true, progress: 0.5 });
-    expect(byTitle.get("Cut off")).toMatchObject({ stopped: true });
+    expect(byTitle.get("Cut off")).toMatchObject({ stopped: true, needs: "stopped" });
     expect(byTitle.get("Agent")?.needs).toBeUndefined();
     expect(byTitle.get("Agent flagged")).toMatchObject({ waitingForAgent: true, needs: "review" });
     expect(byTitle.get("Held")?.progress).toBe(0.5);

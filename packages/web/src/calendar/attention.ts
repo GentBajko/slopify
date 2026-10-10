@@ -1,4 +1,4 @@
-import { heldWord } from "@app/slices/admission/state-words.js";
+import { heldWord, stoppedWord } from "@app/slices/admission/state-words.js";
 import type { Calendar } from "@app/slices/schedules/schema.js";
 import type { Tone } from "@/components/kit/status";
 import { projectStateOf } from "@/lib/state-words";
@@ -28,6 +28,12 @@ export function projectLook(
       return {
         tone: "waiting",
         word: "Paused",
+        action: { kind: "open", label: "Open to continue" },
+      };
+    case "stopped":
+      return {
+        tone: "waiting",
+        word: stoppedWord,
         action: { kind: "open", label: "Open to continue" },
       };
     case "review":
