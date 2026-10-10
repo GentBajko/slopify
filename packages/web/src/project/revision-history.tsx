@@ -8,6 +8,8 @@ import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
+import { startedAt } from "@/lib/utils";
+import { Stamp } from "@/library/time";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
@@ -43,13 +45,6 @@ function retainedText(raw: string | null): string {
   } catch {
     return "Recorded text cannot be decoded.";
   }
-}
-// "4 Oct 2026, 14:05": when a version was saved, as a person reads it.
-function stamp(iso: string): string {
-  const at = new Date(iso);
-  return Number.isNaN(at.getTime())
-    ? iso
-    : at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function RevisionHistory({
@@ -88,7 +83,7 @@ export function RevisionHistory({
       output.available &&
       (output.output.role === "image" || output.output.role === "thumbnail"),
   );
-  const versionWhen = stamp(selectedView?.revision.createdAt ?? "");
+  const versionWhen = selectedView === undefined ? "" : startedAt(selectedView.revision.createdAt);
   // The version's folder: the one its images are in, else its first saved file's.
   const folderOf = zipImage ?? selectedView?.outputs.find((output) => output.available);
   return (
@@ -99,7 +94,8 @@ export function RevisionHistory({
         {history.data?.revisions.map((revision) => (
           <li key={revision.id}>
             <Button type="button" onClick={() => setSelected(revision.id)}>
-              {revision.title} · {stamp(revision.createdAt)}
+              {revision.title} ·{" "}
+              <Stamp iso={revision.createdAt}>{startedAt(revision.createdAt)}</Stamp>
               {revision.byAgent === true ? " · by agent" : ""}
               {revision.current ? " · Current" : ""}
             </Button>
@@ -112,7 +108,8 @@ export function RevisionHistory({
           <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
             {history.data?.agentActions.map((action) => (
               <li key={action.id}>
-                {action.title} · by agent · {stamp(action.createdAt)}
+                {action.title} · by agent ·{" "}
+                <Stamp iso={action.createdAt}>{startedAt(action.createdAt)}</Stamp>
               </li>
             ))}
           </ul>
