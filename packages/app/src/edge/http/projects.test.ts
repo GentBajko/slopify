@@ -596,7 +596,7 @@ describe("GET /api/projects", () => {
     );
     const work = (id: string, stage: string, dispatch: string) => {
       db.prepare(
-        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,'p1','r1',?,'images',?,'pending',?,'2026-09-01')",
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at) VALUES (?,'p1','r1',?,'images',?,'pending',?,'{}','2026-09-01')",
       ).run(id, stage, id, dispatch);
       db.prepare(
         "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r1',?,?,?)",

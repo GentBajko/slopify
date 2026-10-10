@@ -148,14 +148,16 @@ export function projectHolds(
   };
 }
 
-// A step of `h`'s current version, of a stage not finished, held other than one parked on an
-// agent's review: a restart (`recoverWork`), a pause or a saved edit held it, and only Continue
-// the run starts it.
+// An admitted step of `h`'s current version, of a stage not finished, held other than one
+// parked on an agent's review: a restart (`recoverWork`) or a pause held it, and only Continue
+// the run starts it. A saved edit's step nobody admitted yet (no `recipe_context`) waits for the
+// person to choose what to remake instead.
 function heldBesideReviews(h: string): string {
   return `EXISTS (SELECT 1 FROM revision_work w
      JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=${h}.revision_id
      JOIN stages s ON s.project_id=w.project_id AND s.id=w.stage_id
      WHERE w.project_id=${h}.project_id AND w.state='pending' AND w.dispatch_state='held'
+       AND w.recipe_context IS NOT NULL
        AND s.state NOT IN ('done','provided','skipped')
        AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting'))`;
 }

@@ -144,7 +144,7 @@ it("waits for the person, not the agent, while another step is held for Continue
   f.stage("video", "pending");
   f.db
     .prepare(
-      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('video-work','p1',?,'video','video','v','pending','held','2026-09-10T00:00:00.000Z')",
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at) VALUES ('video-work','p1',?,'video','video','v','pending','held','{}','2026-09-10T00:00:00.000Z')",
     )
     .run(f.revisionId);
   f.db
@@ -176,7 +176,7 @@ function stoppedBehindVideoGate() {
   const work = (id: string, kind: string, key: string, dispatch: string) => {
     f.db
       .prepare(
-        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,'p1',?,?,?,?,'pending',?,'2026-09-10T00:00:00.000Z')",
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at) VALUES (?,'p1',?,?,?,?,'pending',?,'{}','2026-09-10T00:00:00.000Z')",
       )
       .run(id, f.revisionId, kind, kind, id.padEnd(64, "0"), dispatch);
     f.db
@@ -226,6 +226,34 @@ it("reads a prepared project a restart stopped as Stopped, not Prepared", () => 
   const holds = projectHolds(f.db);
   expect([...holds.stopped]).toEqual(["p1"]);
   expect([...holds.prepared]).toEqual([]);
+});
+
+// A saved edit's step waits for the person to choose what to remake, not for Continue the run:
+// between two stages, with the next one's admitted step about to start, the run isn't stopped.
+it("is not Stopped by a saved edit's step that was never admitted", () => {
+  const f = fixture();
+  f.answered();
+  f.stage("images", "done");
+  f.stage("thumbnail", "pending");
+  f.stage("video", "pending");
+  const work = (id: string, kind: string, dispatch: string, context: string | null) => {
+    f.db
+      .prepare(
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at) VALUES (?,'p1',?,?,?,?,'pending',?,?,'2026-09-10T00:00:00.000Z')",
+      )
+      .run(id, f.revisionId, kind, kind, id.padEnd(64, "0"), dispatch, context);
+    f.db
+      .prepare(
+        "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,?,?,?)",
+      )
+      .run(f.revisionId, `${kind}:key`, id, kind);
+  };
+  work("video-work", "video", "allowed", "{}");
+  work("thumb-edit", "thumbnail", "held", null);
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  // A restart held the admitted thumbnail step: only Continue the run starts it.
+  f.db.prepare("UPDATE revision_work SET recipe_context='{}' WHERE id='thumb-edit'").run();
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
 });
 
 // At its day's hold with the thumbnail's step held by a restart: Continue the run moves it on,
