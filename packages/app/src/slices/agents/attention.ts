@@ -73,10 +73,12 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     });
   };
   // Read once for the checkpoints and the stopped runs, when the first of them asks.
-  let read: ProjectHolds | undefined;
+  let heldOnce: ProjectHolds | undefined;
   const holds = (): ProjectHolds => {
-    read ??= projectHolds(db, { skip: (value, error) => skip("review checkpoints", value, error) });
-    return read;
+    heldOnce ??= projectHolds(db, {
+      skip: (value, error) => skip("review checkpoints", value, error),
+    });
+    return heldOnce;
   };
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
     ["external reviews", () => externalReviews(db, skip)],
@@ -91,9 +93,9 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
   ];
   const aside = setAsideProjects(db);
   return sources
-    .flatMap(([source, read]) => {
+    .flatMap(([source, entries]) => {
       try {
-        return read();
+        return entries();
       } catch (error) {
         log.write("error", "attention.source", {
           detail: `needs_attention left out all ${source} because reading them failed: ${causedBy(error)}`,
