@@ -80,6 +80,20 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
   });
 
+  // A restart held it: the header says what the next action says, and nothing is to approve.
+  it("reads a run a restart stopped as Stopped in its header and its next action", async () => {
+    const current = paused();
+    const fixture = revisionRouteFixture({
+      ...current,
+      resumable: true,
+      project: { ...current.project, status: "pending", stopped: true },
+    });
+    renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
+    expect(await screen.findByRole("button", { name: "Continue the run" })).not.toBeNull();
+    expect(screen.getAllByText("Stopped").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("Waiting for your review")).toBeNull();
+  });
+
   // The run goes on once the agent answers; continuing would only park it.
   it("says a run parked on an agent's review waits for the agent, and offers no Continue the run", async () => {
     const current = paused();

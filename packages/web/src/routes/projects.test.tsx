@@ -134,9 +134,11 @@ describe("the projects list", () => {
         listing("p2", "Knots", "pending", { progress: 0.5, prepared: true }),
         listing("p3", "Hitches", "pending", { progress: 0 }),
         listing("p4", "Splices", "pending", { progress: 0.5, waitingForAgent: true }),
+        listing("p5", "Bends", "pending", { progress: 0.5, stopped: true }),
       ]),
     );
     expect(await screen.findByText("Waiting for your review")).not.toBeNull();
+    expect(screen.getByText("Bends").closest("li")?.textContent).toContain("Stopped");
     expect(screen.getByText("Prepared")).not.toBeNull();
     expect(screen.getByText("Waiting for the agent")).not.toBeNull();
     expect(screen.getByText("Hitches").closest("li")?.textContent).toContain("Queued");
@@ -199,6 +201,18 @@ describe("the projects list", () => {
 describe("needs you", () => {
   // A prepared run waits for its day, one parked on an agent's review for
   // the agent; neither is the person's to act on, so neither leads the list.
+  // A stopped run waits for the person's Continue the run, so it is theirs.
+  it("lists a stopped run under Needs you and sorts it with the waiting ones", () => {
+    const projects = [
+      listing("p1", "Going", "running", { progress: 0.5 }),
+      listing("p2", "Stopped one", "pending", { progress: 0.5, stopped: true }),
+    ];
+    expect(projects.filter((one) => matches(one, "waiting")).map((one) => one.title)).toEqual([
+      "Stopped one",
+    ]);
+    expect(sortProjects(projects, "status")[0]?.title).toBe("Stopped one");
+  });
+
   it("keeps prepared runs and runs waiting for the agent out of Needs you and its sort", async () => {
     const projects = [
       listing("p1", "Prepared one", "pending", { progress: 0.9, prepared: true }),

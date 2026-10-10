@@ -37,3 +37,14 @@ it("says a run parked on an agent's review is waiting for the agent, on the list
     "Waiting for the agent",
   ]);
 });
+
+it("says a run only Continue the run moves on is stopped, on the list and its page", () => {
+  const listed = listWithStateWords({
+    projects: [{ status: "pending", progress: 0.5, stopped: true }],
+  }) as { projects: { stateWord: string }[] };
+  const page = projectWithStateWords({
+    project: { status: "pending", stopped: true },
+    stages: [stage("done"), stage("pending")],
+  }) as { project: { stateWord: string } };
+  expect([listed.projects[0]?.stateWord, page.project.stateWord]).toEqual(["Stopped", "Stopped"]);
+});

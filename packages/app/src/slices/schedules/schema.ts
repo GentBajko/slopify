@@ -266,6 +266,7 @@ export const calendarProjectSchema = z
     setAside: z.literal(true).optional(),
     prepared: z.literal(true).optional(),
     waitingForAgent: z.literal(true).optional(),
+    stopped: z.literal(true).optional(),
     // Stages waiting for a CLI plan's limits to reset.
     limitWaits: z
       .array(

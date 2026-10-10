@@ -27,34 +27,44 @@ export const stageStateWords: Readonly<Record<StageState, string>> = {
 };
 
 // What a held run waits for, on a step or on a project: the person's review at a checkpoint,
-// an External agent's review, its scheduled day, or nobody once its
-// leftover steps were set aside on purpose.
+// an External agent's review, Continue the run once a restart stopped it, its scheduled day,
+// or nobody once its leftover steps were set aside on purpose.
 export const heldWord = "Waiting for your review";
 export const waitingForAgentWord = "Waiting for the agent";
+export const stoppedWord = "Stopped";
 export const preparedWord = "Prepared";
 export const keptAsIsWord = "Kept as is";
-export const heldStateWords = [heldWord, waitingForAgentWord, preparedWord, keptAsIsWord] as const;
+export const heldStateWords = [
+  heldWord,
+  waitingForAgentWord,
+  stoppedWord,
+  preparedWord,
+  keptAsIsWord,
+] as const;
 export type HeldStateWord = (typeof heldStateWords)[number];
 
-// `prepared` and `waitingForAgent` are the server's (`reviews/holds.ts` projectHolds).
+// `prepared`, `waitingForAgent` and `stopped` are the server's (`reviews/holds.ts`
+// projectHolds).
 interface ProjectStanding {
   readonly status: ProjectState;
   readonly progress: number;
   readonly setAside?: boolean | undefined;
   readonly prepared?: boolean | undefined;
   readonly waitingForAgent?: boolean | undefined;
+  readonly stopped?: boolean | undefined;
 }
 
-type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent">;
+type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent" | "stopped">;
 
 // A run that ran and is held: a waiting project with some of its run done (`progress` is the
-// run's share done, `progressOf`). One with none is Queued, waiting its turn.
+// run's share done, `progressOf`), or one stopped before it got going. One with none done that
+// isn't stopped is Queued, waiting its turn.
 function held(project: ProjectStanding): boolean {
-  return project.status === "pending" && project.progress > 0;
+  return project.status === "pending" && (project.progress > 0 || project.stopped === true);
 }
 
-// Whether the person is the one it waits for: not when it is Kept as is, waits for an agent
-// or for its scheduled day.
+// Whether the person is the one it waits for (to approve, or to Continue the run): not when it
+// is Kept as is, waits for an agent or for its scheduled day.
 function heldForPerson(project: Holds): boolean {
   return project.setAside !== true && project.waitingForAgent !== true && project.prepared !== true;
 }
@@ -62,6 +72,7 @@ function heldForPerson(project: Holds): boolean {
 export function heldStateWord(project: Holds): HeldStateWord {
   if (project.setAside === true) return keptAsIsWord;
   if (project.waitingForAgent === true) return waitingForAgentWord;
+  if (project.stopped === true) return stoppedWord;
   if (project.prepared === true) return preparedWord;
   return heldWord;
 }

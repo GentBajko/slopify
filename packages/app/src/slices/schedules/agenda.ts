@@ -252,6 +252,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           ...(aside.has(project.id) ? { setAside: true } : {}),
           ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
           ...(waitingForAgent ? { waitingForAgent: true } : {}),
+          ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
           ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
         },
       ];

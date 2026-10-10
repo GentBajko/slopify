@@ -25,18 +25,19 @@ export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
 
 // A project's state with its lamp, in the words the MCP tools say it (`projectStateWord`): a
 // waiting project with some of its run done is held for the person (Waiting for your review),
-// for an External agent (Waiting for the agent), for its scheduled day (Prepared), or set aside
-// (Kept as is). `progress` is the run's share done.
+// for an External agent (Waiting for the agent), for Continue the run (Stopped), for its
+// scheduled day (Prepared), or set aside (Kept as is). `progress` is the run's share done.
 export function projectStateOf(project: {
   readonly status: ProjectState;
   readonly progress: number;
   readonly setAside?: boolean | undefined;
   readonly prepared?: boolean | undefined;
   readonly waitingForAgent?: boolean | undefined;
+  readonly stopped?: boolean | undefined;
 }): StateLook {
-  if (project.status !== "pending" || project.progress <= 0)
-    return projectStateLook[project.status];
-  return { tone: project.setAside === true ? "done" : "waiting", word: projectStateWord(project) };
+  const word = projectStateWord(project);
+  if (word === projectStateWords[project.status]) return projectStateLook[project.status];
+  return { tone: project.setAside === true ? "done" : "waiting", word };
 }
 
 // A failed step that will try again by itself.

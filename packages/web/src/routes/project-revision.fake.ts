@@ -9,7 +9,12 @@ type Body = ReturnType<typeof body>;
 
 // The project body may carry the server's hold flags (`reviews/holds.ts`).
 export function revisionRouteFixture(
-  original: Body & { readonly project: Body["project"] & { readonly waitingForAgent?: true } },
+  original: Body & {
+    readonly project: Body["project"] & {
+      readonly waitingForAgent?: true;
+      readonly stopped?: true;
+    };
+  },
 ): {
   readonly app: ReturnType<typeof deps>;
   readonly routes: Readonly<Record<string, Answer>>;

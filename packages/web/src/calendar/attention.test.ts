@@ -15,6 +15,7 @@ const project: CalendarProject = {
 it.each([
   [{ prepared: true }, "waiting", "Prepared"],
   [{ waitingForAgent: true }, "waiting", "Waiting for the agent"],
+  [{ stopped: true }, "waiting", "Stopped"],
   [{ setAside: true }, "done", "Kept as is"],
   [{ prepared: true, setAside: true }, "done", "Kept as is"],
   [{ prepared: true, progress: 0 }, "off", "Queued"],

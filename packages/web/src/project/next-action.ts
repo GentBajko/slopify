@@ -3,6 +3,7 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import {
   heldStateWord,
   parkedOnAgent,
+  stoppedWord,
   waitingForAgentWord,
 } from "@app/slices/admission/state-words.js";
 import type { Fix } from "@app/slices/fixes/rules.js";
@@ -359,7 +360,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     return {
       situation: "stopped",
       tone: "off",
-      status: project.status === "canceled" ? "Canceled" : "Stopped",
+      status: project.status === "canceled" ? "Canceled" : stoppedWord,
       title: "The run stopped before it finished.",
       why: "Continuing makes only what is missing; everything made so far is kept.",
       action: { label: "Continue the run", intent: { kind: "resume" } },

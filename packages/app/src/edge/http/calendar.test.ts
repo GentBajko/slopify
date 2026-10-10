@@ -298,6 +298,13 @@ it("says which projects need the person, which are ready to upload and which wai
       `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
        VALUES (?,?,'cp-8','audio','work',?,'held',?)`,
     ).run(ahead, `rev-${ahead}`, "a".repeat(64), finished);
+    // Stopped by a restart: nothing admitted can start, so only Continue the run goes on.
+    const cutOff = f.project("Cut off", "pending", null);
+    heldAt(cutOff, "audio");
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      cutOff,
+      `rev-${cutOff}`,
+    );
     db.exec("PRAGMA foreign_keys=ON");
     const waiting = f.project("Waiting", "running", null);
     db.prepare(
@@ -328,6 +335,7 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Aside")).toMatchObject({ setAside: true });
     expect(byTitle.get("Aside")?.needs).toBeUndefined();
     expect(byTitle.get("Agent")).toMatchObject({ waitingForAgent: true, progress: 0.5 });
+    expect(byTitle.get("Cut off")).toMatchObject({ stopped: true });
     expect(byTitle.get("Agent")?.needs).toBeUndefined();
     expect(byTitle.get("Agent flagged")).toMatchObject({ waitingForAgent: true, needs: "review" });
     expect(byTitle.get("Held")?.progress).toBe(0.5);
