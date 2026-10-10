@@ -15,9 +15,9 @@ import {
 } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import { type RecoveryRequest, recoveryResultSchema } from "../../slices/rebuild/recovery-model.js";
-import { resumableRuns } from "../../slices/rebuild/recovery-repo.js";
 import { clearSoftening, requestSoftening, softenableKeys } from "../../slices/rebuild/soften.js";
 import type { RerunDeps } from "../../slices/reruns/index.js";
+import { resumableRuns } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { allowsCustomModel } from "../../slices/settings/models.js";

@@ -18,8 +18,7 @@ import { channelById, projectChannels, setProjectChannel } from "../../slices/ch
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
-import { resumableRuns } from "../../slices/rebuild/recovery-repo.js";
-import { projectHolds } from "../../slices/reviews/holds.js";
+import { projectHolds, resumableRuns } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js";

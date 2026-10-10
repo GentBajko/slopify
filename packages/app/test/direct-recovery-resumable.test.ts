@@ -6,8 +6,8 @@ import { derive } from "../src/kernel/runner/graph.js";
 import { stagesOf } from "../src/slices/admission/repo.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import type { RecoveryRequest } from "../src/slices/rebuild/recovery-model.js";
-import { resumableRuns } from "../src/slices/rebuild/recovery-repo.js";
 import type { RebuildDeps } from "../src/slices/rebuild/service.js";
+import { resumableRuns } from "../src/slices/reviews/holds.js";
 import { composedFixture, current, save } from "./revision-rebuild.fake.js";
 
 type Fixture = Awaited<ReturnType<typeof composedFixture>>;
