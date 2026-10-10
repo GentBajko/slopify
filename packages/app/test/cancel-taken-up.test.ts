@@ -9,6 +9,8 @@ import { stageStandingsByProject, stagesOf } from "../src/slices/admission/repo.
 import { noticeOf } from "../src/slices/notifications/rules.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
+import { answerExternalReview } from "../src/slices/reviews/external-repo.js";
+import { externalReviewById } from "../src/slices/reviews/external-rows.js";
 import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import { projectHolds } from "../src/slices/reviews/holds.js";
 import { boot, cancel, narratingWhileAgentsReview, settleUntil } from "./agent-reviews-run.fake.js";
@@ -128,4 +130,51 @@ it("reads a stage taken up after a cancel that then fails as Failed", {
   );
   expect(announced.at(-1)).toBe("failed");
   expect(noticeOf(announced.at(-2), "failed")).toBe("failed");
+});
+
+// Cancel closes only the reviews still waiting: a verdict an agent already gave stays, and
+// taken up again, only the review that was waiting waits again.
+it("keeps an agent's verdict through a cancel and reopens only the review that waited", {
+  timeout: 30_000,
+}, async () => {
+  const { h } = await narratingWhileAgentsReview(closers);
+  const [answered, waited] = waitingExternalReviews(h.deps.db, h.projectId);
+  if (answered === undefined || waited === undefined) throw new Error("two reviews expected");
+  const verdict = { passed: false, reasons: ["The rope is cut off at the frame's edge."] };
+  expect(
+    answerExternalReview(h.deps.db, {
+      projectId: h.projectId,
+      id: answered.id,
+      verdict,
+      by: "agent",
+      at: new Date().toISOString(),
+    }),
+  ).toMatchObject({ ok: true });
+  await cancel(h);
+  expect(externalReviewById(h.deps.db, h.projectId, answered.id)).toMatchObject({
+    state: "answered",
+    verdict,
+    answeredBy: "agent",
+  });
+  expect(waitingExternalReviews(h.deps.db, h.projectId)).toEqual([]);
+
+  expect(
+    await recoverProject(h.deps, h.projectId, {
+      baseRevisionId: current(h.deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "retry", stage: "images" },
+    }),
+  ).toMatchObject({ ok: true });
+  await vi.waitFor(
+    () =>
+      expect(waitingExternalReviews(h.deps.db, h.projectId).map((review) => review.id)).toEqual([
+        waited.id,
+      ]),
+    { timeout: 4_000 },
+  );
+  expect(externalReviewById(h.deps.db, h.projectId, answered.id)).toMatchObject({
+    state: "answered",
+    verdict,
+    answeredBy: "agent",
+  });
 });
