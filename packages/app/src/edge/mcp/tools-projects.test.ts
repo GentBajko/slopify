@@ -76,3 +76,18 @@ it("answers an unknown project with the route's own sentence", async () => {
   expect(missing.isError).toBe(true);
   expect(JSON.stringify(missing.content)).toContain("Go back to Projects to pick another.");
 });
+
+it("refuses a dot-segment id before anything is called", async () => {
+  const h = withStage();
+  const agent = await connectAgent(h.app);
+  for (const [name, args] of [
+    ["delete_old_versions", { id: "..", confirmed: true }],
+    ["delete_from_trash", { kind: "..", id: "update", confirmed: true }],
+    ["get_project", { id: "%2e%2e" }],
+  ] as const) {
+    const answer = await agent.callTool({ name, arguments: args });
+    expect(answer.isError).toBe(true);
+  }
+  const listed = await agent.callTool({ name: "get_project", arguments: { id: h.projectId } });
+  expect(listed.isError).toBeUndefined();
+});

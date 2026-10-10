@@ -10,6 +10,7 @@ import {
   remakeTotal,
 } from "../../slices/rebuild/remake-outdated.js";
 import { type RouteCallDeps, text } from "./call-route.js";
+import { pathParam } from "./route-tool.js";
 
 const projectSchema = z
   .object({ project: z.object({ title: z.string(), status: z.string() }).loose() })
@@ -147,7 +148,7 @@ export function registerRemakeTools(server: McpServer, deps: RouteCallDeps): voi
       title: "Remake outdated",
       description:
         "Remake outdated for several projects, like the Projects list's selection bar: each project's Choose what to remake for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
-      inputSchema: { projectIds: z.array(z.string().min(1).max(64)).min(1).max(2000) },
+      inputSchema: { projectIds: z.array(pathParam).min(1).max(2000) },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     ({ projectIds }) => remakeOutdated(deps, projectIds),

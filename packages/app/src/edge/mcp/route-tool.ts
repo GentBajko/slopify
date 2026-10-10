@@ -39,6 +39,14 @@ export function paramsOf(path: string): readonly string[] {
   );
 }
 
+// Every id, slug and kind a route takes is letters, digits, - and _ (ULIDs, UUIDs, pack slugs,
+// stage kinds). Nothing else is let into a path: ".." would make the URL resolve to another route.
+export const pathParam = z
+  .string()
+  .min(1)
+  .max(256)
+  .regex(/^[0-9A-Za-z_-]+$/, "Use the id exactly as Slopify listed it: letters, digits, - and _.");
+
 export const fileArg = z
   .object({
     name: z.string().min(1).max(255),
@@ -55,7 +63,7 @@ export function formBody(screen: string): string {
 export function inputShape(tool: RouteTool): Record<string, z.ZodType> {
   const { method, path } = routeOf(tool);
   return {
-    ...Object.fromEntries(paramsOf(path).map((name) => [name, z.string().min(1).max(256)])),
+    ...Object.fromEntries(paramsOf(path).map((name) => [name, pathParam])),
     query: z
       .record(z.string(), z.string())
       .optional()

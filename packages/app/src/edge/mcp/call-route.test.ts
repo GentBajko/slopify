@@ -169,3 +169,32 @@ it("sends a file as multipart for an upload tool, and as the bytes for a raw one
     new Uint8Array([80, 75, 3, 4]),
   );
 });
+
+it("refuses a path parameter that would leave the tool's route, and sends nothing", async () => {
+  const fake = answering(new Response(null, { status: 204 }));
+  const trash: RouteTool = {
+    name: "delete_from_trash",
+    route: "DELETE /api/trash/:kind/:id",
+    title: "Delete forever",
+    description: "",
+  };
+  const oldVersions: RouteTool = {
+    name: "delete_old_versions",
+    route: "POST /api/storage/projects/:id/old-versions/delete",
+    title: "Delete old versions",
+    description: "",
+  };
+  for (const [tool, args] of [
+    [oldVersions, { id: ".." }],
+    [trash, { kind: "..", id: "update" }],
+    [resume, { id: "%2e%2e" }],
+    [resume, { id: "." }],
+    [resume, { id: "a/b" }],
+    [resume, {}],
+  ] as const) {
+    const refused = await callRoute(fake, tool, args);
+    expect(refused.isError).toBe(true);
+    expect(JSON.stringify(refused.content)).toContain(`call ${tool.name} again`);
+  }
+  expect(fake.seen).toHaveLength(0);
+});

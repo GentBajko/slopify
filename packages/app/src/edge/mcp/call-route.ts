@@ -5,7 +5,7 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import { recordAgentAction } from "../../slices/agents/repo.js";
 import { revisionIdOf, subjectsOf } from "./attribution.js";
-import { fileArg, type RouteTool, routeOf } from "./route-tool.js";
+import { fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
 
 export interface RouteCallDeps {
   // The API, called in-process as the agent (`http/actor.ts`).
@@ -47,10 +47,12 @@ export async function callRoute(
       `${tool.confirm} The web page asks for a second press here: call ${tool.name} again with confirmed: true to go ahead.`,
     );
   const { method, path } = routeOf(tool);
-  const url = new URL(
-    path.replace(/:(\w+)/g, (_, name: string) => encodeURIComponent(String(args[name] ?? ""))),
-    "http://localhost",
-  );
+  const named = paramsOf(path).find((name) => !pathParam.safeParse(args[name]).success);
+  if (named !== undefined) return strayPath(tool, named);
+  const filled = path.replace(/:(\w+)/g, (_, name: string) => String(args[name]));
+  const url = new URL(filled, "http://localhost");
+  // The URL must still be the tool's own route once resolved, or it would reach another one.
+  if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
   const query = querySchema.safeParse(args.query);
   if (query.success)
     for (const [key, value] of Object.entries(query.data)) url.searchParams.set(key, value);
@@ -75,6 +77,12 @@ export async function callRoute(
       });
   }
   return result;
+}
+
+function strayPath(tool: RouteTool, named: string): CallToolResult {
+  return refusal(
+    `${tool.name} was refused: ${named} must be an id exactly as Slopify listed it (letters, digits, - and _ only), so the call stays on ${tool.route}. Take the id from the tool that listed it and call ${tool.name} again.`,
+  );
 }
 
 function payloadOf(
