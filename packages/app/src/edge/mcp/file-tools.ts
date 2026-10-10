@@ -21,8 +21,6 @@ const id = z
 const fileUrl =
   /^\/files\/([0-9A-Za-z_-]{1,64})\/(?:revisions\/([0-9A-Za-z_-]{1,64})\/([0-9A-Za-z_-]{1,64})|([a-z0-9-]{1,64}))$/;
 
-type FileDeps = RevisionDeps;
-
 const missing = {
   "unknown-project": "This project doesn't exist. Call list_projects to pick one.",
   "unknown-asset":
@@ -45,7 +43,7 @@ export function listProjectFiles(deps: DownloadDeps, projectId: string): CallToo
 }
 
 export async function projectFile(
-  deps: FileDeps,
+  deps: RevisionDeps,
   projectId: string,
   url: string,
 ): Promise<CallToolResult> {
@@ -90,7 +88,7 @@ export async function projectFile(
 // The word timing describes the current narration, so it comes with that audio only: not an
 // intro, an outro or another format, and not an older version from History.
 async function narrationTimings(
-  deps: FileDeps,
+  deps: RevisionDeps,
   projectId: string,
   asset: "audio-body" | "audio-export",
 ): Promise<string | undefined> {
@@ -115,7 +113,7 @@ async function narrationTimings(
   );
 }
 
-export function registerFileTools(server: McpServer, deps: FileDeps): void {
+export function registerFileTools(server: McpServer, deps: RevisionDeps): void {
   server.registerTool(
     "list_project_files",
     {
@@ -136,6 +134,6 @@ export function registerFileTools(server: McpServer, deps: FileDeps): void {
       inputSchema: { id, url: z.string().min(1).max(300) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ id: projectId, url }) => projectFile(deps, projectId, url),
+    ({ id: projectId, url }) => projectFile(deps, projectId, url),
   );
 }
