@@ -247,7 +247,8 @@ describe("the tutorial in the real app", { timeout: 30_000 }, () => {
     await act(() => router.navigate({ to: "/play" }));
     expect(((await screen.findByLabelText("Title")) as HTMLInputElement).value).toBe("");
     expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("");
-  }, 10000);
+    // About 2.5 s alone; under the full suite's load it reaches about 6 s.
+  }, 20000);
 
   it("can finish the walkthrough without saving prompts or starting generation", async () => {
     const user = userEvent.setup();
