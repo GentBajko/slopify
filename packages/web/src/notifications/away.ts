@@ -10,13 +10,14 @@ export interface AwaySnapshot {
   readonly at: number;
   readonly states: Readonly<Record<string, ProjectState>>;
   // The projects that waited for the person when it was taken (`waitsForPerson`, the rule of
-  // Home's Needs you): one held for an agent or its day waits for nobody.
-  readonly waiting: readonly string[];
+  // Home's Needs you), each with what it waited on (`waitPoint`): one held for an agent or its
+  // day waits for nobody.
+  readonly waiting: Readonly<Record<string, string>>;
 }
 
 type Standing = Pick<
   ProjectListing,
-  "id" | "status" | "progress" | "setAside" | "prepared" | "waitingForAgent" | "stopped"
+  "id" | "status" | "progress" | "setAside" | "prepared" | "waitingForAgent" | "stopped" | "holding"
 >;
 
 export interface AwaySummary {
@@ -35,12 +36,23 @@ export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
   return {
     at,
     states: Object.fromEntries(now.map((one) => [one.id, one.status])),
-    waiting: now.filter(waitsForPerson).map((one) => one.id),
+    waiting: Object.fromEntries(now.filter(waitsForPerson).map((one) => [one.id, waitPoint(one)])),
   };
 }
 
+// What a run waiting for the person waits on: paused, Continue the run after a restart, the
+// checkpoints of the person's that hold it, or nothing named.
+function waitPoint(project: Standing): string {
+  if (project.status === "paused") return "paused";
+  if (project.stopped === true) return "stopped";
+  const at = (project.holding ?? [])
+    .filter((hold) => hold.waitsFor === "person")
+    .map((hold) => `${hold.checkpointId}:${hold.fingerprint}`)
+    .sort();
+  return at.length === 0 ? "held" : at.join(",");
+}
+
 export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): AwaySummary {
-  const waitedBefore = new Set(before.waiting);
   let finished = 0;
   let failed = 0;
   let waiting = 0;
@@ -51,8 +63,9 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
     const changed = was !== project.status;
     if (changed && (project.status === "done" || project.status === "partial")) finished += 1;
     else if (changed && project.status === "failed") failed += 1;
-    // Stopped to wait for a review or a decision since the page last looked.
-    else if (waitsForPerson(project) && !waitedBefore.has(project.id)) waiting += 1;
+    // Stopped to wait for a review or a decision since the page last looked, or at another one.
+    else if (waitsForPerson(project) && before.waiting[project.id] !== waitPoint(project))
+      waiting += 1;
   }
   return { finished, failed, waiting };
 }
@@ -73,8 +86,8 @@ export function awayMessage(summary: AwaySummary): string | undefined {
   return `While you were away: ${parts.join(", ")}.`;
 }
 
-// A snapshot kept before it said who waited reads as none: every run waiting then would be told
-// as news.
+// A snapshot kept before it said who waited, and on what, reads as none: every run waiting then
+// would be told as news.
 export function readSnapshot(): AwaySnapshot | undefined {
   try {
     const stored: unknown = JSON.parse(window.localStorage.getItem(key) ?? "null");
@@ -87,7 +100,9 @@ export function readSnapshot(): AwaySnapshot | undefined {
       typeof stored.states === "object" &&
       stored.states !== null &&
       "waiting" in stored &&
-      Array.isArray(stored.waiting)
+      typeof stored.waiting === "object" &&
+      stored.waiting !== null &&
+      !Array.isArray(stored.waiting)
     )
       return {
         at: stored.at,
@@ -97,7 +112,11 @@ export function readSnapshot(): AwaySnapshot | undefined {
             return known === undefined ? [] : [[id, known]];
           }),
         ),
-        waiting: stored.waiting.filter((id): id is string => typeof id === "string"),
+        waiting: Object.fromEntries(
+          Object.entries(stored.waiting).filter(
+            (entry): entry is [string, string] => typeof entry[1] === "string",
+          ),
+        ),
       };
   } catch {
     // Unreadable storage or a damaged value: no summary this time.

@@ -24,7 +24,7 @@ function Subject() {
 }
 
 it("says on return what the runs did while the page was away", async () => {
-  writeSnapshot({ at: Date.now() - 60 * 60_000, states: { a: "running" }, waiting: [] });
+  writeSnapshot({ at: Date.now() - 60 * 60_000, states: { a: "running" }, waiting: {} });
   renderRouted(
     <Subject />,
     testDeps({
@@ -36,7 +36,7 @@ it("says on return what the runs did while the page was away", async () => {
 });
 
 it("says nothing after a short glance away", async () => {
-  writeSnapshot({ at: Date.now() - 10_000, states: { a: "running" }, waiting: [] });
+  writeSnapshot({ at: Date.now() - 10_000, states: { a: "running" }, waiting: {} });
   const listed = vi.fn(jsonAnswer({ projects: [{ id: "a", status: "failed" }] }));
   renderRouted(<Subject />, testDeps({ "GET /api/projects": listed }));
   await vi.waitFor(() => expect(listed).toHaveBeenCalled());
@@ -53,7 +53,7 @@ it("says nothing the first time back after the update, and keeps a new snapshot"
   renderRouted(<Subject />, testDeps({ "GET /api/projects": listed }));
   await vi.waitFor(() =>
     expect(JSON.parse(window.localStorage.getItem("slopify.away.snapshot") ?? "{}")).toMatchObject({
-      waiting: ["a"],
+      waiting: { a: "held" },
     }),
   );
   expect(screen.queryByText(/While you were away/)).toBeNull();

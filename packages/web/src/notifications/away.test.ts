@@ -7,7 +7,7 @@ describe("awaySummary", () => {
       {
         at: 0,
         states: { a: "running", b: "running", c: "pending", d: "running", e: "done" },
-        waiting: [],
+        waiting: {},
       },
       [
         { id: "a", status: "done", progress: 1 },
@@ -32,7 +32,7 @@ describe("awaySummary", () => {
   it("says nothing when nothing changed", () => {
     expect(
       awayMessage(
-        awaySummary({ at: 0, states: { a: "done" }, waiting: [] }, [
+        awaySummary({ at: 0, states: { a: "done" }, waiting: {} }, [
           { id: "a", status: "done", progress: 1 },
         ]),
       ),
@@ -54,7 +54,7 @@ it("counts as waiting for you only the runs that newly wait for the person", () 
         e: "running",
         f: "running",
       },
-      waiting: ["d"],
+      waiting: { d: "held" },
     },
     [
       { id: "a", status: "pending", progress: 0.5, waitingForAgent: true },
@@ -76,7 +76,36 @@ it("keeps in the snapshot which runs waited for the person", () => {
       { id: "b", status: "pending", progress: 0.5, waitingForAgent: true },
       { id: "c", status: "running", progress: 0.5 },
     ]),
-  ).toEqual({ at: 5, states: { a: "pending", b: "pending", c: "running" }, waiting: ["a"] });
+  ).toEqual({
+    at: 5,
+    states: { a: "pending", b: "pending", c: "running" },
+    waiting: { a: "held" },
+  });
+});
+
+// What a run waits on is kept, not only that it waits: moved on by an agent, a run that now
+// waits at another checkpoint is news.
+it("counts a run that waits again at a new point since the page last looked", () => {
+  const at = (checkpointId: string) => ({
+    id: "a",
+    status: "pending" as const,
+    progress: 0.5,
+    holding: [
+      {
+        checkpointId,
+        stage: "audio" as const,
+        waitsFor: "person" as const,
+        revisionId: "r1",
+        fingerprint: "f1",
+        since: "2026-10-10T00:00:00.000Z",
+      },
+    ],
+  });
+  const before = snapshotOf(0, [at("cp-article")]);
+  expect(awaySummary(before, [at("cp-article")])).toMatchObject({ waiting: 0 });
+  expect(awaySummary(before, [at("cp-audio")])).toMatchObject({ waiting: 1 });
+  const paused = { id: "a", status: "paused" as const, progress: 0.5 };
+  expect(awaySummary(snapshotOf(0, [paused]), [at("cp-article")])).toMatchObject({ waiting: 1 });
 });
 
 describe("the stored snapshot", () => {
@@ -106,6 +135,12 @@ describe("the stored snapshot", () => {
   // Kept before it said who waited, it can't tell news from old: no summary this once.
   it("gives no summary from a snapshot kept before it said who waited", () => {
     stored.set("slopify.away.snapshot", JSON.stringify({ at: 5, states: { a: "pending" } }));
+    expect(readSnapshot()).toBe(undefined);
+    // Kept while it said only who waited, not on what.
+    stored.set(
+      "slopify.away.snapshot",
+      JSON.stringify({ at: 5, states: { a: "pending" }, waiting: ["a"] }),
+    );
     expect(readSnapshot()).toBe(undefined);
   });
 });
