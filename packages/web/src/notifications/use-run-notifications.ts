@@ -1,7 +1,8 @@
+import type { NoticeSubject } from "@app/slices/notifications/rules.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";
-import { readProject } from "@/api";
+import { type Api, readProject } from "@/api";
 import { useApp } from "@/app-context";
 import { projectsQuery } from "@/queries";
 import {
@@ -15,6 +16,19 @@ import {
 import { onRunSoundsChange, playRunSound, runSoundsOn, unlockRunSounds } from "./sounds.js";
 import { useAwaySummary } from "./use-away-summary.js";
 import { createRunWatcher, type RunWatcher } from "./watcher.js";
+
+// What a notification says about a project, from its page's body (`GET /api/projects/:id`), as
+// the server's notifier reads it (`slices/notifications/subject.ts`).
+export async function projectNoticeSubject(api: Api, projectId: string): Promise<NoticeSubject> {
+  const body = await readProject(api, projectId);
+  return {
+    title: body.project.title,
+    makesVideo: body.project.config.sources.video !== "off",
+    startedBy: body.startedBy ?? null,
+    waitingForAgent: body.project.waitingForAgent === true,
+    reason: body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
+  };
+}
 
 // The shell's one watcher. It rides the global event stream the shell already holds open, so
 // notifications cost no extra connection; the only requests it makes are one project list
@@ -42,17 +56,7 @@ export function useRunNotifications(): RunWatcher {
         },
         seed: async () =>
           (await queryClient.fetchQuery({ ...projectsQuery(api), staleTime: 5_000 })).projects,
-        subject: async (projectId) => {
-          const body = await readProject(api, projectId);
-          return {
-            title: body.project.title,
-            makesVideo: body.project.config.sources.video !== "off",
-            startedBy: body.startedBy ?? null,
-            waitingForAgent: body.project.waitingForAgent === true,
-            reason:
-              body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
-          };
-        },
+        subject: (projectId) => projectNoticeSubject(api, projectId),
         claim: (key) => claimOnce(key),
         showTopics: (notice) => {
           showTopicsNotification(notice, () => {
