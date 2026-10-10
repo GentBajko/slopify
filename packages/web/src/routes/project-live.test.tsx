@@ -95,6 +95,7 @@ interface Server {
 function view(server: Server) {
   return {
     revisionId: server.revisionId ?? null,
+    holding: [],
     project: {
       id: "p1",
       title: "Rope Tricks",

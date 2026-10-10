@@ -199,6 +199,7 @@ export async function mount(
       created = {
         revisionId: null,
         resumable: false,
+        holding: [],
         project: {
           id,
           title: draft.title,

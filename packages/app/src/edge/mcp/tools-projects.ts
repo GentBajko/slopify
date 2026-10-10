@@ -20,7 +20,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects/:id",
     title: "Read a project",
     description:
-      "One project as its page shows it: revisionId (the baseRevisionId every change needs), resumable, the project with its stateWord, each step with its state, stateWord (Not started, Running, Done, Provided, Failed, Canceled, Off), failure reason and ETA, and its current output files.",
+      "One project as its page shows it: revisionId (the baseRevisionId every change needs), resumable, holding (the checkpoints holding the run now, each waiting for the person or, a schedule's own Before Video hold, for its day), the project with its stateWord, each step with its state, stateWord (Not started, Running, Done, Provided, Failed, Canceled, Off), failure reason and ETA, and its current output files.",
     shape: projectWithStateWords,
   },
   {

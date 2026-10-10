@@ -141,6 +141,8 @@ export function projectRoutes(deps: AppDeps) {
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
           // Continuing a run parked on an agent's review only parks it again.
           resumable: !waitingForAgent && resumable(deps.db, project.id),
+          // The checkpoints holding the run now, and whom each waits for (`reviews/holds.ts`).
+          holding: holds.holding.get(project.id) ?? [],
           startedBy: lastStarter(deps.db, project.id),
           project: {
             ...summarise(project),

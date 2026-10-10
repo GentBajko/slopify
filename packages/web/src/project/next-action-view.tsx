@@ -1,4 +1,5 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { LimitWait } from "@app/slices/run-cost/panel.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -47,6 +48,7 @@ export function useNextAction({
   project,
   stages,
   resumable,
+  holding,
   sample,
   gates,
   outdated,
@@ -60,6 +62,8 @@ export function useNextAction({
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
   readonly resumable: boolean;
+  // The checkpoints holding the run now (`ProjectBody.holding`).
+  readonly holding: readonly CheckpointHold[];
   readonly sample: boolean;
   readonly gates: readonly CheckpointGate[];
   readonly outdated: readonly OutdatedOutput[];
@@ -78,11 +82,12 @@ export function useNextAction({
   // is the same request.
   const approval = useRef(new Map<string, string>());
   const held: HeldGate[] = gates
-    // A gate waits for the person once its stage is done: held (work behind it is waiting)
-    // or pending review. A configured gate has nothing to look at yet.
+    // A gate holds the run once the run reaches it (`holding`, the server's rule), for the
+    // person or, a schedule's own Before Video hold, for its day. A configured gate, or one
+    // whose inputs changed, has nothing to look at yet.
     .filter(
       (gate) =>
-        (gate.state === "held" || gate.state === "pending-review") &&
+        holding.some((hold) => hold.checkpointId === gate.checkpointId) &&
         gate.fingerprint === gate.currentFingerprint,
     )
     .map((gate) => ({

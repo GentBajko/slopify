@@ -24,6 +24,7 @@ function body(stages: readonly Stage[]): ProjectBody {
   return {
     revisionId: null,
     resumable: false,
+    holding: [],
     project: {
       id: "p1",
       title: "Rope Tricks",

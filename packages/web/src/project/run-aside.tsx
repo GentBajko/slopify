@@ -1,6 +1,12 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
-import { heldWord, stageStateWords } from "@app/slices/admission/state-words.js";
+import {
+  heldWord,
+  preparedWord,
+  stageStateWords,
+  waitingForAgentWord,
+} from "@app/slices/admission/state-words.js";
 import { etaLabel, stageEta } from "@app/slices/eta/model.js";
+import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
@@ -10,7 +16,6 @@ import { Meter } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import { retryingWord } from "@/lib/state-words";
-import type { HeldGate } from "./next-action.js";
 import { stageWords } from "./next-action.js";
 import { money, workDuration } from "./run-cost.js";
 import { finalOutput, summaryOf } from "./summary.js";
@@ -18,8 +23,7 @@ import { finalOutput, summaryOf } from "./summary.js";
 // The right rail under the next action: the run's steps with their times and one detail
 // line each, then what the run has cost so far and its share of the plan limits.
 
-const toneOf = (stage: Stage, held: boolean): Tone => {
-  if (held) return "waiting";
+const toneOf = (stage: Stage): Tone => {
   switch (stage.state) {
     case "running":
       return "running";
@@ -33,8 +37,17 @@ const toneOf = (stage: Stage, held: boolean): Tone => {
   }
 };
 
-const stateWord = (stage: Stage, held: boolean): string => {
-  if (held) return heldWord;
+// What a step waits for when the run is held there: the person's review at its checkpoint, the
+// schedule's day (Prepared), or an agent's review of what was made.
+type StepHold = CheckpointHold["waitsFor"] | "agent";
+
+const holdLook: Readonly<Record<StepHold, { readonly state: string; readonly detail: string }>> = {
+  person: { state: heldWord, detail: "Approve it under Checkpoints to carry on." },
+  day: { state: preparedWord, detail: "Its schedule makes it on its day." },
+  agent: { state: waitingForAgentWord, detail: "Goes on once the agent answers." },
+};
+
+const stateWord = (stage: Stage): string => {
   if (stage.state === "failed" && stage.retryAt !== undefined) return retryingWord;
   return stageStateWords[stage.state];
 };
@@ -62,25 +75,32 @@ function withEta(detail: string | undefined, stage: Stage, now: number): string 
   return detail === undefined || detail === "" ? etaLabel(eta) : `${detail} · ${etaLabel(eta)}`;
 }
 
+// `holding` is the project body's (`reviews/holds.ts`): a checkpoint the run hasn't reached
+// holds nothing, and a run parked on an agent's review waits for the agent on every step left.
 export function runSteps({
   stages,
   outputs,
   project,
   resumable,
-  held,
+  holding,
   now,
 }: {
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
   readonly project: ProjectSummary;
   readonly resumable: boolean;
-  readonly held: readonly HeldGate[];
+  readonly holding: readonly CheckpointHold[];
   readonly now: number;
 }): readonly Step[] {
+  const parked =
+    project.status === "pending" && project.waitingForAgent === true && project.setAside !== true;
+  const holdOf = (stage: Stage): StepHold | undefined =>
+    holding.find((hold) => hold.stage === stage.kind)?.waitsFor ??
+    (parked && stage.state === "pending" ? "agent" : undefined);
   return stages
     .filter((stage) => stage.state !== "skipped")
     .map((stage) => {
-      const isHeld = held.some((gate) => gate.stage === stage.kind);
+      const hold = holdOf(stage);
       const time = elapsed(stage, now);
       return {
         id: stage.id,
@@ -88,12 +108,13 @@ export function runSteps({
           stage.kind === "video" && finalOutput(project.config) === "audio"
             ? "Audio export"
             : stageWords[stage.kind],
-        tone: toneOf(stage, isHeld),
-        state: stateWord(stage, isHeld),
+        tone: hold === undefined ? toneOf(stage) : "waiting",
+        state: hold === undefined ? stateWord(stage) : holdLook[hold].state,
         ...(time === undefined ? {} : { time }),
-        detail: isHeld
-          ? "Approve it under Checkpoints to carry on."
-          : withEta(summaryOf(stage, outputs, project, resumable), stage, now),
+        detail:
+          hold === undefined
+            ? withEta(summaryOf(stage, outputs, project, resumable), stage, now)
+            : holdLook[hold].detail,
       };
     });
 }

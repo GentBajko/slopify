@@ -531,21 +531,31 @@ describe("GET /api/projects", () => {
       const page = (await (await app.request("/api/projects/p1")).json()) as {
         project: ProjectSummary;
         resumable: boolean;
+        holding: readonly { checkpointId: string; waitsFor: string }[];
       };
       const pick = (project: ProjectSummary | undefined) => ({
         prepared: project?.prepared,
         waitingForAgent: project?.waitingForAgent,
       });
-      return { list: pick(list.projects[0]), page: pick(page.project), resumable: page.resumable };
+      return {
+        list: pick(list.projects[0]),
+        page: pick(page.project),
+        resumable: page.resumable,
+        holding: page.holding.map((hold) => [hold.checkpointId, hold.waitsFor]),
+      };
     };
-    // Held at the template's images checkpoint first: that review is the person's.
-    expect((await read()).list).toEqual({ prepared: undefined, waitingForAgent: undefined });
+    // Held at the template's images checkpoint first: that review is the person's. The video's
+    // hold isn't reached until the images are made.
+    const first = await read();
+    expect(first.list).toEqual({ prepared: undefined, waitingForAgent: undefined });
+    expect(first.holding).toEqual([["images-gate", "person"]]);
     db.exec("UPDATE review_checkpoints SET state='released', approved_at='x' WHERE stage='images'");
     db.exec("UPDATE stages SET state='done' WHERE kind='images'");
     // Only the schedule's own Before Video hold is left: it waits for its day.
     const prepared = await read();
     expect(prepared.list).toEqual({ prepared: true, waitingForAgent: undefined });
     expect(prepared.page).toEqual(prepared.list);
+    expect(prepared.holding).toEqual([["video-gate", "day"]]);
     // Its images remade and parked on an agent's review: Continue the run would only park it.
     db.exec("UPDATE stages SET state='pending' WHERE kind='images'");
     db.exec(
@@ -562,6 +572,7 @@ describe("GET /api/projects", () => {
     expect(agent.list.waitingForAgent).toBe(true);
     expect(agent.page.waitingForAgent).toBe(true);
     expect(agent.resumable).toBe(false);
+    expect(agent.holding).toEqual([]);
   });
 
   // An uploaded video left paused, with only leftover steps nobody admitted, is finished.

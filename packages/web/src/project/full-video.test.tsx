@@ -28,6 +28,7 @@ function Harness() {
     },
     stages: [stage("video", "done")],
     resumable: false,
+    holding: [],
     sample: false,
     gates: [],
     outdated: [],

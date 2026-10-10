@@ -40,6 +40,7 @@ function Harness({
     project,
     stages: [failed],
     resumable: false,
+    holding: [],
     sample: false,
     gates: [],
     outdated: [],

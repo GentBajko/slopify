@@ -24,6 +24,7 @@ import type {
   PromptKind,
 } from "@app/slices/library/model.js";
 import type { UsedBy } from "@app/slices/library/used-by.js";
+import type { CheckpointHold } from "@app/slices/reviews/holds.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type {
   Appearance,
@@ -107,6 +108,9 @@ export interface ProjectBody {
   // Unfinished work on the saved revision that nothing has admitted or will dispatch
   // (`slices/rebuild/recovery-repo.ts`): Resume is the way on even while status says pending.
   readonly resumable: boolean;
+  // The checkpoints holding the run now and whom each waits for (`reviews/holds.ts`): one not
+  // reached yet holds nothing.
+  readonly holding: readonly CheckpointHold[];
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];

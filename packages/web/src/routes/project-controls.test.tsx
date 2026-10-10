@@ -95,6 +95,64 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByText("Stopped")).toBeNull();
   });
 
+  // The checkpoints the server says hold the run (`holding`) are the only ones the page offers.
+  it("counts only the person's reached checkpoints, and reads a prepared video as Prepared", async () => {
+    const gate = (checkpointId: string, stage: "audio" | "video") => ({
+      projectId: "p1",
+      revisionId: "r1",
+      checkpointId,
+      workId: "w1",
+      stage,
+      state: "held",
+      fingerprint: "a".repeat(64),
+      currentFingerprint: "a".repeat(64),
+      createdAt: "2026-09-13T00:00:00.000Z",
+      approvedAt: null,
+      dependents: stage === "audio" ? ["video"] : [],
+      workKeys: [`${stage}:main`],
+    });
+    const made = body({
+      status: "pending",
+      stages: [stage("article", "done"), stage("audio", "done"), stage("video", "pending")],
+      outputs: [output("article_md", "article")],
+    });
+    const fixture = revisionRouteFixture(made);
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        ...fixture.routes,
+        "GET /api/projects/p1": jsonAnswer({
+          ...made,
+          revisionId: "r1",
+          holding: [{ checkpointId: "video-gate", stage: "video", waitsFor: "day" }],
+          project: { ...made.project, prepared: true },
+        }),
+        "GET /api/projects/p1/checkpoints": jsonAnswer({
+          revisionId: "r1",
+          // Approved earlier, the audio's gate holds nothing; the video's is the schedule's.
+          checkpoints: [
+            { ...gate("audio-gate", "audio"), state: "released" },
+            gate("video-gate", "video"),
+          ],
+        }),
+      }),
+    );
+    const next = await screen.findByRole("region", { name: "Next action" });
+    expect(
+      await within(next).findByText(
+        "Everything but the video is made; its schedule renders the video on its day.",
+      ),
+    ).not.toBeNull();
+    const steps = screen.getByRole("list", { name: "Run steps" });
+    expect(steps.textContent).toContain("Video, Prepared");
+    expect(within(steps).getByText("Its schedule makes it on its day.")).not.toBeNull();
+    expect(steps.textContent).not.toContain("Waiting for your review");
+    const rail = screen.getByRole("navigation", { name: "Project sections" });
+    expect(within(rail).getByRole("link", { name: /^Checkpoints/ }).textContent).not.toContain(
+      "held",
+    );
+  });
+
   it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());
@@ -117,6 +175,7 @@ describe("project pause and provider changes", () => {
           Response.json({
             ...paused(),
             revisionId: "r1",
+            holding: [{ checkpointId: "audio-gate", stage: "audio", waitsFor: "person" }],
             project: { ...paused().project, status: resumed ? "pending" : "paused" },
           }),
         "GET /api/projects/p1/checkpoints": jsonAnswer({

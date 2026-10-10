@@ -250,6 +250,7 @@ function ProjectWorkspace({
     project: summary ?? placeholderProject,
     stages,
     resumable: project.data?.resumable ?? false,
+    holding: project.data?.holding ?? [],
     sample: isSample,
     gates: gateRows,
     outdated,
@@ -436,7 +437,8 @@ function ProjectWorkspace({
   const youtubeShown =
     config.youtubeDescription === true ||
     outputs.some((output) => output.role === "youtube_description");
-  const held = gateRows.filter((gate) => gate.state === "held" || gate.state === "pending-review");
+  // The person's reviews holding the run now, by the server's rule (`reviews/holds.ts`).
+  const yours = project.data.holding.filter((hold) => hold.waitsFor === "person").length;
   const stageItems: readonly RailItem[] = [
     // Every output in one list, with its state and downloads, and Add another output.
     { id: "outputs", label: "Outputs" },
@@ -481,7 +483,7 @@ function ProjectWorkspace({
           {
             id: "checkpoints" as const,
             label: "Checkpoints",
-            ...(held.length === 0 ? {} : { meta: `${String(held.length)} held` }),
+            ...(yours === 0 ? {} : { meta: `${String(yours)} held` }),
           },
         ]),
     { id: "history", label: "History" },
@@ -609,11 +611,7 @@ function ProjectWorkspace({
     outputs,
     project: summary,
     resumable: project.data.resumable,
-    held: held.map((gate) => ({
-      checkpointId: gate.checkpointId,
-      stage: gate.stage,
-      dependents: gate.dependents,
-    })),
+    holding: project.data.holding,
     now: Date.now(),
   });
 

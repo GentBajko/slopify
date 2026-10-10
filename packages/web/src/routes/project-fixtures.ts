@@ -56,6 +56,7 @@ export function body(options: {
   return {
     revisionId: null,
     resumable: false,
+    holding: [],
     project: {
       id: "p1",
       title: "Rope Tricks",
