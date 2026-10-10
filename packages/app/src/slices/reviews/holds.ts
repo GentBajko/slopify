@@ -7,7 +7,12 @@ import {
   satisfied,
   deps as stageDeps,
 } from "../../kernel/runner/graph.js";
-import { liveProject, stageStandingsByProject } from "../admission/repo.js";
+import {
+  admittedUnfinished,
+  liveProject,
+  oneProject,
+  stageStandingsByProject,
+} from "../admission/repo.js";
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
@@ -145,17 +150,13 @@ export function projectHolds(
   };
 }
 
-// An admitted step of `h`'s current version, of a stage not finished, held other than one
+// An admitted step of `h`'s project still to run (`admittedUnfinished`), held other than one
 // parked on an agent's review: a restart (`recoverWork`) or a pause held it, and only Continue
-// the run starts it. A saved edit's step nobody admitted yet (no `recipe_context`) waits for the
-// person to choose what to remake instead.
+// the run starts it.
 function heldBesideReviews(h: string): string {
   return `EXISTS (SELECT 1 FROM revision_work w
-     JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=${h}.revision_id
-     JOIN stages s ON s.project_id=w.project_id AND s.id=w.stage_id
      WHERE w.project_id=${h}.project_id AND w.state='pending' AND w.dispatch_state='held'
-       AND w.recipe_context IS NOT NULL
-       AND s.state NOT IN ('done','provided','skipped')
+       AND ${admittedUnfinished("w")}
        AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting'))`;
 }
 
@@ -205,14 +206,4 @@ function heldRuns(
       return [run.project_id, { held: run.held === 1, stuck: run.stuck === 1 }] as const;
     }),
   );
-}
-
-// The clause and its parameter that limit a query to one project, when `projectId` is given.
-function oneProject(
-  alias: string,
-  projectId: string | undefined,
-): { readonly sql: string; readonly params: readonly string[] } {
-  return projectId === undefined
-    ? { sql: "", params: [] }
-    : { sql: ` AND ${alias}.project_id=?`, params: [projectId] };
 }

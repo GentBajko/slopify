@@ -69,6 +69,29 @@ export function liveProject(alias = "projects", column = "id"): string {
   return `NOT EXISTS (SELECT 1 FROM project_trash WHERE project_trash.project_id = ${alias}.${column})`;
 }
 
+// The clause and its parameter that limit a query to one project, when `projectId` is given.
+export function oneProject(
+  alias: string,
+  projectId: string | undefined,
+): { readonly sql: string; readonly params: readonly string[] } {
+  return projectId === undefined
+    ? { sql: "", params: [] }
+    : { sql: ` AND ${alias}.project_id=?`, params: [projectId] };
+}
+
+// A step `w` a run admitted (`recipe_context`) for its project's current version, of a stage not
+// finished: it still has to run, though a restart, a pause or an agent's review held it, and
+// Continue the run or the agent's answer starts it again. A saved edit's step nobody admitted
+// yet has no `recipe_context`, and a step reserved only by an older version is a leftover.
+export function admittedUnfinished(w: string): string {
+  return `${w}.recipe_context IS NOT NULL
+    AND EXISTS (SELECT 1 FROM stages s WHERE s.project_id=${w}.project_id AND s.id=${w}.stage_id
+      AND s.state NOT IN ('done','provided','skipped'))
+    AND EXISTS (SELECT 1 FROM revision_work_reservations r
+      JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
+      WHERE r.work_id=${w}.id)`;
+}
+
 export function projectTrashed(db: DatabaseSync, id: string): boolean {
   return db.prepare("SELECT 1 FROM project_trash WHERE project_id = ?").get(id) !== undefined;
 }

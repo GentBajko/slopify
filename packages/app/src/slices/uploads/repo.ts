@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { ProjectState } from "../../kernel/pipeline.js";
+import { admittedUnfinished, oneProject } from "../admission/repo.js";
 
 // "Mark uploaded": the person's own note that a finished video is on YouTube. Slopify never
 // uploads, so this is the only way it learns; Home's Ready to upload leaves such a project out.
@@ -39,28 +40,22 @@ export function uploadedProjects(db: DatabaseSync): ReadonlyMap<string, string> 
   );
 }
 
-// Uploaded projects with nothing admitted still to run: their leftover steps (a placeholder
-// from an edit after the upload, a pause from a bulk Pause) are not work the person is
-// waiting for, so the listing calls them done rather than "Paused" or "Waiting". A remake's
-// admitted step (`recipe_context`) of the current version and an unfinished stage still runs,
-// though a restart or an agent's review held it: Continue the run or the agent's answer starts
-// it again (`reviews/holds.ts` heldBesideReviews).
-// One project's alone when `projectId` is given.
+// Uploaded projects with nothing left to run read done, not "Paused" or "Waiting": a step still
+// allowed to run, or a held one admitted for the current version (`admittedUnfinished`, as
+// `reviews/holds.ts` heldBesideReviews reads it), keeps one unsettled. What is left otherwise
+// - a placeholder from an edit after the upload, a pause from a bulk Pause - is not work the
+// person waits for. One project's alone when `projectId` is given.
 export function uploadedAndSettled(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  const one = oneProject("u", projectId);
   return new Set(
     db
       .prepare(
         `SELECT u.project_id FROM project_uploads u WHERE NOT EXISTS(
            SELECT 1 FROM revision_work w WHERE w.project_id=u.project_id
-             AND w.state IN ('pending','running') AND (w.dispatch_state!='held'
-               OR (w.recipe_context IS NOT NULL AND EXISTS(SELECT 1 FROM stages s
-                 WHERE s.project_id=w.project_id AND s.id=w.stage_id
-                   AND s.state NOT IN ('done','provided','skipped'))
-                 AND EXISTS(SELECT 1 FROM revision_work_reservations r
-                   JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
-                   WHERE r.work_id=w.id))))${projectId === undefined ? "" : " AND u.project_id=?"}`,
+             AND w.state IN ('pending','running')
+             AND (w.dispatch_state!='held' OR ${admittedUnfinished("w")}))${one.sql}`,
       )
-      .all(...(projectId === undefined ? [] : [projectId]))
+      .all(...one.params)
       .map((row) => String(row.project_id)),
   );
 }
