@@ -97,10 +97,11 @@ export function previewById(
     ? undefined
     : rebuildPreviewSchema.parse(JSON.parse(String(row.body_json)));
 }
+// A canceled step stays canceled: only retrying it starts it again (`cancel/index.ts`).
 export function recoverWork(db: DatabaseSync): void {
   transact(db, () =>
-    db.exec(`UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE state!='done' AND work_id IN (SELECT id FROM revision_work WHERE project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued'));
- UPDATE revision_work SET state='pending',dispatch_state='held' WHERE state!='done' AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued');`),
+    db.exec(`UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE state!='done' AND work_id IN (SELECT id FROM revision_work WHERE state!='canceled' AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued'));
+ UPDATE revision_work SET state='pending',dispatch_state='held' WHERE state NOT IN ('done','canceled') AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued');`),
   );
 }
 

@@ -9,10 +9,15 @@ import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
+import { derive } from "../src/kernel/runner/graph.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { wireRunner } from "../src/main.js";
-import { setProjectPaused } from "../src/slices/admission/repo.js";
-import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
+import { setProjectPaused, stagesOf } from "../src/slices/admission/repo.js";
+import { cancelProject } from "../src/slices/cancel/index.js";
+import {
+  recoverCheckpointWork,
+  settleReleasedCheckpoints,
+} from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
@@ -23,6 +28,7 @@ import {
   settleExternalReviews,
   waitingExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
+import { projectHolds } from "../src/slices/reviews/holds.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { current, save, start, tone } from "./revision-rebuild.fake.js";
@@ -157,6 +163,56 @@ it("lets the run go on after a restart once the waiting reviews are answered", a
     "passed",
     "passed",
   ]);
+});
+
+// A canceled run stays canceled across a restart: its reviews wait for nobody, take no verdict
+// and never pass, so nothing of it runs again until the person retries a step.
+it("keeps a canceled run's reviews closed after a restart", async () => {
+  const { h, deps, runner, images } = await agentReviewedRun();
+  const [review] = waitingExternalReviews(deps.db, h.projectId);
+  if (review === undefined) throw new Error("a waiting review expected");
+  const canceled = await cancelProject(
+    {
+      ...deps,
+      abort: (id) => runner.abortProject(id),
+      settleCheckpoints: (projectId) => settleReleasedCheckpoints(deps, projectId),
+      emit: () => undefined,
+    },
+    h.projectId,
+    { baseRevisionId: current(deps, h.projectId).revision.id, idempotencyKey: randomUUID() },
+  );
+  expect(canceled).toMatchObject({ ok: true, state: "canceled" });
+  await runner.settled();
+  // What boot does before anything runs (`main.ts`).
+  recoverCheckpointWork(deps.db);
+  expect(waitingExternalReviews(deps.db, h.projectId)).toEqual([]);
+  expect(
+    answerExternalReview(deps.db, {
+      projectId: h.projectId,
+      id: review.id,
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: new Date().toISOString(),
+    }),
+  ).toMatchObject({ ok: false, reason: "canceled" });
+  expect(
+    settleExternalReviews(deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
+  ).toEqual([]);
+  runner.tick(h.projectId);
+  await runner.settled();
+  expect(images.calls()).toBe(2);
+  expect(derive(stagesOf(deps.db, h.projectId))).toBe("canceled");
+  const holds = projectHolds(deps.db, { projectId: h.projectId });
+  expect([...holds.stopped, ...holds.waitingForAgent]).toEqual([]);
+  // Resume on the canceled run (`POST /api/projects/:id/resume`) brings its reviews back.
+  expect(
+    await recoverProject(deps, h.projectId, {
+      baseRevisionId: current(deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "resume" },
+    }),
+  ).toMatchObject({ ok: true });
+  await settleUntil(runner, () => waitingExternalReviews(deps.db, h.projectId).length === 2);
 });
 
 it("passes reviews a restart left overdue at boot, and the run goes on", async () => {
