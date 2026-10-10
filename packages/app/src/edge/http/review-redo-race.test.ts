@@ -94,3 +94,13 @@ it("lets Overrule go ahead once a Redo was refused", async () => {
   expect((await request("overrule")).status).toBe(200);
   expect(action()).toBe("overruled");
 });
+
+it("answers a repeated Redo with the same key with its first answer", async () => {
+  const { request, action } = await flagged();
+  const first = await request("redo");
+  expect(first.status).toBe(202);
+  const again = await request("redo");
+  expect(again.status).toBe(202);
+  expect(await again.json()).toEqual(await first.json());
+  expect(action()).toBe("redone");
+});

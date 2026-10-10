@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
+import { readRecovery } from "../../slices/rebuild/recovery-repo.js";
 import {
   claimRedoStart,
   redoStarting,
@@ -111,7 +112,18 @@ export function reviewRoutes(deps: AppDeps) {
         const { id: projectId, verdictId } = c.req.valid("param");
         const verdict = verdictById(deps.db, projectId, verdictId);
         if (verdict === undefined) return gone(c);
-        if (verdict.action !== null) return decided(c, verdict);
+        const request = {
+          ...c.req.valid("json"),
+          action: { kind: "redo" as const, item: verdict.itemKey },
+        };
+        if (verdict.action !== null) {
+          // The same Redo sent again (a retry after a lost answer) gets its first answer.
+          const first =
+            deps.rebuild === undefined ? undefined : readRecovery(deps.rebuild, projectId, request);
+          return first !== undefined && "ok" in first && first.ok
+            ? c.json(first, 202)
+            : decided(c, verdict);
+        }
         if (deps.rebuild === undefined)
           return problem(c, {
             status: 503,
@@ -131,10 +143,7 @@ export function reviewRoutes(deps: AppDeps) {
         // Claimed before the rebuild is awaited, so Overrule cannot decide the verdict meanwhile.
         if (!claimRedoStart(verdictId)) return already();
         try {
-          const result = await recoverProject(deps.rebuild, projectId, {
-            ...c.req.valid("json"),
-            action: { kind: "redo", item: verdict.itemKey },
-          });
+          const result = await recoverProject(deps.rebuild, projectId, request);
           if (!result.ok) return refused(c, result, projectId);
           const acted = actOnVerdict(
             deps.db,
