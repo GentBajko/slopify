@@ -9,6 +9,7 @@ import { revisionView } from "@/project/revision-fixture";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { HomeRoute } from "./home.js";
 import { body, output, recoveryAccepted, stage } from "./project-fixtures.js";
+import { matches, projectFilterOf } from "./projects-order.js";
 
 afterEach(cleanup);
 
@@ -611,11 +612,29 @@ describe("home", () => {
     );
     const region = await screen.findByRole("region", { name: "Running now" });
     const all = await within(region).findByRole("link", { name: "See all 4 running" });
-    expect(all.getAttribute("href")).toBe("/projects?show=running");
+    expect(all.getAttribute("href")).toBe("/projects?show=now");
     expect(within(region).getByText("Hypatia, Cleopatra and 1 more")).not.toBeNull();
     expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
       "/projects?show=queued",
     );
+  });
+
+  // Paused runs sit under Needs you on Home but under Running on Projects, so the link opens the
+  // Running now filter: the runs Home counts, and no others.
+  it("links to a Projects filter with as many runs as Home counts", async () => {
+    const projects = [
+      ...["r1", "r2", "r3", "r4"].map((id) => listing(id, `Run ${id}`, "running")),
+      listing("p-agent", "Hatshepsut", "pending", { progress: 0.5, waitingForAgent: true }),
+      listing("p-pause", "Xerxes", "paused", { progress: 0.5 }),
+    ];
+    renderRouted(<HomeRoute />, deps({ "GET /api/projects": jsonAnswer({ projects }) }));
+    const region = await screen.findByRole("region", { name: "Running now" });
+    const all = await within(region).findByRole("link", { name: "See all 5 running" });
+    const filter = projectFilterOf(
+      new URL(all.getAttribute("href") ?? "", "http://x").searchParams.get("show"),
+    );
+    if (filter === undefined) throw new Error("the link opens no filter");
+    expect(projects.filter((one) => matches(one, filter))).toHaveLength(5);
   });
 
   it("lists a run stopped at its start under Needs you, not as queued under Running now", async () => {

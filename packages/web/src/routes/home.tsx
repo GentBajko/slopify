@@ -1,4 +1,4 @@
-import { parkedOnAgent, queuedRun, waitsForPerson } from "@app/slices/admission/state-words.js";
+import { queuedRun, runningNow, waitsForPerson } from "@app/slices/admission/state-words.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
@@ -89,7 +89,7 @@ export function HomeRoute(): ReactElement {
   const mine = (projects.data?.projects ?? []).filter((one) => current.includes(one.channelId));
   // Paused runs wait for the person, so they sit under Needs you, not Running now. A run parked
   // on an agent's review goes on by itself, so it sits here.
-  const running = mine.filter((one) => one.status === "running" || parkedOnAgent(one));
+  const running = mine.filter(runningNow);
   // Started and waiting their turn: they show as one line under Running now.
   const queued = mine.filter(queuedRun);
   // The bundled samples are finished videos too, but nobody uploads them.

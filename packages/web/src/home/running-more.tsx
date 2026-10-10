@@ -24,7 +24,7 @@ export function RunningMore({
         <div>
           <TextLink
             to="/projects"
-            search={{ show: "running" }}
+            search={{ show: "now" }}
           >{`See all ${String(running)} running`}</TextLink>
         </div>
       ) : null}

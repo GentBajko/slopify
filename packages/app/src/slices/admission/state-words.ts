@@ -90,6 +90,14 @@ export function parkedOnAgent(
   );
 }
 
+// Going on by itself: running, or parked on an agent's review. Home's Running now and the
+// Projects filter of the same name.
+export function runningNow(
+  project: Pick<ProjectStanding, "status" | "setAside" | "waitingForAgent">,
+): boolean {
+  return project.status === "running" || parkedOnAgent(project);
+}
+
 // Started and waiting its turn: pending with none of its run done, not stopped and not parked
 // on an agent's review. Projects' Queued filter and Home's queued line under Running now.
 export function queuedRun(project: ProjectStanding): boolean {
