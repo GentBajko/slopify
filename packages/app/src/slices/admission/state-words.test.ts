@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { projectStateWord, queuedRun, waitsForPerson } from "./state-words.js";
+import { parkedOnAgent, projectStateWord, queuedRun, waitsForPerson } from "./state-words.js";
 
 it.each([
   [{ status: "pending", progress: 0 }, "Queued"],
@@ -50,4 +50,15 @@ it.each([
   [{ status: "running", progress: 0 }, false],
 ] as const)("counts %o as queued: %s", (project, queued) => {
   expect(queuedRun(project)).toBe(queued);
+});
+
+// Only a waiting run is parked: a running or paused one with a review out is said as such.
+it.each([
+  [{ status: "pending", waitingForAgent: true }, true],
+  [{ status: "running", waitingForAgent: true }, false],
+  [{ status: "paused", waitingForAgent: true }, false],
+  [{ status: "pending", waitingForAgent: true, setAside: true }, false],
+  [{ status: "pending" }, false],
+] as const)("counts %o as parked on an agent: %s", (project, parked) => {
+  expect(parkedOnAgent(project)).toBe(parked);
 });
