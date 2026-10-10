@@ -220,6 +220,31 @@ it("is not Stopped while paused, while a step runs, or while a checkpoint of the
   expect([...projectHolds(f.db).stopped]).toEqual([]);
 });
 
+// The thumbnail's step still held by the restart, but the video's checkpoint now holds the run
+// for the person: approving it is what they do next, not Continue the run.
+it("is not Stopped while a reached checkpoint of the person's holds it", () => {
+  const f = stoppedBehindVideoGate();
+  f.answered();
+  f.stage("images", "done");
+  const holds = projectHolds(f.db);
+  expect(holds.holding.get("p1")?.map((hold) => hold.waitsFor)).toEqual(["person"]);
+  expect([...holds.stopped]).toEqual([]);
+});
+
+it("is not Stopped while it waits its turn in a batch, or while a step's call is in flight", () => {
+  const f = stoppedBehindVideoGate();
+  f.db.prepare("INSERT INTO batches VALUES ('batch','2026-09-10T00:00:00.000Z')").run();
+  f.db
+    .prepare("INSERT INTO project_queue(project_id,batch_id,state) VALUES ('p1','batch','queued')")
+    .run();
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  f.db.prepare("UPDATE project_queue SET state='active'").run();
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
+  // The video's step runs while its stage still reads pending.
+  f.db.prepare("UPDATE revision_work SET state='running' WHERE id='video-work'").run();
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+});
+
 it("reads a prepared project a restart stopped as Stopped, not Prepared", () => {
   const f = stoppedBehindVideoGate();
   f.prepared(true);
