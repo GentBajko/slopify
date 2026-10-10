@@ -139,3 +139,26 @@ it("refuses, saying why, when the timing can't be read or the narration can't be
     reason: expect.stringContaining("narration audio isn't finished"),
   });
 });
+
+// The words were timed with the intro and outro the settings speak: without one of them the
+// body's place on that clock is unknown.
+it("refuses when an intro or outro the settings speak has no finished audio", async () => {
+  const spoken: RunConfig = {
+    ...narrated,
+    intro: { name: "Intro", mode: "llm" },
+    outro: { name: "Outro", mode: "llm" },
+  };
+  const timing = words([{ text: "Hello", start: 2.2, end: 2.6 }]);
+  const noIntro = await bodyWordTimings(
+    harness().deps,
+    view(spoken, [part("audio_body", 3000), part("audio_outro", 1000)]),
+    timing,
+  );
+  expect(noIntro).toEqual({ ok: false, reason: expect.stringContaining("intro") });
+  const noOutro = await bodyWordTimings(
+    harness().deps,
+    view(spoken, [part("audio_intro", 2000), part("audio_body", 3000)]),
+    timing,
+  );
+  expect(noOutro).toEqual({ ok: false, reason: expect.stringContaining("outro") });
+});

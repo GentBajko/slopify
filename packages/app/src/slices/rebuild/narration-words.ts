@@ -1,6 +1,6 @@
 import { causedBy } from "../../kernel/errors.js";
 import type { RevisionView } from "../revisions/model.js";
-import { type NarrationAudioDeps, narrationAudio } from "./runtime-export-inputs.js";
+import { type NarrationAudioDeps, narrationAudio, speaksPart } from "./runtime-export-inputs.js";
 import { wordsSchema } from "./runtime-subtitles.js";
 
 export type BodyWordTimings =
@@ -19,6 +19,17 @@ export async function bodyWordTimings(
   try {
     const timing = wordsSchema.parse(JSON.parse(words));
     const timeline = await narrationAudio(deps, view);
+    // The words were timed with every part the settings speak; without one, the body's place
+    // on that clock is unknown.
+    for (const part of ["intro", "outro"] as const)
+      if (
+        speaksPart(view.revision.config, part) &&
+        !timeline.some((segment) => segment.kind === part)
+      )
+        return {
+          ok: false,
+          reason: `the narration's ${part} has no finished audio, so where the body starts on the timing's clock is unknown`,
+        };
     const before = timeline.findIndex((segment) => segment.kind === "body");
     const start = timeline.slice(0, before).reduce((sum, segment) => sum + segment.seconds, 0);
     const end = start + (timeline[before]?.seconds ?? 0);
