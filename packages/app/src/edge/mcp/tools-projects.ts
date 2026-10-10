@@ -110,16 +110,16 @@ const projects: readonly RouteTool[] = [
     title: "Delete old versions",
     description:
       "Delete old versions for this one project; answers how many files were deleted and the bytes freed. Delete all old versions and Clean up everything (every project) are the person's, in Settings → Backup & storage.",
-    confirm: `${oldVersionsConsequence()} get_project_storage says how many files and how much space first.`,
+    confirm: `${oldVersionsConsequence(undefined, "project")} get_project_storage says how many files and how much space first.`,
     confirmFrom: {
       route: "/api/storage/projects/:id",
       text: (value) => {
         const storage = historySchema.safeParse(value);
         return storage.success
-          ? oldVersionsConsequence({
-              files: storage.data.historyFiles,
-              bytes: storage.data.historyBytes,
-            })
+          ? oldVersionsConsequence(
+              { files: storage.data.historyFiles, bytes: storage.data.historyBytes },
+              "project",
+            )
           : undefined;
       },
     },

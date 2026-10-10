@@ -17,14 +17,16 @@ export function fileSize(bytes: number): string {
 }
 
 // What Delete old versions removes and what it costs later; without the numbers when they
-// can't be read.
-export function oldVersionsConsequence(size?: {
-  readonly files: number;
-  readonly bytes: number;
-}): string {
+// can't be read. `scope` is whose History it empties: every project's, or one project's.
+export function oldVersionsConsequence(
+  size?: { readonly files: number; readonly bytes: number },
+  scope: "projects" | "project" = "projects",
+): string {
   const what =
     size === undefined
       ? "the older versions"
       : `${String(size.files)} file(s) of older versions and frees ${fileSize(size.bytes)}`;
-  return `This deletes ${what}: what is in the projects' History folders (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything you uploaded or put there yourself. Going back to one of those older versions makes its files again, which takes time and uses provider credits.`;
+  const where =
+    scope === "project" ? "this project's History folder" : "the projects' History folders";
+  return `This deletes ${what}: what is in ${where} (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything you uploaded or put there yourself. Going back to one of those older versions makes its files again, which takes time and uses provider credits.`;
 }

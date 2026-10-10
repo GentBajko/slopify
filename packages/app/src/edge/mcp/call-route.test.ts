@@ -238,7 +238,7 @@ it("states the files and space Delete old versions frees, as the page does, befo
   const asked = await callRoute(fake, tool, { id: "p1" });
   expect(asked.isError).toBe(true);
   expect(JSON.stringify(asked.content)).toContain(
-    "This deletes 3 file(s) of older versions and frees 5 MB",
+    "This deletes 3 file(s) of older versions and frees 5 MB: what is in this project's History folder",
   );
   expect(fake.seen.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
     "GET /api/storage/projects/p1",
@@ -256,4 +256,5 @@ it("falls back to the fixed consequence when the page's numbers can't be read, a
   expect(fake.logged).toEqual([
     expect.stringMatching(/^mcp\.confirm \[p1\]: .*storage read failed/),
   ]);
+  expect(JSON.stringify(asked.content)).toContain("this project's History folder");
 });
