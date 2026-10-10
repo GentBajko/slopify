@@ -221,6 +221,23 @@ it("measures a narration once while the file stays the same, and again once it c
   expect(measured).toHaveLength(2);
 });
 
+// A decode that failed (a timeout under load) is not kept: the next ask measures again, and
+// asks made together while that one runs still share it.
+it("measures again after a failed measurement instead of keeping the failure", async () => {
+  const h = withFiles();
+  const path = join(h.deps.paths.projects, h.projectId, "audio", "body.mp3");
+  let calls = 0;
+  const length = measuredOnce(async () => {
+    calls += 1;
+    if (calls === 1) throw new Error("ffmpeg timed out");
+    return 3000;
+  });
+  await expect(Promise.all([length(path), length(path)])).rejects.toThrow("ffmpeg timed out");
+  expect(calls).toBe(1);
+  expect(await Promise.all([length(path), length(path)])).toEqual([3000, 3000]);
+  expect(calls).toBe(2);
+});
+
 it("gives an uploaded narration it can't measure its words unclipped, and logs why", async () => {
   const h = withFiles();
   narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);

@@ -127,6 +127,8 @@ async function narrationTimings(
 
 // An audio file's length, measured once while the file stays the same: a narration's full
 // decode takes seconds, and an agent may ask for its timing over and over, or several at once.
+// A measurement that failed (a decode timed out under load) is forgotten, so the next ask
+// measures again.
 // ceiling: one entry per narration file measured since boot, a few dozen bytes each.
 export function measuredOnce(
   measure: (path: string) => Promise<number>,
@@ -138,7 +140,11 @@ export function measuredOnce(
     const known = lengths.get(path);
     if (known?.stamp === stamp) return known.length;
     const length = measure(path);
-    lengths.set(path, { stamp, length });
+    const entry = { stamp, length };
+    lengths.set(path, entry);
+    length.catch(() => {
+      if (lengths.get(path) === entry) lengths.delete(path);
+    });
     return length;
   };
 }
