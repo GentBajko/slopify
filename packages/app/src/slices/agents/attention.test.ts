@@ -251,6 +251,35 @@ it("leaves out a prepared project's own video checkpoint, a project kept as is, 
   ]);
 });
 
+// The usual prepared project: everything but the video made, held at its schedule's own Before
+// Video hold, which waits for its day, not for anyone.
+it("leaves out a prepared project held at its day's hold, and lists the template's own", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE external_reviews SET state='answered'").run();
+  for (const kind of ["article", "audio"])
+    db.prepare(
+      "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,'p1',?,'generate','done')",
+    ).run(kind, kind);
+  db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
+  db.prepare(
+    "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('video','p1','video','generate','pending')",
+  ).run();
+  db.prepare(
+    "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'video-gate','video','images-work',?,'held','2026-09-10T00:02:00.000Z')",
+  ).run(f.revisionId, "c".repeat(64));
+  db.prepare(
+    "INSERT INTO prepared_videos(project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES ('p1','s1','Saved',1,'2026-09-10T00:00:00.000Z')",
+  ).run();
+  const checkpoints = () =>
+    needsAttention({ ...f.h.deps, log: quiet }, now).filter((entry) => entry.kind === "checkpoint");
+  expect(checkpoints()).toEqual([]);
+  // Its template's own Before Video hold instead: the person's, and listed.
+  db.prepare("UPDATE prepared_videos SET added_checkpoint=0").run();
+  expect(checkpoints().map((entry) => entry.stage)).toEqual(["video"]);
+});
+
 it("lists a checkpoint only once the run reaches it", () => {
   const f = everything();
   const { db } = f.h.deps;
