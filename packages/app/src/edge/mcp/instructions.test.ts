@@ -18,6 +18,7 @@ it("tells a connecting agent the attend routine and offers it as a prompt", asyn
     "autoRetryInFlight",
     "agentCanAct",
     "whoever paused it",
+    "stopped-run",
     "submit_review_verdict",
     "approve_topics",
     "read_narration_chunks",

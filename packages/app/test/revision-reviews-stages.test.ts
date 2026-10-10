@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { afterAll, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { type FakeImage, fakeImage } from "../src/adapters/fake/image.js";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
@@ -734,8 +735,29 @@ it("stops a run a restart cut off while an agent reviews, and an agent continues
     release();
     await runner.settled();
     expect(await page()).toMatchObject({ resumable: true, project: { stopped: true } });
+    // The agent finds it among what needs attention and continues it with the entry's ids.
+    const listed = await agent.callTool({ name: "needs_attention", arguments: {} });
+    const entry = z
+      .object({
+        entries: z.array(
+          z
+            .object({
+              kind: z.string(),
+              tools: z.array(z.string()),
+              ids: z.record(z.string(), z.string()),
+            })
+            .loose(),
+        ),
+      })
+      .parse(
+        JSON.parse(
+          z.array(z.object({ text: z.string() }).loose()).parse(listed.content)[0]?.text ?? "null",
+        ),
+      )
+      .entries.find((one) => one.kind === "stopped-run");
+    expect(entry?.tools).toEqual(["get_project", "resume_project"]);
     await call("resume_project", {
-      body: { baseRevisionId: (await page()).revisionId, idempotencyKey: randomUUID() },
+      body: { baseRevisionId: entry?.ids.baseRevisionId, idempotencyKey: randomUUID() },
     });
     await settle();
     // The narration is made; only the agent's review holds the run now.

@@ -187,6 +187,33 @@ it("lists a paused run as one an agent may continue, whoever paused it", () => {
   });
 });
 
+// A restart held its images' step and nothing else moves it on: like a paused run, the agent
+// may continue it.
+it("lists a stopped run as one an agent may continue", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  const stopped = () =>
+    needsAttention({ ...f.h.deps, log: quiet }, now).filter(
+      (entry) => entry.kind === "stopped-run",
+    );
+  // Parked on the agent's review, it waits for the agent, not for Continue the run.
+  expect(stopped()).toEqual([]);
+  db.prepare("UPDATE external_reviews SET state='answered'").run();
+  db.prepare("UPDATE revision_work SET dispatch_state='held'").run();
+  expect(stopped()).toEqual([
+    expect.objectContaining({
+      projectId: "p1",
+      title: "Saved",
+      agentCanAct: true,
+      autoRetryInFlight: false,
+      ids: { id: "p1", baseRevisionId: f.revisionId },
+      tools: ["get_project", "resume_project"],
+    }),
+  ]);
+  expect(stopped()[0]?.reason).toContain("resume_project");
+});
+
 it("leaves out a prepared project's own video checkpoint, a project kept as is, and a trashed one", () => {
   const f = everything();
   const { db } = f.h.deps;

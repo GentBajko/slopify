@@ -6,7 +6,7 @@ import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
 import { externalReviewOf } from "../reviews/external-model.js";
 import { waitingExternalReviewRows } from "../reviews/external-repo.js";
-import { projectHolds } from "../reviews/holds.js";
+import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {
   extensionFailures,
@@ -24,6 +24,7 @@ export const attentionKinds = [
   "checkpoint",
   "failed-step",
   "paused-run",
+  "stopped-run",
   "held-topics",
   "late-upload",
   "extension-failure",
@@ -70,12 +71,19 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
       detail: `needs_attention left out one of the ${source} it could not read: ${causedBy(error)}`,
     });
   };
+  // Read once for the checkpoints and the stopped runs, when the first of them asks.
+  let read: ProjectHolds | undefined;
+  const holds = (): ProjectHolds => {
+    read ??= projectHolds(db, { skip: (value, error) => skip("review checkpoints", value, error) });
+    return read;
+  };
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
     ["external reviews", () => externalReviews(db, skip)],
     ["flagged verdicts", () => flaggedVerdicts(db, skip)],
-    ["review checkpoints", () => heldCheckpoints(db, skip)],
+    ["review checkpoints", () => heldCheckpoints(db, holds())],
     ["failed steps", () => failedSteps(db, skip)],
     ["paused runs", () => pausedRuns(db, skip)],
+    ["stopped runs", () => stoppedRuns(db, holds(), skip)],
     ["held topics", () => heldTopics(db, skip)],
     ["late uploads", () => lateUploads(deps, now)],
     ["extension failures", () => extensionFailures(db, skip)],
@@ -184,11 +192,8 @@ function flaggedVerdicts(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
 // Only a checkpoint that holds the run for the person (`reviews/holds.ts`): one whose stage's
 // inputs aren't made yet holds nothing, and a Before Video hold a schedule added waits for its
 // scheduled day, not for anyone.
-function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+function heldCheckpoints(db: DatabaseSync, { holding }: ProjectHolds): readonly AttentionEntry[] {
   const named = titles(db);
-  const { holding } = projectHolds(db, {
-    skip: (value, error) => skip("review checkpoints", value, error),
-  });
   return [...holding].flatMap(([projectId, holds]) =>
     holds
       .filter((hold) => hold.waitsFor === "person")
@@ -214,4 +219,46 @@ function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
           }) satisfies AttentionEntry,
       ),
   );
+}
+
+const stoppedRow = z.object({
+  project_id: z.string(),
+  title: z.string(),
+  updated_at: z.string(),
+  head: z.string(),
+});
+
+// A run a restart stopped before it finished (`reviews/holds.ts`): like a paused one, nothing
+// goes on until Continue the run, and the agent may give it.
+function stoppedRuns(
+  db: DatabaseSync,
+  { stopped }: ProjectHolds,
+  skip: SkipRow,
+): readonly AttentionEntry[] {
+  const rows = db
+    .prepare(
+      `SELECT p.id AS project_id, p.title, p.updated_at, h.revision_id AS head FROM projects p
+       JOIN project_heads h ON h.project_id=p.id WHERE ${liveProject("p")}`,
+    )
+    .all()
+    .filter((row) => stopped.has(String(row.project_id)));
+  return rowsOf(rows, "stopped runs", skip, (value) => {
+    const row = stoppedRow.parse(value);
+    return [
+      {
+        kind: "stopped-run",
+        since: row.updated_at,
+        projectId: row.project_id,
+        title: row.title,
+        stage: null,
+        itemKey: null,
+        reason:
+          "Stopped before it finished, as a restart leaves a run: nothing goes on until Continue the run (resume_project). Read get_project first: continue it once nothing it shows still needs fixing.",
+        autoRetryInFlight: false,
+        agentCanAct: true,
+        ids: { id: row.project_id, baseRevisionId: row.head },
+        tools: ["get_project", "resume_project"],
+      } satisfies AttentionEntry,
+    ];
+  });
 }
