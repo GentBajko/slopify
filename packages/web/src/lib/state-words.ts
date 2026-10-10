@@ -1,5 +1,5 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
-import { projectStateWord, projectStateWords } from "@app/slices/admission/state-words.js";
+import { heldRun, heldStateWord, projectStateWords } from "@app/slices/admission/state-words.js";
 import type { Tone } from "@/components/kit/status";
 
 // One word per state, everywhere a state is shown: Projects, the calendar, the project
@@ -24,9 +24,9 @@ export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
 };
 
 // A project's state with its lamp, in the words the MCP tools say it (`projectStateWord`): a
-// waiting project with some of its run done is held for the person (Waiting for your review),
-// for an External agent (Waiting for the agent), for Continue the run (Stopped), for its
-// scheduled day (Prepared), or set aside (Kept as is). `progress` is the run's share done.
+// held run (`heldRun`) reads as what it waits for, the person (Waiting for your review), an
+// External agent (Waiting for the agent), Continue the run (Stopped), its scheduled day
+// (Prepared), or nobody once set aside (Kept as is).
 export function projectStateOf(project: {
   readonly status: ProjectState;
   readonly progress: number;
@@ -35,9 +35,8 @@ export function projectStateOf(project: {
   readonly waitingForAgent?: boolean | undefined;
   readonly stopped?: boolean | undefined;
 }): StateLook {
-  const word = projectStateWord(project);
-  if (word === projectStateWords[project.status]) return projectStateLook[project.status];
-  return { tone: project.setAside === true ? "done" : "waiting", word };
+  if (!heldRun(project)) return projectStateLook[project.status];
+  return { tone: project.setAside === true ? "done" : "waiting", word: heldStateWord(project) };
 }
 
 // A failed step that will try again by itself.

@@ -59,7 +59,7 @@ type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent" |
 // A run that ran and is held: a waiting project with some of its run done (`progress` is the
 // run's share done, `progressOf`), or one stopped before it got going. One with none done that
 // isn't stopped is Queued, waiting its turn.
-function held(project: ProjectStanding): boolean {
+export function heldRun(project: ProjectStanding): boolean {
   return project.status === "pending" && (project.progress > 0 || project.stopped === true);
 }
 
@@ -90,16 +90,16 @@ export function parkedOnAgent(
 // Started and waiting its turn: pending with none of its run done and not stopped. Projects'
 // Queued filter and Home's queued line under Running now.
 export function queuedRun(project: ProjectStanding): boolean {
-  return project.status === "pending" && !held(project);
+  return project.status === "pending" && !heldRun(project);
 }
 
 // An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
 export function projectStateWord(project: ProjectStanding): string {
-  return held(project) ? heldStateWord(project) : projectStateWords[project.status];
+  return heldRun(project) ? heldStateWord(project) : projectStateWords[project.status];
 }
 
 // A run that ran and now waits for the person: Home's Needs you, the Projects "Needs you"
 // filter and its waiting-first sort.
 export function waitsForPerson(project: ProjectStanding): boolean {
-  return held(project) && heldForPerson(project);
+  return heldRun(project) && heldForPerson(project);
 }
