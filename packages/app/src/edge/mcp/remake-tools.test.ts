@@ -175,3 +175,26 @@ it("logs a refusal it couldn't read with the project it was checking", async () 
     expect.stringMatching(/^mcp\.refusal \[p1\]: .*GET \/api\/projects\/p1 .*HTTP 409.*JSON/),
   ]);
 });
+
+// Each later call of the plan is logged with the project too: the version it prepares and the
+// remake it previews.
+it.each([
+  ["POST", "/api/projects/p1/revisions/prepare"],
+  ["POST", "/api/projects/p1/rebuild/preview"],
+] as const)("logs a refusal of %s %s it couldn't read with its project", async (method, at) => {
+  const deps = routeCallDeps(async (request) => {
+    const path = new URL(request.url).pathname;
+    if (request.method === method && path === at)
+      return new Response("{not json", {
+        status: 409,
+        headers: { "content-type": "application/problem+json" },
+      });
+    if (path === "/api/projects/p1")
+      return Response.json({ project: { title: "Rope", status: "done" } });
+    return Response.json({ view: { revision: { id: "p1-r1" } } });
+  });
+  await remakeOutdated(deps, ["p1"]);
+  expect(deps.logged).toEqual([
+    expect.stringMatching(new RegExp(`^mcp\\.refusal \\[p1\\]: .*${method} ${at} .*HTTP 409`)),
+  ]);
+});
