@@ -17,6 +17,9 @@ export function noticeSubject(
     makesVideo: project.config.sources.video !== "off",
     startedBy: lastStarter(db, projectId),
     waitingForAgent: holds.waitingForAgent.has(projectId),
-    prepared: holds.prepared.has(projectId),
+    // Quiet only at the schedule's own hold: one stopped short of it is the person's to hear.
+    prepared:
+      holds.prepared.has(projectId) &&
+      (holds.holding.get(projectId) ?? []).some((hold) => hold.waitsFor === "day"),
   };
 }

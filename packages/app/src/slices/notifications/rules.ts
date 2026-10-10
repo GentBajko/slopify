@@ -106,7 +106,8 @@ export interface NoticeSubject {
   readonly startedBy?: Actor | null | undefined;
   // The run is parked on an External agent's review (`reviews/holds.ts`).
   readonly waitingForAgent?: boolean | undefined;
-  // Prepared ahead by a schedule and held by its own Before Video hold (`reviews/holds.ts`).
+  // Prepared ahead by a schedule and held now by its own Before Video hold, waiting for its day
+  // (`reviews/holds.ts`).
   readonly prepared?: boolean | undefined;
 }
 

@@ -162,3 +162,29 @@ it("counts a project as prepared only while its schedule's own hold keeps it for
     h.close();
   }
 });
+
+// A step a restart held stops the run short of its day's hold: it reads Stopped, not Prepared,
+// and stays Stopped, with Continue the run offered, once its day takes the hold away.
+it("reads a prepared run a restart stopped as Stopped, before its day and on it", async () => {
+  const { h, deps, scheduleId } = scheduled();
+  try {
+    const prepared = await prepareTopic(deps, { scheduleId, title: "First topic" });
+    if (!prepared.ok) throw new Error(prepared.reason);
+    const { db } = h.deps;
+    db.prepare("UPDATE prepared_videos SET added_checkpoint=1").run();
+    db.prepare(
+      "UPDATE revision_work SET state='pending',dispatch_state='held' WHERE project_id=?",
+    ).run(prepared.projectId);
+    db.prepare("UPDATE stages SET state='pending' WHERE project_id=? AND state!='skipped'").run(
+      prepared.projectId,
+    );
+    const holds = () => projectHolds(db, { projectId: prepared.projectId });
+    expect([...holds().stopped]).toEqual([prepared.projectId]);
+    expect([...holds().prepared]).toEqual([]);
+    await createScheduleRunner(deps).tick(new Date("2026-09-12T00:01:30.000Z"));
+    expect(count(h, "SELECT count(*) AS n FROM prepared_videos")).toBe(0);
+    expect([...holds().stopped]).toEqual([prepared.projectId]);
+  } finally {
+    h.close();
+  }
+});
