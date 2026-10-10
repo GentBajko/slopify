@@ -11,6 +11,7 @@ import { liveProject, stageStandingsByProject } from "../admission/repo.js";
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
+import { uploadedAndSettled } from "../uploads/repo.js";
 import { projectsWaitingOnAgents } from "./external-repo.js";
 
 // What a held run waits for when it isn't the person: the one rule the Projects list, a
@@ -120,6 +121,8 @@ export function projectHolds(
     .map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
   const runs = heldRuns(db, projectId);
+  // An uploaded project with nothing admitted reads Done (`edge/http/projects.ts`).
+  const settled = uploadedAndSettled(db);
   const waitingForAgent = new Set(
     [...agents].filter((id) => !reachedTheirs.has(id) && runs.get(id)?.held !== true),
   );
@@ -131,6 +134,7 @@ export function projectHolds(
         (id) =>
           !reachedTheirs.has(id) &&
           !waitingForAgent.has(id) &&
+          !settled.has(id) &&
           derive(standings.get(id) ?? []) === "pending",
       ),
   );
