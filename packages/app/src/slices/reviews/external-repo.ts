@@ -74,9 +74,14 @@ function wantedBy(table: string): string {
       AND r.work_key=${table}.work_key AND r.fingerprint=${table}.review_fingerprint)`;
 }
 
-// Nothing of a canceled run goes ahead on its own.
+// Nothing of a canceled run goes ahead on its own: its work, or any step of its project, is
+// canceled (a project with a canceled step reads canceled, `derive`).
 function liveWork(table: string): string {
-  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND w.state!='canceled')`;
+  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND NOT ${canceledRun("w")})`;
+}
+
+function canceledRun(work: string): string {
+  return `(${work}.state='canceled' OR EXISTS (SELECT 1 FROM stages s WHERE s.project_id=${work}.project_id AND s.state='canceled'))`;
 }
 
 // A step asked again for the same review keeps its row; one whose earlier wait was superseded

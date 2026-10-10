@@ -169,3 +169,27 @@ it("refuses a verdict on a canceled run's review, which never passes", () => {
   ).toMatchObject({ ok: false, reason: "canceled" });
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
 });
+
+// A canceled run reads canceled by its stages (`derive`), whatever its work row says: one a
+// restart held before canceled work was kept canceled (`recoverWork`) is still canceled.
+it("treats a review of a run with a canceled step as canceled, even with its work pending", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE revision_work SET dispatch_state='held' WHERE id='images-work'").run();
+  db.prepare(
+    "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('audio','p1','audio','generate','canceled')",
+  ).run();
+  expect(waitingExternalReviews(db)).toEqual([]);
+  expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "canceled" });
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});
