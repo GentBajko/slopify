@@ -67,17 +67,15 @@ export function projectHolds(
     readonly skip?: ((value: unknown, error: unknown) => void) | undefined;
   } = {},
 ): ProjectHolds {
-  const { projectId } = scope;
-  const onlyOne = projectId === undefined ? "" : " AND c.project_id=?";
+  const { projectId, skip } = scope;
+  const gatesOf = oneProject("c", projectId);
   const gateSql = `SELECT c.project_id, c.checkpoint_id, c.stage, c.revision_id, c.fingerprint, c.created_at, (c.stage='video' AND ${heldForItsDay("c")}) AS own
        FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
-       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${onlyOne}`;
-  const scoped = projectId === undefined ? [] : [projectId];
-  const { skip } = scope;
+       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${gatesOf.sql}`;
   const gates = db
     .prepare(gateSql)
-    .all(...scoped)
+    .all(...gatesOf.params)
     .flatMap((row) => {
       if (skip === undefined) return [gateRow.parse(row)];
       const gate = gateRow.safeParse(row);
@@ -111,13 +109,10 @@ export function projectHolds(
     };
     holding.set(gate.project_id, [...(holding.get(gate.project_id) ?? []), hold]);
   }
+  const headsOf = oneProject("h", projectId);
   const scheduled = db
-    .prepare(
-      `SELECT h.project_id FROM project_heads h WHERE ${heldForItsDay("h")}${
-        projectId === undefined ? "" : " AND h.project_id=?"
-      }`,
-    )
-    .all(...scoped)
+    .prepare(`SELECT h.project_id FROM project_heads h WHERE ${heldForItsDay("h")}${headsOf.sql}`)
+    .all(...headsOf.params)
     .map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
   const runs = heldRuns(db, projectId);
@@ -184,25 +179,38 @@ function nothingAdmitted(h: string): string {
 // Each project out of the Trash with a step held beside the reviews (`held`), and whether its
 // run is stuck: it has unfinished stages, is still, and nothing will move it on but Continue
 // the run, because nothing admitted can start or because a step is held (a step still allowed
-// may wait on it).
+// may wait on it). Each reading is made once per project (MATERIALIZED), not once per use.
 function heldRuns(
   db: DatabaseSync,
   projectId: string | undefined,
 ): ReadonlyMap<string, { readonly held: boolean; readonly stuck: boolean }> {
-  const stuck = `EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state NOT IN ('done','provided','skipped'))
-    AND ${still("h")} AND (${heldBesideReviews("h")} OR ${nothingAdmitted("h")})`;
+  const one = oneProject("h", projectId);
   const rows = db
     .prepare(
-      `SELECT h.project_id, ${heldBesideReviews("h")} AS held, (${stuck}) AS stuck
-       FROM project_heads h WHERE ${liveProject("h", "project_id")} AND (${heldBesideReviews("h")} OR (${stuck}))${
-         projectId === undefined ? "" : " AND h.project_id=?"
-       }`,
+      `WITH runs AS MATERIALIZED (
+         SELECT h.project_id, ${heldBesideReviews("h")} AS held,
+           EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state NOT IN ('done','provided','skipped'))
+             AND ${still("h")} AS idle,
+           ${nothingAdmitted("h")} AS unadmitted
+         FROM project_heads h WHERE ${liveProject("h", "project_id")}${one.sql})
+       SELECT project_id, held, idle AND (held OR unadmitted) AS stuck FROM runs
+       WHERE held OR (idle AND unadmitted)`,
     )
-    .all(...(projectId === undefined ? [] : [projectId]));
+    .all(...one.params);
   return new Map(
     rows.map((row) => {
       const run = runRow.parse(row);
       return [run.project_id, { held: run.held === 1, stuck: run.stuck === 1 }] as const;
     }),
   );
+}
+
+// The clause and its parameter that limit a query to one project, when `projectId` is given.
+function oneProject(
+  alias: string,
+  projectId: string | undefined,
+): { readonly sql: string; readonly params: readonly string[] } {
+  return projectId === undefined
+    ? { sql: "", params: [] }
+    : { sql: ` AND ${alias}.project_id=?`, params: [projectId] };
 }
