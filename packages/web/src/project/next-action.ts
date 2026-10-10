@@ -2,6 +2,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import {
   heldStateWord,
+  keptAsIsWord,
   parkedOnAgent,
   stoppedWord,
   waitingForAgentWord,
@@ -338,7 +339,7 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       ? {
           situation: "done",
           tone: "done",
-          status: "Kept as is",
+          status: keptAsIsWord,
           title: "The video is ready; what is left won't run.",
           why: "Prepare upload lays out the file, title, description, thumbnails and tags in the order YouTube Studio asks for them. Editing the project brings the rest back to Needs you.",
           action: { label: "Prepare upload", intent: { kind: "prepare-upload" } },
@@ -347,8 +348,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       : {
           situation: "done",
           tone: "done",
-          status: "Kept as is",
-          title: "Kept as is: what is left won't run.",
+          status: keptAsIsWord,
+          title: `${keptAsIsWord}: what is left won't run.`,
           why: "Everything made is kept. Editing the project brings the rest back to Needs you.",
         };
 
