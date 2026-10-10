@@ -9,6 +9,7 @@ import {
   recoverySelection,
   redoTarget,
   regenerationEdit,
+  resumeSelection,
 } from "./recovery-selection.js";
 import { paidServiceFixture } from "./service.fake.js";
 
@@ -23,6 +24,22 @@ it("reruns only generated images and selects their video closure", async () => {
       kind: "selected",
       workKeys: ["image:one", "image:two"],
     });
+    // Continue the run: everything, unless a cancel left stages that weren't taken up again.
+    expect(resumeSelection(plan, [{ kind: "images", state: "pending", admitted: true }])).toEqual({
+      kind: "allAffected",
+    });
+    expect(
+      resumeSelection(plan, [
+        { kind: "images", state: "pending", admitted: true },
+        { kind: "video", state: "canceled" },
+      ]),
+    ).toEqual({ kind: "selected", workKeys: ["image:one", "image:two"] });
+    expect(
+      resumeSelection(plan, [
+        { kind: "images", state: "pending" },
+        { kind: "video", state: "canceled" },
+      ]),
+    ).toEqual({ kind: "allAffected" });
     expect(regenerationEdit(h.base, plan, "article")).toBeUndefined();
     expect(regenerationEdit(h.base, plan, "research")).toBeUndefined();
     expect(dependentClosure(plan.recipes, ["image:one"])).toEqual(["image:one"]);

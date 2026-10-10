@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { stagesOf } from "../admission/repo.js";
 import { withProjectControl } from "../control/lock.js";
 import type { RevisionView } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
@@ -28,6 +29,7 @@ import {
   recoverySelection,
   redoTarget,
   regenerationEdit,
+  resumeSelection,
   sectionRoots,
 } from "./recovery-selection.js";
 import { previewById, storePreview } from "./repo.js";
@@ -193,7 +195,9 @@ export async function recoverProject(
       const selection: RebuildSelection =
         input.action.kind === "rerun" || input.action.kind === "redo"
           ? { kind: "selected", workKeys: rerunKeys }
-          : recoverySelection(plan, input.action.kind === "retry" ? input.action.stage : undefined);
+          : input.action.kind === "retry"
+            ? recoverySelection(plan, input.action.stage)
+            : resumeSelection(plan, stagesOf(deps.db, projectId));
       if (selection.kind === "selected" && selection.workKeys.length === 0)
         return finish({
           ok: false,

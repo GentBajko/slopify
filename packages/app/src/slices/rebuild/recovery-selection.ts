@@ -1,4 +1,5 @@
 import type { StageKind } from "../../kernel/pipeline.js";
+import { readmitted, type StageStanding } from "../../kernel/runner/graph.js";
 import { narrationRegenerationKey } from "../narration/plan.js";
 import type { RevisionEdit, RevisionView } from "../revisions/model.js";
 import type { RebuildSelection } from "./model.js";
@@ -91,16 +92,30 @@ export function dependentClosure(
   return recipes.filter((row) => selected.has(row.key)).map((row) => row.key);
 }
 
-export function recoverySelection(plan: RevisionWorkPlan, stage?: StageKind): RebuildSelection {
-  if (stage === undefined) return { kind: "allAffected" };
+export function recoverySelection(plan: RevisionWorkPlan, stage: StageKind): RebuildSelection {
+  return { kind: "selected", workKeys: stageWork(plan, stage) };
+}
+
+// Continue the run (or Resume): everything left to make, except after a Cancel, when only the
+// stages the person took up again (`readmitted`: Try again, or Continue on the canceled run) go
+// on, each as Try again would; the stages they canceled stay canceled.
+export function resumeSelection(
+  plan: RevisionWorkPlan,
+  stages: readonly StageStanding[],
+): RebuildSelection {
+  const taken = stages.filter((stage) => readmitted(stage, stages));
+  if (taken.length === 0) return { kind: "allAffected" };
+  return { kind: "selected", workKeys: taken.flatMap((stage) => stageWork(plan, stage.kind)) };
+}
+
+// A stage's work left to make, or all of it when every piece would be reused.
+function stageWork(plan: RevisionWorkPlan, stage: StageKind): readonly string[] {
   const roots = plan.work
     .filter((row) => row.stage === stage && row.disposition !== "reuse")
     .map((row) => row.key);
-  const unfinished =
-    roots.length === 0
-      ? plan.work.filter((row) => row.stage === stage).map((row) => row.key)
-      : roots;
-  return { kind: "selected", workKeys: unfinished };
+  return roots.length === 0
+    ? plan.work.filter((row) => row.stage === stage).map((row) => row.key)
+    : roots;
 }
 
 export function regenerationEdit(
