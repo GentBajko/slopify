@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { causedBy } from "../../kernel/errors.js";
+import { closedReviewSentences } from "../../slices/reviews/external-model.js";
 import { answerExternalReview } from "../../slices/reviews/external-repo.js";
 import { verdictAnswerSchema, verdictIssue } from "../../slices/reviews/verdict.js";
 import { actorOf } from "./actor.js";
@@ -87,14 +88,6 @@ export function externalReviewRoutes(deps: AppDeps) {
           by: actorOf(c),
           at: deps.clock.now().toISOString(),
         });
-        if (!result.ok && result.reason === "trashed")
-          return problem(c, {
-            status: 409,
-            title: titleOf(409),
-            detail:
-              "This review's project is in the Trash, so the verdict wasn't saved. Restore the project in Settings → Backup & storage → Trash; the review then waits for its verdict again.",
-            extensions: { reason: "trashed" },
-          });
         if (!result.ok)
           return result.reason === "not-found"
             ? problem(c, {
@@ -107,12 +100,7 @@ export function externalReviewRoutes(deps: AppDeps) {
             : problem(c, {
                 status: 409,
                 title: titleOf(409),
-                detail:
-                  result.reason === "superseded"
-                    ? "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it."
-                    : result.reason === "canceled"
-                      ? "This review's run was canceled, so the verdict wasn't saved: a canceled run's reviews never pass. Nothing is waiting on it; call needs_attention to see what is waiting now."
-                      : `This review was already answered (${result.reason === "auto-passed" ? "it passed at its 2-hour deadline" : "another verdict was saved first"}), so this verdict wasn't saved. Call needs_attention to see what is waiting now.`,
+                detail: `The verdict wasn't saved. ${closedReviewSentences[result.reason]}`,
                 extensions: { reason: result.reason },
               });
         try {

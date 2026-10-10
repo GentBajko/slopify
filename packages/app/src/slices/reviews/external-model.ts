@@ -39,6 +39,21 @@ export interface ExternalReview {
 // Where a review stands (`reviewStanding`): waiting for a verdict, or why it takes none.
 export type ReviewStanding = ExternalReviewState | "trashed" | "canceled";
 
+// Why a review takes no verdict, one sentence per standing: what get_external_review explains,
+// and what a refused verdict says after "The verdict wasn't saved."
+export const closedReviewSentences: Readonly<Record<Exclude<ReviewStanding, "waiting">, string>> = {
+  answered:
+    "This review was already answered, so it takes no other verdict. Call needs_attention to see what is waiting now.",
+  "auto-passed":
+    "This review passed at its 2-hour deadline with no verdict, so it takes none now. Call needs_attention to see what is waiting now.",
+  superseded:
+    "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
+  canceled:
+    "This review's run was canceled, so nothing waits on it and it takes no verdict: a canceled run's reviews never pass. Call needs_attention to see what is waiting now.",
+  trashed:
+    "This review's project is in the Trash, so nothing waits on it and it takes no verdict. Restore the project in Settings → Backup & storage → Trash; the review then waits for its verdict again.",
+};
+
 export type ExternalAnswerResult =
   | { readonly ok: true; readonly value: ExternalReview }
   | { readonly ok: false; readonly reason: "not-found" }

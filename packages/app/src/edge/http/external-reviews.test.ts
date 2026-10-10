@@ -229,7 +229,9 @@ it("says a review already passed at its deadline when a verdict comes after", as
   h.deps.db.prepare("UPDATE external_reviews SET state='auto-passed' WHERE id='er1'").run();
   const late = await verdictOn(h, { verdict: "fail", reasons: ["Too dark."] });
   expect(late.refused).toBe(true);
-  expect(late.said).toContain("it passed at its 2-hour deadline");
+  expect(late.said).toContain(
+    "The verdict wasn't saved. This review passed at its 2-hour deadline with no verdict",
+  );
 });
 
 it("takes no verdict for a project in the Trash and says how to get it back", async () => {
@@ -251,7 +253,9 @@ it("takes no verdict for a canceled run's review and says what to do instead", a
   h.deps.db.prepare("UPDATE revision_work SET state='canceled' WHERE id='w0'").run();
   const canceled = await verdictOn(h, { verdict: "pass", reasons: [] });
   expect(canceled.refused).toBe(true);
-  expect(canceled.said).toContain("This review's run was canceled, so the verdict wasn't saved");
+  expect(canceled.said).toContain(
+    "The verdict wasn't saved. This review's run was canceled, so nothing waits on it",
+  );
   expect(canceled.said).toContain("needs_attention");
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
