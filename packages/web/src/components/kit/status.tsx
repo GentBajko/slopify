@@ -22,7 +22,7 @@ export function Lamp({
   );
 }
 
-// "Running", "Waiting for you", "Failed". Running and done read in accent-ink, the rest in
+// "Running", "Waiting for your review", "Failed". Running and done read in accent-ink, the rest in
 // their own colour; off reads in ink-2.
 export function Status({
   tone,

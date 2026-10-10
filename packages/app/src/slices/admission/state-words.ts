@@ -33,19 +33,32 @@ export const keptAsIsWord = "Kept as is";
 // A project a schedule made ahead, held before its video until its day.
 export const preparedWord = "Prepared";
 
-// An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
-// `progress` is the run's share done (`progressOf`): a waiting project with none is Queued,
-// one with some is held, as Projects tells them apart (`isWaiting`).
-export function projectStateWord(project: {
+interface ProjectStanding {
   readonly status: ProjectState;
   readonly progress: number;
   readonly setAside?: boolean | undefined;
   readonly prepared?: boolean | undefined;
-}): string {
-  if (project.status === "pending" && project.progress > 0) {
-    if (project.setAside === true) return keptAsIsWord;
-    if (project.prepared === true) return preparedWord;
-    return heldWord;
-  }
-  return projectStateWords[project.status];
+}
+
+// What a held project waits for: nobody once it is Kept as is, its scheduled day once a
+// schedule prepared it, otherwise the person's review.
+export function heldStateWord(project: Pick<ProjectStanding, "setAside" | "prepared">): string {
+  if (project.setAside === true) return keptAsIsWord;
+  if (project.prepared === true) return preparedWord;
+  return heldWord;
+}
+
+// An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
+// `progress` is the run's share done (`progressOf`): a waiting project with none is Queued,
+// one with some is held.
+export function projectStateWord(project: ProjectStanding): string {
+  return project.status === "pending" && project.progress > 0
+    ? heldStateWord(project)
+    : projectStateWords[project.status];
+}
+
+// A run that ran and now waits for the person: Home's Needs you, the Projects "Needs you"
+// filter and its waiting-first sort, as needs_attention reads it.
+export function waitsForPerson(project: ProjectStanding): boolean {
+  return projectStateWord(project) === heldWord;
 }

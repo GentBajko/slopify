@@ -70,7 +70,7 @@ export function WorkList({
       />
       {rows.length === 0 ? null : (
         <ul
-          aria-label="Waiting for you"
+          aria-label="What needs you"
           className="sl-home-list m-0 flex list-none flex-col gap-3 p-0"
         >
           {rows.map((item, index) =>

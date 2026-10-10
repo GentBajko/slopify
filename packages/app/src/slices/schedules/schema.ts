@@ -258,6 +258,8 @@ export const calendarProjectSchema = z
     needs: z.enum(calendarNeeds).optional(),
     // Finished, makes a video, not marked uploaded and not a bundled sample.
     readyToUpload: z.literal(true).optional(),
+    // A schedule prepared it ahead: held before its video until its day, not for the person.
+    prepared: z.literal(true).optional(),
     // Stages waiting for a CLI plan's limits to reset.
     limitWaits: z
       .array(

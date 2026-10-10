@@ -206,6 +206,22 @@ describe("the next action", () => {
     });
   });
 
+  it("says a schedule's prepared project is Prepared while its video waits for its day", () => {
+    const gate = { checkpointId: "c1", stage: "video" as const, dependents: [] };
+    const next = nextActionFor(
+      input({
+        project: { status: "pending", config, prepared: true },
+        stages: [stage("images", "done"), stage("video", "pending")],
+        held: [gate],
+      }),
+    );
+    expect(next).toMatchObject({
+      situation: "held",
+      status: "Prepared",
+      title: "Everything but the video is made; its schedule renders the video on its day.",
+    });
+  });
+
   it("approves a held checkpoint, named for what runs next", () => {
     const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
     const next = nextActionFor(

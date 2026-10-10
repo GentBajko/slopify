@@ -42,13 +42,6 @@ export function needsYouCount(
   return waiting.length + failed.length + held.length;
 }
 
-// A run the runner stopped for the person: it ran, and now nothing may start (a checkpoint
-// holds the next step, or held work waits for Continue). The same reading the "Waiting for
-// you" notification uses. One the person chose to keep as is waits for nobody.
-export function isWaiting(project: ProjectListing): boolean {
-  return project.status === "pending" && project.progress > 0 && project.setAside !== true;
-}
-
 function projectLink(project: { readonly id: string; readonly title: string }): ReactElement {
   return (
     <Link to="/projects/$projectId" params={{ projectId: project.id }}>

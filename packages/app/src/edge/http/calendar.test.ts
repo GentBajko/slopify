@@ -180,6 +180,19 @@ it("says which projects need the person, which are ready to upload and which wai
       `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,created_at)
        VALUES ('v-1',?,?,'article','article','f','r1',0,'[]','flagged',1,?)`,
     ).run(flagged, `rev-${flagged}`, finished);
+    // A schedule's prepared project: its Before Video hold waits for its day, not the person.
+    const prepared = f.project("Prepared", "pending", null);
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      prepared,
+      `rev-${prepared}`,
+    );
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,?,'video','work',?,'held',?)`,
+    ).run(prepared, `rev-${prepared}`, "cp-2", "b".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Prepared',1,?)",
+    ).run(prepared, finished);
     db.exec("PRAGMA foreign_keys=ON");
     const waiting = f.project("Waiting", "running", null);
     db.prepare(
@@ -201,6 +214,8 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("On hold")?.needs).toBe("paused");
     expect(byTitle.get("Held")?.needs).toBe("review");
     expect(byTitle.get("Flagged")?.needs).toBe("review");
+    expect(byTitle.get("Prepared")).toMatchObject({ prepared: true });
+    expect(byTitle.get("Prepared")?.needs).toBeUndefined();
     expect(byTitle.get("Ready")?.needs).toBeUndefined();
     expect(
       parsed.projects

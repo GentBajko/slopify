@@ -1,6 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { isWaiting } from "@/home/needs-you";
+import { waitsForPerson } from "@app/slices/admission/state-words.js";
 import { isReadyToUpload } from "@/home/ready";
 import { isQueued } from "@/home/running-more";
 
@@ -30,7 +30,7 @@ export function matches(project: ProjectListing, filter: ProjectFilter): boolean
     case "queued":
       return isQueued(project);
     case "waiting":
-      return isWaiting(project);
+      return waitsForPerson(project);
     case "ready":
       return isReadyToUpload(project);
     case "failed":
@@ -66,7 +66,7 @@ const statusRank: Readonly<Record<ProjectState, number>> = {
 };
 
 function rankOf(project: ProjectListing): number {
-  return isWaiting(project) ? 0 : statusRank[project.status];
+  return waitsForPerson(project) ? 0 : statusRank[project.status];
 }
 
 const newestFirst = (a: ProjectListing, b: ProjectListing): number =>

@@ -3,9 +3,10 @@ import { projectStateWord, projectStateWords } from "@app/slices/admission/state
 import type { Tone } from "@/components/kit/status";
 
 // One word per state, everywhere a state is shown: Projects, the calendar, the project
-// header, Home and the run's steps. A screen that knows more (a project waiting for your
-// review, a limit wait, Ready to upload) says that instead, before falling back to these.
-// The words are the app's (`slices/admission/state-words.ts`), so the MCP tools say the same.
+// header, Home and the run's steps. A held project reads as what it waits for (projectStateOf);
+// a screen that knows more (a limit wait, Ready to upload) says that before falling back to
+// these. The words are the app's (`slices/admission/state-words.ts`), so the MCP tools say
+// the same.
 
 export interface StateLook {
   readonly tone: Tone;

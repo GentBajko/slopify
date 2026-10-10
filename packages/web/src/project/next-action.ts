@@ -1,6 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
-import { heldWord } from "@app/slices/admission/state-words.js";
+import { heldStateWord } from "@app/slices/admission/state-words.js";
 import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
@@ -69,7 +69,7 @@ export interface LimitWaitLike {
 }
 
 export interface NextActionInput {
-  readonly project: Pick<ProjectSummary, "status" | "config" | "setAside">;
+  readonly project: Pick<ProjectSummary, "status" | "config" | "setAside" | "prepared">;
   readonly stages: readonly Stage[];
   // Unfinished work on the saved revision that nothing will start by itself.
   readonly resumable: boolean;
@@ -119,7 +119,7 @@ export type Situation =
 export interface NextAction {
   readonly situation: Situation;
   readonly tone: Tone;
-  // The state in words, beside the lamp: "Waiting for your review".
+  // The state in words, beside the lamp: "Waiting for your review", "Prepared".
   readonly status: string;
   // What is ready or what happened, one sentence.
   readonly title: string;
@@ -252,13 +252,17 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
   const held = input.held[0];
   if (held !== undefined) {
     const heldName = name(held.stage);
+    const prepared = input.project.prepared === true && held.stage === "video";
     return {
       situation: "held",
       tone: "waiting",
-      status: heldWord,
-      title: `The ${lower(heldName)} ${isAre(heldName)} ready for your review.`,
-      why:
-        held.dependents.length === 0
+      status: heldStateWord(input.project),
+      title: prepared
+        ? "Everything but the video is made; its schedule renders the video on its day."
+        : `The ${lower(heldName)} ${isAre(heldName)} ready for your review.`,
+      why: prepared
+        ? "Approving now renders it before its day."
+        : held.dependents.length === 0
           ? "Approving marks it reviewed."
           : `Approving lets ${list(held.dependents.map((kind) => lower(plural(name(kind)))))} run. Nothing after it runs until you do.`,
       action: { label: approveLabel(held, name), intent: { kind: "approve", gate: held } },

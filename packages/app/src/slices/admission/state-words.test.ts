@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { projectStateWord } from "./state-words.js";
+import { projectStateWord, waitsForPerson } from "./state-words.js";
 
 it.each([
   [{ status: "pending", progress: 0 }, "Queued"],
@@ -14,4 +14,14 @@ it.each([
   [{ status: "canceled", progress: 0.5 }, "Canceled"],
 ] as const)("says %o as %s", (project, word) => {
   expect(projectStateWord(project)).toBe(word);
+});
+
+it.each([
+  [{ status: "pending", progress: 0.5 }, true],
+  [{ status: "pending", progress: 0 }, false],
+  [{ status: "pending", progress: 0.5, prepared: true }, false],
+  [{ status: "pending", progress: 0.5, setAside: true }, false],
+  [{ status: "running", progress: 0.5 }, false],
+] as const)("counts %o as waiting for the person: %s", (project, waits) => {
+  expect(waitsForPerson(project)).toBe(waits);
 });

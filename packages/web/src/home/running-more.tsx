@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { TextLink } from "@/components/kit/link";
 
 // Started but not begun: waiting its turn behind the runs ahead of it (a batch or a schedule
-// queues its runs one after another). A run that has made progress and stopped is waiting for
-// the person instead (`isWaiting` in needs-you.tsx).
+// queues its runs one after another). A run that has made progress and stopped is held
+// instead (`projectStateWord`).
 export function isQueued(project: ProjectListing): boolean {
   return project.status === "pending" && project.progress === 0;
 }

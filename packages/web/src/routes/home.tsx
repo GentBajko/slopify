@@ -1,3 +1,4 @@
+import { waitsForPerson } from "@app/slices/admission/state-words.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
@@ -12,7 +13,6 @@ import { ButtonLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock, QueryState, StaleNote } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
-import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { isQueued, RunningMore } from "@/home/running-more";
 import { RunningProject } from "@/home/running-now";
@@ -107,7 +107,7 @@ export function HomeRoute(): ReactElement {
     current.includes(templateChannel.get(run.templateId)),
   );
   const decisions: Decision[] = [
-    ...mine.filter(isWaiting).map((project) => ({ kind: "waiting" as const, project })),
+    ...mine.filter(waitsForPerson).map((project) => ({ kind: "waiting" as const, project })),
     ...mine
       .filter((one) => one.status === "paused")
       .map((project) => ({ kind: "paused" as const, project })),
