@@ -420,6 +420,25 @@ it("reads an uploaded, settled project as done, with no need", () => {
   }
 });
 
+// Uploaded, the run a restart stopped is settled: its leftovers are nothing to continue, so
+// the calendar no more says Stopped than Projects does.
+it("reads an uploaded run a restart stopped as done, not stopped", () => {
+  const f = fixture();
+  try {
+    const finished = "2026-09-11T05:00:00.000Z";
+    const uploaded = heldAtAudio(f, "Uploaded", finished);
+    f.h.deps.db
+      .prepare("INSERT INTO project_uploads (project_id, uploaded_at) VALUES (?, ?)")
+      .run(uploaded, finished);
+    const project = calendarProject(f, "Uploaded");
+    expect(project).toMatchObject({ state: "done" });
+    expect(project?.stopped).toBeUndefined();
+    expect(project?.needs).toBeUndefined();
+  } finally {
+    f.h.close();
+  }
+});
+
 // A run a restart stopped asks for Continue the run first: its flagged item waits until then.
 it("asks a stopped run with a flagged item to continue, not to review", () => {
   const f = fixture();

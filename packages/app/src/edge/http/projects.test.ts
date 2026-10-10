@@ -646,6 +646,31 @@ describe("GET /api/projects", () => {
     expect(await status()).toBe("done");
   });
 
+  // A restart stopped it before the upload: what it left was never admitted, so the list says
+  // Done, not Stopped.
+  it("lists an uploaded project a restart stopped with nothing admitted as done, not stopped", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r1')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','article','provide','done'), ('s3','p1','video','generate','pending')",
+    );
+    const listed = async () =>
+      (
+        (await (await app.request("/api/projects")).json()) as {
+          projects: { status: string; stopped?: boolean }[];
+        }
+      ).projects[0];
+    expect(await listed()).toMatchObject({ status: "pending", stopped: true });
+    db.exec("INSERT INTO project_uploads (project_id, uploaded_at) VALUES ('p1','2026-09-01')");
+    const after = await listed();
+    expect(after?.status).toBe("done");
+    expect(after?.stopped).toBeUndefined();
+  });
+
   // Its page says the same, each project read alone: another uploaded project with work still
   // to run stays paused beside it.
   it("shows an uploaded, paused project with nothing admitted as done on its page", async () => {
