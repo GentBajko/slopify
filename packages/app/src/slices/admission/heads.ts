@@ -16,6 +16,8 @@ const headRow = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   paused: z.number().default(0),
+  pauses: z.number(),
+  stops: z.number(),
   sources: z.string(),
   article_prompt: z.string().nullable(),
   book: z.string().nullable(),
@@ -29,6 +31,7 @@ const listingConfigSchema = z.object({
 
 const headSelect = `SELECT projects.id, projects.title, projects.format, projects.created_at,
   projects.updated_at, COALESCE(project_controls.paused, 0) AS paused,
+  COALESCE(project_controls.pauses, 0) AS pauses, COALESCE(project_controls.stops, 0) AS stops,
   json_extract(projects.config, '$.sources') AS sources,
   json_extract(projects.config, '$.articlePrompt') AS article_prompt,
   json_extract(projects.config, '$.voices.book') AS book
@@ -48,6 +51,8 @@ export function listProjectHeads(db: DatabaseSync): ProjectHead[] {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         paused: row.paused === 1,
+        ...(row.paused === 1 ? { pauseCount: row.pauses } : {}),
+        ...(row.stops > 0 ? { stopCount: row.stops } : {}),
       };
     });
 }

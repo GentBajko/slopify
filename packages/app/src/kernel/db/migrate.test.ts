@@ -227,6 +227,7 @@ describe("migrate", () => {
       { version: 58, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 59, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 60, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 61, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -236,16 +237,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 53 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 54 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(61, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(62, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 61 is newer than this app knows (60)",
+      "database schema 62 is newer than this app knows (61)",
     );
   });
 
@@ -261,7 +262,7 @@ describe("migrate", () => {
       config: '{"saved":true}',
     });
     expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
-    db.exec("INSERT INTO project_controls VALUES ('p1', 1)");
+    db.exec("INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1)");
     db.exec("DELETE FROM projects WHERE id = 'p1'");
     expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
     db.close();

@@ -369,6 +369,10 @@ export interface ListingConfig extends Pick<RunConfig, "sources" | "articlePromp
 // A live project with only its list settings, as `listProjectHeads` reads it.
 export interface ProjectHead extends Omit<Project, "config"> {
   readonly config: ListingConfig;
+  // How many times it was paused, while it is; and stopped by a restart, once it was: a pause or
+  // a stop that comes again is a new wait (`web/src/notifications/away.ts`).
+  readonly pauseCount?: number;
+  readonly stopCount?: number;
 }
 
 // One row of 07 Projects. The list carries a share rather than the stage rows a project

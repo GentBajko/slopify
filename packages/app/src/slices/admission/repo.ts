@@ -185,7 +185,9 @@ export function setProjectPaused(
   at: string,
 ): void {
   db.prepare(
-    "INSERT INTO project_controls (project_id, paused) VALUES (?, ?) ON CONFLICT(project_id) DO UPDATE SET paused = excluded.paused",
+    `INSERT INTO project_controls (project_id, paused, pauses) VALUES (?1, ?2, ?2)
+     ON CONFLICT(project_id) DO UPDATE SET pauses = pauses + (excluded.paused = 1 AND paused = 0),
+       paused = excluded.paused`,
   ).run(projectId, paused ? 1 : 0);
   db.prepare("UPDATE projects SET updated_at = ? WHERE id = ?").run(at, projectId);
 }

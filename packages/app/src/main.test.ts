@@ -63,7 +63,7 @@ describe("markInterruptedStages", () => {
   it("returns interrupted paused work to pending and keeps the pause after reopening", () => {
     const db = migrated();
     db.exec("INSERT INTO projects VALUES ('p1','t','16:9','{}','2026-09-01','2026-09-01')");
-    db.exec("INSERT INTO project_controls VALUES ('p1', 1)");
+    db.exec("INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1)");
     addStage(db, "research", "running");
     expect(markInterruptedStages(db, clock)).toBe(1);
     expect(db.prepare("SELECT state, failure_reason, finished_at FROM stages").get()).toEqual({
@@ -224,6 +224,7 @@ describe("boot", { timeout: 30_000 }, () => {
       { version: 58 },
       { version: 59 },
       { version: 60 },
+      { version: 61 },
     ]);
     db.close();
   });
@@ -305,7 +306,7 @@ describe("boot", { timeout: 30_000 }, () => {
   function seedWaitingReview(db: DatabaseSync, id: string, deadline: string): void {
     if (db.prepare("SELECT 1 FROM projects WHERE id='p1'").get() === undefined)
       db.exec(`INSERT INTO projects VALUES ('p1','t','16:9','{}','2026-09-01','2026-09-01');
-        INSERT INTO project_controls VALUES ('p1', 1);
+        INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1);
         INSERT INTO project_revisions (id,project_id,config,content,fingerprints,created_at)
           VALUES ('r1','p1','{}','{}','{}','2026-09-01');
         INSERT INTO project_heads VALUES ('p1','r1');

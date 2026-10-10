@@ -179,36 +179,30 @@ it("counts a run that waits at a new checkpoint, not one with a checkpoint appro
 });
 
 // Continued and paused again, or continued and stopped again by a restart, while away: news.
+// An edit that changes the project, or moves a stopped run's meter, is not another pause or stop.
 it("counts a run paused or stopped again since the page looked", () => {
-  const paused = (updatedAt: string) => ({
+  const paused = (pauseCount: number, updatedAt = "2026-10-10T08:00:00.000Z") => ({
     id: "a",
     status: "paused" as const,
     progress: 0.5,
     updatedAt,
+    pauseCount,
   });
-  const before = snapshotOf(0, [paused("2026-10-10T08:00:00.000Z")]);
-  expect(awaySummary(before, [paused("2026-10-10T08:00:00.000Z")])).toMatchObject({ waiting: 0 });
-  expect(awaySummary(before, [paused("2026-10-10T09:00:00.000Z")])).toMatchObject({ waiting: 1 });
-  const stopped = (progress: number) => ({
+  const before = snapshotOf(0, [paused(1)]);
+  expect(awaySummary(before, [paused(1, "2026-10-10T09:00:00.000Z")])).toMatchObject({
+    waiting: 0,
+  });
+  expect(awaySummary(before, [paused(2)])).toMatchObject({ waiting: 1 });
+  const stopped = (stopCount: number, progress = 0.4) => ({
     id: "a",
     status: "pending" as const,
     progress,
     stopped: true,
+    stopCount,
   });
-  const restarted = snapshotOf(0, [stopped(0.4)]);
-  expect(awaySummary(restarted, [stopped(0.4)])).toMatchObject({ waiting: 0 });
-  expect(awaySummary(restarted, [stopped(0.7)])).toMatchObject({ waiting: 1 });
-  // Kept before points carried when they began, a pause or a stop is the same one as now.
-  const legacy = {
-    at: 0,
-    states: { a: "paused" as const },
-    waiting: { a: "paused" },
-    stepFailed: [],
-  };
-  expect(awaySummary(legacy, [paused("2026-10-10T09:00:00.000Z")])).toMatchObject({ waiting: 0 });
-  expect(awaySummary({ ...legacy, waiting: { a: "stopped" } }, [stopped(0.7)])).toMatchObject({
-    waiting: 0,
-  });
+  const restarted = snapshotOf(0, [stopped(1)]);
+  expect(awaySummary(restarted, [stopped(1, 0.7)])).toMatchObject({ waiting: 0 });
+  expect(awaySummary(restarted, [stopped(2)])).toMatchObject({ waiting: 1 });
 });
 
 // An agent may fix a failed run, or remake a finished one, while the page is away: the run's

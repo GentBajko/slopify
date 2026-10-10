@@ -28,10 +28,9 @@ type Standing = Pick<
   | "stopped"
   | "holding"
   | "stepFailed"
-> & {
-  // When the project last changed: a pause and a Continue each set it (`setProjectPaused`).
-  readonly updatedAt?: string | undefined;
-};
+  | "pauseCount"
+  | "stopCount"
+>;
 
 export interface AwaySummary {
   readonly finished: number;
@@ -56,23 +55,22 @@ export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
   };
 }
 
-// Where a run waiting for the person waits: paused since its last change (a Continue and a new
-// pause make it another point), stopped at how far it got (moved on and stopped again, it got
-// further), each checkpoint of the person's that holds it, or nowhere named.
+// Where a run waiting for the person waits: at its latest pause or its latest stop by a restart
+// (a Continue and a new pause or stop make it another point), each checkpoint of the person's
+// that holds it, or nowhere named.
 function waitPoints(project: Standing): readonly string[] {
-  if (project.status === "paused") return [`paused@${project.updatedAt ?? ""}`];
-  if (project.stopped === true) return [`stopped@${String(project.progress)}`];
+  if (project.status === "paused") return [`paused@${String(project.pauseCount ?? 0)}`];
+  if (project.stopped === true) return [`stopped@${String(project.stopCount ?? 0)}`];
   const at = (project.holding ?? [])
     .filter((hold) => hold.waitsFor === "person")
     .map((hold) => `${hold.checkpointId}:${hold.fingerprint}`);
   return at.length === 0 ? ["held"] : at;
 }
 
-// Whether a run waits at a point it did not wait at when the page last looked. A snapshot kept
-// before points carried their change marker said only "paused" or "stopped".
+// Whether a run waits at a point it did not wait at when the page last looked.
 function waitsAnew(before: string | undefined, now: readonly string[]): boolean {
   const seen = before === undefined ? [] : before.split(",");
-  return now.some((point) => !seen.some((old) => point === old || point.startsWith(`${old}@`)));
+  return now.some((point) => !seen.includes(point));
 }
 
 export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): AwaySummary {
