@@ -220,6 +220,19 @@ describe("needs you", () => {
     expect(matches(stopped, "waiting")).toBe(true);
   });
 
+  // A run parked on an agent's review goes on by itself: it is among the running ones, as on
+  // Home's Running now.
+  it("counts a run waiting for the agent as running", () => {
+    const parked = listing("p1", "Agent one", "pending", { progress: 0.5, waitingForAgent: true });
+    expect(matches(parked, "running")).toBe(true);
+    expect(
+      matches(
+        listing("p2", "Kept", "pending", { progress: 0.5, waitingForAgent: true, setAside: true }),
+        "running",
+      ),
+    ).toBe(false);
+  });
+
   // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
   it("keeps a run waiting for the agent at its start out of Queued", () => {
     const parked = listing("p1", "Agent early", "pending", { waitingForAgent: true });
