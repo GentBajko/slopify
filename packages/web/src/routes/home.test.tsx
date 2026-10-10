@@ -184,7 +184,7 @@ describe("home", () => {
     expect(within(needs).getByText("3 decisions waiting · 1 ready to upload")).not.toBeNull();
   });
 
-  // Decided 2026-10-10: a schedule's prepared project waits for its day and a run parked on
+  // A schedule's prepared project waits for its day and a run parked on
   // an agent's review waits for the agent; neither asks anything of the person.
   it("keeps a prepared project and a run waiting for the agent off Needs you", async () => {
     const parked = body({

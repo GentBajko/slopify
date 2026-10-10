@@ -197,7 +197,7 @@ describe("the projects list", () => {
 });
 
 describe("needs you", () => {
-  // Decided 2026-10-10: a prepared run waits for its day, one parked on an agent's review for
+  // A prepared run waits for its day, one parked on an agent's review for
   // the agent; neither is the person's to act on, so neither leads the list.
   it("keeps prepared runs and runs waiting for the agent out of Needs you and its sort", async () => {
     const projects = [

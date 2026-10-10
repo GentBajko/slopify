@@ -239,7 +239,7 @@ describe("the next action", () => {
     });
   });
 
-  // Decided 2026-10-10: nothing to press, and Continue the run would only park it again.
+  // Nothing to press, and Continue the run would only park it again.
   it("says a run parked on an agent's review waits for the agent, with no button", () => {
     const next = nextActionFor(
       input({
