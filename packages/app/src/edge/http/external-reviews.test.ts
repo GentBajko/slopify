@@ -171,3 +171,27 @@ it("takes no verdict for a project in the Trash and says how to get it back", as
   expect(trashed.said).toContain("Settings → Backup & storage → Trash");
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
+
+it.each([
+  ["a body that isn't JSON", { "content-type": "application/json" }, '{"verdict":"pass",'],
+  ["a body sent without saying it is JSON", {}, '{"verdict":"pass","reasons":[]}'],
+])(
+  "says how to send the verdict again after %s, and the review keeps waiting",
+  async (_case, headers, body) => {
+    const h = waiting();
+    const response = await h.app.request(
+      `/api/projects/${h.projectId}/external-reviews/er1/verdict`,
+      {
+        method: "POST",
+        headers,
+        body,
+      },
+    );
+    expect(response.status).toBe(400);
+    const { detail } = (await response.json()) as { detail: string };
+    expect(detail).toMatch(
+      /^The verdict wasn't saved: .*JSON.*\. The review is still waiting: send \{verdict/,
+    );
+    expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
+  },
+);
