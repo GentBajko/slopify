@@ -17,6 +17,8 @@ const id = z
 const fileUrl =
   /^\/files\/([0-9A-Za-z_-]{1,64})\/(?:revisions\/([0-9A-Za-z_-]{1,64})\/([0-9A-Za-z_-]{1,64})|([a-z0-9-]{1,64}))$/;
 
+const narrationAssets: ReadonlySet<string> = new Set(["audio-body", "audio-export"]);
+
 const missing = {
   "unknown-project": "This project doesn't exist. Call list_projects to pick one.",
   "unknown-asset":
@@ -63,9 +65,12 @@ export function projectFile(deps: DownloadDeps, projectId: string, url: string):
   if (download.text !== undefined) return text(new TextDecoder().decode(download.text));
   if (download.contentType.startsWith("text/") || download.contentType.includes("json"))
     return text(readFileSync(download.path, "utf8"));
-  const timing = download.contentType.startsWith("audio/")
-    ? findDownload(deps, projectId, "subtitle-words")
-    : undefined;
+  // The word timing describes the current narration, so it comes with that audio only: not
+  // an intro, an outro or another format, and not an older version from History.
+  const timing =
+    asset !== undefined && narrationAssets.has(asset)
+      ? findDownload(deps, projectId, "subtitle-words")
+      : undefined;
   return text(
     JSON.stringify({
       ...where,
@@ -93,7 +98,7 @@ export function registerFileTools(server: McpServer, deps: DownloadDeps): void {
     {
       title: "Read a project file",
       description:
-        "One project file by the url list_project_files gives: a picture as an image, text inline, audio and video as their local path and url, with the narration's word timing for audio.",
+        "One project file by the url list_project_files gives: a picture as an image, text inline, audio and video as their local path and url, with the word timing for the current narration (audio-body, audio-export).",
       inputSchema: { id, url: z.string().min(1).max(300) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

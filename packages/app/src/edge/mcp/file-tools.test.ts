@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { emptyView } from "../../slices/rebuild/recipe-fixture.js";
+import { insertRevision } from "../../slices/revisions/repo.js";
 import type { Output } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
 import { listProjectFiles, projectFile } from "./file-tools.js";
@@ -46,7 +48,7 @@ function withFiles() {
   insertOutput(h.deps.db, output("o1", "image", "images/one.png", "images", { index: 1 }));
   insertOutput(h.deps.db, output("o2", "audio_body", "audio/body.mp3", "audio"));
   insertOutput(h.deps.db, output("o3", "subtitle_words", "audio/words.json", "video"));
-  return h;
+  return { ...h, output };
 }
 
 it("lists the files in their folder groups with path and URL", () => {
@@ -80,4 +82,34 @@ it("says which tool finds the right address for a file it cannot find", () => {
     expect(missing.isError).toBe(true);
     expect(JSON.stringify(missing.content)).toContain("list_project_files");
   }
+});
+
+it("gives word timing with the current narration only, not an intro or an older version", () => {
+  const h = withFiles();
+  const { db } = h.deps;
+  const dir = join(h.deps.paths.projects, h.projectId);
+  writeFileSync(join(dir, "audio", "intro.mp3"), Buffer.from("mp3"));
+  insertOutput(db, h.output("o4", "audio_intro", "audio/intro.mp3", "audio"));
+  mkdirSync(join(dir, "History"), { recursive: true });
+  writeFileSync(join(dir, "History", "body-old.mp3"), Buffer.from("mp3"));
+  const view = emptyView();
+  insertRevision(db, { ...view.revision, projectId: h.projectId });
+  db.prepare(
+    "INSERT INTO project_assets(id,project_id,path,bytes,created_at) VALUES ('a-old',?,'History/body-old.mp3',3,'2026-09-09T00:00:00.000Z')",
+  ).run(h.projectId);
+  db.prepare(
+    "INSERT INTO revision_outputs(id,project_id,revision_id,slot,work_key,asset_id,fingerprint,state,descriptor,selected,created_at) VALUES ('ro-old',?,?,'audio_body','audio:body:concat','a-old','f','ready',?,0,'2026-09-09T00:00:00.000Z')",
+  ).run(
+    h.projectId,
+    view.revision.id,
+    JSON.stringify(h.output("o-old", "audio_body", "History/body-old.mp3", "audio")),
+  );
+  const said = (url: string) => JSON.stringify(projectFile(h.deps, h.projectId, url).content);
+  const intro = said(`/files/${h.projectId}/audio-intro`);
+  expect(intro).toContain("intro.mp3");
+  expect(intro).not.toContain("wordTimings");
+  const older = said(`/files/${h.projectId}/revisions/${view.revision.id}/ro-old`);
+  expect(older).toContain("body-old.mp3");
+  expect(older).not.toContain("wordTimings");
+  expect(said(`/files/${h.projectId}/audio-body`)).toContain("wordTimings");
 });
