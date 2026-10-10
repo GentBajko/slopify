@@ -1,4 +1,5 @@
 import { type ProjectState, projectStates } from "@app/kernel/pipeline.js";
+import type { ProjectListing } from "@app/slices/admission/model.js";
 import { waitsForPerson } from "@app/slices/admission/state-words.js";
 
 // "While you were away": what the runs did while no Slopify tab was open or in view. The page
@@ -13,7 +14,10 @@ export interface AwaySnapshot {
   readonly waiting: readonly string[];
 }
 
-type Standing = Parameters<typeof waitsForPerson>[0] & { readonly id: string };
+type Standing = Pick<
+  ProjectListing,
+  "id" | "status" | "progress" | "setAside" | "prepared" | "waitingForAgent" | "stopped"
+>;
 
 export interface AwaySummary {
   readonly finished: number;
