@@ -335,6 +335,8 @@ export function createApp(deps: AppDeps): Hono {
       log: deps.log,
       version: deps.version,
       host: deps.host,
+      // An uploaded narration's length, for its word timing (get_project_file).
+      ...(deps.measureAudio === undefined ? {} : { measureAudio: deps.measureAudio }),
       api: async (request) => app.request(request, undefined, agentBindings),
     }),
   );

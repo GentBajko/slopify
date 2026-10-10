@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import type { Paths } from "../../kernel/paths.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import {
   narrationAliasesOf,
@@ -60,6 +61,32 @@ export async function revisionAudio(
   // levelled join: only the master reaches it.
   options: { readonly levelled?: boolean } = {},
 ): Promise<readonly AudioSegment[]> {
+  return narrationAudio(
+    {
+      paths: deps.paths,
+      measure: (path) =>
+        deps.measureAudio?.(path, context.signal) ??
+        probeDurationMs(deps.ffmpeg, path, context.signal, deps.log),
+    },
+    view,
+    options,
+  );
+}
+
+export interface NarrationAudioDeps {
+  readonly paths: Paths;
+  // An audio file's length in milliseconds, for a part whose length was never recorded (an
+  // uploaded narration): ffmpeg's full decode in production.
+  readonly measure: (path: string) => Promise<number>;
+}
+
+// The narration's parts in their order on the export timeline: the version's selected, ready
+// intro, body and outro, each measured when its length was never recorded.
+export async function narrationAudio(
+  deps: NarrationAudioDeps,
+  view: RevisionView,
+  options: { readonly levelled?: boolean } = {},
+): Promise<readonly AudioSegment[]> {
   const config = view.revision.config;
   if (config.sources.audio === "off") return [];
   const levelled =
@@ -80,11 +107,8 @@ export async function revisionAudio(
         `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Resume, or Try again on it), then retry this stage; or turn off Level the volume in Edit project → Pauses and volume.`,
       );
     if (row === undefined) return undefined;
-    const path = outputPath(deps.paths, context.work.projectId, row.output.path);
-    const duration =
-      row.output.durationMs ??
-      (await (deps.measureAudio?.(path, context.signal) ??
-        probeDurationMs(deps.ffmpeg, path, context.signal, deps.log)));
+    const path = outputPath(deps.paths, view.revision.projectId, row.output.path);
+    const duration = row.output.durationMs ?? (await deps.measure(path));
     if (!Number.isFinite(duration) || duration <= 0)
       throw new Error(
         "Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Regenerate the narration (or upload your audio file again in Edit project → Narration), then Try again.",

@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { z } from "zod";
+import type { RunConfig } from "../../slices/admission/model.js";
 import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import type { Output } from "../../slices/storage/model.js";
@@ -57,13 +57,24 @@ function withFiles() {
 
 // The project's current version speaks generated narration, so its word timing is for it.
 const narrated = { ...config, sources: { ...config.sources, audio: "generate" as const } };
-function narratedHead(h: ReturnType<typeof withFiles>): void {
-  insertRevision(h.deps.db, {
-    ...emptyView(narrated).revision,
-    id: "head",
-    projectId: h.projectId,
-  });
-  h.deps.db.prepare("INSERT INTO project_heads VALUES (?, 'head')").run(h.projectId);
+function narratedHead(
+  h: ReturnType<typeof withFiles>,
+  runConfig: RunConfig = narrated,
+  durationMs: number | null = 3000,
+): void {
+  const { db } = h.deps;
+  insertRevision(db, { ...emptyView(runConfig).revision, id: "head", projectId: h.projectId });
+  db.prepare("INSERT INTO project_heads VALUES (?, 'head')").run(h.projectId);
+  // The head's narration, as the subtitles stage timed its words on it.
+  db.prepare(
+    "INSERT INTO project_assets(id,project_id,path,bytes,created_at) VALUES ('a-body',?,'audio/body.mp3',3,'2026-09-10T00:00:00.000Z')",
+  ).run(h.projectId);
+  db.prepare(
+    "INSERT INTO revision_outputs(id,project_id,revision_id,slot,work_key,asset_id,fingerprint,state,descriptor,selected,created_at) VALUES ('ro-body',?,'head','audio_body','audio:body:concat','a-body','f','ready',?,1,'2026-09-10T00:00:00.000Z')",
+  ).run(
+    h.projectId,
+    JSON.stringify({ ...h.output("o2", "audio_body", "audio/body.mp3", "audio"), durationMs }),
+  );
 }
 
 it("lists the files in their folder groups with path and URL", () => {
@@ -74,33 +85,33 @@ it("lists the files in their folder groups with path and URL", () => {
   expect(listed).toContain("Working/Narration/body.mp3");
 });
 
-it("returns a picture as image content, and audio as its path, URL and word timing", () => {
+it("returns a picture as image content, and audio as its path, URL and word timing", async () => {
   const h = withFiles();
   narratedHead(h);
-  const picture = projectFile(h.deps, h.projectId, `/files/${h.projectId}/image-1`);
+  const picture = await projectFile(h.deps, h.projectId, `/files/${h.projectId}/image-1`);
   expect(picture.content[0]).toMatchObject({
     type: "image",
     mimeType: "image/png",
     data: png.toString("base64"),
   });
   const narration = JSON.stringify(
-    projectFile(h.deps, h.projectId, `/files/${h.projectId}/audio-body`).content,
+    (await projectFile(h.deps, h.projectId, `/files/${h.projectId}/audio-body`)).content,
   );
   expect(narration).toContain(`/files/${h.projectId}/audio-body`);
   expect(narration).toContain(join(h.deps.paths.projects, h.projectId, "audio", "body.mp3"));
   expect(narration).toContain("Hello");
 });
 
-it("says which tool finds the right address for a file it cannot find", () => {
+it("says which tool finds the right address for a file it cannot find", async () => {
   const h = withFiles();
   for (const url of ["nothing", `/files/${h.projectId}/nothing`, "/files/other/image-1"]) {
-    const missing = projectFile(h.deps, h.projectId, url);
+    const missing = await projectFile(h.deps, h.projectId, url);
     expect(missing.isError).toBe(true);
     expect(JSON.stringify(missing.content)).toContain("list_project_files");
   }
 });
 
-it("gives word timing with the current narration only, not an intro or an older version", () => {
+it("gives word timing with the current narration only, not an intro or an older version", async () => {
   const h = withFiles();
   narratedHead(h);
   const { db } = h.deps;
@@ -121,56 +132,33 @@ it("gives word timing with the current narration only, not an intro or an older 
     view.revision.id,
     JSON.stringify(h.output("o-old", "audio_body", "History/body-old.mp3", "audio")),
   );
-  const said = (url: string) => JSON.stringify(projectFile(h.deps, h.projectId, url).content);
-  const intro = said(`/files/${h.projectId}/audio-intro`);
+  const said = async (url: string) =>
+    JSON.stringify((await projectFile(h.deps, h.projectId, url)).content);
+  const intro = await said(`/files/${h.projectId}/audio-intro`);
   expect(intro).toContain("intro.mp3");
   expect(intro).not.toContain("wordTimings");
-  const older = said(`/files/${h.projectId}/revisions/${view.revision.id}/ro-old`);
+  const older = await said(`/files/${h.projectId}/revisions/${view.revision.id}/ro-old`);
   expect(older).toContain("body-old.mp3");
   expect(older).not.toContain("wordTimings");
-  expect(said(`/files/${h.projectId}/audio-body`)).toContain("wordTimings");
+  expect(await said(`/files/${h.projectId}/audio-body`)).toContain("wordTimings");
 });
 
-it("puts the word timing on the body's own clock for the body file, without the intro's words", () => {
+// An uploaded narration has no length recorded: it is measured, as the export measures it.
+it("gives an uploaded narration its word timing, measuring the file", async () => {
   const h = withFiles();
-  narratedHead(h);
-  const { db } = h.deps;
-  const dir = join(h.deps.paths.projects, h.projectId);
-  writeFileSync(join(dir, "audio", "intro.mp3"), Buffer.from("mp3"));
-  insertOutput(db, h.output("o4", "audio_intro", "audio/intro.mp3", "audio"));
-  db.prepare("UPDATE project_revisions SET config=? WHERE id='head'").run(
-    JSON.stringify({
-      ...narrated,
-      intro: { name: "Intro", mode: "llm" },
-      edgeSilenceSeconds: 1,
-      silenceGapSeconds: 0.5,
-    }),
+  narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);
+  const measured: string[] = [];
+  const deps = {
+    ...h.deps,
+    measureAudio: async (path: string) => {
+      measured.push(path);
+      return 3000;
+    },
+  };
+  const said = JSON.stringify(
+    (await projectFile(deps, h.projectId, `/files/${h.projectId}/audio-body`)).content,
   );
-  // Edge 1 s, intro 2 s, gap 0.5 s: the body starts at 3.5 s and ends at 6.5 s.
-  const words = [
-    { text: "Welcome", start: 1.2, end: 1.8 },
-    { text: "Hello", start: 3.6, end: 4 },
-    { text: "harbor", start: 6.2, end: 6.5 },
-  ];
-  writeFileSync(
-    join(dir, "audio", "words.json"),
-    JSON.stringify({ key: "k", words, omissions: [{ start: 1.5, text: "uh" }] }),
-  );
-  const timing = (url: string) =>
-    JSON.parse(
-      z
-        .object({ wordTimings: z.string() })
-        .parse(
-          JSON.parse(
-            z
-              .array(z.object({ text: z.string() }))
-              .parse(projectFile(h.deps, h.projectId, url).content)[0]?.text ?? "{}",
-          ),
-        ).wordTimings,
-    );
-  const body = timing(`/files/${h.projectId}/audio-body`);
-  expect(body.words.map((word: { text: string }) => word.text)).toEqual(["Hello", "harbor"]);
-  expect(body.words[0].start).toBeCloseTo(0.1);
-  expect(body.words[1].end).toBeCloseTo(3);
-  expect(body.omissions).toEqual([]);
+  expect(said).toContain("wordTimings");
+  expect(said).toContain("Hello");
+  expect(measured).toEqual([join(h.deps.paths.projects, h.projectId, "audio", "body.mp3")]);
 });
