@@ -167,6 +167,47 @@ describe("project pause and provider changes", () => {
     );
   });
 
+  // A template's checkpoint the run hasn't reached yet is in the checkpoints list but not in
+  // `holding`: the next action is the run, not an approval.
+  it("offers no approval for a checkpoint the run hasn't reached", async () => {
+    const going = body({
+      status: "running",
+      stages: [stage("article", "done"), stage("audio", "running"), stage("video", "pending")],
+      outputs: [output("article_md", "article")],
+    });
+    const fixture = revisionRouteFixture(going);
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        ...fixture.routes,
+        "GET /api/projects/p1": jsonAnswer({ ...going, revisionId: "r1", holding: [] }),
+        "GET /api/projects/p1/checkpoints": jsonAnswer({
+          revisionId: "r1",
+          checkpoints: [
+            {
+              projectId: "p1",
+              revisionId: "r1",
+              checkpointId: "video-gate",
+              workId: "w1",
+              stage: "video",
+              state: "held",
+              fingerprint: "a".repeat(64),
+              currentFingerprint: "a".repeat(64),
+              createdAt: "2026-09-13T00:00:00.000Z",
+              approvedAt: null,
+              dependents: [],
+              workKeys: ["video:main"],
+            },
+          ],
+        }),
+      }),
+    );
+    const next = await screen.findByRole("region", { name: "Next action" });
+    expect(await within(next).findByRole("button", { name: "Pause" })).not.toBeNull();
+    expect(within(next).queryByRole("button", { name: /^Approve/ })).toBeNull();
+    expect(within(next).queryByText(/ready for your review/)).toBeNull();
+  });
+
   it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());
