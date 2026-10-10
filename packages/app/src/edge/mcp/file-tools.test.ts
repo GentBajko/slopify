@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import ffmpegStatic from "ffmpeg-static";
 import { afterEach, expect, it } from "vitest";
 import { z } from "zod";
 import type { LogFields, LogLevel } from "../../kernel/log.js";
@@ -8,6 +9,7 @@ import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import type { Output } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
+import { probeDurationMs, resolveFfmpeg } from "../../slices/video/ffmpeg.js";
 import { listProjectFiles, measuredOnce, projectFile } from "./file-tools.js";
 import { connectAgent, mcpFixture } from "./mcp.fake.js";
 
@@ -258,4 +260,53 @@ it("measures an uploaded narration once for an agent that asks for its timing ag
     expect(JSON.stringify(answer.content)).toContain("wordTimings");
   }
   expect(measured).toHaveLength(1);
+});
+
+// A tenth of a second of silence: 8 kHz mono 16-bit WAV.
+function silence(): Buffer {
+  const bytes = Buffer.alloc(44 + 1600);
+  bytes.write("RIFF");
+  bytes.writeUInt32LE(bytes.length - 8, 4);
+  bytes.write("WAVEfmt ", 8);
+  bytes.writeUInt32LE(16, 16);
+  bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(1, 22);
+  bytes.writeUInt32LE(8000, 24);
+  bytes.writeUInt32LE(16000, 28);
+  bytes.writeUInt16LE(2, 32);
+  bytes.writeUInt16LE(16, 34);
+  bytes.write("data", 36);
+  bytes.writeUInt32LE(1600, 40);
+  return bytes;
+}
+
+// The app as boot builds it (`main.ts` hands createApp its ffmpeg measure): the uploaded
+// narration is measured, so its last word is cut at the file's end.
+it("times an uploaded narration's words with the app's own ffmpeg measure", async () => {
+  const bin = resolveFfmpeg({}, ffmpegStatic);
+  const log = { write: () => undefined };
+  const h = withFiles({
+    measureAudio: (path, signal) =>
+      probeDurationMs(bin, path, signal ?? AbortSignal.timeout(30_000), log),
+  });
+  narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);
+  const dir = join(h.deps.paths.projects, h.projectId, "audio");
+  writeFileSync(join(dir, "body.mp3"), silence());
+  writeFileSync(
+    join(dir, "words.json"),
+    JSON.stringify({ key: "k", words: [{ text: "Hush", start: 0, end: 0.5 }], omissions: [] }),
+  );
+  const agent = await connectAgent(h.app);
+  const answer = await agent.callTool({
+    name: "get_project_file",
+    arguments: { id: h.projectId, url: `/files/${h.projectId}/audio-body` },
+  });
+  const first = z.array(z.object({ text: z.string() }).loose()).parse(answer.content)[0];
+  const { wordTimings } = z
+    .object({ wordTimings: z.string() })
+    .parse(JSON.parse(first?.text ?? "{}"));
+  const timed = z
+    .object({ words: z.array(z.object({ end: z.number() }).loose()) })
+    .parse(JSON.parse(wordTimings));
+  expect(timed.words[0]?.end).toBeCloseTo(0.1, 2);
 });
