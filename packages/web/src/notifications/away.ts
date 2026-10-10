@@ -1,4 +1,5 @@
 import { type ProjectState, projectStates } from "@app/kernel/pipeline.js";
+import { waitsForPerson } from "@app/slices/admission/state-words.js";
 
 // "While you were away": what the runs did while no Slopify tab was open or in view. The page
 // keeps a snapshot of every project's state (in this browser) while it is seen; on return the
@@ -7,7 +8,12 @@ import { type ProjectState, projectStates } from "@app/kernel/pipeline.js";
 export interface AwaySnapshot {
   readonly at: number;
   readonly states: Readonly<Record<string, ProjectState>>;
+  // The projects that waited for the person when it was taken (`waitsForPerson`, the rule of
+  // Home's Needs you): one held for an agent or its day waits for nobody.
+  readonly waiting: readonly string[];
 }
+
+type Standing = Parameters<typeof waitsForPerson>[0] & { readonly id: string };
 
 export interface AwaySummary {
   readonly finished: number;
@@ -21,23 +27,28 @@ export const awayAfterMs = 2 * 60_000;
 
 const going: ReadonlySet<ProjectState> = new Set(["running", "pending", "paused"]);
 
-export function awaySummary(
-  before: AwaySnapshot,
-  now: readonly { readonly id: string; readonly status: ProjectState }[],
-): AwaySummary {
+export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
+  return {
+    at,
+    states: Object.fromEntries(now.map((one) => [one.id, one.status])),
+    waiting: now.filter(waitsForPerson).map((one) => one.id),
+  };
+}
+
+export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): AwaySummary {
+  const waitedBefore = new Set(before.waiting);
   let finished = 0;
   let failed = 0;
   let waiting = 0;
   for (const project of now) {
     const was = before.states[project.id];
-    if (was === project.status) continue;
     // A project started while away (a schedule's) counts once it ended.
-    const counts = was === undefined || going.has(was);
-    if (!counts) continue;
-    if (project.status === "done" || project.status === "partial") finished += 1;
-    else if (project.status === "failed") failed += 1;
-    // Stopped to wait for a review or a decision.
-    else if (project.status === "pending" && was === "running") waiting += 1;
+    if (was !== undefined && !going.has(was)) continue;
+    const changed = was !== project.status;
+    if (changed && (project.status === "done" || project.status === "partial")) finished += 1;
+    else if (changed && project.status === "failed") failed += 1;
+    // Stopped to wait for a review or a decision since the page last looked.
+    else if (waitsForPerson(project) && !waitedBefore.has(project.id)) waiting += 1;
   }
   return { finished, failed, waiting };
 }
@@ -78,6 +89,11 @@ export function readSnapshot(): AwaySnapshot | undefined {
             return known === undefined ? [] : [[id, known]];
           }),
         ),
+        // A snapshot from before the field was kept says nobody waited.
+        waiting:
+          "waiting" in stored && Array.isArray(stored.waiting)
+            ? stored.waiting.filter((id): id is string => typeof id === "string")
+            : [],
       };
   } catch {
     // Unreadable storage or a damaged value: no summary this time.

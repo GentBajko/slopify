@@ -1,11 +1,18 @@
-import type { ProjectState } from "@app/kernel/pipeline.js";
+import type { ProjectListing } from "@app/slices/admission/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useApp } from "@/app-context";
 import { useToast } from "@/components/kit/toast";
 import { projectsQuery } from "@/queries";
-import { awayAfterMs, awayMessage, awaySummary, readSnapshot, writeSnapshot } from "./away.js";
+import {
+  awayAfterMs,
+  awayMessage,
+  awaySummary,
+  readSnapshot,
+  snapshotOf,
+  writeSnapshot,
+} from "./away.js";
 
 // How often a page in view refreshes the snapshot, so a closed or crashed tab leaves a recent one.
 const refreshMs = 30_000;
@@ -21,16 +28,12 @@ export function useAwaySummary(): void {
   navigateRef.current = navigate;
   useEffect(() => {
     let stopped = false;
-    const projects = async (): Promise<readonly { id: string; status: ProjectState }[]> =>
+    const projects = async (): Promise<readonly ProjectListing[]> =>
       (await client.fetchQuery({ ...projectsQuery(api), staleTime: 0 })).projects;
     const snapshot = async (): Promise<void> => {
       try {
         const now = await projects();
-        if (!stopped)
-          writeSnapshot({
-            at: Date.now(),
-            states: Object.fromEntries(now.map((one) => [one.id, one.status])),
-          });
+        if (!stopped) writeSnapshot(snapshotOf(Date.now(), now));
       } catch {
         // The next refresh tries again.
       }
@@ -45,10 +48,7 @@ export function useAwaySummary(): void {
         const now = await projects();
         if (stopped) return;
         const message = awayMessage(awaySummary(before, now));
-        writeSnapshot({
-          at: Date.now(),
-          states: Object.fromEntries(now.map((one) => [one.id, one.status])),
-        });
+        writeSnapshot(snapshotOf(Date.now(), now));
         if (message !== undefined)
           notify(message, "info", {
             label: "Open Home",
