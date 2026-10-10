@@ -16,13 +16,15 @@ import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
+import { externalReviewWaitMs } from "../src/slices/reviews/external-model.js";
 import {
-  answerExternalReview,
-  externalReviewWaitMs,
   releaseDueReviews,
   settleExternalReviews,
+} from "../src/slices/reviews/external-release.js";
+import {
+  answerExternalReview,
   waitingExternalReviews,
-} from "../src/slices/reviews/external.js";
+} from "../src/slices/reviews/external-repo.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { current, save, start, tone } from "./revision-rebuild.fake.js";

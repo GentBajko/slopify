@@ -1,102 +1,14 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
-import { causedBy } from "../../kernel/errors.js";
-import type { ProjectEvent } from "../../kernel/events.js";
-import type { Log } from "../../kernel/log.js";
 import { liveProject, projectTrashed } from "../admission/repo.js";
-import { type Actor, actors } from "../agents/model.js";
-import { reviewItemName } from "../notifications/rules.js";
-import { revisionById } from "../revisions/repo.js";
-import { type ReviewStage, type ReviewVerdict, reviewStages } from "./model.js";
-import type { ReviewMaterial } from "./verdict.js";
-
-// ceiling: the owner's number. An hourly agent routine answers well inside two hours; a run
-// with no agent at all still finishes the same evening.
-export const externalReviewWaitMs = 2 * 60 * 60 * 1000;
-
-export const externalReviewStates = ["waiting", "answered", "auto-passed", "superseded"] as const;
-export type ExternalReviewState = (typeof externalReviewStates)[number];
-
-// What the built-in reviewer would be sent: the prompt's parts, and the pictures by their stored
-// path (`storage/layout.ts` outputPath finds where each is when it is read).
-export interface ExternalMaterial {
-  readonly request: ReviewMaterial;
-  readonly images: readonly { readonly stored: string; readonly name: string }[];
-}
-
-export interface ExternalReview {
-  readonly id: string;
-  readonly projectId: string;
-  readonly revisionId: string;
-  readonly workId: string;
-  readonly pieceId: string;
-  readonly workKey: string;
-  readonly itemKey: string;
-  readonly stage: ReviewStage;
-  readonly itemFingerprint: string;
-  readonly reviewFingerprint: string;
-  readonly material: ExternalMaterial;
-  readonly state: ExternalReviewState;
-  readonly waitingSince: string;
-  readonly deadlineAt: string;
-  readonly verdict: ReviewVerdict | null;
-  readonly answeredBy: Actor | null;
-  readonly answeredAt: string | null;
-}
-
-const materialSchema = z.object({
-  request: z.object({
-    stage: z.enum(reviewStages),
-    instruction: z.string(),
-    sections: z.array(z.object({ label: z.string(), text: z.string() })),
-    images: z.array(z.string()),
-  }),
-  images: z.array(z.object({ stored: z.string(), name: z.string() })),
-});
-const verdictSchema = z.object({ passed: z.boolean(), reasons: z.array(z.string()) });
-const rowSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  revision_id: z.string(),
-  work_id: z.string(),
-  piece_id: z.string(),
-  work_key: z.string(),
-  item_key: z.string(),
-  stage: z.enum(reviewStages),
-  item_fingerprint: z.string(),
-  review_fingerprint: z.string(),
-  material: z.string(),
-  state: z.enum(externalReviewStates),
-  waiting_since: z.string(),
-  deadline_at: z.string(),
-  verdict: z.string().nullable(),
-  answered_by: z.enum(actors).nullable(),
-  answered_at: z.string().nullable(),
-});
-
-export function externalReviewOf(value: unknown): ExternalReview {
-  const row = rowSchema.parse(value);
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    revisionId: row.revision_id,
-    workId: row.work_id,
-    pieceId: row.piece_id,
-    workKey: row.work_key,
-    itemKey: row.item_key,
-    stage: row.stage,
-    itemFingerprint: row.item_fingerprint,
-    reviewFingerprint: row.review_fingerprint,
-    material: materialSchema.parse(JSON.parse(row.material)),
-    state: row.state,
-    waitingSince: row.waiting_since,
-    deadlineAt: row.deadline_at,
-    verdict: row.verdict === null ? null : verdictSchema.parse(JSON.parse(row.verdict)),
-    answeredBy: row.answered_by,
-    answeredAt: row.answered_at,
-  };
-}
+import type { Actor } from "../agents/model.js";
+import {
+  type ExternalAnswerResult,
+  type ExternalReview,
+  externalReviewOf,
+} from "./external-model.js";
+import type { ReviewVerdict } from "./model.js";
 
 // A review the project still wants: its step is reserved by the project's current version with
 // the same fingerprint. A rerun or an edit that replaced the item leaves it unwanted.
@@ -172,22 +84,12 @@ export function externalReviewById(
   return row === undefined ? undefined : externalReviewOf(row);
 }
 
-export type ExternalAnswerResult =
-  | { readonly ok: true; readonly value: ExternalReview }
-  | { readonly ok: false; readonly reason: "not-found" }
-  | { readonly ok: false; readonly reason: "trashed" }
-  | {
-      readonly ok: false;
-      readonly reason: "answered" | "superseded";
-      readonly value: ExternalReview;
-    };
-
 // The step that waited ended its stage as held, which parks the work (`finishWork`); a settled
 // review lets it be claimed again while the current version still wants it. A restart also
 // held the work's unfinished pieces (`recoverWork`), so the ones never submitted are allowed
 // again, as boot does for work it keeps (`recoverCheckpointWork`). A paused project stays put:
 // the runner claims nothing for it until Resume.
-function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
+export function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
   const parked = `(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`;
   const released = db
     .prepare(
@@ -269,97 +171,4 @@ function stillWaiting(projectId: string | undefined): string {
   return `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}${
     projectId === undefined ? "" : " AND e.project_id=?"
   }`;
-}
-
-export type SettledReview = Pick<
-  ExternalReview,
-  "id" | "projectId" | "revisionId" | "workId" | "stage" | "itemKey"
->;
-
-const dueRow = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  revision_id: z.string(),
-  work_id: z.string(),
-  stage: z.enum(reviewStages),
-  item_key: z.string(),
-});
-
-// Replaced reviews stop waiting; waiting ones past their deadline pass without review. A
-// paused project's review passes too (nothing runs until Resume); a canceled run's never does,
-// nor one of a project in the Trash (it waits on, and passes once restored).
-// Read by plain columns only: a review whose stored material can't be read back still passes,
-// and never holds up the others.
-export function settleExternalReviews(db: DatabaseSync, now: Date): readonly SettledReview[] {
-  const at = now.toISOString();
-  return transact(db, () => {
-    db.prepare(
-      `UPDATE external_reviews SET state='superseded' WHERE state='waiting' AND NOT ${wantedBy("external_reviews")}`,
-    ).run();
-    const due = db
-      .prepare(
-        `SELECT e.id, e.project_id, e.revision_id, e.work_id, e.stage, e.item_key FROM external_reviews e
-         WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")} AND ${liveProject("e", "project_id")}
-         ORDER BY e.waiting_since, e.rowid`,
-      )
-      .all(at)
-      .map((value) => dueRow.parse(value));
-    return due.map((row) => {
-      db.prepare(
-        "UPDATE external_reviews SET state='auto-passed', answered_at=? WHERE id=? AND state='waiting'",
-      ).run(at, row.id);
-      releaseParkedWork(db, row.project_id, row.id);
-      return {
-        id: row.id,
-        projectId: row.project_id,
-        revisionId: row.revision_id,
-        workId: row.work_id,
-        stage: row.stage,
-        itemKey: row.item_key,
-      };
-    });
-  });
-}
-
-export interface ReviewReleaseDeps {
-  readonly db: DatabaseSync;
-  readonly now: () => Date;
-  readonly emit: (projectId: string, event: ProjectEvent) => void;
-  readonly tick: (projectId: string) => void;
-  readonly log: Pick<Log, "write">;
-}
-
-function itemName(db: DatabaseSync, review: SettledReview): string | undefined {
-  const revision = revisionById(db, review.projectId, review.revisionId);
-  return reviewItemName(review.itemKey, revision?.content.imageOrder ?? []);
-}
-
-// At boot and every few seconds: each review past its deadline passes, says so, and the run
-// goes on. The deadline is a row, so a restart in between loses nothing. Each passed review is
-// announced and woken on its own: one that throws is logged, and the others still go on (the
-// passing itself is already saved).
-export function releaseDueReviews(deps: ReviewReleaseDeps): number {
-  const passed = settleExternalReviews(deps.db, deps.now());
-  for (const review of passed) {
-    try {
-      deps.emit(review.projectId, {
-        type: "review.auto-passed",
-        projectId: review.projectId,
-        reviewId: review.id,
-        stage: review.stage,
-        itemKey: review.itemKey,
-        item: itemName(deps.db, review),
-        revisionId: review.revisionId,
-        workId: review.workId,
-      });
-      deps.emit(review.projectId, { type: "project.updated", projectId: review.projectId });
-      deps.tick(review.projectId);
-    } catch (error) {
-      deps.log.write("error", "review.deadline", {
-        projectId: review.projectId,
-        detail: `Review ${review.id} passed at its deadline, but announcing it or waking the run failed: ${causedBy(error)}`,
-      });
-    }
-  }
-  return passed.length;
 }

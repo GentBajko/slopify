@@ -1,7 +1,8 @@
 import { config, emptyView } from "../rebuild/recipe-fixture.js";
 import { insertRevision } from "../revisions/repo.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
-import { type ExternalReview, openExternalReview } from "./external.js";
+import type { ExternalReview } from "./external-model.js";
+import { openExternalReview } from "./external-repo.js";
 
 // Project p1 whose current version reserves one image review that waits for an agent.
 export function waitingReviewFixture(): {

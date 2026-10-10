@@ -109,7 +109,7 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
-import { releaseDueReviews } from "./slices/reviews/external.js";
+import { releaseDueReviews } from "./slices/reviews/external-release.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";

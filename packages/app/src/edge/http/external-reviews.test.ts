@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
-import { externalReviewById, openExternalReview } from "../../slices/reviews/external.js";
+import { externalReviewById, openExternalReview } from "../../slices/reviews/external-repo.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
 

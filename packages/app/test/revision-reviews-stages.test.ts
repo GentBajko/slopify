@@ -23,12 +23,12 @@ import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
+import { settleExternalReviews } from "../src/slices/reviews/external-release.js";
 import {
   answerExternalReview,
   externalReviewById,
-  settleExternalReviews,
   waitingExternalReviews,
-} from "../src/slices/reviews/external.js";
+} from "../src/slices/reviews/external-repo.js";
 import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";

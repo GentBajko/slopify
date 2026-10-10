@@ -1,11 +1,8 @@
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
-import {
-  externalReviewByFingerprint,
-  externalReviewWaitMs,
-  openExternalReview,
-} from "../reviews/external.js";
+import { externalReviewWaitMs } from "../reviews/external-model.js";
+import { externalReviewByFingerprint, openExternalReview } from "../reviews/external-repo.js";
 import { reviewStages } from "../reviews/model.js";
 import { nextAttempt, reviewOutcome } from "../reviews/outcome.js";
 import { latestVerdict, saveVerdict } from "../reviews/repo.js";

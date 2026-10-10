@@ -15,7 +15,7 @@ import { createRunNotifier } from "../src/slices/notifications/notifier.js";
 import { noticeSubject } from "../src/slices/notifications/subject.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
-import { waitingExternalReviews } from "../src/slices/reviews/external.js";
+import { waitingExternalReviews } from "../src/slices/reviews/external-repo.js";
 import type { RevisionDeps } from "../src/slices/revisions/model.js";
 import { insertVoice } from "../src/slices/settings/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";

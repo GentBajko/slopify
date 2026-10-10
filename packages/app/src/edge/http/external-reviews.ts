@@ -3,7 +3,7 @@ import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { causedBy } from "../../kernel/errors.js";
-import { answerExternalReview } from "../../slices/reviews/external.js";
+import { answerExternalReview } from "../../slices/reviews/external-repo.js";
 import { verdictAnswerSchema, verdictIssue } from "../../slices/reviews/verdict.js";
 import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";

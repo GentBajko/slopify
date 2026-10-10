@@ -5,7 +5,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
-import { externalReviewById } from "../../slices/reviews/external.js";
+import { externalReviewById } from "../../slices/reviews/external-repo.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { refusal } from "./call-route.js";
 
