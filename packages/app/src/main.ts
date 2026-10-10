@@ -110,6 +110,7 @@ import {
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
 import { releaseDueReviews } from "./slices/reviews/external.js";
+import { projectHolds } from "./slices/reviews/holds.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
@@ -323,6 +324,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
               title: project.title,
               makesVideo: project.config.sources.video !== "off",
               startedBy: lastStarter(eventDb, projectId),
+              waitingForAgent: projectHolds(eventDb).waitingForAgent.has(projectId),
             };
       },
       // Read when a notification goes out, by which time the server is listening.

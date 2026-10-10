@@ -1,5 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import {
+  announces,
   autoPassNoticeText,
   type NoticeSubject,
   type NoticeText,
@@ -123,7 +124,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
 
   const announce = async (projectId: string, state: ProjectState, kind: RunNotice) => {
     const subject = await deps.subject(projectId);
-    if (subject === undefined) return;
+    if (subject === undefined || !announces(kind, subject)) return;
     if (!(await deps.claim(`${projectId}:${state}`))) return;
     if (sounding()) deps.play?.("end");
     if (deps.enabled()) deps.show({ projectId, kind, text: noticeText(kind, subject) });

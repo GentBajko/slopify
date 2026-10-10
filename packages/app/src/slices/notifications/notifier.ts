@@ -9,6 +9,7 @@ import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { NoticeSubject, NoticeText } from "./rules.js";
 import {
+  announces,
   autoPassNoticeText,
   noticeOf,
   noticeText,
@@ -53,7 +54,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     const url = deps.url();
     if (url === null) return;
     const subject = deps.subject(projectId);
-    if (subject === undefined) return;
+    if (subject === undefined || !announces(kind, subject)) return;
     const text = noticeText(kind, { ...subject, reason: reasons.get(projectId) });
     post(url, { ...text, link: deps.link?.(projectId) }, kind, { projectId });
   };

@@ -48,6 +48,7 @@ export function useRunNotifications(): RunWatcher {
             title: body.project.title,
             makesVideo: body.project.config.sources.video !== "off",
             startedBy: body.startedBy ?? null,
+            waitingForAgent: body.project.waitingForAgent === true,
             reason:
               body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
           };

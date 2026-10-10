@@ -104,6 +104,17 @@ export interface NoticeSubject {
   readonly reason?: string | undefined;
   // Who started the run; an agent's run says so.
   readonly startedBy?: Actor | null | undefined;
+  // The run is parked on an External agent's review (`reviews/holds.ts`).
+  readonly waitingForAgent?: boolean | undefined;
+}
+
+// A run parked on an agent's review waits for nobody: the agent answers, or the review passes
+// at its deadline and says so then (decided 2026-10-10). Every other notice goes out.
+export function announces(
+  kind: RunNotice,
+  subject: Pick<NoticeSubject, "waitingForAgent">,
+): boolean {
+  return kind !== "waiting" || subject.waitingForAgent !== true;
 }
 
 const reasonMax = 140;

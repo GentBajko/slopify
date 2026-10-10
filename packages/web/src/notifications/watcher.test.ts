@@ -28,7 +28,12 @@ function harness(
         : Promise.resolve(
             projectId === "gone"
               ? undefined
-              : { title: `Project ${projectId}`, makesVideo: true, reason: "Quota exceeded" },
+              : {
+                  title: `Project ${projectId}`,
+                  makesVideo: true,
+                  reason: "Quota exceeded",
+                  ...(projectId === "agent" ? { waitingForAgent: true } : {}),
+                },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),
     show: (notice) => {
@@ -70,6 +75,15 @@ describe("createRunWatcher", () => {
       ["failed", "Run failed: Project p1 — Quota exceeded"],
       ["waiting", "Waiting for you: Project p2"],
     ]);
+  });
+
+  // Decided 2026-10-10: the agent answers it, or it passes at its deadline and says so then.
+  it("says nothing when a run stops to wait for an agent's review", async () => {
+    const { watcher, shown } = harness();
+    watcher.observe({ projectId: "agent", state: "running" });
+    watcher.observe({ projectId: "agent", state: "pending" });
+    await watcher.settled();
+    expect(shown).toEqual([]);
   });
 
   it("stays quiet while turned off, and for pause and cancel", async () => {
