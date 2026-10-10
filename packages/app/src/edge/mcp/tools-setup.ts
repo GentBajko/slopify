@@ -47,6 +47,14 @@ export function withoutExtensionSecrets(value: unknown): unknown {
     : {};
 }
 
+// The Notification URL can carry a secret (a webhook's token, a private ntfy topic): agents are
+// told only whether one is set, and change it with set_notification_url.
+export function notificationUrlState(value: unknown): unknown {
+  const parsed = z.object({ url: z.string().nullable() }).loose().safeParse(value);
+  const url = parsed.success ? parsed.data.url : null;
+  return { notificationUrl: url === null || url.trim() === "" ? "missing" : "configured" };
+}
+
 const settings: readonly RouteTool[] = [
   {
     name: "get_settings",
@@ -77,14 +85,18 @@ const settings: readonly RouteTool[] = [
   {
     name: "get_notification_url",
     route: "GET /api/settings/notifications",
-    title: "Read the Notification URL",
-    description: "Where run notifications are sent.",
+    title: "Check the Notification URL",
+    description:
+      "Whether run notifications have somewhere to go: configured or missing. The address itself is never shown to agents.",
+    shape: notificationUrlState,
   },
   {
     name: "set_notification_url",
     route: "PUT /api/settings/notifications",
     title: "Save the Notification URL",
-    description: "Body: {url: an http(s) address, or empty to stop}.",
+    description:
+      "Body: {url: an http(s) address, or empty to stop}. Answers configured or missing, never the address.",
+    shape: notificationUrlState,
   },
   {
     name: "send_test_notification",

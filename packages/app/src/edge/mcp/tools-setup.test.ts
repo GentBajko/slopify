@@ -109,3 +109,24 @@ it("leaves the pairing token and the unpacked extension folder out of the Studio
   expect(said).not.toContain("/home/you/.slopify/extension");
   expect(said).toContain("playlists");
 });
+
+it("never shows an agent the Notification URL, only whether one is set", async () => {
+  const h = mcpFixture();
+  open.push(h);
+  const agent = await connectAgent(h.app);
+  const secret = "https://ntfy.sh/harbor-7f3a9c2e1b";
+  const said: string[] = [];
+  const call = async (name: string, args: Record<string, unknown> = {}) => {
+    const answer = JSON.stringify((await agent.callTool({ name, arguments: args })).content);
+    said.push(answer);
+    return answer;
+  };
+  expect(await call("get_notification_url")).toContain("missing");
+  await call("set_notification_url", { body: { url: secret } });
+  expect(await call("get_notification_url")).toContain("configured");
+  await call("get_settings");
+  await call("get_diagnostics");
+  await call("set_notification_url", { body: { url: `${secret}?x=` } });
+  for (const answer of said) expect(answer).not.toContain("harbor-7f3a9c2e1b");
+  expect(said.every((answer) => !answer.includes("ntfy.sh"))).toBe(true);
+});
