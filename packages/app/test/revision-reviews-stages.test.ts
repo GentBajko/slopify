@@ -205,15 +205,17 @@ async function reviewedRun(options: Options) {
   await start(deps, h.projectId, Object.keys(current(deps, h.projectId).revision.fingerprints));
   // A redo starts after its review's step has finished, so the run settles in rounds.
   const settle = async () => {
-    for (let round = 0; round < 20; round++) {
-      await runner.settled();
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      if (
-        (options.unbound === true || pendingRedos(deps.db, h.projectId).length === 0) &&
-        !runner.hasInflight?.(h.projectId)
-      )
-        break;
-    }
+    await vi.waitFor(
+      async () => {
+        await runner.settled();
+        expect(
+          (options.unbound === true || pendingRedos(deps.db, h.projectId).length === 0) &&
+            runner.hasInflight?.(h.projectId) !== true,
+        ).toBe(true);
+      },
+      // ceiling: a shorts run renders its reels before its reviews settle; its test allows 60 s.
+      { timeout: 30_000, interval: 20 },
+    );
     await runner.settled();
   };
   await settle();

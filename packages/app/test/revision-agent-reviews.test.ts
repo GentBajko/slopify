@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import ffmpegStatic from "ffmpeg-static";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { fakeImage } from "../src/adapters/fake/image.js";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
@@ -28,12 +28,13 @@ import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { current, save, start, tone } from "./revision-rebuild.fake.js";
 
 async function settleUntil(runner: Runner, done: () => boolean): Promise<void> {
-  for (let round = 0; round < 50; round++) {
-    await runner.settled();
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    if (done()) return;
-  }
-  throw new Error("The run never reached the expected state.");
+  await vi.waitFor(
+    async () => {
+      await runner.settled();
+      expect(done(), "The run never reached the expected state.").toBe(true);
+    },
+    { timeout: 4_000, interval: 20 },
+  );
 }
 
 // Two generated images reviewed by an external agent: no model is asked.
@@ -189,11 +190,10 @@ it("passes a paused project's reviews at the deadline, but nothing runs until Re
   expect(
     settleExternalReviews(deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
   ).toHaveLength(2);
+  // The runner claims nothing for a paused project: once it has settled, nothing ran.
   runner.tick(h.projectId);
-  for (let round = 0; round < 10; round++) {
-    await runner.settled();
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
+  await runner.settled();
+  expect(runner.hasInflight?.(h.projectId) ?? false).toBe(false);
   expect(listVerdicts(deps.db, h.projectId)).toEqual([]);
   // resume_project's route (`POST /api/projects/:id/resume`).
   expect(
