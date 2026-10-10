@@ -21,6 +21,7 @@ import type { TtsPort } from "../src/kernel/ports/tts.js";
 import { wireRunner } from "../src/main.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
+import { needsAttention } from "../src/slices/agents/attention.js";
 import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
@@ -36,6 +37,7 @@ import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";
 import { insertVoice } from "../src/slices/settings/repo.js";
+import { markUploaded } from "../src/slices/uploads/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { current, save, start, tone } from "./revision-rebuild.fake.js";
 
@@ -655,6 +657,88 @@ it("offers Continue the run while an agent reviews when a restart held the video
     runner.tick(h.projectId);
     await settle();
     expect(video()).toHaveLength(1);
+  } finally {
+    h.close();
+  }
+});
+
+// An uploaded project whose remake a restart held is not settled: its admitted steps wait for
+// Continue the run, so it reads Stopped everywhere it is listed, and the remake finishes after.
+it("stops an uploaded project's remake a restart held, and finishes it after Continue", {
+  timeout: 30_000,
+}, async () => {
+  const { h, deps, runner, settle } = await reviewedRun({
+    fail: () => undefined,
+    speech: quiet(2),
+    config: (base) => ({
+      ...base,
+      sources: { ...base.sources, audio: "generate", video: "generate" },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "whole" },
+      provided: { article: "Rope holds fast." },
+      motionStyle: "still",
+    }),
+    reviews: { reviewer: "agent", retries: 0, stages: { images: { mode: "flag" } } },
+  });
+  try {
+    const app = createApp({
+      ...h.deps,
+      hub: createHub(h.deps),
+      runner,
+      version: "test",
+      webDist: "/missing",
+      probe: async () => ({ ran: false, stdout: "" }),
+      flushSoon: () => undefined,
+    });
+    const page = async () =>
+      (await (await app.request(`/api/projects/${h.projectId}`)).json()) as {
+        readonly resumable: boolean;
+        readonly project: { readonly status: string };
+      };
+    const listed = async () =>
+      (
+        (await (await app.request("/api/projects")).json()) as {
+          readonly projects: readonly { readonly id: string }[];
+        }
+      ).projects.find((one) => one.id === h.projectId);
+    markUploaded(deps.db, h.projectId, true, new Date().toISOString());
+    // What boot does before anything runs (`main.ts`).
+    recoverCheckpointWork(deps.db);
+    expect(await page()).toMatchObject({ resumable: true, project: { status: "pending" } });
+    expect(await listed()).toMatchObject({ status: "pending", stopped: true });
+    expect(
+      needsAttention({ ...deps, log: { write: () => undefined } }, new Date()).map(
+        (entry) => entry.kind,
+      ),
+    ).toContain("stopped-run");
+    expect(
+      await recoverProject(deps, h.projectId, {
+        baseRevisionId: current(deps, h.projectId).revision.id,
+        idempotencyKey: randomUUID(),
+        action: { kind: "resume" },
+      }),
+    ).toMatchObject({ ok: true });
+    await settle();
+    for (const review of waitingExternalReviews(deps.db, h.projectId))
+      answerExternalReview(deps.db, {
+        projectId: h.projectId,
+        id: review.id,
+        verdict: { passed: true, reasons: [] },
+        by: "agent",
+        at: new Date().toISOString(),
+      });
+    runner.tick(h.projectId);
+    await settle();
+    expect(
+      current(deps, h.projectId).outputs.filter(
+        (row) =>
+          row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.selected &&
+          row.state === "ready",
+      ),
+    ).toHaveLength(1);
+    expect(await listed()).toMatchObject({ status: "done" });
   } finally {
     h.close();
   }

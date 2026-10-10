@@ -319,11 +319,24 @@ it("is not Stopped in the Trash", () => {
   expect([...projectHolds(f.db).stopped]).toEqual([]);
 });
 
-// An uploaded project with nothing admitted reads Done (`uploadedAndSettled`): its leftover
-// held steps are nothing to continue.
-it("is not Stopped once uploaded with nothing admitted, as it reads Done", () => {
+// An uploaded project whose remake a restart held still has admitted steps to run: it reads
+// Stopped, with Continue the run, as any other run would (`uploadedAndSettled`).
+it("is Stopped once uploaded while a restart holds its admitted remake", () => {
   const f = stoppedBehindVideoGate();
   f.db.prepare("UPDATE revision_work SET dispatch_state='held' WHERE id='video-work'").run();
+  f.db
+    .prepare("INSERT INTO project_uploads(project_id,uploaded_at) VALUES ('p1','2026-09-11')")
+    .run();
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
+  expect([...projectHolds(f.db, { projectId: "p1" }).stopped]).toEqual(["p1"]);
+});
+
+// Its leftover steps nobody admitted (a saved edit's) are nothing to continue: an uploaded
+// project with only those reads Done.
+it("is not Stopped once uploaded with only steps nobody admitted, as it reads Done", () => {
+  const f = stoppedBehindVideoGate();
+  f.answered();
+  f.db.prepare("UPDATE revision_work SET dispatch_state='held',recipe_context=NULL").run();
   expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
   f.db
     .prepare("INSERT INTO project_uploads(project_id,uploaded_at) VALUES ('p1','2026-09-11')")
