@@ -163,6 +163,12 @@ it("reads a run retried after a cancel by what it does while its images wait for
   expect(status).toBe("pending");
   expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("pending");
   expect(derive(executionStandings(h.deps, h.projectId))).toBe("pending");
+  // What the runner told every page and the notifier (`main.ts` standingsOf).
+  const announced = () =>
+    h.events.flatMap((event) =>
+      event.type === "project.state" && event.projectId === h.projectId ? [event.state] : [],
+    );
+  expect(announced().at(-1)).toBe("pending");
   const holds = projectHolds(h.deps.db, { projectId: h.projectId });
   const project = {
     status,
@@ -187,4 +193,5 @@ it("reads a run retried after a cancel by what it does while its images wait for
       stagesOf(h.deps.db, h.projectId).find((stage) => stage.kind === "images")?.state === "done",
   );
   expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("canceled");
+  expect(announced().at(-1)).toBe("canceled");
 });
