@@ -67,9 +67,9 @@ function registerRouteTool(server: McpServer, deps: McpDeps, tool: RouteTool): v
       description: tool.description,
       inputSchema: inputShape(tool),
       annotations: {
-        readOnlyHint: method === "GET" || tool.readOnly === true,
+        readOnlyHint: method === "GET" || (tool.readOnly === true && tool.reachesOut !== true),
         destructiveHint: method === "DELETE" || tool.confirm !== undefined,
-        openWorldHint: false,
+        openWorldHint: tool.reachesOut === true,
       },
     },
     (args) => callRoute(deps, tool, argsSchema.parse(args)),

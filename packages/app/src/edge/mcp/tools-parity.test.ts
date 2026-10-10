@@ -129,7 +129,6 @@ it("marks the POST tools that only look or price as read-only", () => {
     .sort();
   expect(readOnly).toEqual(
     [
-      "check_catalogue",
       "check_providers",
       "estimate_run",
       "preview_added_output",
@@ -140,4 +139,18 @@ it("marks the POST tools that only look or price as read-only", () => {
       "send_test_notification",
     ].sort(),
   );
+});
+
+it("tells the agent's client a test send goes out and a catalogue check can change the list", async () => {
+  const h = mcpFixture();
+  open.push(h);
+  const agent = await connectAgent(h.app);
+  const { tools } = await agent.listTools();
+  const hints = (name: string) => tools.find((tool) => tool.name === name)?.annotations;
+  expect(hints("send_test_notification")).toMatchObject({
+    readOnlyHint: false,
+    openWorldHint: true,
+  });
+  expect(hints("check_catalogue")).toMatchObject({ readOnlyHint: false });
+  expect(hints("preview_rebuild")).toMatchObject({ readOnlyHint: true, openWorldHint: false });
 });

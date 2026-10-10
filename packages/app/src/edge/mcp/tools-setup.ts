@@ -104,6 +104,7 @@ const settings: readonly RouteTool[] = [
     title: "Send a test notification",
     description: "Body: {url}.",
     readOnly: true,
+    reachesOut: true,
   },
   {
     name: "list_voices",
@@ -219,8 +220,8 @@ const providers: readonly RouteTool[] = [
     name: "check_catalogue",
     route: "POST /api/providers/catalogue/check",
     title: "Check the model catalogue",
-    description: "Checks for a newer model catalogue.",
-    readOnly: true,
+    description:
+      "Checks the published model catalogue and merges what changed into models.yaml (Settings → Models, Check now).",
   },
   {
     name: "refresh_catalogue",

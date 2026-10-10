@@ -20,8 +20,11 @@ export interface RouteTool {
     readonly text: (value: unknown) => string | undefined;
   };
   // A POST that only looks, checks or prices (a preview, an estimate, a test send): it changes
-  // nothing, so it is not recorded as an agent's change.
+  // nothing in Slopify, so it is not recorded as an agent's change.
   readonly readOnly?: true;
+  // It acts outside Slopify (a test message really goes out), so the agent's client is told it
+  // is neither read-only nor closed-world, recorded or not.
+  readonly reachesOut?: true;
   // A route that takes a file: multipart like the page's file pickers, or the bytes themselves.
   readonly upload?: "multipart" | "raw";
   // What the agent is shown instead of the route's own answer: state words added, or a
