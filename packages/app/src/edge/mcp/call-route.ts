@@ -2,7 +2,9 @@ import type { DatabaseSync } from "node:sqlite";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { causedBy } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
+import type { Log } from "../../kernel/log.js";
 import { recordAgentAction } from "../../slices/agents/repo.js";
 import { revisionIdOf, subjectsOf } from "./attribution.js";
 import { fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
@@ -14,6 +16,7 @@ export interface RouteCallDeps {
   readonly db: DatabaseSync;
   readonly ids: Ids;
   readonly clock: Clock;
+  readonly log: Pick<Log, "write">;
 }
 
 const problemSchema = z
@@ -91,7 +94,10 @@ async function confirmText(
   try {
     const response = await deps.api(new Request(new URL(path, "http://localhost")));
     return response.ok ? tool.confirmFrom.text(await response.json()) : undefined;
-  } catch {
+  } catch (error) {
+    deps.log.write("warn", "mcp.confirm", {
+      detail: `${tool.name} asked with its fixed consequence: reading ${path} for the numbers failed: ${causedBy(error)}`,
+    });
     return undefined;
   }
 }

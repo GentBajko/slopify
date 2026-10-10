@@ -230,3 +230,14 @@ it("states the files and space Delete old versions frees, as the page does, befo
     "GET /api/storage/projects/p1",
   ]);
 });
+
+it("falls back to the fixed consequence when the page's numbers can't be read, and logs why", async () => {
+  const fake = routeCallDeps(async () => {
+    throw new Error("storage read failed");
+  });
+  const tool = routeTools.find((one) => one.name === "delete_old_versions");
+  if (tool === undefined) throw new Error("no delete_old_versions tool");
+  const asked = await callRoute(fake, tool, { id: "p1" });
+  expect(JSON.stringify(asked.content)).toContain(tool.confirm ?? "missing");
+  expect(fake.logged).toEqual([expect.stringMatching(/^mcp\.confirm: .*storage read failed/)]);
+});

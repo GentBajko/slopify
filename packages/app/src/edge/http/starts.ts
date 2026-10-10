@@ -13,19 +13,22 @@ const createdStart =
   /^\/api\/(?:drafts\/[^/]+\/start|onboarding\/short|schedules\/[^/]+\/topics\/prepare)\/?$/;
 
 // The projects whose work a successful POST started: the one its path names, or those it made.
-export async function startedProjects(
+async function startedProjects(
   path: string,
   response: Response,
+  log: Pick<Log, "write">,
 ): Promise<readonly string[]> {
   const named = projectStart.exec(path)?.[1];
   if (named !== undefined) return [named];
   if (!createdStart.test(path)) return [];
-  return projectsMadeBy(
-    await response
-      .clone()
-      .json()
-      .catch(() => undefined),
-  );
+  try {
+    return projectsMadeBy(await response.clone().json());
+  } catch (error) {
+    log.write("error", "project.start", {
+      detail: `Who started the projects ${path} made wasn't recorded: its answer couldn't be read: ${causedBy(error)}`,
+    });
+    return [];
+  }
 }
 
 // Who last started each project's work, for the notices its run sends.
@@ -37,7 +40,7 @@ export function startRecorder(deps: {
   return async (c, next) => {
     await next();
     if (c.req.method !== "POST" || !c.res.ok) return;
-    for (const projectId of await startedProjects(c.req.path, c.res))
+    for (const projectId of await startedProjects(c.req.path, c.res, deps.log))
       try {
         recordStart(deps.db, { projectId, actor: actorOf(c), at: deps.clock.now().toISOString() });
       } catch (error) {

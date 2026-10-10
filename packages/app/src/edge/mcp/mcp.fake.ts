@@ -62,10 +62,20 @@ export async function connectAgent(
 // The executor's deps over a fake API and an empty database, for tests of one call.
 export function routeCallDeps(
   api: (request: Request) => Promise<Response>,
-): RouteCallDeps & { readonly db: DatabaseSync } {
+): RouteCallDeps & { readonly db: DatabaseSync; readonly logged: readonly string[] } {
   const clock = fixedClock("2026-09-10T00:00:00.000Z");
   const db = openDb(":memory:");
   migrate(db, clock);
   let next = 0;
-  return { api, db, clock, ids: { next: () => `a${String(++next)}` } };
+  const logged: string[] = [];
+  return {
+    api,
+    db,
+    clock,
+    ids: { next: () => `a${String(++next)}` },
+    log: {
+      write: (_level, event, fields) => void logged.push(`${event}: ${fields?.detail ?? ""}`),
+    },
+    logged,
+  };
 }

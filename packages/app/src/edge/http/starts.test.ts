@@ -56,3 +56,26 @@ it("logs a start it couldn't record with the project it was for, and still answe
     },
   ]);
 });
+
+it("logs a start whose answer it couldn't read, and still answers", async () => {
+  const h = revisionFixture();
+  open.push(h);
+  const written: { readonly event: string; readonly fields: unknown }[] = [];
+  const app = new Hono()
+    .use(
+      "/api/*",
+      startRecorder({
+        ...h.deps,
+        log: { write: (_level, event, fields) => void written.push({ event, fields }) },
+      }),
+    )
+    .post("/api/drafts/:id/start", (c) => c.text("not json", 201));
+  const answer = await app.request("/api/drafts/d1/start", { method: "POST" });
+  expect(answer.status).toBe(201);
+  expect(written).toEqual([
+    {
+      event: "project.start",
+      fields: { detail: expect.stringContaining("/api/drafts/d1/start") },
+    },
+  ]);
+});
