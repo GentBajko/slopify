@@ -196,9 +196,42 @@ export function answerExternalReview(
   const row = externalReviewById(db, input.projectId, input.id);
   if (row === undefined) return { ok: false, reason: "not-found" };
   if (Number(changed.changes) === 1) return { ok: true, value: row };
-  const reason =
-    row.state === "superseded" ? "superseded" : row.state === "waiting" ? "canceled" : "answered";
-  return { ok: false, reason, value: row };
+  if (row.state !== "waiting")
+    return {
+      ok: false,
+      reason: row.state === "superseded" ? "superseded" : "answered",
+      value: row,
+    };
+  const closed = closedWait(db, row);
+  if (closed === "missing" || closed === "canceled")
+    return { ok: false, reason: closed, value: row };
+  throw new Error(
+    "Slopify hit an internal error (a waiting review took no verdict). Send the verdict again; if it happens again, use Download diagnostics in Settings and report it.",
+  );
+}
+
+// Why a review still marked waiting waits for nobody: its project is in the Trash, its step no
+// longer exists, its run was canceled, or the current version no longer wants it. Undefined
+// while it waits.
+export function closedWait(
+  db: DatabaseSync,
+  review: Pick<ExternalReview, "projectId" | "id" | "workId">,
+): "trashed" | "missing" | "canceled" | "superseded" | undefined {
+  if (projectTrashed(db, review.projectId)) return "trashed";
+  if (db.prepare("SELECT 1 FROM revision_work WHERE id=?").get(review.workId) === undefined)
+    return "missing";
+  if (
+    db
+      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledRun("w")}`)
+      .get(review.workId) !== undefined
+  )
+    return "canceled";
+  const wanted = db
+    .prepare(
+      `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")}`,
+    )
+    .get(review.projectId, review.id);
+  return wanted === undefined ? "superseded" : undefined;
 }
 
 // Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.

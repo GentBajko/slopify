@@ -193,3 +193,23 @@ it("treats a review of a run with a canceled step as canceled, even with its wor
   ).toMatchObject({ ok: false, reason: "canceled" });
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
 });
+
+it("refuses a verdict on a review whose step no longer exists, as missing, not canceled", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  // A step's rows cascade away with it; only its work row is gone here.
+  db.exec("PRAGMA foreign_keys=OFF");
+  db.prepare("DELETE FROM revision_work WHERE id='images-work'").run();
+  db.exec("PRAGMA foreign_keys=ON");
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "missing" });
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});

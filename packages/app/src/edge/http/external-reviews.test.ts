@@ -255,3 +255,24 @@ it("takes no verdict for a canceled run's review and says what to do instead", a
   expect(canceled.said).toContain("needs_attention");
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
+
+it("says a verdict on a review whose step no longer exists wasn't saved, and nothing waits on it", async () => {
+  const h = waiting();
+  h.deps.db.exec("PRAGMA foreign_keys=OFF");
+  h.deps.db.prepare("DELETE FROM revision_work WHERE id='w0'").run();
+  h.deps.db.exec("PRAGMA foreign_keys=ON");
+  const response = await h.app.request(
+    `/api/projects/${h.projectId}/external-reviews/er1/verdict`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ verdict: "pass", reasons: [] }),
+    },
+  );
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({
+    reason: "missing",
+    detail:
+      "This review's step no longer exists, so the verdict wasn't saved. Nothing is waiting on it; call needs_attention to see what is waiting now.",
+  });
+});

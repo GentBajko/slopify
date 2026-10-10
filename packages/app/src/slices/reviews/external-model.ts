@@ -42,8 +42,9 @@ export type ExternalAnswerResult =
   | { readonly ok: false; readonly reason: "trashed" }
   | {
       readonly ok: false;
-      // `canceled`: its run was canceled, and a canceled run's reviews never pass.
-      readonly reason: "answered" | "superseded" | "canceled";
+      // `canceled`: its run was canceled, and a canceled run's reviews never pass. `missing`:
+      // the step it reviews no longer exists.
+      readonly reason: "answered" | "superseded" | "canceled" | "missing";
       readonly value: ExternalReview;
     };
 
