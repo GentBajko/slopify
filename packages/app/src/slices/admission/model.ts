@@ -341,7 +341,8 @@ export interface ProjectSummary extends Project {
   // waiting run is left as it is, off Needs you, until the project's next edit.
   readonly setAside?: boolean;
   // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held before its video
-  // until its day (`schedules/prepare.ts`).
+  // by the schedule's own hold until its day (`schedules/prepare.ts` heldForItsDay). One held
+  // by its template's Before Video checkpoint is not: that hold is the person's to approve.
   readonly prepared?: boolean;
 }
 

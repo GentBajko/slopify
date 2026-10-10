@@ -5,6 +5,7 @@ import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
 import {
   heldBeforeVideo,
+  preparedProjectIds,
   preparedTopics,
   prepareTopic,
   scheduledDocument,
@@ -145,4 +146,19 @@ it("keeps the title's keywords in a scheduled draft, so its project keeps the pa
   expect(fresh.form.title).toBe("{{Topic}} | Lore");
   expect(fresh.form.values.Topic).toBe("Lighthouse");
   expect(scheduledTitle(fresh)).toBe("Lighthouse | Lore");
+});
+
+it("counts a project as prepared only while its schedule's own hold keeps it for its day", async () => {
+  const { h, deps, scheduleId } = scheduled();
+  try {
+    const prepared = await prepareTopic(deps, { scheduleId, title: "First topic" });
+    if (!prepared.ok) throw new Error(prepared.reason);
+    h.deps.db.prepare("UPDATE prepared_videos SET added_checkpoint=1").run();
+    expect([...preparedProjectIds(h.deps.db)]).toEqual([prepared.projectId]);
+    // The template's own Before Video hold is the person's to approve.
+    h.deps.db.prepare("UPDATE prepared_videos SET added_checkpoint=0").run();
+    expect([...preparedProjectIds(h.deps.db)]).toEqual([]);
+  } finally {
+    h.close();
+  }
 });

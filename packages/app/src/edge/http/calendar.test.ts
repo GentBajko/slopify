@@ -193,6 +193,19 @@ it("says which projects need the person, which are ready to upload and which wai
     db.prepare(
       "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Prepared',1,?)",
     ).run(prepared, finished);
+    // Prepared too, but the Before Video hold is its template's own: the person approves it.
+    const ownHold = f.project("Own hold", "pending", null);
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      ownHold,
+      `rev-${ownHold}`,
+    );
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,?,'video','work',?,'held',?)`,
+    ).run(ownHold, `rev-${ownHold}`, "cp-3", "c".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Own hold',0,?)",
+    ).run(ownHold, finished);
     db.exec("PRAGMA foreign_keys=ON");
     const waiting = f.project("Waiting", "running", null);
     db.prepare(
@@ -216,6 +229,8 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Flagged")?.needs).toBe("review");
     expect(byTitle.get("Prepared")).toMatchObject({ prepared: true });
     expect(byTitle.get("Prepared")?.needs).toBeUndefined();
+    expect(byTitle.get("Own hold")?.needs).toBe("review");
+    expect(byTitle.get("Own hold")?.prepared).toBeUndefined();
     expect(byTitle.get("Ready")?.needs).toBeUndefined();
     expect(
       parsed.projects

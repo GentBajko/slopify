@@ -201,6 +201,14 @@ it("leaves out a prepared project's own video checkpoint, a project kept as is, 
       .filter((entry) => entry.kind === "checkpoint")
       .map((entry) => entry.stage),
   ).toEqual(["images"]);
+  // A Before Video hold the template had itself is the person's to approve, prepared or not.
+  db.prepare("UPDATE prepared_videos SET added_checkpoint=0").run();
+  expect(
+    needsAttention({ ...f.h.deps, log: quiet }, now)
+      .filter((entry) => entry.kind === "checkpoint")
+      .map((entry) => entry.stage),
+  ).toEqual(["images", "video"]);
+  db.prepare("UPDATE prepared_videos SET added_checkpoint=1").run();
   db.prepare(
     "INSERT INTO project_set_aside(project_id,revision_id,set_at) VALUES ('p1',?,'t')",
   ).run(f.revisionId);

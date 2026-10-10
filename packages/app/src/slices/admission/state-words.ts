@@ -41,7 +41,8 @@ interface ProjectStanding {
 }
 
 // What a held project waits for: nobody once it is Kept as is, its scheduled day once a
-// schedule prepared it, otherwise the person's review.
+// schedule prepared it behind the schedule's own hold (`prepared`), otherwise the person's
+// review.
 export function heldStateWord(project: Pick<ProjectStanding, "setAside" | "prepared">): string {
   if (project.setAside === true) return keptAsIsWord;
   if (project.prepared === true) return preparedWord;

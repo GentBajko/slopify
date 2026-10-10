@@ -5,6 +5,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
 import { externalReviewOf, waitingExternalReviewRows } from "../reviews/external.js";
+import { heldForItsDay } from "../schedules/prepare.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {
   extensionFailures,
@@ -189,7 +190,7 @@ const gateRow = z.object({
   created_at: z.string(),
 });
 
-// A prepared project's own Before Video hold waits for its scheduled day, not for anyone.
+// A Before Video hold a schedule added waits for its scheduled day, not for anyone.
 function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
   const rows = db
     .prepare(
@@ -198,7 +199,7 @@ function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
        JOIN projects p ON p.id=c.project_id
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}
-         AND NOT (c.stage='video' AND EXISTS (SELECT 1 FROM prepared_videos v WHERE v.project_id=c.project_id))`,
+         AND NOT (c.stage='video' AND ${heldForItsDay("c.project_id")})`,
     )
     .all();
   return rowsOf(rows, "review checkpoints", skip, (value) => {

@@ -10,7 +10,7 @@ import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
 import { uploadedProjects } from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
-import { preparedProject, preparedProjectIds } from "./prepare.js";
+import { heldForItsDay, preparedProject, preparedProjectIds } from "./prepare.js";
 import { scheduleRows } from "./repo.js";
 import {
   type Calendar,
@@ -139,15 +139,15 @@ const projectRow = z.object({
 
 // Projects the person has something to decide on in the current revision: a review
 // checkpoint holding the run, or an automatic review that failed an item and waits for
-// Overrule or Redo (its latest verdict, with no redo under way). A prepared project's Before
-// Video hold waits for its scheduled day, as needs_attention reads it.
+// Overrule or Redo (its latest verdict, with no redo under way). A Before Video hold its
+// schedule added waits for its day, as needs_attention reads it.
 function awaitingReview(db: DatabaseSync): ReadonlySet<string> {
   const ids = db
     .prepare(
       `SELECT c.project_id AS id FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL
-         AND NOT (c.stage='video' AND EXISTS (SELECT 1 FROM prepared_videos p WHERE p.project_id=c.project_id))
+         AND NOT (c.stage='video' AND ${heldForItsDay("c.project_id")})
        UNION
        SELECT v.project_id AS id FROM review_verdicts v
        JOIN project_heads h ON h.project_id=v.project_id AND h.revision_id=v.revision_id
