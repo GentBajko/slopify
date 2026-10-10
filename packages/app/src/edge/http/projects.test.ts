@@ -524,6 +524,13 @@ describe("GET /api/projects", () => {
     db.exec(
       "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES ('p1','s1','First',1,'2026-09-01')",
     );
+    // The video's step is admitted, waiting behind its hold.
+    db.exec(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('w-video','p1','r1','s3','video','v','pending','allowed','2026-09-01')",
+    );
+    db.exec(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r1','export:video','w-video','v')",
+    );
     const read = async () => {
       const list = (await (await app.request("/api/projects")).json()) as {
         projects: ProjectSummary[];
@@ -573,6 +580,48 @@ describe("GET /api/projects", () => {
     expect(agent.page.waitingForAgent).toBe(true);
     expect(agent.resumable).toBe(false);
     expect(agent.holding).toEqual([]);
+  });
+
+  // What a restart leaves: a step held for Continue the run, and the video's step still allowed
+  // behind it. Nothing moves it on by itself, so both say Stopped and the page offers Continue.
+  it("says a run a restart held is stopped, on the list and the page, and offers Continue", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r1')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','article','provide','done'), ('s2','p1','images','provide','pending'), ('s3','p1','video','generate','pending')",
+    );
+    const work = (id: string, stage: string, dispatch: string) => {
+      db.prepare(
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,'p1','r1',?,'images',?,'pending',?,'2026-09-01')",
+      ).run(id, stage, id, dispatch);
+      db.prepare(
+        "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r1',?,?,?)",
+      ).run(id, id, id);
+    };
+    work("w-images", "s2", "held");
+    work("w-video", "s3", "allowed");
+    const list = (await (await app.request("/api/projects")).json()) as {
+      projects: ProjectSummary[];
+    };
+    const page = (await (await app.request("/api/projects/p1")).json()) as {
+      project: ProjectSummary;
+      resumable: boolean;
+    };
+    expect(list.projects[0]?.stopped).toBe(true);
+    expect(page.project.stopped).toBe(true);
+    expect(page.resumable).toBe(true);
+    // Continued, the held step is allowed again and the run goes on by itself.
+    db.exec("UPDATE revision_work SET dispatch_state='allowed'");
+    const after = (await (await app.request("/api/projects/p1")).json()) as {
+      project: ProjectSummary;
+      resumable: boolean;
+    };
+    expect(after.project.stopped).toBeUndefined();
+    expect(after.resumable).toBe(false);
   });
 
   // An uploaded video left paused, with only leftover steps nobody admitted, is finished.

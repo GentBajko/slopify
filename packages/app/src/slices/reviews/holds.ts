@@ -1,7 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
-import { type StageProgress, satisfied, deps as stageDeps } from "../../kernel/runner/graph.js";
+import {
+  derive,
+  type StageProgress,
+  satisfied,
+  deps as stageDeps,
+} from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
@@ -18,6 +23,10 @@ export interface ProjectHolds {
   // and no other step held for Continue the run: it goes on by itself once the agent answers
   // or the review passes at its deadline.
   readonly waitingForAgent: ReadonlySet<string>;
+  // Stopped before it finished, as a restart leaves a run: nothing moves it on but Continue the
+  // run, no checkpoint of the person's holds it and no agent's review alone. A project's page
+  // offers Continue the run for exactly these (`resumable`).
+  readonly stopped: ReadonlySet<string>;
   // Each project's checkpoints that hold its run now, their stage's inputs made: the person's
   // to approve, or a schedule's own Before Video hold waiting for its day. One not reached yet
   // holds nothing.
@@ -110,54 +119,81 @@ export function projectHolds(
     .all(...scoped)
     .map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
-  const stopped = heldBesideReviews(db, projectId);
+  const runs = heldRuns(db, projectId);
+  const waitingForAgent = new Set(
+    [...agents].filter((id) => !reachedTheirs.has(id) && runs.get(id)?.held !== true),
+  );
+  const stopped = new Set(
+    [...runs]
+      .filter(([, run]) => run.stuck)
+      .map(([id]) => id)
+      .filter(
+        (id) =>
+          !reachedTheirs.has(id) &&
+          !waitingForAgent.has(id) &&
+          derive(standings.get(id) ?? []) === "pending",
+      ),
+  );
   return {
-    prepared: new Set(scheduled.filter((id) => !theirs.has(id))),
-    waitingForAgent: new Set(
-      [...agents].filter((id) => !reachedTheirs.has(id) && !stopped.has(id)),
-    ),
+    prepared: new Set(scheduled.filter((id) => !theirs.has(id) && !stopped.has(id))),
+    waitingForAgent,
+    stopped,
     holding,
   };
 }
 
-// Projects whose current version has a step of an unfinished stage held other than one parked
-// on an agent's review: a restart (`recoverWork`), a pause or a saved edit held it, and only
-// Continue the run starts it.
-function heldBesideReviews(db: DatabaseSync, projectId: string | undefined): ReadonlySet<string> {
-  const sql = `SELECT DISTINCT w.project_id FROM revision_work w
-     JOIN revision_work_reservations r ON r.work_id=w.id
-     JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
+// A step of `h`'s current version, of a stage not finished, held other than one parked on an
+// agent's review: a restart (`recoverWork`), a pause or a saved edit held it, and only Continue
+// the run starts it.
+function heldBesideReviews(h: string): string {
+  return `EXISTS (SELECT 1 FROM revision_work w
+     JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=${h}.revision_id
      JOIN stages s ON s.project_id=w.project_id AND s.id=w.stage_id
-     WHERE w.state='pending' AND w.dispatch_state='held'
+     WHERE w.project_id=${h}.project_id AND w.state='pending' AND w.dispatch_state='held'
        AND s.state NOT IN ('done','provided','skipped')
-       AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting')${
-         projectId === undefined ? "" : " AND w.project_id=?"
-       }`;
-  const rows = db.prepare(sql).all(...(projectId === undefined ? [] : [projectId]));
-  return new Set(rows.map((row) => projectRow.parse(row).project_id));
+       AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting'))`;
 }
 
-// The projects whose head has unfinished stages but nothing that will move them on its own: no
-// call in flight and no admitted, dispatchable work; one project's alone when `projectId` is
-// given. A saved rerun or edit is admitted by no one until Resume, and work held by a pause, a
-// restart or a failed sibling of its admission never starts, yet none of these shows as paused
-// or failed. A queued batch item waits for its turn instead.
-export function resumableRuns(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+const runRow = z.object({ project_id: z.string(), held: z.number(), stuck: z.number() });
+
+// Whether `h` is still: no call in flight, not paused and not waiting its turn in a batch.
+function still(h: string): string {
+  return `NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=${h}.project_id AND s.state='running')
+    AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=${h}.project_id AND w.state='running')
+    AND NOT EXISTS(SELECT 1 FROM project_controls c WHERE c.project_id=${h}.project_id AND c.paused=1)
+    AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=${h}.project_id AND q.state='queued')`;
+}
+
+// No admitted work of `h`'s current version that can start: a saved rerun or edit is admitted
+// by no one until Resume, and work whose admission has a failed sibling never starts.
+function nothingAdmitted(h: string): string {
+  return `NOT EXISTS(SELECT 1 FROM revision_work w
+    JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=${h}.revision_id
+    WHERE w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(
+      SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id AND f.state IN ('failed','canceled')))`;
+}
+
+// Each project with a step held beside the reviews (`held`), and whether its run is stuck: it
+// has unfinished stages, is still, and nothing will move it on but Continue the run, because
+// nothing admitted can start or because a step is held (a step still allowed may wait on it).
+function heldRuns(
+  db: DatabaseSync,
+  projectId: string | undefined,
+): ReadonlyMap<string, { readonly held: boolean; readonly stuck: boolean }> {
+  const stuck = `EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state NOT IN ('done','provided','skipped'))
+    AND ${still("h")} AND (${heldBesideReviews("h")} OR ${nothingAdmitted("h")})`;
   const rows = db
     .prepare(
-      "SELECT h.project_id FROM project_heads h WHERE " +
-        "EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id " +
-        "AND s.state NOT IN ('done','provided','skipped')) " +
-        "AND NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state='running') " +
-        "AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued') " +
-        "AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id AND w.state='running') " +
-        "AND NOT EXISTS(SELECT 1 FROM revision_work w " +
-        "JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=h.revision_id " +
-        "WHERE w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
-        "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
-        "AND f.state IN ('failed','canceled')))" +
-        (projectId === undefined ? "" : " AND h.project_id=?"),
+      `SELECT h.project_id, ${heldBesideReviews("h")} AS held, (${stuck}) AS stuck
+       FROM project_heads h WHERE (${heldBesideReviews("h")} OR (${stuck}))${
+         projectId === undefined ? "" : " AND h.project_id=?"
+       }`,
     )
     .all(...(projectId === undefined ? [] : [projectId]));
-  return new Set(rows.map((row) => z.string().parse(row.project_id)));
+  return new Map(
+    rows.map((row) => {
+      const run = runRow.parse(row);
+      return [run.project_id, { held: run.held === 1, stuck: run.stuck === 1 }] as const;
+    }),
+  );
 }

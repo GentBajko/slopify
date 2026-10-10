@@ -18,7 +18,7 @@ import { channelById, projectChannels, setProjectChannel } from "../../slices/ch
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
-import { projectHolds, resumableRuns } from "../../slices/reviews/holds.js";
+import { projectHolds } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js";
@@ -111,6 +111,7 @@ export function projectRoutes(deps: AppDeps) {
             ...(aside.has(project.id) ? { setAside: true } : {}),
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
+            ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
             ...(numbers.get(project.id)?.views == null
               ? {}
               : { views: numbers.get(project.id)?.views ?? 0 }),
@@ -135,11 +136,10 @@ export function projectRoutes(deps: AppDeps) {
         }
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
         const holds = projectHolds(deps.db, { projectId: project.id });
-        const waitingForAgent = holds.waitingForAgent.has(project.id);
+        const stopped = holds.stopped.has(project.id);
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
-          // Continuing a run parked on an agent's review only parks it again.
-          resumable: !waitingForAgent && resumableRuns(deps.db, project.id).has(project.id),
+          resumable: stopped,
           // The checkpoints holding the run now, and whom each waits for (`reviews/holds.ts`).
           holding: holds.holding.get(project.id) ?? [],
           startedBy: lastStarter(deps.db, project.id),
@@ -147,7 +147,8 @@ export function projectRoutes(deps: AppDeps) {
             ...summarise(project),
             ...(setAsideProjects(deps.db).has(project.id) ? { setAside: true } : {}),
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
-            ...(waitingForAgent ? { waitingForAgent: true } : {}),
+            ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
+            ...(stopped ? { stopped: true } : {}),
           },
           stages: stagesWithEta(
             deps.db,

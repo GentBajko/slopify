@@ -153,9 +153,79 @@ it("waits for the person, not the agent, while another step is held for Continue
     )
     .run(f.revisionId);
   expect([...projectHolds(f.db).waitingForAgent]).toEqual([]);
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
   // A finished stage's leftover step holds nothing.
   f.stage("video", "done");
   expect([...projectHolds(f.db).waitingForAgent]).toEqual(["p1"]);
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+});
+
+// What a restart leaves while an agent reviews an image: the review's own step parked, the
+// thumbnail's held for Continue the run, and the video's kept allowed behind the template's
+// Before Video checkpoint (`recoverCheckpointWork`), which the run hasn't reached.
+function stoppedBehindVideoGate() {
+  const f = fixture();
+  f.db.prepare("UPDATE revision_work SET dispatch_state='held' WHERE id='images-work'").run();
+  for (const [kind, state] of [
+    ["article", "done"],
+    ["audio", "done"],
+    ["thumbnail", "pending"],
+    ["video", "pending"],
+  ] as const)
+    f.stage(kind, state);
+  const work = (id: string, kind: string, key: string, dispatch: string) => {
+    f.db
+      .prepare(
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,'p1',?,?,?,?,'pending',?,'2026-09-10T00:00:00.000Z')",
+      )
+      .run(id, f.revisionId, kind, kind, id.padEnd(64, "0"), dispatch);
+    f.db
+      .prepare(
+        "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,?,?,?)",
+      )
+      .run(f.revisionId, key, id, key);
+  };
+  work("video-work", "video", "export:video", "allowed");
+  work("thumb-work", "thumbnail", "thumbnail:image", "held");
+  f.gate("video");
+  return f;
+}
+
+it("reads a run a restart stopped as Stopped, though a step behind a checkpoint is allowed", () => {
+  const f = stoppedBehindVideoGate();
+  const holds = projectHolds(f.db);
+  expect([...holds.stopped]).toEqual(["p1"]);
+  expect([...holds.waitingForAgent]).toEqual([]);
+  expect(holds.holding.get("p1")).toBeUndefined();
+  expect([...projectHolds(f.db, { projectId: "p1" }).stopped]).toEqual(["p1"]);
+  expect([...projectHolds(f.db, { projectId: "other" }).stopped]).toEqual([]);
+});
+
+it("is not Stopped while paused, while a step runs, or while a checkpoint of the person's holds it", () => {
+  const f = stoppedBehindVideoGate();
+  f.db.prepare("INSERT INTO project_controls(project_id,paused) VALUES ('p1',1)").run();
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  f.db.prepare("UPDATE project_controls SET paused=0").run();
+  f.stage("thumbnail", "running");
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+  f.stage("thumbnail", "done");
+  f.answered();
+  f.stage("images", "done");
+  // Everything the video needs is made: its checkpoint holds the run for the person.
+  expect(
+    projectHolds(f.db)
+      .holding.get("p1")
+      ?.map((hold) => hold.waitsFor),
+  ).toEqual(["person"]);
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+});
+
+it("reads a prepared project a restart stopped as Stopped, not Prepared", () => {
+  const f = stoppedBehindVideoGate();
+  f.prepared(true);
+  const holds = projectHolds(f.db);
+  expect([...holds.stopped]).toEqual(["p1"]);
+  expect([...holds.prepared]).toEqual([]);
 });
 
 it("lists the checkpoints holding a run once reached, and whom each waits for", () => {

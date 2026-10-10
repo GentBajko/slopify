@@ -11,10 +11,12 @@ import { fakeTts } from "../src/adapters/fake/tts.js";
 import { createHub } from "../src/edge/events/hub.js";
 import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createApp } from "../src/edge/http/app.js";
+import { connectAgent } from "../src/edge/mcp/mcp.fake.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
+import type { TtsPort } from "../src/kernel/ports/tts.js";
 import { wireRunner } from "../src/main.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
@@ -121,6 +123,10 @@ interface Options {
   readonly work?: (request: LlmCompletion, attempt: number) => readonly string[];
   readonly image?: FakeImage;
   readonly speech?: Uint8Array;
+  // The narration's voice instead of one that answers at once.
+  readonly tts?: TtsPort;
+  // Hand back the run as soon as it starts instead of once it has settled.
+  readonly unsettled?: boolean;
   readonly config: (base: RunConfig) => RunConfig;
   readonly content?: (base: RevisionContent) => RevisionContent;
   // A second edit once the first is saved and planned, like a hand edit made in Edit project.
@@ -156,7 +162,7 @@ async function reviewedRun(options: Options) {
   const images = options.image ?? fakeImage({ bytes: still("320x180") });
   const registry: Registry = {
     image: () => images,
-    tts: () => fakeTts({ bytesFor: () => [options.speech ?? tone()] }),
+    tts: () => options.tts ?? fakeTts({ bytesFor: () => [options.speech ?? tone()] }),
     llm: () => llm,
     list: async () => [],
   };
@@ -220,7 +226,7 @@ async function reviewedRun(options: Options) {
     );
     await runner.settled();
   };
-  await settle();
+  if (options.unsettled !== true) await settle();
   const verdicts = () => listVerdicts(deps.db, h.projectId).toReversed();
   return { h, deps, runner, redos, llm, images, asked, verdicts, settle };
 }
@@ -648,6 +654,107 @@ it("offers Continue the run while an agent reviews when a restart held the video
     runner.tick(h.projectId);
     await settle();
     expect(video()).toHaveLength(1);
+  } finally {
+    h.close();
+  }
+});
+
+// A restart while an agent reviews the images and the narration is half recorded: the voice's
+// step ends held for Continue the run, while the video's stays allowed, as boot keeps it behind
+// a Before Video checkpoint (`recoverCheckpointWork`). Nothing moves the run on by itself, so it
+// reads Stopped with Continue offered, an agent continues it through MCP like a paused run, and
+// the video renders once the agent has answered.
+it("stops a run a restart cut off while an agent reviews, and an agent continues it to its video", {
+  timeout: 60_000,
+}, async () => {
+  const voice = fakeTts({ bytesFor: () => [quiet(1)] });
+  let release: () => void = () => undefined;
+  const cutOff = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let first = true;
+  const tts: TtsPort = {
+    ...voice,
+    synthesize: async (request) => {
+      if (first) {
+        first = false;
+        await cutOff;
+      }
+      return voice.synthesize(request);
+    },
+  };
+  const { h, deps, runner, settle } = await reviewedRun({
+    fail: () => undefined,
+    tts,
+    unsettled: true,
+    config: (base) => ({
+      ...base,
+      sources: { ...base.sources, audio: "generate", video: "generate" },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "paragraph" },
+      provided: { article: "Rope holds fast.\n\nKnots hold it." },
+      motionStyle: "still",
+    }),
+    reviews: { reviewer: "agent", retries: 0, stages: { images: { mode: "flag" } } },
+  });
+  try {
+    const app = createApp({
+      ...h.deps,
+      hub: createHub(h.deps),
+      runner,
+      rebuild: deps,
+      version: "test",
+      webDist: "/missing",
+      probe: async () => ({ ran: false, stdout: "" }),
+      flushSoon: () => undefined,
+    });
+    const page = async () =>
+      (await (await app.request(`/api/projects/${h.projectId}`)).json()) as {
+        readonly revisionId: string;
+        readonly resumable: boolean;
+        readonly project: { readonly stopped?: boolean; readonly waitingForAgent?: boolean };
+      };
+    const agent = await connectAgent(app);
+    const call = async (name: string, args: Record<string, unknown>): Promise<void> => {
+      const result = await agent.callTool({ name, arguments: { id: h.projectId, ...args } });
+      expect(result.isError, JSON.stringify(result.content)).toBeUndefined();
+    };
+    await vi.waitFor(() => expect(waitingExternalReviews(deps.db, h.projectId)).not.toEqual([]), {
+      timeout: 20_000,
+      interval: 20,
+    });
+    // The process stops with the first chunk in flight: boot holds what was unfinished and
+    // keeps the video's step allowed.
+    recoverCheckpointWork(deps.db);
+    deps.db
+      .prepare(
+        "UPDATE revision_work SET dispatch_state='allowed' WHERE project_id=? AND kind='video' AND state='pending'",
+      )
+      .run(h.projectId);
+    release();
+    await runner.settled();
+    expect(await page()).toMatchObject({ resumable: true, project: { stopped: true } });
+    await call("resume_project", {
+      body: { baseRevisionId: (await page()).revisionId, idempotencyKey: randomUUID() },
+    });
+    await settle();
+    // The narration is made; only the agent's review holds the run now.
+    expect(await page()).toMatchObject({ resumable: false, project: { waitingForAgent: true } });
+    for (const review of waitingExternalReviews(deps.db, h.projectId))
+      await call("submit_review_verdict", {
+        reviewId: review.id,
+        body: { verdict: "pass", reasons: [] },
+      });
+    await settle();
+    expect(
+      current(deps, h.projectId).outputs.filter(
+        (row) =>
+          row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.selected &&
+          row.state === "ready",
+      ),
+    ).toHaveLength(1);
   } finally {
     h.close();
   }

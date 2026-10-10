@@ -345,6 +345,8 @@ export interface ProjectSummary extends Project {
   // Both are `reviews/holds.ts` projectHolds: a checkpoint still to approve is the person's.
   readonly prepared?: boolean;
   readonly waitingForAgent?: boolean;
+  // Stopped before it finished, as a restart leaves a run: only Continue the run goes on.
+  readonly stopped?: boolean;
 }
 
 // The part of a project's settings the list reads (`listProjectHeads`). The whole configuration
@@ -365,7 +367,7 @@ export interface ProjectHead extends Omit<Project, "config"> {
 // six times the body for the same 2 px.
 export interface ProjectListing
   extends ProjectHead,
-    Pick<ProjectSummary, "status" | "setAside" | "prepared" | "waitingForAgent"> {
+    Pick<ProjectSummary, "status" | "setAside" | "prepared" | "waitingForAgent" | "stopped"> {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so

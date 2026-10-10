@@ -201,6 +201,13 @@ it("says which projects need the person, which are ready to upload and which wai
     db.prepare(
       "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Prepared',1,?)",
     ).run(prepared, finished);
+    // Its video's step is admitted, waiting behind the hold.
+    db.prepare(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('prepared-video',?,?,'video','video','f','pending','allowed',?)",
+    ).run(prepared, `rev-${prepared}`, finished);
+    db.prepare(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES (?,?,'export:video','prepared-video','f')",
+    ).run(prepared, `rev-${prepared}`);
     // Prepared too, but the Before Video hold is its template's own: the person approves it.
     const ownHold = f.project("Own hold", "pending", null);
     heldAt(ownHold, "video");

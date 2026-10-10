@@ -7,7 +7,7 @@ import { stagesOf } from "../src/slices/admission/repo.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import type { RecoveryRequest } from "../src/slices/rebuild/recovery-model.js";
 import type { RebuildDeps } from "../src/slices/rebuild/service.js";
-import { resumableRuns } from "../src/slices/reviews/holds.js";
+import { projectHolds } from "../src/slices/reviews/holds.js";
 import { composedFixture, current, save } from "./revision-rebuild.fake.js";
 
 type Fixture = Awaited<ReturnType<typeof composedFixture>>;
@@ -45,7 +45,7 @@ function recover(deps: RebuildDeps, projectId: string, action: RecoveryRequest["
 }
 
 function resumable(h: Fixture): boolean {
-  return resumableRuns(h.deps.db, h.projectId).has(h.projectId);
+  return projectHolds(h.deps.db, { projectId: h.projectId }).stopped.has(h.projectId);
 }
 
 function status(h: Fixture): string {
