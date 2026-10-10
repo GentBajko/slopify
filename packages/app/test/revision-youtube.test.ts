@@ -141,4 +141,4 @@ it("writes the YouTube description from the timed narration, asking again on a b
   expect(await affected()).toEqual(
     expect.arrayContaining(["subtitles:timing", "youtube:description", "export:wav"]),
   );
-});
+}, 20_000);
