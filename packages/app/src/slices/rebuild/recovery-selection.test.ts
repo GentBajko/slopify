@@ -34,6 +34,13 @@ it("reruns only generated images and selects their video closure", async () => {
         { kind: "video", state: "canceled" },
       ]),
     ).toEqual({ kind: "selected", workKeys: ["image:one", "image:two"] });
+    // Taken up again and failed: Continue tries it again, still not the canceled stage.
+    expect(
+      resumeSelection(plan, [
+        { kind: "images", state: "failed", admitted: true },
+        { kind: "video", state: "canceled" },
+      ]),
+    ).toEqual({ kind: "selected", workKeys: ["image:one", "image:two"] });
     expect(
       resumeSelection(plan, [
         { kind: "images", state: "pending" },
