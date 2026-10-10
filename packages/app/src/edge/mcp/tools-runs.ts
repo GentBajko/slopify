@@ -11,7 +11,7 @@ const runs: readonly RouteTool[] = [
     name: "resume_project",
     route: "POST /api/projects/:id/resume",
     title: "Continue the run",
-    description: `Continue the run: starts the project's held and unfinished work, including work a saved edit left waiting. After a Cancel, only the steps taken up again (retry_stage) go on; the steps canceled stay canceled. ${control}`,
+    description: `Continue the run: starts the project's held and unfinished work, including work a saved edit left waiting. On a canceled run it resumes the whole run, the canceled steps too; once a step of it was taken up again (retry_stage), only the steps taken up again go on and the rest stay canceled. ${control}`,
   },
   {
     name: "cancel_project",
