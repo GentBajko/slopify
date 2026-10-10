@@ -1,43 +1,36 @@
-import type { ProjectState, StageState } from "@app/kernel/pipeline.js";
+import type { ProjectState } from "@app/kernel/pipeline.js";
+import {
+  keptAsIsWord,
+  projectStateWords,
+  stageStateWords,
+} from "@app/slices/admission/state-words.js";
 import type { Tone } from "@/components/kit/status";
+
+export { heldWord } from "@app/slices/admission/state-words.js";
 
 // One word per state, everywhere a state is shown: Projects, the calendar, the project
 // header, Home and the run's steps. A screen that knows more (a project waiting for your
 // review, a limit wait, Ready to upload) says that instead, before falling back to these.
+// The words are the app's (`slices/admission/state-words.ts`), so the MCP tools say the same.
 
 export interface StateLook {
   readonly tone: Tone;
   readonly word: string;
 }
 
-// A project that has not started yet is Queued: it waits its turn, not for the person.
-// "Waiting" is kept for a project that waits on someone or something named.
 export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
-  running: { tone: "running", word: "Running" },
-  paused: { tone: "waiting", word: "Paused" },
-  pending: { tone: "off", word: "Queued" },
-  failed: { tone: "failed", word: "Failed" },
-  partial: { tone: "waiting", word: "Done with problems" },
-  done: { tone: "done", word: "Done" },
-  canceled: { tone: "off", word: "Canceled" },
+  running: { tone: "running", word: projectStateWords.running },
+  paused: { tone: "waiting", word: projectStateWords.paused },
+  pending: { tone: "off", word: projectStateWords.pending },
+  failed: { tone: "failed", word: projectStateWords.failed },
+  partial: { tone: "waiting", word: projectStateWords.partial },
+  done: { tone: "done", word: projectStateWords.done },
+  canceled: { tone: "off", word: projectStateWords.canceled },
 };
 
-// A project whose leftover steps were set aside on purpose.
-export const keptAsIs: StateLook = { tone: "done", word: "Kept as is" };
+export const keptAsIs: StateLook = { tone: "done", word: keptAsIsWord };
 
-// A step of a run. A skipped step is one the run's settings turned off.
-export const stageStateWord: Readonly<Record<StageState, string>> = {
-  pending: "Not started",
-  running: "Running",
-  done: "Done",
-  provided: "Provided",
-  failed: "Failed",
-  canceled: "Canceled",
-  skipped: "Off",
-};
-
-// Work held at a checkpoint until the person approves it, on a step or on a project.
-export const heldWord = "Waiting for your review";
+export const stageStateWord = stageStateWords;
 
 // A failed step that will try again by itself.
 export const retryingWord = "Waiting to try again";

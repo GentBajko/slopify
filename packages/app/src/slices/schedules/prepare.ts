@@ -200,3 +200,14 @@ export function preparedTopics(
     return found === undefined ? [] : [{ title, topic: topic.title, projectId: found.projectId }];
   });
 }
+
+// Projects a schedule prepared ahead and still holds before their video: the day deletes the
+// row (`continuePrepared`).
+export function preparedProjectIds(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare("SELECT project_id FROM prepared_videos")
+      .all()
+      .map((row) => String(row.project_id)),
+  );
+}

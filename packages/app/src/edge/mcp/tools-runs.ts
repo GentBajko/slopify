@@ -1,10 +1,105 @@
 import { control, type RouteTool } from "./route-tool.js";
 
-export const runTools: readonly RouteTool[] = [
+const runs: readonly RouteTool[] = [
+  {
+    name: "pause_project",
+    route: "POST /api/projects/:id/pause",
+    title: "Pause",
+    description: `Pause: the run stops after the steps already sent finish; nothing starts until resume_project. ${control}`,
+  },
   {
     name: "resume_project",
     route: "POST /api/projects/:id/resume",
     title: "Continue the run",
     description: `Continue the run: starts the project's held and unfinished work, including work a saved edit left waiting. ${control}`,
   },
+  {
+    name: "cancel_project",
+    route: "POST /api/projects/:id/cancel",
+    title: "Cancel run",
+    description: `Cancel run: stops every running stage of the project. ${control}`,
+    confirm: "Cancel this run? It stops every running stage; finished outputs are kept.",
+  },
+  {
+    name: "retry_stage",
+    route: "POST /api/projects/:id/stages/:kind/retry",
+    title: "Try again",
+    description: `Try again on a failed step (kind: research, article, audio, images, thumbnail, video or document), keeping what it already made. ${control}`,
+  },
+  {
+    name: "soften_stage",
+    route: "POST /api/projects/:id/stages/:kind/soften",
+    title: "Soften and retry",
+    description: `Soften and retry, for a picture a content filter refused (kind images or thumbnail, or video for a short's picture): rewords the refused prompts and draws them again. ${control}`,
+    confirm:
+      "Your project's AI model rewrites each refused prompt without what a content filter could flag, keeping the scene and style. The image is then drawn again from the new wording, which it keeps as its prompt. The AI call and the new image are charged like any other.",
+  },
+  {
+    name: "rerun_stage",
+    route: "POST /api/projects/:id/stages/:kind/rerun",
+    title: "Re-run a stage",
+    description: `Re-run section: makes a stage again and everything built on it. A re-run that costs money is refused until it is reviewed: use preview_rebuild (Choose what to remake), then start_rebuild. ${control}`,
+    confirm:
+      "Re-run this stage? It generates the stage and its dependent outputs again, which costs what the stage cost the first time; previous outputs stay in History.",
+  },
 ];
+
+const revisions: readonly RouteTool[] = [
+  {
+    name: "prepare_revision",
+    route: "POST /api/projects/:id/revisions/prepare",
+    title: "Prepare an older project for editing",
+    description:
+      "Saves the first version of a project made before versions existed; nothing is generated.",
+  },
+  {
+    name: "list_revisions",
+    route: "GET /api/projects/:id/revisions",
+    title: "Read project history",
+    description: "Every saved version of the project, newest first, as Project history lists them.",
+  },
+  {
+    name: "get_revision",
+    route: "GET /api/projects/:id/revisions/:revisionId",
+    title: "Read a version",
+    description:
+      "One version in full: revision.config and revision.content (send them back as save_revision's edit.config and edit.content), its outputs, pieces and text parts.",
+  },
+  {
+    name: "read_narration_chunks",
+    route: "GET /api/projects/:id/revisions/:revisionId/narration-chunks",
+    title: "Read narration chunk keys",
+    description:
+      'The narration chunk keys in spoken order, per segment: {chunks: {intro?, body?, outro?}}. "Narration chunk 5 of 10" in an error is chunks.body[4] (an intro or outro chunk is named after its segment); the key is what save_revision\'s edit.regenerate and content.narrationOverrides take.',
+  },
+  {
+    name: "save_revision",
+    route: "POST /api/projects/:id/revisions",
+    title: "Save an edit",
+    description:
+      "Saves an edit as a new version, like Save in Edit project; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, edit: {config, content, regenerate?: [work keys to make again, such as a narration chunk key], uploads?: [{stagedFileId, destination}]}}; send get_revision's revision.config and revision.content with your change. One chunk's wording or delivery note is content.narrationOverrides[chunk key] = {kind: \"text\", text, direction?}. Finished shorts kept through a new pick are content.shortsKeep: leave one out to pick a new moment for it, and lower config.shorts.count as well to drop it. Then preview_rebuild (Choose what to remake) says what it makes and costs, and start_rebuild starts it.",
+  },
+  {
+    name: "restore_revision",
+    route: "POST /api/projects/:id/revisions/restore",
+    title: "Restore a version",
+    description:
+      "Makes an earlier version current again, like Restore this revision; it starts nothing. Body: {baseRevisionId, idempotencyKey: a new UUID, targetRevisionId}.",
+  },
+  {
+    name: "preview_rebuild",
+    route: "POST /api/projects/:id/rebuild/preview",
+    title: "Choose what to remake",
+    description:
+      'Choose what to remake: what a remake makes again, reuses or leaves blocked, each output\'s estimate and the total, like the project\'s Choose what to remake. Body: {baseRevisionId, request: {kind: "allAffected"} | {kind: "selected", workKeys: [...]}}. Nothing starts; start_rebuild does, with this preview\'s id.',
+  },
+  {
+    name: "start_rebuild",
+    route: "POST /api/projects/:id/rebuild",
+    title: "Start a remake",
+    description:
+      "Starts the remake you previewed: the acknowledgement Choose what to remake asks for. Body: {baseRevisionId, idempotencyKey: a new UUID, previewId: the preview's id, acknowledgeUnknownCosts: true only after reading the preview's unknown costs, confirmedProvidedWorkKeys: the preview's providedReuseRequired keys you accept replacing}.",
+  },
+];
+
+export const runTools: readonly RouteTool[] = [...runs, ...revisions];

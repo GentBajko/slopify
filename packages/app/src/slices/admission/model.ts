@@ -340,6 +340,9 @@ export interface ProjectSummary extends Project {
   // "Keep as is" on Needs you, still about the current revision (`uploads/repo.ts`): the
   // waiting run is left as it is, off Needs you, until the project's next edit.
   readonly setAside?: boolean;
+  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held before its video
+  // until its day (`schedules/prepare.ts`).
+  readonly prepared?: boolean;
 }
 
 // The part of a project's settings the list reads (`listProjectHeads`). The whole configuration
@@ -361,6 +364,9 @@ export interface ProjectHead extends Omit<Project, "config"> {
 export interface ProjectListing extends ProjectHead {
   readonly status: ProjectState;
   readonly setAside?: boolean;
+  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held before its video
+  // until its day (`schedules/prepare.ts`).
+  readonly prepared?: boolean;
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so
