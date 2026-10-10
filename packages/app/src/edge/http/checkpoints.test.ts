@@ -268,3 +268,15 @@ it("returns typed missing/invalid refusals and does not accept client-authored g
   ).toBe(400);
   expect(h.wake).not.toHaveBeenCalled();
 });
+
+it("refuses a second approval of a checkpoint that was already approved", async () => {
+  const h = fixture();
+  expect((await h.send("/audio-gate/approve", "POST", h.approval)).status).toBe(200);
+  const second = await h.send("/audio-gate/approve", "POST", {
+    ...h.approval,
+    idempotencyKey: randomUUID(),
+  });
+  expect(second.status).toBe(409);
+  expect(await second.text()).toContain("This checkpoint was already approved");
+  expect(h.wake).toHaveBeenCalledTimes(1);
+});

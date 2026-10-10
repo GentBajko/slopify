@@ -38,6 +38,16 @@ function refused(c: Context, reason: string): Response {
   });
 }
 
+function alreadyApproved(c: Context): Response {
+  return problem(c, {
+    status: 409,
+    title: titleOf(409),
+    detail:
+      "This checkpoint was already approved, so nothing changed. Reload the page (or call needs_attention) to see what waits now.",
+    extensions: { reason: "already-approved" },
+  });
+}
+
 export function checkpointRoutes(deps: AppDeps): ReturnType<typeof buildCheckpointRoutes> {
   return buildCheckpointRoutes(deps);
 }
@@ -86,11 +96,12 @@ function buildCheckpointRoutes(deps: AppDeps) {
           const authority = deps.runner.checkpoints;
           if (!authority) return refused(c, "conflict");
           const result = authority.release(projectId, checkpointId, identity);
-          if (!result.ok && (result.reason !== "duplicate" || result.value === undefined))
-            return refused(c, result.reason);
-          const checkpoint = checkpointRowSchema.parse(result.value);
-          if (result.ok) notify(projectId, identity.revisionId, false);
-          return c.json({ checkpoint, replayed: !result.ok });
+          // A known key was answered by the replay above, so a duplicate here is an approval
+          // someone else made first.
+          if (!result.ok)
+            return result.reason === "duplicate" ? alreadyApproved(c) : refused(c, result.reason);
+          notify(projectId, identity.revisionId, false);
+          return c.json({ checkpoint: checkpointRowSchema.parse(result.value), replayed: false });
         });
       },
     )

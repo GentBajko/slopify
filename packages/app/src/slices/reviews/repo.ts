@@ -160,7 +160,8 @@ export function setRedoState(
 
 export type VerdictActionResult =
   | { readonly ok: true; readonly value: ReviewRecord }
-  | { readonly ok: false; readonly reason: "not-found" | "conflict" };
+  | { readonly ok: false; readonly reason: "not-found" | "conflict" }
+  | { readonly ok: false; readonly reason: "decided"; readonly value: ReviewRecord };
 
 // Overrule accepts a failed item as it is; Redo records that the person had it made again.
 // A passed verdict has nothing to overrule. Overrule also calls off an automatic redo that is
@@ -175,18 +176,28 @@ export function actOnVerdict(
 ): VerdictActionResult {
   const record = verdictById(db, projectId, id);
   if (record === undefined) return { ok: false, reason: "not-found" };
+  // The first decision stands: a second person or agent is told it was already made.
+  if (record.action !== null) return { ok: false, reason: "decided", value: record };
   if (action === "overruled" && record.passed) return { ok: false, reason: "conflict" };
   if (record.redoState === "started") return { ok: false, reason: "conflict" };
   if (record.redoState === "pending") {
     if (action !== "overruled") return { ok: false, reason: "conflict" };
     const called = db
       .prepare(
-        "UPDATE review_verdicts SET action=?, action_at=?, redo_state=NULL WHERE id=? AND redo_state='pending'",
+        "UPDATE review_verdicts SET action=?, action_at=?, redo_state=NULL WHERE id=? AND redo_state='pending' AND action IS NULL",
       )
       .run(action, at, id);
     if (Number(called.changes) !== 1) return { ok: false, reason: "conflict" };
   } else {
-    db.prepare("UPDATE review_verdicts SET action=?, action_at=? WHERE id=?").run(action, at, id);
+    const changed = db
+      .prepare("UPDATE review_verdicts SET action=?, action_at=? WHERE id=? AND action IS NULL")
+      .run(action, at, id);
+    if (Number(changed.changes) !== 1) {
+      const now = verdictById(db, projectId, id);
+      return now === undefined
+        ? { ok: false, reason: "not-found" }
+        : { ok: false, reason: "decided", value: now };
+    }
   }
   const updated = verdictById(db, projectId, id);
   return updated === undefined ? { ok: false, reason: "not-found" } : { ok: true, value: updated };

@@ -103,4 +103,17 @@ describe("review verdicts", () => {
         ?.current,
     ).toBe(false);
   });
+  it("refuses a second decision on a verdict that already has one", () => {
+    saveVerdict(db, failed);
+    expect(actOnVerdict(db, "p1", "v1", "overruled", "t1")).toMatchObject({ ok: true });
+    expect(actOnVerdict(db, "p1", "v1", "overruled", "t2")).toMatchObject({
+      ok: false,
+      reason: "decided",
+    });
+    expect(actOnVerdict(db, "p1", "v1", "redone", "t3")).toMatchObject({
+      ok: false,
+      reason: "decided",
+    });
+    expect(latestVerdict(db, "p1", "image:hill")?.actionAt).toBe("t1");
+  });
 });

@@ -5,6 +5,7 @@ import { revisionControlSchema } from "../../slices/control/revision-control-sch
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
 import { redoStarting } from "../../slices/rebuild/review-redo.js";
+import type { ReviewRecord } from "../../slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, verdictById } from "../../slices/reviews/repo.js";
 import { latestReviews } from "../../slices/reviews/view.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -30,6 +31,13 @@ export function reviewRoutes(deps: AppDeps) {
       title: titleOf(404),
       detail:
         "This review no longer exists; the project may have been deleted or restored from a backup. Reload the project page.",
+    });
+  const decided = (c: Context, verdict: ReviewRecord) =>
+    problem(c, {
+      status: 409,
+      title: titleOf(409),
+      detail: `This verdict was already decided: the item was ${verdict.action === "overruled" ? "kept as it is" : "sent to be made again"}${verdict.actionBy === "agent" ? " by an agent" : ""}, so nothing changed. Reload the project page (or call needs_attention) to see what waits now.`,
+      extensions: { reason: "decided" },
     });
   const notify = (projectId: string) => {
     try {
@@ -74,7 +82,12 @@ export function reviewRoutes(deps: AppDeps) {
         "overruled",
         deps.clock.now().toISOString(),
       );
-      if (!result.ok) return result.reason === "not-found" ? gone(c) : busy();
+      if (!result.ok)
+        return result.reason === "not-found"
+          ? gone(c)
+          : result.reason === "decided"
+            ? decided(c, result.value)
+            : busy();
       // A called-off redo released the work that was waiting on the item.
       try {
         deps.runner.tick(projectId);
@@ -92,6 +105,7 @@ export function reviewRoutes(deps: AppDeps) {
         const { id: projectId, verdictId } = c.req.valid("param");
         const verdict = verdictById(deps.db, projectId, verdictId);
         if (verdict === undefined) return gone(c);
+        if (verdict.action !== null) return decided(c, verdict);
         if (deps.rebuild === undefined)
           return problem(c, {
             status: 503,
