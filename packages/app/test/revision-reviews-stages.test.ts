@@ -10,6 +10,7 @@ import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
 import { createHub } from "../src/edge/events/hub.js";
 import { currentProjectEvent } from "../src/edge/events/visibility.js";
+import { createApp } from "../src/edge/http/app.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
@@ -17,6 +18,7 @@ import type { Registry } from "../src/kernel/ports/registry.js";
 import { wireRunner } from "../src/main.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
+import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
@@ -573,6 +575,79 @@ it("holds the video while an agent's reviews wait, opens new ones after Re-run, 
     await settle();
     expect(video()).toHaveLength(1);
     expect(asked).toEqual([]);
+  } finally {
+    h.close();
+  }
+});
+
+// A restart holds every unfinished step for Continue the run (`recoverWork`); an agent's answer
+// releases only the step it reviewed. So while the agent reviews, the person is offered
+// Continue, and the run goes on to its video once both are done.
+it("offers Continue the run while an agent reviews when a restart held the video, and renders", {
+  timeout: 30_000,
+}, async () => {
+  const { h, deps, runner, settle } = await reviewedRun({
+    fail: () => undefined,
+    speech: quiet(2),
+    config: (base) => ({
+      ...base,
+      sources: { ...base.sources, audio: "generate", video: "generate" },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "whole" },
+      provided: { article: "Rope holds fast." },
+      motionStyle: "still",
+    }),
+    reviews: { reviewer: "agent", retries: 0, stages: { images: { mode: "flag" } } },
+  });
+  try {
+    const app = createApp({
+      ...h.deps,
+      hub: createHub(h.deps),
+      runner,
+      version: "test",
+      webDist: "/missing",
+      probe: async () => ({ ran: false, stdout: "" }),
+      flushSoon: () => undefined,
+    });
+    const page = async () =>
+      (await (await app.request(`/api/projects/${h.projectId}`)).json()) as {
+        readonly resumable: boolean;
+        readonly project: { readonly waitingForAgent?: boolean };
+      };
+    const video = () =>
+      current(deps, h.projectId).outputs.filter(
+        (row) =>
+          row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.selected &&
+          row.state === "ready",
+      );
+    // What boot does before anything runs (`main.ts`).
+    recoverCheckpointWork(deps.db);
+    const waiting = await page();
+    expect(waiting.resumable).toBe(true);
+    expect(waiting.project.waitingForAgent).toBeUndefined();
+    expect(
+      await recoverProject(deps, h.projectId, {
+        baseRevisionId: current(deps, h.projectId).revision.id,
+        idempotencyKey: randomUUID(),
+        action: { kind: "resume" },
+      }),
+    ).toMatchObject({ ok: true });
+    await settle();
+    // Only the agent's reviews hold the run now: nothing for the person to press.
+    expect(await page()).toMatchObject({ resumable: false, project: { waitingForAgent: true } });
+    for (const review of waitingExternalReviews(deps.db, h.projectId))
+      answerExternalReview(deps.db, {
+        projectId: h.projectId,
+        id: review.id,
+        verdict: { passed: true, reasons: [] },
+        by: "agent",
+        at: new Date().toISOString(),
+      });
+    runner.tick(h.projectId);
+    await settle();
+    expect(video()).toHaveLength(1);
   } finally {
     h.close();
   }

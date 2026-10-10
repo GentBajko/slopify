@@ -38,7 +38,7 @@ function fixture() {
       )
       .run(own ? 1 : 0);
   const answered = () => db.prepare("UPDATE external_reviews SET state='answered'").run();
-  return { db, gate, stage, prepared, answered };
+  return { db, revisionId: f.revisionId, gate, stage, prepared, answered };
 }
 
 // Everything but the video is made: the run is held at the video's checkpoint.
@@ -133,4 +133,27 @@ it("reads one project's holds alone, and the stage standings a caller already re
   ]);
   expect([...projectHolds(f.db, { standings }).waitingForAgent]).toEqual(["p1"]);
   expect([...projectHolds(f.db).waitingForAgent]).toEqual([]);
+});
+
+it("waits for the person, not the agent, while another step is held for Continue the run", () => {
+  const f = fixture();
+  // The review's own step, held where it waits, still waits for the agent.
+  f.db.prepare("UPDATE revision_work SET dispatch_state='held' WHERE id='images-work'").run();
+  expect([...projectHolds(f.db).waitingForAgent]).toEqual(["p1"]);
+  // The video's step, held by a restart.
+  f.stage("video", "pending");
+  f.db
+    .prepare(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('video-work','p1',?,'video','video','v','pending','held','2026-09-10T00:00:00.000Z')",
+    )
+    .run(f.revisionId);
+  f.db
+    .prepare(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,'export:video','video-work','v')",
+    )
+    .run(f.revisionId);
+  expect([...projectHolds(f.db).waitingForAgent]).toEqual([]);
+  // A finished stage's leftover step holds nothing.
+  f.stage("video", "done");
+  expect([...projectHolds(f.db).waitingForAgent]).toEqual(["p1"]);
 });

@@ -13,8 +13,9 @@ export interface ProjectHolds {
   // Prepared ahead by a schedule and held only by the schedule's own Before Video hold: it
   // waits for its day. Any other checkpoint still to approve is the person's, prepared or not.
   readonly prepared: ReadonlySet<string>;
-  // Parked on a review an External agent answers, with no checkpoint of the person's reached:
-  // it goes on by itself once the agent answers or the review passes at its deadline.
+  // Parked on a review an External agent answers, with no checkpoint of the person's reached
+  // and no other step held for Continue the run: it goes on by itself once the agent answers
+  // or the review passes at its deadline.
   readonly waitingForAgent: ReadonlySet<string>;
 }
 
@@ -65,8 +66,28 @@ export function projectHolds(
     projectId === undefined ? db.prepare(preparedSql).all() : db.prepare(preparedSql).all(projectId)
   ).map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
+  const stopped = heldBesideReviews(db, projectId);
   return {
     prepared: new Set(scheduled.filter((id) => !theirs.has(id))),
-    waitingForAgent: new Set([...agents].filter((id) => !reachedTheirs.has(id))),
+    waitingForAgent: new Set(
+      [...agents].filter((id) => !reachedTheirs.has(id) && !stopped.has(id)),
+    ),
   };
+}
+
+// Projects whose current version has a step of an unfinished stage held other than one parked
+// on an agent's review: a restart (`recoverWork`), a pause or a saved edit held it, and only
+// Continue the run starts it.
+function heldBesideReviews(db: DatabaseSync, projectId: string | undefined): ReadonlySet<string> {
+  const sql = `SELECT DISTINCT w.project_id FROM revision_work w
+     JOIN revision_work_reservations r ON r.work_id=w.id
+     JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
+     JOIN stages s ON s.project_id=w.project_id AND s.id=w.stage_id
+     WHERE w.state='pending' AND w.dispatch_state='held'
+       AND s.state NOT IN ('done','provided','skipped')
+       AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting')${
+         projectId === undefined ? "" : " AND w.project_id=?"
+       }`;
+  const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
+  return new Set(rows.map((row) => projectRow.parse(row).project_id));
 }
