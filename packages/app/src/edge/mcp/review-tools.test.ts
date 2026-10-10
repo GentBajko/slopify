@@ -83,7 +83,7 @@ it("says an answered review takes no other verdict", () => {
 
 const replaced =
   "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.";
-const outdated =
+const notAskedYet =
   "This review was replaced: its item was made again or edited, so it takes no verdict, and no new review waits for it yet. One opens once the new item is made; an edit saved but not continued makes none until the run is continued. There is nothing to answer here: call needs_attention to see what is waiting now.";
 
 // Its item made again, the review is replaced at once, before the next settle marks it so.
@@ -111,7 +111,7 @@ it("promises no new review for a replaced one while none waits", () => {
       db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run(),
   ]) {
     const said = read((db) => void close(db));
-    expect(said).toMatchObject({ state: "outdated", explanation: outdated });
+    expect(said).toMatchObject({ state: "replaced-pending", explanation: notAskedYet });
     expect(said).not.toHaveProperty("answer");
   }
 });

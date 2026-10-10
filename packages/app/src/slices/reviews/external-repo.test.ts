@@ -221,7 +221,7 @@ it("refuses a verdict on a review whose step is gone, as replaced", () => {
   db.prepare("DELETE FROM revision_work WHERE id='images-work'").run();
   const review = externalReviewById(db, "p1", "er1");
   if (review === undefined) throw new Error("the review row stays");
-  expect(reviewStanding(db, review)).toBe("outdated");
+  expect(reviewStanding(db, review)).toBe("replaced-pending");
   expect(
     answerExternalReview(db, {
       projectId: "p1",
@@ -230,7 +230,7 @@ it("refuses a verdict on a review whose step is gone, as replaced", () => {
       by: "agent",
       at: "2026-09-10T00:30:00.000Z",
     }),
-  ).toMatchObject({ ok: false, reason: "outdated" });
+  ).toMatchObject({ ok: false, reason: "replaced-pending" });
 });
 
 // One order for every reader: get_external_review and a refused verdict give the same reason.
@@ -290,7 +290,7 @@ it("says a canceled run's review in the Trash is canceled, and a replaced one ou
   };
   expect(standing()).toBe("trashed");
   db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
-  expect(standing()).toBe("outdated");
+  expect(standing()).toBe("replaced-pending");
   db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
   expect(standing()).toBe("canceled");
 });

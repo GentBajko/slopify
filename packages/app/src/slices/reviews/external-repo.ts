@@ -92,7 +92,7 @@ export function answerExternalReview(
     if (review === undefined) return { ok: false, reason: "not-found" };
     const standing = reviewStanding(db, review);
     if (standing === "trashed") return { ok: false, reason: "trashed" };
-    if (standing === "superseded" || standing === "outdated")
+    if (standing === "superseded" || standing === "replaced-pending")
       db.prepare(
         "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND id=? AND state='waiting'",
       ).run(input.projectId, input.id);

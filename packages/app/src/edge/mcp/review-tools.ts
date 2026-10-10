@@ -79,7 +79,7 @@ export function registerReviewTools(server: McpServer, deps: ReviewToolDeps): vo
     {
       title: "Read an external review",
       description:
-        "What a review waiting for an agent asks you to judge: the instruction, the item and what it was made from, and its pictures, exactly as the built-in reviewer would be shown them. Take id and reviewId from needs_attention.",
+        "What a review waiting for an agent asks you to judge: the instruction, the item and what it was made from, and its pictures, exactly as the built-in reviewer would be shown them, and its state: waiting for your verdict, or why it takes none (answered, auto-passed, superseded, replaced-pending, canceled or trashed, with an explanation). Take id and reviewId from needs_attention.",
       inputSchema: { id, reviewId: id },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
