@@ -6,7 +6,7 @@ import { derive } from "../src/kernel/runner/graph.js";
 import { stagesOf } from "../src/slices/admission/repo.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import type { RecoveryRequest } from "../src/slices/rebuild/recovery-model.js";
-import { resumable } from "../src/slices/rebuild/recovery-repo.js";
+import { resumableRuns } from "../src/slices/rebuild/recovery-repo.js";
 import type { RebuildDeps } from "../src/slices/rebuild/service.js";
 import { composedFixture, current, save } from "./revision-rebuild.fake.js";
 
@@ -44,6 +44,10 @@ function recover(deps: RebuildDeps, projectId: string, action: RecoveryRequest["
   });
 }
 
+function resumable(h: Fixture): boolean {
+  return resumableRuns(h.deps.db, h.projectId).has(h.projectId);
+}
+
 function status(h: Fixture): string {
   return derive(stagesOf(h.deps.db, h.projectId));
 }
@@ -60,7 +64,7 @@ it("offers Resume for a rerun revision saved while readiness failed", async () =
     expect(await recover(h.deps, h.projectId, { kind: "resume" })).toMatchObject({ ok: true });
     await h.runner.settled();
     expect(status(h)).toBe("done");
-    expect(resumable(h.deps.db, h.projectId)).toBe(false);
+    expect(resumable(h)).toBe(false);
     const refused = await recover({ ...h.deps, providers: async () => [] }, h.projectId, {
       kind: "rerun",
       stage: "images",
@@ -68,12 +72,12 @@ it("offers Resume for a rerun revision saved while readiness failed", async () =
     expect(refused).toMatchObject({ ok: false, reason: "readiness" });
     expect(refused).toHaveProperty("intentRevisionId", current(h.deps, h.projectId).revision.id);
     expect(status(h)).toBe("pending");
-    expect(resumable(h.deps.db, h.projectId)).toBe(true);
+    expect(resumable(h)).toBe(true);
     expect(await recover(h.deps, h.projectId, { kind: "resume" })).toMatchObject({ ok: true });
-    expect(resumable(h.deps.db, h.projectId)).toBe(false);
+    expect(resumable(h)).toBe(false);
     await h.runner.settled();
     expect(status(h)).toBe("done");
-    expect(resumable(h.deps.db, h.projectId)).toBe(false);
+    expect(resumable(h)).toBe(false);
   } finally {
     await close(h);
   }
@@ -96,11 +100,11 @@ it("offers Resume after an edit saves over failed work", async () => {
       content: base.revision.content,
     });
     expect(status(h)).toBe("pending");
-    expect(resumable(h.deps.db, h.projectId)).toBe(true);
+    expect(resumable(h)).toBe(true);
     expect(await recover(h.deps, h.projectId, { kind: "resume" })).toMatchObject({ ok: true });
     await h.runner.settled();
     expect(status(h)).toBe("done");
-    expect(resumable(h.deps.db, h.projectId)).toBe(false);
+    expect(resumable(h)).toBe(false);
   } finally {
     await close(h);
   }

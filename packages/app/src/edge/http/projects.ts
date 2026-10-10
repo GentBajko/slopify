@@ -18,7 +18,7 @@ import { channelById, projectChannels, setProjectChannel } from "../../slices/ch
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
-import { resumable } from "../../slices/rebuild/recovery-repo.js";
+import { resumableRuns } from "../../slices/rebuild/recovery-repo.js";
 import { projectHolds } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -140,7 +140,7 @@ export function projectRoutes(deps: AppDeps) {
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
           // Continuing a run parked on an agent's review only parks it again.
-          resumable: !waitingForAgent && resumable(deps.db, project.id),
+          resumable: !waitingForAgent && resumableRuns(deps.db, project.id).has(project.id),
           // The checkpoints holding the run now, and whom each waits for (`reviews/holds.ts`).
           holding: holds.holding.get(project.id) ?? [],
           startedBy: lastStarter(deps.db, project.id),

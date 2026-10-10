@@ -135,27 +135,27 @@ function forget(deps: RevisionDeps, projectId: string, input: RecoveryRequest): 
     .prepare("DELETE FROM project_recovery_requests WHERE project_id=? AND idempotency_key=?")
     .run(projectId, input.idempotencyKey);
 }
-// The head has unfinished stages but nothing that will move them on its own: no call in
-// flight and no admitted, dispatchable work. A saved rerun or edit is admitted by no one
-// until Resume, and work held by a pause, a restart or a failed sibling of its admission
-// never starts, yet none of these shows as paused or failed. A queued batch item waits for
-// its turn instead.
-export function resumable(db: DatabaseSync, projectId: string): boolean {
-  return (
-    db
-      .prepare(
-        "SELECT 1 FROM project_heads h WHERE h.project_id=? " +
-          "AND EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id " +
-          "AND s.state NOT IN ('done','provided','skipped')) " +
-          "AND NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state='running') " +
-          "AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued') " +
-          "AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id AND w.state='running') " +
-          "AND NOT EXISTS(SELECT 1 FROM revision_work w " +
-          "JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=h.revision_id " +
-          "WHERE w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
-          "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
-          "AND f.state IN ('failed','canceled')))",
-      )
-      .get(projectId) !== undefined
-  );
+// The projects whose head has unfinished stages but nothing that will move them on its own: no
+// call in flight and no admitted, dispatchable work; one project's alone when `projectId` is
+// given. A saved rerun or edit is admitted by no one until Resume, and work held by a pause, a
+// restart or a failed sibling of its admission never starts, yet none of these shows as paused
+// or failed. A queued batch item waits for its turn instead.
+export function resumableRuns(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  const rows = db
+    .prepare(
+      "SELECT h.project_id FROM project_heads h WHERE " +
+        "EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id " +
+        "AND s.state NOT IN ('done','provided','skipped')) " +
+        "AND NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state='running') " +
+        "AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued') " +
+        "AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id AND w.state='running') " +
+        "AND NOT EXISTS(SELECT 1 FROM revision_work w " +
+        "JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=h.revision_id " +
+        "WHERE w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
+        "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
+        "AND f.state IN ('failed','canceled')))" +
+        (projectId === undefined ? "" : " AND h.project_id=?"),
+    )
+    .all(...(projectId === undefined ? [] : [projectId]));
+  return new Set(rows.map((row) => z.string().parse(row.project_id)));
 }
