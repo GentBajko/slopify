@@ -73,6 +73,7 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     ],
     outputs: [],
   });
+  const waiting = body({ status: "pending", stages: [], outputs: [] });
   return testDeps({
     "GET /api/projects": jsonAnswer({
       projects: [
@@ -91,6 +92,20 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/projects/p-fail": jsonAnswer({
       ...failed,
       project: { ...failed.project, id: "p-fail" },
+    }),
+    "GET /api/projects/p-wait": jsonAnswer({
+      ...waiting,
+      project: { ...waiting.project, id: "p-wait" },
+      holding: [
+        {
+          checkpointId: "video-gate",
+          stage: "video",
+          waitsFor: "person",
+          revisionId: "r1",
+          fingerprint: "a".repeat(64),
+          since: "2026-09-13T00:00:00.000Z",
+        },
+      ],
     }),
     "GET /api/projects/p-wait/checkpoints": checkpoints("held"),
     "GET /api/schedules": jsonAnswer({
@@ -243,6 +258,53 @@ describe("home", () => {
     await user.click(within(needs).getByRole("button", { name: "Continue the run" }));
     await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
     expect(within(needs).getByRole("button", { name: "Keep as is" })).not.toBeNull();
+  });
+
+  // Only a checkpoint the run has reached holds it (`holding`); one further on is not offered.
+  it("offers the checkpoint that holds the run, not one the run hasn't reached", async () => {
+    const gate = (checkpointId: string, stage: "audio" | "video") => ({
+      projectId: "p-wait",
+      revisionId: "r1",
+      checkpointId,
+      workId: "w1",
+      stage,
+      state: "held",
+      fingerprint: "a".repeat(64),
+      currentFingerprint: "a".repeat(64),
+      createdAt: "2026-09-13T00:00:00.000Z",
+      approvedAt: null,
+      dependents: [],
+      workKeys: [],
+    });
+    const waiting = body({ status: "pending", stages: [], outputs: [] });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-wait": jsonAnswer({
+          ...waiting,
+          project: { ...waiting.project, id: "p-wait" },
+          holding: [
+            {
+              checkpointId: "video-gate",
+              stage: "video",
+              waitsFor: "person",
+              revisionId: "r1",
+              fingerprint: "a".repeat(64),
+              since: "2026-09-13T00:00:00.000Z",
+            },
+          ],
+        }),
+        "GET /api/projects/p-wait/checkpoints": jsonAnswer({
+          revisionId: "r1",
+          checkpoints: [gate("audio-gate", "audio"), gate("video-gate", "video")],
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByRole("button", { name: "Approve and render" })).not.toBeNull();
+    expect(
+      within(needs).queryByRole("button", { name: "Approve the article and record" }),
+    ).toBeNull();
   });
 
   it("approves a held review from Home", async () => {
