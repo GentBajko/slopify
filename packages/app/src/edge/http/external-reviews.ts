@@ -16,13 +16,14 @@ const id = z
   .regex(/^[0-9A-Za-z_-]+$/);
 const reviewParam = z.object({ id, reviewId: id });
 
-// A verdict that wasn't saved and what was wrong with it. Said before the review is looked up,
-// so it claims nothing about the review: a fixed verdict that is too late is told so then.
+// A verdict that wasn't saved, what was wrong with it, and the tool and body to send instead.
+// Said before the review is looked up, so it claims nothing about the review: a fixed verdict
+// that is too late is told so then.
 function notSaved(c: Context, why: string): Response {
   return problem(c, {
     status: 400,
     title: titleOf(400),
-    detail: `The verdict wasn't saved${why}. Send {verdict: "pass" | "fail", reasons} again with that fixed.`,
+    detail: `The verdict wasn't saved${why}. Call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]} and that fixed; a pass may send reasons: [].`,
     extensions: { reason: "invalid-verdict" },
   });
 }

@@ -103,7 +103,12 @@ it("says a body that isn't JSON wasn't JSON, and a JSON one without a verdict se
     });
   const broken = await post("{verdict", "application/json");
   expect(broken.status).toBe(400);
-  expect(((await broken.json()) as { detail: string }).detail).toContain("wasn't JSON");
+  const unread = ((await broken.json()) as { detail: string }).detail;
+  expect(unread).toContain("wasn't JSON");
+  // It names the tool and the body to send, as a missing verdict does.
+  expect(unread).toContain(
+    'Call submit_review_verdict again with body {verdict: "pass" | "fail", reasons:',
+  );
   for (const answer of [await post("[]", "application/json"), await post('{"verdict":"pass"}')]) {
     expect(answer.status).toBe(400);
     expect(((await answer.json()) as { detail: string }).detail).toContain(
@@ -201,7 +206,7 @@ it("refuses more than ten reasons, or a reason over 500 characters, and the revi
   });
   expect(many.refused).toBe(true);
   expect(many.said).toContain("at most 10 reasons");
-  expect(many.said).toContain("Send {verdict");
+  expect(many.said).toContain("Call submit_review_verdict again with body {verdict");
   // Read before the review is looked up, it says nothing of whether the review still waits.
   expect(many.said).not.toContain("still waiting");
   const long = await verdictOn(h, { verdict: "fail", reasons: ["x".repeat(501)] });
