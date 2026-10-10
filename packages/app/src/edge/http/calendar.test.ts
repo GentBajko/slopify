@@ -274,6 +274,13 @@ it("says which projects need the person, which are ready to upload and which wai
       return id;
     };
     parked("Agent");
+    const agentFlagged = parked("Agent flagged");
+    // An item the agent already flagged waits for the person's Overrule or Redo, even while
+    // another review waits for the agent.
+    db.prepare(
+      `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,created_at)
+       VALUES ('v-2',?,?,'image:two','images','f2','r2',0,'[]','flagged',1,?)`,
+    ).run(agentFlagged, `rev-${agentFlagged}`, finished);
     // Running towards its template's audio checkpoint: nothing to review until it is reached.
     const ahead = f.project("Ahead", "running", null);
     db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
@@ -315,6 +322,7 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Aside")?.needs).toBeUndefined();
     expect(byTitle.get("Agent")).toMatchObject({ waitingForAgent: true, progress: 0.5 });
     expect(byTitle.get("Agent")?.needs).toBeUndefined();
+    expect(byTitle.get("Agent flagged")).toMatchObject({ waitingForAgent: true, needs: "review" });
     expect(byTitle.get("Held")?.progress).toBe(0.5);
     expect(byTitle.get("Ahead")?.needs).toBeUndefined();
     expect(byTitle.get("Ready")?.progress).toBe(1);

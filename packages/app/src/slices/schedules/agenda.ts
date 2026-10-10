@@ -228,13 +228,10 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         const ended = project.finished_at ?? project.created_at;
         if (ended < from.toISOString() || ended >= to.toISOString()) return [];
       }
-      // A run parked on an agent's review goes on by itself, and one Kept as is waits for
-      // nobody: neither asks anything of the person.
+      // One Kept as is waits for nobody. A run parked on an agent's review holds no checkpoint
+      // of the person's, but an item already flagged still waits for their Overrule or Redo.
       const waitingForAgent = holds.waitingForAgent.has(project.id);
-      const needs = needsOf(
-        state,
-        reviewing.has(project.id) && !waitingForAgent && !aside.has(project.id),
-      );
+      const needs = needsOf(state, reviewing.has(project.id) && !aside.has(project.id));
       const ready =
         (state === "done" || state === "partial") &&
         makesVideo(project.video_source) &&
