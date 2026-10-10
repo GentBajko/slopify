@@ -18,6 +18,11 @@ export type ReviewMode = (typeof reviewModes)[number];
 export const reviewers = ["model", "agent"] as const;
 export type Reviewer = (typeof reviewers)[number];
 
+// Who gave a verdict: the reviewer model, an external agent, the person (through the verdict
+// route), or nobody when the review passed at its deadline.
+export const reviewAnswerers = ["model", "agent", "person", "nobody"] as const;
+export type ReviewAnswerer = (typeof reviewAnswerers)[number];
+
 export const reviewerLabels: Readonly<Record<Reviewer, string>> = {
   model: "Model",
   agent: "External agent (MCP)",
@@ -36,7 +41,7 @@ export interface ReviewSettings {
   readonly thinking?: ThinkingMode | undefined;
   // "agent": an external agent answers through MCP and provider/model are unused. Absent is
   // the model, which keeps every saved project's settings, and so its steps, unchanged.
-  readonly reviewer?: "agent" | undefined;
+  readonly reviewer?: Extract<Reviewer, "agent"> | undefined;
   // How many times one item is made again after a failed review before it is kept and
   // flagged. Absent is `defaultReviewRetries`.
   readonly retries?: number | undefined;
@@ -194,9 +199,7 @@ export interface ReviewRecord extends ReviewVerdict {
   // An automatic redo: waiting to start, started, or refused (with the reason).
   readonly redoState: "pending" | "started" | "failed" | null;
   readonly redoError: string | null;
-  // Who gave the verdict: the reviewer model, an external agent, the person (through the
-  // verdict route), or nobody when the review passed at its deadline.
-  readonly answeredBy: "model" | "agent" | "person" | "nobody";
+  readonly answeredBy: ReviewAnswerer;
   // Who overruled it or had it made again.
   readonly actionBy: Actor | null;
   readonly createdAt: string;

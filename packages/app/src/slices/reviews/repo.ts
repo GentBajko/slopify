@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { type Actor, actors } from "../agents/model.js";
-import { type ReviewRecord, reviewStages } from "./model.js";
+import { type ReviewRecord, reviewAnswerers, reviewStages } from "./model.js";
 
 const rowSchema = z.object({
   id: z.string(),
@@ -19,7 +19,7 @@ const rowSchema = z.object({
   action_at: z.string().nullable(),
   redo_state: z.enum(["pending", "started", "failed"]).nullable(),
   redo_error: z.string().nullable(),
-  answered_by: z.enum(["model", "agent", "person", "nobody"]),
+  answered_by: z.enum(reviewAnswerers),
   action_by: z.enum(actors).nullable(),
   created_at: z.string(),
 });
