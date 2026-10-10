@@ -50,7 +50,8 @@ export async function callRoute(
   if (named !== undefined) return strayPath(tool, named);
   const filled = filledPath(path, args);
   const url = new URL(filled, "http://localhost");
-  // The URL must still be the tool's own route once resolved, or it would reach another one.
+  // Defense in depth: pathParam already keeps dots and slashes out, but should that rule ever
+  // loosen, a URL that resolves off the tool's own route still never reaches another one.
   if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
   if (tool.confirm !== undefined && args.confirmed !== true)
     return refusal(
