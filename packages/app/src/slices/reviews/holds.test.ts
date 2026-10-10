@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { waitingReviewFixture } from "./external-repo.fake.js";
 import { projectHolds } from "./holds.js";
 
@@ -372,14 +372,23 @@ it("lists the checkpoints holding a run once reached, and whom each waits for", 
 });
 
 // Every list, calendar and needs_attention read asks, for each idle project, whether an
-// admission has a failed sibling: by its index, not a scan of every step ever made.
+// admission has a failed sibling: by its index, not a scan of every step ever made. The plan is
+// read for the statement heldRuns prepares, as it prepares it.
 it("finds an admission's steps by their index", () => {
   const f = fixture();
+  const prepared = vi.spyOn(f.db, "prepare");
+  projectHolds(f.db);
+  const runs = prepared.mock.calls
+    .map(([sql]) => sql)
+    .find((sql) => sql.includes("WITH runs AS MATERIALIZED"));
+  prepared.mockRestore();
+  if (runs === undefined) throw new Error("heldRuns prepared no statement");
   const plan = f.db
-    .prepare(
-      "EXPLAIN QUERY PLAN SELECT 1 FROM revision_work f WHERE f.admission_id=? AND f.state IN ('failed','canceled')",
-    )
-    .all("a1")
+    .prepare(`EXPLAIN QUERY PLAN ${runs}`)
+    .all()
     .map((row) => String(row.detail));
-  expect(plan.join("\n")).toContain("USING INDEX revision_work_admission");
+  // A SEARCH by the admission, not a SCAN of the whole index.
+  expect(plan.join("\n")).toMatch(
+    /SEARCH f USING (COVERING )?INDEX revision_work_admission \(admission_id=\?\)/,
+  );
 });
