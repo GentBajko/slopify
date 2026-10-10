@@ -68,11 +68,7 @@ export function ProjectRow({
   const state = stateOf(project);
   // The server refuses a delete while the project is running, so the button says why instead.
   const running = project.status === "running";
-  const meta = `${madeOf(project)} · started ${startedAt(project.createdAt)}${
-    project.views === undefined
-      ? ""
-      : ` · ${project.views.toLocaleString()} views${project.ctr === undefined ? "" : ` · ${String(project.ctr)}% CTR`}`
-  }`;
+  const meta = `${madeOf(project)} · started ${startedAt(project.createdAt)}`;
   return (
     <ListRow
       lead={check}

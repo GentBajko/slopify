@@ -46,10 +46,9 @@ import type {
   StudioPlaylist,
   UploadPack,
 } from "@app/slices/studio/model.js";
-import type { ChannelPerformance } from "@app/slices/studio/performance.js";
 import type { PostingPlan } from "@app/slices/studio/plan-model.js";
 import type { Release, Slot } from "@app/slices/studio/releases.js";
-import type { AbResult, VideoStats } from "@app/slices/studio/stats.js";
+import type { AbResult } from "@app/slices/studio/stats.js";
 import type { YoutubeVideo } from "@app/slices/studio/videos.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import type { DescriptionField } from "@app/slices/youtube/edits.js";
@@ -661,26 +660,6 @@ export async function saveUploadSlot(
       param: { projectId },
       json: { slot: slot === null ? null : { row: slot.row, longAt: slot.longAt } },
     }),
-  );
-}
-
-export async function readProjectStats(
-  api: Api,
-  projectId: string,
-): Promise<readonly VideoStats[]> {
-  const answer = await read<{ stats: readonly VideoStats[] }>(
-    await api.client.studio.stats[":projectId"].$get({ param: { projectId } }),
-  );
-  return answer.stats;
-}
-
-// Channels → YouTube: the channel's videos on YouTube with Studio's numbers.
-export async function readChannelPerformance(
-  api: Api,
-  channelId: string,
-): Promise<ChannelPerformance> {
-  return read<ChannelPerformance>(
-    await api.client.studio.channels[":channelId"].performance.$get({ param: { channelId } }),
   );
 }
 

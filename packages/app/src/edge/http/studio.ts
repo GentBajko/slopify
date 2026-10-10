@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
@@ -21,7 +20,6 @@ import {
   studioUploadUrl,
 } from "../../slices/studio/model.js";
 import { packItem, uploadPack } from "../../slices/studio/pack.js";
-import { channelPerformance } from "../../slices/studio/performance.js";
 import { writeUploadPick } from "../../slices/studio/pick.js";
 import {
   postingPlanSchema,
@@ -49,20 +47,14 @@ import {
   swapReleases,
   writeLeadHours,
 } from "../../slices/studio/releases.js";
-import { parseStudioExport, readReport, saveReport } from "../../slices/studio/report.js";
-import { statsFromReport } from "../../slices/studio/report-stats.js";
 import {
   autoCommentKey,
   bearerToken,
-  exportViewProblem,
-  exportViews,
   isExtensionOrigin,
   pairStudioExtension,
   readChannelPlaylists,
-  readExportView,
   readStudioPlaylists,
   resetStudioPairing,
-  saveExportView,
   saveProjectPlaylists,
   saveRealFootage,
   saveStudioPlaylists,
@@ -71,13 +63,7 @@ import {
   studioPlaylistsProblem,
   studioRequestAllowed,
 } from "../../slices/studio/settings.js";
-import {
-  abResults,
-  abVariantSchema,
-  projectStats,
-  saveAbResult,
-  saveStats,
-} from "../../slices/studio/stats.js";
+import { abResults, abVariantSchema, saveAbResult } from "../../slices/studio/stats.js";
 import {
   confirmUpload,
   doneVideos,
@@ -159,15 +145,11 @@ const taskResultBody = z.object({
   ok: z.boolean(),
   message: z.string().max(2000),
 });
+// An A/B test's result as Studio shows it; older extensions also send numbers, which are ignored.
 const statsBody = z.object({
   projectId: id,
   short: shortField,
   videoId: z.string().regex(videoIdPattern),
-  impressions: z.number().nonnegative().optional(),
-  ctr: z.number().min(0).max(100).optional(),
-  views: z.number().nonnegative().optional(),
-  averageViewSeconds: z.number().nonnegative().optional(),
-  watchHours: z.number().nonnegative().optional(),
   abVariants: z.array(abVariantSchema).max(3).optional(),
 });
 const backfillBody = z.object({
@@ -272,34 +254,6 @@ export function studioRoutes(deps: AppDeps) {
       .filter((one) => one !== "")
       .toSorted(),
   });
-  // A report and, for each of its videos Slopify made, the project and which upload it is.
-  const reportBody = (channelId: string) => {
-    const report = readReport(deps.db, channelId);
-    const known = new Map(
-      listProjects(deps.db).flatMap((project) =>
-        projectVideos(deps.db, project.id).map(
-          (video) =>
-            [
-              video.videoId,
-              { projectId: project.id, short: video.short, projectTitle: project.title },
-            ] as const,
-        ),
-      ),
-    );
-    return {
-      exportView: readExportView(deps.db, channelId),
-      report,
-      projects:
-        report === null
-          ? {}
-          : Object.fromEntries(
-              report.rows.flatMap((row) => {
-                const found = known.get(row.videoId);
-                return found === undefined ? [] : [[row.videoId, found]];
-              }),
-            ),
-    };
-  };
   const slotChoices = (projectId: string, series: string) =>
     freeSlots(deps.db, readPlan(deps.db), whoOf(projectId, series), deps.clock.now(), 9);
   // Finished projects not marked uploaded: the popup's list and the calendar's candidates.
@@ -608,120 +562,8 @@ export function studioRoutes(deps: AppDeps) {
         },
       )
       // What waits for the extension, oldest first: each new upload dialog takes the first.
-      // Studio's numbers for a project's videos, and every finished A/B test (Library).
-      .get("/stats/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
-        c.json({ stats: projectStats(deps.db, c.req.valid("param").projectId) }),
-      )
+      // Every finished A/B test (Library).
       .get("/ab-results", (c) => c.json({ results: abResults(deps.db) }))
-      // Channels → YouTube numbers: Studio's Advanced-mode export, imported as the zip Studio
-      // downloads, and which project each of its videos is.
-      .get(
-        "/channels/:channelId/report",
-        zValidator("param", z.object({ channelId: id }), onInvalid),
-        (c) => c.json(reportBody(c.req.valid("param").channelId)),
-      )
-      .post(
-        "/channels/:channelId/report",
-        zValidator("param", z.object({ channelId: id }), onInvalid),
-        bodyLimit({
-          maxSize: 30 * 1024 * 1024,
-          onError: (c) =>
-            problem(c, {
-              status: 413,
-              title: titleOf(413),
-              detail:
-                "That file is larger than 30 MB, which a Studio export never is. Export again from Studio's Advanced mode and import the zip it downloads.",
-            }),
-        }),
-        async (c) => {
-          const denied = samePage(c);
-          if (denied !== undefined) return denied;
-          const { channelId } = c.req.valid("param");
-          const parsed = parseStudioExport(
-            new Uint8Array(await c.req.arrayBuffer()),
-            deps.clock.now().toISOString(),
-          );
-          if (!parsed.ok)
-            return problem(c, { status: 400, title: titleOf(400), detail: parsed.message });
-          saveReport(deps.db, channelId, parsed.report);
-          statsFromReport(deps.db, parsed.report, parsed.report.importedAt);
-          return c.json(reportBody(channelId));
-        },
-      )
-      // The Analytics view the extension exports every day for this channel; null forgets it.
-      .put(
-        "/channels/:channelId/export-view",
-        zValidator("param", z.object({ channelId: id }), onInvalid),
-        zValidator("json", z.object({ url: z.string().max(4000).nullable() }), onInvalid),
-        (c) => {
-          const denied = samePage(c);
-          if (denied !== undefined) return denied;
-          const { channelId } = c.req.valid("param");
-          const { url } = c.req.valid("json");
-          const wrong = url === null || url.trim() === "" ? undefined : exportViewProblem(url);
-          if (wrong !== undefined)
-            return problem(c, {
-              status: 400,
-              title: titleOf(400),
-              detail: wrong,
-              extensions: { fields: [{ field: "url", message: wrong }] },
-            });
-          saveExportView(deps.db, channelId, url);
-          return c.json(reportBody(channelId));
-        },
-      )
-      // The extension: each channel's Analytics view to export.
-      .get("/ext/export-views", (c) => {
-        allowOrigin(c, false);
-        if (!extAllowed(c)) return refused(c);
-        return c.json({ views: exportViews(deps.db) });
-      })
-      // The extension exported a channel's view: the zip Studio's Export makes, as Studio sends
-      // it (base64). Saved as an import would be, and each known video's numbers with it.
-      .post(
-        "/ext/report",
-        bodyLimit({
-          maxSize: 40 * 1024 * 1024,
-          onError: (c) =>
-            problem(c, {
-              status: 413,
-              title: titleOf(413),
-              detail: "Studio's export was larger than Slopify takes (40 MB).",
-            }),
-        }),
-        zValidator(
-          "json",
-          z.object({
-            channelId: id,
-            zippedData: z
-              .string()
-              .min(1)
-              .max(40 * 1024 * 1024),
-          }),
-          onInvalid,
-        ),
-        (c) => {
-          allowOrigin(c, false);
-          if (!extAllowed(c)) return refused(c);
-          const { channelId, zippedData } = c.req.valid("json");
-          const now = deps.clock.now().toISOString();
-          const parsed = parseStudioExport(
-            new Uint8Array(Buffer.from(zippedData, "base64url")),
-            now,
-          );
-          if (!parsed.ok)
-            return problem(c, { status: 400, title: titleOf(400), detail: parsed.message });
-          saveReport(deps.db, channelId, parsed.report);
-          const videos = statsFromReport(deps.db, parsed.report, now);
-          return c.json({ rows: parsed.report.rows.length, videos });
-        },
-      )
-      // Channels → YouTube: the channel's videos on YouTube with Studio's numbers and totals.
-      .get(
-        "/channels/:channelId/performance",
-        zValidator("param", z.object({ channelId: id }), onInvalid),
-        (c) => c.json(channelPerformance(deps, c.req.valid("param").channelId)),
-      )
       // The YouTube videos a project's uploads became, and their A/B tests.
       .get("/videos/:projectId", zValidator("param", projectParam, onInvalid), (c) =>
         c.json({ videos: projectVideos(deps.db, c.req.valid("param").projectId) }),
@@ -996,12 +838,11 @@ export function studioRoutes(deps: AppDeps) {
         setTaskState(deps.db, task, projectId, short ?? null, ok ? "done" : "failed", message);
         return c.json({ ok: true });
       })
-      // Every video on YouTube, for the numbers the extension reads from Studio.
+      // The long videos whose A/B test is running, for the extension to read each result.
       .get("/ext/known-videos", (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
         return c.json({
-          // The export brings every video's numbers; only an A/B test's result needs a visit.
           videos: doneVideos(deps.db)
             .filter((video) => video.short === null && video.abState === "started")
             .map((video) => ({
@@ -1057,26 +898,6 @@ export function studioRoutes(deps: AppDeps) {
         if (!extAllowed(c)) return refused(c);
         const body = c.req.valid("json");
         const readAt = deps.clock.now().toISOString();
-        // A visit for the A/B result alone brings no numbers: the export's are kept.
-        const numbers = [
-          body.impressions,
-          body.ctr,
-          body.views,
-          body.averageViewSeconds,
-          body.watchHours,
-        ].some((one) => one !== undefined);
-        if (numbers)
-          saveStats(deps.db, {
-            projectId: body.projectId,
-            short: body.short ?? null,
-            videoId: body.videoId,
-            readAt,
-            impressions: body.impressions ?? null,
-            ctr: body.ctr ?? null,
-            views: body.views ?? null,
-            averageViewSeconds: body.averageViewSeconds ?? null,
-            watchHours: body.watchHours ?? null,
-          });
         if (body.abVariants !== undefined && body.abVariants.length > 1)
           saveAbResult(deps.db, {
             projectId: body.projectId,

@@ -22,7 +22,6 @@ import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js";
 import { outputsOf } from "../../slices/storage/repo.js";
-import { longVideoStats } from "../../slices/studio/stats.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
 import {
@@ -95,7 +94,6 @@ export function projectRoutes(deps: AppDeps) {
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
         const settled = uploadedAndSettled(deps.db);
-        const numbers = longVideoStats(deps.db);
         const waits = limitWaitsByProject(deps.db);
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
@@ -107,12 +105,6 @@ export function projectRoutes(deps: AppDeps) {
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
             ...(aside.has(project.id) ? { setAside: true } : {}),
-            ...(numbers.get(project.id)?.views == null
-              ? {}
-              : { views: numbers.get(project.id)?.views ?? 0 }),
-            ...(numbers.get(project.id)?.ctr == null
-              ? {}
-              : { ctr: numbers.get(project.id)?.ctr ?? 0 }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };
         });

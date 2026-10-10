@@ -125,12 +125,12 @@ async function post(path: string, body: unknown, what: string): Promise<unknown>
 //   the long video's end screen and captions);
 // - a pinned comment, once the video is public (YouTube's public oEmbed answers only for a
 //   public or unlisted video, with no sign-in);
-// - once a day, each known video's Analytics, for its numbers.
+// - once a day, each running A/B test's result, from the long video's Details page.
 
 const opened = "tasksOpened";
 // A tab opened for a task is not opened again for this long, in case its page never reports.
 const retryMs = 30 * 60 * 1000;
-const statsEveryMs = 24 * 60 * 60 * 1000;
+const abEveryMs = 24 * 60 * 60 * 1000;
 const checksEveryMs = 2 * 60 * 60 * 1000;
 // Whether the videos Slopify takes to be on YouTube still exist: every two hours, and when the
 // popup opens if the last check is older than this.
@@ -221,113 +221,60 @@ async function checkTasks(): Promise<void> {
     });
   }
   await checkGone(goneEveryMs);
-  await sweepStats();
+  await sweepAbResults();
 }
 
-// Once a day: each known video's Analytics, one tab after another (the Reach tab, then the page
-// moves itself to Engagement, then reports and the worker opens the next).
-const statsKey = "statsSweep";
-interface StatsSweep {
+// Once a day: each running A/B test's result, one Details page after another (the page reads
+// it, reports, and the worker opens the next).
+const abKey = "statsSweep";
+interface AbSweep {
   readonly at: number;
   readonly left: readonly { projectId: string; short: number | null; videoId: string }[];
 }
 
-// Once a day, each channel's Analytics view (Settings in Slopify: Channels → YouTube), its end
-// moved to today, is opened in the background to export (`content.ts`'s `runExport`).
-const exportKey = "exportAt";
-
-// The view's end moved to the end of today: Studio counts days from midnight Pacific time and
-// keeps the end exclusive; the start stays as saved.
-export function viewToday(url: string, now: Date): string {
-  const parsed = new URL(url);
-  const [start] = (parsed.searchParams.get("time_period") ?? "").split(",");
-  const pacific = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Los_Angeles",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-  const [year, month, day] = pacific.split("-").map(Number);
-  // Midnight Pacific of the next day: 07:00 or 08:00 UTC, whichever names midnight there.
-  const next = Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) + 1, 7);
-  const hour = Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/Los_Angeles",
-      hour: "numeric",
-      hourCycle: "h23",
-    }).format(new Date(next)),
-  );
-  // 07:00 UTC is midnight in summer time (PDT) and 23:00 the day before in winter (PST).
-  const end = next + ((24 - hour) % 24) * 3_600_000;
-  if (start !== undefined && start !== "")
-    parsed.searchParams.set("time_period", `${start},${String(end)}`);
-  return parsed.href;
-}
-
-async function exportViews(force = false): Promise<number> {
-  const stored = await api.storage.local.get([exportKey]);
-  const at = typeof stored[exportKey] === "number" ? stored[exportKey] : 0;
-  if (!force && Date.now() - at < statsEveryMs) return 0;
-  const { views } = await getJson<{ views: readonly { channelId: string; url: string }[] }>(
-    "/api/studio/ext/export-views",
-    "the Analytics views to export",
-  ).catch(() => ({ views: [] }));
-  if (views.length === 0) return 0;
-  await api.storage.local.set({ [exportKey]: Date.now() });
-  for (const view of views)
-    await api.tabs?.create({
-      url: `${viewToday(view.url, new Date())}#slopify-export&c=${encodeURIComponent(view.channelId)}`,
-      active: false,
-    });
-  return views.length;
-}
-
-async function sweepStats(force = false): Promise<number> {
-  await exportViews(force);
-  const stored = await api.storage.local.get([statsKey]);
-  const sweep = stored[statsKey] as StatsSweep | undefined;
-  if (!force && sweep !== undefined && Date.now() - sweep.at < statsEveryMs) return 0;
+async function sweepAbResults(): Promise<number> {
+  const stored = await api.storage.local.get([abKey]);
+  const sweep = stored[abKey] as AbSweep | undefined;
+  if (sweep !== undefined && Date.now() - sweep.at < abEveryMs) return 0;
   const { videos } = await getJson<{
     videos: readonly { projectId: string; short: number | null; videoId: string }[];
-  }>("/api/studio/ext/known-videos", "the videos on YouTube").catch(() => ({ videos: [] }));
-  // Nothing to read (Slopify not reachable, or no video known yet): the next check tries again,
+  }>("/api/studio/ext/known-videos", "the A/B tests running").catch(() => ({ videos: [] }));
+  // Nothing to read (Slopify not reachable, or no test running): the next check tries again,
   // rather than waiting a day.
   if (videos.length === 0) return 0;
-  await api.storage.local.set({
-    [statsKey]: { at: Date.now(), left: videos } satisfies StatsSweep,
-  });
-  await nextStats();
+  await api.storage.local.set({ [abKey]: { at: Date.now(), left: videos } satisfies AbSweep });
+  await nextAbRead();
   return videos.length;
 }
 
-// The Analytics tab being read, and when it opened. A video Studio can't open (deleted in
-// Studio, say) never reports, which used to stop the day's sweep there: past `statsTabMs` the
-// tab is closed and the next video opens.
-const statsTabKey = "statsTab";
-const statsTabMs = 4 * 60 * 1000;
+// The Details tab being read, and when it opened. A video Studio can't open (deleted in
+// Studio, say) never reports, which would stop the day's sweep there: past `abTabMs` the tab
+// is closed and the next video opens.
+const abTabKey = "statsTab";
+const abTabMs = 4 * 60 * 1000;
 
-async function nextStats(): Promise<void> {
-  const stored = await api.storage.local.get([statsKey]);
-  const sweep = stored[statsKey] as StatsSweep | undefined;
+async function nextAbRead(): Promise<void> {
+  const stored = await api.storage.local.get([abKey]);
+  const sweep = stored[abKey] as AbSweep | undefined;
   const next = sweep?.left[0];
-  await api.storage.local.set({ [statsTabKey]: null });
+  await api.storage.local.set({ [abTabKey]: null });
   if (sweep === undefined || next === undefined) return;
-  await api.storage.local.set({ [statsKey]: { ...sweep, left: sweep.left.slice(1) } });
+  await api.storage.local.set({ [abKey]: { ...sweep, left: sweep.left.slice(1) } });
   const tab = await api.tabs?.create({
-    url: `https://studio.youtube.com/video/${next.videoId}/analytics/tab-reach_viewers/period-default#slopify-stats=1&${query(next.projectId, next.short)}`,
+    url: `https://studio.youtube.com/video/${next.videoId}/edit#slopify-ab-read&${query(next.projectId, next.short)}`,
     active: false,
   });
   if (tab?.id !== undefined)
-    await api.storage.local.set({ [statsTabKey]: { id: tab.id, at: Date.now() } });
+    await api.storage.local.set({ [abTabKey]: { id: tab.id, at: Date.now() } });
 }
 
-// Closes an Analytics tab that hasn't reported in time and moves the sweep on.
-async function unstickStats(): Promise<void> {
-  const stored = await api.storage.local.get([statsTabKey]);
-  const open = stored[statsTabKey] as { id: number; at: number } | null | undefined;
-  if (open == null || Date.now() - open.at < statsTabMs) return;
+// Closes a Details tab that hasn't reported in time and moves the sweep on.
+async function unstickAbRead(): Promise<void> {
+  const stored = await api.storage.local.get([abTabKey]);
+  const open = stored[abTabKey] as { id: number; at: number } | null | undefined;
+  if (open == null || Date.now() - open.at < abTabMs) return;
   await api.tabs?.remove(open.id).catch(() => {});
-  await nextStats();
+  await nextAbRead();
 }
 
 // A page opened for one upload asks for it: the item, its thumbnails' and captions' bytes.
@@ -443,41 +390,19 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
       );
       return { ok: true, value: true };
     }
-    if (request.type === "stats") {
-      const m = request.metrics;
+    if (request.type === "ab-result") {
       await post(
         "/api/studio/ext/stats",
         {
           projectId: request.projectId,
           short: request.short,
           videoId: request.videoId,
-          ...(m.VIDEO_THUMBNAIL_IMPRESSIONS === undefined
-            ? {}
-            : { impressions: m.VIDEO_THUMBNAIL_IMPRESSIONS }),
-          ...(m.VIDEO_THUMBNAIL_IMPRESSIONS_VTR === undefined
-            ? {}
-            : { ctr: m.VIDEO_THUMBNAIL_IMPRESSIONS_VTR }),
-          ...(m.EXTERNAL_VIEWS === undefined ? {} : { views: m.EXTERNAL_VIEWS }),
-          ...(m.AVERAGE_WATCH_TIME === undefined
-            ? {}
-            : { averageViewSeconds: m.AVERAGE_WATCH_TIME }),
-          ...(m.EXTERNAL_WATCH_TIME === undefined ? {} : { watchHours: m.EXTERNAL_WATCH_TIME }),
           ...(request.abVariants === undefined ? {} : { abVariants: request.abVariants }),
         },
-        "the video's numbers",
+        "the A/B test's result",
       );
       return { ok: true, value: true };
     }
-    if (request.type === "report")
-      return {
-        ok: true,
-        value: await post(
-          "/api/studio/ext/report",
-          { channelId: request.channelId, zippedData: request.zippedData },
-          "Studio's export",
-        ),
-      };
-    if (request.type === "export-done") return { ok: true, value: true };
     if (request.type === "gone-now") {
       await checkGone(0);
       return { ok: true, value: true };
@@ -507,11 +432,6 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ok: true,
         value: await post("/api/studio/ext/backfill", { videos: request.videos }, "Studio's list"),
       };
-    if (request.type === "stats-now") {
-      // Read Studio now also checks at once which videos were deleted there.
-      await checkGone(0);
-      return { ok: true, value: await sweepStats(true) };
-    }
     if (request.type === "ready") {
       void checkGone(goneOnPopupMs);
       const current = await paired();
@@ -546,12 +466,11 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
     const tab = sender.tab?.id;
     if (tab === undefined) return;
     if (request.type === "task-result") void api.tabs?.remove(tab);
-    if (request.type === "export-done") void api.tabs?.remove(tab);
     if (request.type === "gone") void api.tabs?.remove(tab);
     if (request.type === "backfill" && request.close === true) void api.tabs?.remove(tab);
-    if (request.type === "stats" && request.last) {
+    if (request.type === "ab-result") {
       void api.tabs?.remove(tab);
-      void nextStats();
+      void nextAbRead();
     }
   });
   // The answer comes later.
@@ -566,7 +485,7 @@ api.action?.onClicked.addListener(() => {
 api.alarms?.onAlarm.addListener((alarm) => {
   if (alarm.name === "slopify-ab-tests") void checkTasks();
   if (alarm.name === "slopify-stats-watch") {
-    void unstickStats();
+    void unstickAbRead();
     // Loaded from the folder Slopify keeps current: run its new build once it's quiet.
     void api.storage.local
       .get([activityKey])

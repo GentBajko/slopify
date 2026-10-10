@@ -11,7 +11,6 @@ import { channelDeleteConsequence, channelDeleteTitle } from "@/channels/delete-
 import { EpisodesTab } from "@/channels/episodes-tab";
 import { SchedulesTab, TemplatesTab } from "@/channels/members-tabs";
 import { VideosTab } from "@/channels/videos-tab";
-import { YoutubeTab } from "@/channels/youtube-tab";
 import { useDocumentTitle } from "@/components/document-title";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
@@ -29,7 +28,6 @@ export const channelTabs = [
   "schedules",
   "episodes",
   "videos",
-  "youtube",
 ] as const;
 export type ChannelTab = (typeof channelTabs)[number];
 const labels: Readonly<Record<ChannelTab, string>> = {
@@ -39,7 +37,6 @@ const labels: Readonly<Record<ChannelTab, string>> = {
   schedules: "Schedules",
   episodes: "Episodes",
   videos: "Existing videos",
-  youtube: "YouTube numbers",
 };
 
 export function channelTabOf(value: unknown): ChannelTab {
@@ -188,9 +185,6 @@ export function ChannelRoute({
           </TabPanel>
           <TabPanel idPrefix="channel" id="videos" active={tab === "videos"}>
             {tab === "videos" ? <VideosTab channelId={channel.id} /> : null}
-          </TabPanel>
-          <TabPanel idPrefix="channel" id="youtube" active={tab === "youtube"}>
-            {tab === "youtube" ? <YoutubeTab channelId={channel.id} /> : null}
           </TabPanel>
         </>
       ) : null}

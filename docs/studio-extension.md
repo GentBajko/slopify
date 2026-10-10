@@ -227,15 +227,14 @@ video's Details page with a `#slopify-ab=` hash; the extension presses A/B Testi
 mode and fills the titles and thumbnails. You check them and press **Set test** and **Save**
 yourself; the extension never presses them.
 
-### Numbers from Studio (from 3.3.0)
+### A/B test results
 
-Once a day the extension opens each recorded video's Analytics in a background tab and reads
-impressions, click-through rate, views, average view duration and watch hours (`POST
-/ext/stats`, kept in `video_stats`). The Projects list shows each project's views and CTR, and On
-YouTube shows each video's. A finished A/B test's result is read too (`ab_results`):
-**Library → A/B results** lists them, winner first, and **Copy as prompt notes** puts a summary
-on the clipboard for the Library prompts that write titles and thumbnails. Nothing changes a
-prompt by itself.
+Once a day the extension opens the Details page of each long video whose A/B test is running,
+in a background tab, and reads the test's result once Studio has one (`POST /ext/stats`, kept in
+`ab_results`). **Library → A/B results** lists them, winner first, and **Copy as prompt notes**
+puts a summary on the clipboard for the Library prompts that write titles and thumbnails. Nothing
+changes a prompt by itself. Studio's views, CTR and watch time are no longer read (removed in
+3.17.0).
 
 ### Links
 
@@ -296,8 +295,8 @@ The extension's background worker is the only part that talks to Slopify, and on
 (`chrome-extension://…` or `moz-extension://…`); Slopify stores that origin, and from then on
 the `/api/studio/ext/*` routes answer only requests with the token, and send CORS headers only
 for that origin — never `*`, never a web page's. They serve the first waiting item's pack and
-its thumbnails, the finishing-touch and stats queues, and take the extension's reports (filled,
-uploaded, task results, numbers), nothing else. The only other address the extension calls is
+its thumbnails, the finishing-touch and A/B queues, and take the extension's reports (filled,
+uploaded, task results, A/B results), nothing else. The only other address the extension calls is
 YouTube's public oEmbed.
 
 ### Selectors and the live page
@@ -352,7 +351,7 @@ Still unverified:
   all's wait for the file to finish (read from Studio's words, not an element), the Content
   list's Restrictions cell (`.tablecell-restrictions`) for the checks, Upload all's next
   upload, the captions upload, the end screen and related-video pickers, posting and pinning the
-  comment, the Analytics metric tabs and reading a finished A/B test. Their selectors come from a
+  comment and reading a finished A/B test. Their selectors come from a
   read-only look at Studio on 2026-10-02 (`studio-pages.ts`); none of them was saved then.
 
 - **Whether the upload dialog behaves like the Details editor**: the ids match, but the upload

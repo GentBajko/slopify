@@ -97,17 +97,6 @@ export type WorkerRequest =
     }
   // The toolbar popup: the projects ready to upload, and the one clicked.
   | { readonly type: "ready" }
-  // The popup's "Read Studio numbers now": the daily sweep, at once.
-  | { readonly type: "stats-now" }
-  // A channel's Analytics view exported: Studio's zip (base64) for Slopify; then the page says
-  // it is done, and the worker closes its tab.
-  | { readonly type: "report"; readonly channelId: string; readonly zippedData: string }
-  | {
-      readonly type: "export-done";
-      readonly channelId: string;
-      readonly ok: boolean;
-      readonly message: string;
-    }
   | { readonly type: "upload"; readonly projectId: string; readonly short: number | null }
   // A Studio tab opened to check the videos on YouTube ("#slopify-gone") asks which, then
   // reports the ones Studio says are deleted; the worker closes its tab.
@@ -148,20 +137,19 @@ export type WorkerRequest =
       readonly ok: boolean;
       readonly message: string;
     }
-  // A video's numbers read from its Analytics; `last` closes the tab and opens the next.
+  // A running A/B test's result read from the long video's Details page (none when Studio has
+  // none yet); the worker closes the tab and opens the next.
   | {
-      readonly type: "stats";
+      readonly type: "ab-result";
       readonly projectId: string;
       readonly short: number | null;
       readonly videoId: string;
-      readonly metrics: Readonly<Record<string, number>>;
       readonly abVariants?: readonly {
         readonly title: string | null;
         readonly thumbnail: number | null;
         readonly share: number | null;
         readonly winner: boolean;
       }[];
-      readonly last: boolean;
     };
 
 // A finished project not marked uploaded, as the popup lists it.
