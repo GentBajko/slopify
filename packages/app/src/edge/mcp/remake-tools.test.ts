@@ -1,7 +1,10 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import { routeCallDeps } from "./mcp.fake.js";
-import { remakeOutdated } from "./remake-tools.js";
+import { registerRemakeTools, remakeOutdated } from "./remake-tools.js";
 
 const preview = (projectId: string, key: string, low: number, high: number, unknown: number) => ({
   ok: true,
@@ -137,4 +140,24 @@ it("says why a project couldn't be checked and what to do, whatever the API answ
       "It couldn't be checked: its remake plan came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
     ],
   ]);
+});
+
+it("refuses a project id that would leave the project's routes before calling anything", async () => {
+  const called: string[] = [];
+  const deps = routeCallDeps(async (request) => {
+    called.push(new URL(request.url).pathname);
+    return new Response(null, { status: 404 });
+  });
+  const server = new McpServer({ name: "slopify", version: "test" });
+  registerRemakeTools(server, deps);
+  const [clientEnd, serverEnd] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverEnd);
+  const agent = new Client({ name: "test-agent", version: "1" });
+  await agent.connect(clientEnd);
+  const answer = await agent.callTool({
+    name: "preview_remake_outdated",
+    arguments: { projectIds: ["p1", ".."] },
+  });
+  expect(answer.isError).toBe(true);
+  expect(called).toEqual([]);
 });
