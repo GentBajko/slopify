@@ -20,10 +20,12 @@ export function pendingAdmitted(w: string): string {
 }
 
 // Whether stage `s` has work admitted (`admittedUnfinished`) in the stage's own state: the
-// fact `derive` reads (`readmitted`) to tell a stage taken up again after a cancel.
+// fact `derive` reads (`readmitted`) to tell a stage taken up again after a cancel. A finished
+// stage, most of every library, is answered by its own row before any step is looked up.
 export function admittedInItsState(s: string): string {
-  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
-      AND w.state=${s}.state AND ${admittedUnfinished("w")})`;
+  return `(${s}.state NOT IN ('done','provided','skipped')
+    AND EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
+      AND w.state=${s}.state AND ${admittedUnfinished("w")}))`;
 }
 
 // The same fact for a project's work, as `${kind}:${state}` of each step admitted, for a caller
