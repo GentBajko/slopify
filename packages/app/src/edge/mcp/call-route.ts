@@ -1,0 +1,124 @@
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import { fileArg, type RouteTool, routeOf } from "./route-tool.js";
+
+export interface RouteCallDeps {
+  // The API, called in-process as the agent (`http/actor.ts`).
+  readonly api: (request: Request) => Promise<Response>;
+}
+
+const problemSchema = z
+  .object({
+    title: z.string(),
+    detail: z.string().optional(),
+    reason: z.string().optional(),
+    currentRevisionId: z.string().nullable().optional(),
+    fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
+    errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+  })
+  .loose();
+const querySchema = z.record(z.string(), z.string());
+const bodySchema = z.record(z.string(), z.unknown());
+
+export function text(value: string): CallToolResult {
+  return { content: [{ type: "text", text: value }] };
+}
+
+export function refusal(value: string): CallToolResult {
+  return { isError: true, content: [{ type: "text", text: value }] };
+}
+
+export async function callRoute(
+  deps: RouteCallDeps,
+  tool: RouteTool,
+  args: Readonly<Record<string, unknown>>,
+): Promise<CallToolResult> {
+  if (tool.confirm !== undefined && args.confirmed !== true)
+    return refusal(
+      `${tool.confirm} The web page asks for a second press here: call ${tool.name} again with confirmed: true to go ahead.`,
+    );
+  const { method, path } = routeOf(tool);
+  const url = new URL(
+    path.replace(/:(\w+)/g, (_, name: string) => encodeURIComponent(String(args[name] ?? ""))),
+    "http://localhost",
+  );
+  const query = querySchema.safeParse(args.query);
+  if (query.success)
+    for (const [key, value] of Object.entries(query.data)) url.searchParams.set(key, value);
+  const response = await deps.api(new Request(url, { method, ...payloadOf(tool, args) }));
+  return answerOf(tool, response);
+}
+
+function payloadOf(
+  tool: RouteTool,
+  args: Readonly<Record<string, unknown>>,
+): { readonly body?: NonNullable<RequestInit["body"]>; readonly headers?: Record<string, string> } {
+  if (tool.upload !== undefined) {
+    const file = fileArg.parse(args.file);
+    const bytes = new Uint8Array(Buffer.from(file.base64, "base64"));
+    if (tool.upload === "raw")
+      return { body: bytes, headers: { "content-type": file.contentType } };
+    const form = new FormData();
+    form.append("file", new File([bytes], file.name, { type: file.contentType }));
+    return { body: form };
+  }
+  const body = bodySchema.safeParse(args.body);
+  return body.success
+    ? { body: JSON.stringify(body.data), headers: { "content-type": "application/json" } }
+    : {};
+}
+
+async function answerOf(tool: RouteTool, response: Response): Promise<CallToolResult> {
+  const type = response.headers.get("content-type") ?? "";
+  if (type.startsWith("application/problem+json")) return problemOf(tool, await response.json());
+  if (!response.ok)
+    return refusal(
+      `${tool.title} failed: Slopify answered HTTP ${String(response.status)} without saying why. Call ${tool.name} again; if it keeps failing, use Download diagnostics in Settings and report it.`,
+    );
+  if (response.status === 204 || response.body === null) return text("Done.");
+  if (type.startsWith("image/"))
+    return {
+      content: [
+        {
+          type: "image",
+          data: Buffer.from(await response.arrayBuffer()).toString("base64"),
+          mimeType: type.split(";")[0] ?? type,
+        },
+      ],
+    };
+  if (type.includes("json")) {
+    const value: unknown = await response.json();
+    return text(JSON.stringify(tool.shape === undefined ? value : tool.shape(value)));
+  }
+  if (type.startsWith("text/")) return text(await response.text());
+  return text(
+    `${tool.title} answered with a ${type === "" ? "binary" : type} file of ${response.headers.get("content-length") ?? "unknown"} bytes; read project files with get_project_file.`,
+  );
+}
+
+function problemOf(tool: RouteTool, raw: unknown): CallToolResult {
+  const problem = problemSchema.safeParse(raw);
+  if (!problem.success)
+    return refusal(
+      `${tool.title} was refused, and the refusal could not be read. Call ${tool.name} again; if it keeps happening, use Download diagnostics in Settings and report it.`,
+    );
+  const { title, detail, reason, currentRevisionId, fields, errors } = problem.data;
+  // The route's own sentence, except the schema refusal's "reload the page", which fixes
+  // nothing for an agent: it is told which arguments were wrong instead.
+  const lead =
+    errors === undefined
+      ? (detail ?? title)
+      : `${tool.name} was refused: its arguments don't match what Slopify accepts (${errors
+          .map((error) => `${error.path === "" ? "body" : error.path}: ${error.message}`)
+          .join("; ")}). Correct them and call ${tool.name} again.`;
+  const unsaid = (fields ?? []).filter((field) => !lead.includes(field.message));
+  const named =
+    unsaid.length === 0
+      ? ""
+      : ` ${unsaid.map((field) => `${field.field}: ${field.message}`).join(" ")}`;
+  const moved =
+    reason === "conflict" && typeof currentRevisionId === "string"
+      ? ` The project's current revision is ${currentRevisionId}: read it with get_project, then call ${tool.name} once more with baseRevisionId ${currentRevisionId} and a new idempotencyKey.`
+      : "";
+  return refusal(`${lead}${named}${moved}`);
+}

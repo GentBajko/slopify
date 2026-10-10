@@ -74,6 +74,11 @@ test "$(docker inspect --format '{{(index (index .NetworkSettings.Ports "6969/tc
 test -f "$install_dir/compose.yaml" && test -f "$install_dir/install.json" && test ! -e "$install_dir/update.json"
 test "$(stat -c %a "$install_dir/.env")" = 600
 curl --fail --silent "http://$(docker port "$smoke_name" 6969/tcp)/api/health" >/dev/null
+# An agent connects through the published port with no further setup.
+curl --fail --silent -X POST "http://$(docker port "$smoke_name" 6969/tcp)/mcp" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
+  | grep -q '"name":"slopify"'
 docker exec "$smoke_name" node -e '
   fetch("http://127.0.0.1:6969/api/providers").then(r => r.json()).then(body => {
     const cli = body.providers.filter(p => ["codex", "claude-code", "gemini", "codex-image"].includes(p.id));

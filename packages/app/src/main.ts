@@ -652,6 +652,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       ...(dockerState === undefined ? {} : { installationPending: () => updater.locked() }),
       db,
       paths,
+      host: config.host,
       hub,
       runner,
       updater,

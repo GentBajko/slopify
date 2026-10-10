@@ -24,6 +24,7 @@ import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
+import { agentConnectionKey } from "../agents/connection.js";
 import { fontMaxBytes } from "../fonts/model.js";
 import { readFontMetadata } from "../fonts/sfnt.js";
 import { lintEntry, lintPrompt } from "../library/lint.js";
@@ -484,10 +485,12 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     // So does the Studio extension's pairing: its token reads every project's upload pack.
     // Which "What's new" tour and which patch notes this install has closed are about this
     // install, not the data.
+    // When an agent last connected is this install's own fact.
     if (
       key === "tutorial.session" ||
       // Whether this install showed its first-run welcome belongs to this install.
       key === "first-run.done" ||
+      key === agentConnectionKey ||
       key === notificationUrlKey ||
       key === studioPairingKey ||
       // What waits to be filled in Studio belongs to this install's pairing.

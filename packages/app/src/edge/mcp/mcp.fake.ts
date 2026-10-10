@@ -1,0 +1,52 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Hono } from "hono";
+import type { RevisionDeps } from "../../slices/revisions/model.js";
+import { revisionFixture } from "../../slices/revisions/revision.fake.js";
+import { createHub } from "../events/hub.js";
+import { createApp } from "../http/app.js";
+
+// The whole app over a temporary database with one project ("Saved", p1), as an agent reaches it.
+export function mcpFixture(): {
+  readonly app: Hono;
+  readonly deps: RevisionDeps;
+  readonly projectId: string;
+  readonly ticks: readonly string[];
+  readonly close: () => void;
+} {
+  const h = revisionFixture();
+  const ticks: string[] = [];
+  const app = createApp({
+    ...h.deps,
+    hub: createHub(h.deps),
+    runner: {
+      tick: (projectId: string) => {
+        ticks.push(projectId);
+      },
+      settled: async () => undefined,
+      abortProject: async () => undefined,
+      abortAll: async () => undefined,
+    },
+    version: "test",
+    webDist: "/missing",
+    probe: async () => ({ ran: false, stdout: "" }),
+    flushSoon: () => undefined,
+    host: "127.0.0.1",
+  });
+  return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
+}
+
+export async function connectAgent(
+  app: Hono,
+  headers: Readonly<Record<string, string>> = {},
+): Promise<Client> {
+  const client = new Client({ name: "test-agent", version: "1" });
+  await client.connect(
+    // @ts-expect-error SDK 1.32.1 types sessionId as string | undefined, which Transport's optional sessionId rejects under exactOptionalPropertyTypes
+    new StreamableHTTPClientTransport(new URL("http://127.0.0.1:6969/mcp"), {
+      fetch: async (url, init) => app.request(String(url), init),
+      requestInit: { headers: { ...headers } },
+    }),
+  );
+  return client;
+}

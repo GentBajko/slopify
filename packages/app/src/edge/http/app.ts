@@ -12,6 +12,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
+import { mcpPath } from "../../slices/agents/model.js";
 import type { BackupService } from "../../slices/backups/service.js";
 import { isSampleProject } from "../../slices/onboarding/sample.js";
 import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
@@ -21,7 +22,9 @@ import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
+import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
+import { agentBindings } from "./actor.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { autostartRoutes } from "./autostart.js";
@@ -136,6 +139,8 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
+  // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
+  readonly host?: string | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
   readonly patchNotesDir?: string;
   // Where the bundled tutorials are (the wiki's <Page>.md and _Sidebar.md); the build's own
@@ -313,6 +318,22 @@ export function createApp(deps: AppDeps): Hono {
     // The API answers for its whole prefix, so an unknown endpoint is a problem+json 404
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);
+
+  // Agents reach the same API in-process, as the agent (`actor.ts`): every tool validates,
+  // refuses and answers exactly like the page's own request.
+  app.route(
+    mcpPath,
+    mcpRoutes({
+      db: deps.db,
+      paths: deps.paths,
+      ids: deps.ids,
+      clock: deps.clock,
+      log: deps.log,
+      version: deps.version,
+      host: deps.host,
+      api: async (request) => app.request(request, undefined, agentBindings),
+    }),
+  );
 
   // ceiling: the SPA directory is looked up once, at boot. The build that fills it runs
   // before the server starts; a server started before its own build needs a restart.
