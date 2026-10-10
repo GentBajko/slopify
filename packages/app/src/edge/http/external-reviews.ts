@@ -26,38 +26,56 @@ function notSaved(c: Context, why: string): Response {
   });
 }
 
+// What an agent that left out `body` sent: nothing, or nothing Hono reads as JSON (it reads a
+// body without a JSON content type as {}). It is told the tool and the body to send.
+function noVerdict(c: Context): Response {
+  return problem(c, {
+    status: 400,
+    title: titleOf(400),
+    detail:
+      'The verdict wasn\'t saved: no verdict came with it. The review is still waiting: call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]}; a pass may send reasons: [].',
+    extensions: { reason: "invalid-verdict" },
+  });
+}
+
+const sentNothing = (value: unknown): boolean =>
+  typeof value !== "object" ||
+  value === null ||
+  Array.isArray(value) ||
+  Object.keys(value).length === 0;
+
+// The requests whose body Hono read as JSON: a 400 thrown before that is its "Malformed JSON".
+const bodyRead = new WeakSet<Request>();
+
 // A verdict that isn't {verdict, reasons} in the reviewer's rules.
 function verdictRefused(
   result:
-    | { readonly success: true }
-    | { readonly success: false; readonly error: { readonly issues: readonly ValidationIssue[] } },
+    | { readonly success: true; readonly data: unknown }
+    | {
+        readonly success: false;
+        readonly data: unknown;
+        readonly error: { readonly issues: readonly ValidationIssue[] };
+      },
   c: Context,
 ): Response | undefined {
+  bodyRead.add(c.req.raw);
   if (result.success) return undefined;
+  if (sentNothing(result.data)) return noVerdict(c);
   return notSaved(c, verdictIssue(result.error.issues, "it is not {verdict, reasons}"));
 }
-
-// The JSON validator reads a body without a JSON content type as {}, and throws on JSON it
-// can't parse; both would otherwise be answered as something other than what went wrong.
-const notJson = ": the body wasn't JSON (send it as application/json)";
 
 // An external agent's verdict on a review waiting for it (`slices/reviews/external.ts`). The
 // rules are the reviewer model's own; the outcome is decided when the review step runs again.
 export function externalReviewRoutes(deps: AppDeps) {
   return new Hono()
     .onError((error, c) =>
-      error instanceof HTTPException && error.status === 400
-        ? notSaved(c, notJson)
+      error instanceof HTTPException && error.status === 400 && !bodyRead.has(c.req.raw)
+        ? notSaved(c, ": the body wasn't JSON")
         : problemFromError(c, error, deps),
     )
     .post(
       "/:id/external-reviews/:reviewId/verdict",
       zValidator("param", reviewParam, onInvalid),
-      async (c, next) => {
-        const type = c.req.header("content-type") ?? "";
-        if (!/^application\/([a-z.-]+\+)?json\b/i.test(type)) return notSaved(c, notJson);
-        await next();
-      },
       zValidator("json", verdictAnswerSchema, verdictRefused),
       async (c) => {
         const { id: projectId, reviewId } = c.req.valid("param");
