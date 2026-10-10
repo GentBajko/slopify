@@ -357,3 +357,16 @@ it("lists the checkpoints holding a run once reached, and whom each waits for", 
     { checkpointId: "video-gate", stage: "video", waitsFor: "day", ...gate },
   ]);
 });
+
+// Every list, calendar and needs_attention read asks, for each idle project, whether an
+// admission has a failed sibling: by its index, not a scan of every step ever made.
+it("finds an admission's steps by their index", () => {
+  const f = fixture();
+  const plan = f.db
+    .prepare(
+      "EXPLAIN QUERY PLAN SELECT 1 FROM revision_work f WHERE f.admission_id=? AND f.state IN ('failed','canceled')",
+    )
+    .all("a1")
+    .map((row) => String(row.detail));
+  expect(plan.join("\n")).toContain("USING INDEX revision_work_admission");
+});

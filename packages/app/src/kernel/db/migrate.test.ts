@@ -154,6 +154,7 @@ describe("migrate", () => {
       "revision_pieces_publication",
       "revision_pieces_revision",
       "revision_pieces_selected",
+      "revision_work_admission",
       "revision_work_dispatch",
       "revision_work_retry",
       "revision_work_revision_identity",
@@ -222,6 +223,7 @@ describe("migrate", () => {
       { version: 55, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 56, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 57, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 58, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -231,16 +233,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 50 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 51 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(58, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(59, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 58 is newer than this app knows (57)",
+      "database schema 59 is newer than this app knows (58)",
     );
   });
 
