@@ -260,6 +260,42 @@ describe("home", () => {
     expect(within(needs).getByRole("button", { name: "Keep as is" })).not.toBeNull();
   });
 
+  it("keeps a stopped run as is from Home, and says why it didn't continue", async () => {
+    const user = userEvent.setup();
+    const keep = vi.fn(jsonAnswer({ setAside: true }));
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-stop", "Ramesses", "pending", { progress: 0.5, stopped: true })],
+        }),
+        "POST /api/projects/p-stop/revisions/prepare": jsonAnswer({
+          ok: true,
+          view: revisionView(),
+          created: false,
+        }),
+        "POST /api/projects/p-stop/resume": problemAnswer(
+          "This project changed since the page loaded. Reload the page to see the latest, then use Continue the run again.",
+          409,
+        ),
+        "PUT /api/projects/p-stop/set-aside": keep,
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    await user.click(await within(needs).findByRole("button", { name: "Continue the run" }));
+    expect(
+      await within(needs).findByText(
+        "It didn't continue: This project changed since the page loaded. Reload the page to see the latest, then use Continue the run again.",
+      ),
+    ).not.toBeNull();
+    await user.click(within(needs).getByRole("button", { name: "Keep as is" }));
+    await waitFor(() => expect(keep).toHaveBeenCalledOnce());
+    expect(
+      JSON.parse((await (keep.mock.calls[0]?.[0] as Request | undefined)?.text()) ?? "{}"),
+    ).toEqual({ setAside: true });
+    expect(await screen.findByText(/Kept as is: Ramesses\. It is off Needs you/)).not.toBeNull();
+  });
+
   // Only a checkpoint the run has reached holds it (`holding`); one further on is not offered.
   it("offers the checkpoint that holds the run, not one the run hasn't reached", async () => {
     const gate = (checkpointId: string, stage: "audio" | "video") => ({
@@ -290,6 +326,41 @@ describe("home", () => {
     expect(
       within(needs).queryByRole("button", { name: "Approve the article and record" }),
     ).toBeNull();
+  });
+
+  // A schedule's own hold waits for its day, not for the person: Home offers no approval.
+  it("offers no approval for a hold that waits for its day", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-wait", "Cleopatra", "pending", {
+              progress: 0.6,
+              holding: [{ ...videoHold, waitsFor: "day" }],
+            }),
+          ],
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByRole("link", { name: "Open to continue" })).not.toBeNull();
+    expect(within(needs).queryByRole("button", { name: "Approve and render" })).toBeNull();
+  });
+
+  it("says a held review that didn't load, and where to review it", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects/p-wait/checkpoints": problemAnswer("Slopify isn't responding.", 503),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(
+      await within(needs).findByText(
+        "Its review didn't load: Slopify isn't responding. Open the project to review it there.",
+      ),
+    ).not.toBeNull();
   });
 
   it("approves a held review from Home", async () => {
