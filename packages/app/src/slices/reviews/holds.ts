@@ -48,20 +48,20 @@ export function projectHolds(
   } = {},
 ): ProjectHolds {
   const { projectId } = scope;
-  const one = projectId === undefined ? "" : " AND c.project_id=?";
+  const onlyOne = projectId === undefined ? "" : " AND c.project_id=?";
   const gateSql = `SELECT c.project_id, c.checkpoint_id, c.stage, (c.stage='video' AND ${heldForItsDay("c")}) AS own
        FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
-       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${one}`;
+       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${onlyOne}`;
   const gates = (
     projectId === undefined ? db.prepare(gateSql).all() : db.prepare(gateSql).all(projectId)
   ).map((row) => gateRow.parse(row));
   const standings = scope.standings ?? stageStandingsByProject(db, projectId);
   // A checkpoint holds the run once the stages its step needs are made; before that the run
   // is held by whatever those stages wait on.
-  const reached = (projectId: string, stage: StageKind): boolean =>
+  const reached = (project: string, stage: StageKind): boolean =>
     stageDeps[stage].every((dependency) => {
-      const standing = standings.get(projectId)?.find((one) => one.kind === dependency);
+      const standing = standings.get(project)?.find((made) => made.kind === dependency);
       return standing === undefined || satisfied(standing.state);
     });
   const theirs = new Set<string>();
