@@ -108,7 +108,10 @@ export function HomeRoute(): ReactElement {
     current.includes(templateChannel.get(run.templateId)),
   );
   const decisions: Decision[] = [
-    ...mine.filter(waitsForPerson).map((project) => ({ kind: "waiting" as const, project })),
+    ...mine.filter(waitsForPerson).map((project) => ({
+      kind: project.stopped === true ? ("stopped" as const) : ("waiting" as const),
+      project,
+    })),
     ...mine
       .filter((one) => one.status === "paused")
       .map((project) => ({ kind: "paused" as const, project })),

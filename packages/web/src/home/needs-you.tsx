@@ -1,6 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { heldWord } from "@app/slices/admission/state-words.js";
+import { heldWord, stoppedWord } from "@app/slices/admission/state-words.js";
 import { shortReason } from "@app/slices/notifications/rules.js";
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,13 +25,14 @@ import {
 } from "@/project/checkpoint-api";
 import { fixOf } from "@/project/fix-it";
 import { stageNames } from "@/project/summary";
+import { useProjectActions } from "@/project/use-actions";
 import { keys } from "@/queries";
 import { setAside } from "./api.js";
 import { ProjectThumb } from "./project-thumb.js";
 import { WorkItem } from "./work-item.js";
 
-// Home's "Needs you": runs holding for a review, schedules holding suggested topics, and runs
-// that failed with the one thing that fixes them. Only the first item's action is primary;
+// Home's "Needs you": runs holding for a review or stopped before they finished, schedules
+// holding suggested topics, and runs that failed with the one thing that fixes them. Only the first item's action is primary;
 // the accent is spent once in the area.
 
 export function needsYouCount(
@@ -240,6 +241,51 @@ export function HeldTopicsItem({
         >
           Review topics
         </ButtonLink>
+      }
+    />
+  );
+}
+
+// A run a restart stopped before it finished (`stopped`, `reviews/holds.ts`): nothing moves it
+// on but Continue the run, offered here as on its page.
+export function StoppedItem({
+  project,
+  primary,
+}: {
+  readonly project: ProjectListing;
+  readonly primary: boolean;
+}): ReactElement {
+  const actions = useProjectActions(project.id);
+  const keep = useKeepAsIs(project);
+  return (
+    <WorkItem
+      lead={<ProjectThumb projectId={project.id} />}
+      status={<Status tone="waiting">{stoppedWord}</Status>}
+      title={projectLink(project)}
+      detail={
+        actions.refusal === undefined
+          ? "The run stopped before it finished. Continuing makes only what is missing; everything made so far is kept."
+          : `It didn't continue: ${actions.refusal.message}`
+      }
+      action={
+        <>
+          <Button
+            variant={primary ? "primary" : "secondary"}
+            disabled={actions.pending}
+            disabledReason="Continuing…"
+            onClick={() => actions.run({ kind: "resume" })}
+          >
+            {actions.pending ? "Continuing…" : "Continue the run"}
+          </Button>
+          <Button
+            variant="quiet"
+            disabled={keep.isPending}
+            disabledReason="Saving…"
+            onClick={() => keep.mutate(true)}
+          >
+            Keep as is
+          </Button>
+        </>
       }
     />
   );

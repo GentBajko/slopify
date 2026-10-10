@@ -5,9 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startOfWeek } from "@/home/api";
 import { spentLabel } from "@/home/week";
+import { revisionView } from "@/project/revision-fixture";
 import { type Answer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { HomeRoute } from "./home.js";
-import { body, output, stage } from "./project-fixtures.js";
+import { body, output, recoveryAccepted, stage } from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -216,6 +217,32 @@ describe("home", () => {
     const running = screen.getByRole("region", { name: "Running now" });
     expect(within(running).getByText("Hatshepsut")).not.toBeNull();
     expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
+  });
+
+  // A restart stopped it: Home says so and continues it, as its page would.
+  it("lists a stopped run under Needs you as Stopped and continues it from Home", async () => {
+    const user = userEvent.setup();
+    const resume = vi.fn(() => Response.json(recoveryAccepted));
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-stop", "Ramesses", "pending", { progress: 0.5, stopped: true })],
+        }),
+        "POST /api/projects/p-stop/revisions/prepare": jsonAnswer({
+          ok: true,
+          view: revisionView(),
+          created: false,
+        }),
+        "POST /api/projects/p-stop/resume": resume,
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText("Stopped")).not.toBeNull();
+    expect(within(needs).queryByText("Waiting for your review")).toBeNull();
+    await user.click(within(needs).getByRole("button", { name: "Continue the run" }));
+    await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
+    expect(within(needs).getByRole("button", { name: "Keep as is" })).not.toBeNull();
   });
 
   it("approves a held review from Home", async () => {

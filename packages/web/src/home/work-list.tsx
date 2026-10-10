@@ -6,16 +6,19 @@ import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { RowCheck, SelectionBar, useSelection } from "@/components/selection";
 import { useBulkMarkUploaded } from "./bulk-uploaded.js";
-import { FailedItem, HeldTopicsItem, PausedItem, WaitingItem } from "./needs-you.js";
+import { FailedItem, HeldTopicsItem, PausedItem, StoppedItem, WaitingItem } from "./needs-you.js";
 import { ReadyItem } from "./ready.js";
 
-// Home's work list: the decisions waiting for the person first (held reviews, paused runs,
-// suggested topics, failures), then the finished videos ready to upload. Only the first row's
+// Home's work list: the decisions waiting for the person first (held reviews, stopped and
+// paused runs, suggested topics, failures), then the finished videos ready to upload. Only the first row's
 // action is primary. With two or more videos ready, they can be ticked and marked uploaded
 // together, with Undo.
 
 export type Decision =
-  | { readonly kind: "waiting" | "paused" | "failed"; readonly project: ProjectListing }
+  | {
+      readonly kind: "waiting" | "stopped" | "paused" | "failed";
+      readonly project: ProjectListing;
+    }
   | { readonly kind: "held"; readonly schedule: ScheduleSummary };
 
 // Enough to see what matters without the page turning into the projects list.
@@ -82,6 +85,8 @@ export function WorkList({
               />
             ) : item.kind === "waiting" ? (
               <WaitingItem key={item.project.id} project={item.project} primary={index === 0} />
+            ) : item.kind === "stopped" ? (
+              <StoppedItem key={item.project.id} project={item.project} primary={index === 0} />
             ) : item.kind === "paused" ? (
               <PausedItem key={item.project.id} project={item.project} primary={index === 0} />
             ) : (
