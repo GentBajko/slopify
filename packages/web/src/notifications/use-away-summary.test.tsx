@@ -42,3 +42,19 @@ it("says nothing after a short glance away", async () => {
   await vi.waitFor(() => expect(listed).toHaveBeenCalled());
   expect(screen.queryByText(/While you were away/)).toBeNull();
 });
+
+// Kept by the version before, the snapshot doesn't say who waited: it is replaced, untold.
+it("says nothing the first time back after the update, and keeps a new snapshot", async () => {
+  window.localStorage.setItem(
+    "slopify.away.snapshot",
+    JSON.stringify({ at: Date.now() - 60 * 60_000, states: { a: "running" } }),
+  );
+  const listed = vi.fn(jsonAnswer({ projects: [{ id: "a", status: "pending", progress: 0.5 }] }));
+  renderRouted(<Subject />, testDeps({ "GET /api/projects": listed }));
+  await vi.waitFor(() =>
+    expect(JSON.parse(window.localStorage.getItem("slopify.away.snapshot") ?? "{}")).toMatchObject({
+      waiting: ["a"],
+    }),
+  );
+  expect(screen.queryByText(/While you were away/)).toBeNull();
+});

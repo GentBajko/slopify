@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { awayMessage, awaySummary, snapshotOf } from "./away.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { awayMessage, awaySummary, readSnapshot, snapshotOf, writeSnapshot } from "./away.js";
 
 describe("awaySummary", () => {
   it("counts runs that finished, failed or stopped for you while away", () => {
@@ -77,4 +77,35 @@ it("keeps in the snapshot which runs waited for the person", () => {
       { id: "c", status: "running", progress: 0.5 },
     ]),
   ).toEqual({ at: 5, states: { a: "pending", b: "pending", c: "running" }, waiting: ["a"] });
+});
+
+describe("the stored snapshot", () => {
+  // This runner has no localStorage, so the tests bring their own.
+  const stored = new Map<string, string>();
+  beforeEach(() => {
+    stored.clear();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads back what it wrote, so a run still waiting is not news on return", () => {
+    const now = [
+      { id: "a", status: "pending", progress: 0.5 },
+      { id: "b", status: "running", progress: 0.2 },
+    ] as const;
+    writeSnapshot(snapshotOf(5, now));
+    const before = readSnapshot();
+    expect(before).toEqual(snapshotOf(5, now));
+    if (before === undefined) throw new Error("a snapshot expected");
+    expect(awaySummary(before, now)).toEqual({ finished: 0, failed: 0, waiting: 0 });
+  });
+
+  // Kept before it said who waited, it can't tell news from old: no summary this once.
+  it("gives no summary from a snapshot kept before it said who waited", () => {
+    stored.set("slopify.away.snapshot", JSON.stringify({ at: 5, states: { a: "pending" } }));
+    expect(readSnapshot()).toBe(undefined);
+  });
 });

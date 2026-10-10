@@ -73,6 +73,8 @@ export function awayMessage(summary: AwaySummary): string | undefined {
   return `While you were away: ${parts.join(", ")}.`;
 }
 
+// A snapshot kept before it said who waited reads as none: every run waiting then would be told
+// as news.
 export function readSnapshot(): AwaySnapshot | undefined {
   try {
     const stored: unknown = JSON.parse(window.localStorage.getItem(key) ?? "null");
@@ -83,7 +85,9 @@ export function readSnapshot(): AwaySnapshot | undefined {
       typeof stored.at === "number" &&
       "states" in stored &&
       typeof stored.states === "object" &&
-      stored.states !== null
+      stored.states !== null &&
+      "waiting" in stored &&
+      Array.isArray(stored.waiting)
     )
       return {
         at: stored.at,
@@ -93,11 +97,7 @@ export function readSnapshot(): AwaySnapshot | undefined {
             return known === undefined ? [] : [[id, known]];
           }),
         ),
-        // A snapshot from before the field was kept says nobody waited.
-        waiting:
-          "waiting" in stored && Array.isArray(stored.waiting)
-            ? stored.waiting.filter((id): id is string => typeof id === "string")
-            : [],
+        waiting: stored.waiting.filter((id): id is string => typeof id === "string"),
       };
   } catch {
     // Unreadable storage or a damaged value: no summary this time.
