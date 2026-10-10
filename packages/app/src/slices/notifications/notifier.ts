@@ -43,6 +43,8 @@ export interface RunNotifier {
   readonly close: () => void;
 }
 
+const ends: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
+
 export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   // ceiling: one entry per project seen since boot, a few dozen bytes each.
   const states = new Map<string, ProjectState>();
@@ -132,9 +134,10 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
       if (closed) return;
       try {
         if (event.type === "stage.state") {
-          if (event.state === "failed" && event.failureReason !== undefined)
-            reasons.set(event.projectId, event.failureReason);
-          else if (event.state === "running") reasons.delete(event.projectId);
+          // Kept until the run ends: the steps that go on after it are no reason to forget it.
+          if (event.state !== "failed") return;
+          if (event.failureReason === undefined) reasons.delete(event.projectId);
+          else reasons.set(event.projectId, event.failureReason);
           return;
         }
         if (event.type === "review.flagged") {
@@ -151,6 +154,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         states.set(event.projectId, event.state);
         const kind = noticeOf(previous, event.state);
         if (kind !== undefined) notify(event.projectId, kind);
+        if (ends.has(event.state)) reasons.delete(event.projectId);
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,

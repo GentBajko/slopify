@@ -61,6 +61,34 @@ const state = (value: ProjectState, projectId = "p1"): ProjectEvent => ({
   state: value,
 });
 
+const stage = (
+  kind: "audio" | "images" | "thumbnail" | "video",
+  value: "running" | "failed",
+  failureReason?: string,
+): ProjectEvent => ({
+  type: "stage.state",
+  projectId: "p1",
+  stage: kind,
+  state: value,
+  ...(failureReason === undefined ? {} : { failureReason }),
+});
+
+const firstLines = (posted: readonly Posted[]): string[] =>
+  posted.map((one) => one.body.split("\n")[0] ?? "");
+
+// A step going on after another failed doesn't take the failure's reason off the run's notice.
+it("keeps a failed step's reason while the rest of the run goes on", async () => {
+  const { notifier, posted } = harness();
+  notifier.observe(state("running"));
+  notifier.observe(stage("thumbnail", "failed", "The cover was refused."));
+  notifier.observe(stage("video", "running"));
+  notifier.observe(state("partial"));
+  await notifier.settled();
+  expect(firstLines(posted)).toEqual([
+    "Video ready with problems: Black holes — The cover was refused.",
+  ]);
+});
+
 describe("createRunNotifier", () => {
   it("POSTs once when a running project finishes", async () => {
     const { notifier, posted } = harness();
