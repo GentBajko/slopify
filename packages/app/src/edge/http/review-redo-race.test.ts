@@ -1,34 +1,42 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it } from "vitest";
+import { deferred } from "../../../test/revision-rebuild.fake.js";
+import { withProjectControl } from "../../slices/control/lock.js";
+import { paidServiceFixture } from "../../slices/rebuild/service.fake.js";
 import { saveVerdict, verdictById } from "../../slices/reviews/repo.js";
-import { mcpFixture } from "../mcp/mcp.fake.js";
-
-// Redo waits on the rebuild while the item is made again; each test holds that wait open. The
-// route only reads `ok` and a refusal's reason, so the answers carry no more than that.
-const recovery = vi.hoisted(() => ({
-  next: (): Promise<unknown> => Promise.reject(new Error("no recovery planned")),
-}));
-vi.mock("../../slices/rebuild/recovery.js", () => ({
-  recoverProject: () => recovery.next(),
-}));
+import { currentRevisionId } from "../../slices/revisions/repo.js";
+import { createHub } from "../events/hub.js";
+import { createApp } from "./app.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
   for (const fixture of open.splice(0)) fixture.close();
 });
 
-function flagged() {
-  const h = mcpFixture({ rebuild: true });
+// A project whose image "one" failed its review, served by the real rebuild.
+async function flagged() {
+  const h = await paidServiceFixture();
   open.push(h);
+  const app = createApp({
+    ...h.deps,
+    hub: createHub(h.deps),
+    version: "test",
+    webDist: "/missing",
+    probe: async () => ({ ran: false, stdout: "" }),
+    flushSoon: () => undefined,
+    host: "127.0.0.1",
+    rebuild: h.deps,
+  });
+  const head = currentRevisionId(h.deps.db, h.projectId) ?? "";
   saveVerdict(h.deps.db, {
     id: "v1",
     projectId: h.projectId,
-    revisionId: "r0",
-    itemKey: "article:body",
-    stage: "article",
+    revisionId: head,
+    itemKey: "image:one",
+    stage: "images",
     itemFingerprint: "f",
     reviewFingerprint: "g",
     passed: false,
-    reasons: ["A section repeats another."],
+    reasons: ["The hand has six fingers."],
     outcome: "flagged",
     attempt: 1,
     action: null,
@@ -39,56 +47,50 @@ function flagged() {
     actionBy: null,
     createdAt: "2026-09-10T00:00:00.000Z",
   });
-  return h;
+  const request = (action: "redo" | "overrule", baseRevisionId = head) =>
+    app.request(`/api/projects/${h.projectId}/reviews/v1/${action}`, {
+      method: "POST",
+      ...(action === "redo"
+        ? {
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              baseRevisionId,
+              idempotencyKey: "4f1c2b8e-0d7a-4c3e-9b1a-2e6f5d7c8a90",
+            }),
+          }
+        : {}),
+    });
+  const action = () => verdictById(h.deps.db, h.projectId, "v1")?.action;
+  return { h, request, action };
 }
 
-function held(): { readonly resolve: (result: unknown) => void } {
-  let resolve = (_result: unknown): void => undefined;
-  const promise = new Promise<unknown>((accept) => {
-    resolve = accept;
-  });
-  recovery.next = () => promise;
-  return { resolve };
+// Redo waits on the project's control lock before it makes anything; holding that lock keeps a
+// Redo started but undecided for as long as a test needs.
+function holdProject(h: Awaited<ReturnType<typeof paidServiceFixture>>): () => void {
+  const gate = deferred<void>();
+  void withProjectControl(h.deps.db, h.projectId, () => gate.promise);
+  return () => gate.resolve();
 }
-
-const redoBody = JSON.stringify({
-  baseRevisionId: "r0",
-  idempotencyKey: "4f1c2b8e-0d7a-4c3e-9b1a-2e6f5d7c8a90",
-});
 
 it("refuses Overrule while a Redo is being started, and the Redo is recorded", async () => {
-  const h = flagged();
-  const rebuild = held();
-  const redo = h.app.request(`/api/projects/${h.projectId}/reviews/v1/redo`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: redoBody,
-  });
+  const { h, request, action } = await flagged();
+  const release = holdProject(h);
+  const redo = request("redo");
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const overrule = await h.app.request(`/api/projects/${h.projectId}/reviews/v1/overrule`, {
-    method: "POST",
-  });
-  expect(overrule.status).toBe(409);
-  expect(verdictById(h.deps.db, h.projectId, "v1")?.action).toBeNull();
-  rebuild.resolve({ ok: true, value: { warnings: [] } });
+  expect((await request("overrule")).status).toBe(409);
+  expect(action()).toBeNull();
+  release();
   expect((await redo).status).toBe(202);
-  expect(verdictById(h.deps.db, h.projectId, "v1")?.action).toBe("redone");
+  expect(action()).toBe("redone");
 });
 
 it("lets Overrule go ahead once a Redo was refused", async () => {
-  const h = flagged();
-  const rebuild = held();
-  const redo = h.app.request(`/api/projects/${h.projectId}/reviews/v1/redo`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: redoBody,
-  });
+  const { h, request, action } = await flagged();
+  const release = holdProject(h);
+  const redo = request("redo", "an-older-version");
   await new Promise((resolve) => setTimeout(resolve, 0));
-  rebuild.resolve({ ok: false, reason: "running" });
+  release();
   expect((await redo).status).toBe(409);
-  const overrule = await h.app.request(`/api/projects/${h.projectId}/reviews/v1/overrule`, {
-    method: "POST",
-  });
-  expect(overrule.status).toBe(200);
-  expect(verdictById(h.deps.db, h.projectId, "v1")?.action).toBe("overruled");
+  expect((await request("overrule")).status).toBe(200);
+  expect(action()).toBe("overruled");
 });
