@@ -83,6 +83,56 @@ it("holds all three gates, releases Images independently, and refuses removal af
   }
 }, 60000);
 
+// Saving before the run leaves never-admitted placeholder rows for the Video stage next to the
+// admitted ones; a gate added mid-run binds to the oldest. It must still hold and release.
+it("holds and releases a Before Video checkpoint added while the run makes its images", async () => {
+  const images = fakeImage();
+  const entered = deferred<void>();
+  const finish = deferred<void>();
+  const h = await checkpointFixture({
+    tts: () => fakeTts({ bytesFor: () => [tone()] }),
+    image: () => ({
+      ...images,
+      generate: async (request) => {
+        entered.resolve();
+        await finish.promise;
+        return images.generate(request);
+      },
+    }),
+  });
+  const exported = () =>
+    current(h.deps, h.projectId).outputs.some(
+      (row) => row.output.role === "audio_export" && row.available,
+    );
+  try {
+    const base = current(h.deps, h.projectId);
+    await save(h.deps, h.projectId, {
+      config: {
+        ...base.revision.config,
+        sources: { ...base.revision.config.sources, audio: "generate" },
+        audio: { provider: "openai-tts", model: "tts", voice: "first" },
+        chunking: { mode: "paragraph" },
+      },
+      content: base.revision.content,
+    });
+    await h.admit(Object.keys(current(h.deps, h.projectId).revision.fingerprints));
+    h.runner.tick(h.projectId);
+    await entered.promise;
+    expect((await h.change(["video"])).status).toBe(200);
+    finish.resolve();
+    await h.runner.settled();
+    expect(exported()).toBe(false);
+    const gate = (await h.status()).checkpoints[0];
+    if (!gate) throw new Error("Missing Video checkpoint");
+    expect((await h.approve(gate)).status).toBe(200);
+    await h.runner.settled();
+    expect(exported()).toBe(true);
+  } finally {
+    finish.resolve();
+    await h.dispose();
+  }
+}, 60000);
+
 it("runs unchanged zero-gate projects and saves gate changes without provider submissions", async () => {
   const images = fakeImage();
   const h = await checkpointFixture({ image: () => images });
