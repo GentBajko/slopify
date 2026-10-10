@@ -160,7 +160,8 @@ function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): voi
 
 // The first verdict saved wins: one guarded UPDATE, so two agents answering at once cannot
 // both succeed. A review whose item was just replaced is superseded here rather than at the
-// next settle, and a project in the Trash takes no verdict until it is restored.
+// next settle, a project in the Trash takes no verdict until it is restored, and a canceled
+// run's review takes none at all.
 export function answerExternalReview(
   db: DatabaseSync,
   input: {
@@ -181,7 +182,7 @@ export function answerExternalReview(
     ).run(input.projectId, input.id);
     const answered = db
       .prepare(
-        `UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting' AND ${wantedBy("external_reviews")}`,
+        `UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting' AND ${wantedBy("external_reviews")} AND ${liveWork("external_reviews")}`,
       )
       .run(JSON.stringify(input.verdict), input.by, input.at, input.projectId, input.id);
     if (Number(answered.changes) === 1) releaseParkedWork(db, input.projectId, input.id);
@@ -190,7 +191,9 @@ export function answerExternalReview(
   const row = externalReviewById(db, input.projectId, input.id);
   if (row === undefined) return { ok: false, reason: "not-found" };
   if (Number(changed.changes) === 1) return { ok: true, value: row };
-  return { ok: false, reason: row.state === "superseded" ? "superseded" : "answered", value: row };
+  const reason =
+    row.state === "superseded" ? "superseded" : row.state === "waiting" ? "canceled" : "answered";
+  return { ok: false, reason, value: row };
 }
 
 // Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.

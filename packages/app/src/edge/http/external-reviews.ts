@@ -110,7 +110,9 @@ export function externalReviewRoutes(deps: AppDeps) {
                 detail:
                   result.reason === "superseded"
                     ? "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it."
-                    : `This review was already answered (${result.value.state === "auto-passed" ? "it passed at its 2-hour deadline" : "another verdict was saved first"}), so this verdict wasn't saved. Call needs_attention to see what is waiting now.`,
+                    : result.reason === "canceled"
+                      ? "This review's run was canceled, so the verdict wasn't saved: a canceled run's reviews never pass. Nothing is waiting on it; call needs_attention to see what is waiting now."
+                      : `This review was already answered (${result.value.state === "auto-passed" ? "it passed at its 2-hour deadline" : "another verdict was saved first"}), so this verdict wasn't saved. Call needs_attention to see what is waiting now.`,
                 extensions: { reason: result.reason },
               });
         try {

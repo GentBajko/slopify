@@ -244,3 +244,14 @@ it("takes no verdict for a project in the Trash and says how to get it back", as
   expect(trashed.said).toContain("Settings → Backup & storage → Trash");
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
+
+// A canceled run's reviews never pass: a verdict would let its step go ahead.
+it("takes no verdict for a canceled run's review and says what to do instead", async () => {
+  const h = waiting();
+  h.deps.db.prepare("UPDATE revision_work SET state='canceled' WHERE id='w0'").run();
+  const canceled = await verdictOn(h, { verdict: "pass", reasons: [] });
+  expect(canceled.refused).toBe(true);
+  expect(canceled.said).toContain("This review's run was canceled, so the verdict wasn't saved");
+  expect(canceled.said).toContain("needs_attention");
+  expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
+});

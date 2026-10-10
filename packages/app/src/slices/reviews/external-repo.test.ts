@@ -152,3 +152,20 @@ it("still passes every due review when one of them can't be read back", () => {
   ).toEqual(["er1", "er2"]);
   expect(externalReviewById(f.h.deps.db, "p1", "er1")?.state).toBe("auto-passed");
 });
+
+it("refuses a verdict on a canceled run's review, which never passes", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "canceled" });
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});
