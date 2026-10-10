@@ -8,6 +8,7 @@ describe("awaySummary", () => {
         at: 0,
         states: { a: "running", b: "running", c: "pending", d: "running", e: "done" },
         waiting: {},
+        stepFailed: [],
       },
       [
         { id: "a", status: "done", progress: 1 },
@@ -23,7 +24,7 @@ describe("awaySummary", () => {
         { id: "g", status: "pending", progress: 0 },
       ],
     );
-    expect(summary).toEqual({ finished: 3, failed: 1, waiting: 1 });
+    expect(summary).toEqual({ finished: 3, failed: 1, waiting: 1, stepFailed: 0 });
     expect(awayMessage(summary)).toBe(
       "While you were away: 3 runs finished, 1 run failed, 1 run waits for you.",
     );
@@ -32,7 +33,7 @@ describe("awaySummary", () => {
   it("says nothing when nothing changed", () => {
     expect(
       awayMessage(
-        awaySummary({ at: 0, states: { a: "done" }, waiting: {} }, [
+        awaySummary({ at: 0, states: { a: "done" }, waiting: {}, stepFailed: [] }, [
           { id: "a", status: "done", progress: 1 },
         ]),
       ),
@@ -40,18 +41,37 @@ describe("awaySummary", () => {
   });
 });
 
-// A step failed beside one held for the person: the run waits for them, and is a failure only
-// once nothing else can go on.
+// A step failed beside one held for the person: the run waits for them, its step failed (the
+// person's decision, 2026-10-10: told right away), and it is a failure only once nothing else
+// can go on.
 it("counts a run whose step failed beside the person's wait as waiting, then as failed", () => {
-  const before = { at: 0, states: { a: "running" as const }, waiting: {} };
-  expect(
-    awaySummary(before, [{ id: "a", status: "pending", progress: 0, stepFailed: true }]),
-  ).toEqual({ finished: 0, failed: 0, waiting: 1 });
+  const before = { at: 0, states: { a: "running" as const }, waiting: {}, stepFailed: [] };
+  const failedBeside = { id: "a", status: "pending" as const, progress: 0, stepFailed: true };
+  const summary = awaySummary(before, [failedBeside]);
+  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 1, stepFailed: 1 });
+  expect(awayMessage(summary)).toBe(
+    "While you were away: 1 run had a step fail, 1 run waits for you.",
+  );
   expect(awaySummary(before, [{ id: "a", status: "failed", progress: 0 }])).toEqual({
     finished: 0,
     failed: 1,
     waiting: 0,
+    stepFailed: 0,
   });
+  // Already failed when the page last looked: not news.
+  expect(awaySummary(snapshotOf(0, [failedBeside]), [failedBeside])).toMatchObject({
+    stepFailed: 0,
+  });
+});
+
+// Beside an agent's review or a prepared run's day, nobody is waited for, but the step failed.
+it("counts a step failed beside a wait for the agent or the run's day", () => {
+  const before = snapshotOf(0, [{ id: "a", status: "running", progress: 0.2 }]);
+  expect(
+    awaySummary(before, [
+      { id: "a", status: "pending", progress: 0.2, stepFailed: true, waitingForAgent: true },
+    ]),
+  ).toEqual({ finished: 0, failed: 0, waiting: 0, stepFailed: 1 });
 });
 
 // The same rule as Home's Needs you (`waitsForPerson`): a run waiting for the agent or prepared
@@ -69,6 +89,7 @@ it("counts as waiting for you only the runs that newly wait for the person", () 
         f: "running",
       },
       waiting: { d: "held" },
+      stepFailed: [],
     },
     [
       { id: "a", status: "pending", progress: 0.5, waitingForAgent: true },
@@ -80,7 +101,7 @@ it("counts as waiting for you only the runs that newly wait for the person", () 
       { id: "f", status: "pending", progress: 0.5, waitingForAgent: true },
     ],
   );
-  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 2 });
+  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 2, stepFailed: 0 });
 });
 
 it("keeps in the snapshot which runs waited for the person", () => {
@@ -94,6 +115,7 @@ it("keeps in the snapshot which runs waited for the person", () => {
     at: 5,
     states: { a: "pending", b: "pending", c: "running" },
     waiting: { a: "held" },
+    stepFailed: [],
   });
 });
 
@@ -177,7 +199,12 @@ it("counts a run paused or stopped again since the page looked", () => {
   expect(awaySummary(restarted, [stopped(0.4)])).toMatchObject({ waiting: 0 });
   expect(awaySummary(restarted, [stopped(0.7)])).toMatchObject({ waiting: 1 });
   // Kept before points carried when they began, a pause or a stop is the same one as now.
-  const legacy = { at: 0, states: { a: "paused" as const }, waiting: { a: "paused" } };
+  const legacy = {
+    at: 0,
+    states: { a: "paused" as const },
+    waiting: { a: "paused" },
+    stepFailed: [],
+  };
   expect(awaySummary(legacy, [paused("2026-10-10T09:00:00.000Z")])).toMatchObject({ waiting: 0 });
   expect(awaySummary({ ...legacy, waiting: { a: "stopped" } }, [stopped(0.7)])).toMatchObject({
     waiting: 0,
@@ -188,12 +215,15 @@ it("counts a run paused or stopped again since the page looked", () => {
 // new end is news either way.
 it("tells a failed run that finished, and a finished one that failed, since the page looked", () => {
   expect(
-    awaySummary({ at: 0, states: { a: "failed", b: "done", c: "failed" }, waiting: {} }, [
-      { id: "a", status: "done", progress: 1 },
-      { id: "b", status: "failed", progress: 1 },
-      { id: "c", status: "failed", progress: 1 },
-    ]),
-  ).toEqual({ finished: 1, failed: 1, waiting: 0 });
+    awaySummary(
+      { at: 0, states: { a: "failed", b: "done", c: "failed" }, waiting: {}, stepFailed: [] },
+      [
+        { id: "a", status: "done", progress: 1 },
+        { id: "b", status: "failed", progress: 1 },
+        { id: "c", status: "failed", progress: 1 },
+      ],
+    ),
+  ).toEqual({ finished: 1, failed: 1, waiting: 0, stepFailed: 0 });
 });
 
 describe("the stored snapshot", () => {
@@ -217,7 +247,12 @@ describe("the stored snapshot", () => {
     const before = readSnapshot();
     expect(before).toEqual(snapshotOf(5, now));
     if (before === undefined) throw new Error("a snapshot expected");
-    expect(awaySummary(before, now)).toEqual({ finished: 0, failed: 0, waiting: 0 });
+    expect(awaySummary(before, now)).toEqual({
+      finished: 0,
+      failed: 0,
+      waiting: 0,
+      stepFailed: 0,
+    });
   });
 
   // Kept before it said who waited, it can't tell news from old: no summary this once.
@@ -228,6 +263,12 @@ describe("the stored snapshot", () => {
     stored.set(
       "slopify.away.snapshot",
       JSON.stringify({ at: 5, states: { a: "pending" }, waiting: ["a"] }),
+    );
+    expect(readSnapshot()).toBe(undefined);
+    // Kept before it said whose step failed beside a wait.
+    stored.set(
+      "slopify.away.snapshot",
+      JSON.stringify({ at: 5, states: { a: "pending" }, waiting: { a: "held" } }),
     );
     expect(readSnapshot()).toBe(undefined);
   });

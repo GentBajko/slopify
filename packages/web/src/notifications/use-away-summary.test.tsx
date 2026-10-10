@@ -24,7 +24,12 @@ function Subject() {
 }
 
 it("says on return what the runs did while the page was away", async () => {
-  writeSnapshot({ at: Date.now() - 60 * 60_000, states: { a: "running" }, waiting: {} });
+  writeSnapshot({
+    at: Date.now() - 60 * 60_000,
+    states: { a: "running" },
+    waiting: {},
+    stepFailed: [],
+  });
   renderRouted(
     <Subject />,
     testDeps({
@@ -36,7 +41,7 @@ it("says on return what the runs did while the page was away", async () => {
 });
 
 it("says nothing after a short glance away", async () => {
-  writeSnapshot({ at: Date.now() - 10_000, states: { a: "running" }, waiting: {} });
+  writeSnapshot({ at: Date.now() - 10_000, states: { a: "running" }, waiting: {}, stepFailed: [] });
   const listed = vi.fn(jsonAnswer({ projects: [{ id: "a", status: "failed" }] }));
   renderRouted(<Subject />, testDeps({ "GET /api/projects": listed }));
   await vi.waitFor(() => expect(listed).toHaveBeenCalled());

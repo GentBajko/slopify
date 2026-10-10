@@ -13,6 +13,8 @@ export interface AwaySnapshot {
   // Home's Needs you), each with the points it waited at (`waitPoints`, comma-joined): one held
   // for an agent or its day waits for nobody.
   readonly waiting: Readonly<Record<string, string>>;
+  // The projects with a step failed while the run still read by a wait (`stepFailed`).
+  readonly stepFailed: readonly string[];
 }
 
 type Standing = Pick<
@@ -35,6 +37,8 @@ export interface AwaySummary {
   readonly finished: number;
   readonly failed: number;
   readonly waiting: number;
+  // Runs whose step failed while another still waits ("Step failed"): not over yet.
+  readonly stepFailed: number;
 }
 
 const key = "slopify.away.snapshot";
@@ -48,6 +52,7 @@ export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
     waiting: Object.fromEntries(
       now.filter(waitsForPerson).map((one) => [one.id, waitPoints(one).join(",")]),
     ),
+    stepFailed: now.filter((one) => one.stepFailed === true).map((one) => one.id),
   };
 }
 
@@ -74,7 +79,9 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
   let finished = 0;
   let failed = 0;
   let waiting = 0;
+  let stepFailed = 0;
   for (const project of now) {
+    if (project.stepFailed === true && !before.stepFailed.includes(project.id)) stepFailed += 1;
     // A run that ended differently since the page looked: one started while away (a
     // schedule's), or a failed or finished one an agent took up again.
     const changed = before.states[project.id] !== project.status;
@@ -84,7 +91,7 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
     else if (waitsForPerson(project) && waitsAnew(before.waiting[project.id], waitPoints(project)))
       waiting += 1;
   }
-  return { finished, failed, waiting };
+  return { finished, failed, waiting, stepFailed };
 }
 
 export function awayMessage(summary: AwaySummary): string | undefined {
@@ -95,6 +102,9 @@ export function awayMessage(summary: AwaySummary): string | undefined {
     summary.failed > 0
       ? `${String(summary.failed)} ${summary.failed === 1 ? "run failed" : "runs failed"}`
       : undefined,
+    summary.stepFailed > 0
+      ? `${String(summary.stepFailed)} ${summary.stepFailed === 1 ? "run had a step fail" : "runs had a step fail"}`
+      : undefined,
     summary.waiting > 0
       ? `${String(summary.waiting)} ${summary.waiting === 1 ? "run waits" : "runs wait"} for you`
       : undefined,
@@ -103,8 +113,8 @@ export function awayMessage(summary: AwaySummary): string | undefined {
   return `While you were away: ${parts.join(", ")}.`;
 }
 
-// A snapshot kept before it said who waited, and on what, reads as none: every run waiting then
-// would be told as news.
+// A snapshot kept before it said who waited, on what, and whose step failed reads as none: every
+// run waiting then would be told as news.
 export function readSnapshot(): AwaySnapshot | undefined {
   try {
     const stored: unknown = JSON.parse(window.localStorage.getItem(key) ?? "null");
@@ -119,7 +129,9 @@ export function readSnapshot(): AwaySnapshot | undefined {
       "waiting" in stored &&
       typeof stored.waiting === "object" &&
       stored.waiting !== null &&
-      !Array.isArray(stored.waiting)
+      !Array.isArray(stored.waiting) &&
+      "stepFailed" in stored &&
+      Array.isArray(stored.stepFailed)
     )
       return {
         at: stored.at,
@@ -134,6 +146,7 @@ export function readSnapshot(): AwaySnapshot | undefined {
             (entry): entry is [string, string] => typeof entry[1] === "string",
           ),
         ),
+        stepFailed: stored.stepFailed.filter((id): id is string => typeof id === "string"),
       };
   } catch {
     // Unreadable storage or a damaged value: no summary this time.
