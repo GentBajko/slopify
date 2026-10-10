@@ -1,4 +1,3 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { RevisionDeps, RevisionEdit } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
