@@ -13,7 +13,8 @@ import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { ProviderChoice } from "../admission/model.js";
-import { projectById, setStageProgress } from "../admission/repo.js";
+import { projectById } from "../admission/repo.js";
+import { setStageProgress } from "../admission/stage-writes.js";
 import { storeText } from "../storage/staging.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { noTokens, plusUsage } from "../telemetry/model.js";

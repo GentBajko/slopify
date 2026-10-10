@@ -11,14 +11,8 @@ import { type StageKind, type StageState, stageKinds } from "../../kernel/pipeli
 import { dependenciesOf } from "../../kernel/runner/graph.js";
 import { createRunner, type Runner, type StageRun } from "../../kernel/runner/index.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
-import {
-  claimStage,
-  finishStage,
-  insertProject,
-  insertStage,
-  projectPaused,
-  stagesOf,
-} from "../admission/repo.js";
+import { insertProject, projectPaused, stagesOf } from "../admission/repo.js";
+import { claimStage, finishStage, insertStage } from "../admission/stage-writes.js";
 import { providers as catalog } from "../settings/model.js";
 import { hasKey, insertVoice, upsertKey } from "../settings/repo.js";
 import type { ControlDeps } from "./index.js";

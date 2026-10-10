@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
+import { readmitted } from "./admitted-work.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { formats, stageSources } from "./model.js";
 import { runConfigSchema } from "./schema.js";
@@ -58,12 +59,6 @@ export function insertProject(db: DatabaseSync, project: Project): void {
   if (project.paused === true) setProjectPaused(db, project.id, true, project.updatedAt);
 }
 
-export function insertStage(db: DatabaseSync, stage: Stage): void {
-  db.prepare(
-    "INSERT INTO stages (id, project_id, kind, source, state, attempt_count) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(stage.id, stage.projectId, stage.kind, stage.source, stage.state, stage.attemptCount);
-}
-
 // A project in the trash (`project_trash`, Settings → Trash) is not found by any of these
 // reads: it is listed nowhere, opens nowhere and takes no action until it is restored.
 // `slices/trash` and `slices/storage/delete-project.ts` read the table directly.
@@ -79,34 +74,6 @@ export function oneProject(
   return projectId === undefined
     ? { sql: "", params: [] }
     : { sql: ` AND ${alias}.project_id=?`, params: [projectId] };
-}
-
-// A step `w` a run admitted (`recipe_context`) for its project's current version, of a stage not
-// finished: it still has to run, though a restart, a pause or an agent's review held it, and
-// Continue the run or the agent's answer starts it again. A saved edit's step nobody admitted
-// yet has no `recipe_context`, and a step reserved only by an older version is a leftover.
-export function admittedUnfinished(w: string): string {
-  return `${w}.recipe_context IS NOT NULL
-    AND EXISTS (SELECT 1 FROM stages s WHERE s.project_id=${w}.project_id AND s.id=${w}.stage_id
-      AND s.state NOT IN ('done','provided','skipped'))
-    AND EXISTS (SELECT 1 FROM revision_work_reservations r
-      JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
-      WHERE r.work_id=${w}.id)`;
-}
-
-// Work `w` admitted and waiting to run (`admittedUnfinished`), as Retry, Resume or Continue
-// leave a canceled run's step.
-export function pendingAdmitted(w: string): string {
-  return `${w}.state='pending' AND ${admittedUnfinished(w)}`;
-}
-
-// Whether stage `s` waits to run again after a cancel: pending beside a canceled stage, with
-// work admitted to run.
-function readmitted(s: string): string {
-  return `(${s}.state='pending'
-    AND EXISTS (SELECT 1 FROM stages c WHERE c.project_id=${s}.project_id AND c.state='canceled')
-    AND EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
-      AND ${pendingAdmitted("w")}))`;
 }
 
 export function projectTrashed(db: DatabaseSync, id: string): boolean {
@@ -182,49 +149,6 @@ export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {
     )
     .all(projectId)
     .map((row) => toStage(stageRow.parse(row)));
-}
-
-// The runner's claim: one statement, so two callers cannot both find the stage pending.
-export function claimStage(db: DatabaseSync, stageId: string, at: string): boolean {
-  const result = db
-    .prepare(
-      "UPDATE stages SET state = 'running', started_at = ?, finished_at = NULL, failure_reason = NULL WHERE id = ? AND state = 'pending' AND NOT EXISTS (SELECT 1 FROM project_controls WHERE project_id = stages.project_id AND paused = 1)",
-    )
-    .run(at, stageId);
-  return Number(result.changes) === 1;
-}
-
-export function finishStage(
-  db: DatabaseSync,
-  stageId: string,
-  state: Stage["state"],
-  failureReason: string | null,
-  at: string,
-): void {
-  db.prepare(
-    "UPDATE stages SET state = ?, failure_reason = ?, retry_at = NULL, finished_at = ? WHERE id = ?",
-  ).run(state, failureReason, state === "pending" ? null : at, stageId);
-}
-
-// A stage put back to `pending` by a re-run, a cascade or a retry starts again from a clean row
-// - no error text, no progress from the run before it, and a fresh attempt budget.
-export function resetStage(db: DatabaseSync, stageId: string): void {
-  db.prepare(
-    "UPDATE stages SET state = 'pending', failure_reason = NULL, failure_kind = NULL, retry_at = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",
-  ).run(stageId);
-}
-
-export function setStageProgress(
-  db: DatabaseSync,
-  stageId: string,
-  current: number,
-  total: number,
-): void {
-  db.prepare("UPDATE stages SET progress_current = ?, progress_total = ? WHERE id = ?").run(
-    current,
-    total,
-    stageId,
-  );
 }
 
 function toProject(row: z.infer<typeof projectRow>): Project {

@@ -4,13 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { openDb } from "../../kernel/db/index.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { insertPiece, piecesOf } from "../../kernel/runner/piece-repo.js";
-import {
-  claimStage,
-  projectById,
-  projectPaused,
-  setProjectPaused,
-  stagesOf,
-} from "../admission/repo.js";
+import { projectById, projectPaused, setProjectPaused, stagesOf } from "../admission/repo.js";
+import { claimStage } from "../admission/stage-writes.js";
 import { deleteKey } from "../settings/repo.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
 import { clock, config, deferred, harness } from "./control.fake.js";

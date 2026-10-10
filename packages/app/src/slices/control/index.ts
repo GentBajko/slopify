@@ -5,15 +5,9 @@ import { transact } from "../../kernel/db/tx.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import { derive, satisfied } from "../../kernel/runner/graph.js";
 import type { Runner } from "../../kernel/runner/index.js";
-import {
-  finishStage,
-  projectById,
-  resetStage,
-  setProjectPaused,
-  stagesOf,
-  updateProjectConfig,
-} from "../admission/repo.js";
+import { projectById, setProjectPaused, stagesOf, updateProjectConfig } from "../admission/repo.js";
 import type { FieldError } from "../admission/rules.js";
+import { finishStage, resetStage } from "../admission/stage-writes.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
 import { sameChunking } from "../narration/chunk.js";
 import { projectStandings } from "../rebuild/runtime-store.js";

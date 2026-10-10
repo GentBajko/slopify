@@ -11,13 +11,8 @@ import {
   stageKinds,
 } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
-import {
-  finishStage,
-  projectExists,
-  projectPaused,
-  setProjectPaused,
-  stagesOf,
-} from "../admission/repo.js";
+import { projectExists, projectPaused, setProjectPaused, stagesOf } from "../admission/repo.js";
+import { finishStage } from "../admission/stage-writes.js";
 import { withProjectControl } from "../control/lock.js";
 import {
   checkRevisionControl,

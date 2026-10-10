@@ -10,7 +10,7 @@ import {
 import { dirname } from "node:path";
 import { transact } from "../../kernel/db/tx.js";
 import type { StageContext } from "../../kernel/runner/index.js";
-import { setStageProgress } from "../admission/repo.js";
+import { setStageProgress } from "../admission/stage-writes.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { deleteOutput, insertOutput, outputsOf } from "../storage/repo.js";

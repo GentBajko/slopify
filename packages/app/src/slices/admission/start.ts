@@ -24,8 +24,9 @@ import {
   type StageSource,
   sourceOf,
 } from "./model.js";
-import { insertProject, insertStage } from "./repo.js";
+import { insertProject } from "./repo.js";
 import { usesPronunciationGlossary, usesReference } from "./rules.js";
+import { insertStage } from "./stage-writes.js";
 import { detectSlots, render } from "./substitute.js";
 
 export interface StartedRun {

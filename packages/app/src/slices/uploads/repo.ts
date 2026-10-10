@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { admittedUnfinished, oneProject } from "../admission/repo.js";
+import { admittedUnfinished } from "../admission/admitted-work.js";
+import { oneProject } from "../admission/repo.js";
 
 // "Mark uploaded": the person's own note that a finished video is on YouTube. Slopify never
 // uploads, so this is the only way it learns; Home's Ready to upload leaves such a project out.

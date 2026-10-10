@@ -15,7 +15,8 @@ import {
   setPiece,
 } from "../../kernel/runner/piece-repo.js";
 import type { Stage, StageSource } from "../admission/model.js";
-import { projectById, resetStage, stagesOf } from "../admission/repo.js";
+import { projectById, stagesOf } from "../admission/repo.js";
+import { resetStage } from "../admission/stage-writes.js";
 import { storeArticleText } from "../article/store.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { outputPath } from "../storage/layout.js";

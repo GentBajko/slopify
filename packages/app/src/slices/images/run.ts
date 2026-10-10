@@ -14,7 +14,8 @@ import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { Format, ProviderChoice, RunConfig } from "../admission/model.js";
-import { projectById, setStageProgress } from "../admission/repo.js";
+import { projectById } from "../admission/repo.js";
+import { setStageProgress } from "../admission/stage-writes.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";

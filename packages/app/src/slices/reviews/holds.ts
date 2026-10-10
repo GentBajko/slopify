@@ -7,12 +7,8 @@ import {
   satisfied,
   deps as stageDeps,
 } from "../../kernel/runner/graph.js";
-import {
-  admittedUnfinished,
-  liveProject,
-  oneProject,
-  stageStandingsByProject,
-} from "../admission/repo.js";
+import { admittedUnfinished } from "../admission/admitted-work.js";
+import { liveProject, oneProject, stageStandingsByProject } from "../admission/repo.js";
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
