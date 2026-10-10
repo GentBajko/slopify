@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
-import { readmitted } from "./admitted-work.js";
+import { admittedInItsState } from "./admitted-work.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { formats, stageSources } from "./model.js";
 import { runConfigSchema } from "./schema.js";
@@ -25,7 +25,7 @@ const standingRow = z.object({
   state: z.enum(stageStates),
   progress_current: z.number().nullable(),
   progress_total: z.number().nullable(),
-  readmitted: z.number(),
+  admitted: z.number(),
 });
 
 const stageRow = z.object({
@@ -42,7 +42,7 @@ const stageRow = z.object({
   finished_at: z.string().nullable(),
   failure_kind: z.string().nullable().optional(),
   retry_at: z.string().nullable().optional(),
-  readmitted: z.number(),
+  admitted: z.number(),
 });
 
 export function insertProject(db: DatabaseSync, project: Project): void {
@@ -118,7 +118,7 @@ export function stageStandingsByProject(
   projectId?: string,
 ): Map<string, StageProgress[]> {
   const grouped = new Map<string, StageProgress[]>();
-  const select = `SELECT project_id, kind, state, progress_current, progress_total, ${readmitted("stages")} AS readmitted FROM stages${
+  const select = `SELECT project_id, kind, state, progress_current, progress_total, ${admittedInItsState("stages")} AS admitted FROM stages${
     projectId === undefined ? "" : " WHERE project_id=?"
   } ORDER BY rowid`;
   const rows =
@@ -130,7 +130,7 @@ export function stageStandingsByProject(
       state: parsed.state,
       progressCurrent: parsed.progress_current,
       progressTotal: parsed.progress_total,
-      ...(parsed.readmitted === 1 ? { readmitted: true } : {}),
+      ...(parsed.admitted === 1 ? { admitted: true } : {}),
     };
     const seen = grouped.get(parsed.project_id);
     if (seen === undefined) {
@@ -145,7 +145,7 @@ export function stageStandingsByProject(
 export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {
   return db
     .prepare(
-      `SELECT *, ${readmitted("stages")} AS readmitted FROM stages WHERE project_id = ? ORDER BY rowid`,
+      `SELECT *, ${admittedInItsState("stages")} AS admitted FROM stages WHERE project_id = ? ORDER BY rowid`,
     )
     .all(projectId)
     .map((row) => toStage(stageRow.parse(row)));
@@ -223,6 +223,6 @@ function toStage(row: z.infer<typeof stageRow>): Stage {
       ? {}
       : { failureKind: row.failure_kind }),
     ...(row.retry_at === null || row.retry_at === undefined ? {} : { retryAt: row.retry_at }),
-    ...(row.readmitted === 1 ? { readmitted: true } : {}),
+    ...(row.admitted === 1 ? { admitted: true } : {}),
   };
 }

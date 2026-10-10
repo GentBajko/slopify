@@ -1,3 +1,5 @@
+import type { DatabaseSync } from "node:sqlite";
+
 // A step `w` a run admitted (`recipe_context`) for its project's current version, of a stage not
 // finished: it still has to run, though a restart, a pause or an agent's review held it, and
 // Continue the run or the agent's answer starts it again. A saved edit's step nobody admitted
@@ -17,11 +19,22 @@ export function pendingAdmitted(w: string): string {
   return `${w}.state='pending' AND ${admittedUnfinished(w)}`;
 }
 
-// Whether stage `s` waits to run again after a cancel: pending beside a canceled stage, with
-// work admitted to run.
-export function readmitted(s: string): string {
-  return `(${s}.state='pending'
-    AND EXISTS (SELECT 1 FROM stages c WHERE c.project_id=${s}.project_id AND c.state='canceled')
-    AND EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
-      AND ${pendingAdmitted("w")}))`;
+// Whether stage `s` has work admitted (`admittedUnfinished`) in the stage's own state: the
+// fact `derive` reads (`readmitted`) to tell a stage taken up again after a cancel.
+export function admittedInItsState(s: string): string {
+  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
+      AND w.state=${s}.state AND ${admittedUnfinished("w")})`;
+}
+
+// The same fact for a project's work, as `${kind}:${state}` of each step admitted, for a caller
+// that derives stage states from the work itself (`rebuild/runtime-store.ts`).
+export function admittedStates(db: DatabaseSync, projectId: string): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare(
+        `SELECT DISTINCT w.kind, w.state FROM revision_work w WHERE w.project_id=? AND ${admittedUnfinished("w")}`,
+      )
+      .all(projectId)
+      .map((row) => `${String(row.kind)}:${String(row.state)}`),
+  );
 }

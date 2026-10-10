@@ -89,7 +89,7 @@ describe("derive", () => {
     expect(derive(canceled)).toBe("canceled");
     expect(
       derive(
-        canceled.map((stage) => (stage.kind === "images" ? { ...stage, readmitted: true } : stage)),
+        canceled.map((stage) => (stage.kind === "images" ? { ...stage, admitted: true } : stage)),
       ),
     ).toBe("pending");
   });

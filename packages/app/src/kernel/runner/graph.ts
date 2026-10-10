@@ -44,9 +44,9 @@ export interface StageStanding {
   readonly state: StageState;
   // Set on a `pending` stage waiting to run again by itself after a failure time can fix.
   readonly retryAt?: string | null | undefined;
-  // Set on a `pending` stage whose work was admitted again beside a canceled stage: retried or
-  // resumed after Cancel, the run goes on.
-  readonly readmitted?: boolean | undefined;
+  // Set when the stage has work of the current version admitted in the stage's own state
+  // (`admission/admitted-work.ts`): beside a canceled stage, it was taken up again (`readmitted`).
+  readonly admitted?: boolean | undefined;
 }
 
 // What a run is for, in order: the first of these the run asks for is the one that has to be
@@ -65,7 +65,7 @@ export function derive(stages: readonly StageStanding[], paused = false): Projec
   }
   if (
     stages.some((stage) => stage.state === "canceled") &&
-    !stages.some((stage) => stage.readmitted === true)
+    !stages.some((stage) => readmitted(stage, stages))
   ) {
     return "canceled";
   }
@@ -77,6 +77,16 @@ export function derive(stages: readonly StageStanding[], paused = false): Projec
   }
   // Includes a run created but not yet claimed and unfinished work after restart.
   return "pending";
+}
+
+// A stage taken up again after a Cancel, by Retry, Resume or Continue the run: beside a canceled
+// stage, it waits to run with its work admitted again. The run goes on while one does.
+export function readmitted(stage: StageStanding, stages: readonly StageStanding[]): boolean {
+  return (
+    stage.state === "pending" &&
+    stage.admitted === true &&
+    stages.some((other) => other.state === "canceled")
+  );
 }
 
 function waiting(stage: StageStanding): boolean {

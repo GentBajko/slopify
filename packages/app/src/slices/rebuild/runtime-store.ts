@@ -5,7 +5,7 @@ import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import { optionalDeps, type StageStanding } from "../../kernel/runner/graph.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
-import { pendingAdmitted } from "../admission/admitted-work.js";
+import { admittedStates } from "../admission/admitted-work.js";
 import { sourceOf } from "../admission/model.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { reviewsNarration } from "../reviews/rules.js";
@@ -210,22 +210,9 @@ export function executionStandings(
         : "pending";
     return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
   });
-  return standings.some((stage) => stage.state === "canceled")
-    ? standings.map((stage) =>
-        stage.state === "pending" &&
-        work.some((entry) => entry.kind === stage.kind && readmittedWork(deps, entry))
-          ? { ...stage, readmitted: true }
-          : stage,
-      )
-    : standings;
-}
-
-// A step taken up again after a cancel, read as a stage's is (`admission/repo.ts` readmitted).
-function readmittedWork(deps: RevisionDeps, entry: RunnerStage): boolean {
-  return (
-    deps.db
-      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${pendingAdmitted("w")}`)
-      .get(entry.work.workId) !== undefined
+  const admitted = admittedStates(deps.db, projectId);
+  return standings.map((stage) =>
+    admitted.has(`${stage.kind}:${stage.state}`) ? { ...stage, admitted: true } : stage,
   );
 }
 
