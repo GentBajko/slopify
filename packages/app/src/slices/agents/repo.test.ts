@@ -77,3 +77,16 @@ it("lists only the latest 20 changes on the Agents list", () => {
   expect(listed).not.toContain("a1");
   expect(agentActionsOf(db, "p1")).toHaveLength(21);
 });
+
+it("records a call sent again with its idempotencyKey once, and still fails loudly on anything else", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  recordAgentAction(db, action("a1", "p1", "2026-09-10T00:01:00.000Z"), "key-1");
+  recordAgentAction(db, action("a2", "p1", "2026-09-10T00:02:00.000Z"), "key-1");
+  expect(agentActionsOf(db, "p1").map((one) => one.id)).toEqual(["a1"]);
+  // The same row id twice is a bug, not a replay.
+  expect(() =>
+    recordAgentAction(db, action("a1", "p1", "2026-09-10T00:03:00.000Z"), "key-2"),
+  ).toThrow(/UNIQUE constraint failed: agent_actions\.id/);
+});

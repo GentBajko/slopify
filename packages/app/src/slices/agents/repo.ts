@@ -47,15 +47,17 @@ function actionOf(value: unknown): AgentAction {
 
 // A project the call itself deleted for good is gone: the action is kept without it. A call
 // sent again with its idempotencyKey was answered with its first answer, so it adds no second
-// row (`agent_actions_once`).
+// row (`agent_actions_once`); any other failure to record it is thrown.
 export function recordAgentAction(
   db: DatabaseSync,
   action: AgentAction,
   idempotencyKey?: string,
 ): void {
   db.prepare(
-    `INSERT OR IGNORE INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key)
-     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?,?)`,
+    `INSERT INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key)
+     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?,?)
+     ON CONFLICT(tool,COALESCE(project_id,''),idempotency_key) WHERE idempotency_key IS NOT NULL
+     DO NOTHING`,
   ).run(
     action.id,
     action.projectId,
