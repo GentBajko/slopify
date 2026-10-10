@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
-import { waitingExternalReviews } from "../reviews/external.js";
+import { externalReviewOf, waitingExternalReviewRows } from "../reviews/external.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {
   extensionFailures,
@@ -68,7 +68,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     });
   };
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
-    ["external reviews", () => externalReviews(db)],
+    ["external reviews", () => externalReviews(db, skip)],
     ["flagged verdicts", () => flaggedVerdicts(db, skip)],
     ["review checkpoints", () => heldCheckpoints(db, skip)],
     ["failed steps", () => failedSteps(db, skip)],
@@ -109,11 +109,12 @@ function titles(db: DatabaseSync): ReadonlyMap<string, string> {
   );
 }
 
-function externalReviews(db: DatabaseSync): readonly AttentionEntry[] {
+function externalReviews(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
   const named = titles(db);
-  return waitingExternalReviews(db).map(
-    (review) =>
-      ({
+  return rowsOf(waitingExternalReviewRows(db), "external reviews", skip, (value) => {
+    const review = externalReviewOf(value);
+    return [
+      {
         kind: "external-review",
         since: review.waitingSince,
         projectId: review.projectId,
@@ -125,8 +126,9 @@ function externalReviews(db: DatabaseSync): readonly AttentionEntry[] {
         agentCanAct: true,
         ids: { id: review.projectId, reviewId: review.id },
         tools: ["get_external_review", "submit_review_verdict"],
-      }) satisfies AttentionEntry,
-  );
+      } satisfies AttentionEntry,
+    ];
+  });
 }
 
 const verdictRow = z.object({

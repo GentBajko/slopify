@@ -52,3 +52,15 @@ export function waitingReviewFixture(): {
   });
   return { h, revisionId: view.revision.id, review, close: h.close };
 }
+
+// A second waiting review, for image "two", whose stored material can't be read back.
+export function addUnreadableReview(f: ReturnType<typeof waitingReviewFixture>): void {
+  const { db } = f.h.deps;
+  db.prepare(
+    "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES (?,?,'review:image:two','images-work','review-fp-two')",
+  ).run(f.h.projectId, f.revisionId);
+  db.prepare(
+    `INSERT INTO external_reviews(id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
+     VALUES ('er2',?,?,'images-work','review-piece-two','review:image:two','image:two','images','item-fp-two','review-fp-two','{"not":"material"}','waiting','2026-09-10T00:00:00.000Z','2026-09-10T02:00:00.000Z')`,
+  ).run(f.h.projectId, f.revisionId);
+}

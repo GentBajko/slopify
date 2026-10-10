@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import type { LogFields } from "../../kernel/log.js";
-import { waitingReviewFixture } from "../reviews/external.fake.js";
+import { addUnreadableReview, waitingReviewFixture } from "../reviews/external.fake.js";
 import { saveVerdict } from "../reviews/repo.js";
 import { insertOutput } from "../storage/repo.js";
 import { type AttentionDeps, needsAttention } from "./attention.js";
@@ -336,4 +336,21 @@ it("marks a video step whose shorts pick stopped as in flight while its chunk is
       ["images", "The image provider refused.", false],
     ]),
   );
+});
+
+it("lists the other waiting reviews when one can't be read back, and logs that one", () => {
+  const f = everything();
+  addUnreadableReview(f);
+  const { deps, lines } = logged(f);
+  expect(
+    needsAttention(deps, now)
+      .filter((entry) => entry.kind === "external-review")
+      .map((entry) => entry.ids.reviewId),
+  ).toEqual(["er1"]);
+  expect(lines).toEqual([
+    {
+      event: "attention.row",
+      fields: { projectId: "p1", detail: expect.stringContaining("external reviews") },
+    },
+  ]);
 });

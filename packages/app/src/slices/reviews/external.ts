@@ -74,7 +74,7 @@ const rowSchema = z.object({
   answered_at: z.string().nullable(),
 });
 
-function reviewOf(value: unknown): ExternalReview {
+export function externalReviewOf(value: unknown): ExternalReview {
   const row = rowSchema.parse(value);
   return {
     id: row.id,
@@ -157,7 +157,7 @@ export function externalReviewByFingerprint(
   const row = db
     .prepare("SELECT * FROM external_reviews WHERE project_id=? AND review_fingerprint=?")
     .get(projectId, reviewFingerprint);
-  return row === undefined ? undefined : reviewOf(row);
+  return row === undefined ? undefined : externalReviewOf(row);
 }
 
 export function externalReviewById(
@@ -168,7 +168,7 @@ export function externalReviewById(
   const row = db
     .prepare("SELECT * FROM external_reviews WHERE project_id=? AND id=?")
     .get(projectId, id);
-  return row === undefined ? undefined : reviewOf(row);
+  return row === undefined ? undefined : externalReviewOf(row);
 }
 
 export type ExternalAnswerResult =
@@ -240,17 +240,37 @@ export function waitingExternalReviews(
   db: DatabaseSync,
   projectId?: string,
 ): readonly ExternalReview[] {
+  return waitingExternalReviewRows(db, projectId).map(externalReviewOf);
+}
+
+// The same rows unread, for a caller that skips one it can't read instead of failing them all.
+export function waitingExternalReviewRows(db: DatabaseSync, projectId?: string): unknown[] {
   const sql = `SELECT e.* FROM external_reviews e WHERE e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")}
     AND ${liveProject("e", "project_id")}
     ${projectId === undefined ? "" : "AND e.project_id=?"} ORDER BY e.waiting_since, e.rowid`;
-  const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
-  return rows.map(reviewOf);
+  return projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
 }
+
+export type SettledReview = Pick<
+  ExternalReview,
+  "id" | "projectId" | "revisionId" | "workId" | "stage" | "itemKey"
+>;
+
+const dueRow = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  revision_id: z.string(),
+  work_id: z.string(),
+  stage: z.enum(reviewStages),
+  item_key: z.string(),
+});
 
 // Replaced reviews stop waiting; waiting ones past their deadline pass without review. A
 // paused project's review passes too (nothing runs until Resume); a canceled run's never does,
 // nor one of a project in the Trash (it waits on, and passes once restored).
-export function settleExternalReviews(db: DatabaseSync, now: Date): readonly ExternalReview[] {
+// Read by plain columns only: a review whose stored material can't be read back still passes,
+// and never holds up the others.
+export function settleExternalReviews(db: DatabaseSync, now: Date): readonly SettledReview[] {
   const at = now.toISOString();
   return transact(db, () => {
     db.prepare(
@@ -258,17 +278,25 @@ export function settleExternalReviews(db: DatabaseSync, now: Date): readonly Ext
     ).run();
     const due = db
       .prepare(
-        `SELECT e.id, e.project_id FROM external_reviews e WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")} AND ${liveProject("e", "project_id")}`,
+        `SELECT e.id, e.project_id, e.revision_id, e.work_id, e.stage, e.item_key FROM external_reviews e
+         WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")} AND ${liveProject("e", "project_id")}
+         ORDER BY e.waiting_since, e.rowid`,
       )
       .all(at)
-      .map((row) => z.object({ id: z.string(), project_id: z.string() }).parse(row));
-    return due.flatMap((row) => {
+      .map((value) => dueRow.parse(value));
+    return due.map((row) => {
       db.prepare(
         "UPDATE external_reviews SET state='auto-passed', answered_at=? WHERE id=? AND state='waiting'",
       ).run(at, row.id);
       releaseParkedWork(db, row.project_id, row.id);
-      const passed = externalReviewById(db, row.project_id, row.id);
-      return passed === undefined ? [] : [passed];
+      return {
+        id: row.id,
+        projectId: row.project_id,
+        revisionId: row.revision_id,
+        workId: row.work_id,
+        stage: row.stage,
+        itemKey: row.item_key,
+      };
     });
   });
 }
@@ -283,7 +311,7 @@ export interface ReviewReleaseDeps {
 
 // At boot and every few seconds: each review past its deadline passes, says so, and the run
 // goes on. The deadline is a row, so a restart in between loses nothing.
-function itemName(db: DatabaseSync, review: ExternalReview): string | undefined {
+function itemName(db: DatabaseSync, review: SettledReview): string | undefined {
   const revision = revisionById(db, review.projectId, review.revisionId);
   return reviewItemName(review.itemKey, revision?.content.imageOrder ?? []);
 }
