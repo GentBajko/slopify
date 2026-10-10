@@ -82,6 +82,18 @@ describe("derive", () => {
     expect(derive(stages({ research: "canceled", article: "failed" }))).toBe("canceled");
   });
 
+  // Taken up again after a cancel, the run goes on until that stage is done; a stage merely
+  // left pending by the cancel is not one.
+  it("reads pending while a stage taken up again after a cancel waits to run", () => {
+    const canceled = stages({ audio: "canceled", images: "pending" });
+    expect(derive(canceled)).toBe("canceled");
+    expect(
+      derive(
+        canceled.map((stage) => (stage.kind === "images" ? { ...stage, readmitted: true } : stage)),
+      ),
+    ).toBe("pending");
+  });
+
   it("reads failed when a stage failed and none was canceled", () => {
     expect(derive(stages({ audio: "failed", video: "pending" }))).toBe("failed");
   });

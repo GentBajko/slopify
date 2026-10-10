@@ -6,6 +6,7 @@ import { optionalDeps, type StageStanding } from "../../kernel/runner/graph.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { sourceOf } from "../admission/model.js";
+import { pendingAdmitted } from "../admission/repo.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { reviewsNarration } from "../reviews/rules.js";
 import type { RevisionDeps } from "../revisions/model.js";
@@ -163,7 +164,7 @@ export function executionStandings(
   const view = revisionId === undefined ? undefined : getRevisionView(deps, projectId, revisionId);
   if (view === undefined) return [];
   const work = derived ?? executionStages(deps, projectId);
-  return stageKinds.map((kind) => {
+  const standings = stageKinds.map((kind): StageStanding => {
     const source = sourceOf(view.revision.config.sources, kind);
     const group = work
       .filter((entry) => entry.kind === kind)
@@ -209,6 +210,23 @@ export function executionStandings(
         : "pending";
     return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
   });
+  return standings.some((stage) => stage.state === "canceled")
+    ? standings.map((stage) =>
+        stage.state === "pending" &&
+        work.some((entry) => entry.kind === stage.kind && readmittedWork(deps, entry))
+          ? { ...stage, readmitted: true }
+          : stage,
+      )
+    : standings;
+}
+
+// A step taken up again after a cancel, read as a stage's is (`admission/repo.ts` readmitted).
+function readmittedWork(deps: RevisionDeps, entry: RunnerStage): boolean {
+  return (
+    deps.db
+      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${pendingAdmitted("w")}`)
+      .get(entry.work.workId) !== undefined
+  );
 }
 
 // A finished piece whose request was planned under this fingerprint: a placeholder is planned

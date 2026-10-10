@@ -44,6 +44,9 @@ export interface StageStanding {
   readonly state: StageState;
   // Set on a `pending` stage waiting to run again by itself after a failure time can fix.
   readonly retryAt?: string | null | undefined;
+  // Set on a `pending` stage whose work was admitted again beside a canceled stage: retried or
+  // resumed after Cancel, the run goes on.
+  readonly readmitted?: boolean | undefined;
 }
 
 // What a run is for, in order: the first of these the run asks for is the one that has to be
@@ -53,13 +56,17 @@ const headline: readonly StageKind[] = ["video", "audio", "article"];
 
 // Stage state is derived; an explicit persisted pause takes precedence while calls
 // drain. Completed independent images do not imply that a run was canceled. A stage
-// waiting out a rate limit is still part of a run in progress.
+// waiting out a rate limit is still part of a run in progress, and so is one taken up again
+// after a cancel: the run reads by what that stage waits on until it is done.
 export function derive(stages: readonly StageStanding[], paused = false): ProjectState {
   if (paused) return "paused";
   if (stages.some((stage) => stage.state === "running" || waiting(stage))) {
     return "running";
   }
-  if (stages.some((stage) => stage.state === "canceled")) {
+  if (
+    stages.some((stage) => stage.state === "canceled") &&
+    !stages.some((stage) => stage.readmitted === true)
+  ) {
     return "canceled";
   }
   if (stages.some((stage) => stage.state === "failed")) {

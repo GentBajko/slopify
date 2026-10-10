@@ -24,6 +24,7 @@ const standingRow = z.object({
   state: z.enum(stageStates),
   progress_current: z.number().nullable(),
   progress_total: z.number().nullable(),
+  readmitted: z.number(),
 });
 
 const stageRow = z.object({
@@ -40,6 +41,7 @@ const stageRow = z.object({
   finished_at: z.string().nullable(),
   failure_kind: z.string().nullable().optional(),
   retry_at: z.string().nullable().optional(),
+  readmitted: z.number(),
 });
 
 export function insertProject(db: DatabaseSync, project: Project): void {
@@ -92,6 +94,21 @@ export function admittedUnfinished(w: string): string {
       WHERE r.work_id=${w}.id)`;
 }
 
+// Work `w` admitted and waiting to run (`admittedUnfinished`), as Retry, Resume or Continue
+// leave a canceled run's step.
+export function pendingAdmitted(w: string): string {
+  return `${w}.state='pending' AND ${admittedUnfinished(w)}`;
+}
+
+// Whether stage `s` waits to run again after a cancel: pending beside a canceled stage, with
+// work admitted to run.
+function readmitted(s: string): string {
+  return `(${s}.state='pending'
+    AND EXISTS (SELECT 1 FROM stages c WHERE c.project_id=${s}.project_id AND c.state='canceled')
+    AND EXISTS (SELECT 1 FROM revision_work w WHERE w.project_id=${s}.project_id AND w.stage_id=${s}.id
+      AND ${pendingAdmitted("w")}))`;
+}
+
 export function projectTrashed(db: DatabaseSync, id: string): boolean {
   return db.prepare("SELECT 1 FROM project_trash WHERE project_id = ?").get(id) !== undefined;
 }
@@ -134,7 +151,7 @@ export function stageStandingsByProject(
   projectId?: string,
 ): Map<string, StageProgress[]> {
   const grouped = new Map<string, StageProgress[]>();
-  const select = `SELECT project_id, kind, state, progress_current, progress_total FROM stages${
+  const select = `SELECT project_id, kind, state, progress_current, progress_total, ${readmitted("stages")} AS readmitted FROM stages${
     projectId === undefined ? "" : " WHERE project_id=?"
   } ORDER BY rowid`;
   const rows =
@@ -146,6 +163,7 @@ export function stageStandingsByProject(
       state: parsed.state,
       progressCurrent: parsed.progress_current,
       progressTotal: parsed.progress_total,
+      ...(parsed.readmitted === 1 ? { readmitted: true } : {}),
     };
     const seen = grouped.get(parsed.project_id);
     if (seen === undefined) {
@@ -159,7 +177,9 @@ export function stageStandingsByProject(
 
 export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {
   return db
-    .prepare("SELECT * FROM stages WHERE project_id = ? ORDER BY rowid")
+    .prepare(
+      `SELECT *, ${readmitted("stages")} AS readmitted FROM stages WHERE project_id = ? ORDER BY rowid`,
+    )
     .all(projectId)
     .map((row) => toStage(stageRow.parse(row)));
 }
@@ -279,5 +299,6 @@ function toStage(row: z.infer<typeof stageRow>): Stage {
       ? {}
       : { failureKind: row.failure_kind }),
     ...(row.retry_at === null || row.retry_at === undefined ? {} : { retryAt: row.retry_at }),
+    ...(row.readmitted === 1 ? { readmitted: true } : {}),
   };
 }

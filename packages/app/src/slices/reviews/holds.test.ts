@@ -251,9 +251,18 @@ it("is not Stopped once a step failed or the run was canceled", () => {
   const f = stoppedBehindVideoGate();
   f.stage("audio", "failed");
   expect([...projectHolds(f.db).stopped]).toEqual([]);
-  f.stage("audio", "canceled");
-  expect([...projectHolds(f.db).stopped]).toEqual([]);
   f.stage("audio", "done");
+  expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
+  f.stage("audio", "canceled");
+  f.db.prepare("UPDATE revision_work SET state='canceled' WHERE state!='done'").run();
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+});
+
+// Its steps taken up again after a cancel, the run goes on (`derive`): a restart that held them
+// stops it like any run.
+it("reads a run taken up again after a cancel, then held by a restart, as Stopped", () => {
+  const f = stoppedBehindVideoGate();
+  f.stage("audio", "canceled");
   expect([...projectHolds(f.db).stopped]).toEqual(["p1"]);
 });
 

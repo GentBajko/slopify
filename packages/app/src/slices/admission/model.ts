@@ -328,6 +328,8 @@ export interface Stage {
   readonly activity?: StageActivity;
   // Waiting to run again by itself after a failure time can fix (a rate limit, a timeout).
   readonly retryAt?: string;
+  // Taken up again after Cancel and still to run (`kernel/runner/graph.ts` derive).
+  readonly readmitted?: boolean;
   // A running step's time left (`slices/eta`), as the server saw it when it answered: seconds
   // and what they rest on. The page recomputes it every second from `typicalSeconds`, how
   // long such a step usually takes in all, when finished runs give one.

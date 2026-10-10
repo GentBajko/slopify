@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import { fakeTts } from "../src/adapters/fake/tts.js";
-import { derive } from "../src/kernel/runner/graph.js";
+import { derive, progressOf } from "../src/kernel/runner/graph.js";
 import type { Runner } from "../src/kernel/runner/index.js";
-import { stagesOf } from "../src/slices/admission/repo.js";
+import { stageStandingsByProject, stagesOf } from "../src/slices/admission/repo.js";
+import { projectStateWord, runningNow } from "../src/slices/admission/state-words.js";
 import { cancelProject } from "../src/slices/cancel/index.js";
 import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
+import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
 import { externalReviewWaitMs } from "../src/slices/reviews/external-model.js";
 import {
   answerExternalReview,
@@ -230,3 +232,48 @@ for (const action of [{ kind: "retry", stage: "images" }, { kind: "resume" }] as
       settleExternalReviews(h.deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
     ).toHaveLength(2);
   });
+
+// A run taken up again after a cancel goes on, so it reads by what it does, not Canceled: here
+// its retried images wait for the agent (the header, Projects, Home, the calendar and the MCP
+// tools read the stage rows; the runner announces from its own standings).
+it("reads a run retried after a cancel by what it does while its images wait for the agent", async () => {
+  const { h } = await narratingWhileAgentsReview();
+  await cancel(h);
+  expect(
+    await recoverProject(h.deps, h.projectId, {
+      baseRevisionId: current(h.deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "retry", stage: "images" },
+    }),
+  ).toMatchObject({ ok: true });
+  await settleUntil(h.runner, () => waitingExternalReviews(h.deps.db, h.projectId).length === 2);
+  const standings = stageStandingsByProject(h.deps.db, h.projectId).get(h.projectId) ?? [];
+  const status = derive(standings);
+  expect(status).toBe("pending");
+  expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("pending");
+  expect(derive(executionStandings(h.deps, h.projectId))).toBe("pending");
+  const holds = projectHolds(h.deps.db, { projectId: h.projectId });
+  const project = {
+    status,
+    progress: progressOf(standings),
+    ...(holds.waitingForAgent.has(h.projectId) ? { waitingForAgent: true } : {}),
+  };
+  expect(projectStateWord(project)).toBe("Waiting for the agent");
+  expect(runningNow(project)).toBe(true);
+  // Both answered, the images finish and nothing else was taken up: the run reads Canceled.
+  for (const review of waitingExternalReviews(h.deps.db, h.projectId))
+    answerExternalReview(h.deps.db, {
+      projectId: h.projectId,
+      id: review.id,
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: new Date().toISOString(),
+    });
+  h.runner.tick(h.projectId);
+  await settleUntil(
+    h.runner,
+    () =>
+      stagesOf(h.deps.db, h.projectId).find((stage) => stage.kind === "images")?.state === "done",
+  );
+  expect(derive(stagesOf(h.deps.db, h.projectId))).toBe("canceled");
+});
