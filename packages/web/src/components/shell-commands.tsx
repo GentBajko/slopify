@@ -151,6 +151,7 @@ const sectionWords: Readonly<Record<string, readonly string[]>> = {
   general: ["appearance", "theme", "dark", "light", "start at login", "autostart"],
   providers: ["api keys", "sign in", "openai", "gemini", "claude", "codex"],
   voices: ["voice id", "elevenlabs", "tts"],
+  agents: ["mcp", "claude code", "codex", "agent"],
   playback: ["pace", "loudness", "volume", "narration"],
   notifications: ["webhook", "ntfy", "alerts"],
   studio: ["extension", "playlist", "youtube"],

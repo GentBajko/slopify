@@ -1,6 +1,8 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { lastAgentConnection } from "../../slices/agents/connection.js";
+import { recentAgentActions } from "../../slices/agents/repo.js";
 import {
   notificationUrlMax,
   notificationUrlProblem,
@@ -145,6 +147,14 @@ export function settingsRoutes(deps: AppDeps) {
         }
         return c.json({ sent: true });
       })
+      // Settings → Connections → Agents (MCP): when an agent last opened an MCP session, and
+      // the latest changes agents made.
+      .get("/agents", (c) =>
+        c.json({
+          lastConnectedAt: lastAgentConnection(deps.db),
+          recent: recentAgentActions(deps.db),
+        }),
+      )
       .get("/voices", (c) => c.json({ voices: voices(voiceDeps) }))
       .post("/voices", zValidator("json", voiceBody, onInvalid), async (c) => {
         const body = c.req.valid("json");

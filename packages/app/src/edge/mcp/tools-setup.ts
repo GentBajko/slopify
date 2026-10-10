@@ -158,6 +158,13 @@ const settings: readonly RouteTool[] = [
     description:
       "Playlist kinds: the playlists upload packs name (long videos, shorts or both), for every channel or one. Body: {playlists: [{name, byDefault, for?: long | shorts | both}], channelId?}.",
   },
+  {
+    name: "get_agent_connection",
+    route: "GET /api/settings/agents",
+    title: "Read Settings → Connections → Agents (MCP)",
+    description:
+      "When an agent last connected to Slopify's MCP endpoint, and the latest changes agents made, as Settings → Connections → Agents (MCP) lists them.",
+  },
 ];
 
 const providers: readonly RouteTool[] = [

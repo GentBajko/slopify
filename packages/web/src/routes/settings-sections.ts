@@ -18,6 +18,11 @@ export const settingsSections = [
     meta: "New models, prices and retirements, checked once a day.",
   },
   {
+    id: "agents",
+    label: "Agents (MCP)",
+    meta: "Let an AI agent on this computer, such as Claude Code or Codex, run Slopify.",
+  },
+  {
     id: "playback",
     label: "Production defaults",
     meta: "How new runs pace the narration and level the volume.",
@@ -82,7 +87,7 @@ interface SettingsGroup {
 const connections: SettingsGroup = {
   id: "connections",
   label: "Connections",
-  sections: ["providers", "voices", "models"],
+  sections: ["providers", "voices", "models", "agents"],
 };
 
 export const settingsGroups: readonly SettingsGroup[] = [

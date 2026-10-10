@@ -173,6 +173,10 @@ export const settingsHelp = {
     body: "An address Slopify POSTs a short plain-text message to, with no tab open. For your phone, install the ntfy app, subscribe to a topic with a long random name, and paste https://ntfy.sh/that-topic. Any address that accepts a POST works. Each message is sent once, with a 5 second timeout. Leave it empty to turn it off.",
     tutorial: { page: "Notifications", anchor: "get-notifications-on-your-phone-notification-url" },
   },
+  "settings.agents": {
+    title: "Agents (MCP)",
+    body: "An AI agent on this computer, such as Claude Code or Codex, can run Slopify through this address: start and fix runs, edit the Library and answer reviews set to External agent. It needs no key, like this page, and never uploads to YouTube. What it changes is marked by agent in the project's history, in notifications and in the list below.",
+  },
 
   // YouTube Studio
   "settings.studio.extension": {

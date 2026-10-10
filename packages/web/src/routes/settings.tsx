@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { DownloadIcon } from "lucide-react";
+import { AgentSettings } from "@/agents/agent-settings";
 import { useApp } from "@/app-context";
 import { AutostartSettings } from "@/autostart/autostart-settings";
 import { CatalogueSettings } from "@/components/catalogue";
@@ -200,6 +201,7 @@ export function SettingsRoute({
             ) : null}
             {section === "voices" ? <Voices /> : null}
             {section === "models" ? <CatalogueSettings /> : null}
+            {section === "agents" ? <AgentSettings /> : null}
             {section === "playback" ? <ProductionDefaults /> : null}
             {section === "notifications" ? <NotificationSettings /> : null}
             {section === "channel-links" ? <ChannelLinksSettings /> : null}

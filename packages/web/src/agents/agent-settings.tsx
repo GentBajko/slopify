@@ -1,0 +1,105 @@
+import { claudeAddCommand, codexConfig, mcpUrl } from "@app/slices/agents/model.js";
+import { useQuery } from "@tanstack/react-query";
+import { CopyIcon } from "lucide-react";
+import type { ReactElement } from "react";
+import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { helpScope } from "@/components/kit/info-tip";
+import { SectionHead } from "@/components/kit/section-head";
+import { useToast } from "@/components/kit/toast";
+import { copyText } from "@/fixes/fix-actions";
+import { agentConnectionQueryKey, readAgentConnection } from "./api";
+
+// "10 Sept 2026, 08:00"
+function stamp(iso: string): string {
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime())
+    ? iso
+    : at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+
+// Settings → Connections → Agents (MCP): where an agent on this computer connects, the two
+// setup lines, whether one has connected, and what agents changed lately.
+export function AgentSettings(): ReactElement {
+  const { api } = useApp();
+  const notify = useToast();
+  const connection = useQuery({
+    queryKey: agentConnectionQueryKey,
+    queryFn: () => readAgentConnection(api),
+  });
+  const url = mcpUrl(api.origin);
+  const setups = [
+    { label: "Claude Code", where: "Run it once in a terminal.", text: claudeAddCommand(url) },
+    { label: "Codex", where: "Add it to ~/.codex/config.toml.", text: codexConfig(url) },
+  ];
+  const copy = async (setup: (typeof setups)[number]): Promise<void> => {
+    if (await copyText(setup.text))
+      notify(`${setup.label} setup copied. ${setup.where}`, "success");
+    else
+      notify(
+        `The ${setup.label} setup wasn't copied: this browser blocked the clipboard. Select the line and copy it yourself.`,
+        "error",
+      );
+  };
+  const last = connection.data?.lastConnectedAt;
+  const status =
+    connection.error !== null
+      ? `${connection.error.message} Reload the page to try again.`
+      : connection.data === undefined
+        ? "Checking for agents…"
+        : last === null || last === undefined
+          ? "No agent has connected yet."
+          : `Last connected ${stamp(last)}.`;
+  const recent = connection.data?.recent ?? [];
+  return (
+    <div className="flex max-w-prose flex-col gap-4" {...helpScope}>
+      <SectionHead title="Agents (MCP)" info="settings.agents" />
+      <div className="flex flex-col gap-1">
+        <span className="text-small font-semibold">MCP address</span>
+        <code className="sl-code py-2 select-all">{url}</code>
+      </div>
+      {setups.map((setup) => (
+        <div key={setup.label} className="flex flex-col gap-1">
+          <span className="text-small font-semibold">{setup.label}</span>
+          <div className="flex flex-wrap items-start gap-2">
+            <code className="sl-code min-w-0 flex-1 basis-[220px] py-2 whitespace-pre-wrap select-all">
+              {setup.text}
+            </code>
+            <Button
+              variant="quiet"
+              aria-label={`Copy the ${setup.label} setup`}
+              onClick={() => void copy(setup)}
+            >
+              <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
+              Copy
+            </Button>
+          </div>
+          <p className="m-0 text-small text-ink-2">{setup.where}</p>
+        </div>
+      ))}
+      <p
+        role="status"
+        className={
+          connection.error === null ? "m-0 text-small text-ink-2" : "m-0 text-small text-danger"
+        }
+      >
+        {status}
+      </p>
+      <section aria-label="What agents did" className="flex flex-col gap-1">
+        <h3 className="m-0 text-title-3">What agents did</h3>
+        {recent.length === 0 ? (
+          <p className="m-0 text-small text-ink-2">No agent has changed anything yet.</p>
+        ) : (
+          <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
+            {recent.map((action) => (
+              <li key={action.id}>
+                {action.title}
+                {action.subject === null ? "" : ` · ${action.subject}`} · {stamp(action.createdAt)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

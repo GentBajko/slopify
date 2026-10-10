@@ -113,6 +113,7 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
   return testDeps({
     "GET /api/providers": jsonAnswer({ providers }),
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+    "GET /api/settings/agents": jsonAnswer({ lastConnectedAt: null, recent: [] }),
     "GET /api/settings": jsonAnswer({ silenceGapSeconds: 3, appearance: "system" }),
     "GET /api/settings/autostart": jsonAnswer(autostart),
     "GET /api/settings/notifications": jsonAnswer({ url: "https://ntfy.sh/slopify-runs" }),
@@ -187,6 +188,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   providers: () => screen.findByLabelText("ElevenLabs API key"),
   voices: () => screen.findByRole("heading", { level: 1, name: "Voices" }),
   models: () => screen.findByText("/data/catalogue.json"),
+  agents: () => screen.findByText("No agent has connected yet."),
   playback: () => screen.findByLabelText("Silence between segments"),
   notifications: () => screen.findByDisplayValue("https://ntfy.sh/slopify-runs"),
   "channel-links": () => screen.findByRole("link", { name: "Open the default channel's links" }),
