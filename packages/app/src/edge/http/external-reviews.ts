@@ -47,6 +47,14 @@ export function externalReviewRoutes(deps: AppDeps) {
         by: actorOf(c),
         at: deps.clock.now().toISOString(),
       });
+      if (!result.ok && result.reason === "trashed")
+        return problem(c, {
+          status: 409,
+          title: titleOf(409),
+          detail:
+            "This review's project is in the Trash, so the verdict wasn't saved. Restore the project in Settings → Backup & storage → Trash; the review then waits for its verdict again.",
+          extensions: { reason: "trashed" },
+        });
       if (!result.ok)
         return result.reason === "not-found"
           ? problem(c, {

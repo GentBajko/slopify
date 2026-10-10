@@ -1,11 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
+import { liveProject } from "../admission/repo.js";
 import { releaseCalendar } from "../studio/calendar.js";
 import type { AttentionEntry } from "./attention.js";
-
-export const notTrashed = (table: string): string =>
-  `NOT EXISTS (SELECT 1 FROM project_trash t WHERE t.project_id=${table}.project_id)`;
 
 const stageRow = z.object({
   project_id: z.string(),
@@ -29,7 +27,7 @@ export function failedSteps(db: DatabaseSync): readonly AttentionEntry[] {
        FROM stages s
        JOIN projects p ON p.id=s.project_id
        LEFT JOIN project_heads h ON h.project_id=s.project_id
-       WHERE s.state='failed' AND ${notTrashed("s")}`,
+       WHERE s.state='failed' AND ${liveProject("s", "project_id")}`,
     )
     .all()
     .map((value) => {
@@ -188,7 +186,7 @@ export function extensionFailures(db: DatabaseSync): readonly AttentionEntry[] {
          v.comment_state, v.comment_message, v.ab_state, v.ab_message, v.ab_at
        FROM youtube_videos v JOIN projects p ON p.id=v.project_id
        WHERE (v.finish_state='failed' OR v.comment_state='failed' OR v.ab_state='failed')
-         AND ${notTrashed("v")}`,
+         AND ${liveProject("v", "project_id")}`,
     )
     .all()
     .flatMap((value) => {

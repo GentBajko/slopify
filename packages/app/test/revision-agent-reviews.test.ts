@@ -171,6 +171,7 @@ it("passes reviews a restart left overdue at boot, and the run goes on", async (
       emitted.push(event.type);
     },
     tick: runner.tick,
+    log: { write: () => undefined },
   });
   expect(passed).toBe(2);
   expect(emitted.filter((type) => type === "review.auto-passed")).toHaveLength(2);

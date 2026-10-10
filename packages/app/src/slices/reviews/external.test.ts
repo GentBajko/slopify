@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 import type { ProjectEvent } from "../../kernel/events.js";
+import type { LogFields } from "../../kernel/log.js";
 import { waitingReviewFixture } from "./external.fake.js";
 import {
   answerExternalReview,
@@ -98,6 +99,7 @@ it("passes a review nobody answered once its two hours are up, and says so", () 
       now: () => new Date(at),
       emit: (_projectId, event) => events.push(event),
       tick: (projectId) => ticks.push(projectId),
+      log: { write: () => undefined },
     });
   expect(release("2026-09-10T01:59:59.000Z")).toBe(0);
   expect(release("2026-09-10T02:00:00.000Z")).toBe(1);
@@ -141,4 +143,89 @@ it("supersedes the review of an item the current version no longer wants", () =>
   db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
   expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("superseded");
+});
+
+// A second waiting review on p1, of another image.
+function secondReview(f: ReturnType<typeof waitingReviewFixture>): void {
+  const { db } = f.h.deps;
+  db.prepare(
+    `INSERT INTO revision_work_pieces(id,work_id,work_key,request_fingerprint,fingerprint,input_json,state,dispatch_state) VALUES ('review-piece-2','images-work','review:image:two','req','review-fp-2','{"kind":"local"}','pending','allowed')`,
+  ).run();
+  db.prepare(
+    "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,piece_id,fingerprint) VALUES ('p1',?,'review:image:two','images-work','review-piece-2','review-fp-2')",
+  ).run(f.revisionId);
+  openExternalReview(db, {
+    ...f.review,
+    id: "er2",
+    pieceId: "review-piece-2",
+    workKey: "review:image:two",
+    itemKey: "image:two",
+    reviewFingerprint: "review-fp-2",
+  });
+}
+
+it("still passes, announces and wakes the other reviews when one announcement throws", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  secondReview(f);
+  const announced: string[] = [];
+  const ticks: string[] = [];
+  const logged: { event: string; fields: LogFields | undefined }[] = [];
+  const passed = releaseDueReviews({
+    db: f.h.deps.db,
+    now: () => new Date("2026-09-10T02:00:00.000Z"),
+    emit: (_projectId, event) => {
+      if (event.type !== "review.auto-passed") return;
+      if (event.reviewId === "er1") throw new Error("The hub is closed.");
+      announced.push(event.reviewId);
+    },
+    tick: (projectId) => ticks.push(projectId),
+    log: { write: (_level, event, fields) => logged.push({ event, fields }) },
+  });
+  expect(passed).toBe(2);
+  expect(announced).toEqual(["er2"]);
+  expect(ticks).toEqual(["p1"]);
+  expect(logged).toEqual([
+    {
+      event: "review.deadline",
+      fields: { projectId: "p1", detail: expect.stringContaining("The hub is closed.") },
+    },
+  ]);
+});
+
+it("neither passes nor accepts a verdict for a review of a project in the Trash", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare(
+    "INSERT INTO project_trash(project_id,deleted_at) VALUES ('p1','2026-09-10T01:00:00.000Z')",
+  ).run();
+  expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toEqual({ ok: false, reason: "trashed" });
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});
+
+it("answers superseded for a review whose item was just replaced, before any settle", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "superseded" });
+  expect(externalReviewById(db, "p1", "er1")).toMatchObject({ state: "superseded", verdict: null });
 });

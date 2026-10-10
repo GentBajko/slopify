@@ -711,6 +711,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           now: () => clock.now(),
           emit: hub.emit,
           tick: runner.tick,
+          log,
         });
       } catch (error) {
         log.write("error", "review.deadline", { detail: causedBy(error) });

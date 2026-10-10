@@ -2,6 +2,8 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { ProjectEvent } from "../../kernel/events.js";
+import type { Log } from "../../kernel/log.js";
+import { liveProject, projectTrashed } from "../admission/repo.js";
 import { type Actor, actors } from "../agents/model.js";
 import { type ReviewStage, type ReviewVerdict, reviewStages } from "./model.js";
 import type { ReviewMaterial } from "./verdict.js";
@@ -170,6 +172,7 @@ export function externalReviewById(
 export type ExternalAnswerResult =
   | { readonly ok: true; readonly value: ExternalReview }
   | { readonly ok: false; readonly reason: "not-found" }
+  | { readonly ok: false; readonly reason: "trashed" }
   | {
       readonly ok: false;
       readonly reason: "answered" | "superseded";
@@ -196,7 +199,8 @@ function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): voi
 }
 
 // The first verdict saved wins: one guarded UPDATE, so two agents answering at once cannot
-// both succeed.
+// both succeed. A review whose item was just replaced is superseded here rather than at the
+// next settle, and a project in the Trash takes no verdict until it is restored.
 export function answerExternalReview(
   db: DatabaseSync,
   input: {
@@ -207,10 +211,17 @@ export function answerExternalReview(
     readonly at: string;
   },
 ): ExternalAnswerResult {
+  if (projectTrashed(db, input.projectId))
+    return externalReviewById(db, input.projectId, input.id) === undefined
+      ? { ok: false, reason: "not-found" }
+      : { ok: false, reason: "trashed" };
   const changed = transact(db, () => {
+    db.prepare(
+      `UPDATE external_reviews SET state='superseded' WHERE project_id=? AND id=? AND state='waiting' AND NOT ${wantedBy("external_reviews")}`,
+    ).run(input.projectId, input.id);
     const answered = db
       .prepare(
-        "UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting'",
+        `UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting' AND ${wantedBy("external_reviews")}`,
       )
       .run(JSON.stringify(input.verdict), input.by, input.at, input.projectId, input.id);
     if (Number(answered.changes) === 1) releaseParkedWork(db, input.projectId, input.id);
@@ -228,14 +239,15 @@ export function waitingExternalReviews(
   projectId?: string,
 ): readonly ExternalReview[] {
   const sql = `SELECT e.* FROM external_reviews e WHERE e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")}
-    AND NOT EXISTS (SELECT 1 FROM project_trash t WHERE t.project_id=e.project_id)
+    AND ${liveProject("e", "project_id")}
     ${projectId === undefined ? "" : "AND e.project_id=?"} ORDER BY e.waiting_since, e.rowid`;
   const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
   return rows.map(reviewOf);
 }
 
 // Replaced reviews stop waiting; waiting ones past their deadline pass without review. A
-// paused project's review passes too (nothing runs until Resume); a canceled run's never does.
+// paused project's review passes too (nothing runs until Resume); a canceled run's never does,
+// nor one of a project in the Trash (it waits on, and passes once restored).
 export function settleExternalReviews(db: DatabaseSync, now: Date): readonly ExternalReview[] {
   const at = now.toISOString();
   return transact(db, () => {
@@ -244,7 +256,7 @@ export function settleExternalReviews(db: DatabaseSync, now: Date): readonly Ext
     ).run();
     const due = db
       .prepare(
-        `SELECT e.id, e.project_id FROM external_reviews e WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")}`,
+        `SELECT e.id, e.project_id FROM external_reviews e WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")} AND ${liveProject("e", "project_id")}`,
       )
       .all(at)
       .map((row) => z.object({ id: z.string(), project_id: z.string() }).parse(row));
@@ -264,24 +276,34 @@ export interface ReviewReleaseDeps {
   readonly now: () => Date;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
   readonly tick: (projectId: string) => void;
+  readonly log: Pick<Log, "write">;
 }
 
 // At boot and every few seconds: each review past its deadline passes, says so, and the run
 // goes on. The deadline is a row, so a restart in between loses nothing.
+// Each passed review is announced and woken on its own: one that throws is logged, and the
+// others still go on (the passing itself is already saved).
 export function releaseDueReviews(deps: ReviewReleaseDeps): number {
   const passed = settleExternalReviews(deps.db, deps.now());
   for (const review of passed) {
-    deps.emit(review.projectId, {
-      type: "review.auto-passed",
-      projectId: review.projectId,
-      reviewId: review.id,
-      stage: review.stage,
-      itemKey: review.itemKey,
-      revisionId: review.revisionId,
-      workId: review.workId,
-    });
-    deps.emit(review.projectId, { type: "project.updated", projectId: review.projectId });
-    deps.tick(review.projectId);
+    try {
+      deps.emit(review.projectId, {
+        type: "review.auto-passed",
+        projectId: review.projectId,
+        reviewId: review.id,
+        stage: review.stage,
+        itemKey: review.itemKey,
+        revisionId: review.revisionId,
+        workId: review.workId,
+      });
+      deps.emit(review.projectId, { type: "project.updated", projectId: review.projectId });
+      deps.tick(review.projectId);
+    } catch (error) {
+      deps.log.write("error", "review.deadline", {
+        projectId: review.projectId,
+        detail: `Review ${review.id} passed at its deadline, but announcing it or waking the run failed: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
   return passed.length;
 }

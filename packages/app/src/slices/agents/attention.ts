@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
+import { liveProject } from "../admission/repo.js";
 import { waitingExternalReviews } from "../reviews/external.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {
@@ -8,7 +9,6 @@ import {
   failedSteps,
   heldTopics,
   lateUploads,
-  notTrashed,
   pausedRuns,
 } from "./attention-work.js";
 
@@ -120,7 +120,7 @@ function flaggedVerdicts(db: DatabaseSync): readonly AttentionEntry[] {
        FROM review_verdicts v
        JOIN projects p ON p.id=v.project_id
        JOIN project_heads h ON h.project_id=v.project_id AND h.revision_id=v.revision_id
-       WHERE v.passed=0 AND v.action IS NULL AND ${notTrashed("v")}
+       WHERE v.passed=0 AND v.action IS NULL AND ${liveProject("v", "project_id")}
          AND NOT EXISTS (SELECT 1 FROM review_verdicts n WHERE n.project_id=v.project_id
            AND n.item_key=v.item_key AND (n.created_at>v.created_at OR (n.created_at=v.created_at AND n.rowid>v.rowid)))`,
     )
@@ -166,7 +166,7 @@ function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
        FROM review_checkpoints c
        JOIN projects p ON p.id=c.project_id
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
-       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${notTrashed("c")}
+       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}
          AND NOT (c.stage='video' AND EXISTS (SELECT 1 FROM prepared_videos v WHERE v.project_id=c.project_id))`,
     )
     .all()
