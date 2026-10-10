@@ -1,4 +1,4 @@
-import { oldVersionsConsequence } from "@app/slices/storage/consequences.js";
+import { fileSize, oldVersionsConsequence } from "@app/slices/storage/consequences.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -14,7 +14,6 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
-import { fileSize } from "@/lib/format";
 
 type ProjectUsage = StorageUsage["byProject"][number];
 
@@ -207,9 +206,6 @@ export function ProjectStorageList({
     </>
   );
 }
-
-// What Delete old versions removes and what it costs later: the agent's tool states the same.
-export { oldVersionsConsequence };
 
 // What Keep outputs only removes and what it costs later, asked before it runs here and on
 // the project page.

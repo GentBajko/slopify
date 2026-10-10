@@ -1,4 +1,5 @@
 import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
+import { fileSize } from "@app/slices/storage/consequences.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { readBackups, runBackupNow, saveBackups } from "@/api";
@@ -11,7 +12,6 @@ import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
 import { UnsavedStatus } from "@/components/save-state";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { fileSize } from "@/lib/format";
 
 export const backupsQueryKey = ["backups"] as const;
 const keepMin = 1;

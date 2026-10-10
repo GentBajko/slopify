@@ -1,4 +1,5 @@
 import {
+  importEach,
   type LibraryItems,
   type LibrarySection,
   type LibrarySections,
@@ -9,13 +10,7 @@ import { type QueryKey, useMutation, useQueryClient } from "@tanstack/react-quer
 import { useToast } from "@/components/kit/toast";
 import { counted } from "@/components/selection";
 import type { SaveResult } from "@/http";
-import {
-  downloadLibraryFile,
-  fileText,
-  importEach,
-  importSummary,
-  refusedFile,
-} from "./transfer-file";
+import { downloadLibraryFile, fileText, importSummary, refusedFile } from "./transfer-file";
 
 // Export and Import for one Library tab that saves item by item (prompts, intros and outros,
 // PDF themes). Every outcome is a toast: what was imported, what was renamed and what was

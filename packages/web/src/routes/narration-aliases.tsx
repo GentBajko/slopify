@@ -1,4 +1,5 @@
 import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
+import { mergeAliases } from "@app/slices/library/transfer.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardPasteIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
@@ -18,7 +19,7 @@ import { LibraryBulkBar, SelectionArea } from "@/library/bulk-bar";
 import { TransferMenu } from "@/library/transfer-menu";
 import { keys, narrationAliasesQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
-import { mergeAliases, PasteAliasesDialog } from "./narration-alias-paste.js";
+import { PasteAliasesDialog } from "./narration-alias-paste.js";
 import { type AliasRow, AliasRows, matchingRows } from "./narration-alias-rows.js";
 import { aliasFileTypes, useAliasTransfer } from "./narration-alias-transfer.js";
 import { UnsavedLeaveGuard } from "./unsaved-leave-guard.js";

@@ -79,17 +79,14 @@ export function agentRevisionIds(db: DatabaseSync, projectId: string): ReadonlyS
   );
 }
 
-export function recentAgentActions(
-  db: DatabaseSync,
-  limit = recentAgentActionsMax,
-): readonly AgentActionView[] {
+export function recentAgentActions(db: DatabaseSync): readonly AgentActionView[] {
   return db
     .prepare(
       `SELECT a.*, COALESCE(p.title, s.name) AS subject FROM agent_actions a
        LEFT JOIN projects p ON p.id=a.project_id LEFT JOIN schedules s ON s.id=a.schedule_id
        ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?`,
     )
-    .all(limit)
+    .all(recentAgentActionsMax)
     .map((row) => ({
       ...actionOf(row),
       subject: z.object({ subject: z.string().nullable() }).parse(row).subject,

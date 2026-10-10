@@ -1,12 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
-import {
-  keptAsIsWord,
-  projectStateWords,
-  stageStateWords,
-} from "@app/slices/admission/state-words.js";
+import { keptAsIsWord, projectStateWords } from "@app/slices/admission/state-words.js";
 import type { Tone } from "@/components/kit/status";
-
-export { heldWord } from "@app/slices/admission/state-words.js";
 
 // One word per state, everywhere a state is shown: Projects, the calendar, the project
 // header, Home and the run's steps. A screen that knows more (a project waiting for your
@@ -29,8 +23,6 @@ export const projectStateLook: Readonly<Record<ProjectState, StateLook>> = {
 };
 
 export const keptAsIs: StateLook = { tone: "done", word: keptAsIsWord };
-
-export const stageStateWord = stageStateWords;
 
 // A failed step that will try again by itself.
 export const retryingWord = "Waiting to try again";

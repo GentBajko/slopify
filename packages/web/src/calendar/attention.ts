@@ -1,6 +1,7 @@
+import { heldWord } from "@app/slices/admission/state-words.js";
 import type { Calendar } from "@app/slices/schedules/schema.js";
 import type { Tone } from "@/components/kit/status";
-import { heldWord, projectStateLook } from "@/lib/state-words";
+import { projectStateLook } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 
 // How a project reads on the calendar: what it needs from the person, whether its video is

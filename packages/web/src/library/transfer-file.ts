@@ -48,8 +48,6 @@ export async function fileText(file: File): Promise<FileText> {
   }
 }
 
-export { type ImportOutcome, importEach } from "@app/slices/library/transfer.js";
-
 // The first few skipped items with their reasons, for a toast.
 export function skippedText(skipped: readonly SkippedItem[]): string {
   if (skipped.length === 0) return "";

@@ -1,4 +1,5 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import { heldWord, stageStateWords } from "@app/slices/admission/state-words.js";
 import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
@@ -8,7 +9,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
-import { heldWord, retryingWord, stageStateWord } from "@/lib/state-words";
+import { retryingWord } from "@/lib/state-words";
 import type { HeldGate } from "./next-action.js";
 import { stageWords } from "./next-action.js";
 import { money, workDuration } from "./run-cost.js";
@@ -35,7 +36,7 @@ const toneOf = (stage: Stage, held: boolean): Tone => {
 const stateWord = (stage: Stage, held: boolean): string => {
   if (held) return heldWord;
   if (stage.state === "failed" && stage.retryAt !== undefined) return retryingWord;
-  return stageStateWord[stage.state];
+  return stageStateWords[stage.state];
 };
 
 // "6 min", "41 s", "1 h 52 min": how long a step took, or has taken so far.

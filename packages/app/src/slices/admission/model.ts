@@ -361,12 +361,9 @@ export interface ProjectHead extends Omit<Project, "config"> {
 // page reads: the screen shows one thin meter per running row and nothing else of a
 // stage, so sending six stage rows per project to average them in the browser would be
 // six times the body for the same 2 px.
-export interface ProjectListing extends ProjectHead {
-  readonly status: ProjectState;
-  readonly setAside?: boolean;
-  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held before its video
-  // until its day (`schedules/prepare.ts`).
-  readonly prepared?: boolean;
+export interface ProjectListing
+  extends ProjectHead,
+    Pick<ProjectSummary, "status" | "setAside" | "prepared"> {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so

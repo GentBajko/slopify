@@ -1,9 +1,10 @@
+import { mergeAliases } from "@app/slices/library/transfer.js";
 import { Link } from "@tanstack/react-router";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
-import { mergeAliases, parseAliasLines } from "./narration-alias-paste.js";
+import { parseAliasLines } from "./narration-alias-paste.js";
 import { NarrationAliasesRoute } from "./narration-aliases.js";
 
 afterEach(cleanup);

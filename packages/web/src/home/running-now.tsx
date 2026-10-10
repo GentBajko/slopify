@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectListing, Stage } from "@app/slices/admission/model.js";
+import { stageStateWords } from "@app/slices/admission/state-words.js";
 import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +13,6 @@ import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
-import { stageStateWord } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 import { activityText, capitalised, stageName, stageNames } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
@@ -100,7 +100,7 @@ export function RunningProject({
     id: stage.kind,
     name: nameOf(stage.kind),
     tone: stepTone[stage.state],
-    state: stageStateWord[stage.state],
+    state: stageStateWords[stage.state],
     time: elapsed(stage.startedAt, stage.finishedAt, now),
     detail: runningDetail(stage, now),
   }));

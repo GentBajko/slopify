@@ -5,8 +5,6 @@ import { Dialog } from "@/components/kit/dialog";
 import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
-export { mergeAliases } from "@app/slices/library/transfer.js";
-
 export interface ParsedAliases {
   readonly aliases: readonly NarrationAlias[];
   // 1-based line numbers that were not "written = spoken".

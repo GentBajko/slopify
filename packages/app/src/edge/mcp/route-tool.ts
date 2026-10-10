@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const routeMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
-export type RouteMethod = (typeof routeMethods)[number];
+const routeMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+type RouteMethod = (typeof routeMethods)[number];
 
 // One API route offered to agents as a tool. The route validates, refuses and answers exactly
 // as it does for the web page; the tool only names it and says what its body carries.

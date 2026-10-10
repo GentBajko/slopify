@@ -1,5 +1,6 @@
+import { importEach } from "@app/slices/library/transfer.js";
 import { describe, expect, it } from "vitest";
-import { importEach, importSummary } from "./transfer-file";
+import { importSummary } from "./transfer-file";
 
 const refusedName = {
   ok: false as const,

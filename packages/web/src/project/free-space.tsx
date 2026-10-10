@@ -1,4 +1,5 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
+import { oldVersionsConsequence } from "@app/slices/storage/consequences.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { deleteOldVersions, keepOutputsOnly, readProjectStorage } from "@/api";
@@ -8,11 +9,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
-import {
-  formatBytes,
-  keepOutputsConsequence,
-  oldVersionsConsequence,
-} from "@/routes/settings-storage";
+import { formatBytes, keepOutputsConsequence } from "@/routes/settings-storage";
 
 // Storage that looks after itself: a finished project offers to drop the working files it was
 // made from and keep its outputs, saying how much space that frees (`slices/storage/trim.ts`,
