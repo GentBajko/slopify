@@ -7,6 +7,7 @@ import { fixedClock } from "./kernel/clock.fake.js";
 import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
+import { layout } from "./kernel/paths.js";
 import { readVersion } from "./kernel/version.js";
 import { boot, createScheduleTickLifecycle, markInterruptedStages, urlOf } from "./main.js";
 
@@ -294,6 +295,60 @@ describe("boot", { timeout: 30_000 }, () => {
     running.push(stop);
 
     await expect(boot(config(dir))).rejects.toThrow(/already running on this data directory/);
+  });
+
+  // A paused project whose one image review waits for an agent, due `deadline`.
+  function seedWaitingReview(db: DatabaseSync, id: string, deadline: string): void {
+    if (db.prepare("SELECT 1 FROM projects WHERE id='p1'").get() === undefined)
+      db.exec(`INSERT INTO projects VALUES ('p1','t','16:9','{}','2026-09-01','2026-09-01');
+        INSERT INTO project_controls VALUES ('p1', 1);
+        INSERT INTO project_revisions (id,project_id,config,content,fingerprints,created_at)
+          VALUES ('r1','p1','{}','{}','{}','2026-09-01');
+        INSERT INTO project_heads VALUES ('p1','r1');
+        INSERT INTO stages (id,project_id,kind,source,state) VALUES ('s1','p1','images','generate','pending');`);
+    db.prepare(
+      `INSERT INTO revision_work (id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at)
+       VALUES (?,'p1','r1','s1','images','f','pending','held','2026-09-01')`,
+    ).run(`w-${id}`);
+    db.prepare(
+      "INSERT INTO revision_work_reservations (project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r1',?,?,?)",
+    ).run(`review:${id}`, `w-${id}`, `rf-${id}`);
+    db.prepare(
+      `INSERT INTO external_reviews (id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
+       VALUES (?,'p1','r1',?,'piece',?,?,'images','if',?,?,'waiting','2026-09-01',?)`,
+    ).run(id, `w-${id}`, `review:${id}`, `image:${id}`, `rf-${id}`, material, deadline);
+  }
+
+  const material = JSON.stringify({
+    request: { stage: "images", instruction: "", sections: [], images: [] },
+    images: [],
+  });
+
+  function reviewState(db: DatabaseSync, id: string): unknown {
+    return db.prepare("SELECT state FROM external_reviews WHERE id=?").get(id);
+  }
+
+  it("passes a review left overdue by a restart at boot, and one falling due every five seconds", async () => {
+    const dir = dataDir();
+    const seed = openDb(layout(dir).db);
+    migrate(seed, clock);
+    seedWaitingReview(seed, "overdue", "2026-09-01T00:00:00.000Z");
+    seed.close();
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const { paths, stop } = await boot(config(dir));
+      running.push(stop);
+      const db = openDb(paths.db);
+      expect(reviewState(db, "overdue")).toEqual({ state: "auto-passed" });
+      seedWaitingReview(db, "later", "2026-09-01T00:00:00.000Z");
+      vi.advanceTimersByTime(4_999);
+      expect(reviewState(db, "later")).toEqual({ state: "waiting" });
+      vi.advanceTimersByTime(1);
+      expect(reviewState(db, "later")).toEqual({ state: "auto-passed" });
+      db.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("lets the data directory be booted again after stop", async () => {
