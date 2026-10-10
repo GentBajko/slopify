@@ -1,4 +1,4 @@
-import type { NoticeSubject } from "@app/slices/notifications/rules.js";
+import { atItsDay, type NoticeSubject } from "@app/slices/notifications/rules.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";
@@ -26,7 +26,7 @@ export async function projectNoticeSubject(api: Api, projectId: string): Promise
     makesVideo: body.project.config.sources.video !== "off",
     startedBy: body.startedBy ?? null,
     waitingForAgent: body.project.waitingForAgent === true,
-    atItsDay: body.project.prepared === true,
+    atItsDay: atItsDay(body.project, body.holding),
     reason: body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
   };
 }

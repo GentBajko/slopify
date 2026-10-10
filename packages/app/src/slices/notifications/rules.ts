@@ -110,6 +110,15 @@ export interface NoticeSubject {
   readonly atItsDay?: boolean | undefined;
 }
 
+// Whether a prepared run's own Before Video hold is what holds it now (`atItsDay`), from the
+// project's `prepared` and `holding` (`reviews/holds.ts`): the notifier and the browser both ask.
+export function atItsDay(
+  project: { readonly prepared?: boolean | undefined },
+  holding: readonly { readonly waitsFor: string }[],
+): boolean {
+  return project.prepared === true && holding.some((hold) => hold.waitsFor === "day");
+}
+
 // A run parked on an agent's review waits for nobody: the agent answers, or the review passes
 // at its deadline and says so then. One at its day's hold waits for its scheduled day. Every
 // other notice goes out.
