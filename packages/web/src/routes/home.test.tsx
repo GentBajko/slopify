@@ -387,6 +387,28 @@ describe("home", () => {
     expect(within(needs).getByRole("link", { name: "Open to retry" })).not.toBeNull();
   });
 
+  // Kept as is wins over waiting for the agent, as in its state word: nothing of it runs.
+  it("leaves a run Kept as is out of Running now while an agent's review waits", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-run", "Sargon", "running", { progress: 0.4 }),
+            listing("p-kept", "Hatshepsut", "pending", {
+              progress: 0.5,
+              waitingForAgent: true,
+              setAside: true,
+            }),
+          ],
+        }),
+      }),
+    );
+    const running = await screen.findByRole("region", { name: "Running now" });
+    expect(await within(running).findByText("Sargon")).not.toBeNull();
+    expect(within(running).queryByText("Hatshepsut")).toBeNull();
+  });
+
   it("lists a paused run under Needs you, not Running now", async () => {
     renderRouted(
       <HomeRoute />,
