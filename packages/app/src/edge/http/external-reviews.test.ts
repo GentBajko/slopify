@@ -2,7 +2,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
-import { externalReviewById, openExternalReview } from "../../slices/reviews/external-repo.js";
+import {
+  externalReviewById,
+  openExternalReview,
+  settleExternalReviews,
+} from "../../slices/reviews/external-repo.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import { connectAgent, mcpFixture } from "../mcp/mcp.fake.js";
 
@@ -270,4 +274,26 @@ it("says a canceled run's replaced review was canceled, not that a new one waits
   expect(refused.refused).toBe(true);
   expect(refused.said).toContain("This review's run was canceled");
   expect(refused.said).not.toContain("replaced");
+});
+
+// In the Trash a review waits for nobody and never passes; restored, it waits again, listed for
+// agents, and passes at its deadline.
+it("lists a review again once its project is restored from the Trash, and passes it at its deadline", async () => {
+  const h = waiting();
+  const agent = await connectAgent(h.app);
+  const listed = async () =>
+    JSON.stringify((await agent.callTool({ name: "needs_attention", arguments: {} })).content);
+  expect(await listed()).toContain("er1");
+  expect((await h.app.request(`/api/projects/${h.projectId}`, { method: "DELETE" })).status).toBe(
+    204,
+  );
+  expect(await listed()).not.toContain("er1");
+  const deadline = new Date("2026-09-10T02:00:00.000Z");
+  expect(settleExternalReviews(h.deps.db, deadline)).toEqual([]);
+  expect(
+    (await h.app.request(`/api/trash/project/${h.projectId}/restore`, { method: "POST" })).status,
+  ).toBe(200);
+  expect(await listed()).toContain("er1");
+  expect(settleExternalReviews(h.deps.db, deadline).map((review) => review.id)).toEqual(["er1"]);
+  expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("auto-passed");
 });
