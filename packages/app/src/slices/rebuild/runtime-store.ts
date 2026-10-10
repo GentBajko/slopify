@@ -259,7 +259,9 @@ export function projectStandings(deps: RevisionDeps, projectId: string): readonl
         .get(entry.work.workId);
       return total + fraction(progress?.progress_current, progress?.progress_total);
     }, 0);
-    // A failed step, or else one waiting to run again, says why on the stage row.
+    // A failed step, or else one waiting to run again, says why on the stage row. A failed
+    // stage keeps the moment it failed: needs_attention tells a narration retry started after
+    // the failure (still going) from one started before it (spent) by it.
     const failed =
       all.find((work) => work.state === "failed") ??
       (stage.retryAt === undefined || stage.retryAt === null
@@ -273,20 +275,24 @@ export function projectStandings(deps: RevisionDeps, projectId: string): readonl
             .get(failed.work.workId);
     deps.db
       .prepare(
-        "UPDATE stages SET state=?,failure_reason=?,failure_kind=?,retry_at=?,progress_current=?,progress_total=?,finished_at=CASE WHEN ?='done' THEN ? ELSE NULL END WHERE project_id=? AND kind=?",
+        `UPDATE stages SET state=:state,failure_reason=:reason,failure_kind=:kind,retry_at=:retryAt,
+           progress_current=:current,progress_total=:total,
+           finished_at=CASE WHEN :state='done' THEN :now
+             WHEN :state='failed' THEN CASE WHEN state='failed' AND finished_at IS NOT NULL THEN finished_at ELSE :now END
+             ELSE NULL END
+         WHERE project_id=:projectId AND kind=:stage`,
       )
-      .run(
-        stage.state,
-        textOf(failure?.failure_reason),
-        textOf(failure?.failure_kind),
-        stage.retryAt ?? null,
-        invocations.length === 0 ? null : current,
-        invocations.length === 0 ? null : invocations.length,
-        stage.state,
-        deps.clock.now().toISOString(),
+      .run({
+        state: stage.state,
+        reason: textOf(failure?.failure_reason),
+        kind: textOf(failure?.failure_kind),
+        retryAt: stage.retryAt ?? null,
+        current: invocations.length === 0 ? null : current,
+        total: invocations.length === 0 ? null : invocations.length,
+        now: deps.clock.now().toISOString(),
         projectId,
-        stage.kind,
-      );
+        stage: stage.kind,
+      });
   }
   settleScheduleRunsForProject(deps.db, projectId, deps.clock.now().toISOString());
   return work;

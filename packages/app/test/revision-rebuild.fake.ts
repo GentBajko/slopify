@@ -8,6 +8,7 @@ import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
+import type { SubtitleAligner } from "../src/kernel/ports/subtitles.js";
 import { wireRunner } from "../src/main.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
@@ -49,7 +50,12 @@ export function tone(): Uint8Array {
   return bytes;
 }
 
-export async function composedFixture(ports: Partial<Registry> = {}, upgradeFrom10 = false) {
+export async function composedFixture(
+  ports: Partial<Registry> = {},
+  upgradeFrom10 = false,
+  // The caption aligner; the real one downloads a speech model.
+  alignSubtitles?: SubtitleAligner,
+) {
   const h = await paidServiceFixture(upgradeFrom10);
   for (const voice of ["first", "second", "third", "changed"])
     insertVoice(h.deps.db, { id: voice, name: voice, provider: "openai-tts", voiceId: voice });
@@ -77,6 +83,7 @@ export async function composedFixture(ports: Partial<Registry> = {}, upgradeFrom
       audioPreviews,
       telemetry: { ...base, appVersion: "test" },
       flusher: { soon: () => undefined, stop: () => undefined },
+      alignSubtitles,
     });
     return {
       deps: { ...service.deps, runner },
