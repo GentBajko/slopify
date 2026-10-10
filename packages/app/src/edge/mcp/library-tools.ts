@@ -21,7 +21,7 @@ import {
 } from "../../slices/library/transfer.js";
 import { listNarrationAliases } from "../../slices/narration/aliases-library.js";
 import { readAliasTable } from "../../slices/narration/aliases-table.js";
-import { type RouteCallDeps, refusal, text } from "./call-route.js";
+import { callApi, type RouteCallDeps, refusal, text } from "./call-route.js";
 import { fileArg } from "./route-tool.js";
 
 const sections = ["prompts", "entries", "documentThemes", "aliases"] as const;
@@ -31,13 +31,7 @@ const stems: Readonly<Record<LibrarySection, string>> = {
   documentThemes: "pdf-themes",
   aliases: "aliases",
 };
-const problemSchema = z
-  .object({
-    title: z.string(),
-    detail: z.string().optional(),
-    fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-  })
-  .loose();
+const importTool = { name: "import_library", title: "Import into the Library" } as const;
 
 // The file Library → Import or export writes for one section, with the name the page gives it.
 export function exportLibrary(deps: RouteCallDeps, section: LibrarySection): CallToolResult {
@@ -61,23 +55,11 @@ export function exportLibrary(deps: RouteCallDeps, section: LibrarySection): Cal
 
 // One item through the route its editor saves with, so the Library's own rules decide.
 async function saveThrough(deps: RouteCallDeps, path: string, item: unknown): Promise<ItemSave> {
-  const response = await deps.api(
-    new Request(new URL(path, "http://localhost"), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(item),
-    }),
-  );
-  if (response.ok) return { ok: true };
-  const problem = problemSchema.safeParse(await response.json());
-  const fields = problem.success ? (problem.data.fields ?? []) : [];
-  if ((response.status === 400 || response.status === 409) && fields.length > 0)
-    return { ok: false, fields };
-  throw new Error(
-    problem.success
-      ? (problem.data.detail ?? problem.data.title)
-      : `Slopify answered HTTP ${String(response.status)} without saying why.`,
-  );
+  const answer = await callApi(deps, importTool, "POST", path, item);
+  if (answer.ok) return { ok: true };
+  if ((answer.status === 400 || answer.status === 409) && answer.fields.length > 0)
+    return { ok: false, fields: answer.fields };
+  throw new Error(answer.message);
 }
 
 async function importInto<T extends { readonly name: string }>(
@@ -131,23 +113,12 @@ async function importAliases(
   if (aliases.length === 0)
     return { refused: "it holds no aliases. Fix the file and import it again." };
   const merged = mergeAliases(listNarrationAliases(deps.db), aliases, (alias) => alias);
-  const response = await deps.api(
-    new Request(new URL("/api/pronunciations/aliases", "http://localhost"), {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ aliases: merged.rows }),
-    }),
-  );
-  if (response.ok) return { added: merged.added, updated: merged.updated, skipped };
-  const problem = problemSchema.safeParse(await response.json());
-  return {
-    refused: problem.success
-      ? [
-          problem.data.detail ?? problem.data.title,
-          ...(problem.data.fields ?? []).map((field) => field.message),
-        ].join(" ")
-      : `Slopify answered HTTP ${String(response.status)} without saying why.`,
-  };
+  const answer = await callApi(deps, importTool, "PUT", "/api/pronunciations/aliases", {
+    aliases: merged.rows,
+  });
+  return answer.ok
+    ? { added: merged.added, updated: merged.updated, skipped }
+    : { refused: answer.message };
 }
 
 export async function importLibrary(
@@ -193,8 +164,8 @@ export async function importLibrary(
     id: deps.ids.next(),
     projectId: null,
     scheduleId: null,
-    tool: "import_library",
-    title: "Import into the Library",
+    tool: importTool.name,
+    title: importTool.title,
     revisionId: null,
     createdAt: deps.clock.now().toISOString(),
   });
@@ -217,9 +188,9 @@ export function registerLibraryTools(server: McpServer, deps: RouteCallDeps): vo
     ({ section: picked }) => exportLibrary(deps, picked),
   );
   server.registerTool(
-    "import_library",
+    importTool.name,
     {
-      title: "Import into the Library",
+      title: importTool.title,
       description:
         "Library → Import or export → Import from a file: a .json file Export made (or, for aliases, a two-column .csv or .tsv table). Each item is saved with the Library's own checks; one whose name is taken is saved as \"<name> (imported)\", one that doesn't fit is skipped with its reason. Aliases join the saved list and are saved.",
       inputSchema: { section, file: fileArg },

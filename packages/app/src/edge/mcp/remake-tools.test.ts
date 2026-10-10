@@ -9,11 +9,46 @@ const preview = (projectId: string, key: string, low: number, high: number, unkn
     id: `${projectId}-preview`,
     projectId,
     baseRevisionId: `${projectId}-r1`,
-    work: [{ key, disposition: "generate", reason: "" }],
+    planFingerprint: "plan",
+    selection: { kind: "allAffected" },
+    changedInputs: [],
+    work: [
+      {
+        key,
+        stage: "audio",
+        kind: "provider",
+        disposition: "generate",
+        requestFingerprint: "request",
+        fingerprint: "work",
+        dependsOn: [],
+        reason: "",
+        inflight: false,
+        pieceIds: [],
+      },
+    ],
+    retained: [],
     providedReuseRequired: [],
-    costs: { low, high, unknown, rows: [] },
+    costs: {
+      currency: "USD",
+      rows: [],
+      low,
+      high,
+      unknown,
+      expectedWords: 0,
+      catalogueDate: null,
+      assumptions: [],
+    },
+    wholeRequestNotice: null,
+    warnings: [],
   },
 });
+
+const skippedOf = (content: unknown) =>
+  z
+    .object({ skipped: z.array(z.object({ projectId: z.string(), reason: z.string() }).loose()) })
+    .parse(
+      JSON.parse(z.array(z.object({ text: z.string() }).loose()).parse(content)[0]?.text ?? ""),
+    ).skipped;
 
 it("previews each project's remake, leaves out the running one, and adds one total", async () => {
   const deps = routeCallDeps(async (request) => {
@@ -64,4 +99,42 @@ it("previews each project's remake, leaves out the running one, and adds one tot
     }),
   ]);
   expect(said.total).toEqual({ low: 4, high: 7, unknown: 1 });
+});
+
+it("says why a project couldn't be checked and what to do, whatever the API answered", async () => {
+  const deps = routeCallDeps(async (request) => {
+    const path = new URL(request.url).pathname;
+    if (path === "/api/projects/silent") return new Response(null, { status: 500 });
+    if (path === "/api/projects/refused")
+      return Response.json(
+        { title: "Not Found", status: 404, detail: "This project is no longer here." },
+        { status: 404, headers: { "content-type": "application/problem+json" } },
+      );
+    if (path === "/api/projects/odd") return Response.json({ project: { name: "Harbor" } });
+    if (path === "/api/projects/oddpreview")
+      return Response.json({ project: { title: "Harbor", status: "done" } });
+    if (path.endsWith("/revisions/prepare"))
+      return Response.json({ ok: true, view: { revision: { id: "r1" } } });
+    if (path.endsWith("/rebuild/preview"))
+      return Response.json({ ok: true, value: { id: "x", work: [] } });
+    return new Response(null, { status: 404 });
+  });
+  const skipped = skippedOf(
+    (await remakeOutdated(deps, ["silent", "refused", "odd", "oddpreview"])).content,
+  );
+  expect(skipped.map((one) => [one.projectId, one.reason])).toEqual([
+    [
+      "silent",
+      "It couldn't be checked: Remake outdated failed: Slopify answered HTTP 500 without saying why. Call preview_remake_outdated again; if it keeps failing, use Download diagnostics in Settings and report it.",
+    ],
+    ["refused", "It couldn't be checked: This project is no longer here."],
+    [
+      "odd",
+      "It couldn't be checked: its project page came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
+    ],
+    [
+      "oddpreview",
+      "It couldn't be checked: its remake plan came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.",
+    ],
+  ]);
 });

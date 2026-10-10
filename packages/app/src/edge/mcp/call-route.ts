@@ -60,9 +60,9 @@ export async function callRoute(
   const type = response.headers.get("content-type") ?? "";
   const value: unknown =
     response.ok && type.includes("json") && !type.includes("problem")
-      ? await response.clone().json()
+      ? await response.json()
       : undefined;
-  const result = await answerOf(tool, response);
+  const result = await answerOf(tool, response, value);
   if (method !== "GET" && tool.readOnly !== true && response.ok) {
     const { projectIds, scheduleId } = subjectsOf(tool, args, value);
     for (const projectId of projectIds.length === 0 ? [null] : projectIds)
@@ -121,13 +121,14 @@ function payloadOf(
     : {};
 }
 
-async function answerOf(tool: RouteTool, response: Response): Promise<CallToolResult> {
+async function answerOf(
+  tool: RouteTool,
+  response: Response,
+  value: unknown,
+): Promise<CallToolResult> {
   const type = response.headers.get("content-type") ?? "";
-  if (type.startsWith("application/problem+json")) return problemOf(tool, await response.json());
-  if (!response.ok)
-    return refusal(
-      `${tool.title} failed: Slopify answered HTTP ${String(response.status)} without saying why. Call ${tool.name} again; if it keeps failing, use Download diagnostics in Settings and report it.`,
-    );
+  if (!response.ok || type.startsWith("application/problem+json"))
+    return refusal((await failureOf(tool, response)).message);
   if (response.status === 204 || response.body === null) return text("Done.");
   if (type.startsWith("image/"))
     return {
@@ -139,23 +140,72 @@ async function answerOf(tool: RouteTool, response: Response): Promise<CallToolRe
         },
       ],
     };
-  if (type.includes("json")) {
-    const value: unknown = await response.json();
+  if (type.includes("json"))
     return text(JSON.stringify(tool.shape === undefined ? value : tool.shape(value)));
-  }
   if (type.startsWith("text/")) return text(await response.text());
   return text(
     `${tool.title} answered with a ${type === "" ? "binary" : type} file of ${response.headers.get("content-length") ?? "unknown"} bytes; read project files with get_project_file.`,
   );
 }
 
-function problemOf(tool: RouteTool, raw: unknown): CallToolResult {
-  const problem = problemSchema.safeParse(raw);
+// The tool a refusal names: what failed and what to call again.
+type Named = Pick<RouteTool, "name" | "title">;
+type Field = { readonly field: string; readonly message: string };
+
+export type ApiAnswer =
+  | { readonly ok: true; readonly value: unknown }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly message: string;
+      readonly fields: readonly Field[];
+    };
+
+// One in-process call to the API as the agent, for a tool that makes several of them
+// (import_library, preview_remake_outdated): the JSON it answered, or the refusal worded as a
+// route tool's own call words it.
+export async function callApi(
+  deps: RouteCallDeps,
+  tool: Named,
+  method: "GET" | "POST" | "PUT",
+  path: string,
+  body?: unknown,
+): Promise<ApiAnswer> {
+  const response = await deps.api(
+    new Request(new URL(path, "http://localhost"), {
+      method,
+      ...(body === undefined
+        ? {}
+        : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+    }),
+  );
+  if (response.ok)
+    return { ok: true, value: response.body === null ? undefined : await response.json() };
+  return { ok: false, status: response.status, ...(await failureOf(tool, response)) };
+}
+
+// What failed and why, with what to do next, from a refused or failed answer.
+async function failureOf(
+  tool: Named,
+  response: Response,
+): Promise<{ readonly message: string; readonly fields: readonly Field[] }> {
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.startsWith("application/problem+json"))
+    return {
+      message: `${tool.title} failed: Slopify answered HTTP ${String(response.status)} without saying why. Call ${tool.name} again; if it keeps failing, use Download diagnostics in Settings and report it.`,
+      fields: [],
+    };
+  const problem = problemSchema.safeParse(await response.json().catch(() => undefined));
   if (!problem.success)
-    return refusal(
-      `${tool.title} was refused, and the refusal could not be read. Call ${tool.name} again; if it keeps happening, use Download diagnostics in Settings and report it.`,
-    );
-  const { title, detail, reason, currentRevisionId, fields, errors } = problem.data;
+    return {
+      message: `${tool.title} was refused, and the refusal could not be read. Call ${tool.name} again; if it keeps happening, use Download diagnostics in Settings and report it.`,
+      fields: [],
+    };
+  return { message: problemText(tool, problem.data), fields: problem.data.fields ?? [] };
+}
+
+function problemText(tool: Named, problem: z.infer<typeof problemSchema>): string {
+  const { title, detail, reason, currentRevisionId, fields, errors } = problem;
   // The route's own sentence, except the schema refusal's "reload the page", which fixes
   // nothing for an agent: it is told which arguments were wrong instead.
   const lead =
@@ -173,5 +223,5 @@ function problemOf(tool: RouteTool, raw: unknown): CallToolResult {
     reason === "conflict" && typeof currentRevisionId === "string"
       ? ` The project's current revision is ${currentRevisionId}: read it with get_project, then call ${tool.name} once more with baseRevisionId ${currentRevisionId} and a new idempotencyKey.`
       : "";
-  return refusal(`${lead}${named}${moved}`);
+  return `${lead}${named}${moved}`;
 }

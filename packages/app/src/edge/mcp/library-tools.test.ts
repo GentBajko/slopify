@@ -2,7 +2,8 @@ import { afterEach, expect, it } from "vitest";
 import { z } from "zod";
 import { recentAgentActions } from "../../slices/agents/repo.js";
 import { listNarrationAliases } from "../../slices/narration/aliases-library.js";
-import { connectAgent, mcpFixture } from "./mcp.fake.js";
+import { importLibrary } from "./library-tools.js";
+import { connectAgent, mcpFixture, routeCallDeps } from "./mcp.fake.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -75,4 +76,13 @@ it("imports an alias table and saves it like Save aliases", async () => {
   });
   expect(imported.isError).toBeUndefined();
   expect(listNarrationAliases(h.deps.db).map((alias) => alias.spoken)).toEqual(["Doctor", "Saint"]);
+});
+
+it("says what to do when saving the aliases fails without a reason", async () => {
+  const deps = routeCallDeps(async () => new Response(null, { status: 500 }));
+  const refused = await importLibrary(deps, "aliases", fileOf("aliases.csv", "Dr.,Doctor\n"));
+  expect(refused.isError).toBe(true);
+  expect(textOf(refused.content)).toBe(
+    "aliases.csv wasn't imported: Import into the Library failed: Slopify answered HTTP 500 without saying why. Call import_library again; if it keeps failing, use Download diagnostics in Settings and report it.",
+  );
 });

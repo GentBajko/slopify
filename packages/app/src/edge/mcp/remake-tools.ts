@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { isSampleProject } from "../../slices/onboarding/sample.js";
+import { rebuildPreviewSchema } from "../../slices/rebuild/model.js";
 import {
   type CostTotal,
   previewBlocker,
@@ -9,7 +10,7 @@ import {
   remakeBlocker,
   remakeTotal,
 } from "../../slices/rebuild/remake-outdated.js";
-import { type RouteCallDeps, text } from "./call-route.js";
+import { callApi, type RouteCallDeps, text } from "./call-route.js";
 import { pathParam } from "./route-tool.js";
 
 const projectSchema = z
@@ -18,28 +19,12 @@ const projectSchema = z
 const baselineSchema = z
   .object({ view: z.object({ revision: z.object({ id: z.string() }) }) })
   .loose();
-const previewSchema = z
-  .object({
-    value: z
-      .object({
-        id: z.string(),
-        baseRevisionId: z.string(),
-        work: z.array(
-          z
-            .object({
-              key: z.string(),
-              disposition: z.enum(["reuse", "generate", "local", "review", "blocked"]),
-              reason: z.string(),
-            })
-            .loose(),
-        ),
-        providedReuseRequired: z.array(z.string()),
-        costs: z.object({ low: z.number(), high: z.number(), unknown: z.number() }).loose(),
-      })
-      .loose(),
-  })
-  .loose();
-const problemSchema = z.object({ title: z.string(), detail: z.string().optional() }).loose();
+const previewSchema = z.object({ value: rebuildPreviewSchema }).loose();
+const remakeTool = { name: "preview_remake_outdated", title: "Remake outdated" } as const;
+
+// An answer this tool can't read: the project is left out, and the page can still do it.
+const unreadable = (what: string): string =>
+  `its ${what} came back in a shape this tool doesn't read. Open the project and use Remake outdated on the Projects list; if it keeps happening, use Download diagnostics in Settings and report it.`;
 
 interface Plan {
   readonly projectId: string;
@@ -55,33 +40,6 @@ interface Skip {
   readonly reason: string;
 }
 
-async function call(
-  deps: RouteCallDeps,
-  method: "GET" | "POST",
-  path: string,
-  body?: unknown,
-): Promise<
-  { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly message: string }
-> {
-  const response = await deps.api(
-    new Request(new URL(path, "http://localhost"), {
-      method,
-      ...(body === undefined
-        ? {}
-        : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
-    }),
-  );
-  const value: unknown = response.body === null ? undefined : await response.json();
-  if (response.ok) return { ok: true, value };
-  const problem = problemSchema.safeParse(value);
-  return {
-    ok: false,
-    message: problem.success
-      ? (problem.data.detail ?? problem.data.title)
-      : `Slopify answered HTTP ${String(response.status)} without saying why.`,
-  };
-}
-
 // The same steps as the page's Remake outdated (`web/src/routes/projects-remake.ts`): the
 // project's own version, then Choose what to remake for every outdated output.
 async function planOne(deps: RouteCallDeps, projectId: string): Promise<Plan | Skip> {
@@ -91,25 +49,25 @@ async function planOne(deps: RouteCallDeps, projectId: string): Promise<Plan | S
     title: "",
     reason: `It couldn't be checked: ${message}`,
   });
-  const read = await call(deps, "GET", at);
+  const read = await callApi(deps, remakeTool, "GET", at);
   if (!read.ok) return unread(read.message);
   const project = projectSchema.safeParse(read.value);
-  if (!project.success) return unread("its page could not be read.");
+  if (!project.success) return unread(unreadable("project page"));
   const { title, status } = project.data.project;
   const blocker = remakeBlocker(status, isSampleProject(deps.db, projectId));
   if (blocker !== undefined) return { projectId, title, reason: blocker };
-  const base = await call(deps, "POST", `${at}/revisions/prepare`);
+  const base = await callApi(deps, remakeTool, "POST", `${at}/revisions/prepare`);
   const baseline = base.ok ? baselineSchema.safeParse(base.value) : undefined;
   if (!base.ok) return { ...unread(base.message), title };
   if (baseline === undefined || !baseline.success)
-    return { ...unread("its saved version could not be read."), title };
-  const previewed = await call(deps, "POST", `${at}/rebuild/preview`, {
+    return { ...unread(unreadable("saved version")), title };
+  const previewed = await callApi(deps, remakeTool, "POST", `${at}/rebuild/preview`, {
     baseRevisionId: baseline.data.view.revision.id,
     request: { kind: "allAffected" },
   });
   if (!previewed.ok) return { ...unread(previewed.message), title };
   const preview = previewSchema.safeParse(previewed.value);
-  if (!preview.success) return { ...unread("its remake could not be read."), title };
+  if (!preview.success) return { ...unread(unreadable("remake plan")), title };
   const shown = preview.data.value;
   const blocked = previewBlocker(shown, (key) => key);
   if (blocked !== undefined) return { projectId, title, reason: blocked };
@@ -143,9 +101,9 @@ export async function remakeOutdated(
 
 export function registerRemakeTools(server: McpServer, deps: RouteCallDeps): void {
   server.registerTool(
-    "preview_remake_outdated",
+    remakeTool.name,
     {
-      title: "Remake outdated",
+      title: remakeTool.title,
       description:
         "Remake outdated for several projects, like the Projects list's selection bar: each project's Choose what to remake for every outdated output with its estimate, the projects it leaves out and why, and the single total. Nothing starts here.",
       inputSchema: { projectIds: z.array(pathParam).min(1).max(2000) },

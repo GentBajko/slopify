@@ -12,7 +12,7 @@ it("leaves out a running project and a sample, with the page's reasons", () => {
     "It is running now. Remake it once the run has finished.",
   );
   expect(remakeBlocker("done", true)).toBe(
-    "It is a sample project, which stays as it came with Slopify.",
+    "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then remake the copy.",
   );
   expect(remakeBlocker("done", false)).toBeUndefined();
 });

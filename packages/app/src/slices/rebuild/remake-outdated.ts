@@ -17,7 +17,8 @@ export function remadeWork<W extends Pick<RebuildWork, "disposition">>(
 
 export function remakeBlocker(status: string, sample: boolean): string | undefined {
   if (status === "running") return "It is running now. Remake it once the run has finished.";
-  if (sample) return "It is a sample project, which stays as it came with Slopify.";
+  if (sample)
+    return "It is a sample project, which stays as it came with Slopify. Open it, press Make my own copy at the top of its page, then remake the copy.";
   return undefined;
 }
 
