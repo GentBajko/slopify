@@ -11,7 +11,6 @@ import {
   monetizationUnset,
   rateAdSuitability,
   readAbResult,
-  readMetrics,
 } from "./studio-pages.js";
 import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 
@@ -338,7 +337,7 @@ async function confirmed(): Promise<boolean> {
 }
 
 // A Studio page opened for one upload: the hash says what to do there and for which upload
-// ("#slopify-ab=both&p=<project>&s=<short>", "#slopify-finish&…", "#slopify-stats=1&…").
+// ("#slopify-ab=both&p=<project>&s=<short>", "#slopify-finish&…", "#slopify-ab-read&…").
 // The task this page was opened for: kept by `early.ts` before Studio's router saw the "#…"
 // (read once, so a later navigation in the same tab isn't taken for it), or still in the
 // address on a page where the early script didn't run.
@@ -409,70 +408,18 @@ async function runFinish(projectId: string, short: number | null): Promise<void>
   await report(result.ok, result.message);
 }
 
-// Analytics: Reach, then Engagement (the page moves itself there), then report.
-async function runStats(step: string, projectId: string, short: number | null): Promise<void> {
-  const videoId = /\/video\/([A-Za-z0-9_-]{11})\//.exec(location.pathname)?.[1];
-  if (videoId === undefined) return;
-  const metrics = await readMetrics();
-  const key = `slopify.stats.${videoId}`;
-  if (step === "1") {
-    sessionStorage.setItem(key, JSON.stringify(metrics));
-    location.assign(
-      `https://studio.youtube.com/video/${videoId}/analytics/tab-interest_viewers/period-default#slopify-stats=2&${hashParams()
-        .toString()
-        .replace(/^slopify-stats=1&?/, "")}`,
-    );
-    return;
-  }
-  let reach: Record<string, number> = {};
-  try {
-    reach = JSON.parse(sessionStorage.getItem(key) ?? "{}") as Record<string, number>;
-  } catch {
-    // Read again tomorrow.
-  }
-  const all = { ...reach, ...metrics };
-  // A long video's A/B result is on its Details page: the page moves itself there once more.
-  if (step === "2" && short === null) {
-    sessionStorage.setItem(key, JSON.stringify(all));
-    location.assign(
-      `https://studio.youtube.com/video/${videoId}/edit#slopify-stats=3&${hashParams()
-        .toString()
-        .replace(/^slopify-stats=2&?/, "")}`,
-    );
-    return;
-  }
-  await api.runtime.sendMessage({
-    type: "stats",
-    projectId,
-    short,
-    videoId,
-    metrics: all,
-    last: true,
-  });
-}
-
-// The last step for a long video: its A/B result, if Studio has one, with its numbers.
+// A long video's running A/B test, on its Details page ("#slopify-ab-read&p=…"): its result,
+// if Studio has one, for Slopify's Library.
 async function runAbRead(projectId: string): Promise<void> {
   const videoId = /\/video\/([A-Za-z0-9_-]{11})\//.exec(location.pathname)?.[1];
   if (videoId === undefined) return;
-  let metrics: Record<string, number> = {};
-  try {
-    metrics = JSON.parse(sessionStorage.getItem(`slopify.stats.${videoId}`) ?? "{}") as Record<
-      string,
-      number
-    >;
-  } catch {
-    // Read again tomorrow.
-  }
   const abVariants = await readAbResult().catch(() => undefined);
   await api.runtime.sendMessage({
-    type: "stats",
+    type: "ab-result",
     projectId,
     short: null,
     videoId,
-    metrics,
     ...(abVariants === undefined ? {} : { abVariants }),
-    last: true,
   });
 }
 
@@ -703,60 +650,6 @@ function look(): void {
   void fill(true);
 }
 
-// The extension opened Studio's Analytics view to export it ("#slopify-export&c=<channel>"):
-// presses Export → Comma-separated values, takes the zip from Studio's answer (passed on by
-// `export-hook.ts`), sends it to Slopify for that channel, and closes the tab.
-async function runExport(channelId: string): Promise<void> {
-  const report = (ok: boolean, message: string) =>
-    api.runtime.sendMessage({ type: "export-done", channelId, ok, message });
-  const caught = new Promise<string | null>((resolve) => {
-    const listen = (event: MessageEvent): void => {
-      const data = event.data as { source?: unknown; zippedData?: unknown } | null;
-      if (event.source !== window || data?.source !== "slopify-export-hook") return;
-      if (typeof data.zippedData !== "string") return;
-      window.removeEventListener("message", listen);
-      resolve(data.zippedData);
-    };
-    window.addEventListener("message", listen);
-    setTimeout(() => {
-      window.removeEventListener("message", listen);
-      resolve(null);
-    }, 90_000);
-  });
-  const button = await waitFor(
-    () => document.querySelector("ytcp-icon-button#export-button"),
-    45_000,
-  );
-  if (button === null) {
-    await report(false, "Studio's Export button didn't show on the Analytics view.");
-    return;
-  }
-  pressLike(button);
-  const csv = await waitFor(
-    () =>
-      [...document.querySelectorAll('tp-yt-paper-item[test-id="CSV"]')].find(
-        (one) => one.getClientRects().length > 0,
-      ) ?? null,
-    10_000,
-  );
-  if (csv === null) {
-    await report(false, "Studio's Export menu didn't offer Comma-separated values.");
-    return;
-  }
-  pressLike(csv);
-  const zippedData = await caught;
-  if (zippedData === null) {
-    await report(false, "Studio didn't send the export within a minute and a half.");
-    return;
-  }
-  const sent = (await api.runtime.sendMessage({
-    type: "report",
-    channelId,
-    zippedData,
-  })) as WorkerAnswer<{ rows: number }>;
-  await report(sent.ok, sent.ok ? `Exported ${String(sent.value.rows)} videos.` : sent.message);
-}
-
 // The extension opened Studio to check the videos Slopify takes to be on YouTube
 // ("#slopify-gone"): asks Studio's own page for each one's state (`export-hook.ts`, which reads
 // the edit page signed in), reports the deleted ones, and says in the console what it found.
@@ -809,47 +702,15 @@ async function runGone(): Promise<void> {
   if (!sent.ok) console.warn(`Slopify couldn't take in what Studio said: ${sent.message}`);
 }
 
-async function waitFor<T>(look: () => T | null, ms: number): Promise<T | null> {
-  for (let waited = 0; waited < ms; waited += 300) {
-    const found = look();
-    if (found !== null) return found;
-    await new Promise((done) => setTimeout(done, 300));
-  }
-  return null;
-}
-
-// Studio's menus open on a pointer press, not on a bare click() call.
-function pressLike(element: Element): void {
-  const box = element.getBoundingClientRect();
-  const at = {
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-    button: 0,
-    clientX: box.left + box.width / 2,
-    clientY: box.top + box.height / 2,
-  };
-  const pointer = { ...at, pointerId: 1, pointerType: "mouse", isPrimary: true };
-  element.dispatchEvent(new PointerEvent("pointerdown", { ...pointer, buttons: 1 }));
-  element.dispatchEvent(new MouseEvent("mousedown", { ...at, buttons: 1 }));
-  element.dispatchEvent(new PointerEvent("pointerup", pointer));
-  element.dispatchEvent(new MouseEvent("mouseup", at));
-  element.dispatchEvent(new MouseEvent("click", at));
-}
-
 const params = hashParams();
 const projectId = params.get("p");
 const short = Number(params.get("s") ?? "0") || null;
 const ab = params.get("slopify-ab");
-const exportChannel = params.has("slopify-export") ? params.get("c") : null;
-if (exportChannel !== null) void runExport(exportChannel);
-else if (params.has("slopify-gone")) void runGone();
+if (params.has("slopify-gone")) void runGone();
 else if (projectId !== null && (ab === "titles" || ab === "thumbnails" || ab === "both"))
   void runAb(ab, projectId, short);
 else if (projectId !== null && params.has("slopify-finish")) void runFinish(projectId, short);
-else if (projectId !== null && params.get("slopify-stats") === "3") void runAbRead(projectId);
-else if (projectId !== null && params.has("slopify-stats"))
-  void runStats(params.get("slopify-stats") ?? "1", projectId, short);
+else if (projectId !== null && params.has("slopify-ab-read")) void runAbRead(projectId);
 else {
   watch();
   look();

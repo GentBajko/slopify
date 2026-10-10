@@ -96,7 +96,5 @@ export const excludedRoutes: Readonly<Record<string, string>> = {
   "POST /api/studio/ext/stats": extension,
   "POST /api/studio/ext/video": extension,
   "POST /api/studio/ext/video/done": extension,
-  "GET /api/studio/ext/export-views": extension,
-  "POST /api/studio/ext/report": extension,
   "GET /api/studio/ext/files/:projectId/:asset": extension,
 };

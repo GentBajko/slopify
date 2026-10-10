@@ -1,7 +1,6 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
@@ -879,41 +878,6 @@ describe("YouTube videos and their A/B tests", () => {
     expect(await tasks()).toBe(false);
   });
 
-  it("totals a channel's numbers: CTR over all impressions, view duration weighted by views", async () => {
-    const h = harness();
-    finished(h.output);
-    const token = await paired(h);
-    const long = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
-    const short = { projectId: "p1", short: 1, videoId: "xQgNw85mvH4" };
-    for (const one of [long, short]) {
-      await h.call("/ext/video", ext(token, one));
-      await h.call("/ext/video/done", ext(token, one));
-    }
-    await h.call(
-      "/ext/stats",
-      ext(token, {
-        ...long,
-        impressions: 1000,
-        ctr: 2,
-        views: 100,
-        averageViewSeconds: 600,
-        watchHours: 16.7,
-      }),
-    );
-    await h.call("/ext/stats", ext(token, { ...short, views: 300, averageViewSeconds: 20 }));
-    const body = (await (
-      await h.call("/channels/00000000-0000-4000-8000-000000000001/performance")
-    ).json()) as {
-      projects: { long: { stats: { views: number } } | null; shorts: unknown[] }[];
-      long: { views: number; ctr: number | null; averageViewSeconds: number | null };
-      shorts: { views: number; impressions: number | null; averageViewSeconds: number | null };
-    };
-    expect(body.projects).toHaveLength(1);
-    expect(body.projects[0]?.shorts).toHaveLength(1);
-    expect(body.long).toMatchObject({ views: 100, ctr: 2, averageViewSeconds: 600 });
-    expect(body.shorts).toMatchObject({ views: 300, impressions: null, averageViewSeconds: 20 });
-  });
-
   it("takes a pasted link for an upload made by hand", async () => {
     const h = harness();
     finished(h.output);
@@ -1067,62 +1031,6 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     "content-type": "application/json",
   });
 
-  it("takes the extension's daily export of the channel's view, with each video's numbers", async () => {
-    const h = harness();
-    finished(h.output);
-    const token = await paired(h);
-    const channelId = "00000000-0000-4000-8000-000000000001";
-    // The view to export: only a Studio Advanced mode link is kept.
-    const wrong = await h.call(`/channels/${channelId}/export-view`, {
-      ...json({ url: "https://example.com/" }),
-      method: "PUT",
-    });
-    expect(wrong.status).toBe(400);
-    const url =
-      "https://studio.youtube.com/channel/UCabc/analytics/tab-content/period-default/explore?time_period=1741420800000%2C1790924400000";
-    await h.call(`/channels/${channelId}/export-view`, { ...json({ url }), method: "PUT" });
-    expect(
-      await (await h.call("/ext/export-views", { headers: extHeaders(token) })).json(),
-    ).toEqual({
-      views: [{ channelId, url }],
-    });
-    // The project's video is on YouTube; the export has its row.
-    await h.call("/ext/video", {
-      method: "POST",
-      headers: extHeaders(token),
-      body: JSON.stringify({ projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
-    });
-    await h.call("/ext/video/done", {
-      method: "POST",
-      headers: extHeaders(token),
-      body: JSON.stringify({ projectId: "p1", short: null, videoId: "lKS3FAjekpI" }),
-    });
-    const table = [
-      "Content,Video title,Video publish time,Duration,Views,Average view duration,Watch time (hours),Impressions,Impressions click-through rate (%)",
-      "Total,,,,66,0:32:19,35.5,493,2.2",
-      'lKS3FAjekpI,The Lighthouse,"Oct 1, 2026",3600,66,0:32:19,35.5,493,2.2',
-    ].join("\n");
-    const zip = zipSync({ "Table data.csv": strToU8(table) });
-    const sent = await h.call("/ext/report", {
-      method: "POST",
-      headers: extHeaders(token),
-      body: JSON.stringify({ channelId, zippedData: Buffer.from(zip).toString("base64url") }),
-    });
-    expect(await sent.json()).toEqual({ rows: 1, videos: 1 });
-    expect(await (await h.call("/stats/p1")).json()).toMatchObject({
-      stats: [
-        {
-          videoId: "lKS3FAjekpI",
-          views: 66,
-          impressions: 493,
-          ctr: 2.2,
-          averageViewSeconds: 1939,
-          watchHours: 35.5,
-        },
-      ],
-    });
-  });
-
   it("gives a finished project the plan's next free slot, with its shorts' times after it", async () => {
     const h = harness();
     finished(h.output);
@@ -1268,7 +1176,7 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
     expect(pack).toMatchObject({ item: { kind: "video" }, waiting: 1 });
   });
 
-  it("keeps Studio's numbers and an A/B result for the project and the Library", async () => {
+  it("keeps an A/B result for the Library and ignores the numbers an older extension sends", async () => {
     const h = harness();
     finished(h.output);
     const token = await paired(h);
@@ -1289,9 +1197,7 @@ describe("the posting plan, Upload all Shorts and Studio's numbers", () => {
         ],
       }),
     });
-    expect(await (await h.call("/stats/p1")).json()).toMatchObject({
-      stats: [{ views: 66, ctr: 2.2, impressions: 493, averageViewSeconds: 1939 }],
-    });
+    expect((await h.call("/stats/p1")).status).toBe(404);
     expect(await (await h.call("/ab-results")).json()).toMatchObject({
       results: [{ projectId: "p1", variants: [{ title: "A", winner: true }, { title: "B" }] }],
     });

@@ -436,34 +436,6 @@ export async function finishDetails(item: PackItem, captionsFile: File | undefin
   };
 }
 
-// ---- Analytics ---------------------------------------------------------------------------
-
-// A metric block's number as Studio writes it: "493", "2.2%", "1.2K", "32:19" (seconds), "—".
-export function metricValue(text: string): number | undefined {
-  const value = text.trim().replace(/,/g, "");
-  if (value === "" || value === "—") return undefined;
-  const clock = /^(?:(\d+):)?(\d+):(\d{2})$/.exec(value);
-  if (clock !== null)
-    return Number(clock[1] ?? 0) * 3600 + Number(clock[2]) * 60 + Number(clock[3]);
-  const number = /^(\d+(?:\.\d+)?)\s*([KMB%])?$/i.exec(value);
-  if (number === null) return undefined;
-  const scale = { K: 1e3, M: 1e6, B: 1e9 }[(number[2] ?? "").toUpperCase() as "K" | "M" | "B"] ?? 1;
-  return Number(number[1]) * scale;
-}
-
-// The key metrics shown on an Analytics tab, by Studio's own ids (VIDEO_THUMBNAIL_IMPRESSIONS,
-// VIDEO_THUMBNAIL_IMPRESSIONS_VTR, EXTERNAL_VIEWS, EXTERNAL_WATCH_TIME, AVERAGE_WATCH_TIME).
-export async function readMetrics(): Promise<Record<string, number>> {
-  await until(() => document.querySelector("tp-yt-paper-item[id$='-tab'] #metric-total"), 20000);
-  await sleep(1500);
-  const out: Record<string, number> = {};
-  for (const block of document.querySelectorAll("tp-yt-paper-item[id$='-tab']")) {
-    const value = metricValue(block.querySelector("#metric-total")?.textContent ?? "");
-    if (value !== undefined) out[block.id.replace(/-tab$/, "")] = value;
-  }
-  return out;
-}
-
 // ---- A/B results ---------------------------------------------------------------------------
 
 export interface AbVariantRead {

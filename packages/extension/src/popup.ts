@@ -37,21 +37,6 @@ document.getElementById("open")?.addEventListener("click", () => {
   window.close();
 });
 
-// Exports the Analytics view and reads A/B results now, instead of waiting for the day.
-const statsButton = document.getElementById("stats") as HTMLButtonElement;
-statsButton.addEventListener("click", () => {
-  statsButton.disabled = true;
-  status.textContent = "Reading Studio in background tabs…";
-  void (api.runtime.sendMessage({ type: "stats-now" }) as Promise<WorkerAnswer<number>>).then(
-    (answer) => {
-      statsButton.disabled = false;
-      status.textContent = answer.ok
-        ? "Reading Studio in background tabs; Channels → YouTube fills in within a minute."
-        : answer.message;
-    },
-  );
-});
-
 // The list's heading, with the button that checks Studio for deleted videos now: one Studio
 // already deleted shows "On YouTube" until the check forgets it (every two hours otherwise).
 function sectionRow(text: string): HTMLElement {

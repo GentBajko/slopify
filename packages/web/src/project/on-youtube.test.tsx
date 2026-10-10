@@ -28,7 +28,6 @@ it("forgets a short deleted in Studio, so it can be uploaded again", async () =>
     <OnYoutube projectId="p1" shorts={1} />,
     testDeps({
       "GET /api/studio/videos/p1": jsonAnswer({ videos: [video] }),
-      "GET /api/studio/stats/p1": jsonAnswer({ stats: [] }),
       "PUT /api/studio/videos/p1": async (request) => {
         sent.push(await request.json());
         return jsonAnswer({ videos: [] })(request);

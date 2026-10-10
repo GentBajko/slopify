@@ -153,44 +153,10 @@ const youtube: readonly RouteTool[] = [
       "Records the YouTube link of an upload made without the extension, or with an empty link is Deleted on YouTube: Slopify forgets the video so it can be uploaded again. Body: {short: a short's number or null for the video, link}.",
   },
   {
-    name: "get_youtube_stats",
-    route: "GET /api/studio/stats/:projectId",
-    title: "Read a project's YouTube numbers",
-    description: "Studio's numbers for the project's videos, as the extension last read them.",
-  },
-  {
     name: "get_ab_results",
     route: "GET /api/studio/ab-results",
     title: "Read A/B results",
     description: "Library → A/B results: every finished title and thumbnail test.",
-  },
-  {
-    name: "get_studio_report",
-    route: "GET /api/studio/channels/:channelId/report",
-    title: "Read the Studio report",
-    description:
-      "Channels → YouTube numbers: the last imported Studio Analytics export, which project each of its videos is, and the export link the extension reads daily.",
-  },
-  {
-    name: "import_studio_export",
-    route: "POST /api/studio/channels/:channelId/report",
-    title: "Import a Studio export",
-    description:
-      "Imports the zip Studio's Advanced mode Export downloads (at most 30 MB), with the same checks as Import on the channel's YouTube tab.",
-    upload: "raw",
-  },
-  {
-    name: "set_export_view",
-    route: "PUT /api/studio/channels/:channelId/export-view",
-    title: "Set the Analytics export link",
-    description:
-      "The Studio Analytics view the extension exports every day for this channel. Body: {url: the Advanced mode link | null to forget it}.",
-  },
-  {
-    name: "get_channel_youtube",
-    route: "GET /api/studio/channels/:channelId/performance",
-    title: "Read Channels → YouTube",
-    description: "The channel's videos on YouTube with Studio's numbers and totals.",
   },
 ];
 

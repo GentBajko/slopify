@@ -1,13 +1,11 @@
-import type { VideoStats } from "@app/slices/studio/stats.js";
 import type { YoutubeVideo } from "@app/slices/studio/videos.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useId, useState } from "react";
-import { readProjectStats, readProjectVideos, saveProjectVideo } from "@/api";
+import { readProjectVideos, saveProjectVideo } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
-import { shortDate } from "@/lib/utils";
 
 // On YouTube: the video each of the project's uploads became (the long video and each short),
 // as the Slopify Studio extension read it from Studio's upload dialog or as pasted here. A/B
@@ -71,12 +69,6 @@ export function OnYoutube({
   readonly shorts: number;
 }): ReactElement {
   const videos = useProjectVideos(projectId);
-  const { api } = useApp();
-  // Studio's numbers, as the extension last read them from each video's Analytics.
-  const stats = useQuery({
-    queryKey: ["project", projectId, "youtube-stats"],
-    queryFn: () => readProjectStats(api, projectId),
-  });
   const uploads: readonly (number | null)[] = [
     null,
     ...Array.from({ length: shorts }, (_, index) => index + 1),
@@ -96,7 +88,6 @@ export function OnYoutube({
             projectId={projectId}
             short={short}
             video={videos.data?.find((one) => one.short === short)}
-            stats={stats.data?.find((one) => one.short === short)}
           />
         ))}
       </ul>
@@ -108,12 +99,10 @@ function UploadRow({
   projectId,
   short,
   video,
-  stats,
 }: {
   readonly projectId: string;
   readonly short: number | null;
   readonly video: YoutubeVideo | undefined;
-  readonly stats: VideoStats | undefined;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -214,29 +203,6 @@ function UploadRow({
           {error ?? (video === undefined ? "" : stateWords(video))}
         </p>
       )}
-      {stats === undefined ? null : (
-        <p className="m-0 pl-18 text-small tabular-nums text-ink-2">{numbersOf(stats)}</p>
-      )}
     </li>
   );
-}
-
-// "66 views · 2.2% CTR of 493 impressions · 32:19 average view · read 2 Oct".
-function numbersOf(stats: VideoStats): string {
-  const parts: string[] = [];
-  if (stats.views !== null) parts.push(`${stats.views.toLocaleString()} views`);
-  if (stats.ctr !== null)
-    parts.push(
-      `${String(stats.ctr)}% CTR${stats.impressions === null ? "" : ` of ${stats.impressions.toLocaleString()} impressions`}`,
-    );
-  if (stats.averageViewSeconds !== null) {
-    const s = Math.round(stats.averageViewSeconds);
-    const clock =
-      s >= 3600
-        ? `${String(Math.floor(s / 3600))}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
-        : `${String(Math.floor(s / 60))}:${String(s % 60).padStart(2, "0")}`;
-    parts.push(`${clock} average view`);
-  }
-  parts.push(`read ${shortDate(stats.readAt)}`);
-  return parts.join(" · ");
 }

@@ -154,20 +154,20 @@ it("sends a file as multipart for an upload tool, and as the bytes for a raw one
   await callRoute(
     raw,
     {
-      name: "import_studio_export",
-      route: "POST /api/studio/channels/:channelId/report",
-      title: "Import",
+      name: "upload_cast_picture",
+      route: "POST /api/channels/cast/:memberId/images",
+      title: "Upload",
       description: "",
       upload: "raw",
     },
     {
-      channelId: "c1",
-      file: { name: "export.zip", contentType: "application/zip", base64: "UEsDBA==" },
+      memberId: "m1",
+      file: { name: "one.png", contentType: "image/png", base64: "iVBORw==" },
     },
   );
-  expect(raw.seen[0]?.headers.get("content-type")).toBe("application/zip");
+  expect(raw.seen[0]?.headers.get("content-type")).toBe("image/png");
   expect(new Uint8Array(await (raw.seen[0]?.arrayBuffer() ?? new ArrayBuffer(0)))).toEqual(
-    new Uint8Array([80, 75, 3, 4]),
+    new Uint8Array([137, 80, 78, 71]),
   );
 });
 
