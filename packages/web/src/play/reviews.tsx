@@ -2,9 +2,12 @@ import type { Prompt } from "@app/slices/library/model.js";
 import {
   defaultReviewRetries,
   imageReviewers,
+  type Reviewer,
   type ReviewMode,
   type ReviewSettingsForm,
   type ReviewStage,
+  reviewerLabels,
+  reviewers,
   reviewModeLabels,
   reviewModes,
   reviewStageLabels,
@@ -18,6 +21,7 @@ import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
 import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { Segmented } from "@/components/kit/switch";
 import { Picker } from "@/components/ui/picker";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { promptsQuery, providersQuery } from "@/queries";
@@ -91,8 +95,12 @@ export function ReviewSettings({
   const setStage = (stage: ReviewStage, mode: ReviewMode, prompt: string) =>
     onChange({ ...value, stages: { ...value.stages, [stage]: { mode, prompt } } });
   const pictures = visionStages.filter((stage) => modeOf(stage) !== "off" && makes(stage));
+  const byAgent = value.reviewer === "agent";
   const blind =
-    pictures.length > 0 && value.provider !== "" && !imageReviewers.includes(value.provider);
+    !byAgent &&
+    pictures.length > 0 &&
+    value.provider !== "" &&
+    !imageReviewers.includes(value.provider);
   return (
     <fieldset
       data-play-field="reviews"
@@ -106,25 +114,37 @@ export function ReviewSettings({
         <InfoTip id="play.reviews" />
       </legend>
       <div className="sl-fields">
-        <ProviderPicker
-          field="reviews.provider"
-          label="Reviewer"
-          tip="play.reviews.provider"
-          family="llm"
-          providers={providers}
-          value={value.provider}
-          problem={problem("reviews.provider")}
-          onPick={(provider) => onChange({ ...value, provider, model: "" })}
-        />
-        <ModelPicker
-          field="reviews.model"
-          label="Reviewer model"
-          tip="play.reviews.model"
-          provider={value.provider}
-          value={value.model}
-          problem={problem("reviews.model")}
-          onPick={(model) => onChange({ ...value, model })}
-        />
+        <div className="block text-small">
+          <Segmented<Reviewer>
+            label="Who reviews"
+            tip="play.reviews.reviewer"
+            value={value.reviewer ?? "model"}
+            options={reviewers.map((one) => ({ value: one, label: reviewerLabels[one] }))}
+            onChange={(reviewer) => onChange({ ...value, reviewer })}
+          />
+        </div>
+        {/* The agent needs no model: the pickers stay, disabled, so nothing shifts. */}
+        <fieldset className="contents" disabled={byAgent}>
+          <ProviderPicker
+            field="reviews.provider"
+            label="Reviewer"
+            tip="play.reviews.provider"
+            family="llm"
+            providers={providers}
+            value={value.provider}
+            problem={problem("reviews.provider")}
+            onPick={(provider) => onChange({ ...value, provider, model: "" })}
+          />
+          <ModelPicker
+            field="reviews.model"
+            label="Reviewer model"
+            tip="play.reviews.model"
+            provider={value.provider}
+            value={value.model}
+            problem={problem("reviews.model")}
+            onPick={(model) => onChange({ ...value, model })}
+          />
+        </fieldset>
         <div className="block space-y-1 text-small" {...helpScope}>
           <span className="flex items-center gap-1">
             <label htmlFor={`${id}-retries`}>Redos per item</label>
@@ -151,7 +171,9 @@ export function ReviewSettings({
         </p>
       ) : (
         <p className="mt-2 text-label text-ink-3">
-          Pictures (images, thumbnail, shorts) need Claude Code or Codex as the reviewer.
+          {byAgent
+            ? "The external agent answers through MCP and is shown the pictures; no API fee."
+            : "Pictures (images, thumbnail, shorts) need Claude Code or Codex as the reviewer."}
         </p>
       )}
       <table className="mt-3 w-full text-small">

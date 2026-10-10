@@ -118,3 +118,39 @@ it.each([
   const parts = await showHistory([textPiece(payload)]);
   expect(parts.querySelector("pre")?.textContent).toBe(message);
 });
+
+it("marks a version an agent saved and lists what agents did", async () => {
+  const view = revisionView();
+  const revision = view.revision;
+  renderApp(
+    <RevisionHistory projectId="p1" pending={false} onRestore={() => {}} />,
+    testDeps({
+      "GET /api/projects/p1/revisions": jsonAnswer({
+        revisions: [
+          {
+            id: revision.id,
+            parentId: null,
+            restoredFromId: null,
+            title: revision.config.title,
+            createdAt: revision.createdAt,
+            current: true,
+            byAgent: true,
+          },
+        ],
+        agentActions: [
+          {
+            id: "a1",
+            projectId: "p1",
+            scheduleId: null,
+            tool: "resume_project",
+            title: "Continue the run",
+            revisionId: null,
+            createdAt: "2026-09-10T00:05:00.000Z",
+          },
+        ],
+      }),
+    }),
+  );
+  expect(await screen.findByRole("button", { name: /· by agent/ })).toBeTruthy();
+  expect(screen.getByText(/Continue the run · by agent/)).toBeTruthy();
+});

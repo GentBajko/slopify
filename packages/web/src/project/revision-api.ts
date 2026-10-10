@@ -131,15 +131,31 @@ export function restoreProjectRevision(
     restoreRevisionSchema.parse(input),
   );
 }
+const agentActionSchema = z.object({
+  id: z.string(),
+  tool: z.string(),
+  title: z.string(),
+  revisionId: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type AgentActionView = z.infer<typeof agentActionSchema>;
 export function historyOf(
   api: Api,
   projectId: string,
-): Promise<RevisionReply<{ readonly revisions: readonly RevisionSummary[] }>> {
+): Promise<
+  RevisionReply<{
+    readonly revisions: readonly RevisionSummary[];
+    readonly agentActions: readonly AgentActionView[];
+  }>
+> {
   return request(
     api,
     projectId,
     "/revisions",
-    z.object({ revisions: z.array(revisionSummarySchema) }),
+    z.object({
+      revisions: z.array(revisionSummarySchema),
+      agentActions: z.array(agentActionSchema).default([]),
+    }),
   );
 }
 export function viewOf(

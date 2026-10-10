@@ -68,7 +68,7 @@ export function RevisionHistory({
     queryFn: async () => {
       const result = await historyOf(api, projectId);
       if (!result.ok) throw new Error(result.message);
-      return result.value.revisions;
+      return result.value;
     },
   });
   const view = useQuery({
@@ -96,15 +96,28 @@ export function RevisionHistory({
       <SectionHead title="Project history" />
       {history.error === null ? null : <p role="alert">{history.error.message}</p>}
       <ol className="space-y-2">
-        {history.data?.map((revision) => (
+        {history.data?.revisions.map((revision) => (
           <li key={revision.id}>
             <Button type="button" onClick={() => setSelected(revision.id)}>
               {revision.title} · {stamp(revision.createdAt)}
+              {revision.byAgent === true ? " · by agent" : ""}
               {revision.current ? " · Current" : ""}
             </Button>
           </li>
         ))}
       </ol>
+      {(history.data?.agentActions.length ?? 0) === 0 ? null : (
+        <section aria-label="Done by agents" className="space-y-1">
+          <h3 className="m-0 text-title-3">Done by agents</h3>
+          <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
+            {history.data?.agentActions.map((action) => (
+              <li key={action.id}>
+                {action.title} · by agent · {stamp(action.createdAt)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {view.error === null ? null : <p role="alert">{view.error.message}</p>}
       {selectedView === undefined ? null : (
         <div className="space-y-3">

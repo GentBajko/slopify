@@ -36,15 +36,25 @@ function statusOf(review: Review): {
   readonly label: string;
   readonly tone: BadgeTone;
 } {
+  const agent = review.answeredBy === "agent";
+  if (review.outcome === "auto-passed") return { label: "Passed without review", tone: "waiting" };
   if (review.passed)
     return review.attempt > 1
-      ? { label: "Redone after review", tone: "info" }
-      : { label: "Review passed", tone: "neutral" };
-  if (review.action === "overruled") return { label: "Accepted by you", tone: "neutral" };
-  if (review.action === "redone") return { label: "Being made again", tone: "running" };
+      ? { label: agent ? "Redone after agent review" : "Redone after review", tone: "info" }
+      : { label: agent ? "Passed by agent" : "Review passed", tone: "neutral" };
+  if (review.action === "overruled")
+    return {
+      label: review.actionBy === "agent" ? "Accepted by agent" : "Accepted by you",
+      tone: "neutral",
+    };
+  if (review.action === "redone")
+    return {
+      label: review.actionBy === "agent" ? "Made again by agent" : "Being made again",
+      tone: "running",
+    };
   if (review.redoState === "pending") return { label: "Waiting to be made again", tone: "running" };
   if (review.redoState === "started") return { label: "Being made again", tone: "running" };
-  return { label: "Flagged by review", tone: "info" };
+  return { label: agent ? "Flagged by agent" : "Flagged by review", tone: "info" };
 }
 
 // The verdict as a status badge: "Flagged by review", "Redone after review".
@@ -61,7 +71,11 @@ function Reasons({ review }: { readonly review: Review }): ReactElement {
   return (
     <>
       {review.reasons.length === 0 ? (
-        <p className="m-0">The reviewer found nothing to fix.</p>
+        <p className="m-0">
+          {review.outcome === "auto-passed"
+            ? "No agent answered within 2 hours, so it went ahead without review."
+            : "The reviewer found nothing to fix."}
+        </p>
       ) : (
         <ul className="m-0 flex list-disc flex-col gap-1 pl-4">
           {review.reasons.map((reason) => (

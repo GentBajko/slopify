@@ -124,3 +124,60 @@ it("keeps Overrule off once the redo has started", async () => {
   expect(await screen.findByText("Being made again")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Overrule" }).hasAttribute("disabled")).toBe(true);
 });
+
+it.each([
+  [{ ...flagged, answeredBy: "agent" as const }, "Flagged by agent"],
+  [
+    {
+      ...flagged,
+      passed: true,
+      reasons: [],
+      outcome: "passed" as const,
+      attempt: 1,
+      answeredBy: "agent" as const,
+    },
+    "Passed by agent",
+  ],
+  [
+    { ...flagged, action: "overruled" as const, actionAt: "now", actionBy: "agent" as const },
+    "Accepted by agent",
+  ],
+  [
+    {
+      ...flagged,
+      passed: true,
+      reasons: [],
+      outcome: "auto-passed" as const,
+      attempt: 1,
+      answeredBy: "nobody" as const,
+    },
+    "Passed without review",
+  ],
+])("names who decided: %#", async (review, label) => {
+  renderApp(
+    <Subject />,
+    testDeps({ "GET /api/projects/p1/reviews": jsonAnswer({ reviews: [review] }) }),
+  );
+  expect(await screen.findByText(label)).toBeTruthy();
+});
+
+it("says an auto-passed item went ahead unreviewed", async () => {
+  renderApp(
+    <Subject />,
+    testDeps({
+      "GET /api/projects/p1/reviews": jsonAnswer({
+        reviews: [
+          {
+            ...flagged,
+            passed: true,
+            reasons: [],
+            outcome: "auto-passed",
+            attempt: 1,
+            answeredBy: "nobody",
+          },
+        ],
+      }),
+    }),
+  );
+  expect(await screen.findByText(/No agent answered within 2 hours/)).toBeTruthy();
+});

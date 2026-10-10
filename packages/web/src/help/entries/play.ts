@@ -476,6 +476,11 @@ export const playHelp = {
     body: "A reviewer model checks each finished item and saves its verdict and reasons on the project page. Flag only marks a failed item; Flag and redo makes it again, up to the redos per item, then keeps and flags it. Each review is a text-model call, counted in usage. Default: Off.",
     tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
   },
+  "play.reviews.reviewer": {
+    title: "Who reviews",
+    body: "Model: Slopify asks the reviewer model below, one paid call per item. External agent (MCP): an agent connected in Settings → Connections → Agents (MCP) answers each review instead, at no API cost. A review nobody answers within 2 hours passes on its own, and a notification says so.",
+    tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
+  },
   "play.reviews.provider": {
     title: "Reviewer",
     body: "Who runs the review model. Picture reviews, for images, the thumbnail and shorts, need Claude Code or Codex, which can look at images; other providers review text only.",
