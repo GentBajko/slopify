@@ -258,6 +258,19 @@ describe("the next action", () => {
     expect(next?.action).toBeUndefined();
   });
 
+  // As every list says it (`heldStateWord`): what was set aside on purpose waits for nobody.
+  it("says a project Kept as is is kept as is, even while an agent's review waits", () => {
+    const next = nextActionFor(
+      input({
+        project: { status: "pending", config, waitingForAgent: true, setAside: true },
+        stages: [stage("images", "pending"), stage("video", "pending")],
+        resumable: false,
+        uploadReady: false,
+      }),
+    );
+    expect(next).toMatchObject({ situation: "done", status: "Kept as is" });
+  });
+
   it("approves a held checkpoint, named for what runs next", () => {
     const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
     const next = nextActionFor(

@@ -1,6 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
-import { heldStateWord } from "@app/slices/admission/state-words.js";
+import { heldStateWord, waitingForAgentWord } from "@app/slices/admission/state-words.js";
 import type { Fix } from "@app/slices/fixes/rules.js";
 import type { OutputRole } from "@app/slices/storage/model.js";
 import type { Tone } from "@/components/kit/status";
@@ -252,13 +252,14 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
     }
   }
 
-  // Parked on an External agent's review: the server says so only while no checkpoint of the
-  // person's holds the run (`reviews/holds.ts`). It goes on by itself, so nothing is offered.
-  if (project.status === "pending" && project.waitingForAgent === true)
+  // Parked on an External agent's review: the server says so only while nothing else holds
+  // the run (`reviews/holds.ts`). It goes on by itself, so nothing is offered. Kept as is wins,
+  // as in every list's state word (`heldStateWord`).
+  if (project.status === "pending" && project.waitingForAgent === true && project.setAside !== true)
     return {
       situation: "waiting",
       tone: "waiting",
-      status: heldStateWord(project),
+      status: waitingForAgentWord,
       title: "An agent is reviewing what was made.",
       why: "Nothing to do: the run carries on once the agent answers, and a review no agent answers passes by itself 2 hours after it was asked.",
     };

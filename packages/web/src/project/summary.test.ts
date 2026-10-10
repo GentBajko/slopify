@@ -76,6 +76,10 @@ describe("the summary in a rundown row", () => {
     const parked = { ...project, status: "pending" as const, waitingForAgent: true };
     expect(summaryOf(stage("images", "pending"), [], parked)).toBe("Waiting for the agent");
     expect(summaryOf(stage("video", "pending"), [], parked)).toBe("Waiting for the agent");
+    // Kept as is wins, as on every list: what is left won't run.
+    expect(summaryOf(stage("images", "pending"), [], { ...parked, setAside: true })).toBe(
+      "Ready to run",
+    );
   });
 
   it("names the file behind a provided stage", () => {
