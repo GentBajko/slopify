@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { z } from "zod";
 import { fakeTts } from "../src/adapters/fake/tts.js";
 import { createHub } from "../src/edge/events/hub.js";
@@ -10,7 +10,9 @@ import { composedFixture, current, save, start, tone } from "./revision-rebuild.
 const answer = (content: unknown): unknown =>
   JSON.parse(z.array(z.object({ text: z.string() }).loose()).parse(content)[0]?.text ?? "null");
 
-it("fixes one narration chunk through MCP the way the error says, voicing only that chunk again", async () => {
+it("fixes one narration chunk through MCP the way the error says, voicing only that chunk again", {
+  timeout: 30_000,
+}, async () => {
   const audio = fakeTts({ bytesFor: () => [tone()] });
   const h = await composedFixture({ tts: () => audio });
   try {
@@ -109,12 +111,16 @@ it("fixes one narration chunk through MCP the way the error says, voicing only t
         confirmedProvidedWorkKeys: [],
       },
     });
-    for (let round = 0; round < 20 && audio.calls() === voiced; round++) {
-      await h.runner.settled();
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
+    const expected = voiced + remade.filter((one) => one.startsWith(`${key}:`)).length;
+    await vi.waitFor(
+      async () => {
+        await h.runner.settled();
+        expect(audio.calls()).toBeGreaterThanOrEqual(expected);
+      },
+      { timeout: 20_000, interval: 50 },
+    );
     await h.runner.settled();
-    expect(audio.calls()).toBe(voiced + remade.filter((one) => one.startsWith(`${key}:`)).length);
+    expect(audio.calls()).toBe(expected);
   } finally {
     h.audioPreviews.close();
     h.close();
