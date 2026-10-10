@@ -42,7 +42,7 @@ export function ProjectStorageList({
   const freed = (files: number, bytes: number, what: string, where: string) =>
     files === 0
       ? `Nothing left to remove ${where}.`
-      : `Freed ${formatBytes(bytes)} ${where} (${String(files)} ${what}${files === 1 ? "" : "s"}).`;
+      : `Freed ${fileSize(bytes)} ${where} (${String(files)} ${what}${files === 1 ? "" : "s"}).`;
   const run = useMutation({
     mutationFn: async (action: Asking) => {
       switch (action.kind) {
@@ -100,7 +100,7 @@ export function ProjectStorageList({
           disabledReason={history === 0 ? "No older versions to delete." : "Working…"}
           onClick={() => setAsking({ kind: "all-old" })}
         >
-          {pendingOn("all-old") ? "Deleting…" : `Delete all old versions (${formatBytes(history)})`}
+          {pendingOn("all-old") ? "Deleting…" : `Delete all old versions (${fileSize(history)})`}
         </Button>
         <Button
           variant="secondary"
@@ -111,7 +111,7 @@ export function ProjectStorageList({
         >
           {pendingOn("cleanup")
             ? "Cleaning up…"
-            : `Clean up everything (${formatBytes(history + working)})`}
+            : `Clean up everything (${fileSize(history + working)})`}
         </Button>
         <InfoTip id="settings.storage.keep-outputs" />
       </div>
@@ -122,10 +122,10 @@ export function ProjectStorageList({
             title={project.title}
             meta={
               <span className="tabular-nums">
-                {formatBytes(project.bytes)} · outputs {formatBytes(project.outputsBytes)} · working
-                files {formatBytes(project.workingBytes)}
+                {fileSize(project.bytes)} · outputs {fileSize(project.outputsBytes)} · working files{" "}
+                {fileSize(project.workingBytes)}
                 {project.historyBytes > 0
-                  ? ` · old versions ${formatBytes(project.historyBytes)}`
+                  ? ` · old versions ${fileSize(project.historyBytes)}`
                   : ""}
               </span>
             }
@@ -136,7 +136,7 @@ export function ProjectStorageList({
                     variant="quiet"
                     size="small"
                     disabled={busy}
-                    title={`Frees ${formatBytes(project.historyBytes)}.`}
+                    title={`Frees ${fileSize(project.historyBytes)}.`}
                     onClick={() => setAsking({ kind: "old", project })}
                   >
                     {pendingOn("old", project.id) ? "Deleting…" : "Delete old versions"}
@@ -151,7 +151,7 @@ export function ProjectStorageList({
                       ? "Available once the project has finished."
                       : project.removableBytes === 0
                         ? "No working files left to remove."
-                        : `Frees ${formatBytes(project.removableBytes)}.`
+                        : `Frees ${fileSize(project.removableBytes)}.`
                   }
                   onClick={() => setAsking({ kind: "trim", project })}
                 >
@@ -213,7 +213,5 @@ export function ProjectStorageList({
 // What Keep outputs only removes and what it costs later, asked before it runs here and on
 // the project page.
 export function keepOutputsConsequence(files: number, bytes: number): string {
-  return `This removes ${String(files)} working file(s) and frees ${formatBytes(bytes)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
+  return `This removes ${String(files)} working file(s) and frees ${fileSize(bytes)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
 }
-
-export const formatBytes = fileSize;

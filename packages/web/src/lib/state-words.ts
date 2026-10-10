@@ -31,10 +31,9 @@ export function projectStateOf(project: {
   readonly setAside?: boolean | undefined;
   readonly prepared?: boolean | undefined;
 }): StateLook {
-  const word = projectStateWord(project);
   if (project.status !== "pending" || project.progress <= 0)
     return projectStateLook[project.status];
-  return { tone: project.setAside === true ? "done" : "waiting", word };
+  return { tone: project.setAside === true ? "done" : "waiting", word: projectStateWord(project) };
 }
 
 // A failed step that will try again by itself.

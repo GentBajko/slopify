@@ -1,5 +1,5 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
-import { oldVersionsConsequence } from "@app/slices/storage/consequences.js";
+import { fileSize, oldVersionsConsequence } from "@app/slices/storage/consequences.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { deleteOldVersions, keepOutputsOnly, readProjectStorage } from "@/api";
@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
-import { formatBytes, keepOutputsConsequence } from "@/routes/settings-storage";
+import { keepOutputsConsequence } from "@/routes/settings-storage";
 
 // Storage that looks after itself: a finished project offers to drop the working files it was
 // made from and keep its outputs, saying how much space that frees (`slices/storage/trim.ts`,
@@ -47,7 +47,7 @@ export function FreeSpaceOffer({
       notify(
         result.files === 0
           ? `"${title}" had no working files left to remove.`
-          : `Freed ${formatBytes(result.bytesFreed)} from "${title}". The outputs are all still here.`,
+          : `Freed ${fileSize(result.bytesFreed)} from "${title}". The outputs are all still here.`,
         "success",
       ),
     onError: (error: Error) =>
@@ -66,7 +66,7 @@ export function FreeSpaceOffer({
       notify(
         result.files === 0
           ? `"${title}" had no old versions left to delete.`
-          : `Freed ${formatBytes(result.bytesFreed)} from "${title}". The current version is all still here.`,
+          : `Freed ${fileSize(result.bytesFreed)} from "${title}". The current version is all still here.`,
         "success",
       ),
     onError: (error: Error) =>
@@ -88,14 +88,14 @@ export function FreeSpaceOffer({
     (data.removableBytes === 0 && data.historyBytes === 0)
   )
     return null;
-  const freed = formatBytes(data.removableBytes);
-  const history = formatBytes(data.historyBytes);
+  const freed = fileSize(data.removableBytes);
+  const history = fileSize(data.historyBytes);
   return (
     <section aria-label="Free space" className="flex flex-col gap-2">
       <SectionHead
         as="h3"
         title="Free space"
-        meta={`Outputs ${formatBytes(data.outputsBytes)} · working files ${formatBytes(data.workingBytes)}${data.historyBytes > 0 ? ` · old versions ${history}` : ""}`}
+        meta={`Outputs ${fileSize(data.outputsBytes)} · working files ${fileSize(data.workingBytes)}${data.historyBytes > 0 ? ` · old versions ${history}` : ""}`}
         info="project.free-space"
       >
         {/* The rail is narrow: the button says what it frees, the dialog says the rest. */}

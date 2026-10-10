@@ -1,3 +1,4 @@
+import { fileSize } from "@app/slices/storage/consequences.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useState } from "react";
 import { type FilesView, moveFiles, openFilesFolder, readFiles } from "@/api";
@@ -8,7 +9,6 @@ import { Code, Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import { useToast } from "@/components/kit/toast";
-import { formatBytes } from "./settings-storage";
 
 const filesQueryKey = ["storage-files"] as const;
 
@@ -181,8 +181,8 @@ export function FilesFolder({
             <p role="status" className="m-0 text-ink tabular-nums">
               {view.move.phase === "copying" ? "Copying" : "Checking the copy of"} your files to{" "}
               {view.move.target}: {view.move.files} of {view.move.totalFiles} files (
-              {formatBytes(view.move.bytes)} of {formatBytes(view.move.totalBytes)}). Keep Slopify
-              running until it finishes.
+              {fileSize(view.move.bytes)} of {fileSize(view.move.totalBytes)}). Keep Slopify running
+              until it finishes.
             </p>
             <Meter
               progress

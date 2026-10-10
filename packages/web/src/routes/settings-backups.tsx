@@ -260,7 +260,7 @@ export function lastLine(view: BackupView): string {
   const success =
     status.lastSuccessAt === null
       ? "No backup yet."
-      : `Last backup ${when(status.lastSuccessAt)}${status.lastSuccessBytes === null ? "" : `, ${formatBytes(status.lastSuccessBytes)}`}.`;
+      : `Last backup ${when(status.lastSuccessAt)}${status.lastSuccessBytes === null ? "" : `, ${fileSize(status.lastSuccessBytes)}`}.`;
   if (status.lastResult === "failed" && status.lastAttemptAt !== null)
     return `${success} The backup at ${when(status.lastAttemptAt)} failed.`;
   if (status.lastResult === "waiting") return `${success} Waiting for projects to finish.`;
@@ -274,11 +274,9 @@ function nextLine(view: BackupView): string {
 }
 
 function whereLine(view: BackupView): string {
-  const kept = `${view.files.length} backup${view.files.length === 1 ? "" : "s"} here (${formatBytes(view.files.reduce((sum, file) => sum + file.bytes, 0))}).`;
+  const kept = `${view.files.length} backup${view.files.length === 1 ? "" : "s"} here (${fileSize(view.files.reduce((sum, file) => sum + file.bytes, 0))}).`;
   if (view.hostFolder === null)
     return `Inside Slopify's Docker volume, not on your computer. Leave Folder empty to save backups in the Backups folder on your computer. ${kept}`;
   const empty = view.config.folder === null ? "Empty uses the default: " : "On your computer: ";
   return `${empty}${view.hostFolder}. ${kept}`;
 }
-
-const formatBytes = fileSize;

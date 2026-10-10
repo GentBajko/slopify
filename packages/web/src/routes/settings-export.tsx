@@ -1,4 +1,5 @@
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
+import { fileSize } from "@app/slices/storage/consequences.js";
 import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { type BackupImportSummary, readBackupExportSummary, readStorageUsage } from "@/api";
@@ -13,7 +14,7 @@ import { keys } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
-import { formatBytes, ProjectStorageList } from "./settings-storage";
+import { ProjectStorageList } from "./settings-storage";
 
 // Settings → Backup & storage: export everything, import a backup, clean up, and the disk
 // space each project takes.
@@ -240,7 +241,7 @@ export function StorageTools() {
           {exporting.phase === "downloading" ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p role="status" className="m-0 min-w-0 flex-1 text-ink">
-                Downloading {formatBytes(exporting.bytes)} ({exporting.projects} project
+                Downloading {fileSize(exporting.bytes)} ({exporting.projects} project
                 {exporting.projects === 1 ? "" : "s"}). Your browser's downloads show its progress;
                 keep Slopify running until it finishes.
               </p>
@@ -252,8 +253,7 @@ export function StorageTools() {
           {importing.phase === "uploading" ? (
             <div className="flex flex-col gap-2">
               <p role="status" className="m-0 text-ink tabular-nums">
-                Uploading the backup: {formatBytes(importing.sent)} of{" "}
-                {formatBytes(importing.total)}
+                Uploading the backup: {fileSize(importing.sent)} of {fileSize(importing.total)}
               </p>
               <Meter
                 progress
@@ -282,15 +282,13 @@ export function StorageTools() {
           meta={
             usage.data ? (
               <>
-                <span className="font-semibold text-ink">
-                  {formatBytes(usage.data.data)} stored
-                </span>
+                <span className="font-semibold text-ink">{fileSize(usage.data.data)} stored</span>
                 <span className="tabular-nums">
                   {" "}
-                  · {formatBytes(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
-                  files · {formatBytes(usage.data.staging)} staged files
+                  · {fileSize(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
+                  files · {fileSize(usage.data.staging)} staged files
                   {usage.data.trash.projects > 0
-                    ? ` · ${formatBytes(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
+                    ? ` · ${fileSize(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
                     : null}
                 </span>
               </>
@@ -337,7 +335,7 @@ export function ImportResult({
 }) {
   const lines = [
     result.projects.imported.length > 0
-      ? `Projects: ${result.projects.imported.length} added (${formatBytes(result.files.bytes)} of files).`
+      ? `Projects: ${result.projects.imported.length} added (${fileSize(result.files.bytes)} of files).`
       : "Projects: none added.",
     counted("Prompts", result.prompts),
     counted("Intros and outros", result.entries),

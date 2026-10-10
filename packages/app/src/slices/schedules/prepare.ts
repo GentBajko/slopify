@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectPaused, stagesOf } from "../admission/repo.js";
 import { render } from "../admission/substitute.js";
@@ -208,6 +209,6 @@ export function preparedProjectIds(db: DatabaseSync): ReadonlySet<string> {
     db
       .prepare("SELECT project_id FROM prepared_videos")
       .all()
-      .map((row) => String(row.project_id)),
+      .map((row) => z.object({ project_id: z.string() }).parse(row).project_id),
   );
 }
