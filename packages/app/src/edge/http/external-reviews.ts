@@ -44,9 +44,6 @@ const sentNothing = (value: unknown): boolean =>
   Array.isArray(value) ||
   Object.keys(value).length === 0;
 
-// The requests whose body Hono read as JSON: a 400 thrown before that is its "Malformed JSON".
-const bodyRead = new WeakSet<Request>();
-
 // A verdict that isn't {verdict, reasons} in the reviewer's rules.
 function verdictRefused(
   result:
@@ -58,7 +55,6 @@ function verdictRefused(
       },
   c: Context,
 ): Response | undefined {
-  bodyRead.add(c.req.raw);
   if (result.success) return undefined;
   if (sentNothing(result.data)) return noVerdict(c);
   return notSaved(c, verdictIssue(result.error.issues, "it is not {verdict, reasons}"));
@@ -66,10 +62,11 @@ function verdictRefused(
 
 // An external agent's verdict on a review waiting for it (`slices/reviews/external.ts`). The
 // rules are the reviewer model's own; the outcome is decided when the review step runs again.
+// The one 400 the route throws is the json validator's, for a body it can't parse as JSON.
 export function externalReviewRoutes(deps: AppDeps) {
   return new Hono()
     .onError((error, c) =>
-      error instanceof HTTPException && error.status === 400 && !bodyRead.has(c.req.raw)
+      error instanceof HTTPException && error.status === 400
         ? notSaved(c, ": the body wasn't JSON")
         : problemFromError(c, error, deps),
     )

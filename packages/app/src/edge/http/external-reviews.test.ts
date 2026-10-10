@@ -112,6 +112,18 @@ it("says a body that isn't JSON wasn't JSON, and a JSON one without a verdict se
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
 
+it("answers a failure that isn't the agent's with the fixed sentence and a reference", async () => {
+  const h = waiting();
+  h.deps.db.exec("DROP TABLE external_reviews");
+  const failed = await h.app.request(`/api/projects/${h.projectId}/external-reviews/er1/verdict`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ verdict: "pass", reasons: [] }),
+  });
+  expect(failed.status).toBe(500);
+  expect(((await failed.json()) as { detail: string }).detail).toContain("Download diagnostics");
+});
+
 it("saves the agent's verdict, wakes the run, and refuses a second one", async () => {
   const h = waiting();
   const agent = await connectAgent(h.app);
