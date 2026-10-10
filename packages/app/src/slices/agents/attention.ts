@@ -73,7 +73,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
     ["external reviews", () => externalReviews(db, skip)],
     ["flagged verdicts", () => flaggedVerdicts(db, skip)],
-    ["review checkpoints", () => heldCheckpoints(db, skip)],
+    ["review checkpoints", () => heldCheckpoints(db)],
     ["failed steps", () => failedSteps(db, skip)],
     ["paused runs", () => pausedRuns(db, skip)],
     ["held topics", () => heldTopics(db, skip)],
@@ -181,55 +181,34 @@ function flaggedVerdicts(db: DatabaseSync, skip: SkipRow): readonly AttentionEnt
   });
 }
 
-const gateRow = z.object({
-  project_id: z.string(),
-  title: z.string(),
-  checkpoint_id: z.string(),
-  stage: z.string(),
-  revision_id: z.string(),
-  fingerprint: z.string(),
-  created_at: z.string(),
-});
-
 // Only a checkpoint that holds the run for the person (`reviews/holds.ts`): one whose stage's
 // inputs aren't made yet holds nothing, and a Before Video hold a schedule added waits for its
 // scheduled day, not for anyone.
-function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
-  const { holding } = projectHolds(db);
-  const rows = db
-    .prepare(
-      `SELECT c.project_id, p.title, c.checkpoint_id, c.stage, c.revision_id, c.fingerprint, c.created_at
-       FROM review_checkpoints c
-       JOIN projects p ON p.id=c.project_id
-       JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
-       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}`,
-    )
-    .all();
-  return rowsOf(rows, "review checkpoints", skip, (value) => {
-    const row = gateRow.parse(value);
-    const holds = holding
-      .get(row.project_id)
-      ?.some((hold) => hold.checkpointId === row.checkpoint_id && hold.waitsFor === "person");
-    if (holds !== true) return [];
-    return [
-      {
-        kind: "checkpoint",
-        since: row.created_at,
-        projectId: row.project_id,
-        title: row.title,
-        stage: row.stage,
-        itemKey: null,
-        reason: `Waiting for your review before ${row.stage}: held until it is approved.`,
-        autoRetryInFlight: false,
-        agentCanAct: true,
-        ids: {
-          id: row.project_id,
-          checkpointId: row.checkpoint_id,
-          revisionId: row.revision_id,
-          fingerprint: row.fingerprint,
-        },
-        tools: ["get_checkpoints", "approve_checkpoint"],
-      } satisfies AttentionEntry,
-    ];
-  });
+function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
+  const named = titles(db);
+  return [...projectHolds(db).holding].flatMap(([projectId, holds]) =>
+    holds
+      .filter((hold) => hold.waitsFor === "person")
+      .map(
+        (hold) =>
+          ({
+            kind: "checkpoint",
+            since: hold.since,
+            projectId,
+            title: named.get(projectId) ?? "",
+            stage: hold.stage,
+            itemKey: null,
+            reason: `Waiting for your review before ${hold.stage}: held until it is approved.`,
+            autoRetryInFlight: false,
+            agentCanAct: true,
+            ids: {
+              id: projectId,
+              checkpointId: hold.checkpointId,
+              revisionId: hold.revisionId,
+              fingerprint: hold.fingerprint,
+            },
+            tools: ["get_checkpoints", "approve_checkpoint"],
+          }) satisfies AttentionEntry,
+      ),
+  );
 }

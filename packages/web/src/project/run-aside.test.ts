@@ -32,6 +32,7 @@ function stage(kind: StageKind, state: StageState): Stage {
 
 const stages = [stage("article", "done"), stage("images", "pending"), stage("video", "pending")];
 
+const gate = { revisionId: "r1", fingerprint: "a".repeat(64), since: "2026-09-10T00:00:00.000Z" };
 const steps = (over: Partial<ProjectSummary>, holding: readonly CheckpointHold[]) =>
   runSteps({
     stages,
@@ -43,13 +44,13 @@ const steps = (over: Partial<ProjectSummary>, holding: readonly CheckpointHold[]
   }).map((step) => [step.name, step.state, step.detail]);
 
 it("says a step waits for the person only at a checkpoint that holds the run", () => {
-  expect(steps({}, [{ checkpointId: "images-gate", stage: "images", waitsFor: "person" }])).toEqual(
-    [
-      ["Article", "Done", expect.anything()],
-      ["Images", "Waiting for your review", "Approve it under Checkpoints to carry on."],
-      ["Video", "Not started", "Waits for the stages above"],
-    ],
-  );
+  expect(
+    steps({}, [{ checkpointId: "images-gate", stage: "images", waitsFor: "person", ...gate }]),
+  ).toEqual([
+    ["Article", "Done", expect.anything()],
+    ["Images", "Waiting for your review", "Approve it under Checkpoints to carry on."],
+    ["Video", "Not started", "Waits for the stages above"],
+  ]);
   // The video's checkpoint, not reached yet, holds nothing.
   expect(steps({ status: "running" }, [])).toEqual([
     ["Article", "Done", expect.anything()],
@@ -60,7 +61,9 @@ it("says a step waits for the person only at a checkpoint that holds the run", (
 
 it("reads a prepared project's video as Prepared, not as a review to approve", () => {
   expect(
-    steps({ prepared: true }, [{ checkpointId: "video-gate", stage: "video", waitsFor: "day" }])[2],
+    steps({ prepared: true }, [
+      { checkpointId: "video-gate", stage: "video", waitsFor: "day", ...gate },
+    ])[2],
   ).toEqual(["Video", "Prepared", "Its schedule makes it on its day."]);
 });
 

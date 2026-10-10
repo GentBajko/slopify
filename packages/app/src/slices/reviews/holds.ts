@@ -28,12 +28,19 @@ export interface CheckpointHold {
   readonly checkpointId: string;
   readonly stage: CheckpointStage;
   readonly waitsFor: "person" | "day";
+  // What approving it names (`approve_checkpoint`), and since when it was set.
+  readonly revisionId: string;
+  readonly fingerprint: string;
+  readonly since: string;
 }
 
 const gateRow = z.object({
   project_id: z.string(),
   checkpoint_id: z.string(),
   stage: checkpointStageSchema,
+  revision_id: z.string(),
+  fingerprint: z.string(),
+  created_at: z.string(),
   own: z.number(),
 });
 const projectRow = z.object({ project_id: z.string() });
@@ -49,7 +56,7 @@ export function projectHolds(
 ): ProjectHolds {
   const { projectId } = scope;
   const onlyOne = projectId === undefined ? "" : " AND c.project_id=?";
-  const gateSql = `SELECT c.project_id, c.checkpoint_id, c.stage, (c.stage='video' AND ${heldForItsDay("c")}) AS own
+  const gateSql = `SELECT c.project_id, c.checkpoint_id, c.stage, c.revision_id, c.fingerprint, c.created_at, (c.stage='video' AND ${heldForItsDay("c")}) AS own
        FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${onlyOne}`;
@@ -78,6 +85,9 @@ export function projectHolds(
       checkpointId: gate.checkpoint_id,
       stage: gate.stage,
       waitsFor: own ? "day" : "person",
+      revisionId: gate.revision_id,
+      fingerprint: gate.fingerprint,
+      since: gate.created_at,
     };
     holding.set(gate.project_id, [...(holding.get(gate.project_id) ?? []), hold]);
   }
