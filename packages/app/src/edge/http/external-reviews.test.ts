@@ -256,23 +256,13 @@ it("takes no verdict for a canceled run's review and says what to do instead", a
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
 
-it("says a verdict on a review whose step no longer exists wasn't saved, and nothing waits on it", async () => {
+// A canceled run's replaced review: no new one waits, so the refusal says canceled.
+it("says a canceled run's replaced review was canceled, not that a new one waits", async () => {
   const h = waiting();
-  h.deps.db.exec("PRAGMA foreign_keys=OFF");
-  h.deps.db.prepare("DELETE FROM revision_work WHERE id='w0'").run();
-  h.deps.db.exec("PRAGMA foreign_keys=ON");
-  const response = await h.app.request(
-    `/api/projects/${h.projectId}/external-reviews/er1/verdict`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ verdict: "pass", reasons: [] }),
-    },
-  );
-  expect(response.status).toBe(409);
-  expect(await response.json()).toMatchObject({
-    reason: "missing",
-    detail:
-      "This review's step no longer exists, so the verdict wasn't saved. Nothing is waiting on it; call needs_attention to see what is waiting now.",
-  });
+  h.deps.db.prepare("UPDATE revision_work SET state='canceled' WHERE id='w0'").run();
+  h.deps.db.prepare("DELETE FROM revision_work_reservations WHERE work_id='w0'").run();
+  const refused = await verdictOn(h, { verdict: "pass", reasons: [] });
+  expect(refused.refused).toBe(true);
+  expect(refused.said).toContain("This review's run was canceled");
+  expect(refused.said).not.toContain("replaced");
 });

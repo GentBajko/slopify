@@ -5,8 +5,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Paths } from "../../kernel/paths.js";
-import type { ExternalReview } from "../../slices/reviews/external-model.js";
-import { closedWait, externalReviewById } from "../../slices/reviews/external-repo.js";
+import type { ReviewStanding } from "../../slices/reviews/external-model.js";
+import { externalReviewById, reviewStanding } from "../../slices/reviews/external-repo.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { refusal } from "./call-route.js";
 
@@ -28,9 +28,7 @@ const imageTypes: Readonly<Record<string, string>> = {
 };
 
 // What a review that waits for nobody says instead of asking for a verdict.
-const notWaiting: Readonly<
-  Record<Exclude<ExternalReview["state"], "waiting"> | "trashed" | "missing" | "canceled", string>
-> = {
+const notWaiting: Readonly<Record<Exclude<ReviewStanding, "waiting">, string>> = {
   answered:
     "This review was already answered, so it takes no other verdict. Call needs_attention to see what is waiting now.",
   "auto-passed":
@@ -41,8 +39,6 @@ const notWaiting: Readonly<
     "This review's run was canceled, so nothing waits on it and it takes no verdict: a canceled run's reviews never pass. Call needs_attention to see what is waiting now.",
   trashed:
     "This review's project is in the Trash, so nothing waits on it and it takes no verdict. Restore the project in Settings → Backup & storage → Trash; the review then waits for its verdict again.",
-  missing:
-    "This review's step no longer exists, so nothing waits on it and it takes no verdict. Call needs_attention to see what is waiting now.",
 };
 
 export function externalReviewMaterial(
@@ -55,8 +51,7 @@ export function externalReviewMaterial(
     return refusal(
       "This external review doesn't exist: the project may have been deleted. Call needs_attention to see what is waiting now.",
     );
-  const standing =
-    (review.state === "waiting" ? closedWait(deps.db, review) : undefined) ?? review.state;
+  const standing = reviewStanding(deps.db, review);
   const pictures = review.material.images.flatMap((image) => {
     const path = outputPath(deps.paths, projectId, image.stored);
     const mimeType = imageTypes[extname(path).toLowerCase()];

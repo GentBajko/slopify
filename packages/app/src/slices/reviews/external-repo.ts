@@ -7,6 +7,7 @@ import {
   type ExternalAnswerResult,
   type ExternalReview,
   externalReviewStates,
+  type ReviewStanding,
   type SettledReview,
 } from "./external-model.js";
 import { type ReviewVerdict, reviewStages } from "./model.js";
@@ -166,10 +167,10 @@ function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): voi
   ).run(projectId, id);
 }
 
-// The first verdict saved wins: one guarded UPDATE, so two agents answering at once cannot
-// both succeed. A review whose item was just replaced is superseded here rather than at the
-// next settle, a project in the Trash takes no verdict until it is restored, and a canceled
-// run's review takes none at all.
+// The first verdict saved wins: read and answered in one transaction, so two agents answering
+// at once cannot both succeed. A review whose item was just replaced is superseded here rather
+// than at the next settle, a project in the Trash takes no verdict until it is restored, and a
+// canceled run's review takes none at all.
 export function answerExternalReview(
   db: DatabaseSync,
   input: {
@@ -180,61 +181,53 @@ export function answerExternalReview(
     readonly at: string;
   },
 ): ExternalAnswerResult {
-  if (projectTrashed(db, input.projectId))
-    return externalReviewById(db, input.projectId, input.id) === undefined
-      ? { ok: false, reason: "not-found" }
-      : { ok: false, reason: "trashed" };
-  const changed = transact(db, () => {
+  return transact(db, (): ExternalAnswerResult => {
+    const review = externalReviewById(db, input.projectId, input.id);
+    if (review === undefined) return { ok: false, reason: "not-found" };
+    const standing = reviewStanding(db, review);
+    if (standing === "trashed") return { ok: false, reason: "trashed" };
+    if (standing === "superseded")
+      db.prepare(
+        "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND id=? AND state='waiting'",
+      ).run(input.projectId, input.id);
+    if (standing !== "waiting") return { ok: false, reason: standing, value: review };
     db.prepare(
-      `UPDATE external_reviews SET state='superseded' WHERE project_id=? AND id=? AND state='waiting' AND NOT ${wantedBy("external_reviews")}`,
-    ).run(input.projectId, input.id);
-    const answered = db
-      .prepare(
-        `UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=? AND state='waiting' AND ${wantedBy("external_reviews")} AND ${liveWork("external_reviews")}`,
-      )
-      .run(JSON.stringify(input.verdict), input.by, input.at, input.projectId, input.id);
-    if (Number(answered.changes) === 1) releaseParkedWork(db, input.projectId, input.id);
-    return answered;
-  });
-  const row = externalReviewById(db, input.projectId, input.id);
-  if (row === undefined) return { ok: false, reason: "not-found" };
-  if (Number(changed.changes) === 1) return { ok: true, value: row };
-  if (row.state !== "waiting")
+      "UPDATE external_reviews SET state='answered', verdict=?, answered_by=?, answered_at=? WHERE project_id=? AND id=?",
+    ).run(JSON.stringify(input.verdict), input.by, input.at, input.projectId, input.id);
+    releaseParkedWork(db, input.projectId, input.id);
     return {
-      ok: false,
-      reason: row.state === "superseded" ? "superseded" : "answered",
-      value: row,
+      ok: true,
+      value: {
+        ...review,
+        state: "answered",
+        verdict: input.verdict,
+        answeredBy: input.by,
+        answeredAt: input.at,
+      },
     };
-  const closed = closedWait(db, row);
-  if (closed === "missing" || closed === "canceled")
-    return { ok: false, reason: closed, value: row };
-  throw new Error(
-    "Slopify hit an internal error (a waiting review took no verdict). Send the verdict again; if it happens again, use Download diagnostics in Settings and report it.",
-  );
+  });
 }
 
-// Why a review still marked waiting waits for nobody: its project is in the Trash, its step no
-// longer exists, its run was canceled, or the current version no longer wants it. Undefined
-// while it waits.
-export function closedWait(
-  db: DatabaseSync,
-  review: Pick<ExternalReview, "projectId" | "id" | "workId">,
-): "trashed" | "missing" | "canceled" | "superseded" | undefined {
+// Where a review stands, in the one order get_external_review and a refused verdict both say
+// it: a verdict already kept (Restore would not bring it back), its project in the Trash, its
+// step canceled (no new one waits), then its item replaced or its step gone. It waits only
+// when none holds, exactly when `stillWaiting` lists it.
+export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
+  if (review.state === "answered" || review.state === "auto-passed") return review.state;
   if (projectTrashed(db, review.projectId)) return "trashed";
-  if (db.prepare("SELECT 1 FROM revision_work WHERE id=?").get(review.workId) === undefined)
-    return "missing";
   if (
     db
       .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledStep("w")}`)
       .get(review.workId) !== undefined
   )
     return "canceled";
-  const wanted = db
+  if (review.state === "superseded") return "superseded";
+  const waits = db
     .prepare(
-      `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")}`,
+      `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")} AND ${liveWork("e")}`,
     )
     .get(review.projectId, review.id);
-  return wanted === undefined ? "superseded" : undefined;
+  return waits === undefined ? "superseded" : "waiting";
 }
 
 // Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.

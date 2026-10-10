@@ -4,6 +4,7 @@ import {
   answerExternalReview,
   externalReviewById,
   openExternalReview,
+  reviewStanding,
   settleExternalReviews,
   waitingExternalReviews,
 } from "./external-repo.js";
@@ -208,14 +209,15 @@ it("keeps a review of a step retried after a cancel waiting, while another step 
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("auto-passed");
 });
 
-it("refuses a verdict on a review whose step no longer exists, as missing, not canceled", () => {
+// A step's reservations go with it, so a review whose step is gone was replaced.
+it("refuses a verdict on a review whose step is gone, as replaced", () => {
   const f = waitingReviewFixture();
   open.push(f);
   const { db } = f.h.deps;
-  // A step's rows cascade away with it; only its work row is gone here.
-  db.exec("PRAGMA foreign_keys=OFF");
   db.prepare("DELETE FROM revision_work WHERE id='images-work'").run();
-  db.exec("PRAGMA foreign_keys=ON");
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("superseded");
   expect(
     answerExternalReview(db, {
       projectId: "p1",
@@ -224,6 +226,48 @@ it("refuses a verdict on a review whose step no longer exists, as missing, not c
       by: "agent",
       at: "2026-09-10T00:30:00.000Z",
     }),
-  ).toMatchObject({ ok: false, reason: "missing" });
-  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+  ).toMatchObject({ ok: false, reason: "superseded" });
+});
+
+// One order for every reader: get_external_review and a refused verdict give the same reason.
+// A canceled run's replaced review says canceled: no new one waits.
+it("refuses a verdict on a canceled run's replaced review as canceled, as it reads", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
+  db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("canceled");
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "canceled" });
+});
+
+// A verdict kept is said first: Restore would not bring an answered review back.
+it("refuses a second verdict in the Trash as answered, as it reads", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE external_reviews SET state='auto-passed' WHERE id='er1'").run();
+  db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-11T00:00:00.000Z')").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("auto-passed");
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toMatchObject({ ok: false, reason: "auto-passed" });
 });

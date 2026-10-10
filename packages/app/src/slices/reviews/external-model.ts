@@ -36,15 +36,17 @@ export interface ExternalReview {
   readonly answeredAt: string | null;
 }
 
+// Where a review stands (`reviewStanding`): waiting for a verdict, or why it takes none.
+export type ReviewStanding = ExternalReviewState | "trashed" | "canceled";
+
 export type ExternalAnswerResult =
   | { readonly ok: true; readonly value: ExternalReview }
   | { readonly ok: false; readonly reason: "not-found" }
   | { readonly ok: false; readonly reason: "trashed" }
   | {
       readonly ok: false;
-      // `canceled`: its run was canceled, and a canceled run's reviews never pass. `missing`:
-      // the step it reviews no longer exists.
-      readonly reason: "answered" | "superseded" | "canceled" | "missing";
+      // `canceled`: its run was canceled, and a canceled run's reviews never pass.
+      readonly reason: Exclude<ReviewStanding, "waiting" | "trashed">;
       readonly value: ExternalReview;
     };
 
