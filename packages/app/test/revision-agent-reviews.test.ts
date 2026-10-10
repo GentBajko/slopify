@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import ffmpegStatic from "ffmpeg-static";
 import { expect, it } from "vitest";
 import { fakeImage } from "../src/adapters/fake/image.js";
@@ -10,7 +11,10 @@ import { systemClock } from "../src/kernel/clock.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { wireRunner } from "../src/main.js";
+import { setProjectPaused } from "../src/slices/admission/repo.js";
 import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
+import { recoverProject } from "../src/slices/rebuild/recovery.js";
+import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
 import {
   answerExternalReview,
@@ -33,7 +37,7 @@ async function settleUntil(runner: Runner, done: () => boolean): Promise<void> {
 }
 
 // Two generated images reviewed by an external agent: no model is asked.
-async function agentReviewedRun() {
+async function agentReviewedRun(mode: "flag" | "redo" = "flag") {
   const h = await paidServiceFixture();
   const reviewer = fakeLlm({ reply: () => ['{"verdict":"pass","reasons":[]}'] });
   const images = fakeImage();
@@ -44,6 +48,8 @@ async function agentReviewedRun() {
     list: async () => [],
   };
   const service = createRebuildDeps({ ...h.deps, clock: systemClock }, h.catalogue);
+  // As boot wires them (`main.ts`): a verdict that sends its item back starts its redo.
+  const redos = createReviewRedos();
   const runner = wireRunner({
     ...service.deps,
     ffmpeg: resolveFfmpeg({}, ffmpegStatic),
@@ -52,8 +58,10 @@ async function agentReviewedRun() {
     audioPreviews: createAudioPreviewStore(),
     telemetry: { ...h.deps, appVersion: "test" },
     flusher: { soon: () => undefined, stop: () => undefined },
+    onFinished: (work) => redos.kick(work.projectId),
   });
   const deps = { ...service.deps, runner };
+  redos.bind(deps);
   const base = current(deps, h.projectId);
   await save(deps, h.projectId, {
     config: {
@@ -63,7 +71,7 @@ async function agentReviewedRun() {
         model: "",
         reviewer: "agent",
         retries: 1,
-        stages: { images: { mode: "flag" } },
+        stages: { images: { mode } },
       },
     },
     content: base.revision.content,
@@ -171,4 +179,95 @@ it("passes reviews a restart left overdue at boot, and the run goes on", async (
     "auto-passed",
     "auto-passed",
   ]);
+});
+
+it("passes a paused project's reviews at the deadline, but nothing runs until Resume", async () => {
+  const { h, deps, runner } = await agentReviewedRun();
+  await runner.settled();
+  setProjectPaused(deps.db, h.projectId, true, new Date().toISOString());
+  expect(
+    settleExternalReviews(deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
+  ).toHaveLength(2);
+  runner.tick(h.projectId);
+  for (let round = 0; round < 10; round++) {
+    await runner.settled();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  expect(listVerdicts(deps.db, h.projectId)).toEqual([]);
+  // resume_project's route (`POST /api/projects/:id/resume`).
+  expect(
+    await recoverProject(deps, h.projectId, {
+      baseRevisionId: current(deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "resume" },
+    }),
+  ).toMatchObject({ ok: true });
+  await settleUntil(runner, () => listVerdicts(deps.db, h.projectId).length === 2);
+  expect(listVerdicts(deps.db, h.projectId).map((row) => row.outcome)).toEqual([
+    "auto-passed",
+    "auto-passed",
+  ]);
+});
+
+it("makes an image an agent failed again in redo mode, asks the agent again, then flags it", async () => {
+  const { h, deps, runner, reviewer, images } = await agentReviewedRun("redo");
+  const [first, second] = waitingExternalReviews(deps.db, h.projectId);
+  if (first === undefined || second === undefined) throw new Error("two reviews expected");
+  const fail = (id: string) =>
+    answerExternalReview(deps.db, {
+      projectId: h.projectId,
+      id,
+      verdict: { passed: false, reasons: ["Stray letters in the sky."] },
+      by: "agent",
+      at: new Date().toISOString(),
+    });
+  fail(first.id);
+  // The redo starts once the stage's reviews are all answered.
+  answerExternalReview(deps.db, {
+    projectId: h.projectId,
+    id: second.id,
+    verdict: { passed: true, reasons: [] },
+    by: "agent",
+    at: new Date().toISOString(),
+  });
+  runner.tick(h.projectId);
+  // The image is drawn again, and its new review waits for the agent.
+  await settleUntil(runner, () =>
+    waitingExternalReviews(deps.db, h.projectId).some(
+      (row) => row.itemKey === first.itemKey && row.id !== first.id,
+    ),
+  );
+  expect(images.calls()).toBe(3);
+  expect(
+    listVerdicts(deps.db, h.projectId).find((row) => row.itemKey === first.itemKey),
+  ).toMatchObject({
+    outcome: "redo",
+    answeredBy: "agent",
+    redoState: "started",
+  });
+  const again = waitingExternalReviews(deps.db, h.projectId).find(
+    (row) => row.itemKey === first.itemKey,
+  );
+  if (again === undefined) throw new Error("a new review of the remade image expected");
+  expect(again.itemFingerprint).not.toBe(first.itemFingerprint);
+  // Past its one retry, the second fail is kept and flagged.
+  fail(again.id);
+  runner.tick(h.projectId);
+  await settleUntil(runner, () =>
+    listVerdicts(deps.db, h.projectId).some(
+      (row) => row.itemKey === first.itemKey && row.outcome === "flagged",
+    ),
+  );
+  expect(
+    listVerdicts(deps.db, h.projectId)
+      .filter((row) => row.itemKey === first.itemKey)
+      .map((row) => [row.outcome, row.attempt, row.answeredBy]),
+  ).toEqual(
+    expect.arrayContaining([
+      ["redo", 1, "agent"],
+      ["flagged", 2, "agent"],
+    ]),
+  );
+  expect(images.calls()).toBe(3);
+  expect(reviewer.calls()).toBe(0);
 });

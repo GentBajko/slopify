@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,9 +16,17 @@ import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import { wireRunner } from "../src/main.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
+import { setProjectPaused } from "../src/slices/admission/repo.js";
+import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
+import {
+  answerExternalReview,
+  externalReviewById,
+  settleExternalReviews,
+  waitingExternalReviews,
+} from "../src/slices/reviews/external.js";
 import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { actOnVerdict, listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";
@@ -491,6 +500,77 @@ it("lets Overrule call off a redo that has not started, and releases the work he
     expect(current(deps, h.projectId).revision.content.regenerationTokens).not.toHaveProperty(
       "image:one",
     );
+  } finally {
+    h.close();
+  }
+});
+
+it("holds the video while an agent's reviews wait, opens new ones after Re-run, and renders once answered", {
+  timeout: 30_000,
+}, async () => {
+  const { h, deps, runner, images, asked, settle } = await reviewedRun({
+    fail: () => undefined,
+    speech: quiet(2),
+    config: (base) => ({
+      ...base,
+      sources: { ...base.sources, audio: "generate", video: "generate" },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "whole" },
+      provided: { article: "Rope holds fast." },
+      motionStyle: "still",
+    }),
+    reviews: { reviewer: "agent", retries: 0, stages: { images: { mode: "flag" } } },
+  });
+  try {
+    const video = () =>
+      current(deps, h.projectId).outputs.filter(
+        (row) =>
+          row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.selected &&
+          row.state === "ready",
+      );
+    const first = waitingExternalReviews(deps.db, h.projectId);
+    expect(first).toHaveLength(2);
+    expect(video()).toEqual([]);
+    expect(images.calls()).toBe(2);
+
+    // Pause, then Re-run Images while the reviews wait: the new images get reviews of their
+    // own and the old ones are replaced.
+    setProjectPaused(deps.db, h.projectId, true, new Date().toISOString());
+    expect(
+      await recoverProject(deps, h.projectId, {
+        baseRevisionId: current(deps, h.projectId).revision.id,
+        idempotencyKey: randomUUID(),
+        action: { kind: "rerun", stage: "images" },
+      }),
+    ).toMatchObject({ ok: true });
+    runner.tick(h.projectId);
+    await settle();
+    const second = waitingExternalReviews(deps.db, h.projectId);
+    expect(images.calls()).toBe(4);
+    expect(second).toHaveLength(2);
+    expect(second.map((row) => row.id)).not.toEqual(
+      expect.arrayContaining(first.map((row) => row.id)),
+    );
+    expect(video()).toEqual([]);
+
+    // The few-seconds settle (`main.ts` releaseReviews) marks the replaced ones.
+    settleExternalReviews(deps.db, new Date());
+    for (const old of first)
+      expect(externalReviewById(deps.db, h.projectId, old.id)?.state).toBe("superseded");
+    for (const review of second)
+      answerExternalReview(deps.db, {
+        projectId: h.projectId,
+        id: review.id,
+        verdict: { passed: true, reasons: [] },
+        by: "agent",
+        at: new Date().toISOString(),
+      });
+    runner.tick(h.projectId);
+    await settle();
+    expect(video()).toHaveLength(1);
+    expect(asked).toEqual([]);
   } finally {
     h.close();
   }
