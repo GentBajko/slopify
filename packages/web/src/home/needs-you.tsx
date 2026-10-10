@@ -18,14 +18,6 @@ import { projectLink, WorkItem } from "./work-item.js";
 // first item's action is primary; the accent is spent once in the area. The held review and
 // the failed run each have their own file (`waiting-item.tsx`, `failed-item.tsx`).
 
-export function needsYouCount(
-  waiting: readonly ProjectListing[],
-  failed: readonly ProjectListing[],
-  held: readonly ScheduleSummary[],
-): number {
-  return waiting.length + failed.length + held.length;
-}
-
 export function HeldTopicsItem({
   schedule,
   primary,
