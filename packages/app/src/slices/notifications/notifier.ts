@@ -7,13 +7,15 @@ import type {
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
-import type { NoticeSubject, NoticeText } from "./rules.js";
+import type { NoticeSubject, NoticeText, RunNotice } from "./rules.js";
 import {
   announces,
   autoPassNoticeText,
+  failureTold,
   noticeOf,
   noticeText,
   reviewNoticeText,
+  tellsStepFailure,
   topicsNoticeText,
   webhookBody,
 } from "./rules.js";
@@ -52,13 +54,25 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   const inflight = new Set<Promise<void>>();
   let closed = false;
 
-  const notify = (projectId: string, kind: NonNullable<ReturnType<typeof noticeOf>>): void => {
+  // The failure each project's "Step failed" said (`failureOf`).
+  // ceiling: one entry per project with a step failed beside a wait since boot.
+  const told = new Map<string, string>();
+
+  const notify = (projectId: string, kind: RunNotice): void => {
     const url = deps.url();
     if (url === null) return;
     const subject = deps.subject(projectId);
-    if (subject === undefined || !announces(kind, subject)) return;
-    const text = noticeText(kind, { ...subject, reason: reasons.get(projectId) });
-    post(url, { ...text, link: deps.link?.(projectId) }, kind, { projectId });
+    if (subject === undefined) return;
+    const say = (one: RunNotice): void => {
+      const text = noticeText(one, { ...subject, reason: reasons.get(projectId) });
+      post(url, { ...text, link: deps.link?.(projectId) }, one, { projectId });
+    };
+    if (failureTold(kind, subject, told.get(projectId))) return;
+    if (announces(kind, subject)) say(kind);
+    if (tellsStepFailure(kind, subject, told.get(projectId)) && subject.failure !== undefined) {
+      told.set(projectId, subject.failure);
+      say("step-failed");
+    }
   };
 
   // Once per verdict: a review asked again for the same item replaces its verdict in place.
@@ -154,7 +168,10 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         states.set(event.projectId, event.state);
         const kind = noticeOf(previous, event.state);
         if (kind !== undefined) notify(event.projectId, kind);
-        if (ends.has(event.state)) reasons.delete(event.projectId);
+        if (ends.has(event.state)) {
+          reasons.delete(event.projectId);
+          told.delete(event.projectId);
+        }
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,

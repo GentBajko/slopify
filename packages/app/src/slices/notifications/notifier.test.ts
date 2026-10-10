@@ -21,6 +21,8 @@ function harness(
     readonly startedBy?: "person" | "agent";
     readonly waitingForAgent?: boolean;
     readonly atItsDay?: boolean;
+    // What the project says of a failed step as each notice goes out.
+    readonly failing?: () => { readonly stepFailed?: boolean; readonly failure?: string };
   } = {},
 ) {
   const posted: Posted[] = [];
@@ -44,6 +46,7 @@ function harness(
             ...(options.startedBy === undefined ? {} : { startedBy: options.startedBy }),
             ...(options.waitingForAgent === true ? { waitingForAgent: true } : {}),
             ...(options.atItsDay === true ? { atItsDay: true } : {}),
+            ...options.failing?.(),
           }
         : undefined,
     ...(options.link === true
@@ -75,6 +78,63 @@ const stage = (
 
 const firstLines = (posted: readonly Posted[]): string[] =>
   posted.map((one) => one.body.split("\n")[0] ?? "");
+
+// The person's decision (2026-10-10): a step that fails while another waits for the agent, the
+// person or its day is told right away, and the run that later ends Failed on it isn't told
+// again.
+describe("a step failed beside a wait", () => {
+  it("is told right away beside an agent's review, and not again when the run fails", async () => {
+    let failure = "audio@2026-10-10T10:00:00.000Z";
+    const { notifier, posted } = harness({
+      waitingForAgent: true,
+      failing: () => ({ stepFailed: true, failure }),
+    });
+    notifier.observe(state("running"));
+    notifier.observe(stage("audio", "failed", "The narration was refused."));
+    notifier.observe(state("pending"));
+    notifier.observe(stage("images", "running"));
+    notifier.observe(state("running"));
+    notifier.observe(state("failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Step failed: Black holes — The narration was refused."]);
+    // Tried again, it failed again: another failure, told when the run ends on it.
+    failure = "audio@2026-10-10T11:00:00.000Z";
+    notifier.observe(state("running"));
+    notifier.observe(stage("audio", "failed", "Refused again."));
+    notifier.observe(state("failed"));
+    await notifier.settled();
+    expect(firstLines(posted).at(-1)).toBe("Run failed: Black holes — Refused again.");
+  });
+
+  it("is told beside the person's checkpoint as well as the wait", async () => {
+    const { notifier, posted } = harness({
+      failing: () => ({ stepFailed: true, failure: "audio@t" }),
+    });
+    notifier.observe(state("running"));
+    notifier.observe(stage("audio", "failed", "Refused."));
+    notifier.observe(state("pending"));
+    notifier.observe(state("running"));
+    notifier.observe(state("pending"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual([
+      "Waiting for you: Black holes",
+      "Step failed: Black holes — Refused.",
+      "Waiting for you: Black holes",
+    ]);
+  });
+
+  it("is told beside a prepared run's own hold for its day", async () => {
+    const { notifier, posted } = harness({
+      atItsDay: true,
+      failing: () => ({ stepFailed: true, failure: "thumbnail@t" }),
+    });
+    notifier.observe(state("running"));
+    notifier.observe(stage("thumbnail", "failed", "Refused."));
+    notifier.observe(state("pending"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Step failed: Black holes — Refused."]);
+  });
+});
 
 // A step going on after another failed doesn't take the failure's reason off the run's notice.
 it("keeps a failed step's reason while the rest of the run goes on", async () => {

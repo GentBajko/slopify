@@ -2,12 +2,14 @@ import type { ProjectState } from "@app/kernel/pipeline.js";
 import {
   announces,
   autoPassNoticeText,
+  failureTold,
   type NoticeSubject,
   type NoticeText,
   noticeOf,
   noticeText,
   type RunNotice,
   reviewNoticeText,
+  tellsStepFailure,
   topicsNoticeText,
 } from "@app/slices/notifications/rules.js";
 
@@ -122,12 +124,27 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     pending.add(done);
   };
 
+  // The failure each project's "Step failed" said in this tab (`failureOf`).
+  // ceiling: one entry per project with a step failed beside a wait this page heard.
+  const told = new Map<string, string>();
   const announce = async (projectId: string, state: ProjectState, kind: RunNotice) => {
     const subject = await deps.subject(projectId);
-    if (subject === undefined || !announces(kind, subject)) return;
-    if (!(await deps.claim(`${projectId}:${state}`))) return;
-    if (sounding()) deps.play?.("end");
-    if (deps.enabled()) deps.show({ projectId, kind, text: noticeText(kind, subject) });
+    if (subject === undefined) return;
+    const failure = subject.failure;
+    const news = tellsStepFailure(kind, subject, told.get(projectId));
+    const repeat = failureTold(kind, subject, told.get(projectId));
+    if (news && failure !== undefined) told.set(projectId, failure);
+    if (ends.has(state)) told.delete(projectId);
+    const notices: RunNotice[] = [];
+    if (!repeat && announces(kind, subject) && (await deps.claim(`${projectId}:${state}`)))
+      notices.push(kind);
+    // Shown last: a project's notifications share a tag, so it is the one left on screen.
+    if (news && (await deps.claim(`${projectId}:step-failed:${failure ?? ""}`)))
+      notices.push("step-failed");
+    if (notices.length > 0 && sounding()) deps.play?.("end");
+    if (deps.enabled())
+      for (const one of notices)
+        deps.show({ projectId, kind: one, text: noticeText(one, subject) });
   };
   const announceStart = async (projectId: string) => {
     const subject = await deps.subject(projectId);

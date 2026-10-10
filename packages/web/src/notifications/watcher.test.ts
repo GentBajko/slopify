@@ -15,6 +15,8 @@ function harness(
     readonly enabled?: boolean;
     readonly seeded?: readonly { id: string; status: ProjectState }[];
     readonly claim?: RunWatcherDeps["claim"];
+    // What a project says of a failed step as each notice goes out.
+    readonly failing?: () => { readonly stepFailed?: boolean; readonly failure?: string };
   } = {},
 ) {
   const shown: ShownNotice[] = [];
@@ -34,6 +36,7 @@ function harness(
                   reason: "Quota exceeded",
                   ...(projectId === "agent" ? { waitingForAgent: true } : {}),
                   ...(projectId === "prepared" ? { atItsDay: true } : {}),
+                  ...options.failing?.(),
                 },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),
@@ -46,6 +49,55 @@ function harness(
   });
   return { watcher, shown, reported };
 }
+
+// The person's decision (2026-10-10): a step that fails while another waits is told right away,
+// and the run that later ends Failed on it isn't told again.
+describe("a step failed beside a wait", () => {
+  it("is told right away beside an agent's review, and once", async () => {
+    let failure = "audio@t1";
+    const claimed: string[] = [];
+    const { watcher, shown } = harness({
+      failing: () => ({ stepFailed: true, failure }),
+      claim: (key) => {
+        claimed.push(key);
+        return Promise.resolve(true);
+      },
+    });
+    for (const state of ["running", "pending", "running", "pending", "running", "failed"] as const)
+      watcher.observe({ projectId: "agent", state });
+    await watcher.settled();
+    expect(shown.map((notice) => [notice.kind, notice.text.headline])).toEqual([
+      ["step-failed", "Step failed: Project agent — Quota exceeded"],
+    ]);
+    expect(claimed).toContain("agent:step-failed:audio@t1");
+    // Tried again, it failed again: another failure, told when the run ends on it.
+    failure = "audio@t2";
+    watcher.observe({ projectId: "agent", state: "running" });
+    watcher.observe({ projectId: "agent", state: "failed" });
+    await watcher.settled();
+    expect(shown.map((notice) => notice.kind)).toEqual(["step-failed", "failed"]);
+  });
+
+  it("is told after Waiting for you beside the person's checkpoint", async () => {
+    const { watcher, shown } = harness({
+      failing: () => ({ stepFailed: true, failure: "audio@t1" }),
+    });
+    watcher.observe({ projectId: "p1", state: "running" });
+    watcher.observe({ projectId: "p1", state: "pending" });
+    await watcher.settled();
+    expect(shown.map((notice) => notice.kind)).toEqual(["waiting", "step-failed"]);
+  });
+
+  it("is told beside a prepared run's own hold for its day", async () => {
+    const { watcher, shown } = harness({
+      failing: () => ({ stepFailed: true, failure: "thumbnail@t1" }),
+    });
+    watcher.observe({ projectId: "prepared", state: "running" });
+    watcher.observe({ projectId: "prepared", state: "pending" });
+    await watcher.settled();
+    expect(shown.map((notice) => notice.kind)).toEqual(["step-failed"]);
+  });
+});
 
 describe("createRunWatcher", () => {
   it("notifies when a run already going at page load finishes", async () => {

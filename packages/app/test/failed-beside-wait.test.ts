@@ -10,7 +10,9 @@ import type { Registry } from "../src/kernel/ports/registry.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
 import { stageStandingsByProject, stagesOf } from "../src/slices/admission/repo.js";
+import { createRunNotifier } from "../src/slices/notifications/notifier.js";
 import { noticeOf } from "../src/slices/notifications/rules.js";
+import { noticeSubject } from "../src/slices/notifications/subject.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
 import { answerExternalReview } from "../src/slices/reviews/external-repo.js";
@@ -181,6 +183,25 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
   });
   expect(waiting.listing).toMatchObject({ stepFailed: true });
   expect(waiting.attention).toEqual(expect.arrayContaining(["failed-step", "external-review"]));
+  // The Notification URL hears what the runner said, read as it goes out.
+  const sent: string[] = [];
+  const notifier = createRunNotifier({
+    url: () => "https://ntfy.example/topic",
+    subject: (projectId) => noticeSubject(h.deps.db, projectId),
+    send: async (_url, body) => {
+      sent.push(body.split("\n")[0] ?? "");
+      return { ok: true };
+    },
+    log: h.deps.log,
+  });
+  let heard = 0;
+  const hear = async () => {
+    for (const event of h.events.slice(heard)) notifier.observe(event);
+    heard = h.events.length;
+    await notifier.settled();
+  };
+  await hear();
+  expect(sent).toEqual(["Step failed: Saved — Narration chunk 1 of 1: The narration was refused."]);
 
   for (const review of waitingExternalReviews(h.deps.db, h.projectId))
     answerExternalReview(h.deps.db, {
@@ -210,6 +231,9 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
   });
   expect(ended.listing).not.toHaveProperty("stepFailed");
   expect(ended.attention).toEqual(["failed-step"]);
+  // The run ended on the failure "Step failed" already told: no second notice.
+  await hear();
+  expect(sent).toHaveLength(1);
 });
 
 it("reads a failed step beside images held at the person's checkpoint as Waiting for your review", {

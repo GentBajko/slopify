@@ -43,3 +43,28 @@ it("reads from the project's page whether its day's hold holds it", async () => 
   expect(await subjectOf({ prepared: true })).toMatchObject({ atItsDay: false });
   expect(await subjectOf({})).toMatchObject({ atItsDay: false });
 });
+
+// "Step failed" goes out once per failure (`tellsStepFailure`): the page says a step failed
+// beside the run's wait, and which failure it is.
+it("reads from the project's page which step failed beside its wait", async () => {
+  const failed = body({
+    status: "pending",
+    stages: [
+      stage("audio", "failed", { finishedAt: "2026-09-13T00:05:00.000Z" }),
+      stage("images", "pending"),
+    ],
+    outputs: [],
+  });
+  const subject = await projectNoticeSubject(
+    testDeps({
+      "GET /api/projects/p1": jsonAnswer({
+        ...failed,
+        project: { ...failed.project, stepFailed: true },
+      }),
+    }).api,
+    "p1",
+  );
+  expect(subject).toMatchObject({ stepFailed: true, failure: "audio@2026-09-13T00:05:00.000Z" });
+  expect(await subjectOf({})).not.toHaveProperty("stepFailed");
+  expect(await subjectOf({})).not.toHaveProperty("failure");
+});

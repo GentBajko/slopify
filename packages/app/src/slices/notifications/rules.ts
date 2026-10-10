@@ -6,7 +6,9 @@ import type { CheckpointHold } from "../reviews/holds.js";
 // notifications so both say the same thing about the same transition. Pure: the web bundle
 // imports this file.
 
-export type RunNotice = "ready" | "partial" | "failed" | "waiting";
+// `step-failed`: a step failed while the run still reads by a wait (`stepFailed`), told when the
+// run stops to wait on it (`tellsStepFailure`).
+export type RunNotice = "ready" | "partial" | "failed" | "waiting" | "step-failed";
 
 // Only a run seen running or waiting can finish, fail or stop to wait: a project first seen
 // already done was done before anyone was watching. Paused and canceled are what the user just
@@ -112,6 +114,49 @@ export interface NoticeSubject {
   readonly waitingForAgent?: boolean | undefined;
   // Held now by its schedule's own Before Video hold, waiting for its day (`reviews/holds.ts`).
   readonly atItsDay?: boolean | undefined;
+  // A step failed while the run still reads by a wait (`admission/state-words.ts`).
+  readonly stepFailed?: boolean | undefined;
+  // Which failure the run has now (`failureOf`), so one is told once.
+  readonly failure?: string | undefined;
+}
+
+// The failed steps of a run, each by when it failed: a step that fails again after Try again is
+// another failure.
+export function failureOf(
+  stages: readonly {
+    readonly kind: string;
+    readonly state: string;
+    readonly finishedAt: string | null;
+  }[],
+): string | undefined {
+  const failed = stages
+    .filter((stage) => stage.state === "failed")
+    .map((stage) => `${stage.kind}@${stage.finishedAt ?? ""}`);
+  return failed.length === 0 ? undefined : failed.join(",");
+}
+
+// A step failed while the run still reads by a wait: said right away ("Step failed"), when the
+// run stops to wait on it, once per failure. `told` is the failure said last for the project.
+export function tellsStepFailure(
+  kind: RunNotice,
+  subject: Pick<NoticeSubject, "stepFailed" | "failure">,
+  told: string | undefined,
+): boolean {
+  return (
+    kind === "waiting" &&
+    subject.stepFailed === true &&
+    subject.failure !== undefined &&
+    subject.failure !== told
+  );
+}
+
+// A run that ends Failed on the very failure "Step failed" already said is not told again.
+export function failureTold(
+  kind: RunNotice,
+  subject: Pick<NoticeSubject, "failure">,
+  told: string | undefined,
+): boolean {
+  return kind === "failed" && told !== undefined && subject.failure === told;
 }
 
 // Whether a prepared run's own Before Video hold is what holds it now (`atItsDay`), from the
@@ -175,6 +220,15 @@ function runNoticeText(kind: RunNotice, subject: NoticeSubject): NoticeText {
         headline:
           reason === undefined ? `Run failed: ${title}` : `Run failed: ${title} — ${reason}`,
         detail: "Open the project to see what stopped it and press Retry.",
+      };
+    }
+    case "step-failed": {
+      const reason = shortReason(subject.reason);
+      return {
+        headline:
+          reason === undefined ? `Step failed: ${title}` : `Step failed: ${title} — ${reason}`,
+        detail:
+          "The run still waits on another step, so it isn't over. Open the project to see which step failed and press Retry.",
       };
     }
     case "waiting":

@@ -1,4 +1,4 @@
-import { atItsDay, type NoticeSubject } from "@app/slices/notifications/rules.js";
+import { atItsDay, failureOf, type NoticeSubject } from "@app/slices/notifications/rules.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";
@@ -21,6 +21,7 @@ import { createRunWatcher, type RunWatcher } from "./watcher.js";
 // the server's notifier reads it (`slices/notifications/subject.ts`).
 export async function projectNoticeSubject(api: Api, projectId: string): Promise<NoticeSubject> {
   const body = await readProject(api, projectId);
+  const failure = failureOf(body.stages);
   return {
     title: body.project.title,
     makesVideo: body.project.config.sources.video !== "off",
@@ -28,6 +29,8 @@ export async function projectNoticeSubject(api: Api, projectId: string): Promise
     waitingForAgent: body.project.waitingForAgent === true,
     atItsDay: atItsDay(body.project.prepared === true, body.holding),
     reason: body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
+    ...(body.project.stepFailed === true ? { stepFailed: true } : {}),
+    ...(failure === undefined ? {} : { failure }),
   };
 }
 
