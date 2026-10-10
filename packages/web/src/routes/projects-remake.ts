@@ -1,5 +1,6 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
+import { previewBlocker, remakeBlocker, remakeTotal } from "@app/slices/rebuild/remake-outdated.js";
 import type { Api } from "@/api";
 import { usd } from "@/lib/format";
 import { startsWithoutReview } from "@/project/rebuild-consent";
@@ -39,14 +40,6 @@ export interface RemakeFailure {
   readonly reason: string;
 }
 
-const making = (preview: RebuildPreview) =>
-  preview.work.filter(
-    (work) =>
-      work.disposition === "generate" ||
-      work.disposition === "local" ||
-      work.disposition === "review",
-  );
-
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -57,10 +50,8 @@ async function planOne(
   sample: boolean,
   newKey: () => string,
 ): Promise<RemakePlan | RemakeSkip> {
-  if (project.status === "running")
-    return { project, reason: "It is running now. Remake it once the run has finished." };
-  if (sample)
-    return { project, reason: "It is a sample project, which stays as it came with Slopify." };
+  const blocker = remakeBlocker(project.status, sample);
+  if (blocker !== undefined) return { project, reason: blocker };
   try {
     const base = await prepareRevision(api, project.id);
     if (!base.ok) return { project, reason: `It couldn't be checked: ${base.message}` };
@@ -70,20 +61,8 @@ async function planOne(
     });
     if (!answer.ok) return { project, reason: `It couldn't be checked: ${answer.message}` };
     const preview = answer.value.value;
-    if (making(preview).length === 0)
-      return { project, reason: "Nothing in it is outdated, so there is nothing to remake." };
-    const blocked = preview.work.find((work) => work.disposition === "blocked");
-    if (blocked !== undefined)
-      return {
-        project,
-        reason: `${workLabels(preview)(blocked.key)} can't run: ${blocked.reason.trim() || "no reason was given."} Open the project and press Choose what to remake to see what to fix.`,
-      };
-    if (preview.providedReuseRequired.length > 0)
-      return {
-        project,
-        reason:
-          "It uses content you supplied, which you confirm on the project itself: open it and press Choose what to remake.",
-      };
+    const blocked = previewBlocker(preview, workLabels(preview));
+    if (blocked !== undefined) return { project, reason: blocked };
     return { project, preview, idempotencyKey: newKey() };
   } catch (error) {
     return {
@@ -170,9 +149,7 @@ const range = (low: number, high: number) => (low === high ? usd(low) : `${usd(l
 
 // What one remake, or all of them, is estimated to cost, in words.
 export function costWords(costs: readonly RebuildPreview["costs"][]): string {
-  const low = costs.reduce((sum, one) => sum + one.low, 0);
-  const high = costs.reduce((sum, one) => sum + one.high, 0);
-  const unknown = costs.reduce((sum, one) => sum + one.unknown, 0);
+  const { low, high, unknown } = remakeTotal(costs);
   const onPlan = costs.some((one) => one.rows.some((row) => row.onPlan === true));
   const known =
     high === 0 ? (onPlan ? "$0 on your plan" : "No charge") : `About ${range(low, high)}`;
