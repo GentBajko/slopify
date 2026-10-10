@@ -48,6 +48,7 @@ export interface AutoPassEvent {
   readonly projectId: string;
   readonly reviewId: string;
   readonly stage: string;
+  readonly item?: string | undefined;
 }
 
 // "Started: Title": a run began.
@@ -199,7 +200,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
           if (!(await deps.claim(`auto-pass:${event.reviewId}`))) return;
           show({
             projectId: event.projectId,
-            text: autoPassNoticeText({ title: subject.title, stage: event.stage }),
+            text: autoPassNoticeText({
+              title: subject.title,
+              stage: event.stage,
+              item: event.item,
+            }),
           });
         })(),
       );

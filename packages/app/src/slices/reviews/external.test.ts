@@ -229,3 +229,18 @@ it("answers superseded for a review whose item was just replaced, before any set
   ).toMatchObject({ ok: false, reason: "superseded" });
   expect(externalReviewById(db, "p1", "er1")).toMatchObject({ state: "superseded", verdict: null });
 });
+
+it("names the passed item as the project page shows it", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  f.h.deps.db.prepare("UPDATE external_reviews SET item_key='image:hill' WHERE id='er1'").run();
+  const events: ProjectEvent[] = [];
+  releaseDueReviews({
+    db: f.h.deps.db,
+    now: () => new Date("2026-09-10T02:00:00.000Z"),
+    emit: (_projectId, event) => events.push(event),
+    tick: () => undefined,
+    log: { write: () => undefined },
+  });
+  expect(events[0]).toMatchObject({ type: "review.auto-passed", item: "image 2" });
+});

@@ -88,7 +88,11 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     if (url === null) return;
     const subject = deps.subject(event.projectId);
     if (subject === undefined) return;
-    const text = autoPassNoticeText({ title: subject.title, stage: event.stage });
+    const text = autoPassNoticeText({
+      title: subject.title,
+      stage: event.stage,
+      item: event.item,
+    });
     post(url, { ...text, link: deps.link?.(event.projectId) }, "auto-pass", {
       projectId: event.projectId,
     });

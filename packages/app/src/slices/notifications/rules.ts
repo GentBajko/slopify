@@ -66,13 +66,31 @@ export function reviewNoticeText(subject: ReviewNoticeSubject): NoticeText {
   };
 }
 
+// A reviewed item by the name the project page gives it: an image by its place in the image
+// order ("image 3"), a short or a thumbnail variant by its number. Undefined for keys that are
+// no reviewed item.
+export function reviewItemName(itemKey: string, imageOrder: readonly string[]): string | undefined {
+  if (itemKey === "article:body") return "the article";
+  if (itemKey === "narration") return "the narration";
+  if (itemKey === "thumbnail:image") return "the thumbnail";
+  const variant = /^thumbnail:image:(\d+)$/.exec(itemKey);
+  if (variant !== null) return `thumbnail ${variant[1] ?? ""}`;
+  const short = /^shorts:(\d+)$/.exec(itemKey);
+  if (short !== null) return `short ${short[1] ?? ""}`;
+  if (!itemKey.startsWith("image:")) return undefined;
+  const at = imageOrder.indexOf(itemKey.slice("image:".length));
+  return at === -1 ? "an image" : `image ${String(at + 1)}`;
+}
+
 // An external review's two hours ran out with no agent's verdict (`review.auto-passed`).
 export function autoPassNoticeText(subject: {
   readonly title: string;
   readonly stage: string;
+  // `reviewItemName`, when the event carries it.
+  readonly item?: string | undefined;
 }): NoticeText {
   const title = subject.title.trim() === "" ? "Untitled project" : subject.title.trim();
-  const item = reviewItemNames[subject.stage] ?? "an item";
+  const item = subject.item ?? reviewItemNames[subject.stage] ?? "an item";
   return {
     headline: "Passed without review: no agent answered in 2 h",
     detail: `${title}: ${item} went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.`,

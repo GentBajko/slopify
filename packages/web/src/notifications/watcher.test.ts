@@ -349,7 +349,7 @@ describe("agent notices", () => {
 
   it("shows an auto-passed review once, and an agent's flag as the agent's", async () => {
     const { watcher, reviews } = agentHarness();
-    const passed = { projectId: "p1", reviewId: "er1", stage: "images" };
+    const passed = { projectId: "p1", reviewId: "er1", stage: "images", item: "image 3" };
     watcher.observeAutoPass(passed);
     watcher.observeAutoPass(passed);
     watcher.observeReview({
@@ -364,5 +364,6 @@ describe("agent notices", () => {
       "Passed without review: no agent answered in 2 h",
       "Review needs a decision: Lighthouse — Too short. · by agent",
     ]);
+    expect(reviews[0]?.text.detail).toContain("image 3 went ahead unreviewed");
   });
 });

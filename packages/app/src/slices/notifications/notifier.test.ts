@@ -4,7 +4,7 @@ import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
-import { projectLink } from "./rules.js";
+import { projectLink, reviewItemName } from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
@@ -216,12 +216,13 @@ describe("createRunNotifier", () => {
       reviewId: "er1",
       stage: "images",
       itemKey: "image:one",
+      item: "image 3",
     };
     notifier.observe(passed);
     notifier.observe(passed);
     await notifier.settled();
     expect(posted.map((one) => one.body)).toEqual([
-      "Passed without review: no agent answered in 2 h\nBlack holes: an image went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.\n",
+      "Passed without review: no agent answered in 2 h\nBlack holes: image 3 went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.\n",
     ]);
   });
 
@@ -244,4 +245,16 @@ describe("createRunNotifier", () => {
       "Review needs a decision: Black holes — A section repeats another. · by agent",
     ]);
   });
+});
+
+it("names a reviewed item the way the project page does", () => {
+  const order = ["harbor", "hill"];
+  expect(reviewItemName("image:hill", order)).toBe("image 2");
+  expect(reviewItemName("image:gone", order)).toBe("an image");
+  expect(reviewItemName("article:body", order)).toBe("the article");
+  expect(reviewItemName("narration", order)).toBe("the narration");
+  expect(reviewItemName("shorts:2", order)).toBe("short 2");
+  expect(reviewItemName("thumbnail:image", order)).toBe("the thumbnail");
+  expect(reviewItemName("thumbnail:image:3", order)).toBe("thumbnail 3");
+  expect(reviewItemName("something:else", order)).toBeUndefined();
 });

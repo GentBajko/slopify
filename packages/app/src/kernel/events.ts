@@ -93,6 +93,8 @@ export interface ReviewAutoPassedEvent extends EventOrigin {
   // `reviews/model.ts` reviewStages.
   readonly stage: string;
   readonly itemKey: string;
+  // The item as the project page names it ("image 3"), for the notice.
+  readonly item?: string | undefined;
 }
 
 export interface ProjectUpdatedEvent extends EventOrigin {
