@@ -67,7 +67,6 @@ export function WaitingItem({
   const gate = status.data?.checkpoints.find(
     (one) => theirs.has(one.checkpointId) && one.fingerprint === one.currentFingerprint,
   );
-  const unread = status.error;
   const approve = useMutation({
     mutationFn: async (held: CheckpointGate) => {
       identity.current ??= {
@@ -125,8 +124,8 @@ export function WaitingItem({
       detail={
         gate !== undefined
           ? undefined
-          : unread !== null
-            ? `Its review didn't load: ${unread.message} Open the project to review it there.`
+          : status.error !== null
+            ? `Its review didn't load: ${status.error.message} Open the project to review it there.`
             : "Its next step is held for your review."
       }
       action={
