@@ -31,6 +31,7 @@ const problemSchema = z
   .loose();
 const querySchema = z.record(z.string(), z.string());
 const bodySchema = z.record(z.string(), z.unknown());
+const keyedBody = z.object({ idempotencyKey: z.string() }).loose();
 
 export function text(value: string): CallToolResult {
   return { content: [{ type: "text", text: value }] };
@@ -72,16 +73,21 @@ export async function callRoute(
   });
   if (method !== "GET" && tool.unrecorded !== true && response.ok) {
     const { projectIds, scheduleId } = subjectsOf(tool, args, value);
+    const key = keyedBody.safeParse(args.body);
     for (const projectId of projectIds.length === 0 ? [null] : projectIds)
-      recordAgentAction(deps.db, {
-        id: deps.ids.next(),
-        projectId,
-        scheduleId,
-        tool: tool.name,
-        title: tool.title,
-        revisionId: revisionIdOf(value),
-        createdAt: deps.clock.now().toISOString(),
-      });
+      recordAgentAction(
+        deps.db,
+        {
+          id: deps.ids.next(),
+          projectId,
+          scheduleId,
+          tool: tool.name,
+          title: tool.title,
+          revisionId: revisionIdOf(value),
+          createdAt: deps.clock.now().toISOString(),
+        },
+        key.success ? key.data.idempotencyKey : undefined,
+      );
   }
   return result;
 }

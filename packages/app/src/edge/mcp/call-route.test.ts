@@ -217,6 +217,26 @@ it("records a change by agent, but not a POST that only looks", async () => {
   ]);
 });
 
+// Retried with the same idempotencyKey, the route answers its first answer again: one change.
+it("records an idempotent call once when it is sent again with the same key", async () => {
+  const fake = answering(Response.json({ ok: true }, { status: 202 }));
+  const redo: RouteTool = {
+    name: "redo_review",
+    route: "POST /api/projects/:id/reviews/:verdictId/redo",
+    title: "Redo a flagged item",
+    description: "",
+  };
+  const args = { id: "p1", verdictId: "v1", body: { baseRevisionId: "r1", idempotencyKey: "k1" } };
+  await callRoute(fake, redo, args);
+  await callRoute(fake, redo, args);
+  expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([
+    { tool: "redo_review" },
+  ]);
+  // A new key is a new change.
+  await callRoute(fake, redo, { ...args, body: { ...args.body, idempotencyKey: "k2" } });
+  expect(fake.db.prepare("SELECT count(*) AS n FROM agent_actions").get()).toEqual({ n: 2 });
+});
+
 it("logs a refusal it could not read, with what was called, and still says what to do", async () => {
   const fake = answering(
     new Response("{not json", {

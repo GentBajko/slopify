@@ -45,11 +45,17 @@ function actionOf(value: unknown): AgentAction {
   };
 }
 
-// A project the call itself deleted for good is gone: the action is kept without it.
-export function recordAgentAction(db: DatabaseSync, action: AgentAction): void {
+// A project the call itself deleted for good is gone: the action is kept without it. A call
+// sent again with its idempotencyKey was answered with its first answer, so it adds no second
+// row (`agent_actions_once`).
+export function recordAgentAction(
+  db: DatabaseSync,
+  action: AgentAction,
+  idempotencyKey?: string,
+): void {
   db.prepare(
-    `INSERT INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at)
-     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?)`,
+    `INSERT OR IGNORE INTO agent_actions(id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key)
+     VALUES (?,(SELECT id FROM projects WHERE id=?),?,?,?,?,?,?)`,
   ).run(
     action.id,
     action.projectId,
@@ -58,6 +64,7 @@ export function recordAgentAction(db: DatabaseSync, action: AgentAction): void {
     action.title,
     action.revisionId,
     action.createdAt,
+    idempotencyKey ?? null,
   );
 }
 
