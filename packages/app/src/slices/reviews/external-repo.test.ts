@@ -331,3 +331,15 @@ it("says a replaced review whose replacement exists is replaced, in the Trash to
   if (review === undefined) throw new Error("the review row stays");
   expect(reviewStanding(db, review)).toBe("superseded");
 });
+
+// Taken up again after a Cancel (Try again), its step not asked again yet: the review Cancel
+// closed still reads canceled, by what Cancel stored, though its step no longer reads canceled.
+it("says a canceled run's review is canceled after Try again, until its step asks again", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE external_reviews SET state='canceled' WHERE id='er1'").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("canceled");
+});
