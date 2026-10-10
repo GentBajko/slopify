@@ -1,11 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { answerExternalReview } from "../../slices/reviews/external.js";
-import { verdictAnswerSchema } from "../../slices/reviews/verdict.js";
+import { verdictAnswerSchema, verdictIssue } from "../../slices/reviews/verdict.js";
 import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem, titleOf, type ValidationIssue } from "./problem.js";
 
 const id = z
   .string()
@@ -14,36 +14,37 @@ const id = z
   .regex(/^[0-9A-Za-z_-]+$/);
 const reviewParam = z.object({ id, reviewId: id });
 
+// A verdict that isn't {verdict, reasons} in the reviewer's rules: what was wrong, and that the
+// review still waits for a fixed one.
+function verdictRefused(
+  result:
+    | { readonly success: true }
+    | { readonly success: false; readonly error: { readonly issues: readonly ValidationIssue[] } },
+  c: Context,
+): Response | undefined {
+  if (result.success) return undefined;
+  return problem(c, {
+    status: 400,
+    title: titleOf(400),
+    detail: `The verdict wasn't saved${verdictIssue(result.error.issues, "it is not {verdict, reasons}")}. The review is still waiting: send {verdict: "pass" | "fail", reasons} again with that fixed.`,
+    extensions: { reason: "invalid-verdict" },
+  });
+}
+
 // An external agent's verdict on a review waiting for it (`slices/reviews/external.ts`). The
 // rules are the reviewer model's own; the outcome is decided when the review step runs again.
 export function externalReviewRoutes(deps: AppDeps) {
   return new Hono().post(
     "/:id/external-reviews/:reviewId/verdict",
     zValidator("param", reviewParam, onInvalid),
+    zValidator("json", verdictAnswerSchema, verdictRefused),
     async (c) => {
       const { id: projectId, reviewId } = c.req.valid("param");
-      let body: unknown;
-      try {
-        body = await c.req.json();
-      } catch {
-        body = undefined;
-      }
-      const answer = verdictAnswerSchema.safeParse(body);
-      if (!answer.success) {
-        const issue = answer.error.issues[0];
-        const where =
-          issue === undefined || issue.path.length === 0 ? "" : ` (${issue.path.join(".")})`;
-        return problem(c, {
-          status: 400,
-          title: titleOf(400),
-          detail: `The verdict wasn't saved${where}: ${issue?.message ?? "it is not {verdict, reasons}"}. The review is still waiting: send {verdict: "pass" | "fail", reasons} again with that fixed.`,
-          extensions: { reason: "invalid-verdict" },
-        });
-      }
+      const answer = c.req.valid("json");
       const result = answerExternalReview(deps.db, {
         projectId,
         id: reviewId,
-        verdict: { passed: answer.data.verdict === "pass", reasons: answer.data.reasons },
+        verdict: { passed: answer.verdict === "pass", reasons: answer.reasons },
         by: actorOf(c),
         at: deps.clock.now().toISOString(),
       });

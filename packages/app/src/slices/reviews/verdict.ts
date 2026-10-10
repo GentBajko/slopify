@@ -24,6 +24,18 @@ export const verdictAnswerSchema = z
     message: "a failed verdict names no reason",
   });
 
+// What was wrong with a verdict, where it was: " (reasons.0): a reason can't be empty". The
+// reviewer's refused answer and an agent's refused verdict say it the same way.
+export function verdictIssue(
+  issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[],
+  otherwise: string,
+): string {
+  const issue = issues[0];
+  const where =
+    issue === undefined || issue.path.length === 0 ? "" : ` (${issue.path.map(String).join(".")})`;
+  return `${where}: ${issue?.message ?? otherwise}`;
+}
+
 const answerRules =
   'Answer with one JSON object and nothing else: {"verdict":"pass","reasons":[]} when the item is fine, or {"verdict":"fail","reasons":["..."]} with one short sentence per problem you found (at most 10). Name only real problems you can point to.';
 
@@ -87,15 +99,11 @@ export function parseVerdict(text: string): ParsedVerdict {
     };
   }
   const parsed = verdictAnswerSchema.safeParse(value);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where =
-      issue === undefined || issue.path.length === 0 ? "" : ` (${issue.path.join(".")})`;
+  if (!parsed.success)
     return {
       ok: false,
-      reason: `The reviewer's verdict was malformed${where}: ${issue?.message ?? "it did not match the verdict format"}. ${retryHint}`,
+      reason: `The reviewer's verdict was malformed${verdictIssue(parsed.error.issues, "it did not match the verdict format")}. ${retryHint}`,
     };
-  }
   return {
     ok: true,
     value: { passed: parsed.data.verdict === "pass", reasons: parsed.data.reasons },
