@@ -57,14 +57,15 @@ const gateRow = z.object({
 const projectRow = z.object({ project_id: z.string() });
 
 // Every project's holds, or one project's alone when `projectId` is given. A caller that has
-// already read the stage standings (`stageStandingsByProject`) passes them; one that lists
-// what it can read passes `skip`, given each checkpoint row that can't be read instead of
-// failing them all.
+// already read the stage standings (`stageStandingsByProject`) or the uploaded projects that
+// read Done (`uploadedAndSettled`) passes them; one that lists what it can read passes `skip`,
+// given each checkpoint row that can't be read instead of failing them all.
 export function projectHolds(
   db: DatabaseSync,
   scope: {
     readonly projectId?: string | undefined;
     readonly standings?: ReadonlyMap<string, readonly StageProgress[]> | undefined;
+    readonly settled?: ReadonlySet<string> | undefined;
     readonly skip?: ((value: unknown, error: unknown) => void) | undefined;
   } = {},
 ): ProjectHolds {
@@ -118,7 +119,7 @@ export function projectHolds(
   const agents = projectsWaitingOnAgents(db, projectId);
   const runs = heldRuns(db, projectId);
   // An uploaded project with nothing admitted reads Done (`edge/http/projects.ts`).
-  const settled = uploadedAndSettled(db);
+  const settled = scope.settled ?? uploadedAndSettled(db, projectId);
   const waitingForAgent = new Set(
     [...agents].filter((id) => !reachedTheirs.has(id) && runs.get(id)?.held !== true),
   );

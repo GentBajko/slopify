@@ -62,7 +62,7 @@ export function projectRoutes(deps: AppDeps) {
     ...project,
     status: statusOf(
       derive(stagesOf(deps.db, project.id), project.paused),
-      uploadedAndSettled(deps.db).has(project.id),
+      uploadedAndSettled(deps.db, project.id).has(project.id),
     ),
   });
 
@@ -94,8 +94,8 @@ export function projectRoutes(deps: AppDeps) {
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
-        const holds = projectHolds(deps.db, { standings });
         const settled = uploadedAndSettled(deps.db);
+        const holds = projectHolds(deps.db, { standings, settled });
         const waits = limitWaitsByProject(deps.db);
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
