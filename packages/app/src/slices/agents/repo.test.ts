@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { waitingReviewFixture } from "../reviews/external.fake.js";
+import { waitingReviewFixture } from "../reviews/external-repo.fake.js";
 import { listRevisionHistory } from "../revisions/repo.js";
 import {
   agentActionsOf,

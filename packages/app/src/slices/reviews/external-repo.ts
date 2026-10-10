@@ -2,17 +2,72 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { liveProject, projectTrashed } from "../admission/repo.js";
-import type { Actor } from "../agents/model.js";
+import { type Actor, actors } from "../agents/model.js";
 import {
   type ExternalAnswerResult,
   type ExternalReview,
-  externalReviewOf,
+  externalReviewStates,
+  type SettledReview,
 } from "./external-model.js";
-import type { ReviewVerdict } from "./model.js";
+import { type ReviewVerdict, reviewStages } from "./model.js";
+
+const materialSchema = z.object({
+  request: z.object({
+    stage: z.enum(reviewStages),
+    instruction: z.string(),
+    sections: z.array(z.object({ label: z.string(), text: z.string() })),
+    images: z.array(z.string()),
+  }),
+  images: z.array(z.object({ stored: z.string(), name: z.string() })),
+});
+const verdictSchema = z.object({ passed: z.boolean(), reasons: z.array(z.string()) });
+const rowSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  revision_id: z.string(),
+  work_id: z.string(),
+  piece_id: z.string(),
+  work_key: z.string(),
+  item_key: z.string(),
+  stage: z.enum(reviewStages),
+  item_fingerprint: z.string(),
+  review_fingerprint: z.string(),
+  material: z.string(),
+  state: z.enum(externalReviewStates),
+  waiting_since: z.string(),
+  deadline_at: z.string(),
+  verdict: z.string().nullable(),
+  answered_by: z.enum(actors).nullable(),
+  answered_at: z.string().nullable(),
+});
+
+// One stored review as the slice speaks of it; throws for a row that can't be read back.
+export function externalReviewOf(value: unknown): ExternalReview {
+  const row = rowSchema.parse(value);
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    revisionId: row.revision_id,
+    workId: row.work_id,
+    pieceId: row.piece_id,
+    workKey: row.work_key,
+    itemKey: row.item_key,
+    stage: row.stage,
+    itemFingerprint: row.item_fingerprint,
+    reviewFingerprint: row.review_fingerprint,
+    material: materialSchema.parse(JSON.parse(row.material)),
+    state: row.state,
+    waitingSince: row.waiting_since,
+    deadlineAt: row.deadline_at,
+    verdict: row.verdict === null ? null : verdictSchema.parse(JSON.parse(row.verdict)),
+    answeredBy: row.answered_by,
+    answeredAt: row.answered_at,
+  };
+}
 
 // A review the project still wants: its step is reserved by the project's current version with
 // the same fingerprint. A rerun or an edit that replaced the item leaves it unwanted.
-export function wantedBy(table: string): string {
+function wantedBy(table: string): string {
   return `EXISTS (SELECT 1 FROM revision_work_reservations r
     JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
     WHERE r.project_id=${table}.project_id AND r.work_id=${table}.work_id
@@ -20,7 +75,7 @@ export function wantedBy(table: string): string {
 }
 
 // Nothing of a canceled run goes ahead on its own.
-export function liveWork(table: string): string {
+function liveWork(table: string): string {
   return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND w.state!='canceled')`;
 }
 
@@ -89,7 +144,7 @@ export function externalReviewById(
 // held the work's unfinished pieces (`recoverWork`), so the ones never submitted are allowed
 // again, as boot does for work it keeps (`recoverCheckpointWork`). A paused project stays put:
 // the runner claims nothing for it until Resume.
-export function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
+function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
   const parked = `(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`;
   const released = db
     .prepare(
@@ -171,4 +226,49 @@ function stillWaiting(projectId: string | undefined): string {
   return `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}${
     projectId === undefined ? "" : " AND e.project_id=?"
   }`;
+}
+
+const dueRow = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  revision_id: z.string(),
+  work_id: z.string(),
+  stage: z.enum(reviewStages),
+  item_key: z.string(),
+});
+
+// Replaced reviews stop waiting; waiting ones past their deadline pass without review. A
+// paused project's review passes too (nothing runs until Resume); a canceled run's never does,
+// nor one of a project in the Trash (it waits on, and passes once restored).
+// Read by plain columns only: a review whose stored material can't be read back still passes,
+// and never holds up the others.
+export function settleExternalReviews(db: DatabaseSync, now: Date): readonly SettledReview[] {
+  const at = now.toISOString();
+  return transact(db, () => {
+    db.prepare(
+      `UPDATE external_reviews SET state='superseded' WHERE state='waiting' AND NOT ${wantedBy("external_reviews")}`,
+    ).run();
+    const due = db
+      .prepare(
+        `SELECT e.id, e.project_id, e.revision_id, e.work_id, e.stage, e.item_key FROM external_reviews e
+         WHERE e.state='waiting' AND e.deadline_at<=? AND ${liveWork("e")} AND ${liveProject("e", "project_id")}
+         ORDER BY e.waiting_since, e.rowid`,
+      )
+      .all(at)
+      .map((value) => dueRow.parse(value));
+    return due.map((row) => {
+      db.prepare(
+        "UPDATE external_reviews SET state='auto-passed', answered_at=? WHERE id=? AND state='waiting'",
+      ).run(at, row.id);
+      releaseParkedWork(db, row.project_id, row.id);
+      return {
+        id: row.id,
+        projectId: row.project_id,
+        revisionId: row.revision_id,
+        workId: row.work_id,
+        stage: row.stage,
+        itemKey: row.item_key,
+      };
+    });
+  });
 }

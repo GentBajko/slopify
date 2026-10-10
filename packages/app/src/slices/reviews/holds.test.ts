@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { waitingReviewFixture } from "./external.fake.js";
+import { waitingReviewFixture } from "./external-repo.fake.js";
 import { projectHolds } from "./holds.js";
 
 const open: { readonly close: () => void }[] = [];

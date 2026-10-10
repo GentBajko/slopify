@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import type { LogFields } from "../../kernel/log.js";
-import { addUnreadableReview, waitingReviewFixture } from "../reviews/external.fake.js";
+import { addUnreadableReview, waitingReviewFixture } from "../reviews/external-repo.fake.js";
 import { saveVerdict } from "../reviews/repo.js";
 import { insertOutput } from "../storage/repo.js";
 import { type AttentionDeps, needsAttention } from "./attention.js";

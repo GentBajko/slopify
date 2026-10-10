@@ -1,9 +1,10 @@
 import { afterEach, expect, it } from "vitest";
-import { waitingReviewFixture } from "./external.fake.js";
+import { addUnreadableReview, waitingReviewFixture } from "./external-repo.fake.js";
 import {
   answerExternalReview,
   externalReviewById,
   openExternalReview,
+  settleExternalReviews,
   waitingExternalReviews,
 } from "./external-repo.js";
 
@@ -96,4 +97,58 @@ it("answers superseded for a review whose item was just replaced, before any set
     }),
   ).toMatchObject({ ok: false, reason: "superseded" });
   expect(externalReviewById(db, "p1", "er1")).toMatchObject({ state: "superseded", verdict: null });
+});
+
+it("passes a paused project's review at its deadline too", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  f.h.deps.db.prepare("INSERT INTO project_controls(project_id,paused) VALUES ('p1',1)").run();
+  expect(settleExternalReviews(f.h.deps.db, new Date("2026-09-10T02:00:00.000Z"))).toHaveLength(1);
+});
+
+it("never auto-passes a canceled run's review", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  f.h.deps.db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
+  expect(settleExternalReviews(f.h.deps.db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
+  expect(externalReviewById(f.h.deps.db, "p1", "er1")?.state).toBe("waiting");
+});
+
+it("supersedes the review of an item the current version no longer wants", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
+  expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("superseded");
+});
+
+it("neither passes nor accepts a verdict for a review of a project in the Trash", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare(
+    "INSERT INTO project_trash(project_id,deleted_at) VALUES ('p1','2026-09-10T01:00:00.000Z')",
+  ).run();
+  expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
+  expect(
+    answerExternalReview(db, {
+      projectId: "p1",
+      id: "er1",
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: "2026-09-10T00:30:00.000Z",
+    }),
+  ).toEqual({ ok: false, reason: "trashed" });
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});
+
+it("still passes every due review when one of them can't be read back", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  addUnreadableReview(f);
+  expect(
+    settleExternalReviews(f.h.deps.db, new Date("2026-09-10T02:00:00.000Z")).map((row) => row.id),
+  ).toEqual(["er1", "er2"]);
+  expect(externalReviewById(f.h.deps.db, "p1", "er1")?.state).toBe("auto-passed");
 });

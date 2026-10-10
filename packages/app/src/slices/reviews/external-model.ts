@@ -1,6 +1,5 @@
-import { z } from "zod";
-import { type Actor, actors } from "../agents/model.js";
-import { type ReviewStage, type ReviewVerdict, reviewStages } from "./model.js";
+import type { Actor } from "../agents/model.js";
+import type { ReviewStage, ReviewVerdict } from "./model.js";
 import type { ReviewMaterial } from "./verdict.js";
 
 // ceiling: the owner's number. An hourly agent routine answers well inside two hours; a run
@@ -35,59 +34,6 @@ export interface ExternalReview {
   readonly verdict: ReviewVerdict | null;
   readonly answeredBy: Actor | null;
   readonly answeredAt: string | null;
-}
-
-const materialSchema = z.object({
-  request: z.object({
-    stage: z.enum(reviewStages),
-    instruction: z.string(),
-    sections: z.array(z.object({ label: z.string(), text: z.string() })),
-    images: z.array(z.string()),
-  }),
-  images: z.array(z.object({ stored: z.string(), name: z.string() })),
-});
-const verdictSchema = z.object({ passed: z.boolean(), reasons: z.array(z.string()) });
-const rowSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  revision_id: z.string(),
-  work_id: z.string(),
-  piece_id: z.string(),
-  work_key: z.string(),
-  item_key: z.string(),
-  stage: z.enum(reviewStages),
-  item_fingerprint: z.string(),
-  review_fingerprint: z.string(),
-  material: z.string(),
-  state: z.enum(externalReviewStates),
-  waiting_since: z.string(),
-  deadline_at: z.string(),
-  verdict: z.string().nullable(),
-  answered_by: z.enum(actors).nullable(),
-  answered_at: z.string().nullable(),
-});
-
-export function externalReviewOf(value: unknown): ExternalReview {
-  const row = rowSchema.parse(value);
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    revisionId: row.revision_id,
-    workId: row.work_id,
-    pieceId: row.piece_id,
-    workKey: row.work_key,
-    itemKey: row.item_key,
-    stage: row.stage,
-    itemFingerprint: row.item_fingerprint,
-    reviewFingerprint: row.review_fingerprint,
-    material: materialSchema.parse(JSON.parse(row.material)),
-    state: row.state,
-    waitingSince: row.waiting_since,
-    deadlineAt: row.deadline_at,
-    verdict: row.verdict === null ? null : verdictSchema.parse(JSON.parse(row.verdict)),
-    answeredBy: row.answered_by,
-    answeredAt: row.answered_at,
-  };
 }
 
 export type ExternalAnswerResult =

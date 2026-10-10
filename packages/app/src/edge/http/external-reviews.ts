@@ -62,9 +62,10 @@ function verdictRefused(
   return notSaved(c, verdictIssue(result.error.issues, "it is not {verdict, reasons}"));
 }
 
-// An external agent's verdict on a review waiting for it (`slices/reviews/external.ts`). The
-// rules are the reviewer model's own; the outcome is decided when the review step runs again.
-// The one 400 the route throws is the json validator's, for a body it can't parse as JSON.
+// An external agent's verdict on a review waiting for it (`slices/reviews/external-repo.ts`).
+// The rules are the reviewer model's own; the outcome is decided when the review step runs
+// again. The one 400 the route throws is the json validator's, for a body it can't parse as
+// JSON.
 export function externalReviewRoutes(deps: AppDeps) {
   return new Hono()
     .onError((error, c) =>

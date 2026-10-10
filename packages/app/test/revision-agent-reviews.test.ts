@@ -17,12 +17,10 @@ import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
 import { externalReviewWaitMs } from "../src/slices/reviews/external-model.js";
-import {
-  releaseDueReviews,
-  settleExternalReviews,
-} from "../src/slices/reviews/external-release.js";
+import { releaseDueReviews } from "../src/slices/reviews/external-release.js";
 import {
   answerExternalReview,
+  settleExternalReviews,
   waitingExternalReviews,
 } from "../src/slices/reviews/external-repo.js";
 import { listVerdicts } from "../src/slices/reviews/repo.js";
