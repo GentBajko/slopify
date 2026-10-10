@@ -1,6 +1,7 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import {
   heldWord,
+  parkedOnAgent,
   preparedWord,
   stageStateWords,
   waitingForAgentWord,
@@ -92,8 +93,7 @@ export function runSteps({
   readonly holding: readonly CheckpointHold[];
   readonly now: number;
 }): readonly Step[] {
-  const parked =
-    project.status === "pending" && project.waitingForAgent === true && project.setAside !== true;
+  const parked = parkedOnAgent(project);
   const holdOf = (stage: Stage): StepHold | undefined =>
     holding.find((hold) => hold.stage === stage.kind)?.waitsFor ??
     (parked && stage.state === "pending" ? "agent" : undefined);

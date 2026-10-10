@@ -66,6 +66,16 @@ export function heldStateWord(project: Holds): HeldStateWord {
   return heldWord;
 }
 
+// A waiting run parked on an External agent's review, which goes on by itself once the agent
+// answers. Kept as is wins, as in `heldStateWord`.
+export function parkedOnAgent(
+  project: Pick<ProjectStanding, "status" | "setAside" | "waitingForAgent">,
+): boolean {
+  return (
+    project.status === "pending" && project.waitingForAgent === true && project.setAside !== true
+  );
+}
+
 // An uploaded project already reads "done" from the projects route (`uploadedAndSettled`).
 export function projectStateWord(project: ProjectStanding): string {
   return held(project) ? heldStateWord(project) : projectStateWords[project.status];
