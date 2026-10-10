@@ -8,6 +8,7 @@ import { isProviderError } from "../../kernel/ports/model.js";
 import { claudeCodeArgs, claudeCodeLlm, claudePlanLimit } from "./claude-code.js";
 import type { CliEnded, CliRun, RunCli } from "./run-cli.js";
 import { nodeRunCli } from "./run-cli.js";
+import { exitsWith, reapStandIns } from "./stand-in-cli.fake.js";
 
 // Fixture provenance: `fixtures/claude-code-*.jsonl` come from real `claude` 2.1.258 runs on
 // this machine (spike 1), captured with claude -p "..." --output-format stream-json --verbose
@@ -357,6 +358,8 @@ describe("claudeCodeLlm.complete", () => {
 });
 
 describe("claudeCodeLlm against a real child process", () => {
+  const track = reapStandIns();
+
   it("kills the process the stage's cancel aborted, leaving nothing behind", async () => {
     // A stand-in CLI that writes one assistant event and then never finishes its turn,
     // which is what a long agent run looks like from here.
@@ -364,7 +367,7 @@ describe("claudeCodeLlm against a real child process", () => {
     const path = join(dir, "stubborn.mjs");
     writeFileSync(
       path,
-      `process.stdout.write(JSON.stringify({type:"assistant",message:{content:[{type:"text",text:"working"}]}}) + "\\n");
+      `${exitsWith(process.pid)}process.stdout.write(JSON.stringify({type:"assistant",message:{content:[{type:"text",text:"working"}]}}) + "\\n");
 setInterval(() => {}, 1000);\n`,
       { mode: 0o700 },
     );
@@ -375,6 +378,7 @@ setInterval(() => {}, 1000);\n`,
       binary: process.execPath,
       run: (binary, args, signal): CliRun => {
         started = nodeRunCli(binary, [path, ...args], signal);
+        track(started.pid);
         return started;
       },
     });

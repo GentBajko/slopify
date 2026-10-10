@@ -16,6 +16,7 @@ import {
   stopCliRun,
 } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
+import { alive, exitsWith, reapStandIns } from "./stand-in-cli.fake.js";
 
 // These tests spawn real processes: the point of them is that the seam does what the
 // operating system does, which a double cannot show. No provider is called - the "CLI" is
@@ -25,8 +26,19 @@ const dir = mkdtempSync(join(tmpdir(), "slopify-run-cli-"));
 
 function script(name: string, body: string): string {
   const path = join(dir, name);
-  writeFileSync(path, body, { mode: 0o700 });
+  writeFileSync(path, name.endsWith(".mjs") ? `${exitsWith(process.pid)}${body}` : body, {
+    mode: 0o700,
+  });
   return path;
+}
+
+const track = reapStandIns();
+
+// `nodeRunCli`, its child killed after the test if it still runs.
+function spawned(...args: Parameters<typeof nodeRunCli>): CliRun {
+  const run = nodeRunCli(...args);
+  track(run.pid);
+  return run;
 }
 
 async function textOf(run: CliRun): Promise<string[]> {
@@ -37,23 +49,11 @@ async function textOf(run: CliRun): Promise<string[]> {
   return out;
 }
 
-function alive(pid: number | undefined): boolean {
-  if (pid === undefined) {
-    return false;
-  }
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 describe("nodeRunCli", () => {
   it("writes a large UTF-8 prompt through stdin and closes it without changing bytes", async () => {
     const path = script("echo-stdin.mjs", "process.stdin.pipe(process.stdout);\n");
     const input = "këtu 日本語 --not-a-flag\n".repeat(10000);
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]), { stdin: input });
+    const run = spawned(process.execPath, [path], AbortSignal.any([]), { stdin: input });
     const chunks: Uint8Array[] = [];
     for await (const bytes of run.stdout) chunks.push(bytes);
     await run.inputWritten;
@@ -63,7 +63,7 @@ describe("nodeRunCli", () => {
 
   it("reports a closed input pipe without crashing or hanging", async () => {
     const path = script("close-stdin.mjs", "process.exit(0);\n");
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]), {
+    const run = spawned(process.execPath, [path], AbortSignal.any([]), {
       stdin: "x".repeat(2000000),
     });
     await expect(run.inputWritten).rejects.toThrow();
@@ -77,17 +77,43 @@ describe("nodeRunCli", () => {
     // Everything a shell would have eaten: command substitution, backticks, a variable, a
     // pipe, a semicolon, quotes of both kinds, a newline and a glob.
     const nasty = "`id` $(rm -rf /) $HOME | tee ; 'a' \"b\" \\ *\nsecond line\ttab";
-    const run = nodeRunCli(process.execPath, [path, nasty, "--flag=x y"], AbortSignal.any([]));
+    const run = spawned(process.execPath, [path, nasty, "--flag=x y"], AbortSignal.any([]));
     const written = (await textOf(run)).join("\n");
     expect(JSON.parse(written)).toEqual([nasty, "--flag=x y"]);
     expect((await run.ended).code).toBe(0);
+  });
+
+  // A test worker killed or timed out before it stopped a stand-in leaves it with no parent: it
+  // ends then rather than run on for hours. Here the "worker" is a process that starts one, with
+  // the guard naming it, and exits.
+  it("ends a stand-in whose test worker is gone, even one that ignores the polite stop", async () => {
+    const stubborn = "process.on('SIGTERM', () => {});\nsetInterval(() => {}, 1000);\n";
+    const orphan = join(dir, "orphan.mjs");
+    const worker = script(
+      "worker.mjs",
+      [
+        'import { spawn } from "node:child_process";',
+        'import { writeFileSync } from "node:fs";',
+        `writeFileSync(${JSON.stringify(orphan)}, ${JSON.stringify(exitsWith(0))}.replace("(0,", \`(\${process.pid},\`) + ${JSON.stringify(stubborn)});`,
+        `const child = spawn(process.execPath, [${JSON.stringify(orphan)}], { stdio: "ignore" });`,
+        "process.stdout.write(String(child.pid));",
+        "process.exit(0);",
+        "",
+      ].join("\n"),
+    );
+    const run = spawned(process.execPath, [worker], AbortSignal.any([]));
+    const pid = Number((await textOf(run)).join(""));
+    track(pid);
+    expect(pid).toBeGreaterThan(0);
+    for (let tries = 0; tries < 100 && alive(pid); tries += 1) await delay(20);
+    expect(alive(pid)).toBe(false);
   });
 
   it("kills the child on abort and leaves no process behind", async () => {
     // A child that ignores nothing but would otherwise run for a minute.
     const path = script("forever.mjs", "setTimeout(() => {}, 60000);\n");
     const controller = new AbortController();
-    const run = nodeRunCli(process.execPath, [path], controller.signal);
+    const run = spawned(process.execPath, [path], controller.signal);
     const pid = run.pid;
     expect(pid).toBeDefined();
     // Give it long enough to actually be running before it is stopped.
@@ -110,7 +136,7 @@ describe("nodeRunCli", () => {
       "process.on('SIGTERM', () => {});\nprocess.stdout.write('ready\\n');\nsetInterval(() => {}, 1000);\n",
     );
     const controller = new AbortController();
-    const run = nodeRunCli(process.execPath, [path], controller.signal);
+    const run = spawned(process.execPath, [path], controller.signal);
     const reader = lines(run.stdout)[Symbol.asyncIterator]();
     expect((await reader.next()).value).toBe("ready");
     const waiting = reader.next();
@@ -132,7 +158,7 @@ describe("nodeRunCli", () => {
 
   it("kills the child when the caller stops reading", async () => {
     const path = script("chatty.mjs", "setInterval(() => process.stdout.write('tick\\n'), 10);\n");
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]));
+    const run = spawned(process.execPath, [path], AbortSignal.any([]));
     for await (const line of lines(run.stdout)) {
       expect(line).toBe("tick");
       break;
@@ -172,7 +198,7 @@ describe("nodeRunCli", () => {
       "grumpy.mjs",
       "process.stderr.write('could not reach the model\\n');process.exitCode = 3;\n",
     );
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]));
+    const run = spawned(process.execPath, [path], AbortSignal.any([]));
     await textOf(run);
     const ended = await run.ended;
     expect(ended.code).toBe(3);
@@ -189,7 +215,7 @@ describe("nodeRunCli", () => {
 process.stderr.write('THE REASON\\n');
 process.exitCode = 1;\n`,
     );
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]));
+    const run = spawned(process.execPath, [path], AbortSignal.any([]));
     await textOf(run);
     await run.ended;
     expect(run.stderr().length).toBeLessThanOrEqual(stderrMax);
@@ -197,7 +223,7 @@ process.exitCode = 1;\n`,
   });
 
   it("reports a binary that is not on PATH rather than throwing at the process", async () => {
-    const run = nodeRunCli("slopify-no-such-binary", [], AbortSignal.any([]));
+    const run = spawned("slopify-no-such-binary", [], AbortSignal.any([]));
     const ended = await run.ended;
     expect(ended.error?.message).toContain("ENOENT");
   });
@@ -210,7 +236,7 @@ process.stdin.on('data', () => { seen += 1; });
 process.stdin.on('end', () => { process.stdout.write('ended after ' + seen + ' chunks\\n'); });
 process.stdin.resume();\n`,
     );
-    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]));
+    const run = spawned(process.execPath, [path], AbortSignal.any([]));
     expect(await textOf(run)).toEqual(["ended after 0 chunks"]);
   });
 });
@@ -309,7 +335,7 @@ it.skipIf(process.platform !== "win32")(
     );
     const shim = script("windows-cli.cmd", '@echo off\nnode "%~dp0\\windows-entry.cjs" %*\n');
     const prompt = '%PATH% !USERPROFILE! & echo bad | "quoted"\nsecond line';
-    const run = nodeRunCli(shim, [prompt, ""], AbortSignal.any([]));
+    const run = spawned(shim, [prompt, ""], AbortSignal.any([]));
     expect(JSON.parse((await textOf(run)).join("\n"))).toEqual([prompt, ""]);
     expect((await run.ended).code).toBe(0);
     expect(entry).toContain("windows-entry.cjs");

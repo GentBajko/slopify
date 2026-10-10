@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
+import { exitsWith } from "./stand-in-cli.fake.js";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -20,6 +21,7 @@ async function fakeClaude(reply: string, linger = false, ignoreTerm = false): Pr
   await writeFile(
     path,
     [
+      exitsWith(process.pid),
       'import { writeFileSync } from "node:fs";',
       'let input = "";',
       'process.stdin.setEncoding("utf8");',
