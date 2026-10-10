@@ -177,12 +177,21 @@ export type ExternalAnswerResult =
     };
 
 // The step that waited ended its stage as held, which parks the work (`finishWork`); a settled
-// review lets it be claimed again while the current version still wants it. A paused project
-// stays put: the runner claims nothing for it until Resume.
+// review lets it be claimed again while the current version still wants it. A restart also
+// held the work's unfinished pieces (`recoverWork`), so the ones never submitted are allowed
+// again, as boot does for work it keeps (`recoverCheckpointWork`). A paused project stays put:
+// the runner claims nothing for it until Resume.
 function releaseParkedWork(db: DatabaseSync, projectId: string, id: string): void {
+  const parked = `(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`;
+  const released = db
+    .prepare(
+      `UPDATE revision_work SET dispatch_state='allowed' WHERE state='pending' AND dispatch_state='held' AND id=${parked}`,
+    )
+    .run(projectId, id);
+  if (Number(released.changes) === 0) return;
   db.prepare(
-    `UPDATE revision_work SET dispatch_state='allowed' WHERE state='pending' AND dispatch_state='held'
-     AND id=(SELECT e.work_id FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")})`,
+    `UPDATE revision_work_pieces SET state='pending',dispatch_state='allowed'
+     WHERE work_id=${parked} AND state='held' AND submitted_at IS NULL AND continuation IS NULL`,
   ).run(projectId, id);
 }
 

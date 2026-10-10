@@ -10,10 +10,12 @@ import { systemClock } from "../src/kernel/clock.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { wireRunner } from "../src/main.js";
+import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
 import {
   answerExternalReview,
   externalReviewWaitMs,
+  releaseDueReviews,
   settleExternalReviews,
   waitingExternalReviews,
 } from "../src/slices/reviews/external.js";
@@ -124,4 +126,49 @@ it("passes both images without review after two hours with no agent, and the run
     ["auto-passed", true, "nobody"],
   ]);
   expect(reviewer.calls()).toBe(0);
+});
+
+it("lets the run go on after a restart once the waiting reviews are answered", async () => {
+  const { h, deps, runner } = await agentReviewedRun();
+  await runner.settled();
+  // What boot does before anything runs (`main.ts`).
+  recoverCheckpointWork(deps.db);
+  const at = new Date().toISOString();
+  for (const review of waitingExternalReviews(deps.db, h.projectId))
+    answerExternalReview(deps.db, {
+      projectId: h.projectId,
+      id: review.id,
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at,
+    });
+  runner.tick(h.projectId);
+  await settleUntil(runner, () => listVerdicts(deps.db, h.projectId).length === 2);
+  expect(listVerdicts(deps.db, h.projectId).map((row) => row.outcome)).toEqual([
+    "passed",
+    "passed",
+  ]);
+});
+
+it("passes reviews a restart left overdue at boot, and the run goes on", async () => {
+  const { h, deps, runner } = await agentReviewedRun();
+  await runner.settled();
+  recoverCheckpointWork(deps.db);
+  const emitted: string[] = [];
+  // What boot runs next (`main.ts` releaseReviews), two hours and a minute later.
+  const passed = releaseDueReviews({
+    db: deps.db,
+    now: () => new Date(Date.now() + externalReviewWaitMs + 60_000),
+    emit: (_projectId, event) => {
+      emitted.push(event.type);
+    },
+    tick: runner.tick,
+  });
+  expect(passed).toBe(2);
+  expect(emitted.filter((type) => type === "review.auto-passed")).toHaveLength(2);
+  await settleUntil(runner, () => listVerdicts(deps.db, h.projectId).length === 2);
+  expect(listVerdicts(deps.db, h.projectId).map((row) => row.outcome)).toEqual([
+    "auto-passed",
+    "auto-passed",
+  ]);
 });
