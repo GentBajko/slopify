@@ -364,6 +364,62 @@ it("says which projects need the person, which are ready to upload and which wai
   }
 });
 
+// A project with everything before the audio made, its audio pending and a flagged item.
+function heldAtAudio(f: ReturnType<typeof fixture>, title: string, finished: string): string {
+  const db = f.h.deps.db;
+  const id = f.project(title, "done", finished);
+  db.prepare(
+    "INSERT INTO stages (id,project_id,kind,source,state) VALUES (?,?,'audio','generate','pending')",
+  ).run(randomUUID(), id);
+  db.exec("PRAGMA foreign_keys=OFF");
+  db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+    id,
+    `rev-${id}`,
+  );
+  db.prepare(
+    `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,created_at)
+     VALUES (?,?,?,'article','article','f','r1',0,'[]','flagged',1,?)`,
+  ).run(`v-${id}`, id, `rev-${id}`, finished);
+  db.exec("PRAGMA foreign_keys=ON");
+  return id;
+}
+
+function calendarProject(f: ReturnType<typeof fixture>, title: string) {
+  const result = calendarRange(
+    f.deps,
+    new Date("2026-09-11T00:00:00.000Z"),
+    new Date("2026-09-15T00:00:00.000Z"),
+  );
+  if (!result.ok) throw new Error("calendar refused");
+  return calendarSchema.parse(result.value).projects.find((project) => project.title === title);
+}
+
+// The same reading as Projects: an uploaded project with nothing admitted reads Done and asks
+// nothing of the person.
+it("reads an uploaded, settled project as done, with no need", () => {
+  const f = fixture();
+  try {
+    const db = f.h.deps.db;
+    const finished = "2026-09-11T05:00:00.000Z";
+    const uploaded = heldAtAudio(f, "Uploaded", finished);
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,'cp-1','audio','work',?,'held',?)`,
+    ).run(uploaded, `rev-${uploaded}`, "a".repeat(64), finished);
+    db.exec("PRAGMA foreign_keys=ON");
+    db.prepare("INSERT INTO project_uploads (project_id, uploaded_at) VALUES (?, ?)").run(
+      uploaded,
+      finished,
+    );
+    const project = calendarProject(f, "Uploaded");
+    expect(project).toMatchObject({ state: "done" });
+    expect(project?.needs).toBeUndefined();
+  } finally {
+    f.h.close();
+  }
+});
+
 // Finished projects that ended before the range are left out by the query itself; work still
 // going, paused or not started yet stays however old it is.
 it("leaves out projects that finished before the range and keeps unfinished ones", () => {

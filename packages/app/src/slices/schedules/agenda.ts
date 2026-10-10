@@ -8,7 +8,12 @@ import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
-import { setAsideProjects, uploadedProjects } from "../uploads/repo.js";
+import {
+  setAsideProjects,
+  settledStatus,
+  uploadedAndSettled,
+  uploadedProjects,
+} from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
 import { preparedProject } from "./prepare.js";
@@ -176,14 +181,20 @@ function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
 
 // What a project on the calendar asks of the person, if anything. The same readings Home's
 // Needs you uses: a failed or paused run, one a restart stopped (Continue the run), or one
-// waiting for a review. One Kept as is asks nothing.
+// waiting for a review. One Kept as is asks nothing, nor does an uploaded one that reads Done
+// (`uploadedAndSettled`).
 function needsOf(
   state: ProjectState,
-  ask: { readonly stopped: boolean; readonly reviewing: boolean; readonly aside: boolean },
+  ask: {
+    readonly stopped: boolean;
+    readonly reviewing: boolean;
+    readonly aside: boolean;
+    readonly settled: boolean;
+  },
 ): CalendarNeed | undefined {
   if (state === "failed") return "failed";
   if (state === "paused") return "paused";
-  if (ask.aside) return undefined;
+  if (ask.aside || ask.settled) return undefined;
   if (ask.stopped) return "stopped";
   if (ask.reviewing && state !== "canceled") return "review";
   return undefined;
@@ -193,7 +204,8 @@ function needsOf(
 // the range, with what each needs from the person and whether its video is ready to upload.
 function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calendar["projects"] {
   const standings = stageStandingsByProject(deps.db);
-  const holds = projectHolds(deps.db, { standings });
+  const settled = uploadedAndSettled(deps.db);
+  const holds = projectHolds(deps.db, { standings, settled });
   const reviewing = awaitingReview(deps.db, holds);
   const uploads = uploadedProjects(deps.db);
   const samples = sampleProjectIds(deps.db);
@@ -227,7 +239,10 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
     .all(to.toISOString(), from.toISOString())
     .flatMap((row) => {
       const project = projectRow.parse(row);
-      const state = derive(standings.get(project.id) ?? [], project.paused === 1);
+      const state = settledStatus(
+        derive(standings.get(project.id) ?? [], project.paused === 1),
+        settled.has(project.id),
+      );
       const terminal =
         state === "done" || state === "partial" || state === "failed" || state === "canceled";
       if (terminal) {
@@ -241,6 +256,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         stopped: holds.stopped.has(project.id),
         reviewing: reviewing.has(project.id),
         aside: aside.has(project.id),
+        settled: settled.has(project.id),
       });
       const ready =
         (state === "done" || state === "partial") &&
