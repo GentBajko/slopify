@@ -31,7 +31,7 @@ async function settleUntil(runner: Runner, done: () => boolean): Promise<void> {
       await runner.settled();
       expect(done(), "The run never reached the expected state.").toBe(true);
     },
-    { timeout: 8_000, interval: 20 },
+    { timeout: 4_000, interval: 20 },
   );
 }
 
@@ -78,7 +78,7 @@ async function narratingWhileAgentsReview() {
         "running",
       );
     },
-    { timeout: 8_000 },
+    { timeout: 4_000 },
   );
   return { h, call };
 }
@@ -89,6 +89,23 @@ function boot(h: Awaited<ReturnType<typeof narratingWhileAgentsReview>>["h"]) {
   const next = h.compose(h.deps);
   closers.push(() => next.audioPreviews.close());
   return next;
+}
+
+// Cancel on the project's page (`POST /api/projects/:id/cancel`).
+async function cancel(h: Awaited<ReturnType<typeof narratingWhileAgentsReview>>["h"]) {
+  expect(
+    await cancelProject(
+      {
+        ...h.deps,
+        abort: (id) => h.runner.abortProject(id),
+        settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
+        emit: () => undefined,
+      },
+      h.projectId,
+      { baseRevisionId: current(h.deps, h.projectId).revision.id, idempotencyKey: randomUUID() },
+    ),
+  ).toMatchObject({ ok: true, state: "canceled" });
+  await h.runner.settled();
 }
 
 it("reads a run quit mid-way as Stopped after boot, its reviews live, and Continue goes on", async () => {
@@ -131,19 +148,7 @@ it("reads a run quit mid-way as Stopped after boot, its reviews live, and Contin
 
 it("keeps a run canceled mid-way canceled after boot, its reviews closed", async () => {
   const { h } = await narratingWhileAgentsReview();
-  expect(
-    await cancelProject(
-      {
-        ...h.deps,
-        abort: (id) => h.runner.abortProject(id),
-        settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
-        emit: () => undefined,
-      },
-      h.projectId,
-      { baseRevisionId: current(h.deps, h.projectId).revision.id, idempotencyKey: randomUUID() },
-    ),
-  ).toMatchObject({ ok: true, state: "canceled" });
-  await h.runner.settled();
+  await cancel(h);
   const next = boot(h);
   next.runner.tick(h.projectId);
   await next.runner.settled();
@@ -153,4 +158,45 @@ it("keeps a run canceled mid-way canceled after boot, its reviews closed", async
   expect(
     settleExternalReviews(h.deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)),
   ).toEqual([]);
+});
+
+it("lets the agent review images retried after a cancel, and the images step goes on", async () => {
+  const { h } = await narratingWhileAgentsReview();
+  await cancel(h);
+  // Try images again on the canceled run's page.
+  expect(
+    await recoverProject(h.deps, h.projectId, {
+      baseRevisionId: current(h.deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "retry", stage: "images" },
+    }),
+  ).toMatchObject({ ok: true });
+  await settleUntil(h.runner, () => waitingExternalReviews(h.deps.db, h.projectId).length === 2);
+  const [answered, unanswered] = waitingExternalReviews(h.deps.db, h.projectId);
+  if (answered === undefined || unanswered === undefined) throw new Error("two reviews expected");
+  expect(
+    answerExternalReview(h.deps.db, {
+      projectId: h.projectId,
+      id: answered.id,
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: new Date().toISOString(),
+    }),
+  ).toMatchObject({ ok: true });
+  expect(
+    settleExternalReviews(h.deps.db, new Date(Date.now() + externalReviewWaitMs + 60_000)).map(
+      (row) => row.id,
+    ),
+  ).toEqual([unanswered.id]);
+  h.runner.tick(h.projectId);
+  await settleUntil(
+    h.runner,
+    () =>
+      stagesOf(h.deps.db, h.projectId).find((stage) => stage.kind === "images")?.state === "done",
+  );
+  expect(
+    listVerdicts(h.deps.db, h.projectId)
+      .map((row) => row.outcome)
+      .sort(),
+  ).toEqual(["auto-passed", "passed"]);
 });

@@ -170,16 +170,14 @@ it("refuses a verdict on a canceled run's review, which never passes", () => {
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
 });
 
-// A canceled run reads canceled by its stages (`derive`), whatever its work row says: one a
-// restart held before canceled work was kept canceled (`recoverWork`) is still canceled.
-it("treats a review of a run with a canceled step as canceled, even with its work pending", () => {
+// A canceled step reads canceled by its stage, whatever its work row says: one a restart held
+// before canceled work was kept canceled (`recoverWork`) is still canceled.
+it("treats a review of a canceled step as canceled, even with its work pending", () => {
   const f = waitingReviewFixture();
   open.push(f);
   const { db } = f.h.deps;
   db.prepare("UPDATE revision_work SET dispatch_state='held' WHERE id='images-work'").run();
-  db.prepare(
-    "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('audio','p1','audio','generate','canceled')",
-  ).run();
+  db.prepare("UPDATE stages SET state='canceled' WHERE id='images'").run();
   expect(waitingExternalReviews(db)).toEqual([]);
   expect(settleExternalReviews(db, new Date("2026-09-11T00:00:00.000Z"))).toEqual([]);
   expect(
@@ -192,6 +190,22 @@ it("treats a review of a run with a canceled step as canceled, even with its wor
     }),
   ).toMatchObject({ ok: false, reason: "canceled" });
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("waiting");
+});
+
+// Retrying one step of a canceled run admits it again (`recoverProject`): its reviews wait
+// for their verdict while the steps left canceled stay so.
+it("keeps a review of a step retried after a cancel waiting, while another step stays canceled", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare(
+    "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('audio','p1','audio','generate','canceled')",
+  ).run();
+  expect(waitingExternalReviews(db).map((row) => row.id)).toEqual(["er1"]);
+  expect(
+    settleExternalReviews(db, new Date("2026-09-10T02:00:00.000Z")).map((row) => row.id),
+  ).toEqual(["er1"]);
+  expect(externalReviewById(db, "p1", "er1")?.state).toBe("auto-passed");
 });
 
 it("refuses a verdict on a review whose step no longer exists, as missing, not canceled", () => {

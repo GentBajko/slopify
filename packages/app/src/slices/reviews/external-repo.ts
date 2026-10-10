@@ -74,14 +74,17 @@ function wantedBy(table: string): string {
       AND r.work_key=${table}.work_key AND r.fingerprint=${table}.review_fingerprint)`;
 }
 
-// Nothing of a canceled run goes ahead on its own: its work, or any step of its project, is
-// canceled (a project with a canceled step reads canceled, `derive`).
+// Nothing of a canceled run goes ahead on its own: the review's work, or its own step, is
+// canceled. Another step canceled is not enough: retrying one step (`recoverProject`) admits
+// it again while the rest stay canceled, and its reviews wait for their verdict.
 function liveWork(table: string): string {
-  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND NOT ${canceledRun("w")})`;
+  return `EXISTS (SELECT 1 FROM revision_work w WHERE w.id=${table}.work_id AND NOT ${canceledStep("w")})`;
 }
 
-function canceledRun(work: string): string {
-  return `(${work}.state='canceled' OR EXISTS (SELECT 1 FROM stages s WHERE s.project_id=${work}.project_id AND s.state='canceled'))`;
+// The step reads canceled by its stage too, whatever the work row says: a restart before
+// canceled work was kept canceled (`recoverWork`) held it pending.
+function canceledStep(work: string): string {
+  return `(${work}.state='canceled' OR EXISTS (SELECT 1 FROM stages s WHERE s.id=${work}.stage_id AND s.state='canceled'))`;
 }
 
 // A step asked again for the same review keeps its row; one whose earlier wait was superseded
@@ -222,7 +225,7 @@ export function closedWait(
     return "missing";
   if (
     db
-      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledRun("w")}`)
+      .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledStep("w")}`)
       .get(review.workId) !== undefined
   )
     return "canceled";
