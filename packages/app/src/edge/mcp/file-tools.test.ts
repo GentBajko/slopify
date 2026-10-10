@@ -238,6 +238,30 @@ it("measures again after a failed measurement instead of keeping the failure", a
   expect(calls).toBe(2);
 });
 
+// A measurement of the file as it was, failing after the file changed and was measured again,
+// forgets only itself: the new file's length stays known.
+it("keeps a changed file's length when the old file's measurement fails late", async () => {
+  const h = withFiles();
+  const path = join(h.deps.paths.projects, h.projectId, "audio", "body.mp3");
+  let failOld: (error: Error) => void = () => undefined;
+  let calls = 0;
+  const length = measuredOnce((): Promise<number> => {
+    calls += 1;
+    if (calls === 1)
+      return new Promise((_, reject) => {
+        failOld = reject;
+      });
+    return Promise.resolve(3000);
+  });
+  const old = length(path);
+  writeFileSync(path, Buffer.from("a longer narration"));
+  expect(await length(path)).toBe(3000);
+  failOld(new Error("ffmpeg timed out"));
+  await expect(old).rejects.toThrow("ffmpeg timed out");
+  expect(await length(path)).toBe(3000);
+  expect(calls).toBe(2);
+});
+
 it("gives an uploaded narration it can't measure its words unclipped, and logs why", async () => {
   const h = withFiles();
   narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);
