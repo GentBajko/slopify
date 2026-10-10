@@ -221,6 +221,7 @@ it("says a review was replaced when its item was made again before the verdict c
   const late = await verdictOn(h, { verdict: "pass", reasons: [] });
   expect(late.refused).toBe(true);
   expect(late.said).toContain("This review was replaced");
+  expect(late.said).toContain("no new review waits for it yet");
   expect(late.said).toContain("needs_attention");
 });
 

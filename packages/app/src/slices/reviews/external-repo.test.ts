@@ -1,5 +1,9 @@
 import { afterEach, expect, it } from "vitest";
-import { addUnreadableReview, waitingReviewFixture } from "./external-repo.fake.js";
+import {
+  addReplacementReview,
+  addUnreadableReview,
+  waitingReviewFixture,
+} from "./external-repo.fake.js";
 import {
   answerExternalReview,
   externalReviewById,
@@ -87,7 +91,7 @@ it("answers superseded for a review whose item was just replaced, before any set
   const f = waitingReviewFixture();
   open.push(f);
   const { db } = f.h.deps;
-  db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
+  addReplacementReview(f);
   expect(
     answerExternalReview(db, {
       projectId: "p1",
@@ -209,7 +213,8 @@ it("keeps a review of a step retried after a cancel waiting, while another step 
   expect(externalReviewById(db, "p1", "er1")?.state).toBe("auto-passed");
 });
 
-// A step's reservations go with it, so a review whose step is gone was replaced.
+// A step's reservations go with it, so a review whose step is gone was replaced, and no new
+// one waits.
 it("refuses a verdict on a review whose step is gone, as replaced", () => {
   const f = waitingReviewFixture();
   open.push(f);
@@ -217,7 +222,7 @@ it("refuses a verdict on a review whose step is gone, as replaced", () => {
   db.prepare("DELETE FROM revision_work WHERE id='images-work'").run();
   const review = externalReviewById(db, "p1", "er1");
   if (review === undefined) throw new Error("the review row stays");
-  expect(reviewStanding(db, review)).toBe("superseded");
+  expect(reviewStanding(db, review)).toBe("outdated");
   expect(
     answerExternalReview(db, {
       projectId: "p1",
@@ -226,7 +231,7 @@ it("refuses a verdict on a review whose step is gone, as replaced", () => {
       by: "agent",
       at: "2026-09-10T00:30:00.000Z",
     }),
-  ).toMatchObject({ ok: false, reason: "superseded" });
+  ).toMatchObject({ ok: false, reason: "outdated" });
 });
 
 // One order for every reader: get_external_review and a refused verdict give the same reason.
@@ -274,7 +279,7 @@ it("refuses a second verdict in the Trash as answered, as it reads", () => {
 
 // Trash is said only when Restore would bring the review back: a canceled run's or a replaced
 // review stays closed after Restore.
-it("says a canceled run's review in the Trash is canceled, and a replaced one replaced", () => {
+it("says a canceled run's review in the Trash is canceled, and a replaced one out of date", () => {
   const f = waitingReviewFixture();
   open.push(f);
   const { db } = f.h.deps;
@@ -286,7 +291,7 @@ it("says a canceled run's review in the Trash is canceled, and a replaced one re
   };
   expect(standing()).toBe("trashed");
   db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
-  expect(standing()).toBe("superseded");
+  expect(standing()).toBe("outdated");
   db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
   expect(standing()).toBe("canceled");
 });

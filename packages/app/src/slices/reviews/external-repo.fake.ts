@@ -65,3 +65,20 @@ export function addUnreadableReview(f: ReturnType<typeof waitingReviewFixture>):
      VALUES ('er2',?,?,'images-work','review-piece-two','review:image:two','image:two','images','item-fp-two','review-fp-two','{"not":"material"}','waiting','2026-09-10T00:00:00.000Z','2026-09-10T02:00:00.000Z')`,
   ).run(f.h.projectId, f.revisionId);
 }
+
+// Image "one" made again: the version now reserves its new review, "er3", which waits in place
+// of "er1".
+export function addReplacementReview(f: ReturnType<typeof waitingReviewFixture>): void {
+  const { db } = f.h.deps;
+  db.prepare(
+    "UPDATE revision_work_reservations SET fingerprint='review-fp-new' WHERE work_key='review:image:one'",
+  ).run();
+  openExternalReview(db, {
+    ...f.review,
+    id: "er3",
+    itemFingerprint: "item-fp-new",
+    reviewFingerprint: "review-fp-new",
+    waitingSince: "2026-09-10T01:00:00.000Z",
+    deadlineAt: "2026-09-10T03:00:00.000Z",
+  });
+}

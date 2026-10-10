@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 import { layout } from "../../kernel/paths.js";
-import { waitingReviewFixture } from "../../slices/reviews/external-repo.fake.js";
+import {
+  addReplacementReview,
+  waitingReviewFixture,
+} from "../../slices/reviews/external-repo.fake.js";
 import { routeCallDeps } from "./mcp.fake.js";
 import { externalReviewMaterial } from "./review-tools.js";
 
@@ -17,10 +20,15 @@ it("says a review that isn't there may belong to a deleted project, and where to
 });
 
 // What get_external_review says of p1's review "er1" once `close` has run on the database.
-function read(close: (db: ReturnType<typeof waitingReviewFixture>["h"]["deps"]["db"]) => void) {
+function read(
+  close: (
+    db: ReturnType<typeof waitingReviewFixture>["h"]["deps"]["db"],
+    f: ReturnType<typeof waitingReviewFixture>,
+  ) => void,
+) {
   const f = waitingReviewFixture();
   try {
-    close(f.h.deps.db);
+    close(f.h.deps.db, f);
     const answer = externalReviewMaterial(
       { db: f.h.deps.db, paths: layout("/nowhere") },
       "p1",
@@ -73,28 +81,39 @@ it("says an answered review takes no other verdict", () => {
   expect(said).not.toHaveProperty("answer");
 });
 
+const replaced =
+  "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.";
+const outdated =
+  "This review was replaced: its item was made again or edited, so it takes no verdict, and no new review waits for it yet. One opens once the new item is made; an edit saved but not continued makes none until the run is continued. There is nothing to answer here: call needs_attention to see what is waiting now.";
+
 // Its item made again, the review is replaced at once, before the next settle marks it so.
 it("says a review its item was made again for is replaced, while it is still marked waiting", () => {
-  const said = read((db) => {
-    db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run();
-  });
-  expect(said).toMatchObject({
-    state: "superseded",
-    explanation:
-      "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
-  });
+  const said = read((_db, f) => addReplacementReview(f));
+  expect(said).toMatchObject({ state: "superseded", explanation: replaced });
   expect(said).not.toHaveProperty("answer");
 });
 
 it("says a replaced review takes no verdict and points to the new one", () => {
-  const said = read((db) => {
+  const said = read((db, f) => {
+    addReplacementReview(f);
     db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
   });
-  expect(said).toMatchObject({
-    state: "superseded",
-    explanation:
-      "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
-  });
+  expect(said).toMatchObject({ state: "superseded", explanation: replaced });
+});
+
+// An edit saved but not continued, or an item still being made again: no new review waits, so
+// none is promised.
+it("promises no new review for a replaced one while none waits", () => {
+  for (const close of [
+    (db: ReturnType<typeof waitingReviewFixture>["h"]["deps"]["db"]) =>
+      db.prepare("DELETE FROM revision_work_reservations WHERE work_key='review:image:one'").run(),
+    (db: ReturnType<typeof waitingReviewFixture>["h"]["deps"]["db"]) =>
+      db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run(),
+  ]) {
+    const said = read((db) => void close(db));
+    expect(said).toMatchObject({ state: "outdated", explanation: outdated });
+    expect(said).not.toHaveProperty("answer");
+  }
 });
 
 it("says a review that passed at its deadline takes no verdict now", () => {

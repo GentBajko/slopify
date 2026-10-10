@@ -186,7 +186,7 @@ export function answerExternalReview(
     if (review === undefined) return { ok: false, reason: "not-found" };
     const standing = reviewStanding(db, review);
     if (standing === "trashed") return { ok: false, reason: "trashed" };
-    if (standing === "superseded")
+    if (standing === "superseded" || standing === "outdated")
       db.prepare(
         "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND id=? AND state='waiting'",
       ).run(input.projectId, input.id);
@@ -210,7 +210,7 @@ export function answerExternalReview(
 
 // Where a review stands, in the one order get_external_review and a refused verdict both say
 // it: a verdict already kept, its step canceled (no new one waits), its item replaced or its
-// step gone, then its project in the Trash - said last, as only then would Restore bring it
+// step gone (`superseded` or `outdated`), then its project in the Trash - said last, as only then would Restore bring it
 // back. It waits only when none holds, exactly when `stillWaiting` lists it.
 export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
   if (review.state === "answered" || review.state === "auto-passed") return review.state;
@@ -220,14 +220,26 @@ export function reviewStanding(db: DatabaseSync, review: ExternalReview): Review
       .get(review.workId) !== undefined
   )
     return "canceled";
-  if (review.state === "superseded") return "superseded";
-  const wanted = db
-    .prepare(
-      `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")} AND ${liveWork("e")}`,
-    )
-    .get(review.projectId, review.id);
-  if (wanted === undefined) return "superseded";
+  const wanted =
+    review.state === "waiting" &&
+    db
+      .prepare(
+        `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")} AND ${liveWork("e")}`,
+      )
+      .get(review.projectId, review.id) !== undefined;
+  if (!wanted) return replacementWaits(db, review) ? "superseded" : "outdated";
   return projectTrashed(db, review.projectId) ? "trashed" : "waiting";
+}
+
+// Whether another review of the same item waits in its place.
+function replacementWaits(db: DatabaseSync, review: ExternalReview): boolean {
+  return (
+    db
+      .prepare(
+        `SELECT 1 FROM external_reviews e WHERE ${stillWaiting} AND e.project_id=? AND e.item_key=? AND e.id!=?`,
+      )
+      .get(review.projectId, review.itemKey, review.id) !== undefined
+  );
 }
 
 // A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the

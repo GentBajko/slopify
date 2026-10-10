@@ -37,7 +37,9 @@ export interface ExternalReview {
 }
 
 // Where a review stands (`reviewStanding`): waiting for a verdict, or why it takes none.
-export type ReviewStanding = ExternalReviewState | "trashed" | "canceled";
+// `superseded` when the review that replaced it waits; `outdated` when none does yet (its item is
+// still being made again, or the edit that replaced it is saved but not continued).
+export type ReviewStanding = ExternalReviewState | "trashed" | "canceled" | "outdated";
 
 // Why a review takes no verdict, one sentence per standing: what get_external_review explains,
 // and what a refused verdict says after "The verdict wasn't saved."
@@ -48,6 +50,8 @@ export const closedReviewSentences: Readonly<Record<Exclude<ReviewStanding, "wai
     "This review passed at its 2-hour deadline with no verdict, so it takes none now. Call needs_attention to see what is waiting now.",
   superseded:
     "This review was replaced: its item was made again or edited, and the new one waits for its own verdict. Call needs_attention to see it.",
+  outdated:
+    "This review was replaced: its item was made again or edited, so it takes no verdict, and no new review waits for it yet. One opens once the new item is made; an edit saved but not continued makes none until the run is continued. There is nothing to answer here: call needs_attention to see what is waiting now.",
   canceled:
     "This review's run was canceled, so nothing waits on it and it takes no verdict: a canceled run's reviews never pass. Call needs_attention to see what is waiting now.",
   trashed:
