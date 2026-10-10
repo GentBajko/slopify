@@ -7,7 +7,7 @@ import {
   satisfied,
   deps as stageDeps,
 } from "../../kernel/runner/graph.js";
-import { admittedUnfinished } from "../admission/admitted-work.js";
+import { pendingAdmitted } from "../admission/admitted-work.js";
 import { liveProject, oneProject, stageStandingsByProject } from "../admission/repo.js";
 import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
@@ -146,13 +146,12 @@ export function projectHolds(
   };
 }
 
-// An admitted step of `h`'s project still to run (`admittedUnfinished`), held other than one
+// An admitted step of `h`'s project still to run (`pendingAdmitted`), held other than one
 // parked on an agent's review: a restart (`recoverWork`) or a pause held it, and only Continue
 // the run starts it.
 function heldBesideReviews(h: string): string {
   return `EXISTS (SELECT 1 FROM revision_work w
-     WHERE w.project_id=${h}.project_id AND w.state='pending' AND w.dispatch_state='held'
-       AND ${admittedUnfinished("w")}
+     WHERE w.project_id=${h}.project_id AND w.dispatch_state='held' AND ${pendingAdmitted("w")}
        AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting'))`;
 }
 
