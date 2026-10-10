@@ -20,6 +20,7 @@ function harness(
     readonly link?: boolean;
     readonly startedBy?: "person" | "agent";
     readonly waitingForAgent?: boolean;
+    readonly prepared?: boolean;
   } = {},
 ) {
   const posted: Posted[] = [];
@@ -42,6 +43,7 @@ function harness(
             makesVideo: options.makesVideo ?? true,
             ...(options.startedBy === undefined ? {} : { startedBy: options.startedBy }),
             ...(options.waitingForAgent === true ? { waitingForAgent: true } : {}),
+            ...(options.prepared === true ? { prepared: true } : {}),
           }
         : undefined,
     ...(options.link === true
@@ -99,7 +101,7 @@ describe("createRunNotifier", () => {
     expect(posted[0]?.body.startsWith("Waiting for you: Black holes\n")).toBe(true);
   });
 
-  // Decided 2026-10-10: an External agent answers it, or it passes at its deadline.
+  // An External agent answers it, or it passes at its deadline.
   it("says nothing when the run stops to wait for an agent's review, and still says when it ends", async () => {
     const { notifier, posted } = harness({ waitingForAgent: true });
     notifier.observe(state("running"));
@@ -108,6 +110,14 @@ describe("createRunNotifier", () => {
     notifier.observe(state("done"));
     await notifier.settled();
     expect(posted.map((one) => one.body.split("\n")[0])).toEqual(["Video ready: Black holes"]);
+  });
+
+  it("says nothing when a prepared run stops at its schedule's hold to wait for its day", async () => {
+    const { notifier, posted } = harness({ prepared: true });
+    notifier.observe(state("running"));
+    notifier.observe(state("pending"));
+    await notifier.settled();
+    expect(posted).toEqual([]);
   });
 
   it("stays quiet for a state first seen terminal, a pause and a cancel", async () => {

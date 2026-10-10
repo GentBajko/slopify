@@ -33,6 +33,7 @@ function harness(
                   makesVideo: true,
                   reason: "Quota exceeded",
                   ...(projectId === "agent" ? { waitingForAgent: true } : {}),
+                  ...(projectId === "prepared" ? { prepared: true } : {}),
                 },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),
@@ -77,11 +78,20 @@ describe("createRunWatcher", () => {
     ]);
   });
 
-  // Decided 2026-10-10: the agent answers it, or it passes at its deadline and says so then.
+  // The agent answers it, or it passes at its deadline and says so then.
   it("says nothing when a run stops to wait for an agent's review", async () => {
     const { watcher, shown } = harness();
     watcher.observe({ projectId: "agent", state: "running" });
     watcher.observe({ projectId: "agent", state: "pending" });
+    await watcher.settled();
+    expect(shown).toEqual([]);
+  });
+
+  // Its schedule renders the video on its day.
+  it("says nothing when a prepared run stops at its schedule's hold", async () => {
+    const { watcher, shown } = harness();
+    watcher.observe({ projectId: "prepared", state: "running" });
+    watcher.observe({ projectId: "prepared", state: "pending" });
     await watcher.settled();
     expect(shown).toEqual([]);
   });

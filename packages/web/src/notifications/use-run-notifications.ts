@@ -26,6 +26,7 @@ export async function projectNoticeSubject(api: Api, projectId: string): Promise
     makesVideo: body.project.config.sources.video !== "off",
     startedBy: body.startedBy ?? null,
     waitingForAgent: body.project.waitingForAgent === true,
+    prepared: body.project.prepared === true,
     reason: body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
   };
 }

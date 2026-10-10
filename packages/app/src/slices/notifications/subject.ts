@@ -17,5 +17,6 @@ export function noticeSubject(
     makesVideo: project.config.sources.video !== "off",
     startedBy: lastStarter(db, projectId),
     waitingForAgent: holds.waitingForAgent.has(projectId),
+    prepared: holds.prepared.has(projectId),
   };
 }

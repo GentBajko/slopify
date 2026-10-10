@@ -106,15 +106,18 @@ export interface NoticeSubject {
   readonly startedBy?: Actor | null | undefined;
   // The run is parked on an External agent's review (`reviews/holds.ts`).
   readonly waitingForAgent?: boolean | undefined;
+  // Prepared ahead by a schedule and held by its own Before Video hold (`reviews/holds.ts`).
+  readonly prepared?: boolean | undefined;
 }
 
 // A run parked on an agent's review waits for nobody: the agent answers, or the review passes
-// at its deadline and says so then. Every other notice goes out.
+// at its deadline and says so then. A prepared one waits for its scheduled day. Every other
+// notice goes out.
 export function announces(
   kind: RunNotice,
-  subject: Pick<NoticeSubject, "waitingForAgent">,
+  subject: Pick<NoticeSubject, "waitingForAgent" | "prepared">,
 ): boolean {
-  return kind !== "waiting" || subject.waitingForAgent !== true;
+  return kind !== "waiting" || (subject.waitingForAgent !== true && subject.prepared !== true);
 }
 
 const reasonMax = 140;
