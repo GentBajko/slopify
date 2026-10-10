@@ -249,6 +249,7 @@ function ShellContent() {
       tally: setRunning,
       projectState: runs.observe,
       reviewFlagged: runs.observeReview,
+      reviewAutoPassed: runs.observeAutoPass,
       scheduleTopics: (event) => {
         runs.observeTopics(event);
         void queryClient.invalidateQueries({ queryKey: ["schedules"] });

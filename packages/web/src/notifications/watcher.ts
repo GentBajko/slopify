@@ -1,5 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import {
+  autoPassNoticeText,
   type NoticeSubject,
   type NoticeText,
   noticeOf,
@@ -39,12 +40,21 @@ export interface ReviewEvent {
   readonly verdictId: string;
   readonly stage: string;
   readonly reason?: string | undefined;
+  readonly byAgent?: boolean | undefined;
+}
+
+// An external review passed at its deadline with no agent's verdict (`review.auto-passed`).
+export interface AutoPassEvent {
+  readonly projectId: string;
+  readonly reviewId: string;
+  readonly stage: string;
 }
 
 // "Started: Title": a run began.
 export interface ShownStartNotice {
   readonly projectId: string;
   readonly title: string;
+  readonly byAgent?: boolean | undefined;
 }
 
 export interface ShownReviewNotice {
@@ -79,6 +89,8 @@ export interface RunWatcher {
   readonly observeTopics: (event: TopicsEvent) => void;
   // A review needs a decision. Every tab hears it; one shows it, once per verdict.
   readonly observeReview: (event: ReviewEvent) => void;
+  // A review passed without an agent's verdict. Every tab hears it; one shows it, once.
+  readonly observeAutoPass: (event: AutoPassEvent) => void;
   // Fills in the projects no event has named yet; never overwrites one an event has.
   readonly seed: () => Promise<void>;
   // Resolves once every notification started so far is shown or dropped. Tests.
@@ -92,6 +104,8 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
   // The runs that have started and not ended, so a run that stops to wait for a review and
   // goes on is one start, not two.
   const started = new Set<string>();
+  // ceiling: one id per auto-passed review this page heard.
+  const autoPassed = new Set<string>();
   const sounding = (): boolean => deps.sounds?.() === true && deps.play !== undefined;
   const pending = new Set<Promise<void>>();
 
@@ -118,7 +132,12 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     if (subject === undefined) return;
     if (!(await deps.claim(`${projectId}:started`))) return;
     if (sounding()) deps.play?.("start");
-    if (deps.enabled()) deps.showStart?.({ projectId, title: subject.title });
+    if (deps.enabled())
+      deps.showStart?.({
+        projectId,
+        title: subject.title,
+        ...(subject.startedBy === "agent" ? { byAgent: true } : {}),
+      });
   };
 
   return {
@@ -162,7 +181,25 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
               title: subject.title,
               stage: event.stage,
               reason: event.reason,
+              ...(event.byAgent === true ? { byAgent: true } : {}),
             }),
+          });
+        })(),
+      );
+    },
+    observeAutoPass: (event) => {
+      if (autoPassed.has(event.reviewId) || !deps.enabled() || deps.showReview === undefined)
+        return;
+      autoPassed.add(event.reviewId);
+      const show = deps.showReview;
+      track(
+        (async () => {
+          const subject = await deps.subject(event.projectId);
+          if (subject === undefined) return;
+          if (!(await deps.claim(`auto-pass:${event.reviewId}`))) return;
+          show({
+            projectId: event.projectId,
+            text: autoPassNoticeText({ title: subject.title, stage: event.stage }),
           });
         })(),
       );

@@ -147,10 +147,13 @@ export function showStartNotification(
   open: (projectId: string) => void,
 ): void {
   const title = notice.title.trim() === "" ? "Untitled project" : notice.title.trim();
-  const shown = new Notification(`Started: ${title}`, {
-    body: "Slopify is working on it. You'll hear a different chime when it ends.",
-    tag: `slopify-run-${notice.projectId}`,
-  });
+  const shown = new Notification(
+    `Started: ${title}${notice.byAgent === true ? " · by agent" : ""}`,
+    {
+      body: "Slopify is working on it. You'll hear a different chime when it ends.",
+      tag: `slopify-run-${notice.projectId}`,
+    },
+  );
   shown.onclick = () => {
     window.focus();
     open(notice.projectId);

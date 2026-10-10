@@ -6,6 +6,7 @@ import {
   type RunWatcherDeps,
   type ShownNotice,
   type ShownReviewNotice,
+  type ShownStartNotice,
   type ShownTopicsNotice,
 } from "./watcher.js";
 
@@ -308,5 +309,60 @@ describe("run sounds", () => {
     watcher.observe({ projectId: "b", state: "done" });
     await watcher.settled();
     expect(played).toEqual(["end"]);
+  });
+});
+
+describe("agent notices", () => {
+  function agentHarness() {
+    const shown: ShownNotice[] = [];
+    const reviews: ShownReviewNotice[] = [];
+    const starts: ShownStartNotice[] = [];
+    const watcher = createRunWatcher({
+      enabled: () => true,
+      seed: () => Promise.resolve([]),
+      subject: () => Promise.resolve({ title: "Lighthouse", makesVideo: true, startedBy: "agent" }),
+      claim: () => Promise.resolve(true),
+      show: (notice) => {
+        shown.push(notice);
+      },
+      showReview: (notice) => {
+        reviews.push(notice);
+      },
+      showStart: (notice) => {
+        starts.push(notice);
+      },
+      report: () => undefined,
+    });
+    return { watcher, shown, reviews, starts };
+  }
+
+  it("says a run was started by an agent", async () => {
+    const { watcher, shown, starts } = agentHarness();
+    watcher.observe({ projectId: "p1", state: "running" });
+    watcher.observe({ projectId: "p1", state: "done" });
+    await watcher.settled();
+    expect(starts).toEqual([{ projectId: "p1", title: "Lighthouse", byAgent: true }]);
+    expect(shown.map((notice) => notice.text.headline)).toEqual([
+      "Video ready: Lighthouse · started by agent",
+    ]);
+  });
+
+  it("shows an auto-passed review once, and an agent's flag as the agent's", async () => {
+    const { watcher, reviews } = agentHarness();
+    const passed = { projectId: "p1", reviewId: "er1", stage: "images" };
+    watcher.observeAutoPass(passed);
+    watcher.observeAutoPass(passed);
+    watcher.observeReview({
+      projectId: "p1",
+      verdictId: "v1",
+      stage: "article",
+      reason: "Too short.",
+      byAgent: true,
+    });
+    await watcher.settled();
+    expect(reviews.map((notice) => notice.text.headline)).toEqual([
+      "Passed without review: no agent answered in 2 h",
+      "Review needs a decision: Lighthouse — Too short. · by agent",
+    ]);
   });
 });

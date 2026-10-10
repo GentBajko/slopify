@@ -110,6 +110,8 @@ export interface ProjectBody {
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
+  // Who last started the project's work.
+  readonly startedBy?: "person" | "agent" | null;
 }
 export interface CreatedProjectBody {
   readonly project: ProjectSummary;

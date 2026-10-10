@@ -2,6 +2,7 @@ import type {
   GlobalEvent,
   ProjectEvent,
   ProjectStateEvent,
+  ReviewAutoPassedEvent,
   ReviewFlaggedEvent,
   ScheduleTopicsEvent,
   StageProgressEvent,
@@ -57,6 +58,8 @@ export interface GlobalSink {
   readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
   // An automatic review kept an item flagged and waits for Overrule or Redo.
   readonly reviewFlagged?: (event: ReviewFlaggedEvent) => void;
+  // An external review passed at its deadline with no agent's verdict.
+  readonly reviewAutoPassed?: (event: ReviewAutoPassedEvent) => void;
   // The connection dropped or came back (`components/connection-status.tsx`).
   readonly connection?: (state: Connection) => void;
 }
@@ -155,6 +158,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
         return;
       }
       if (event.type === "review.auto-passed") {
+        sink.reviewAutoPassed?.(event);
         sink.refetch(event.projectId);
         return;
       }
