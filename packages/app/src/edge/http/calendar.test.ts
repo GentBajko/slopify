@@ -188,8 +188,10 @@ it("says which projects need the person, which are ready to upload and which wai
       `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,created_at)
        VALUES ('v-1',?,?,'article','article','f','r1',0,'[]','flagged',1,?)`,
     ).run(flagged, `rev-${flagged}`, finished);
-    // A schedule's prepared project: its Before Video hold waits for its day, not the person.
+    // A schedule's prepared project, everything but its video made: its Before Video hold is
+    // reached and waits for its day, not the person.
     const prepared = f.project("Prepared", "pending", null);
+    heldAt(prepared, "video");
     db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
       prepared,
       `rev-${prepared}`,
