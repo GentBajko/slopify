@@ -487,5 +487,7 @@ describe("the sample over HTTP", () => {
     expect(
       h.db.prepare("SELECT title FROM projects WHERE id=?").get(copy) as { title: string },
     ).toEqual({ title: "The Antikythera Mechanism (my copy)" });
-  });
+    // ceiling: seeds three samples and copies one on disk; alone 0.25 s, past half the 5 s
+    // default under a loaded full suite.
+  }, 20_000);
 });

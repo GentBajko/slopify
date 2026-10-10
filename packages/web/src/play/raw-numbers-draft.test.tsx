@@ -56,6 +56,9 @@ it.each([
       if (!review.ok) expect(review.fields.map((error) => error.field)).toContain(field);
     }
   },
+  // ceiling: saves and reloads the draft once per value; alone 0.7 s, past half the 5 s
+  // default under a loaded full suite.
+  20_000,
 );
 
 it.each([
@@ -92,6 +95,9 @@ it.each([
       if (!review.ok) expect(review.fields.map((error) => error.field)).toContain(field);
     }
   },
+  // ceiling: saves and reloads the draft once per value; alone 0.7 s, past half the 5 s
+  // default under a loaded full suite.
+  20_000,
 );
 
 it("offers seconds per image only for a video and the edge silence only with narration", async () => {

@@ -215,5 +215,7 @@ describe("editing the article", () => {
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(screen.queryByLabelText("Article text")).toBeNull();
     expect(fixture.save).not.toHaveBeenCalled();
-  });
+    // ceiling: types a sentence and switches stages twice; alone 0.7 s, past half the 5 s
+    // default under a loaded full suite.
+  }, 20_000);
 });
