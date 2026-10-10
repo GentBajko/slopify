@@ -6,6 +6,7 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import { createRunner } from "../../kernel/runner/index.js";
 import { claimWork, finishWork, maySubmit } from "../../kernel/runner/work-authority.js";
 import { sourceOf } from "../admission/model.js";
+import { failedSteps } from "../agents/attention-work.js";
 import { adoptBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
@@ -264,6 +265,74 @@ it("counts only spoken narration pieces on the Audio meter", () => {
         .prepare("SELECT progress_current,progress_total FROM stages WHERE id='audio'")
         .get(),
     ).toMatchObject({ progress_current: 0, progress_total: 1 });
+  } finally {
+    h.close();
+  }
+});
+
+// A failed stage keeps the moment it first failed: needs_attention tells a narration retry
+// started after that failure (still going) from one started before it (spent) by it.
+it("keeps a stage's first failure time while it stays failed, and a later retry reads as in flight", () => {
+  const h = revisionFixture();
+  try {
+    let now = "2026-09-10T01:00:00.000Z";
+    const deps = { ...h.deps, clock: { ...h.deps.clock, now: () => new Date(now) } };
+    for (const kind of stageKinds)
+      deps.db
+        .prepare(
+          "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+        )
+        .run(kind, h.projectId, kind);
+    deps.db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({
+        ...h.config,
+        sources: { ...h.config.sources, audio: "generate" },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+      }),
+      h.projectId,
+    );
+    const base = adoptBaseline(deps, h.projectId);
+    if (!base.ok) throw new Error("Missing baseline");
+    admitInitialRevision(deps, base.view, catalogue);
+    // The audio export, which a narration chunk's retry answers like the narration's own.
+    const work = executionStages(deps, h.projectId).find((row) => row.kind === "video")?.work;
+    if (work === undefined) throw new Error("Missing work");
+    const failedAt = () =>
+      deps.db.prepare("SELECT state,finished_at FROM stages WHERE id='video'").get();
+    deps.db
+      .prepare(
+        "UPDATE revision_work SET state='failed',failure_reason='Chunk 5 misread.' WHERE id=?",
+      )
+      .run(work.workId);
+    projectStandings(deps, h.projectId);
+    expect(failedAt()).toEqual({ state: "failed", finished_at: "2026-09-10T01:00:00.000Z" });
+    // Read again later, still failed: the first failure's time stays.
+    now = "2026-09-10T01:05:00.000Z";
+    projectStandings(deps, h.projectId);
+    expect(failedAt()).toEqual({ state: "failed", finished_at: "2026-09-10T01:00:00.000Z" });
+    const inFlight = () =>
+      failedSteps(deps.db, () => undefined).find((entry) => entry.stage === "video")
+        ?.autoRetryInFlight;
+    const retry = (at: string) =>
+      deps.db
+        .prepare(
+          "INSERT INTO narration_retries(project_id,chunk_key,tries,state,updated_at) VALUES (?,'audio:chunk:5',1,'started',?) ON CONFLICT(project_id,chunk_key) DO UPDATE SET updated_at=excluded.updated_at",
+        )
+        .run(h.projectId, at);
+    // Started before the failure: that retry is spent, so the agent may act.
+    retry("2026-09-10T00:59:00.000Z");
+    expect(inFlight()).toBe(false);
+    // Started after it: still going, so the agent leaves it alone.
+    retry("2026-09-10T01:02:00.000Z");
+    expect(inFlight()).toBe(true);
+    // Run again and failed anew: that failure's own time.
+    deps.db.prepare("UPDATE revision_work SET state='running' WHERE id=?").run(work.workId);
+    projectStandings(deps, h.projectId);
+    expect(failedAt()).toEqual({ state: "running", finished_at: null });
+    now = "2026-09-10T01:10:00.000Z";
+    deps.db.prepare("UPDATE revision_work SET state='failed' WHERE id=?").run(work.workId);
+    projectStandings(deps, h.projectId);
+    expect(failedAt()).toEqual({ state: "failed", finished_at: "2026-09-10T01:10:00.000Z" });
   } finally {
     h.close();
   }

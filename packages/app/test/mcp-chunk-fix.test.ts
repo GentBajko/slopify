@@ -142,7 +142,7 @@ it("lets an agent fix a run stopped by a misread narration chunk: listed, regene
         }),
       })
       .parse(await call("get_revision", { revisionId }));
-    const voiced = audio.calls();
+    const voiced = audio.seen().length;
     const saved = z
       .object({ view: z.object({ revision: z.object({ id: z.string() }).loose() }).loose() })
       .parse(
@@ -168,7 +168,8 @@ it("lets an agent fix a run stopped by a misread narration chunk: listed, regene
       },
       { timeout: 20_000, interval: 50 },
     );
-    expect(audio.calls()).toBeGreaterThan(voiced);
+    // Only the misread chunk was voiced again; the others were kept.
+    expect(audio.seen().slice(voiced).join("")).toBe("The lighthouse turns.");
     expect(
       h.deps.db
         .prepare("SELECT tool FROM agent_actions WHERE project_id=? ORDER BY rowid")
