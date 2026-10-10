@@ -9,6 +9,7 @@ import { projectsSearchOf } from "@/router";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 import { ProjectsRoute, projectFilterOf, projectSortOf } from "./projects.js";
+import { matches, sortProjects } from "./projects-order.js";
 
 afterEach(cleanup);
 
@@ -132,10 +133,12 @@ describe("the projects list", () => {
         listing("p1", "Rope Tricks", "pending", { progress: 0.5 }),
         listing("p2", "Knots", "pending", { progress: 0.5, prepared: true }),
         listing("p3", "Hitches", "pending", { progress: 0 }),
+        listing("p4", "Splices", "pending", { progress: 0.5, waitingForAgent: true }),
       ]),
     );
     expect(await screen.findByText("Waiting for your review")).not.toBeNull();
     expect(screen.getByText("Prepared")).not.toBeNull();
+    expect(screen.getByText("Waiting for the agent")).not.toBeNull();
     expect(screen.getByText("Hitches").closest("li")?.textContent).toContain("Queued");
     expect(screen.queryByText("Waiting for you")).toBeNull();
   });
@@ -190,6 +193,22 @@ describe("the projects list", () => {
     expect(screen.queryByRole("link", { name: "Going" })).toBeNull();
     expect(projectFilterOf("running")).toBe("running");
     expect(projectFilterOf("nonsense")).toBeUndefined();
+  });
+});
+
+describe("needs you", () => {
+  // Decided 2026-10-10: a prepared run waits for its day, one parked on an agent's review for
+  // the agent; neither is the person's to act on, so neither leads the list.
+  it("keeps prepared runs and runs waiting for the agent out of Needs you and its sort", async () => {
+    const projects = [
+      listing("p1", "Prepared one", "pending", { progress: 0.9, prepared: true }),
+      listing("p2", "Agent one", "pending", { progress: 0.5, waitingForAgent: true }),
+      listing("p3", "Held one", "pending", { progress: 0.4 }),
+    ];
+    expect(projects.filter((one) => matches(one, "waiting")).map((one) => one.title)).toEqual([
+      "Held one",
+    ]);
+    expect(sortProjects(projects, "status")[0]?.title).toBe("Held one");
   });
 });
 

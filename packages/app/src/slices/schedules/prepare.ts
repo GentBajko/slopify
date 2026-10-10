@@ -1,5 +1,4 @@
 import type { DatabaseSync } from "node:sqlite";
-import { z } from "zod";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectPaused, stagesOf } from "../admission/repo.js";
 import { render } from "../admission/substitute.js";
@@ -202,19 +201,9 @@ export function preparedTopics(
   });
 }
 
-// A project a schedule prepared ahead whose Before Video hold is the schedule's own, so it
-// waits for its day, not for anyone (decided 2026-10-10). A hold its template had anyway is
-// the person's to approve, prepared or not. The day deletes the row (`continuePrepared`).
+// A project a schedule prepared ahead whose Before Video hold is the schedule's own: that hold
+// waits for its day, not for anyone (decided 2026-10-10; `reviews/holds.ts` reads it with the
+// project's other checkpoints). The day deletes the row (`continuePrepared`).
 export function heldForItsDay(alias: string, column = "project_id"): string {
   return `EXISTS (SELECT 1 FROM prepared_videos p WHERE p.project_id=${alias}.${column} AND p.added_checkpoint=1)`;
-}
-
-// The projects `heldForItsDay`: the lists and pages read them as Prepared (`heldStateWord`).
-export function preparedProjectIds(db: DatabaseSync): ReadonlySet<string> {
-  return new Set(
-    db
-      .prepare(`SELECT v.project_id FROM prepared_videos v WHERE ${heldForItsDay("v")}`)
-      .all()
-      .map((row) => z.object({ project_id: z.string() }).parse(row).project_id),
-  );
 }

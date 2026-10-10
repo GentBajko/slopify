@@ -12,7 +12,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects",
     title: "List projects",
     description:
-      "Every project as the Projects list shows it: id, title, status, stateWord (how Slopify's pages say it: Queued, Running, Paused, Waiting for your review, Prepared, Kept as is, Failed, Done with problems, Done, Canceled; an uploaded project reads Done), progress from 0 to 1, channelId and uploadedAt.",
+      "Every project as the Projects list shows it: id, title, status, stateWord (how Slopify's pages say it: Queued, Running, Paused, Waiting for your review, Waiting for the agent, Prepared, Kept as is, Failed, Done with problems, Done, Canceled; an uploaded project reads Done), progress from 0 to 1, channelId and uploadedAt.",
     shape: listWithStateWords,
   },
   {

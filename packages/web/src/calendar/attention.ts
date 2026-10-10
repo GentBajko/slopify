@@ -1,7 +1,7 @@
-import { heldWord, projectStateWord } from "@app/slices/admission/state-words.js";
+import { heldWord } from "@app/slices/admission/state-words.js";
 import type { Calendar } from "@app/slices/schedules/schema.js";
 import type { Tone } from "@/components/kit/status";
-import { projectStateLook } from "@/lib/state-words";
+import { projectStateOf } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 
 // How a project reads on the calendar: what it needs from the person, whether its video is
@@ -43,13 +43,7 @@ export function projectLook(
   if (waiting !== undefined) return { tone: "waiting", word: waiting };
   if (project.readyToUpload === true)
     return { tone: "done", word: "Ready to upload", action: { kind: "upload" } };
-  // A prepared project has run all but its video, so it reads as held (`projectStateWord`).
-  if (project.prepared === true && project.state === "pending")
-    return {
-      tone: "waiting",
-      word: projectStateWord({ status: project.state, progress: 1, prepared: true }),
-    };
-  return projectStateLook[project.state];
+  return projectStateOf({ ...project, status: project.state });
 }
 
 // "2 waiting for you · 1 ready to upload".

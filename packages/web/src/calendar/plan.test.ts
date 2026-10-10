@@ -44,6 +44,7 @@ describe("the weeks", () => {
             createdAt: "",
             finishedAt: new Date(2026, 8, 28, 12).toISOString(),
             scheduleId: null,
+            progress: 1,
           },
           {
             id: "p2",
@@ -52,6 +53,7 @@ describe("the weeks", () => {
             createdAt: "",
             finishedAt: null,
             scheduleId: null,
+            progress: 0,
           },
         ],
         queued: [

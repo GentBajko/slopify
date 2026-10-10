@@ -72,6 +72,12 @@ describe("the summary in a rundown row", () => {
     );
   });
 
+  it("says a stage of a run parked on an agent's review waits for the agent", () => {
+    const parked = { ...project, status: "pending" as const, waitingForAgent: true };
+    expect(summaryOf(stage("images", "pending"), [], parked)).toBe("Waiting for the agent");
+    expect(summaryOf(stage("video", "pending"), [], parked)).toBe("Waiting for the agent");
+  });
+
   it("names the file behind a provided stage", () => {
     const outputs = [output("audio_body", "audio", { originalFilename: "body.mp3" })];
     expect(summaryOf(stage("audio", "provided"), outputs, project)).toBe("body.mp3");

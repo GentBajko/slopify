@@ -3,7 +3,11 @@ import { projectStates, stageKinds, stageStates } from "../../kernel/pipeline.js
 import { progressOf } from "../../kernel/runner/graph.js";
 import { projectStateWord, stageStateWords } from "../../slices/admission/state-words.js";
 
-const flags = { setAside: z.boolean().optional(), prepared: z.boolean().optional() };
+const flags = {
+  setAside: z.boolean().optional(),
+  prepared: z.boolean().optional(),
+  waitingForAgent: z.boolean().optional(),
+};
 const listSchema = z
   .object({
     projects: z.array(

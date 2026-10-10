@@ -5,7 +5,12 @@ import { revisionView } from "@/project/revision-fixture";
 import { type Answer, jsonAnswer } from "@/test-app";
 import { type body, deps } from "./project-fixtures.js";
 
-export function revisionRouteFixture(original: ReturnType<typeof body>): {
+type Body = ReturnType<typeof body>;
+
+// The project body may carry the server's hold flags (`reviews/holds.ts`).
+export function revisionRouteFixture(
+  original: Body & { readonly project: Body["project"] & { readonly waitingForAgent?: true } },
+): {
   readonly app: ReturnType<typeof deps>;
   readonly routes: Readonly<Record<string, Answer>>;
   readonly save: ReturnType<typeof vi.fn<Answer>>;

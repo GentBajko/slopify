@@ -306,7 +306,7 @@ export const settingsHelp = {
   },
   "home.running": {
     title: "Running now",
-    body: "Videos being made or paused, with the step each is on and how long it has taken. Up to 3 show here; Projects lists them all. Open one to follow it live, pause it or cancel it.",
+    body: "Videos being made, and runs Waiting for the agent: an External agent reviews something they made, and they carry on once it answers or after 2 hours. Each shows the step it is on and how long it has taken. Up to 3 show here; Projects lists them all. Open one to follow it live, pause it or cancel it.",
     tutorial: { page: "Home-and-Projects", anchor: "running-now" },
   },
   "home.coming-up": {

@@ -6,6 +6,13 @@ it.each([
   [{ status: "pending", progress: 0.5 }, "Waiting for your review"],
   [{ status: "pending", progress: 0.5, prepared: true }, "Prepared"],
   [{ status: "pending", progress: 0.5, setAside: true }, "Kept as is"],
+  [{ status: "pending", progress: 0.5, waitingForAgent: true }, "Waiting for the agent"],
+  [
+    { status: "pending", progress: 0.5, waitingForAgent: true, prepared: true },
+    "Waiting for the agent",
+  ],
+  [{ status: "pending", progress: 0, waitingForAgent: true }, "Queued"],
+  [{ status: "running", progress: 0.5, waitingForAgent: true }, "Running"],
   [{ status: "running", progress: 0.5 }, "Running"],
   [{ status: "paused", progress: 0.5 }, "Paused"],
   [{ status: "failed", progress: 0.5, prepared: true }, "Failed"],
@@ -21,7 +28,9 @@ it.each([
   [{ status: "pending", progress: 0 }, false],
   [{ status: "pending", progress: 0.5, prepared: true }, false],
   [{ status: "pending", progress: 0.5, setAside: true }, false],
+  [{ status: "pending", progress: 0.5, waitingForAgent: true }, false],
   [{ status: "running", progress: 0.5 }, false],
+  [{ status: "paused", progress: 0.5 }, false],
 ] as const)("counts %o as waiting for the person: %s", (project, waits) => {
   expect(waitsForPerson(project)).toBe(waits);
 });

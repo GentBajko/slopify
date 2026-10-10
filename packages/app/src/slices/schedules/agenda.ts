@@ -1,16 +1,17 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { ProjectState } from "../../kernel/pipeline.js";
-import { derive } from "../../kernel/runner/graph.js";
+import { derive, progressOf } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
+import { projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
-import { uploadedProjects } from "../uploads/repo.js";
+import { setAsideProjects, uploadedProjects } from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
-import { heldForItsDay, preparedProject, preparedProjectIds } from "./prepare.js";
+import { heldForItsDay, preparedProject } from "./prepare.js";
 import { scheduleRows } from "./repo.js";
 import {
   type Calendar,
@@ -191,7 +192,8 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
   const uploads = uploadedProjects(deps.db);
   const samples = sampleProjectIds(deps.db);
   const waits = limitWaitsByProject(deps.db);
-  const prepared = preparedProjectIds(deps.db);
+  const holds = projectHolds(deps.db);
+  const aside = setAsideProjects(deps.db);
   const fromSchedule = new Map<string, string>();
   for (const row of deps.db
     .prepare(
@@ -227,7 +229,13 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         const ended = project.finished_at ?? project.created_at;
         if (ended < from.toISOString() || ended >= to.toISOString()) return [];
       }
-      const needs = needsOf(state, reviewing.has(project.id));
+      // A run parked on an agent's review goes on by itself, and one Kept as is waits for
+      // nobody: neither asks anything of the person.
+      const waitingForAgent = holds.waitingForAgent.has(project.id);
+      const needs = needsOf(
+        state,
+        reviewing.has(project.id) && !waitingForAgent && !aside.has(project.id),
+      );
       const ready =
         (state === "done" || state === "partial") &&
         makesVideo(project.video_source) &&
@@ -242,9 +250,12 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           createdAt: project.created_at,
           finishedAt: terminal ? (project.finished_at ?? project.created_at) : null,
           scheduleId: fromSchedule.get(project.id) ?? null,
+          progress: progressOf(standings.get(project.id) ?? []),
           ...(needs === undefined ? {} : { needs }),
           ...(ready ? { readyToUpload: true } : {}),
-          ...(prepared.has(project.id) ? { prepared: true } : {}),
+          ...(aside.has(project.id) ? { setAside: true } : {}),
+          ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
+          ...(waitingForAgent ? { waitingForAgent: true } : {}),
           ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
         },
       ];

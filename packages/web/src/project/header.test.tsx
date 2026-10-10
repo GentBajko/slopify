@@ -93,10 +93,19 @@ it("says a held or prepared project's state as Projects and the agent tools do",
         more={[]}
         progress={0}
       />
+      <ProjectHeader
+        project={{ ...plain, status: "pending", waitingForAgent: true }}
+        prompts={undefined}
+        editing={false}
+        onEdit={() => {}}
+        more={[]}
+        progress={0.5}
+      />
     </>,
     testDeps({}),
   );
   expect(await screen.findByText("Waiting for your review")).not.toBeNull();
   expect(screen.getByText("Prepared")).not.toBeNull();
   expect(screen.getByText("Queued")).not.toBeNull();
+  expect(screen.getByText("Waiting for the agent")).not.toBeNull();
 });

@@ -13,6 +13,7 @@ import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { projectStateOf } from "@/lib/state-words";
 import { limitWaitLine } from "@/project/limit-wait";
 import { activityText, capitalised, stageName, stageNames } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
@@ -115,6 +116,8 @@ export function RunningProject({
           </div>
           {project.status === "paused" ? (
             <Status tone="waiting">Paused</Status>
+          ) : project.status === "pending" ? (
+            <Status tone="waiting">{projectStateOf(project).word}</Status>
           ) : waiting !== undefined ? (
             <Status tone="waiting">{waiting}</Status>
           ) : (

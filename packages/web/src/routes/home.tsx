@@ -87,8 +87,11 @@ export function HomeRoute(): ReactElement {
     [templates.data],
   );
   const mine = (projects.data?.projects ?? []).filter((one) => current.includes(one.channelId));
-  // Paused runs wait for the person, so they sit under Needs you, not Running now.
-  const running = mine.filter((one) => one.status === "running");
+  // Paused runs wait for the person, so they sit under Needs you, not Running now. A run parked
+  // on an agent's review goes on by itself, so it sits here.
+  const running = mine.filter(
+    (one) => one.status === "running" || (one.status === "pending" && one.waitingForAgent === true),
+  );
   // Started and waiting their turn: they show as one line under Running now.
   const queued = mine.filter(isQueued);
   // The bundled samples are finished videos too, but nobody uploads them.

@@ -19,10 +19,10 @@ import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { videoActivity } from "../../slices/rebuild/activity.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
+import { projectHolds } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { limitWaitsByProject, listingWait } from "../../slices/run-cost/panel.js";
-import { preparedProjectIds } from "../../slices/schedules/prepare.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import { longVideoStats } from "../../slices/studio/stats.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
@@ -96,7 +96,7 @@ export function projectRoutes(deps: AppDeps) {
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
-        const prepared = preparedProjectIds(deps.db);
+        const holds = projectHolds(deps.db);
         const settled = uploadedAndSettled(deps.db);
         const numbers = longVideoStats(deps.db);
         const waits = limitWaitsByProject(deps.db);
@@ -110,7 +110,8 @@ export function projectRoutes(deps: AppDeps) {
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
             ...(aside.has(project.id) ? { setAside: true } : {}),
-            ...(prepared.has(project.id) ? { prepared: true } : {}),
+            ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
+            ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(numbers.get(project.id)?.views == null
               ? {}
               : { views: numbers.get(project.id)?.views ?? 0 }),
@@ -134,14 +135,18 @@ export function projectRoutes(deps: AppDeps) {
           });
         }
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
+        const holds = projectHolds(deps.db);
+        const waitingForAgent = holds.waitingForAgent.has(project.id);
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
-          resumable: resumable(deps.db, project.id),
+          // Continuing a run parked on an agent's review only parks it again.
+          resumable: !waitingForAgent && resumable(deps.db, project.id),
           startedBy: lastStarter(deps.db, project.id),
           project: {
             ...summarise(project),
             ...(setAsideProjects(deps.db).has(project.id) ? { setAside: true } : {}),
-            ...(preparedProjectIds(deps.db).has(project.id) ? { prepared: true } : {}),
+            ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
+            ...(waitingForAgent ? { waitingForAgent: true } : {}),
           },
           stages: stagesWithEta(
             deps.db,

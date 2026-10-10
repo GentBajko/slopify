@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
+import { heldStateWord } from "@app/slices/admission/state-words.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 
@@ -74,6 +75,8 @@ export function summaryOf(
       return "Not part of this run";
     case "pending":
       if (project.status === "paused" || resumable) return "Waits until you continue the run";
+      if (project.status === "pending" && project.waitingForAgent === true)
+        return heldStateWord(project);
       if (stage.retryAt !== undefined) return `Trying again at ${clockTime(stage.retryAt)}`;
       if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))
         return "Ready to run";

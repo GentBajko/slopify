@@ -80,6 +80,21 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
   });
 
+  // Decided 2026-10-10: the run goes on once the agent answers; continuing would only park it.
+  it("says a run parked on an agent's review waits for the agent, and offers no Continue the run", async () => {
+    const current = paused();
+    const fixture = revisionRouteFixture({
+      ...current,
+      resumable: false,
+      project: { ...current.project, status: "pending", waitingForAgent: true },
+    });
+    renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
+    expect((await screen.findAllByText("Waiting for the agent")).length).toBeGreaterThan(0);
+    expect(screen.getByText("An agent is reviewing what was made.")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Continue the run" })).toBeNull();
+    expect(screen.queryByText("Stopped")).toBeNull();
+  });
+
   it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());

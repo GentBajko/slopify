@@ -501,6 +501,69 @@ describe("GET /api/projects", () => {
     expect(body.projects[0]?.progress).toBeCloseTo(1.25 / 3, 10);
   });
 
+  // What a held run waits for is the server's one rule (`reviews/holds.ts`): the list and the
+  // project's page carry it the same way.
+  it("says a held run waits for its day only at its schedule's own video hold, and for an agent while its review waits", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r1')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','article','provide','done'), ('s2','p1','images','provide','pending'), ('s3','p1','video','generate','pending')",
+    );
+    const gate = (stage: string) =>
+      db
+        .prepare(
+          "INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1','r1',?,?,'w1',?,'held','2026-09-01')",
+        )
+        .run(`${stage}-gate`, stage, "a".repeat(64));
+    gate("images");
+    gate("video");
+    db.exec(
+      "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES ('p1','s1','First',1,'2026-09-01')",
+    );
+    const read = async () => {
+      const list = (await (await app.request("/api/projects")).json()) as {
+        projects: ProjectSummary[];
+      };
+      const page = (await (await app.request("/api/projects/p1")).json()) as {
+        project: ProjectSummary;
+        resumable: boolean;
+      };
+      const pick = (project: ProjectSummary | undefined) => ({
+        prepared: project?.prepared,
+        waitingForAgent: project?.waitingForAgent,
+      });
+      return { list: pick(list.projects[0]), page: pick(page.project), resumable: page.resumable };
+    };
+    // Held at the template's images checkpoint first: that review is the person's.
+    expect((await read()).list).toEqual({ prepared: undefined, waitingForAgent: undefined });
+    db.exec("UPDATE review_checkpoints SET state='released', approved_at='x' WHERE stage='images'");
+    db.exec("UPDATE stages SET state='done' WHERE kind='images'");
+    // Only the schedule's own Before Video hold is left: it waits for its day.
+    const prepared = await read();
+    expect(prepared.list).toEqual({ prepared: true, waitingForAgent: undefined });
+    expect(prepared.page).toEqual(prepared.list);
+    // Its images remade and parked on an agent's review: Continue the run would only park it.
+    db.exec("UPDATE stages SET state='pending' WHERE kind='images'");
+    db.exec(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('w1','p1','r1','s2','images','f','pending','held','2026-09-01')",
+    );
+    db.exec(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1','r1','review:image:one','w1','review-fp')",
+    );
+    db.exec(
+      `INSERT INTO external_reviews(id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
+       VALUES ('er1','p1','r1','w1','piece','review:image:one','image:one','images','item-fp','review-fp','{}','waiting','2026-09-01','2026-09-02')`,
+    );
+    const agent = await read();
+    expect(agent.list.waitingForAgent).toBe(true);
+    expect(agent.page.waitingForAgent).toBe(true);
+    expect(agent.resumable).toBe(false);
+  });
+
   // An uploaded video left paused, with only leftover steps nobody admitted, is finished.
   it("lists an uploaded, paused project with nothing admitted as done", async () => {
     const { app, db } = harness();

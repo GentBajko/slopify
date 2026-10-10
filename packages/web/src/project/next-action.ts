@@ -69,7 +69,10 @@ export interface LimitWaitLike {
 }
 
 export interface NextActionInput {
-  readonly project: Pick<ProjectSummary, "status" | "config" | "setAside" | "prepared">;
+  readonly project: Pick<
+    ProjectSummary,
+    "status" | "config" | "setAside" | "prepared" | "waitingForAgent"
+  >;
   readonly stages: readonly Stage[];
   // Unfinished work on the saved revision that nothing will start by itself.
   readonly resumable: boolean;
@@ -248,6 +251,17 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
         };
     }
   }
+
+  // Parked on an External agent's review: the server says so only while no checkpoint of the
+  // person's holds the run (`reviews/holds.ts`). It goes on by itself, so nothing is offered.
+  if (project.status === "pending" && project.waitingForAgent === true)
+    return {
+      situation: "waiting",
+      tone: "waiting",
+      status: heldStateWord(project),
+      title: "An agent is reviewing what was made.",
+      why: "Nothing to do: the run carries on once the agent answers, and a review no agent answers passes by itself 2 hours after it was asked.",
+    };
 
   const held = input.held[0];
   if (held !== undefined) {

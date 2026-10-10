@@ -206,6 +206,61 @@ it("says which projects need the person, which are ready to upload and which wai
     db.prepare(
       "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Own hold',0,?)",
     ).run(ownHold, finished);
+    // Prepared, but held at its template's images checkpoint before the schedule's own hold:
+    // the person reviews the images first.
+    const atImages = f.project("At images", "pending", null);
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      atImages,
+      `rev-${atImages}`,
+    );
+    for (const [checkpoint, stage] of [
+      ["cp-4", "images"],
+      ["cp-5", "video"],
+    ] as const)
+      db.prepare(
+        `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+         VALUES (?,?,?,?,'work',?,'held',?)`,
+      ).run(atImages, `rev-${atImages}`, checkpoint, stage, "d".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO prepared_videos (project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','At images',1,?)",
+    ).run(atImages, finished);
+    // Kept as is: what is left was set aside, so it waits for nobody.
+    const aside = f.project("Aside", "pending", null);
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      aside,
+      `rev-${aside}`,
+    );
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,'cp-6','audio','work',?,'held',?)`,
+    ).run(aside, `rev-${aside}`, "e".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO project_set_aside (project_id, revision_id, set_at) VALUES (?, ?, ?)",
+    ).run(aside, `rev-${aside}`, finished);
+    // Parked on an agent's review, with its template's video checkpoint still ahead.
+    const agent = f.project("Agent", "pending", null);
+    db.prepare("UPDATE stages SET state='done' WHERE project_id=?").run(agent);
+    db.prepare(
+      "INSERT INTO stages (id,project_id,kind,source,state) VALUES (?,?,'images','generate','pending')",
+    ).run(randomUUID(), agent);
+    db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+      agent,
+      `rev-${agent}`,
+    );
+    db.prepare(
+      `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+       VALUES (?,?,'cp-7','video','work',?,'held',?)`,
+    ).run(agent, `rev-${agent}`, "f".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('agent-work',?,?,'images','images',?,'pending','held',?)",
+    ).run(agent, `rev-${agent}`, "a".repeat(64), finished);
+    db.prepare(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES (?,?,'review:image:one','agent-work','review-fp')",
+    ).run(agent, `rev-${agent}`);
+    db.prepare(
+      `INSERT INTO external_reviews(id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
+       VALUES ('er1',?,?,'agent-work','piece','review:image:one','image:one','images','item-fp','review-fp','{}','waiting',?,?)`,
+    ).run(agent, `rev-${agent}`, finished, "2026-09-11T07:00:00.000Z");
     db.exec("PRAGMA foreign_keys=ON");
     const waiting = f.project("Waiting", "running", null);
     db.prepare(
@@ -231,6 +286,14 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Prepared")?.needs).toBeUndefined();
     expect(byTitle.get("Own hold")?.needs).toBe("review");
     expect(byTitle.get("Own hold")?.prepared).toBeUndefined();
+    expect(byTitle.get("At images")?.needs).toBe("review");
+    expect(byTitle.get("At images")?.prepared).toBeUndefined();
+    expect(byTitle.get("Aside")).toMatchObject({ setAside: true });
+    expect(byTitle.get("Aside")?.needs).toBeUndefined();
+    expect(byTitle.get("Agent")).toMatchObject({ waitingForAgent: true, progress: 0.5 });
+    expect(byTitle.get("Agent")?.needs).toBeUndefined();
+    expect(byTitle.get("Held")?.progress).toBe(0);
+    expect(byTitle.get("Ready")?.progress).toBe(1);
     expect(byTitle.get("Ready")?.needs).toBeUndefined();
     expect(
       parsed.projects

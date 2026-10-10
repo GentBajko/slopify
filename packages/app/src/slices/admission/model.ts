@@ -340,10 +340,11 @@ export interface ProjectSummary extends Project {
   // "Keep as is" on Needs you, still about the current revision (`uploads/repo.ts`): the
   // waiting run is left as it is, off Needs you, until the project's next edit.
   readonly setAside?: boolean;
-  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held before its video
-  // by the schedule's own hold until its day (`schedules/prepare.ts` heldForItsDay). One held
-  // by its template's Before Video checkpoint is not: that hold is the person's to approve.
+  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held only by the
+  // schedule's own Before Video hold until its day; parked on an External agent's review.
+  // Both are `reviews/holds.ts` projectHolds: a checkpoint still to approve is the person's.
   readonly prepared?: boolean;
+  readonly waitingForAgent?: boolean;
 }
 
 // The part of a project's settings the list reads (`listProjectHeads`). The whole configuration
@@ -364,7 +365,7 @@ export interface ProjectHead extends Omit<Project, "config"> {
 // six times the body for the same 2 px.
 export interface ProjectListing
   extends ProjectHead,
-    Pick<ProjectSummary, "status" | "setAside" | "prepared"> {
+    Pick<ProjectSummary, "status" | "setAside" | "prepared" | "waitingForAgent"> {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
   // The channel the project belongs to (`project_channels`), the default one when unset, so

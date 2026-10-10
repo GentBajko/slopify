@@ -254,12 +254,18 @@ export const calendarProjectSchema = z
     createdAt: z.string(),
     finishedAt: z.string().nullable(),
     scheduleId: z.string().nullable(),
+    // The run's share done (`progressOf`), which tells a held run from a queued one. Older
+    // servers leave it out.
+    progress: z.number().min(0).max(1).default(0),
     // What the project waits on the person for; left out when nothing.
     needs: z.enum(calendarNeeds).optional(),
     // Finished, makes a video, not marked uploaded and not a bundled sample.
     readyToUpload: z.literal(true).optional(),
-    // A schedule prepared it ahead: held before its video until its day, not for the person.
+    // What a held run waits for when it isn't the person (`reviews/holds.ts`), and a run
+    // Kept as is, as the Projects list says them.
+    setAside: z.literal(true).optional(),
     prepared: z.literal(true).optional(),
+    waitingForAgent: z.literal(true).optional(),
     // Stages waiting for a CLI plan's limits to reset.
     limitWaits: z
       .array(

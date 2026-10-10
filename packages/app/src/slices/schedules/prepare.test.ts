@@ -3,9 +3,9 @@ import { expect, it } from "vitest";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
+import { projectHolds } from "../reviews/holds.js";
 import {
   heldBeforeVideo,
-  preparedProjectIds,
   preparedTopics,
   prepareTopic,
   scheduledDocument,
@@ -154,10 +154,10 @@ it("counts a project as prepared only while its schedule's own hold keeps it for
     const prepared = await prepareTopic(deps, { scheduleId, title: "First topic" });
     if (!prepared.ok) throw new Error(prepared.reason);
     h.deps.db.prepare("UPDATE prepared_videos SET added_checkpoint=1").run();
-    expect([...preparedProjectIds(h.deps.db)]).toEqual([prepared.projectId]);
+    expect([...projectHolds(h.deps.db).prepared]).toEqual([prepared.projectId]);
     // The template's own Before Video hold is the person's to approve.
     h.deps.db.prepare("UPDATE prepared_videos SET added_checkpoint=0").run();
-    expect([...preparedProjectIds(h.deps.db)]).toEqual([]);
+    expect([...projectHolds(h.deps.db).prepared]).toEqual([]);
   } finally {
     h.close();
   }

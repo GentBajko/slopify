@@ -222,6 +222,42 @@ describe("the next action", () => {
     });
   });
 
+  // The server reads it Prepared only while nothing but the schedule's own hold holds it.
+  it("asks for the review of a prepared project held at an earlier checkpoint", () => {
+    const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
+    const next = nextActionFor(
+      input({
+        project: { status: "pending", config },
+        stages: [stage("images", "done"), stage("video", "pending")],
+        held: [gate, { checkpointId: "c2", stage: "video", dependents: [] }],
+      }),
+    );
+    expect(next).toMatchObject({
+      situation: "held",
+      status: "Waiting for your review",
+      title: "The images are ready for your review.",
+    });
+  });
+
+  // Decided 2026-10-10: nothing to press, and Continue the run would only park it again.
+  it("says a run parked on an agent's review waits for the agent, with no button", () => {
+    const next = nextActionFor(
+      input({
+        project: { status: "pending", config, waitingForAgent: true },
+        stages: [stage("images", "pending"), stage("video", "pending")],
+        held: [{ checkpointId: "c2", stage: "video", dependents: [] }],
+        resumable: false,
+        uploadReady: false,
+      }),
+    );
+    expect(next).toMatchObject({
+      situation: "waiting",
+      tone: "waiting",
+      status: "Waiting for the agent",
+    });
+    expect(next?.action).toBeUndefined();
+  });
+
   it("approves a held checkpoint, named for what runs next", () => {
     const gate = { checkpointId: "c1", stage: "images" as const, dependents: ["video" as const] };
     const next = nextActionFor(

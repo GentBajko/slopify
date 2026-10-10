@@ -100,6 +100,23 @@ it("saves the agent's verdict, wakes the run, and refuses a second one", async (
   expect(JSON.stringify(again.content)).toContain("This review was already answered");
 });
 
+it("says a run parked on the review is waiting for the agent, on list_projects and get_project", async () => {
+  const h = waiting();
+  h.deps.db
+    .prepare(
+      "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('article',?,'article','generate','done')",
+    )
+    .run(h.projectId);
+  const agent = await connectAgent(h.app);
+  for (const [name, args] of [
+    ["list_projects", {}],
+    ["get_project", { id: h.projectId }],
+  ] as const) {
+    const answer = JSON.stringify((await agent.callTool({ name, arguments: args })).content);
+    expect(answer).toContain('\\"stateWord\\":\\"Waiting for the agent\\"');
+  }
+});
+
 it("reads the review's material with its instruction and its picture as an image", async () => {
   const h = waiting();
   const agent = await connectAgent(h.app);

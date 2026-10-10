@@ -184,6 +184,40 @@ describe("home", () => {
     expect(within(needs).getByText("3 decisions waiting · 1 ready to upload")).not.toBeNull();
   });
 
+  // Decided 2026-10-10: a schedule's prepared project waits for its day and a run parked on
+  // an agent's review waits for the agent; neither asks anything of the person.
+  it("keeps a prepared project and a run waiting for the agent off Needs you", async () => {
+    const parked = body({
+      status: "pending",
+      stages: [stage("article", "done"), stage("images", "pending")],
+      outputs: [],
+    });
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            listing("p-wait", "Cleopatra", "pending", { progress: 0.6 }),
+            listing("p-prep", "Nefertiti", "pending", { progress: 0.9, prepared: true }),
+            listing("p-agent", "Hatshepsut", "pending", { progress: 0.5, waitingForAgent: true }),
+          ],
+        }),
+        "GET /api/projects/p-agent": jsonAnswer({
+          ...parked,
+          project: { ...parked.project, id: "p-agent", waitingForAgent: true },
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText("Cleopatra")).not.toBeNull();
+    expect(within(needs).queryByText("Nefertiti")).toBeNull();
+    expect(within(needs).queryByText("Hatshepsut")).toBeNull();
+    // The agent's run goes on by itself, so it sits with the running ones and says why it stopped.
+    const running = screen.getByRole("region", { name: "Running now" });
+    expect(within(running).getByText("Hatshepsut")).not.toBeNull();
+    expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
+  });
+
   it("approves a held review from Home", async () => {
     const user = userEvent.setup();
     const approve = vi.fn(
