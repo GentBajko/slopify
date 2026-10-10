@@ -55,7 +55,7 @@ export function exportLibrary(deps: RouteCallDeps, section: LibrarySection): Cal
 
 // One item through the route its editor saves with, so the Library's own rules decide.
 async function saveThrough(deps: RouteCallDeps, path: string, item: unknown): Promise<ItemSave> {
-  const answer = await callApi(deps, importTool, "POST", path, item);
+  const answer = await callApi(deps, importTool, { method: "POST", path, body: item });
   if (answer.ok) return { ok: true };
   if ((answer.status === 400 || answer.status === 409) && answer.fields.length > 0)
     return { ok: false, fields: answer.fields };
@@ -113,8 +113,10 @@ async function importAliases(
   if (aliases.length === 0)
     return { refused: "it holds no aliases. Fix the file and import it again." };
   const merged = mergeAliases(listNarrationAliases(deps.db), aliases, (alias) => alias);
-  const answer = await callApi(deps, importTool, "PUT", "/api/pronunciations/aliases", {
-    aliases: merged.rows,
+  const answer = await callApi(deps, importTool, {
+    method: "PUT",
+    path: "/api/pronunciations/aliases",
+    body: { aliases: merged.rows },
   });
   return answer.ok
     ? { added: merged.added, updated: merged.updated, skipped }

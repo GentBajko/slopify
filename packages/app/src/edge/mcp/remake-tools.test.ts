@@ -161,3 +161,17 @@ it("refuses a project id that would leave the project's routes before calling an
   expect(answer.isError).toBe(true);
   expect(called).toEqual([]);
 });
+
+it("logs a refusal it couldn't read with the project it was checking", async () => {
+  const deps = routeCallDeps(
+    async () =>
+      new Response("{not json", {
+        status: 409,
+        headers: { "content-type": "application/problem+json" },
+      }),
+  );
+  await remakeOutdated(deps, ["p1"]);
+  expect(deps.logged).toEqual([
+    expect.stringMatching(/^mcp\.refusal \[p1\]: .*GET \/api\/projects\/p1 .*HTTP 409.*JSON/),
+  ]);
+});

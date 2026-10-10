@@ -200,10 +200,15 @@ export type ApiAnswer =
 export async function callApi(
   deps: RouteCallDeps,
   tool: Named,
-  method: "GET" | "POST" | "PUT",
-  path: string,
-  body?: unknown,
+  call: {
+    readonly method: "GET" | "POST" | "PUT";
+    readonly path: string;
+    readonly body?: unknown;
+    // The project the call is about, for the log.
+    readonly projectId?: string;
+  },
 ): Promise<ApiAnswer> {
+  const { method, path, body } = call;
   const response = await deps.api(
     new Request(new URL(path, "http://localhost"), {
       method,
@@ -217,7 +222,10 @@ export async function callApi(
   return {
     ok: false,
     status: response.status,
-    ...(await failureOf(deps, tool, response, { called: `${method} ${path}` })),
+    ...(await failureOf(deps, tool, response, {
+      called: `${method} ${path}`,
+      ...(call.projectId === undefined ? {} : { projectId: call.projectId }),
+    })),
   };
 }
 
@@ -242,16 +250,17 @@ async function failureOf(
       fields: [],
     };
   let body: unknown;
+  let unparsed: unknown;
   try {
     body = await response.json();
   } catch (error) {
-    body = error;
+    unparsed = error;
   }
   const problem = problemSchema.safeParse(body);
   if (!problem.success) {
     deps.log.write("warn", "mcp.refusal", {
       ...(call.projectId === undefined ? {} : { projectId: call.projectId }),
-      detail: `${tool.name}: ${call.called} answered HTTP ${String(response.status)} with a refusal that could not be read: ${body instanceof Error ? causedBy(body) : problem.error.message}`,
+      detail: `${tool.name}: ${call.called} answered HTTP ${String(response.status)} with a refusal that could not be read: ${unparsed === undefined ? problem.error.message : causedBy(unparsed)}`,
     });
     return {
       message: `${tool.title} was refused, and the refusal could not be read. Call ${tool.name} again; if it keeps happening, use Download diagnostics in Settings and report it.`,

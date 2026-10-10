@@ -49,21 +49,27 @@ async function planOne(deps: RouteCallDeps, projectId: string): Promise<Plan | S
     title: "",
     reason: `It couldn't be checked: ${message}`,
   });
-  const read = await callApi(deps, remakeTool, "GET", at);
+  const read = await callApi(deps, remakeTool, { method: "GET", path: at, projectId });
   if (!read.ok) return unread(read.message);
   const project = projectSchema.safeParse(read.value);
   if (!project.success) return unread(unreadable("project page"));
   const { title, status } = project.data.project;
   const blocker = remakeBlocker(status, isSampleProject(deps.db, projectId));
   if (blocker !== undefined) return { projectId, title, reason: blocker };
-  const base = await callApi(deps, remakeTool, "POST", `${at}/revisions/prepare`);
+  const base = await callApi(deps, remakeTool, {
+    method: "POST",
+    path: `${at}/revisions/prepare`,
+    projectId,
+  });
   const baseline = base.ok ? baselineSchema.safeParse(base.value) : undefined;
   if (!base.ok) return { ...unread(base.message), title };
   if (baseline === undefined || !baseline.success)
     return { ...unread(unreadable("saved version")), title };
-  const previewed = await callApi(deps, remakeTool, "POST", `${at}/rebuild/preview`, {
-    baseRevisionId: baseline.data.view.revision.id,
-    request: { kind: "allAffected" },
+  const previewed = await callApi(deps, remakeTool, {
+    method: "POST",
+    path: `${at}/rebuild/preview`,
+    body: { baseRevisionId: baseline.data.view.revision.id, request: { kind: "allAffected" } },
+    projectId,
   });
   if (!previewed.ok) return { ...unread(previewed.message), title };
   const preview = previewSchema.safeParse(previewed.value);
