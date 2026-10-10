@@ -209,12 +209,11 @@ export function answerExternalReview(
 }
 
 // Where a review stands, in the one order get_external_review and a refused verdict both say
-// it: a verdict already kept (Restore would not bring it back), its project in the Trash, its
-// step canceled (no new one waits), then its item replaced or its step gone. It waits only
-// when none holds, exactly when `stillWaiting` lists it.
+// it: a verdict already kept, its step canceled (no new one waits), its item replaced or its
+// step gone, then its project in the Trash - said last, as only then would Restore bring it
+// back. It waits only when none holds, exactly when `stillWaiting` lists it.
 export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
   if (review.state === "answered" || review.state === "auto-passed") return review.state;
-  if (projectTrashed(db, review.projectId)) return "trashed";
   if (
     db
       .prepare(`SELECT 1 FROM revision_work w WHERE w.id=? AND ${canceledStep("w")}`)
@@ -222,12 +221,13 @@ export function reviewStanding(db: DatabaseSync, review: ExternalReview): Review
   )
     return "canceled";
   if (review.state === "superseded") return "superseded";
-  const waits = db
+  const wanted = db
     .prepare(
       `SELECT 1 FROM external_reviews e WHERE e.project_id=? AND e.id=? AND ${wantedBy("e")} AND ${liveWork("e")}`,
     )
     .get(review.projectId, review.id);
-  return waits === undefined ? "superseded" : "waiting";
+  if (wanted === undefined) return "superseded";
+  return projectTrashed(db, review.projectId) ? "trashed" : "waiting";
 }
 
 // A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the

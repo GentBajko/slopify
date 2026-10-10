@@ -271,3 +271,34 @@ it("refuses a second verdict in the Trash as answered, as it reads", () => {
     }),
   ).toMatchObject({ ok: false, reason: "auto-passed" });
 });
+
+// Trash is said only when Restore would bring the review back: a canceled run's or a replaced
+// review stays closed after Restore.
+it("says a canceled run's review in the Trash is canceled, and a replaced one replaced", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-11T00:00:00.000Z')").run();
+  const standing = (): string => {
+    const review = externalReviewById(db, "p1", "er1");
+    if (review === undefined) throw new Error("the review row stays");
+    return reviewStanding(db, review);
+  };
+  expect(standing()).toBe("trashed");
+  db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
+  expect(standing()).toBe("superseded");
+  db.prepare("UPDATE revision_work SET state='canceled' WHERE id='images-work'").run();
+  expect(standing()).toBe("canceled");
+});
+
+// A canceled step's review marked replaced says canceled: no new one waits for it.
+it("says a replaced review of a canceled step is canceled", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE external_reviews SET state='superseded' WHERE id='er1'").run();
+  db.prepare("UPDATE stages SET state='canceled' WHERE id='images'").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("canceled");
+});
