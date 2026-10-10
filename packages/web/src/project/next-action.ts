@@ -153,6 +153,12 @@ export const stageWords: Readonly<Record<StageKind, string>> = {
   document: "PDF",
 };
 
+// What a stopped run says, on its page and on Home's Needs you.
+export const stoppedLines = {
+  title: "The run stopped before it finished.",
+  why: "Continuing makes only what is missing; everything made so far is kept.",
+} as const;
+
 const lower = (text: string): string =>
   /^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
 
@@ -362,8 +368,8 @@ export function nextActionFor(input: NextActionInput): NextAction | undefined {
       situation: "stopped",
       tone: "off",
       status: project.status === "canceled" ? "Canceled" : stoppedWord,
-      title: "The run stopped before it finished.",
-      why: "Continuing makes only what is missing; everything made so far is kept.",
+      title: stoppedLines.title,
+      why: stoppedLines.why,
       action: { label: "Continue the run", intent: { kind: "resume" } },
     };
 

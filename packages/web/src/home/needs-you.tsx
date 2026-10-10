@@ -24,6 +24,7 @@ import {
   checkpointStatus,
 } from "@/project/checkpoint-api";
 import { fixOf } from "@/project/fix-it";
+import { stoppedLines } from "@/project/next-action";
 import { stageNames } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { keys } from "@/queries";
@@ -269,7 +270,7 @@ export function StoppedItem({
       title={projectLink(project)}
       detail={
         actions.refusal === undefined
-          ? "The run stopped before it finished. Continuing makes only what is missing; everything made so far is kept."
+          ? `${stoppedLines.title} ${stoppedLines.why}`
           : `It didn't continue: ${actions.refusal.message}`
       }
       action={
