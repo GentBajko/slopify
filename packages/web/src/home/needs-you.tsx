@@ -62,6 +62,34 @@ const heldWords: Readonly<Record<CheckpointGate["stage"], string>> = {
   video: "before the video",
 };
 
+// "Keep as is": held work the person does not want run (a step added after the project was
+// made, whose run would redraw what is finished) leaves Needs you until the next edit.
+function useKeepAsIs(project: ProjectListing) {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const notify = useToast();
+  const keep = useMutation({
+    mutationFn: (aside: boolean) => setAside(api, project.id, aside),
+    onSuccess: (_, aside) => {
+      notify(
+        aside
+          ? `Kept as is: ${project.title}. It is off Needs you; editing the project brings it back.`
+          : `${project.title} is back on Needs you.`,
+        "success",
+        aside ? { label: "Undo", run: () => keep.mutate(false) } : undefined,
+      );
+    },
+    onError: (error: Error) => {
+      notify(
+        `${project.title} wasn't kept as is: ${error.message} Press Keep as is again.`,
+        "error",
+      );
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: keys.projects }),
+  });
+  return keep;
+}
+
 export function WaitingItem({
   project,
   primary,
@@ -121,27 +149,7 @@ export function WaitingItem({
       ]);
     },
   });
-  // "Keep as is": held work the person does not want run (a step added after the project was
-  // made, whose run would redraw what is finished) leaves Needs you until the next edit.
-  const keep = useMutation({
-    mutationFn: (aside: boolean) => setAside(api, project.id, aside),
-    onSuccess: (_, aside) => {
-      notify(
-        aside
-          ? `Kept as is: ${project.title}. It is off Needs you; editing the project brings it back.`
-          : `${project.title} is back on Needs you.`,
-        "success",
-        aside ? { label: "Undo", run: () => keep.mutate(false) } : undefined,
-      );
-    },
-    onError: (error: Error) => {
-      notify(
-        `${project.title} wasn't kept as is: ${error.message} Press Keep as is again.`,
-        "error",
-      );
-    },
-    onSettled: () => client.invalidateQueries({ queryKey: keys.projects }),
-  });
+  const keep = useKeepAsIs(project);
   const label = gate === undefined ? undefined : approveWords[gate.stage];
   useCommand({
     id: `home.approve.${project.id}`,
