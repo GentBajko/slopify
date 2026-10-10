@@ -646,6 +646,33 @@ describe("GET /api/projects", () => {
     expect(await status()).toBe("done");
   });
 
+  // Its page says the same, each project read alone: another uploaded project with work still
+  // to run stays paused beside it.
+  it("shows an uploaded, paused project with nothing admitted as done on its page", async () => {
+    const { app, db } = harness();
+    for (const id of ["p1", "p2"]) {
+      db.exec(
+        `INSERT INTO projects VALUES ('${id}','First','16:9','{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}','2026-09-01','2026-09-01')`,
+      );
+      db.exec(
+        `INSERT INTO stages (id, project_id, kind, source, state) VALUES ('${id}-video','${id}','video','generate','pending')`,
+      );
+      db.exec(`INSERT INTO project_controls (project_id, paused) VALUES ('${id}', 1)`);
+      db.exec(
+        `INSERT INTO project_uploads (project_id, uploaded_at) VALUES ('${id}','2026-09-01')`,
+      );
+    }
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec(
+      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('w2','p2','r2','p2-video','video','f','pending','allowed','2026-09-01')",
+    );
+    const status = async (id: string) =>
+      ((await (await app.request(`/api/projects/${id}`)).json()) as { project: { status: string } })
+        .project.status;
+    expect(await status("p1")).toBe("done");
+    expect(await status("p2")).toBe("paused");
+  });
+
   it("carries no stage rows in the list, because the screen reads none", async () => {
     const { app } = harness();
     const audio = await stage(app, "audio", "narration");
