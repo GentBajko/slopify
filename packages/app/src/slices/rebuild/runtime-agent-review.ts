@@ -48,7 +48,7 @@ export async function executeAgentReviewRecipe(
   const [stage, itemKey, , prompt, mode, retries] = values.data;
   const projectId = context.work.projectId;
   const known = externalReviewByFingerprint(deps.db, projectId, piece.fingerprint);
-  if (known === undefined || known.state === "superseded") {
+  if (known === undefined || known.state === "superseded" || known.state === "canceled") {
     const material = reviewMaterial(
       deps,
       context,

@@ -11,7 +11,7 @@ import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
 import { answerExternalReview } from "../src/slices/reviews/external-repo.js";
 import { externalReviewById } from "../src/slices/reviews/external-rows.js";
-import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
+import { reviewStanding, waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
 import { projectHolds } from "../src/slices/reviews/holds.js";
 import { boot, cancel, narratingWhileAgentsReview, settleUntil } from "./agent-reviews-run.fake.js";
 import { current } from "./revision-rebuild.fake.js";
@@ -177,4 +177,33 @@ it("keeps an agent's verdict through a cancel and reopens only the review that w
     verdict,
     answeredBy: "agent",
   });
+});
+
+// A review Cancel closed reads canceled, not replaced: its item wasn't made again. Taken up
+// again, the step asks it once more and the same review waits.
+it("says a canceled run's review is canceled until its step asks again, then waiting", {
+  timeout: 30_000,
+}, async () => {
+  const { h } = await narratingWhileAgentsReview(closers);
+  const [review] = waitingExternalReviews(h.deps.db, h.projectId);
+  if (review === undefined) throw new Error("a review expected");
+  await cancel(h);
+  const closed = externalReviewById(h.deps.db, h.projectId, review.id);
+  if (closed === undefined) throw new Error("the review is gone");
+  expect(closed.state).toBe("canceled");
+  expect(reviewStanding(h.deps.db, closed)).toBe("canceled");
+  expect(
+    await recoverProject(h.deps, h.projectId, {
+      baseRevisionId: current(h.deps, h.projectId).revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "retry", stage: "images" },
+    }),
+  ).toMatchObject({ ok: true });
+  await vi.waitFor(
+    () => expect(externalReviewById(h.deps.db, h.projectId, review.id)?.state).toBe("waiting"),
+    { timeout: 4_000 },
+  );
+  const asked = externalReviewById(h.deps.db, h.projectId, review.id);
+  if (asked === undefined) throw new Error("the review is gone");
+  expect(reviewStanding(h.deps.db, asked)).toBe("waiting");
 });

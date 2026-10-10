@@ -224,6 +224,7 @@ describe("migrate", () => {
       { version: 56, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 57, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 58, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 59, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -233,16 +234,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 51 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 52 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(59, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(60, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 59 is newer than this app knows (58)",
+      "database schema 60 is newer than this app knows (59)",
     );
   });
 
@@ -675,4 +676,28 @@ it("keeps each channel's cast in the alphabetical order it was shown in, per cha
     { id: "m3", position: 2 },
     { id: "m4", position: 0 },
   ]);
+});
+
+it("keeps every external review and lets Cancel close one as canceled", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 58 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  const add = db.prepare(
+    `INSERT INTO external_reviews (id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at,verdict,answered_by,answered_at)
+     VALUES (?,'p1','r1','w1','pc1','image:one','image:one','images','f',?,'{}',?,'a','b',?,?,?)`,
+  );
+  add.run("er1", "rf1", "waiting", null, null, null);
+  add.run("er2", "rf2", "answered", '{"passed":true,"reasons":[]}', "agent", "c");
+  expect(() => add.run("er3", "rf3", "canceled", null, null, null)).toThrow();
+  migrate(db, clock);
+  expect(
+    db.prepare("SELECT id, state, answered_by FROM external_reviews ORDER BY id").all(),
+  ).toEqual([
+    { id: "er1", state: "waiting", answered_by: null },
+    { id: "er2", state: "answered", answered_by: "agent" },
+  ]);
+  add.run("er3", "rf3", "canceled", null, null, null);
+  expect(db.prepare("SELECT state FROM external_reviews WHERE id='er3'").get()).toEqual({
+    state: "canceled",
+  });
 });

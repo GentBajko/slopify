@@ -9,7 +9,7 @@ import { liveWork, reviewStanding, wantedBy } from "./external-waiting.js";
 import { type ReviewVerdict, reviewStages } from "./model.js";
 
 // A step asked again for the same review keeps its row; one whose earlier wait was superseded
-// waits again from now.
+// or canceled waits again from now.
 export function openExternalReview(
   db: DatabaseSync,
   input: Omit<ExternalReview, "state" | "verdict" | "answeredBy" | "answeredAt">,
@@ -22,7 +22,7 @@ export function openExternalReview(
        item_fingerprint=excluded.item_fingerprint,material=excluded.material,state='waiting',
        waiting_since=excluded.waiting_since,deadline_at=excluded.deadline_at,verdict=NULL,
        answered_by=NULL,answered_at=NULL
-     WHERE external_reviews.state='superseded'`,
+     WHERE external_reviews.state IN ('superseded','canceled')`,
   ).run(
     input.id,
     input.projectId,
@@ -50,7 +50,7 @@ export function openExternalReview(
 // each review waits its whole two hours from then, not from before the cancel.
 export function stopWaitingReviews(db: DatabaseSync, projectId: string): void {
   db.prepare(
-    "UPDATE external_reviews SET state='superseded' WHERE project_id=? AND state='waiting'",
+    "UPDATE external_reviews SET state='canceled' WHERE project_id=? AND state='waiting'",
   ).run(projectId);
 }
 

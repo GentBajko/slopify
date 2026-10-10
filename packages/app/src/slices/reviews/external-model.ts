@@ -6,7 +6,14 @@ import type { ReviewMaterial } from "./verdict.js";
 // with no agent at all still finishes the same evening.
 export const externalReviewWaitMs = 2 * 60 * 60 * 1000;
 
-export const externalReviewStates = ["waiting", "answered", "auto-passed", "superseded"] as const;
+// `canceled`: Cancel closed it while it waited; taken up again, its step asks it once more.
+export const externalReviewStates = [
+  "waiting",
+  "answered",
+  "auto-passed",
+  "superseded",
+  "canceled",
+] as const;
 export type ExternalReviewState = (typeof externalReviewStates)[number];
 
 // What the built-in reviewer would be sent: the prompt's parts, and the pictures by their stored
