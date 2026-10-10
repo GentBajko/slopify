@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
 import { waitingExternalReviews } from "../reviews/external.js";
@@ -10,6 +11,8 @@ import {
   heldTopics,
   lateUploads,
   pausedRuns,
+  rowsOf,
+  type SkipRow,
 } from "./attention-work.js";
 
 export const attentionKinds = [
@@ -48,23 +51,50 @@ export interface AttentionEntry {
 export interface AttentionDeps {
   readonly db: DatabaseSync;
   readonly paths: Paths;
+  readonly log: Pick<Log, "write">;
 }
 
-// Oldest first. A project Kept as is waits for nobody, so none of its entries is listed.
+const projectOf = z.object({ project_id: z.string() });
+
+// Oldest first. A project Kept as is waits for nobody, so none of its entries is listed. Each
+// source is read on its own: one that fails is logged and left out, and the others still list.
 export function needsAttention(deps: AttentionDeps, now: Date): readonly AttentionEntry[] {
-  const aside = setAsideProjects(deps.db);
-  return [
-    ...externalReviews(deps.db),
-    ...flaggedVerdicts(deps.db),
-    ...heldCheckpoints(deps.db),
-    ...failedSteps(deps.db),
-    ...pausedRuns(deps.db),
-    ...heldTopics(deps.db),
-    ...lateUploads(deps, now),
-    ...extensionFailures(deps.db),
-  ]
+  const { db, log } = deps;
+  const skip: SkipRow = (source, value, error) => {
+    const project = projectOf.safeParse(value);
+    log.write("error", "attention.row", {
+      ...(project.success ? { projectId: project.data.project_id } : {}),
+      detail: `needs_attention left out one of the ${source} it could not read: ${messageOf(error)}`,
+    });
+  };
+  const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
+    ["external reviews", () => externalReviews(db)],
+    ["flagged verdicts", () => flaggedVerdicts(db, skip)],
+    ["review checkpoints", () => heldCheckpoints(db, skip)],
+    ["failed steps", () => failedSteps(db, skip)],
+    ["paused runs", () => pausedRuns(db, skip)],
+    ["held topics", () => heldTopics(db, skip)],
+    ["late uploads", () => lateUploads(deps, now)],
+    ["extension failures", () => extensionFailures(db, skip)],
+  ];
+  const aside = setAsideProjects(db);
+  return sources
+    .flatMap(([source, read]) => {
+      try {
+        return read();
+      } catch (error) {
+        log.write("error", "attention.source", {
+          detail: `needs_attention left out all ${source} because reading them failed: ${messageOf(error)}`,
+        });
+        return [];
+      }
+    })
     .filter((entry) => entry.projectId === null || !aside.has(entry.projectId))
     .toSorted((a, b) => a.since.localeCompare(b.since));
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function titles(db: DatabaseSync): ReadonlyMap<string, string> {
@@ -113,8 +143,8 @@ const verdictRow = z.object({
 });
 
 // Each item's latest failed verdict nobody has acted on, in the current version.
-function flaggedVerdicts(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+function flaggedVerdicts(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT v.id, v.project_id, p.title, v.stage, v.item_key, v.reasons, v.created_at, v.redo_state, v.redo_error, h.revision_id AS head
        FROM review_verdicts v
@@ -124,12 +154,13 @@ function flaggedVerdicts(db: DatabaseSync): readonly AttentionEntry[] {
          AND NOT EXISTS (SELECT 1 FROM review_verdicts n WHERE n.project_id=v.project_id
            AND n.item_key=v.item_key AND (n.created_at>v.created_at OR (n.created_at=v.created_at AND n.rowid>v.rowid)))`,
     )
-    .all()
-    .map((value) => {
-      const row = verdictRow.parse(value);
-      const reasons = z.array(z.string()).parse(JSON.parse(row.reasons));
-      const redoing = row.redo_state === "pending" || row.redo_state === "started";
-      return {
+    .all();
+  return rowsOf(rows, "flagged verdicts", skip, (value) => {
+    const row = verdictRow.parse(value);
+    const reasons = z.array(z.string()).parse(JSON.parse(row.reasons));
+    const redoing = row.redo_state === "pending" || row.redo_state === "started";
+    return [
+      {
         kind: "flagged-verdict",
         since: row.created_at,
         projectId: row.project_id,
@@ -144,8 +175,9 @@ function flaggedVerdicts(db: DatabaseSync): readonly AttentionEntry[] {
         agentCanAct: !redoing,
         ids: { id: row.project_id, verdictId: row.id, baseRevisionId: row.head },
         tools: ["list_reviews", "overrule_review", "redo_review"],
-      } satisfies AttentionEntry;
-    });
+      } satisfies AttentionEntry,
+    ];
+  });
 }
 
 const gateRow = z.object({
@@ -159,8 +191,8 @@ const gateRow = z.object({
 });
 
 // A prepared project's own Before Video hold waits for its scheduled day, not for anyone.
-function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+function heldCheckpoints(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT c.project_id, p.title, c.checkpoint_id, c.stage, c.revision_id, c.fingerprint, c.created_at
        FROM review_checkpoints c
@@ -169,10 +201,11 @@ function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}
          AND NOT (c.stage='video' AND EXISTS (SELECT 1 FROM prepared_videos v WHERE v.project_id=c.project_id))`,
     )
-    .all()
-    .map((value) => {
-      const row = gateRow.parse(value);
-      return {
+    .all();
+  return rowsOf(rows, "review checkpoints", skip, (value) => {
+    const row = gateRow.parse(value);
+    return [
+      {
         kind: "checkpoint",
         since: row.created_at,
         projectId: row.project_id,
@@ -189,6 +222,7 @@ function heldCheckpoints(db: DatabaseSync): readonly AttentionEntry[] {
           fingerprint: row.fingerprint,
         },
         tools: ["get_checkpoints", "approve_checkpoint"],
-      } satisfies AttentionEntry;
-    });
+      } satisfies AttentionEntry,
+    ];
+  });
 }

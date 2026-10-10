@@ -40,7 +40,10 @@ export function createMcpServer(deps: McpDeps): McpServer {
     () =>
       text(
         JSON.stringify({
-          entries: needsAttention({ db: deps.db, paths: deps.paths }, deps.clock.now()),
+          entries: needsAttention(
+            { db: deps.db, paths: deps.paths, log: deps.log },
+            deps.clock.now(),
+          ),
         }),
       ),
   );

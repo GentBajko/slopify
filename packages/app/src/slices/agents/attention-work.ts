@@ -5,6 +5,25 @@ import { liveProject } from "../admission/repo.js";
 import { releaseCalendar } from "../studio/calendar.js";
 import type { AttentionEntry } from "./attention.js";
 
+// A row a source could not read: it is left out and logged, and the rest still list.
+export type SkipRow = (source: string, value: unknown, error: unknown) => void;
+
+export function rowsOf<T>(
+  rows: readonly unknown[],
+  source: string,
+  skip: SkipRow,
+  entries: (value: unknown) => readonly T[],
+): T[] {
+  return rows.flatMap((value) => {
+    try {
+      return entries(value);
+    } catch (error) {
+      skip(source, value, error);
+      return [];
+    }
+  });
+}
+
 const stageRow = z.object({
   project_id: z.string(),
   title: z.string(),
@@ -18,8 +37,8 @@ const stageRow = z.object({
 // A narration chunk that stopped matching its text is recorded again by Slopify itself
 // (`rebuild/narration-retry.ts`): pending (also while it waits for a busy project), or started
 // after the failure it answers. A short whose pick stopped fails the video stage the same way.
-export function failedSteps(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+export function failedSteps(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT s.project_id, p.title, s.kind, s.failure_reason, s.finished_at, h.revision_id AS head,
          (s.kind IN ('audio','video') AND EXISTS (SELECT 1 FROM narration_retries n WHERE n.project_id=s.project_id
@@ -29,11 +48,12 @@ export function failedSteps(db: DatabaseSync): readonly AttentionEntry[] {
        LEFT JOIN project_heads h ON h.project_id=s.project_id
        WHERE s.state='failed' AND ${liveProject("s", "project_id")}`,
     )
-    .all()
-    .map((value) => {
-      const row = stageRow.parse(value);
-      const retrying = row.retrying === 1;
-      return {
+    .all();
+  return rowsOf(rows, "failed steps", skip, (value) => {
+    const row = stageRow.parse(value);
+    const retrying = row.retrying === 1;
+    return [
+      {
         kind: "failed-step",
         since: row.finished_at ?? "",
         projectId: row.project_id,
@@ -61,8 +81,9 @@ export function failedSteps(db: DatabaseSync): readonly AttentionEntry[] {
           "retry_stage",
           "soften_stage",
         ],
-      } satisfies AttentionEntry;
-    });
+      } satisfies AttentionEntry,
+    ];
+  });
 }
 
 const pausedRow = z.object({
@@ -74,18 +95,19 @@ const pausedRow = z.object({
 
 // No pause reason is stored: any paused run is the agent's to continue once nothing in the
 // project still needs fixing, whoever paused it.
-export function pausedRuns(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+export function pausedRuns(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT p.id, p.title, p.updated_at, h.revision_id AS head FROM projects p
        JOIN project_controls c ON c.project_id=p.id AND c.paused=1
        LEFT JOIN project_heads h ON h.project_id=p.id
-       WHERE NOT EXISTS (SELECT 1 FROM project_trash t WHERE t.project_id=p.id)`,
+       WHERE ${liveProject("p")}`,
     )
-    .all()
-    .map((value) => {
-      const row = pausedRow.parse(value);
-      return {
+    .all();
+  return rowsOf(rows, "paused runs", skip, (value) => {
+    const row = pausedRow.parse(value);
+    return [
+      {
         kind: "paused-run",
         since: row.updated_at,
         projectId: row.id,
@@ -98,8 +120,9 @@ export function pausedRuns(db: DatabaseSync): readonly AttentionEntry[] {
         agentCanAct: true,
         ids: { id: row.id, ...(row.head === null ? {} : { baseRevisionId: row.head }) },
         tools: ["get_project", "resume_project"],
-      } satisfies AttentionEntry;
-    });
+      } satisfies AttentionEntry,
+    ];
+  });
 }
 
 const topicsRow = z.object({
@@ -109,17 +132,18 @@ const topicsRow = z.object({
   since: z.string(),
 });
 
-export function heldTopics(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+export function heldTopics(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT s.id, s.name, count(t.id) AS held, min(t.created_at) AS since FROM schedules s
        JOIN schedule_topics t ON t.schedule_id=s.id AND t.state='held'
        WHERE s.deleted_at IS NULL GROUP BY s.id, s.name`,
     )
-    .all()
-    .map((value) => {
-      const row = topicsRow.parse(value);
-      return {
+    .all();
+  return rowsOf(rows, "held topics", skip, (value) => {
+    const row = topicsRow.parse(value);
+    return [
+      {
         kind: "held-topics",
         since: row.since,
         projectId: null,
@@ -131,8 +155,9 @@ export function heldTopics(db: DatabaseSync): readonly AttentionEntry[] {
         agentCanAct: true,
         ids: { id: row.id },
         tools: ["list_held_topics", "approve_topics", "reject_topics", "approve_all_topics"],
-      } satisfies AttentionEntry;
-    });
+      } satisfies AttentionEntry,
+    ];
+  });
 }
 
 // Calendar → Releases' "Late · upload now": the agent reports it; uploading is the person's.
@@ -179,8 +204,8 @@ const videoRow = z.object({
 });
 
 // What the Studio extension could not finish on YouTube's side: the agent reports it.
-export function extensionFailures(db: DatabaseSync): readonly AttentionEntry[] {
-  return db
+export function extensionFailures(db: DatabaseSync, skip: SkipRow): readonly AttentionEntry[] {
+  const rows = db
     .prepare(
       `SELECT v.project_id, p.title, v.short, v.recorded_at, v.finish_state, v.finish_message,
          v.comment_state, v.comment_message, v.ab_state, v.ab_message, v.ab_at
@@ -188,39 +213,39 @@ export function extensionFailures(db: DatabaseSync): readonly AttentionEntry[] {
        WHERE (v.finish_state='failed' OR v.comment_state='failed' OR v.ab_state='failed')
          AND ${liveProject("v", "project_id")}`,
     )
-    .all()
-    .flatMap((value) => {
-      const row = videoRow.parse(value);
-      const touches = [
-        row.finish_state === "failed"
-          ? {
-              what: "The finishing touches in YouTube Studio (end screen, captions, related video)",
-              message: row.finish_message,
-              at: row.recorded_at,
-            }
-          : undefined,
-        row.comment_state === "failed"
-          ? { what: "The pinned comment", message: row.comment_message, at: row.recorded_at }
-          : undefined,
-        row.ab_state === "failed"
-          ? { what: "The A/B test", message: row.ab_message, at: row.ab_at ?? row.recorded_at }
-          : undefined,
-      ].filter((touch) => touch !== undefined);
-      return touches.map(
-        (touch) =>
-          ({
-            kind: "extension-failure",
-            since: touch.at,
-            projectId: row.project_id,
-            title: row.title,
-            stage: "video",
-            itemKey: row.short === 0 ? "video" : `short:${String(row.short)}`,
-            reason: `${touch.what} failed: ${touch.message ?? "the extension gave no reason."} Fixing it is the extension's or the person's: report it.`,
-            autoRetryInFlight: false,
-            agentCanAct: false,
-            ids: { id: row.project_id, short: String(row.short) },
-            tools: ["get_youtube_videos"],
-          }) satisfies AttentionEntry,
-      );
-    });
+    .all();
+  return rowsOf(rows, "extension failures", skip, (value) => {
+    const row = videoRow.parse(value);
+    const touches = [
+      row.finish_state === "failed"
+        ? {
+            what: "The finishing touches in YouTube Studio (end screen, captions, related video)",
+            message: row.finish_message,
+            at: row.recorded_at,
+          }
+        : undefined,
+      row.comment_state === "failed"
+        ? { what: "The pinned comment", message: row.comment_message, at: row.recorded_at }
+        : undefined,
+      row.ab_state === "failed"
+        ? { what: "The A/B test", message: row.ab_message, at: row.ab_at ?? row.recorded_at }
+        : undefined,
+    ].filter((touch) => touch !== undefined);
+    return touches.map(
+      (touch) =>
+        ({
+          kind: "extension-failure",
+          since: touch.at,
+          projectId: row.project_id,
+          title: row.title,
+          stage: "video",
+          itemKey: row.short === 0 ? "video" : `short:${String(row.short)}`,
+          reason: `${touch.what} failed: ${touch.message ?? "the extension gave no reason."} Fixing it is the extension's or the person's: report it.`,
+          autoRetryInFlight: false,
+          agentCanAct: false,
+          ids: { id: row.project_id, short: String(row.short) },
+          tools: ["get_youtube_videos"],
+        }) satisfies AttentionEntry,
+    );
+  });
 }

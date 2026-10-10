@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import type { LogFields } from "../../kernel/log.js";
 import { waitingReviewFixture } from "../reviews/external.fake.js";
 import { saveVerdict } from "../reviews/repo.js";
 import { insertOutput } from "../storage/repo.js";
-import { needsAttention } from "./attention.js";
+import { type AttentionDeps, needsAttention } from "./attention.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -12,6 +13,18 @@ afterEach(() => {
 });
 
 const now = new Date("2026-09-10T12:00:00.000Z");
+const quiet = { write: () => undefined };
+
+// The fixture's deps with what needs_attention logs collected.
+function logged(f: { readonly h: { readonly deps: Omit<AttentionDeps, "log"> } }) {
+  const lines: { event: string; fields: LogFields | undefined }[] = [];
+  const deps: AttentionDeps = {
+    db: f.h.deps.db,
+    paths: f.h.deps.paths,
+    log: { write: (_level, event, fields) => lines.push({ event, fields }) },
+  };
+  return { deps, lines };
+}
 const scheduleId = "5c4e0f2a-7b1d-4e3a-9c6f-2d8b1a0e4f71";
 const templateId = "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d";
 const chunkFailure =
@@ -80,7 +93,7 @@ function everything() {
 
 it("lists every kind of waiting decision oldest first, with what the fixing tools need", () => {
   const f = everything();
-  const entries = needsAttention(f.h.deps, now);
+  const entries = needsAttention({ ...f.h.deps, log: quiet }, now);
   expect(entries.map((entry) => entry.kind)).toEqual([
     "external-review",
     "flagged-verdict",
@@ -129,7 +142,8 @@ it("lists every kind of waiting decision oldest first, with what the fixing tool
 it("marks a failed narration step as in flight while Slopify re-records its chunk", () => {
   const f = everything();
   const { db } = f.h.deps;
-  const failed = () => needsAttention(f.h.deps, now).find((entry) => entry.kind === "failed-step");
+  const failed = () =>
+    needsAttention({ ...f.h.deps, log: quiet }, now).find((entry) => entry.kind === "failed-step");
   db.prepare(
     "INSERT INTO narration_retries(project_id,chunk_key,tries,state,detail,updated_at) VALUES ('p1','narration:5',1,'pending',NULL,'2026-09-10T00:04:00.000Z')",
   ).run();
@@ -149,19 +163,24 @@ it("marks a flagged verdict whose redo is under way as in flight, and leaves dec
   const { db } = f.h.deps;
   db.prepare("UPDATE review_verdicts SET redo_state='pending' WHERE id='v1'").run();
   expect(
-    needsAttention(f.h.deps, now).find((entry) => entry.kind === "flagged-verdict")
-      ?.autoRetryInFlight,
+    needsAttention({ ...f.h.deps, log: quiet }, now).find(
+      (entry) => entry.kind === "flagged-verdict",
+    )?.autoRetryInFlight,
   ).toBe(true);
   db.prepare("UPDATE review_verdicts SET redo_state=NULL, action='overruled' WHERE id='v1'").run();
-  expect(needsAttention(f.h.deps, now).some((entry) => entry.kind === "flagged-verdict")).toBe(
-    false,
-  );
+  expect(
+    needsAttention({ ...f.h.deps, log: quiet }, now).some(
+      (entry) => entry.kind === "flagged-verdict",
+    ),
+  ).toBe(false);
 });
 
 it("lists a paused run as one an agent may continue, whoever paused it", () => {
   const f = everything();
   f.h.deps.db.prepare("INSERT INTO project_controls(project_id,paused) VALUES ('p1',1)").run();
-  expect(needsAttention(f.h.deps, now).find((entry) => entry.kind === "paused-run")).toMatchObject({
+  expect(
+    needsAttention({ ...f.h.deps, log: quiet }, now).find((entry) => entry.kind === "paused-run"),
+  ).toMatchObject({
     agentCanAct: true,
     ids: { id: "p1", baseRevisionId: f.revisionId },
     tools: ["get_project", "resume_project"],
@@ -178,15 +197,143 @@ it("leaves out a prepared project's own video checkpoint, a project kept as is, 
     "INSERT INTO prepared_videos(project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES ('p1',?,'Saved',1,'2026-09-10T00:00:00.000Z')",
   ).run(scheduleId);
   expect(
-    needsAttention(f.h.deps, now)
+    needsAttention({ ...f.h.deps, log: quiet }, now)
       .filter((entry) => entry.kind === "checkpoint")
       .map((entry) => entry.stage),
   ).toEqual(["images"]);
   db.prepare(
     "INSERT INTO project_set_aside(project_id,revision_id,set_at) VALUES ('p1',?,'t')",
   ).run(f.revisionId);
-  expect(needsAttention(f.h.deps, now).map((entry) => entry.kind)).toEqual(["held-topics"]);
+  expect(needsAttention({ ...f.h.deps, log: quiet }, now).map((entry) => entry.kind)).toEqual([
+    "held-topics",
+  ]);
   db.prepare("DELETE FROM project_set_aside").run();
   db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-10T01:00:00.000Z')").run();
-  expect(needsAttention(f.h.deps, now).map((entry) => entry.kind)).toEqual(["held-topics"]);
+  expect(needsAttention({ ...f.h.deps, log: quiet }, now).map((entry) => entry.kind)).toEqual([
+    "held-topics",
+  ]);
+});
+
+it("still lists the rest when one source fails, and says in the log which one", () => {
+  const f = everything();
+  const { deps, lines } = logged(f);
+  // A schedule the release calendar can't read makes the late-uploads source throw.
+  f.h.deps.db
+    .prepare(
+      `INSERT INTO schedules(id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,items_json,status,version,creation_hash,created_at,updated_at) VALUES ('broken','Broken',?,1,'{"kind":"never"}','UTC','skip','skip','[]','active',1,'h2','2026-09-10T00:00:00.000Z','2026-09-10T00:00:00.000Z')`,
+    )
+    .run(templateId);
+  const kinds = needsAttention(deps, now).map((entry) => entry.kind);
+  expect(kinds).not.toContain("late-upload");
+  expect(kinds).toEqual(
+    expect.arrayContaining(["external-review", "flagged-verdict", "checkpoint"]),
+  );
+  expect(lines).toEqual([
+    {
+      event: "attention.source",
+      fields: { detail: expect.stringContaining("late uploads") },
+    },
+  ]);
+});
+
+it("skips a row it can't read, logs it, and lists the others", () => {
+  const f = everything();
+  const { deps, lines } = logged(f);
+  f.h.deps.db.prepare("UPDATE review_verdicts SET reasons='not json' WHERE id='v1'").run();
+  const kinds = needsAttention(deps, now).map((entry) => entry.kind);
+  expect(kinds).not.toContain("flagged-verdict");
+  expect(kinds).toContain("external-review");
+  expect(lines).toEqual([
+    {
+      event: "attention.row",
+      fields: { projectId: "p1", detail: expect.stringContaining("flagged verdicts") },
+    },
+  ]);
+});
+
+it("gives a failed redo's error as the reason, and lists only each item's latest verdict", () => {
+  const f = everything();
+  const { db } = f.h.deps;
+  const flagged = () =>
+    needsAttention({ ...f.h.deps, log: quiet }, now).filter(
+      (entry) => entry.kind === "flagged-verdict",
+    );
+  const redoError =
+    "Slopify couldn't make this item again automatically: the image provider has no key. Fix that in Settings → Providers, then use Redo beside it.";
+  db.prepare("UPDATE review_verdicts SET redo_state='failed', redo_error=? WHERE id='v1'").run(
+    redoError,
+  );
+  expect(flagged()).toMatchObject([{ reason: redoError, agentCanAct: true }]);
+  const later = (id: string, passed: boolean, at: string) =>
+    saveVerdict(db, {
+      id,
+      projectId: "p1",
+      revisionId: f.revisionId,
+      itemKey: "thumbnail:image",
+      stage: "thumbnail",
+      itemFingerprint: `thumb-${id}`,
+      reviewFingerprint: `thumb-review-${id}`,
+      passed,
+      reasons: passed ? [] : ["The face is cut off."],
+      outcome: passed ? "passed" : "flagged",
+      attempt: 1,
+      action: null,
+      actionAt: null,
+      redoState: null,
+      redoError: null,
+      answeredBy: "model",
+      actionBy: null,
+      createdAt: at,
+    });
+  later("v2", false, "2026-09-10T00:10:00.000Z");
+  expect(flagged().map((entry) => [entry.ids.verdictId, entry.reason])).toEqual([
+    ["v2", "The face is cut off."],
+  ]);
+  later("v3", true, "2026-09-10T00:20:00.000Z");
+  expect(flagged()).toEqual([]);
+});
+
+it("lists the pinned comment's and the A/B test's failures on their own", () => {
+  const f = everything();
+  f.h.deps.db
+    .prepare(
+      "UPDATE youtube_videos SET finish_state='done', comment_state='failed', comment_message='The comment box was missing.', ab_state='failed', ab_message=NULL, ab_at='2026-09-10T00:08:00.000Z'",
+    )
+    .run();
+  const failures = needsAttention({ ...f.h.deps, log: quiet }, now).filter(
+    (entry) => entry.kind === "extension-failure",
+  );
+  expect(failures.map((entry) => [entry.since, entry.reason])).toEqual([
+    [
+      "2026-09-10T00:07:00.000Z",
+      "The pinned comment failed: The comment box was missing. Fixing it is the extension's or the person's: report it.",
+    ],
+    [
+      "2026-09-10T00:08:00.000Z",
+      "The A/B test failed: the extension gave no reason. Fixing it is the extension's or the person's: report it.",
+    ],
+  ]);
+});
+
+it("marks a video step whose shorts pick stopped as in flight while its chunk is re-recorded, but not another stage", () => {
+  const f = everything();
+  const { db } = f.h.deps;
+  const pickStopped =
+    "The shorts pick stopped: subtitles stopped matching the audio in narration chunk 2 of 4. Regenerate narration chunk 2 in Edit project → Narration, then Continue the run.";
+  db.prepare("UPDATE stages SET failure_reason=? WHERE id='video'").run(pickStopped);
+  db.prepare(
+    "UPDATE stages SET state='failed', failure_reason='The image provider refused.', finished_at='2026-09-10T00:05:00.000Z' WHERE id='images'",
+  ).run();
+  db.prepare(
+    "INSERT INTO narration_retries(project_id,chunk_key,tries,state,detail,updated_at) VALUES ('p1','narration:2',1,'started',NULL,'2026-09-10T00:06:00.000Z')",
+  ).run();
+  const failed = needsAttention({ ...f.h.deps, log: quiet }, now).filter(
+    (entry) => entry.kind === "failed-step",
+  );
+  expect(failed.map((entry) => [entry.stage, entry.reason, entry.autoRetryInFlight])).toEqual(
+    expect.arrayContaining([
+      ["video", pickStopped, true],
+      ["images", "The image provider refused.", false],
+    ]),
+  );
 });
