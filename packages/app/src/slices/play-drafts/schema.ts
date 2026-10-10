@@ -14,7 +14,7 @@ import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schem
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
-import { reviewModes, reviewStages } from "../reviews/model.js";
+import { reviewers, reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 import { ambientBedSources } from "../video/ambient-bed.js";
 import { voicesSettingsSchema } from "../voices/model.js";
@@ -128,6 +128,7 @@ export const playDraftFormSchema = z
         provider: text,
         model: text,
         thinking: z.enum(thinkingModes).optional(),
+        reviewer: z.enum(reviewers).optional(),
         retries: text,
         stages: z
           .partialRecord(

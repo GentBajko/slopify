@@ -45,6 +45,7 @@ export const localOperations = [
   "shorts-pick-v1",
   "short-render-v1",
   "review-v1",
+  "review-agent-v1",
   "concat-turns-v1",
   "voice-captions-v1",
   "audio-files-v1",

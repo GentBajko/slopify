@@ -18,7 +18,12 @@ import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { describeMessages } from "../narration/describe.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
-import { defaultReviewPrompts, reviewPromptKey, reviewRetriesOf } from "../reviews/model.js";
+import {
+  defaultReviewPrompts,
+  reviewedByAgent,
+  reviewPromptKey,
+  reviewRetriesOf,
+} from "../reviews/model.js";
 import { activeReviewStages } from "../reviews/rules.js";
 import { isLocalCliProvider } from "../settings/model.js";
 import {
@@ -389,7 +394,10 @@ export function estimateRun(
   // Automatic reviews: one call per reviewed item, on the reviewer's model. A failed item
   // made again is reviewed again, at most the retries allowed, which is not priced here.
   const reviews = draft.reviews;
-  if (reviews !== undefined)
+  if (reviews !== undefined && reviewedByAgent(reviews)) {
+    if (activeReviewStages(draft).length > 0)
+      local("Reviews", "An external agent answers each review through MCP; no API fee.");
+  } else if (reviews !== undefined)
     for (const stage of activeReviewStages(draft)) {
       const picked = rendered[reviewPromptKey(stage)]?.trim() ?? "";
       const prompt = picked === "" ? defaultReviewPrompts[stage].length : picked.length;

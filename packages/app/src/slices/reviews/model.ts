@@ -13,6 +13,15 @@ export type ReviewStage = (typeof reviewStages)[number];
 export const reviewModes = ["off", "flag", "redo"] as const;
 export type ReviewMode = (typeof reviewModes)[number];
 
+// Who answers the reviews: a text model Slopify calls, or an external agent through MCP.
+export const reviewers = ["model", "agent"] as const;
+export type Reviewer = (typeof reviewers)[number];
+
+export const reviewerLabels: Readonly<Record<Reviewer, string>> = {
+  model: "Model",
+  agent: "External agent (MCP)",
+};
+
 export interface ReviewStageSettings {
   readonly mode: ReviewMode;
   // A Review prompt from the library; absent or blank uses the stage's built-in one.
@@ -24,6 +33,9 @@ export interface ReviewSettings {
   readonly provider: string;
   readonly model: string;
   readonly thinking?: ThinkingMode | undefined;
+  // "agent": an external agent answers through MCP and provider/model are unused. Absent is
+  // the model, which keeps every saved project's settings, and so its steps, unchanged.
+  readonly reviewer?: "agent" | undefined;
   // How many times one item is made again after a failed review before it is kept and
   // flagged. Absent is `defaultReviewRetries`.
   readonly retries?: number | undefined;
@@ -66,6 +78,10 @@ export function reviewRetriesOf(settings: ReviewSettings | undefined): number {
   return settings?.retries ?? defaultReviewRetries;
 }
 
+export function reviewedByAgent(settings: Pick<ReviewSettings, "reviewer"> | undefined): boolean {
+  return settings?.reviewer === "agent";
+}
+
 export function reviewedStages(settings: ReviewSettings | undefined): readonly ReviewStage[] {
   return reviewStages.filter((stage) => reviewModeOf(settings, stage) !== "off");
 }
@@ -91,6 +107,7 @@ export interface ReviewSettingsForm {
   readonly provider: string;
   readonly model: string;
   readonly thinking?: ThinkingMode | undefined;
+  readonly reviewer?: Reviewer | undefined;
   readonly retries: string;
   readonly stages: Readonly<
     Partial<Record<ReviewStage, { readonly mode: ReviewMode; readonly prompt: string }>>
@@ -102,6 +119,7 @@ export function reviewSettingsForm(settings: ReviewSettings): ReviewSettingsForm
     provider: settings.provider,
     model: settings.model,
     ...(settings.thinking === undefined ? {} : { thinking: settings.thinking }),
+    ...(settings.reviewer === "agent" ? { reviewer: "agent" as const } : {}),
     retries: settings.retries === undefined ? "" : String(settings.retries),
     stages: Object.fromEntries(
       reviewStages.flatMap((stage) => {
@@ -138,6 +156,7 @@ export function reviewSettingsFromForm(
       provider: form.provider,
       model: form.model,
       ...(form.thinking === undefined ? {} : { thinking: form.thinking }),
+      ...(form.reviewer === "agent" ? { reviewer: "agent" as const } : {}),
       ...(retries === undefined || !valid ? {} : { retries }),
       stages,
     },

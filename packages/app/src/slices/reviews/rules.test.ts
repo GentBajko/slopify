@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RunDraft } from "../admission/model.js";
 import { admit } from "../admission/rules.js";
+import { reviewSettingsForm, reviewSettingsFromForm } from "./model.js";
 import { activeReviewStages, reviewFields } from "./rules.js";
 
 const sources = {
@@ -100,5 +101,66 @@ describe("review admission", () => {
     expect(result.ok ? [] : result.fields.map((field) => field.field)).toContain(
       "reviews.provider",
     );
+  });
+});
+
+describe("the external agent reviewer", () => {
+  it("needs no reviewer model and may review pictures", () => {
+    expect(
+      reviewFields(
+        draft({
+          provider: "",
+          model: "",
+          reviewer: "agent",
+          stages: {
+            images: { mode: "redo" },
+            thumbnail: { mode: "flag" },
+            shorts: { mode: "flag" },
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("still checks the number of redos", () => {
+    expect(
+      reviewFields(
+        draft({
+          provider: "",
+          model: "",
+          reviewer: "agent",
+          retries: 9,
+          stages: { article: { mode: "redo" } },
+        }),
+      ),
+    ).toEqual([expect.objectContaining({ field: "reviews.retries" })]);
+  });
+
+  it("keeps the agent choice between the form and the saved settings", () => {
+    const settings = reviewSettingsFromForm(
+      {
+        provider: "",
+        model: "",
+        reviewer: "agent",
+        retries: "",
+        stages: { article: { mode: "flag", prompt: "" } },
+      },
+      () => true,
+    ).settings;
+    expect(settings?.reviewer).toBe("agent");
+    expect(settings === undefined ? undefined : reviewSettingsForm(settings).reviewer).toBe(
+      "agent",
+    );
+    expect(
+      reviewSettingsFromForm(
+        {
+          provider: "codex",
+          model: "m",
+          retries: "",
+          stages: { article: { mode: "flag", prompt: "" } },
+        },
+        () => true,
+      ).settings,
+    ).not.toHaveProperty("reviewer");
   });
 });

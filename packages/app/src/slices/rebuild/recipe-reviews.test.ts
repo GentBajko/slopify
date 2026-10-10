@@ -108,4 +108,24 @@ describe("review recipes", () => {
     expect(b["review:image:hill"]).not.toBe(a["review:image:hill"]);
     expect(b["image:hill"]).toBe(a["image:hill"]);
   });
+
+  it("plans an agent's review as a local step that calls no provider", () => {
+    const on: RunConfig = {
+      ...narrated,
+      reviews: { provider: "", model: "", reviewer: "agent", stages: { images: { mode: "redo" } } },
+    };
+    const recipes = recipesFor(on);
+    const review = recipes.find((row) => row.key === "review:image:hill");
+    expect(review).toMatchObject({
+      stage: "images",
+      kind: "local",
+      dependsOn: ["image:hill"],
+      input: { kind: "local", operation: "review-agent-v1" },
+    });
+    if (review === undefined) throw new Error("no review");
+    expect(recipeProviderChoice(review, on)).toBeUndefined();
+    expect(recipes.find((row) => row.key === "export:video")?.dependsOn).toEqual(
+      expect.arrayContaining(["review:image:harbor", "review:image:hill"]),
+    );
+  });
 });

@@ -195,6 +195,7 @@ export const runDraftSchema = z.object({
       provider: z.string(),
       model: z.string(),
       thinking: z.enum(thinkingModes).optional(),
+      reviewer: z.literal("agent").optional(),
       retries: z.number().optional(),
       stages: z.partialRecord(
         z.enum(reviewStages),

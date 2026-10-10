@@ -3,6 +3,7 @@ import type { FieldError } from "../admission/rules.js";
 import {
   imageReviewers,
   type ReviewStage,
+  reviewedByAgent,
   reviewModeOf,
   reviewRetriesMax,
   reviewRetriesMin,
@@ -62,7 +63,8 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
   const reviews = draft.reviews;
   if (active.length === 0 || reviews === undefined) return [];
   const fields: FieldError[] = [];
-  if (reviews.provider.trim() === "" || reviews.model.trim() === "")
+  const byAgent = reviewedByAgent(reviews);
+  if (!byAgent && (reviews.provider.trim() === "" || reviews.model.trim() === ""))
     fields.push({
       field: "reviews.provider",
       message:
@@ -79,6 +81,7 @@ export function reviewFields(draft: ReviewDraft): readonly FieldError[] {
     });
   const pictures = active.filter((stage) => visionStages.includes(stage));
   if (
+    !byAgent &&
     pictures.length > 0 &&
     reviews.provider.trim() !== "" &&
     !reviewerSeesImages(reviews.provider)

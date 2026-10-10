@@ -16,6 +16,7 @@ import { projectById } from "../admission/repo.js";
 import { castMentions } from "../channels/cast-match.js";
 import type { CastSnapshot } from "../channels/model.js";
 import { castOfChannel, projectChannelId } from "../channels/repo.js";
+import { reviewedByAgent } from "../reviews/model.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
 import { episodeMemoryOn, memoryOfProject, saveGeneratedMemory } from "./repo.js";
@@ -164,7 +165,7 @@ async function summarize(
 // The project's own text model; failing that, the one its automatic reviews use.
 function llmOf(config: RunConfig): ProviderChoice | undefined {
   if (config.llm !== undefined) return config.llm;
-  return config.reviews === undefined
+  return config.reviews === undefined || reviewedByAgent(config.reviews)
     ? undefined
     : { provider: config.reviews.provider, model: config.reviews.model };
 }

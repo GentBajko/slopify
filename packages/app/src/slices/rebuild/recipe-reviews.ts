@@ -1,6 +1,7 @@
 import {
   narrationItemKey,
   type ReviewStage,
+  reviewedByAgent,
   reviewKey,
   reviewModeOf,
   reviewPromptKey,
@@ -38,8 +39,37 @@ export function withReviews(
   if (settings === undefined || stages.length === 0) return recipes;
   const byKey = new Map(recipes.map((row) => [row.key, row]));
   const items = stages.flatMap((stage) => reviewedItems(stage, recipes, byKey));
-  const reviews = items.map((item) =>
-    recipe(
+  const byAgent = reviewedByAgent(settings);
+  const reviews = items.map((item) => {
+    const inputs = item.inputs.map((input) => [input.key, resourceIdentity(context, input)]);
+    // Blank means the stage's built-in prompt; the step fills it in, so a new built-in
+    // wording ships as a new operation version rather than a silent change here.
+    const prompt = settings.stages[item.stage]?.prompt?.trim()
+      ? renderedPrompt(context, reviewPromptKey(item.stage))
+      : "";
+    const dependsOn = item.inputs.map((input) => input.key);
+    // An external agent answers through MCP: no provider, no charge, nothing to be ready.
+    if (byAgent)
+      return recipe(
+        context,
+        reviewKey(item.itemKey),
+        stageOf(item.stage),
+        {
+          kind: "local",
+          version: 1,
+          operation: "review-agent-v1",
+          values: [
+            item.stage,
+            item.itemKey,
+            inputs,
+            prompt,
+            reviewModeOf(settings, item.stage),
+            reviewRetriesOf(settings),
+          ],
+        },
+        dependsOn,
+      );
+    return recipe(
       context,
       reviewKey(item.itemKey),
       stageOf(item.stage),
@@ -50,24 +80,20 @@ export function withReviews(
         values: [
           item.stage,
           item.itemKey,
-          item.inputs.map((input) => [input.key, resourceIdentity(context, input)]),
+          inputs,
           settings.provider,
           settings.model,
           settings.thinking ?? null,
-          // Blank means the stage's built-in prompt; the step fills it in, so a new built-in
-          // wording ships as a new operation version rather than a silent change here.
-          settings.stages[item.stage]?.prompt?.trim()
-            ? renderedPrompt(context, reviewPromptKey(item.stage))
-            : "",
+          prompt,
           reviewModeOf(settings, item.stage),
           reviewRetriesOf(settings),
         ],
       },
-      item.inputs.map((input) => input.key),
+      dependsOn,
       // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
       { kind: "provider" },
-    ),
-  );
+    );
+  });
   const gated = recipes.map((row) => {
     const waits = items.flatMap((item, index) => {
       const review = reviews[index];

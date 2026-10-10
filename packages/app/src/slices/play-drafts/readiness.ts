@@ -7,6 +7,7 @@ import {
   usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
+import { reviewedByAgent } from "../reviews/model.js";
 import { usesReviews } from "../reviews/rules.js";
 import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
@@ -49,8 +50,14 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
               usesShorts(d) ||
               usesAnimation(d),
           },
-          // The reviewer is its own text model, checked like the LLM row.
-          { field: "reviews", family: "llm", choice: d.reviews, needed: usesReviews(d) },
+          // The reviewer is its own text model, checked like the LLM row; an external agent
+          // is no provider at all.
+          {
+            field: "reviews",
+            family: "llm",
+            choice: d.reviews,
+            needed: usesReviews(d) && !reviewedByAgent(d.reviews),
+          },
         ] as const,
     )
     .flatMap((c) => (c.needed && c.choice ? [{ ...c, ...c.choice }] : []));

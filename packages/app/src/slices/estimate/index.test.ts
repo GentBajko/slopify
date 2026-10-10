@@ -288,4 +288,22 @@ describe("cost planning", () => {
     expect(estimate.rows.find((row) => row.stage === "Images")?.low).toBeNull();
     expect(estimate.unknown).toBe(1);
   });
+
+  it("adds no charge for reviews an external agent answers", () => {
+    const reviewed = {
+      ...draft,
+      reviews: {
+        provider: "",
+        model: "",
+        reviewer: "agent",
+        stages: { narration: { mode: "flag" } },
+      },
+    } satisfies RunDraft;
+    const rows = estimateRun(reviewed, {}, 1500, catalogue).rows.filter(
+      (one) => one.stage === "Reviews",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.detail).toContain("through MCP");
+    expect(rows[0]?.high ?? 0).toBe(0);
+  });
 });
