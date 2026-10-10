@@ -57,3 +57,23 @@ it("remembers who last started a project's work", () => {
   recordStart(db, { projectId: "p1", actor: "person", at: "t2" });
   expect(lastStarter(db, "p1")).toBe("person");
 });
+
+it("lists only the latest 20 changes on the Agents list", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  for (let minute = 1; minute <= 21; minute++)
+    recordAgentAction(
+      db,
+      action(
+        `a${String(minute)}`,
+        "p1",
+        `2026-09-10T00:${String(minute).padStart(2, "0")}:00.000Z`,
+      ),
+    );
+  const listed = recentAgentActions(db).map((one) => one.id);
+  expect(listed).toHaveLength(20);
+  expect(listed[0]).toBe("a21");
+  expect(listed).not.toContain("a1");
+  expect(agentActionsOf(db, "p1")).toHaveLength(21);
+});
