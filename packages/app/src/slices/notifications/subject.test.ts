@@ -50,3 +50,15 @@ it("keeps Waiting for you quiet only while the schedule's own hold is what holds
   ).run(f.revisionId);
   expect(noticeSubject(db, "p1")?.atItsDay).toBe(false);
 });
+
+// The day's hold and a checkpoint of the person's both hold the run: it is not merely prepared,
+// so Waiting for you goes out for the person's review.
+it("says Waiting for you when a checkpoint of the person's holds the run beside the day's", () => {
+  const f = prepared();
+  const { db } = f.h.deps;
+  db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
+  db.prepare(
+    "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'audio-gate','audio','images-work',?,'held','2026-09-10T00:02:00.000Z')",
+  ).run(f.revisionId, "c".repeat(64));
+  expect(noticeSubject(db, "p1")?.atItsDay).toBe(false);
+});
