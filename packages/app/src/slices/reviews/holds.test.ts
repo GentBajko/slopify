@@ -157,3 +157,24 @@ it("waits for the person, not the agent, while another step is held for Continue
   f.stage("video", "done");
   expect([...projectHolds(f.db).waitingForAgent]).toEqual(["p1"]);
 });
+
+it("lists the checkpoints holding a run once reached, and whom each waits for", () => {
+  const f = fixture();
+  f.answered();
+  f.stage("article", "pending");
+  f.gate("audio");
+  f.gate("images");
+  f.gate("video");
+  f.prepared(true);
+  // The article isn't written: the audio's and the video's checkpoints aren't reached.
+  expect(projectHolds(f.db).holding.get("p1")).toEqual([
+    { checkpointId: "images-gate", stage: "images", waitsFor: "person" },
+  ]);
+  heldAtVideo(f);
+  f.db
+    .prepare("UPDATE review_checkpoints SET state='released',approved_at='x' WHERE stage!='video'")
+    .run();
+  expect(projectHolds(f.db).holding.get("p1")).toEqual([
+    { checkpointId: "video-gate", stage: "video", waitsFor: "day" },
+  ]);
+});

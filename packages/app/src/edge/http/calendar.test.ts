@@ -163,8 +163,16 @@ it("says which projects need the person, which are ready to upload and which wai
     );
     const sample = f.project("Sample", "done", finished);
     writeSampleRecord(db, { projectId: sample, seededAt: finished }, "library");
+    // Everything before `kind` made, and `kind` held at its checkpoint.
+    const heldAt = (id: string, kind: string) => {
+      db.prepare("UPDATE stages SET state='done' WHERE project_id=?").run(id);
+      db.prepare(
+        "INSERT INTO stages (id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+      ).run(randomUUID(), id, kind);
+    };
     // Held at a checkpoint on its current revision, and one with a failed automatic review.
     const held = f.project("Held", "pending", null);
+    heldAt(held, "audio");
     const flagged = f.project("Flagged", "done", finished);
     db.exec("PRAGMA foreign_keys=OFF");
     for (const id of [held, flagged])
@@ -195,6 +203,7 @@ it("says which projects need the person, which are ready to upload and which wai
     ).run(prepared, finished);
     // Prepared too, but the Before Video hold is its template's own: the person approves it.
     const ownHold = f.project("Own hold", "pending", null);
+    heldAt(ownHold, "video");
     db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
       ownHold,
       `rev-${ownHold}`,
@@ -238,29 +247,43 @@ it("says which projects need the person, which are ready to upload and which wai
       "INSERT INTO project_set_aside (project_id, revision_id, set_at) VALUES (?, ?, ?)",
     ).run(aside, `rev-${aside}`, finished);
     // Parked on an agent's review, with its template's video checkpoint still ahead.
-    const agent = f.project("Agent", "pending", null);
-    db.prepare("UPDATE stages SET state='done' WHERE project_id=?").run(agent);
-    db.prepare(
-      "INSERT INTO stages (id,project_id,kind,source,state) VALUES (?,?,'images','generate','pending')",
-    ).run(randomUUID(), agent);
+    const parked = (title: string) => {
+      const id = f.project(title, "pending", null);
+      db.prepare("UPDATE stages SET state='done' WHERE project_id=?").run(id);
+      db.prepare(
+        "INSERT INTO stages (id,project_id,kind,source,state) VALUES (?,?,'images','generate','pending')",
+      ).run(randomUUID(), id);
+      db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
+        id,
+        `rev-${id}`,
+      );
+      db.prepare(
+        `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
+         VALUES (?,?,'cp-7','video','work',?,'held',?)`,
+      ).run(id, `rev-${id}`, "f".repeat(64), finished);
+      db.prepare(
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,?,?,'images','images',?,'pending','held',?)",
+      ).run(`work-${id}`, id, `rev-${id}`, "a".repeat(64), finished);
+      db.prepare(
+        "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES (?,?,'review:image:one',?,'review-fp')",
+      ).run(id, `rev-${id}`, `work-${id}`);
+      db.prepare(
+        `INSERT INTO external_reviews(id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
+         VALUES (?,?,?,?,'piece','review:image:one','image:one','images','item-fp','review-fp','{}','waiting',?,?)`,
+      ).run(`review-${id}`, id, `rev-${id}`, `work-${id}`, finished, "2026-09-11T07:00:00.000Z");
+      return id;
+    };
+    parked("Agent");
+    // Running towards its template's audio checkpoint: nothing to review until it is reached.
+    const ahead = f.project("Ahead", "running", null);
     db.prepare("INSERT INTO project_heads (project_id, revision_id) VALUES (?, ?)").run(
-      agent,
-      `rev-${agent}`,
+      ahead,
+      `rev-${ahead}`,
     );
     db.prepare(
       `INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at)
-       VALUES (?,?,'cp-7','video','work',?,'held',?)`,
-    ).run(agent, `rev-${agent}`, "f".repeat(64), finished);
-    db.prepare(
-      "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('agent-work',?,?,'images','images',?,'pending','held',?)",
-    ).run(agent, `rev-${agent}`, "a".repeat(64), finished);
-    db.prepare(
-      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES (?,?,'review:image:one','agent-work','review-fp')",
-    ).run(agent, `rev-${agent}`);
-    db.prepare(
-      `INSERT INTO external_reviews(id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at)
-       VALUES ('er1',?,?,'agent-work','piece','review:image:one','image:one','images','item-fp','review-fp','{}','waiting',?,?)`,
-    ).run(agent, `rev-${agent}`, finished, "2026-09-11T07:00:00.000Z");
+       VALUES (?,?,'cp-8','audio','work',?,'held',?)`,
+    ).run(ahead, `rev-${ahead}`, "a".repeat(64), finished);
     db.exec("PRAGMA foreign_keys=ON");
     const waiting = f.project("Waiting", "running", null);
     db.prepare(
@@ -292,7 +315,8 @@ it("says which projects need the person, which are ready to upload and which wai
     expect(byTitle.get("Aside")?.needs).toBeUndefined();
     expect(byTitle.get("Agent")).toMatchObject({ waitingForAgent: true, progress: 0.5 });
     expect(byTitle.get("Agent")?.needs).toBeUndefined();
-    expect(byTitle.get("Held")?.progress).toBe(0);
+    expect(byTitle.get("Held")?.progress).toBe(0.5);
+    expect(byTitle.get("Ahead")?.needs).toBeUndefined();
     expect(byTitle.get("Ready")?.progress).toBe(1);
     expect(byTitle.get("Ready")?.needs).toBeUndefined();
     expect(

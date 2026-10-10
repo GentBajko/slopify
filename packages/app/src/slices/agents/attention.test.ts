@@ -201,8 +201,10 @@ it("leaves out a prepared project's own video checkpoint, a project kept as is, 
       .filter((entry) => entry.kind === "checkpoint")
       .map((entry) => entry.stage),
   ).toEqual(["images"]);
-  // A Before Video hold the template had itself is the person's to approve, prepared or not.
+  // A Before Video hold the template had itself is the person's to approve, prepared or not,
+  // once everything the video needs is made.
   db.prepare("UPDATE prepared_videos SET added_checkpoint=0").run();
+  db.prepare("UPDATE stages SET state='done' WHERE project_id='p1' AND kind='images'").run();
   expect(
     needsAttention({ ...f.h.deps, log: quiet }, now)
       .filter((entry) => entry.kind === "checkpoint")
@@ -220,6 +222,25 @@ it("leaves out a prepared project's own video checkpoint, a project kept as is, 
   expect(needsAttention({ ...f.h.deps, log: quiet }, now).map((entry) => entry.kind)).toEqual([
     "held-topics",
   ]);
+});
+
+it("lists a checkpoint only once the run reaches it", () => {
+  const f = everything();
+  const { db } = f.h.deps;
+  // The audio's checkpoint waits for an article that isn't written yet.
+  db.prepare(
+    "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('article','p1','article','generate','pending')",
+  ).run();
+  db.prepare(
+    "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'audio-gate','audio','images-work',?,'held','2026-09-10T00:02:30.000Z')",
+  ).run(f.revisionId, "e".repeat(64));
+  const checkpoints = () =>
+    needsAttention({ ...f.h.deps, log: quiet }, now)
+      .filter((entry) => entry.kind === "checkpoint")
+      .map((entry) => entry.stage);
+  expect(checkpoints()).toEqual(["images"]);
+  db.prepare("UPDATE stages SET state='done' WHERE kind='article'").run();
+  expect(checkpoints()).toEqual(["images", "audio"]);
 });
 
 it("still lists the rest when one source fails, and says in the log which one", () => {

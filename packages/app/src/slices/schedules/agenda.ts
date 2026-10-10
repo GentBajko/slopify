@@ -6,12 +6,12 @@ import { liveProject, stageStandingsByProject } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
-import { projectHolds } from "../reviews/holds.js";
+import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
 import { setAsideProjects, uploadedProjects } from "../uploads/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
-import { heldForItsDay, preparedProject } from "./prepare.js";
+import { preparedProject } from "./prepare.js";
 import { scheduleRows } from "./repo.js";
 import {
   type Calendar,
@@ -139,25 +139,24 @@ const projectRow = z.object({
 });
 
 // Projects the person has something to decide on in the current revision: a review
-// checkpoint holding the run, or an automatic review that failed an item and waits for
-// Overrule or Redo (its latest verdict, with no redo under way). A Before Video hold its
-// schedule added waits for its day, as needs_attention reads it.
-function awaitingReview(db: DatabaseSync): ReadonlySet<string> {
+// checkpoint holding the run for them (`reviews/holds.ts`: reached, and not a Before Video hold
+// its schedule added, which waits for its day), or an automatic review that failed an item and
+// waits for Overrule or Redo (its latest verdict, with no redo under way), as needs_attention
+// reads them.
+function awaitingReview(db: DatabaseSync, holds: ProjectHolds): ReadonlySet<string> {
+  const checkpoints = [...holds.holding]
+    .filter(([, held]) => held.some((hold) => hold.waitsFor === "person"))
+    .map(([id]) => id);
   const ids = db
     .prepare(
-      `SELECT c.project_id AS id FROM review_checkpoints c
-       JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
-       WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL
-         AND NOT (c.stage='video' AND ${heldForItsDay("c")})
-       UNION
-       SELECT v.project_id AS id FROM review_verdicts v
+      `SELECT v.project_id AS id FROM review_verdicts v
        JOIN project_heads h ON h.project_id=v.project_id AND h.revision_id=v.revision_id
        WHERE v.passed=0 AND v.action IS NULL AND (v.redo_state IS NULL OR v.redo_state='failed')
        AND NOT EXISTS (SELECT 1 FROM review_verdicts n WHERE n.project_id=v.project_id
          AND n.item_key=v.item_key AND (n.created_at>v.created_at OR (n.created_at=v.created_at AND n.rowid>v.rowid)))`,
     )
     .all();
-  return new Set(ids.map((row) => z.string().parse(row.id)));
+  return new Set([...checkpoints, ...ids.map((row) => z.string().parse(row.id))]);
 }
 
 // Whether a finished project's settings make a video: projects stored before sources were
@@ -188,11 +187,11 @@ function needsOf(state: ProjectState, reviewing: boolean): CalendarNeed | undefi
 // the range, with what each needs from the person and whether its video is ready to upload.
 function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calendar["projects"] {
   const standings = stageStandingsByProject(deps.db);
-  const reviewing = awaitingReview(deps.db);
+  const holds = projectHolds(deps.db, { standings });
+  const reviewing = awaitingReview(deps.db, holds);
   const uploads = uploadedProjects(deps.db);
   const samples = sampleProjectIds(deps.db);
   const waits = limitWaitsByProject(deps.db);
-  const holds = projectHolds(deps.db, { standings });
   const aside = setAsideProjects(deps.db);
   const fromSchedule = new Map<string, string>();
   for (const row of deps.db

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { type StageProgress, satisfied, deps as stageDeps } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
+import type { CheckpointStage } from "../checkpoints/model.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
 import { projectsWaitingOnAgents } from "./external.js";
@@ -17,10 +18,21 @@ export interface ProjectHolds {
   // and no other step held for Continue the run: it goes on by itself once the agent answers
   // or the review passes at its deadline.
   readonly waitingForAgent: ReadonlySet<string>;
+  // Each project's checkpoints that hold its run now, their stage's inputs made: the person's
+  // to approve, or a schedule's own Before Video hold waiting for its day. One not reached yet
+  // holds nothing.
+  readonly holding: ReadonlyMap<string, readonly CheckpointHold[]>;
+}
+
+export interface CheckpointHold {
+  readonly checkpointId: string;
+  readonly stage: CheckpointStage;
+  readonly waitsFor: "person" | "day";
 }
 
 const gateRow = z.object({
   project_id: z.string(),
+  checkpoint_id: z.string(),
   stage: checkpointStageSchema,
   own: z.number(),
 });
@@ -37,7 +49,7 @@ export function projectHolds(
 ): ProjectHolds {
   const { projectId } = scope;
   const one = projectId === undefined ? "" : " AND c.project_id=?";
-  const gateSql = `SELECT c.project_id, c.stage, (c.stage='video' AND ${heldForItsDay("c")}) AS own
+  const gateSql = `SELECT c.project_id, c.checkpoint_id, c.stage, (c.stage='video' AND ${heldForItsDay("c")}) AS own
        FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${one}`;
@@ -54,10 +66,18 @@ export function projectHolds(
     });
   const theirs = new Set<string>();
   const reachedTheirs = new Set<string>();
+  const holding = new Map<string, CheckpointHold[]>();
   for (const gate of gates) {
-    if (gate.own === 1) continue;
-    theirs.add(gate.project_id);
-    if (reached(gate.project_id, gate.stage)) reachedTheirs.add(gate.project_id);
+    const own = gate.own === 1;
+    if (!own) theirs.add(gate.project_id);
+    if (!reached(gate.project_id, gate.stage)) continue;
+    if (!own) reachedTheirs.add(gate.project_id);
+    const hold: CheckpointHold = {
+      checkpointId: gate.checkpoint_id,
+      stage: gate.stage,
+      waitsFor: own ? "day" : "person",
+    };
+    holding.set(gate.project_id, [...(holding.get(gate.project_id) ?? []), hold]);
   }
   const preparedSql = `SELECT project_id FROM prepared_videos WHERE added_checkpoint=1${
     projectId === undefined ? "" : " AND project_id=?"
@@ -72,6 +92,7 @@ export function projectHolds(
     waitingForAgent: new Set(
       [...agents].filter((id) => !reachedTheirs.has(id) && !stopped.has(id)),
     ),
+    holding,
   };
 }
 
