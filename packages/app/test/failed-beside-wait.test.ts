@@ -141,6 +141,7 @@ async function failedBesideWait(wait: {
       listing,
       attention,
       response: (await (await app.request(`/api/projects/${h.projectId}`)).json()) as unknown,
+      page: await tool("get_project", { id: h.projectId }),
     };
   };
   return { h, states, read, tool };
@@ -224,6 +225,9 @@ it("reads a failed step beside images held at the person's checkpoint as Waiting
     notice: "waiting",
     listing: { status: "pending", stateWord: "Waiting for your review", stepFailed: true },
     calendar: { state: "pending", needs: "review" },
+    // The page's header reads the project's own body: by its wait, not Queued.
+    response: { project: { status: "pending", stepFailed: true } },
+    page: { project: { stateWord: "Waiting for your review", stepFailed: true } },
   });
   expect(waiting.attention).toEqual(expect.arrayContaining(["failed-step", "checkpoint"]));
 });
