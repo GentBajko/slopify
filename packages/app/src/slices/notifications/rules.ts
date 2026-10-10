@@ -1,5 +1,6 @@
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { Actor } from "../agents/model.js";
+import type { CheckpointHold } from "../reviews/holds.js";
 
 // The run notifications' rules, shared by the server's Notification URL and the SPA's browser
 // notifications so both say the same thing about the same transition. Pure: the web bundle
@@ -113,10 +114,10 @@ export interface NoticeSubject {
 // Whether a prepared run's own Before Video hold is what holds it now (`atItsDay`), from the
 // project's `prepared` and `holding` (`reviews/holds.ts`): the notifier and the browser both ask.
 export function atItsDay(
-  project: { readonly prepared?: boolean | undefined },
-  holding: readonly { readonly waitsFor: string }[],
+  prepared: boolean,
+  holding: readonly Pick<CheckpointHold, "waitsFor">[],
 ): boolean {
-  return project.prepared === true && holding.some((hold) => hold.waitsFor === "day");
+  return prepared && holding.some((hold) => hold.waitsFor === "day");
 }
 
 // A run parked on an agent's review waits for nobody: the agent answers, or the review passes
