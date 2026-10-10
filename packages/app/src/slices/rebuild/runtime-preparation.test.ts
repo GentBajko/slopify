@@ -217,6 +217,8 @@ it.each(["title", "voice", "prompt", "source", "model", "regenerate"] as const)(
       h.close();
     }
   },
+  // ceiling: a full narration run per edit; under a loaded full suite it has taken over 5 s.
+  30_000,
 );
 
 it("resolves generated article and entry text before their separate preparation calls", async () => {

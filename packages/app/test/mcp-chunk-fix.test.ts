@@ -39,8 +39,10 @@ function aligner(): { readonly align: SubtitleAligner; fixed: () => void } {
   };
 }
 
+// ceiling: two real runs of about a second each alone; a loaded full suite has stretched them to
+// 21 s, so the budget holds both waits at their own 20 s cap.
 it("lets an agent fix a run stopped by a misread narration chunk: listed, regenerated, continued", {
-  timeout: 30_000,
+  timeout: 60_000,
 }, async () => {
   const audio = fakeTts({ bytesFor: () => [tone()] });
   const hearing = aligner();

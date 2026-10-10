@@ -317,8 +317,10 @@ describe("project pause and provider changes", () => {
     expect(screen.queryByRole("button", { name: "Run settings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save providers" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce());
-    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull());
+    await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce(), { timeout: 5_000 });
+    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull(), {
+      timeout: 5_000,
+    });
     expect(fixture.view().revision.config).toMatchObject({
       llm: { provider: "claude-code", model: "sonnet" },
       audio: { provider: "cartesia", model: "sonic-3", voice: "new-voice" },
@@ -327,7 +329,8 @@ describe("project pause and provider changes", () => {
     });
     expect(fixture.start).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Continue the run" })).not.toBeNull();
-  });
+    // ceiling: some forty keystrokes and clicks; under a loaded full suite it has taken 4.5 s.
+  }, 20_000);
 
   it("keeps a pending action bound to its original project after the page switches IDs", async () => {
     const user = userEvent.setup();
