@@ -476,7 +476,9 @@ describe("running.count", () => {
 });
 
 describe("abortAll", () => {
-  it("cancels every stage in flight and waits for them to settle", async () => {
+  // Quitting is not a person's Cancel: the stages stop pending and held, as a restart leaves
+  // them, for Continue the run to start again.
+  it("stops every stage in flight pending and waits for them to settle", async () => {
     const waits: StageRun = ({ signal }) =>
       new Promise<StageRunResult>((_resolve, reject) => {
         signal.addEventListener("abort", () => {
@@ -492,10 +494,10 @@ describe("abortAll", () => {
     await runner.abortAll();
 
     for (const kind of ["audio", "images", "thumbnail"] as const) {
-      expect(stages.stateOf(kind)).toBe("canceled");
-      expect(stages.reasonOf(kind)).toBe("canceled by user");
+      expect(stages.stateOf(kind)).toBe("pending");
+      expect(stages.reasonOf(kind)).toBeNull();
     }
-    expect(projectStates(events).at(-1)).toBe("canceled");
+    expect(projectStates(events)).not.toContain("canceled");
   });
 
   it("never starts a stage that a sibling released as the shutdown landed", async () => {

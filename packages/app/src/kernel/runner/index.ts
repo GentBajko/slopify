@@ -79,6 +79,9 @@ interface Inflight {
 }
 
 const pauseReason = new Error("paused by user");
+// A shutdown stops a stage without the person asking: it concludes pending and held, as a
+// restart leaves it, for Continue the run to start again - never canceled.
+const shutdownReason = new Error("Slopify is stopping.");
 
 export function createRunner(deps: RunnerDeps): Runner {
   const inflight = new Map<string, Inflight>();
@@ -217,8 +220,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (controller.signal.aborted) {
         // A late rejection from the aborted call is how a stage learns it was canceled, so
         // it is not logged as a fault.
-        const paused = controller.signal.reason === pauseReason;
-        conclude(stage, paused ? "pending" : "canceled", paused ? null : "canceled by user");
+        const held = [pauseReason, shutdownReason].includes(controller.signal.reason);
+        conclude(stage, held ? "pending" : "canceled", held ? null : "canceled by user");
         return;
       }
       const fault = faultOf(error);
@@ -356,7 +359,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     abortAll: async (): Promise<void> => {
       shuttingDown = true;
       for (const entry of inflight.values()) {
-        entry.controller.abort();
+        entry.controller.abort(shutdownReason);
       }
       await settled();
     },

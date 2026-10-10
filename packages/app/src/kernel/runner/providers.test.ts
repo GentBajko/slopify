@@ -279,7 +279,7 @@ describe("a stage running through the wrapper", () => {
     readonly states: Map<StageKind, { state: StageState; reason: string | null }>;
     readonly tick: () => void;
     readonly settled: () => Promise<void>;
-    readonly abortAll: () => Promise<void>;
+    readonly cancel: () => Promise<void>;
   }
 
   function wire(kind: StageKind, run: StageRun): Wired {
@@ -326,7 +326,7 @@ describe("a stage running through the wrapper", () => {
       states,
       tick: () => runner.tick("p1"),
       settled: () => runner.settled(),
-      abortAll: () => runner.abortAll(),
+      cancel: () => runner.abortProject("p1"),
     };
   }
 
@@ -351,7 +351,7 @@ describe("a stage running through the wrapper", () => {
     await h.clock.settle(Promise.resolve());
     expect(llm.calls()).toBe(1);
 
-    await h.clock.settle(wired.abortAll());
+    await h.clock.settle(wired.cancel());
 
     expect(wired.states.get("article")).toEqual({ state: "canceled", reason: "canceled by user" });
     expect(attempts.rows.map((row) => row.outcome)).toEqual(["canceled"]);
