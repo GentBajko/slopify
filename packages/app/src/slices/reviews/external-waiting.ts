@@ -52,20 +52,23 @@ export function reviewStanding(db: DatabaseSync, review: ExternalReview): Review
   return projectTrashed(db, review.projectId) ? "trashed" : "waiting";
 }
 
-// Whether another review of the same item waits in its place.
+// Whether another review of the same item waits in its place, the project in the Trash or not:
+// either way the old one was replaced.
 function replacementWaits(db: DatabaseSync, review: ExternalReview): boolean {
   return (
     db
       .prepare(
-        `SELECT 1 FROM external_reviews e WHERE ${stillWaiting} AND e.project_id=? AND e.item_key=? AND e.id!=?`,
+        `SELECT 1 FROM external_reviews e WHERE ${wantedAndLive} AND e.project_id=? AND e.item_key=? AND e.id!=?`,
       )
       .get(review.projectId, review.itemKey, review.id) !== undefined
   );
 }
 
-// A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the
-// Trash.
-const stillWaiting = `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}`;
+// A review `e` marked waiting, still wanted and of a run that isn't canceled.
+const wantedAndLive = `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")}`;
+
+// A review `e` that waits: the same, of a project not in the Trash.
+const stillWaiting = `${wantedAndLive} AND ${liveProject("e", "project_id")}`;
 
 // Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.
 export function waitingExternalReviews(

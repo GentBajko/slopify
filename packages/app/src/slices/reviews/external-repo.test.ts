@@ -318,3 +318,16 @@ it("says a replaced review with no new one for its item is replaced-pending", ()
   if (review === undefined) throw new Error("the review row stays");
   expect(reviewStanding(db, review)).toBe("replaced-pending");
 });
+
+// A review replaced by one that waits says so even in the Trash: Restore wouldn't bring the old
+// one back, and the new one waits for its verdict again once restored.
+it("says a replaced review whose replacement exists is replaced, in the Trash too", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  addReplacementReview(f);
+  db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-11T00:00:00.000Z')").run();
+  const review = externalReviewById(db, "p1", "er1");
+  if (review === undefined) throw new Error("the review row stays");
+  expect(reviewStanding(db, review)).toBe("superseded");
+});
