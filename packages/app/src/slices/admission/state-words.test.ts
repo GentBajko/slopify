@@ -39,7 +39,7 @@ it.each([
   [{ status: "pending", progress: 0, stopped: true }, true],
   [{ status: "pending", progress: 0.5, stopped: true, setAside: true }, false],
   [{ status: "running", progress: 0.5 }, false],
-  [{ status: "paused", progress: 0.5 }, false],
+  [{ status: "paused", progress: 0.5 }, true],
 ] as const)("counts %o as waiting for the person: %s", (project, waits) => {
   expect(waitsForPerson(project)).toBe(waits);
 });

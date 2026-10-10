@@ -213,6 +213,18 @@ describe("needs you", () => {
     expect(sortProjects(projects, "status")[0]?.title).toBe("Stopped one");
   });
 
+  // Paused, it waits for the person's Continue the run: under Needs you, as on Home.
+  it("lists a paused run under Needs you and sorts it with the waiting ones", () => {
+    const projects = [
+      listing("p1", "Going", "running", { progress: 0.5 }),
+      listing("p2", "Paused one", "paused", { progress: 0.5 }),
+    ];
+    expect(projects.filter((one) => matches(one, "waiting")).map((one) => one.title)).toEqual([
+      "Paused one",
+    ]);
+    expect(sortProjects(projects, "status")[0]?.title).toBe("Paused one");
+  });
+
   // Stopped before anything was made, it needs Continue the run: it isn't waiting its turn.
   it("counts a run stopped at its start as needing the person, not as Queued", () => {
     const stopped = listing("p1", "Stopped early", "pending", { stopped: true });

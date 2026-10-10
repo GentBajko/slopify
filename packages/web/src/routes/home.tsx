@@ -107,12 +107,15 @@ export function HomeRoute(): ReactElement {
   const upcoming = (calendar.data?.runs ?? []).filter((run) =>
     current.includes(templateChannel.get(run.templateId)),
   );
+  const needsYou = mine.filter(waitsForPerson);
   const decisions: Decision[] = [
-    ...mine.filter(waitsForPerson).map((project) => ({
-      kind: project.stopped === true ? ("stopped" as const) : ("waiting" as const),
-      project,
-    })),
-    ...mine
+    ...needsYou
+      .filter((one) => one.status !== "paused")
+      .map((project) => ({
+        kind: project.stopped === true ? ("stopped" as const) : ("waiting" as const),
+        project,
+      })),
+    ...needsYou
       .filter((one) => one.status === "paused")
       .map((project) => ({ kind: "paused" as const, project })),
     ...held.map((schedule) => ({ kind: "held" as const, schedule })),

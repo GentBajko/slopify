@@ -109,8 +109,8 @@ export function projectStateWord(project: ProjectStanding): string {
   return heldRun(project) ? heldStateWord(project) : projectStateWords[project.status];
 }
 
-// A run that ran and now waits for the person: Home's Needs you, the Projects "Needs you"
-// filter and its waiting-first sort.
+// A run that ran and now waits for the person, held or paused: Home's Needs you, the Projects
+// "Needs you" filter and its waiting-first sort.
 export function waitsForPerson(project: ProjectStanding): boolean {
-  return heldRun(project) && heldForPerson(project);
+  return project.status === "paused" || (heldRun(project) && heldForPerson(project));
 }
