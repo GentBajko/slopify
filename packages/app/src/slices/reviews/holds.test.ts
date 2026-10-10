@@ -228,6 +228,26 @@ it("reads a prepared project a restart stopped as Stopped, not Prepared", () => 
   expect([...holds.prepared]).toEqual([]);
 });
 
+// At its day's hold with the thumbnail's step held by a restart: Continue the run moves it on,
+// so its day's hold doesn't hold it now and nothing offers to render the video early.
+it("holds a prepared run a restart stopped at its day's hold for Continue the run alone", () => {
+  const f = stoppedBehindVideoGate();
+  f.answered();
+  f.stage("images", "done");
+  f.prepared(true);
+  const holds = projectHolds(f.db);
+  expect([...holds.stopped]).toEqual(["p1"]);
+  expect([...holds.prepared]).toEqual([]);
+  expect(holds.holding.get("p1")).toBeUndefined();
+  // Continued, the run waits for its day again.
+  f.stage("thumbnail", "done");
+  expect(
+    projectHolds(f.db)
+      .holding.get("p1")
+      ?.map((hold) => hold.waitsFor),
+  ).toEqual(["day"]);
+});
+
 // An uploaded project with nothing admitted reads Done (`uploadedAndSettled`): its leftover
 // held steps are nothing to continue.
 it("is not Stopped once uploaded with nothing admitted, as it reads Done", () => {

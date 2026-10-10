@@ -30,7 +30,7 @@ export interface ProjectHolds {
   readonly stopped: ReadonlySet<string>;
   // Each project's checkpoints that hold its run now, their stage's inputs made: the person's
   // to approve, or a schedule's own Before Video hold waiting for its day. One not reached yet
-  // holds nothing.
+  // holds nothing, and a stopped run waits for Continue the run before any day.
   readonly holding: ReadonlyMap<string, readonly CheckpointHold[]>;
 }
 
@@ -142,7 +142,9 @@ export function projectHolds(
     prepared: new Set(scheduled.filter((id) => !theirs.has(id) && !stopped.has(id))),
     waitingForAgent,
     stopped,
-    holding,
+    // Only Continue the run moves a stopped run on: the one hold it can have reached, its
+    // day's, holds it again once it has.
+    holding: new Map([...holding].filter(([id]) => !stopped.has(id))),
   };
 }
 
