@@ -8,8 +8,8 @@ import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import type { Output } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
-import { listProjectFiles, projectFile } from "./file-tools.js";
-import { mcpFixture } from "./mcp.fake.js";
+import { listProjectFiles, measuredOnce, projectFile } from "./file-tools.js";
+import { connectAgent, mcpFixture } from "./mcp.fake.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -21,8 +21,8 @@ const png = Buffer.from(
   "base64",
 );
 
-function withFiles() {
-  const h = mcpFixture();
+function withFiles(options: Parameters<typeof mcpFixture>[0] = {}) {
+  const h = mcpFixture(options);
   open.push(h);
   const dir = join(h.deps.paths.projects, h.projectId);
   mkdirSync(join(dir, "images"), { recursive: true });
@@ -201,4 +201,61 @@ it("gives an uploaded narration its word timing, measuring the file", async () =
   expect(said).toContain("wordTimings");
   expect(said).toContain("Hello");
   expect(measured).toEqual([join(h.deps.paths.projects, h.projectId, "audio", "body.mp3")]);
+});
+
+it("measures a narration once while the file stays the same, and again once it changes", async () => {
+  const h = withFiles();
+  const path = join(h.deps.paths.projects, h.projectId, "audio", "body.mp3");
+  const measured: string[] = [];
+  const length = measuredOnce(async (file) => {
+    measured.push(file);
+    return 3000;
+  });
+  expect(await Promise.all([length(path), length(path)])).toEqual([3000, 3000]);
+  expect(await length(path)).toBe(3000);
+  expect(measured).toHaveLength(1);
+  writeFileSync(path, Buffer.from("a longer narration"));
+  await length(path);
+  expect(measured).toHaveLength(2);
+});
+
+it("gives an uploaded narration it can't measure its words unclipped, and logs why", async () => {
+  const h = withFiles();
+  narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);
+  const lines: string[] = [];
+  const deps = {
+    ...h.deps,
+    measureAudio: async () => {
+      throw new Error("ffmpeg timed out");
+    },
+    log: {
+      write: (_level: LogLevel, event: string, fields?: LogFields) =>
+        void lines.push(`${event} [${fields?.projectId ?? ""}] ${fields?.detail ?? ""}`),
+    },
+  };
+  const said = JSON.stringify(
+    (await projectFile(deps, h.projectId, `/files/${h.projectId}/audio-body`)).content,
+  );
+  expect(said).toContain("Hello");
+  expect(lines).toEqual([expect.stringMatching(/^mcp\.word-timing \[p1\] .*ffmpeg timed out/)]);
+});
+
+it("measures an uploaded narration once for an agent that asks for its timing again", async () => {
+  const measured: string[] = [];
+  const h = withFiles({
+    measureAudio: async (path) => {
+      measured.push(path);
+      return 3000;
+    },
+  });
+  narratedHead(h, { ...config, sources: { ...config.sources, audio: "provide" } }, null);
+  const agent = await connectAgent(h.app);
+  for (let call = 0; call < 2; call++) {
+    const answer = await agent.callTool({
+      name: "get_project_file",
+      arguments: { id: h.projectId, url: `/files/${h.projectId}/audio-body` },
+    });
+    expect(JSON.stringify(answer.content)).toContain("wordTimings");
+  }
+  expect(measured).toHaveLength(1);
 });

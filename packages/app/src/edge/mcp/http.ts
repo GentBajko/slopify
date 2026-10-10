@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { recordAgentConnection } from "../../slices/agents/connection.js";
+import { measuredOnce } from "./file-tools.js";
 import { createMcpServer, type McpDeps } from "./server.js";
 
 export interface McpRouteDeps extends McpDeps {
@@ -47,7 +48,12 @@ function initializes(body: unknown): boolean {
   );
 }
 
-export function mcpRoutes(deps: McpRouteDeps): Hono {
+export function mcpRoutes(routeDeps: McpRouteDeps): Hono {
+  const { measureAudio } = routeDeps;
+  const deps: McpRouteDeps =
+    measureAudio === undefined
+      ? routeDeps
+      : { ...routeDeps, measureAudio: measuredOnce((path) => measureAudio(path)) };
   return new Hono()
     .use("*", async (c, next) => {
       if (originAllowed(c.req.header("origin"), deps.host)) return next();

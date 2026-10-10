@@ -13,8 +13,13 @@ import { createApp } from "../http/app.js";
 import type { RouteCallDeps } from "./call-route.js";
 
 // The whole app over a temporary database with one project ("Saved", p1), as an agent reaches it;
-// `rebuild` wires the rebuild service, which Redo needs.
-export function mcpFixture(options: { readonly rebuild?: boolean } = {}): {
+// `rebuild` wires the rebuild service, which Redo needs; `measureAudio` is the app's own.
+export function mcpFixture(
+  options: {
+    readonly rebuild?: boolean;
+    readonly measureAudio?: (path: string, signal?: AbortSignal) => Promise<number>;
+  } = {},
+): {
   readonly app: Hono;
   readonly deps: RevisionDeps;
   readonly projectId: string;
@@ -40,6 +45,7 @@ export function mcpFixture(options: { readonly rebuild?: boolean } = {}): {
     flushSoon: () => undefined,
     host: "127.0.0.1",
     ...(options.rebuild === true ? { rebuild: createRebuildDeps(h.deps).deps } : {}),
+    ...(options.measureAudio === undefined ? {} : { measureAudio: options.measureAudio }),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }

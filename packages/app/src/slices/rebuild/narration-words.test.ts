@@ -125,11 +125,15 @@ it("refuses, saying why, when the timing can't be read or the narration can't be
   expect(
     await bodyWordTimings(unreadable.deps, view(narrated, [part("audio_body", 3000)]), "{not json"),
   ).toEqual({ ok: false, reason: expect.stringContaining("JSON") });
+  // With an intro before it, the body's start needs the intro's length.
   const unmeasured = harness();
   expect(
     await bodyWordTimings(
       unmeasured.deps,
-      view(narrated, [part("audio_body", null)]),
+      view({ ...narrated, intro: { name: "Intro", mode: "llm" } }, [
+        part("audio_intro", null),
+        part("audio_body", 3000),
+      ]),
       words([{ text: "Hello", start: 0.2, end: 0.6 }]),
     ),
   ).toEqual({ ok: false, reason: expect.stringContaining("ffmpeg could not read") });
@@ -161,4 +165,29 @@ it("refuses when an intro or outro the settings speak has no finished audio", as
     timing,
   );
   expect(noOutro).toEqual({ ok: false, reason: expect.stringContaining("outro") });
+});
+
+// Alone on its clock, the body's words need its length only to clip the last one at its end.
+it("gives a narration with no intro or outro its words unclipped when it can't be measured", async () => {
+  const provided: RunConfig = {
+    ...config,
+    sources: { ...config.sources, audio: "provide" },
+    edgeSilenceSeconds: 1,
+  };
+  const timing = await bodyWordTimings(
+    harness().deps,
+    view(provided, [part("audio_body", null)]),
+    words([
+      { text: "Hello", start: 1.2, end: 1.6 },
+      { text: "end", start: 4.8, end: 5.2 },
+    ]),
+  );
+  expect(timing).toMatchObject({
+    ok: true,
+    unclipped: expect.stringContaining("ffmpeg could not read"),
+  });
+  expect(read(timing)?.words.map((word) => [word.text, word.start, word.end])).toEqual([
+    ["Hello", expect.closeTo(0.2), expect.closeTo(0.6)],
+    ["end", expect.closeTo(3.8), expect.closeTo(4.2)],
+  ]);
 });

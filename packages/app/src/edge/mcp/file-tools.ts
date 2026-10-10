@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
@@ -112,12 +112,35 @@ async function narrationTimings(
     view,
     words,
   );
+  if (body.ok && body.unclipped !== undefined)
+    deps.log.write("warn", "mcp.word-timing", {
+      projectId,
+      detail: `get_project_file gave the narration's word timing without cutting the last words at its end, as its length couldn't be measured: ${body.unclipped}`,
+    });
   if (body.ok) return body.value;
   deps.log.write("error", "mcp.word-timing", {
     projectId,
     detail: `The narration's word timing was left out of get_project_file: ${body.reason}`,
   });
   return undefined;
+}
+
+// An audio file's length, measured once while the file stays the same: a narration's full
+// decode takes seconds, and an agent may ask for its timing over and over, or several at once.
+// ceiling: one entry per narration file measured since boot, a few dozen bytes each.
+export function measuredOnce(
+  measure: (path: string) => Promise<number>,
+): (path: string) => Promise<number> {
+  const lengths = new Map<string, { readonly stamp: string; readonly length: Promise<number> }>();
+  return async (path) => {
+    const { mtimeMs, size } = statSync(path);
+    const stamp = `${String(mtimeMs)}:${String(size)}`;
+    const known = lengths.get(path);
+    if (known?.stamp === stamp) return known.length;
+    const length = measure(path);
+    lengths.set(path, { stamp, length });
+    return length;
+  };
 }
 
 export function registerFileTools(server: McpServer, deps: RevisionDeps): void {
