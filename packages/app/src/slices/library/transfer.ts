@@ -221,3 +221,96 @@ function freeName(
     if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 }
+
+// What saving one imported item answered: saved, or refused with the editor's field sentences.
+export type ItemSave =
+  | { readonly ok: true; readonly value?: unknown }
+  | {
+      readonly ok: false;
+      readonly fields: readonly { readonly field: string; readonly message: string }[];
+    };
+
+export interface ImportOutcome {
+  readonly added: number;
+  // Saved as "<name> (imported)" because the name was taken.
+  readonly renamed: number;
+  readonly skipped: readonly SkippedItem[];
+}
+
+const tries = 3;
+
+// Saves the items one by one under a name free in their group (a prompt kind, an intro or
+// outro, every PDF theme). A name the server still refuses moves on to the next free one; any
+// other refusal skips the item with the server's sentence. The web's Import and the agent's
+// import_library both use it.
+export async function importEach<T extends { readonly name: string }>(
+  items: readonly T[],
+  options: {
+    // What the Library holds now, each name with its group.
+    readonly existing: readonly { readonly group: string; readonly name: string }[];
+    readonly groupOf: (item: T) => string;
+    readonly max: number;
+    readonly save: (item: T) => Promise<ItemSave>;
+  },
+): Promise<ImportOutcome> {
+  const taken = new Map<string, Set<string>>();
+  const takenIn = (group: string): Set<string> => {
+    const found = taken.get(group);
+    if (found !== undefined) return found;
+    const made = new Set<string>();
+    taken.set(group, made);
+    return made;
+  };
+  for (const one of options.existing) takenIn(one.group).add(one.name.trim().toLowerCase());
+  let added = 0;
+  let renamed = 0;
+  const skipped: SkippedItem[] = [];
+  for (const item of items) {
+    const names = takenIn(options.groupOf(item));
+    let reason = "";
+    for (let attempt = 0; attempt < tries; attempt += 1) {
+      const name = importedName(item.name, names, options.max);
+      try {
+        const reply = await options.save({ ...item, name });
+        names.add(name.toLowerCase());
+        if (reply.ok) {
+          added += 1;
+          if (name !== item.name.trim()) renamed += 1;
+          reason = "";
+          break;
+        }
+        reason = reply.fields.map((field) => field.message).join(" ");
+        if (!reply.fields.some((field) => field.field === "name")) break;
+      } catch (error) {
+        reason = error instanceof Error ? error.message : String(error);
+        break;
+      }
+    }
+    if (reason !== "") skipped.push({ item: item.name.trim() || "An item", reason });
+  }
+  return { added, renamed, skipped };
+}
+
+// Folds imported or pasted aliases into a list: a written form already in the list gets the
+// new spoken form, anything else is added at the end.
+export function mergeAliases<R extends NarrationAlias>(
+  rows: readonly R[],
+  pasted: readonly NarrationAlias[],
+  make: (alias: NarrationAlias) => R,
+): { readonly rows: readonly R[]; readonly added: number; readonly updated: number } {
+  const next = [...rows];
+  let added = 0;
+  let updated = 0;
+  for (const alias of pasted) {
+    const at = next.findIndex((row) => row.written.trim() === alias.written);
+    const existing = at < 0 ? undefined : next[at];
+    if (existing === undefined) {
+      next.push(make(alias));
+      added += 1;
+    } else if (existing.spoken.trim() !== alias.spoken) {
+      next[at] = { ...existing, spoken: alias.spoken };
+      updated += 1;
+    }
+  }
+  return { rows: next, added, updated };
+}

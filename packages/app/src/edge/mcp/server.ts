@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { callRoute, type RouteCallDeps } from "./call-route.js";
 import { registerFileTools } from "./file-tools.js";
+import { registerLibraryTools } from "./library-tools.js";
 import { registerReviewTools } from "./review-tools.js";
 import { inputShape, type RouteTool, routeOf } from "./route-tool.js";
 import { routeTools } from "./tools.js";
@@ -20,6 +21,7 @@ export function createMcpServer(deps: McpDeps): McpServer {
   for (const tool of routeTools) registerRouteTool(server, deps, tool);
   registerFileTools(server, deps);
   registerReviewTools(server, deps);
+  registerLibraryTools(server, deps);
   return server;
 }
 

@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { builtInTheme } from "../document/theme.js";
 import {
   copyName,
+  importEach,
   importedName,
   libraryFile,
   libraryFileFormat,
+  mergeAliases,
   readLibraryFile,
 } from "./transfer.js";
 
@@ -110,5 +112,47 @@ describe("names", () => {
   it("names a copy '<name> copy', then 'copy 2'", () => {
     expect(copyName("Dossier", new Set(["dossier"]), 200)).toBe("Dossier copy");
     expect(copyName("Dossier", new Set(["dossier", "dossier copy"]), 200)).toBe("Dossier copy 2");
+  });
+});
+
+describe("importing item by item", () => {
+  it("renames an item whose name is taken in its group and skips a refusal that isn't the name", async () => {
+    const saved: string[] = [];
+    const outcome = await importEach(
+      [
+        { name: "Harbor", kind: "article" },
+        { name: "Broken", kind: "article" },
+      ],
+      {
+        existing: [{ group: "article", name: "harbor" }],
+        groupOf: (item) => item.kind,
+        max: 200,
+        save: async (item) => {
+          saved.push(item.name);
+          return item.name === "Broken"
+            ? { ok: false, fields: [{ field: "body", message: "Enter the text." }] }
+            : { ok: true };
+        },
+      },
+    );
+    expect(saved).toEqual(["Harbor (imported)", "Broken"]);
+    expect(outcome).toEqual({
+      added: 1,
+      renamed: 1,
+      skipped: [{ item: "Broken", reason: "Enter the text." }],
+    });
+  });
+
+  it("folds aliases into a list: a written form already there gets the new spoken form", () => {
+    const merged = mergeAliases(
+      [{ written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false }],
+      [
+        { written: "Dr.", spoken: "Docteur", wholeWord: true, caseSensitive: false },
+        { written: "St.", spoken: "Saint", wholeWord: true, caseSensitive: false },
+      ],
+      (alias) => alias,
+    );
+    expect(merged.rows.map((row) => row.spoken)).toEqual(["Docteur", "Saint"]);
+    expect([merged.added, merged.updated]).toEqual([1, 1]);
   });
 });

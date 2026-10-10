@@ -5,6 +5,8 @@ import { Dialog } from "@/components/kit/dialog";
 import { Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
+export { mergeAliases } from "@app/slices/library/transfer.js";
+
 export interface ParsedAliases {
   readonly aliases: readonly NarrationAlias[];
   // 1-based line numbers that were not "written = spoken".
@@ -28,30 +30,6 @@ export function parseAliasLines(text: string): ParsedAliases {
     aliases.push({ written, spoken, wholeWord: true, caseSensitive: false });
   }
   return { aliases, skipped };
-}
-
-// Folds pasted aliases into the list: a written form already in the list gets the new spoken
-// form, anything else is added at the end.
-export function mergeAliases<R extends NarrationAlias>(
-  rows: readonly R[],
-  pasted: readonly NarrationAlias[],
-  make: (alias: NarrationAlias) => R,
-): { readonly rows: readonly R[]; readonly added: number; readonly updated: number } {
-  const next = [...rows];
-  let added = 0;
-  let updated = 0;
-  for (const alias of pasted) {
-    const at = next.findIndex((row) => row.written.trim() === alias.written);
-    const existing = at < 0 ? undefined : next[at];
-    if (existing === undefined) {
-      next.push(make(alias));
-      added += 1;
-    } else if (existing.spoken.trim() !== alias.spoken) {
-      next[at] = { ...existing, spoken: alias.spoken };
-      updated += 1;
-    }
-  }
-  return { rows: next, added, updated };
 }
 
 // Paste many: one alias per line, added to the list on screen (Save aliases keeps them).
