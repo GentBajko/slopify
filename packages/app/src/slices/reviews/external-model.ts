@@ -44,8 +44,8 @@ export interface ExternalReview {
 }
 
 // Where a review stands (`reviewStanding`): waiting for a verdict, or why it takes none.
-// `superseded` when the review that replaced it waits; `replaced-pending` when none does yet (its item is
-// still being made again, or the edit that replaced it is saved but not continued).
+// `superseded` when the review that replaced it waits; `replaced-pending` when none does yet
+// (its item is still being made again, or the edit that replaced it is saved but not continued).
 export type ReviewStanding = ExternalReviewState | "trashed" | "canceled" | "replaced-pending";
 
 // Why a review takes no verdict, one sentence per standing: what get_external_review explains,

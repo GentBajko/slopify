@@ -28,10 +28,10 @@ function canceledStep(work: string): string {
 
 // Where a review stands, in the one order get_external_review and a refused verdict both say
 // it: a verdict already kept, its run canceled (Cancel closed it, or its step reads canceled;
-// no new one waits until the step is taken up and asks again), its item replaced or its
-// step gone (`superseded`, or `replaced-pending` while no new one waits yet), then its project in the Trash - said last, as only
-// then would Restore bring it back. It waits only when none holds, exactly when `stillWaiting`
-// lists it.
+// no new one waits until the step is taken up and asks again), its item replaced or its step
+// gone (`superseded`, or `replaced-pending` while no new one waits yet), then its project in
+// the Trash - said last, as only then would Restore bring it back. It waits only when none
+// holds, exactly when `stillWaiting` lists it.
 export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
   if (review.state === "answered" || review.state === "auto-passed") return review.state;
   if (
