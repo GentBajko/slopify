@@ -1,5 +1,5 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type UseMutationResult, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
 import { useToast } from "@/components/kit/toast";
 import { keys } from "@/queries";
@@ -7,7 +7,9 @@ import { setAside } from "./api.js";
 
 // "Keep as is": held work the person does not want run (a step added after the project was
 // made, whose run would redraw what is finished) leaves Needs you until the next edit.
-export function useKeepAsIs(project: ProjectListing) {
+export function useKeepAsIs(
+  project: ProjectListing,
+): UseMutationResult<{ readonly setAside: boolean }, Error, boolean> {
   const { api } = useApp();
   const client = useQueryClient();
   const notify = useToast();
