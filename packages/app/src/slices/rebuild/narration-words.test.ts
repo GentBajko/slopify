@@ -1,10 +1,9 @@
 import { expect, it } from "vitest";
-import type { LogFields } from "../../kernel/log.js";
 import { layout } from "../../kernel/paths.js";
 import type { RunConfig } from "../admission/model.js";
 import type { RevisionOutputView, RevisionView } from "../revisions/model.js";
 import type { Output } from "../storage/model.js";
-import { wordTimingsFor } from "./narration-words.js";
+import { type BodyWordTimings, bodyWordTimings } from "./narration-words.js";
 import { config, emptyView } from "./recipe-fixture.js";
 
 const paths = layout("/data");
@@ -41,10 +40,8 @@ function view(runConfig: RunConfig, outputs: readonly RevisionOutputView[]): Rev
 }
 
 function harness(measured: Readonly<Record<string, number>> = {}) {
-  const lines: { event: string; fields: LogFields | undefined }[] = [];
   const asked: string[] = [];
   return {
-    lines,
     asked,
     deps: {
       paths,
@@ -53,9 +50,6 @@ function harness(measured: Readonly<Record<string, number>> = {}) {
         const ms = Object.entries(measured).find(([name]) => path.endsWith(name))?.[1];
         if (ms === undefined) throw new Error(`ffmpeg could not read ${path}`);
         return ms;
-      },
-      log: {
-        write: (_level: string, event: string, fields?: LogFields) => lines.push({ event, fields }),
       },
     },
   };
@@ -66,18 +60,11 @@ const words = (
   omissions: readonly { start: number; text: string }[] = [],
 ) => JSON.stringify({ key: "k", words: list, omissions });
 
-const read = (timing: string | undefined) =>
-  JSON.parse(timing ?? "null") as {
+const read = (timing: BodyWordTimings) =>
+  JSON.parse(timing.ok ? timing.value : "null") as {
     words: { text: string; start: number; end: number }[];
     omissions: { start: number; text: string }[];
   } | null;
-
-it("gives the audio export its timing as it is: both play on the export's clock", async () => {
-  const h = harness();
-  const timing = words([{ text: "Welcome", start: 1.2, end: 1.8 }]);
-  expect(await wordTimingsFor(h.deps, view(narrated, []), "audio-export", timing)).toBe(timing);
-  expect(h.asked).toEqual([]);
-});
 
 it("moves the body's words back by the edge, intro and gap, and leaves out the intro's and outro's", async () => {
   const h = harness();
@@ -89,10 +76,9 @@ it("moves the body's words back by the edge, intro and gap, and leaves out the i
     silenceGapSeconds: 0.5,
   };
   // Edge 1 s, intro 2 s, gap 0.5 s: the body runs from 3.5 s to 6.5 s, then a gap and the outro.
-  const timing = await wordTimingsFor(
+  const timing = await bodyWordTimings(
     h.deps,
     view(spoken, [part("audio_intro", 2000), part("audio_body", 3000), part("audio_outro", 1000)]),
-    "audio-body",
     words(
       [
         { text: "Welcome", start: 1.2, end: 1.8 },
@@ -119,10 +105,9 @@ it("moves the body's words back by the edge, intro and gap, and leaves out the i
 it("measures a provided narration whose length was never recorded", async () => {
   const h = harness({ "audio_body.mp3": 4000 });
   const provided: RunConfig = { ...config, sources: { ...config.sources, audio: "provide" } };
-  const timing = await wordTimingsFor(
+  const timing = await bodyWordTimings(
     h.deps,
     view(provided, [part("audio_body", null)]),
-    "audio-body",
     words([
       { text: "Hello", start: 0.2, end: 0.6 },
       { text: "end", start: 3.8, end: 4.2 },
@@ -135,32 +120,22 @@ it("measures a provided narration whose length was never recorded", async () => 
   ]);
 });
 
-it("leaves the timing out and logs why when it can't be read or the narration can't be timed", async () => {
+it("refuses, saying why, when the timing can't be read or the narration can't be timed", async () => {
   const unreadable = harness();
   expect(
-    await wordTimingsFor(
-      unreadable.deps,
-      view(narrated, [part("audio_body", 3000)]),
-      "audio-body",
-      "{not json",
-    ),
-  ).toBeUndefined();
-  expect(unreadable.lines).toEqual([
-    { event: "mcp.word-timing", fields: expect.objectContaining({ projectId: "p1" }) },
-  ]);
+    await bodyWordTimings(unreadable.deps, view(narrated, [part("audio_body", 3000)]), "{not json"),
+  ).toEqual({ ok: false, reason: expect.stringContaining("JSON") });
   const unmeasured = harness();
   expect(
-    await wordTimingsFor(
+    await bodyWordTimings(
       unmeasured.deps,
       view(narrated, [part("audio_body", null)]),
-      "audio-body",
       words([{ text: "Hello", start: 0.2, end: 0.6 }]),
     ),
-  ).toBeUndefined();
-  expect(unmeasured.lines[0]?.fields?.detail).toContain("ffmpeg could not read");
+  ).toEqual({ ok: false, reason: expect.stringContaining("ffmpeg could not read") });
   const missing = harness();
-  expect(
-    await wordTimingsFor(missing.deps, view(narrated, []), "audio-body", words([])),
-  ).toBeUndefined();
-  expect(missing.lines[0]?.fields?.detail).toContain("narration audio isn't finished");
+  expect(await bodyWordTimings(missing.deps, view(narrated, []), words([]))).toEqual({
+    ok: false,
+    reason: expect.stringContaining("narration audio isn't finished"),
+  });
 });

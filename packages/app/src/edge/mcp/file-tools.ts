@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { wordTimingsFor } from "../../slices/rebuild/narration-words.js";
+import { bodyWordTimings } from "../../slices/rebuild/narration-words.js";
 import { findRevisionDownload } from "../../slices/revisions/downloads.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -86,7 +86,8 @@ export async function projectFile(
 }
 
 // The word timing describes the current narration, so it comes with that audio only: not an
-// intro, an outro or another format, and not an older version from History.
+// intro, an outro or another format, and not an older version from History. The audio export
+// plays on the clock the words were timed on; the body file alone has its own.
 async function narrationTimings(
   deps: RevisionDeps,
   projectId: string,
@@ -97,20 +98,26 @@ async function narrationTimings(
   const head = currentRevisionId(deps.db, projectId);
   const view = head === undefined ? undefined : getRevisionView(deps, projectId, head);
   if (view === undefined) return undefined;
+  const words = readFileSync(timing.download.path, "utf8");
+  if (asset === "audio-export") return words;
   const { measureAudio } = deps;
-  return wordTimingsFor(
+  const body = await bodyWordTimings(
     {
       paths: deps.paths,
-      log: deps.log,
       measure: (path) =>
         measureAudio === undefined
           ? Promise.reject(new Error("this server has no way to measure audio"))
           : measureAudio(path),
     },
     view,
-    asset,
-    readFileSync(timing.download.path, "utf8"),
+    words,
   );
+  if (body.ok) return body.value;
+  deps.log.write("error", "mcp.word-timing", {
+    projectId,
+    detail: `The narration's word timing was left out of get_project_file: ${body.reason}`,
+  });
+  return undefined;
 }
 
 export function registerFileTools(server: McpServer, deps: RevisionDeps): void {

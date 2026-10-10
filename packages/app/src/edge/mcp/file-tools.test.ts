@@ -1,6 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { z } from "zod";
+import type { LogFields, LogLevel } from "../../kernel/log.js";
 import type { RunConfig } from "../../slices/admission/model.js";
 import { config, emptyView } from "../../slices/rebuild/recipe-fixture.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
@@ -141,6 +143,44 @@ it("gives word timing with the current narration only, not an intro or an older 
   expect(older).toContain("body-old.mp3");
   expect(older).not.toContain("wordTimings");
   expect(await said(`/files/${h.projectId}/audio-body`)).toContain("wordTimings");
+});
+
+it("gives the audio export its word timing as it is: both play on the export's clock", async () => {
+  const h = withFiles();
+  // An edge of silence would move the body file's words back by a second.
+  narratedHead(h, { ...narrated, edgeSilenceSeconds: 1 });
+  const dir = join(h.deps.paths.projects, h.projectId);
+  writeFileSync(join(dir, "audio", "export.mp3"), Buffer.from("mp3"));
+  insertOutput(h.deps.db, h.output("o5", "audio_export", "audio/export.mp3", "video"));
+  const answer = await projectFile(h.deps, h.projectId, `/files/${h.projectId}/audio-export`);
+  const first = answer.content[0];
+  const said = z
+    .object({ wordTimings: z.string() })
+    .parse(JSON.parse(first?.type === "text" ? first.text : "{}"));
+  expect(said.wordTimings).toBe(readFileSync(join(dir, "audio", "words.json"), "utf8"));
+});
+
+it("leaves the body's word timing out, and logs why, when it can't be read", async () => {
+  const h = withFiles();
+  narratedHead(h);
+  writeFileSync(join(h.deps.paths.projects, h.projectId, "audio", "words.json"), "{not json");
+  const lines: string[] = [];
+  const deps = {
+    ...h.deps,
+    log: {
+      write: (_level: LogLevel, event: string, fields?: LogFields) =>
+        void lines.push(`${event} [${fields?.projectId ?? ""}] ${fields?.detail ?? ""}`),
+    },
+  };
+  const said = JSON.stringify(
+    (await projectFile(deps, h.projectId, `/files/${h.projectId}/audio-body`)).content,
+  );
+  expect(said).not.toContain("wordTimings");
+  expect(lines).toEqual([
+    expect.stringMatching(
+      /^mcp\.word-timing \[p1\] The narration's word timing was left out of get_project_file: .*JSON/,
+    ),
+  ]);
 });
 
 // An uploaded narration has no length recorded: it is measured, as the export measures it.

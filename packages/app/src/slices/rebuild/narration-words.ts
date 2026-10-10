@@ -1,22 +1,21 @@
 import { causedBy } from "../../kernel/errors.js";
-import type { Log } from "../../kernel/log.js";
 import type { RevisionView } from "../revisions/model.js";
 import { type NarrationAudioDeps, narrationAudio } from "./runtime-export-inputs.js";
 import { wordsSchema } from "./runtime-subtitles.js";
 
-// The word timing for one narration file, as the agent's get_project_file hands it out. The
-// timing is on the export's clock (the subtitles stage timed it on `narrationAudio`), which the
-// audio export plays on. The body file alone starts at zero: its words move back by where the
-// body starts, and the intro's and outro's are left out. Undefined, and logged, when the
+export type BodyWordTimings =
+  | { readonly ok: true; readonly value: string }
+  | { readonly ok: false; readonly reason: string };
+
+// The word timing of the body narration file alone. The subtitles stage timed the words on the
+// export's clock (`narrationAudio`); the body file starts at zero, so its words move back by
+// where the body starts, and the intro's and outro's are left out. Refused, with why, when the
 // timing can't be read or the narration can't be timed.
-export async function wordTimingsFor(
-  deps: NarrationAudioDeps & { readonly log: Pick<Log, "write"> },
+export async function bodyWordTimings(
+  deps: NarrationAudioDeps,
   view: RevisionView,
-  asset: "audio-body" | "audio-export",
   words: string,
-): Promise<string | undefined> {
-  if (asset === "audio-export") return words;
-  const projectId = view.revision.projectId;
+): Promise<BodyWordTimings> {
   try {
     const timing = wordsSchema.parse(JSON.parse(words));
     const timeline = await narrationAudio(deps, view);
@@ -25,24 +24,23 @@ export async function wordTimingsFor(
     const end = start + (timeline[before]?.seconds ?? 0);
     // Times are rounded to the millisecond, so a body word can sit a hair before the body.
     const inBody = (at: number) => at >= start - 0.001 && at < end;
-    return JSON.stringify({
-      ...timing,
-      words: timing.words
-        .filter((word) => inBody(word.start))
-        .map((word) => ({
-          ...word,
-          start: Math.max(0, word.start - start),
-          end: Math.min(word.end, end) - start,
-        })),
-      omissions: timing.omissions
-        .filter((omission) => inBody(omission.start))
-        .map((omission) => ({ ...omission, start: Math.max(0, omission.start - start) })),
-    });
+    return {
+      ok: true,
+      value: JSON.stringify({
+        ...timing,
+        words: timing.words
+          .filter((word) => inBody(word.start))
+          .map((word) => ({
+            ...word,
+            start: Math.max(0, word.start - start),
+            end: Math.min(word.end, end) - start,
+          })),
+        omissions: timing.omissions
+          .filter((omission) => inBody(omission.start))
+          .map((omission) => ({ ...omission, start: Math.max(0, omission.start - start) })),
+      }),
+    };
   } catch (error) {
-    deps.log.write("error", "mcp.word-timing", {
-      projectId,
-      detail: `The narration's word timing was left out of get_project_file: ${causedBy(error)}`,
-    });
-    return undefined;
+    return { ok: false, reason: causedBy(error) };
   }
 }
