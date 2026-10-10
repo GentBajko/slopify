@@ -53,9 +53,11 @@ export function projectHolds(
        FROM review_checkpoints c
        JOIN project_heads h ON h.project_id=c.project_id AND h.revision_id=c.revision_id
        WHERE c.state IN ('held','pending-review') AND c.approved_at IS NULL AND ${liveProject("c", "project_id")}${onlyOne}`;
-  const gates = (
-    projectId === undefined ? db.prepare(gateSql).all() : db.prepare(gateSql).all(projectId)
-  ).map((row) => gateRow.parse(row));
+  const scoped = projectId === undefined ? [] : [projectId];
+  const gates = db
+    .prepare(gateSql)
+    .all(...scoped)
+    .map((row) => gateRow.parse(row));
   const standings = scope.standings ?? stageStandingsByProject(db, projectId);
   // A checkpoint holds the run once the stages its step needs are made; before that the run
   // is held by whatever those stages wait on.
@@ -79,12 +81,14 @@ export function projectHolds(
     };
     holding.set(gate.project_id, [...(holding.get(gate.project_id) ?? []), hold]);
   }
-  const preparedSql = `SELECT project_id FROM prepared_videos WHERE added_checkpoint=1${
-    projectId === undefined ? "" : " AND project_id=?"
-  }`;
-  const scheduled = (
-    projectId === undefined ? db.prepare(preparedSql).all() : db.prepare(preparedSql).all(projectId)
-  ).map((row) => projectRow.parse(row).project_id);
+  const scheduled = db
+    .prepare(
+      `SELECT h.project_id FROM project_heads h WHERE ${heldForItsDay("h")}${
+        projectId === undefined ? "" : " AND h.project_id=?"
+      }`,
+    )
+    .all(...scoped)
+    .map((row) => projectRow.parse(row).project_id);
   const agents = projectsWaitingOnAgents(db, projectId);
   const stopped = heldBesideReviews(db, projectId);
   return {
@@ -109,6 +113,6 @@ function heldBesideReviews(db: DatabaseSync, projectId: string | undefined): Rea
        AND NOT EXISTS (SELECT 1 FROM external_reviews e WHERE e.work_id=w.id AND e.state='waiting')${
          projectId === undefined ? "" : " AND w.project_id=?"
        }`;
-  const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
+  const rows = db.prepare(sql).all(...(projectId === undefined ? [] : [projectId]));
   return new Set(rows.map((row) => projectRow.parse(row).project_id));
 }
