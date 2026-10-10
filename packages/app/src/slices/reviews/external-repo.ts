@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
-import { liveProject, projectTrashed } from "../admission/repo.js";
+import { liveProject, oneProject, projectTrashed } from "../admission/repo.js";
 import { type Actor, actors } from "../agents/model.js";
 import {
   type ExternalAnswerResult,
@@ -230,6 +230,10 @@ export function reviewStanding(db: DatabaseSync, review: ExternalReview): Review
   return waits === undefined ? "superseded" : "waiting";
 }
 
+// A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the
+// Trash.
+const stillWaiting = `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}`;
+
 // Waiting, still wanted by the current version, of a run that isn't canceled, oldest first.
 export function waitingExternalReviews(
   db: DatabaseSync,
@@ -240,29 +244,21 @@ export function waitingExternalReviews(
 
 // The same rows unread, for a caller that skips one it can't read instead of failing them all.
 export function waitingExternalReviewRows(db: DatabaseSync, projectId?: string): unknown[] {
+  const one = oneProject("e", projectId);
   return db
     .prepare(
-      `SELECT e.* FROM external_reviews e WHERE ${stillWaiting(projectId)} ORDER BY e.waiting_since, e.rowid`,
+      `SELECT e.* FROM external_reviews e WHERE ${stillWaiting}${one.sql} ORDER BY e.waiting_since, e.rowid`,
     )
-    .all(...(projectId === undefined ? [] : [projectId]));
+    .all(...one.params);
 }
 
 // The projects with a review waiting for an agent, as `waitingExternalReviewRows` finds them.
 export function projectsWaitingOnAgents(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  const one = oneProject("e", projectId);
   const rows = db
-    .prepare(
-      `SELECT DISTINCT e.project_id FROM external_reviews e WHERE ${stillWaiting(projectId)}`,
-    )
-    .all(...(projectId === undefined ? [] : [projectId]));
+    .prepare(`SELECT DISTINCT e.project_id FROM external_reviews e WHERE ${stillWaiting}${one.sql}`)
+    .all(...one.params);
   return new Set(rows.map((row) => z.string().parse(row.project_id)));
-}
-
-// A review `e` that waits: still wanted, of a run that isn't canceled and a project not in the
-// Trash; one project's alone when `projectId` is given (bound as the query's parameter).
-function stillWaiting(projectId: string | undefined): string {
-  return `e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")} AND ${liveProject("e", "project_id")}${
-    projectId === undefined ? "" : " AND e.project_id=?"
-  }`;
 }
 
 const dueRow = z.object({
