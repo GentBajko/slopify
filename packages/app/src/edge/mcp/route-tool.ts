@@ -13,6 +13,12 @@ export interface RouteTool {
   readonly description: string;
   // The consequence the web page's confirm dialog states; the tool then needs confirmed: true.
   readonly confirm?: string;
+  // The page's own wording of that consequence with this call's numbers: read from the GET
+  // route the page reads (same path parameters), then put into words. Falls back to confirm.
+  readonly confirmFrom?: {
+    readonly route: string;
+    readonly text: (value: unknown) => string | undefined;
+  };
   // A POST that only looks, checks or prices (a preview, an estimate, a test send): it changes
   // nothing, so it is not recorded as an agent's change.
   readonly readOnly?: true;

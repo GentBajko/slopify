@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { callRoute } from "./call-route.js";
 import { routeCallDeps } from "./mcp.fake.js";
 import type { RouteTool } from "./route-tool.js";
+import { routeTools } from "./tools.js";
 
 function answering(response: Response) {
   const seen: Request[] = [];
@@ -213,5 +214,19 @@ it("records a change by agent, but not a POST that only looks", async () => {
   await callRoute(fake, resume, { id: "p1", body: {} });
   expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([
     { tool: "resume_project" },
+  ]);
+});
+
+it("states the files and space Delete old versions frees, as the page does, before asking", async () => {
+  const fake = answering(Response.json({ historyFiles: 3, historyBytes: 5 * 1024 * 1024 }));
+  const tool = routeTools.find((one) => one.name === "delete_old_versions");
+  if (tool === undefined) throw new Error("no delete_old_versions tool");
+  const asked = await callRoute(fake, tool, { id: "p1" });
+  expect(asked.isError).toBe(true);
+  expect(JSON.stringify(asked.content)).toContain(
+    "This deletes 3 file(s) of older versions and frees 5 MB",
+  );
+  expect(fake.seen.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+    "GET /api/storage/projects/p1",
   ]);
 });

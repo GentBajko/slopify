@@ -18,16 +18,5 @@ export function usd(value: number): string {
   return Math.abs(value) < 0.01 ? fractions.format(value) : cents.format(value);
 }
 
-// "512 B", "3.4 MB", "12 GB": binary units, one decimal under ten.
-export function fileSize(bytes: number): string {
-  if (bytes < 1024) return `${String(bytes)} B`;
-  const units = ["KB", "MB", "GB", "TB"] as const;
-  let value = bytes;
-  let unit: string = units[0];
-  for (const candidate of units) {
-    value /= 1024;
-    unit = candidate;
-    if (value < 1024 || candidate === units.at(-1)) break;
-  }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "")} ${unit}`;
-}
+// "512 B", "3.4 MB", "12 GB": the server's own, so an agent's confirmation reads the same.
+export { fileSize } from "@app/slices/storage/consequences.js";

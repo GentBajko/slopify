@@ -1,5 +1,10 @@
+import { z } from "zod";
+import { oldVersionsConsequence } from "../../slices/storage/consequences.js";
 import { control, type RouteTool } from "./route-tool.js";
 import { listWithStateWords, projectWithStateWords } from "./state-shapes.js";
+
+// What get_project_storage (and the page's Free up space) reads for the old versions.
+const historySchema = z.object({ historyFiles: z.number(), historyBytes: z.number() });
 
 const projects: readonly RouteTool[] = [
   {
@@ -107,6 +112,15 @@ const projects: readonly RouteTool[] = [
       "Delete old versions for this one project; answers how many files were deleted and the bytes freed. Delete all old versions and Clean up everything (every project) are the person's, in Settings → Backup & storage.",
     confirm:
       "This deletes the project's older versions, the files in its History folder (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything uploaded or put there by hand. Going back to one of those versions makes its files again, which takes time and uses provider credits. get_project_storage says how many files and how much space first.",
+    confirmFrom: {
+      route: "/api/storage/projects/:id",
+      text: (value) => {
+        const storage = historySchema.safeParse(value);
+        return storage.success
+          ? oldVersionsConsequence(storage.data.historyFiles, storage.data.historyBytes)
+          : undefined;
+      },
+    },
   },
 ];
 

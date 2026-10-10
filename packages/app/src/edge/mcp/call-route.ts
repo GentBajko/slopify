@@ -42,10 +42,6 @@ export async function callRoute(
   tool: RouteTool,
   args: Readonly<Record<string, unknown>>,
 ): Promise<CallToolResult> {
-  if (tool.confirm !== undefined && args.confirmed !== true)
-    return refusal(
-      `${tool.confirm} The web page asks for a second press here: call ${tool.name} again with confirmed: true to go ahead.`,
-    );
   const { method, path } = routeOf(tool);
   const named = paramsOf(path).find((name) => !pathParam.safeParse(args[name]).success);
   if (named !== undefined) return strayPath(tool, named);
@@ -53,6 +49,10 @@ export async function callRoute(
   const url = new URL(filled, "http://localhost");
   // The URL must still be the tool's own route once resolved, or it would reach another one.
   if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
+  if (tool.confirm !== undefined && args.confirmed !== true)
+    return refusal(
+      `${(await confirmText(deps, tool, args)) ?? tool.confirm} The web page asks for a second press here: call ${tool.name} again with confirmed: true to go ahead.`,
+    );
   const query = querySchema.safeParse(args.query);
   if (query.success)
     for (const [key, value] of Object.entries(query.data)) url.searchParams.set(key, value);
@@ -77,6 +77,23 @@ export async function callRoute(
       });
   }
   return result;
+}
+
+// The consequence with this call's numbers, as the page states it; undefined when they can't
+// be read, and the tool's fixed sentence is said instead.
+async function confirmText(
+  deps: RouteCallDeps,
+  tool: RouteTool,
+  args: Readonly<Record<string, unknown>>,
+): Promise<string | undefined> {
+  if (tool.confirmFrom === undefined) return undefined;
+  const path = tool.confirmFrom.route.replace(/:(\w+)/g, (_, name: string) => String(args[name]));
+  try {
+    const response = await deps.api(new Request(new URL(path, "http://localhost")));
+    return response.ok ? tool.confirmFrom.text(await response.json()) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function strayPath(tool: RouteTool, named: string): CallToolResult {

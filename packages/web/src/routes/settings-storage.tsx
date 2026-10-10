@@ -1,3 +1,4 @@
+import { oldVersionsConsequence } from "@app/slices/storage/consequences.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -207,10 +208,8 @@ export function ProjectStorageList({
   );
 }
 
-// What Delete old versions removes and what it costs later.
-export function oldVersionsConsequence(files: number, bytes: number): string {
-  return `This deletes ${String(files)} file(s) of older versions and frees ${formatBytes(bytes)}: what is in the projects' History folders (earlier renders, narration before a change). The current video, shorts, thumbnails and everything in Upload stay, and so does anything you uploaded or put there yourself. Going back to one of those older versions makes its files again, which takes time and uses provider credits.`;
-}
+// What Delete old versions removes and what it costs later: the agent's tool states the same.
+export { oldVersionsConsequence };
 
 // What Keep outputs only removes and what it costs later, asked before it runs here and on
 // the project page.
