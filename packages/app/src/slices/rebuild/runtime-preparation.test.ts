@@ -259,7 +259,8 @@ it("resolves generated article and entry text before their separate preparation 
   } finally {
     h.close();
   }
-});
+  // ceiling: a full narration run with two preparation calls, as its peers above.
+}, 30_000);
 
 it("retains preparation with a resolved thinking configuration", async () => {
   const catalogue = {

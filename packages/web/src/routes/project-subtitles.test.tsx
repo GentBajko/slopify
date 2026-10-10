@@ -83,7 +83,9 @@ describe("existing project subtitles", () => {
       "upper-middle",
     );
     expect(screen.queryByRole("button", { name: "Save subtitles" })).toBeNull();
-  });
+    // ceiling: opens the editor twice and saves; alone 0.8 s, it timed out once under a loaded
+    // full suite.
+  }, 20_000);
 
   it("keeps refused subtitle edits and maps the server field path", async () => {
     const user = userEvent.setup();

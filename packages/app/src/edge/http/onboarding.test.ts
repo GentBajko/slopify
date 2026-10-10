@@ -450,7 +450,9 @@ describe("the sample over HTTP", () => {
     });
     const restored = await h.app.request("/api/onboarding/sample/restore", { method: "POST" });
     expect(await json(restored)).toMatchObject({ projectId, samples: { library: projectId } });
-  });
+    // ceiling: copies the whole sample on disk; alone it takes 0.4 s, and a loaded full suite
+    // stretched it near the 5 s default.
+  }, 20_000);
 
   it("lists the demos beside the first sample, read-only, and copies the one asked for", async () => {
     const h = harness();

@@ -63,7 +63,8 @@ it("polls for incoming bytes, preserves the active player, and stops a replaced 
   expect(load).toHaveBeenCalledTimes(1);
   unmount();
   expect(pause).toHaveBeenCalledTimes(2);
-});
+  // ceiling: three polling waits of up to 2.5 s each; alone it takes 3 s.
+}, 15_000);
 
 it("removes interrupted audio and handles browser buffering errors without generation actions", async () => {
   vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
