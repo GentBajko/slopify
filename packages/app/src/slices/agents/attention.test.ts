@@ -212,6 +212,9 @@ it("lists a stopped run as one an agent may continue", () => {
     }),
   ]);
   expect(stopped()[0]?.reason).toContain("resume_project");
+  // In the Trash, nothing is asked of anyone.
+  db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-10T01:00:00.000Z')").run();
+  expect(stopped()).toEqual([]);
 });
 
 it("leaves out a prepared project's own video checkpoint, a project kept as is, and a trashed one", () => {

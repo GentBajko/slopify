@@ -276,6 +276,12 @@ it("holds a prepared run a restart stopped at its day's hold for Continue the ru
   ).toEqual(["day"]);
 });
 
+it("is not Stopped in the Trash", () => {
+  const f = stoppedBehindVideoGate();
+  f.db.prepare("INSERT INTO project_trash VALUES ('p1','2026-09-11T00:00:00.000Z')").run();
+  expect([...projectHolds(f.db).stopped]).toEqual([]);
+});
+
 // An uploaded project with nothing admitted reads Done (`uploadedAndSettled`): its leftover
 // held steps are nothing to continue.
 it("is not Stopped once uploaded with nothing admitted, as it reads Done", () => {

@@ -181,9 +181,10 @@ function nothingAdmitted(h: string): string {
       SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id AND f.state IN ('failed','canceled')))`;
 }
 
-// Each project with a step held beside the reviews (`held`), and whether its run is stuck: it
-// has unfinished stages, is still, and nothing will move it on but Continue the run, because
-// nothing admitted can start or because a step is held (a step still allowed may wait on it).
+// Each project out of the Trash with a step held beside the reviews (`held`), and whether its
+// run is stuck: it has unfinished stages, is still, and nothing will move it on but Continue
+// the run, because nothing admitted can start or because a step is held (a step still allowed
+// may wait on it).
 function heldRuns(
   db: DatabaseSync,
   projectId: string | undefined,
@@ -193,7 +194,7 @@ function heldRuns(
   const rows = db
     .prepare(
       `SELECT h.project_id, ${heldBesideReviews("h")} AS held, (${stuck}) AS stuck
-       FROM project_heads h WHERE (${heldBesideReviews("h")} OR (${stuck}))${
+       FROM project_heads h WHERE ${liveProject("h", "project_id")} AND (${heldBesideReviews("h")} OR (${stuck}))${
          projectId === undefined ? "" : " AND h.project_id=?"
        }`,
     )
