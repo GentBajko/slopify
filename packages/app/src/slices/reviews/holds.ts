@@ -17,8 +17,9 @@ import { projectsWaitingOnAgents } from "./external-repo.js";
 // What a held run waits for when it isn't the person: the one rule the Projects list, a
 // project's page, the calendar, Home and the MCP tools read (`admission/state-words.ts`).
 export interface ProjectHolds {
-  // Prepared ahead by a schedule and held only by the schedule's own Before Video hold: it
-  // waits for its day. Any other checkpoint still to approve is the person's, prepared or not.
+  // Prepared ahead by a schedule: its own Before Video hold not yet approved, no checkpoint of
+  // the person's left to approve, and not stopped. It reads Prepared on its way to that hold
+  // too; `holding` says when the hold is what holds it (the notifier's `atItsDay`).
   readonly prepared: ReadonlySet<string>;
   // Parked on a review an External agent answers, with no checkpoint of the person's reached
   // and no other step held for Continue the run: it goes on by itself once the agent answers

@@ -30,7 +30,7 @@ it("keeps Waiting for you quiet only while the schedule's own hold is what holds
   const f = prepared();
   const { db } = f.h.deps;
   // The images are still to be made: the run is not at its day's hold yet.
-  expect(noticeSubject(db, "p1")?.prepared).toBe(false);
+  expect(noticeSubject(db, "p1")?.atItsDay).toBe(false);
   db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
   db.prepare("UPDATE revision_work SET state='done'").run();
   db.prepare(
@@ -39,7 +39,7 @@ it("keeps Waiting for you quiet only while the schedule's own hold is what holds
   db.prepare(
     "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,'export:video','video-work','v')",
   ).run(f.revisionId);
-  expect(noticeSubject(db, "p1")?.prepared).toBe(true);
+  expect(noticeSubject(db, "p1")?.atItsDay).toBe(true);
   // A step held for Continue the run: it is stopped, and that is the person's to hear.
   db.prepare("UPDATE stages SET state='pending' WHERE kind='audio'").run();
   db.prepare(
@@ -48,5 +48,5 @@ it("keeps Waiting for you quiet only while the schedule's own hold is what holds
   db.prepare(
     "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,'audio:body','audio-work','a')",
   ).run(f.revisionId);
-  expect(noticeSubject(db, "p1")?.prepared).toBe(false);
+  expect(noticeSubject(db, "p1")?.atItsDay).toBe(false);
 });

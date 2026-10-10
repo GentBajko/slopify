@@ -18,7 +18,7 @@ export function noticeSubject(
     startedBy: lastStarter(db, projectId),
     waitingForAgent: holds.waitingForAgent.has(projectId),
     // Quiet only at the schedule's own hold: one stopped short of it is the person's to hear.
-    prepared:
+    atItsDay:
       holds.prepared.has(projectId) &&
       (holds.holding.get(projectId) ?? []).some((hold) => hold.waitsFor === "day"),
   };

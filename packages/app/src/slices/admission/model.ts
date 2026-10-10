@@ -340,9 +340,10 @@ export interface ProjectSummary extends Project {
   // "Keep as is" on Needs you, still about the current revision (`uploads/repo.ts`): the
   // waiting run is left as it is, off Needs you, until the project's next edit.
   readonly setAside?: boolean;
-  // Prepared ahead by a schedule (Schedules → a topic → Prepare) and held only by the
-  // schedule's own Before Video hold until its day; parked on an External agent's review.
-  // Both are `reviews/holds.ts` projectHolds: a checkpoint still to approve is the person's.
+  // Prepared ahead by a schedule (Schedules → a topic → Prepare), its own Before Video hold
+  // the only checkpoint left, which holds it once reached; parked on an External agent's
+  // review. Both are `reviews/holds.ts` projectHolds: a checkpoint still to approve is the
+  // person's.
   readonly prepared?: boolean;
   readonly waitingForAgent?: boolean;
   // Stopped before it finished, as a restart leaves a run: only Continue the run goes on.

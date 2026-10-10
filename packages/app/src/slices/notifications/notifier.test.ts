@@ -20,7 +20,7 @@ function harness(
     readonly link?: boolean;
     readonly startedBy?: "person" | "agent";
     readonly waitingForAgent?: boolean;
-    readonly prepared?: boolean;
+    readonly atItsDay?: boolean;
   } = {},
 ) {
   const posted: Posted[] = [];
@@ -43,7 +43,7 @@ function harness(
             makesVideo: options.makesVideo ?? true,
             ...(options.startedBy === undefined ? {} : { startedBy: options.startedBy }),
             ...(options.waitingForAgent === true ? { waitingForAgent: true } : {}),
-            ...(options.prepared === true ? { prepared: true } : {}),
+            ...(options.atItsDay === true ? { atItsDay: true } : {}),
           }
         : undefined,
     ...(options.link === true
@@ -113,7 +113,7 @@ describe("createRunNotifier", () => {
   });
 
   it("says nothing when a prepared run stops at its schedule's hold to wait for its day", async () => {
-    const { notifier, posted } = harness({ prepared: true });
+    const { notifier, posted } = harness({ atItsDay: true });
     notifier.observe(state("running"));
     notifier.observe(state("pending"));
     await notifier.settled();

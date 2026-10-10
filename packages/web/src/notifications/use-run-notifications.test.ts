@@ -25,6 +25,6 @@ it("reads from the project's page whether its run waits for an agent", async () 
 
 // Nor for a prepared one, held by its schedule's own hold until its day.
 it("reads from the project's page whether it is prepared for its day", async () => {
-  expect(await subjectOf({ prepared: true })).toMatchObject({ prepared: true });
-  expect(await subjectOf({})).toMatchObject({ prepared: false });
+  expect(await subjectOf({ prepared: true })).toMatchObject({ atItsDay: true });
+  expect(await subjectOf({})).toMatchObject({ atItsDay: false });
 });

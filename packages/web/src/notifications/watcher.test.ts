@@ -33,7 +33,7 @@ function harness(
                   makesVideo: true,
                   reason: "Quota exceeded",
                   ...(projectId === "agent" ? { waitingForAgent: true } : {}),
-                  ...(projectId === "prepared" ? { prepared: true } : {}),
+                  ...(projectId === "prepared" ? { atItsDay: true } : {}),
                 },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),
