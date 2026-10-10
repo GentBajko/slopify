@@ -32,3 +32,27 @@ it("records whether the person or an agent started a project's work, and nothing
   await app.request("/api/schedules/s1/topics/prepare", { method: "POST" }, agentBindings);
   expect(lastStarter(h.deps.db, h.projectId)).toBe("agent");
 });
+
+it("logs a start it couldn't record with the project it was for, and still answers", async () => {
+  const h = revisionFixture();
+  open.push(h);
+  const written: { readonly event: string; readonly fields: unknown }[] = [];
+  h.deps.db.exec("DROP TABLE project_starts");
+  const app = new Hono()
+    .use(
+      "/api/*",
+      startRecorder({
+        ...h.deps,
+        log: { write: (_level, event, fields) => void written.push({ event, fields }) },
+      }),
+    )
+    .post("/api/projects/:id/resume", (c) => c.json({ ok: true }, 202));
+  const answer = await app.request(`/api/projects/${h.projectId}/resume`, { method: "POST" });
+  expect(answer.status).toBe(202);
+  expect(written).toEqual([
+    {
+      event: "project.start",
+      fields: expect.objectContaining({ projectId: h.projectId }),
+    },
+  ]);
+});

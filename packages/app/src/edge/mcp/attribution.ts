@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectsMadeBy } from "../../slices/agents/model.js";
 import { paramsOf, type RouteTool, routeOf } from "./route-tool.js";
 
 export interface ActionSubjects {
@@ -6,9 +7,6 @@ export interface ActionSubjects {
   readonly scheduleId: string | null;
 }
 
-const madeBody = z
-  .object({ projectIds: z.array(z.string()).optional(), projectId: z.string().optional() })
-  .loose();
 const movedBody = z.object({ projectIds: z.array(z.string()) }).loose();
 const trashBody = z
   .object({ items: z.array(z.object({ kind: z.string(), id: z.string() })) })
@@ -47,12 +45,7 @@ function projectIdsOf(
   const trashed = trashBody.safeParse(args.body);
   if (trashed.success)
     return trashed.data.items.filter((item) => item.kind === "project").map((item) => item.id);
-  const made = madeBody.safeParse(value);
-  if (!made.success) return [];
-  return [
-    ...(made.data.projectIds ?? []),
-    ...(made.data.projectId === undefined ? [] : [made.data.projectId]),
-  ];
+  return projectsMadeBy(value);
 }
 
 export function revisionIdOf(value: unknown): string | null {
