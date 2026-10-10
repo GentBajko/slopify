@@ -164,10 +164,10 @@ function heldBesideReviews(h: string): string {
 
 const runRow = z.object({ project_id: z.string(), held: z.number(), stuck: z.number() });
 
-// Whether `h` is still: no call in flight, not paused and not waiting its turn in a batch.
+// Whether `h` is still: no step's call in flight, not paused and not waiting its turn in a
+// batch. A running stage needs no clause here: it makes the run's state running (`derive`).
 function still(h: string): string {
-  return `NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=${h}.project_id AND s.state='running')
-    AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=${h}.project_id AND w.state='running')
+  return `NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=${h}.project_id AND w.state='running')
     AND NOT EXISTS(SELECT 1 FROM project_controls c WHERE c.project_id=${h}.project_id AND c.paused=1)
     AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=${h}.project_id AND q.state='queued')`;
 }
