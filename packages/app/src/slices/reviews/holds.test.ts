@@ -401,3 +401,32 @@ it("finds an admission's steps by their index", () => {
     /SEARCH f USING (COVERING )?INDEX revision_work_admission \(admission_id=\?\)/,
   );
 });
+
+// A step failed beside a schedule's own Before Video hold the run reached: the video still
+// renders on its day, so the run reads Prepared (`derive` reads it waiting), not Stopped,
+// though the failed step's admission holds back the video's step until then.
+it("reads a prepared project whose thumbnail failed as Prepared, not Stopped", () => {
+  const f = fixture();
+  heldAtVideo(f);
+  f.db.prepare("UPDATE revision_work SET state='done' WHERE id='images-work'").run();
+  const work = (id: string, kind: string, state: string) =>
+    f.db
+      .prepare(
+        "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at,admission_id) VALUES (?,'p1',?,?,?,?,?,'allowed','{}','2026-09-10T00:00:00.000Z','a1')",
+      )
+      .run(id, f.revisionId, kind, kind, id.padEnd(64, "0"), state);
+  f.stage("thumbnail", "failed");
+  work("video-work", "video", "pending");
+  work("thumb-work", "thumbnail", "failed");
+  f.db
+    .prepare(
+      "INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,fingerprint) VALUES ('p1',?,'export:video','video-work','export:video')",
+    )
+    .run(f.revisionId);
+  f.gate("video");
+  f.prepared(true);
+  const holds = projectHolds(f.db);
+  expect([...holds.stopped]).toEqual([]);
+  expect([...holds.prepared]).toEqual(["p1"]);
+  expect(holds.holding.get("p1")?.map((hold) => hold.waitsFor)).toEqual(["day"]);
+});

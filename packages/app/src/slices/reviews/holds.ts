@@ -96,12 +96,13 @@ export function projectHolds(
     });
   const theirs = new Set<string>();
   const reachedTheirs = new Set<string>();
+  const reachedOwn = new Set<string>();
   const holding = new Map<string, CheckpointHold[]>();
   for (const gate of gates) {
     const own = gate.own === 1;
     if (!own) theirs.add(gate.project_id);
     if (!reached(gate.project_id, gate.stage)) continue;
-    if (!own) reachedTheirs.add(gate.project_id);
+    (own ? reachedOwn : reachedTheirs).add(gate.project_id);
     const hold: CheckpointHold = {
       checkpointId: gate.checkpoint_id,
       stage: gate.stage,
@@ -132,6 +133,10 @@ export function projectHolds(
         (id) =>
           !reachedTheirs.has(id) &&
           !waitingForAgent.has(id) &&
+          // Held at its day's hold, it goes on by itself on its day, though a failed step's
+          // admission holds its video's step back until then; a step a restart held still
+          // waits for Continue the run.
+          (!reachedOwn.has(id) || runs.get(id)?.held === true) &&
           !settled.has(id) &&
           derive(standings.get(id) ?? []) === "pending",
       ),
