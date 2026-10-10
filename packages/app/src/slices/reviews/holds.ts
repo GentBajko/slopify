@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { satisfied, deps as stageDeps } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
+import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { heldForItsDay } from "../schedules/prepare.js";
 import { waitingExternalReviewRows } from "./external.js";
 
@@ -21,7 +22,7 @@ export interface ProjectHolds {
 
 const gateRow = z.object({
   project_id: z.string(),
-  stage: z.enum(["audio", "images", "video"]),
+  stage: checkpointStageSchema,
   own: z.number(),
 });
 const projectRow = z.object({ project_id: z.string() }).loose();
