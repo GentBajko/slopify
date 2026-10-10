@@ -109,3 +109,28 @@ it("waits for the person, not the agent, once a checkpoint of theirs holds the r
   g.db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
   expect([...projectHolds(g.db).waitingForAgent]).toEqual(["p1"]);
 });
+
+it("reads one project's holds alone, and the stage standings a caller already read", () => {
+  const f = fixture();
+  expect([...projectHolds(f.db, { projectId: "p1" }).waitingForAgent]).toEqual(["p1"]);
+  expect([...projectHolds(f.db, { projectId: "other" }).waitingForAgent]).toEqual([]);
+  f.stage("article", "done");
+  f.stage("audio", "pending");
+  f.gate("audio");
+  // The audio's checkpoint isn't reached by the standings the caller passes: no article yet.
+  const standings = new Map([
+    [
+      "p1",
+      [
+        {
+          kind: "article" as const,
+          state: "pending" as const,
+          progressCurrent: null,
+          progressTotal: null,
+        },
+      ],
+    ],
+  ]);
+  expect([...projectHolds(f.db, { standings }).waitingForAgent]).toEqual(["p1"]);
+  expect([...projectHolds(f.db).waitingForAgent]).toEqual([]);
+});

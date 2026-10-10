@@ -324,7 +324,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
               title: project.title,
               makesVideo: project.config.sources.video !== "off",
               startedBy: lastStarter(eventDb, projectId),
-              waitingForAgent: projectHolds(eventDb).waitingForAgent.has(projectId),
+              waitingForAgent: projectHolds(eventDb, { projectId }).waitingForAgent.has(projectId),
             };
       },
       // Read when a notification goes out, by which time the server is listening.

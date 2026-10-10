@@ -252,6 +252,14 @@ export function waitingExternalReviewRows(db: DatabaseSync, projectId?: string):
   return projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
 }
 
+// The projects with a review waiting for an agent, as `waitingExternalReviewRows` finds them.
+export function projectsWaitingOnAgents(db: DatabaseSync, projectId?: string): ReadonlySet<string> {
+  const sql = `SELECT DISTINCT e.project_id FROM external_reviews e WHERE e.state='waiting' AND ${wantedBy("e")} AND ${liveWork("e")}
+    AND ${liveProject("e", "project_id")} ${projectId === undefined ? "" : "AND e.project_id=?"}`;
+  const rows = projectId === undefined ? db.prepare(sql).all() : db.prepare(sql).all(projectId);
+  return new Set(rows.map((row) => z.string().parse(row.project_id)));
+}
+
 export type SettledReview = Pick<
   ExternalReview,
   "id" | "projectId" | "revisionId" | "workId" | "stage" | "itemKey"

@@ -96,7 +96,7 @@ export function projectRoutes(deps: AppDeps) {
         const channels = projectChannels(deps.db);
         const uploads = uploadedProjects(deps.db);
         const aside = setAsideProjects(deps.db);
-        const holds = projectHolds(deps.db);
+        const holds = projectHolds(deps.db, { standings });
         const settled = uploadedAndSettled(deps.db);
         const numbers = longVideoStats(deps.db);
         const waits = limitWaitsByProject(deps.db);
@@ -135,7 +135,7 @@ export function projectRoutes(deps: AppDeps) {
           });
         }
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
-        const holds = projectHolds(deps.db);
+        const holds = projectHolds(deps.db, { projectId: project.id });
         const waitingForAgent = holds.waitingForAgent.has(project.id);
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,

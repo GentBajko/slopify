@@ -192,7 +192,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
   const uploads = uploadedProjects(deps.db);
   const samples = sampleProjectIds(deps.db);
   const waits = limitWaitsByProject(deps.db);
-  const holds = projectHolds(deps.db);
+  const holds = projectHolds(deps.db, { standings });
   const aside = setAsideProjects(deps.db);
   const fromSchedule = new Map<string, string>();
   for (const row of deps.db

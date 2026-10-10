@@ -104,14 +104,18 @@ export function listProjects(db: DatabaseSync): Project[] {
 // What 07 Projects needs of every project's stages and no more: the state each one is in
 // and how far through itself a running one is. One statement for the whole list rather
 // than `stagesOf` per row, and five columns rather than the whole stage table, because
-// the screen shows a status word and a meter and reads nothing else from a stage.
-export function stageStandingsByProject(db: DatabaseSync): Map<string, StageProgress[]> {
+// the screen shows a status word and a meter and reads nothing else from a stage. One project's
+// alone when `projectId` is given.
+export function stageStandingsByProject(
+  db: DatabaseSync,
+  projectId?: string,
+): Map<string, StageProgress[]> {
   const grouped = new Map<string, StageProgress[]>();
-  const rows = db
-    .prepare(
-      "SELECT project_id, kind, state, progress_current, progress_total FROM stages ORDER BY rowid",
-    )
-    .all();
+  const select = `SELECT project_id, kind, state, progress_current, progress_total FROM stages${
+    projectId === undefined ? "" : " WHERE project_id=?"
+  } ORDER BY rowid`;
+  const rows =
+    projectId === undefined ? db.prepare(select).all() : db.prepare(select).all(projectId);
   for (const row of rows) {
     const parsed = standingRow.parse(row);
     const standing: StageProgress = {
