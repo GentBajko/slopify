@@ -11,7 +11,8 @@ it.each([
     { status: "pending", progress: 0.5, waitingForAgent: true, prepared: true },
     "Waiting for the agent",
   ],
-  [{ status: "pending", progress: 0, waitingForAgent: true }, "Queued"],
+  // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
+  [{ status: "pending", progress: 0, waitingForAgent: true }, "Waiting for the agent"],
   [{ status: "pending", progress: 0.5, stopped: true }, "Stopped"],
   // Stopped before anything was made: it isn't waiting its turn, it needs Continue the run.
   [{ status: "pending", progress: 0, stopped: true }, "Stopped"],
@@ -46,6 +47,7 @@ it.each([
 it.each([
   [{ status: "pending", progress: 0 }, true],
   [{ status: "pending", progress: 0, stopped: true }, false],
+  [{ status: "pending", progress: 0, waitingForAgent: true }, false],
   [{ status: "pending", progress: 0.5 }, false],
   [{ status: "running", progress: 0 }, false],
 ] as const)("counts %o as queued: %s", (project, queued) => {

@@ -234,6 +234,23 @@ describe("home", () => {
     expect(within(running).getByText("Waiting for the agent")).not.toBeNull();
   });
 
+  // Parked on an agent's review before anything was made: it goes on by itself once the agent
+  // answers, so it is listed once, under Running now, and not as queued.
+  it("lists a run waiting for the agent at its start once, under Running now", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-agent", "Hatshepsut", "pending", { waitingForAgent: true })],
+        }),
+      }),
+    );
+    const running = await screen.findByRole("region", { name: "Running now" });
+    expect(await within(running).findByText("Hatshepsut")).not.toBeNull();
+    expect(within(running).getAllByText(/Hatshepsut/)).toHaveLength(1);
+    expect(within(running).queryByText(/Queued, waiting to start/)).toBeNull();
+  });
+
   // A restart stopped it: Home says so and continues it, as its page would.
   it("lists a stopped run under Needs you as Stopped and continues it from Home", async () => {
     const user = userEvent.setup();

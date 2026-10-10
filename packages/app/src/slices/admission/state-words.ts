@@ -57,10 +57,13 @@ interface ProjectStanding {
 type Holds = Pick<ProjectStanding, "setAside" | "prepared" | "waitingForAgent" | "stopped">;
 
 // A run that ran and is held: a waiting project with some of its run done (`progress` is the
-// run's share done, `progressOf`), or one stopped before it got going. One with none done that
-// isn't stopped is Queued, waiting its turn.
+// run's share done, `progressOf`), or one stopped or parked on an agent's review before it got
+// going. One with none done that waits for neither is Queued, waiting its turn.
 export function heldRun(project: ProjectStanding): boolean {
-  return project.status === "pending" && (project.progress > 0 || project.stopped === true);
+  return (
+    project.status === "pending" &&
+    (project.progress > 0 || project.stopped === true || project.waitingForAgent === true)
+  );
 }
 
 // Whether the person is the one it waits for (to approve, or to Continue the run): not when it
@@ -87,8 +90,8 @@ export function parkedOnAgent(
   );
 }
 
-// Started and waiting its turn: pending with none of its run done and not stopped. Projects'
-// Queued filter and Home's queued line under Running now.
+// Started and waiting its turn: pending with none of its run done, not stopped and not parked
+// on an agent's review. Projects' Queued filter and Home's queued line under Running now.
 export function queuedRun(project: ProjectStanding): boolean {
   return project.status === "pending" && !heldRun(project);
 }

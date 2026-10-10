@@ -11,6 +11,10 @@ it.each([
     { tone: "waiting", word: "Stopped" },
   ],
   [
+    { status: "pending", progress: 0, waitingForAgent: true },
+    { tone: "waiting", word: "Waiting for the agent" },
+  ],
+  [
     { status: "pending", progress: 0.5 },
     { tone: "waiting", word: "Waiting for your review" },
   ],

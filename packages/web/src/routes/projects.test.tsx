@@ -220,6 +220,12 @@ describe("needs you", () => {
     expect(matches(stopped, "waiting")).toBe(true);
   });
 
+  // Parked on an agent's review before anything was made: it waits for the agent, not its turn.
+  it("keeps a run waiting for the agent at its start out of Queued", () => {
+    const parked = listing("p1", "Agent early", "pending", { waitingForAgent: true });
+    expect(matches(parked, "queued")).toBe(false);
+  });
+
   it("keeps prepared runs and runs waiting for the agent out of Needs you and its sort", async () => {
     const projects = [
       listing("p1", "Prepared one", "pending", { progress: 0.9, prepared: true }),
