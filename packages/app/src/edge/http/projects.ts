@@ -27,6 +27,7 @@ import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
 import {
   setAsideProjects,
+  settledStatus,
   uploadedAndSettled,
   uploadedProjects,
 } from "../../slices/uploads/repo.js";
@@ -52,15 +53,9 @@ export function projectRoutes(deps: AppDeps) {
     log: deps.log,
     hasInflight: deps.runner.hasInflight,
   };
-  // An uploaded project with nothing admitted reads as done (`uploadedAndSettled`).
-  const statusOf = (
-    status: ReturnType<typeof derive>,
-    settled: boolean,
-  ): ReturnType<typeof derive> =>
-    settled && (status === "paused" || status === "pending") ? "done" : status;
   const summarise = (project: Project): ProjectSummary => ({
     ...project,
-    status: statusOf(
+    status: settledStatus(
       derive(stagesOf(deps.db, project.id), project.paused),
       uploadedAndSettled(deps.db, project.id).has(project.id),
     ),
@@ -103,7 +98,7 @@ export function projectRoutes(deps: AppDeps) {
           const holding = holds.holding.get(project.id);
           return {
             ...project,
-            status: statusOf(derive(stages, project.paused), settled.has(project.id)),
+            status: settledStatus(derive(stages, project.paused), settled.has(project.id)),
             progress: progressOf(stages),
             channelId: channels.get(project.id) ?? defaultChannelId,
             uploadedAt: uploads.get(project.id) ?? null,
