@@ -109,7 +109,7 @@ export interface NoticeSubject {
 }
 
 // A run parked on an agent's review waits for nobody: the agent answers, or the review passes
-// at its deadline and says so then (decided 2026-10-10). Every other notice goes out.
+// at its deadline and says so then. Every other notice goes out.
 export function announces(
   kind: RunNotice,
   subject: Pick<NoticeSubject, "waitingForAgent">,

@@ -27,7 +27,7 @@ export const stageStateWords: Readonly<Record<StageState, string>> = {
 };
 
 // What a held run waits for, on a step or on a project: the person's review at a checkpoint,
-// an External agent's review (decided 2026-10-10), its scheduled day, or nobody once its
+// an External agent's review, its scheduled day, or nobody once its
 // leftover steps were set aside on purpose.
 export const heldWord = "Waiting for your review";
 export const waitingForAgentWord = "Waiting for the agent";

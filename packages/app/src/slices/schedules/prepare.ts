@@ -202,8 +202,8 @@ export function preparedTopics(
 }
 
 // A project a schedule prepared ahead whose Before Video hold is the schedule's own: that hold
-// waits for its day, not for anyone (decided 2026-10-10; `reviews/holds.ts` reads it with the
-// project's other checkpoints). The day deletes the row (`continuePrepared`).
+// waits for its day, not for anyone (`reviews/holds.ts` reads it with the project's other
+// checkpoints). The day deletes the row (`continuePrepared`).
 export function heldForItsDay(alias: string): string {
   return `EXISTS (SELECT 1 FROM prepared_videos p WHERE p.project_id=${alias}.project_id AND p.added_checkpoint=1)`;
 }

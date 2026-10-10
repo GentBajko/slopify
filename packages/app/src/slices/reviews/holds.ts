@@ -11,12 +11,10 @@ import { waitingExternalReviewRows } from "./external.js";
 // project's page, the calendar, Home and the MCP tools read (`admission/state-words.ts`).
 export interface ProjectHolds {
   // Prepared ahead by a schedule and held only by the schedule's own Before Video hold: it
-  // waits for its day (decided 2026-10-10). Any other checkpoint still to approve is the
-  // person's, prepared or not.
+  // waits for its day. Any other checkpoint still to approve is the person's, prepared or not.
   readonly prepared: ReadonlySet<string>;
   // Parked on a review an External agent answers, with no checkpoint of the person's reached:
-  // it goes on by itself once the agent answers or the review passes at its deadline
-  // (decided 2026-10-10).
+  // it goes on by itself once the agent answers or the review passes at its deadline.
   readonly waitingForAgent: ReadonlySet<string>;
 }
 
