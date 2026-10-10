@@ -218,8 +218,9 @@ export function answerExternalReview(
 
 // Where a review stands, in the one order get_external_review and a refused verdict both say
 // it: a verdict already kept, its step canceled (no new one waits), its item replaced or its
-// step gone (`superseded` or `outdated`), then its project in the Trash - said last, as only then would Restore bring it
-// back. It waits only when none holds, exactly when `stillWaiting` lists it.
+// step gone (`superseded` or `outdated`), then its project in the Trash - said last, as only
+// then would Restore bring it back. It waits only when none holds, exactly when `stillWaiting`
+// lists it.
 export function reviewStanding(db: DatabaseSync, review: ExternalReview): ReviewStanding {
   if (review.state === "answered" || review.state === "auto-passed") return review.state;
   if (
