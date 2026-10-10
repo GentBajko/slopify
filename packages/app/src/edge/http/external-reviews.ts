@@ -16,12 +16,13 @@ const id = z
   .regex(/^[0-9A-Za-z_-]+$/);
 const reviewParam = z.object({ id, reviewId: id });
 
-// A verdict that wasn't saved: what was wrong, and that the review still waits for a fixed one.
+// A verdict that wasn't saved and what was wrong with it. Said before the review is looked up,
+// so it claims nothing about the review: a fixed verdict that is too late is told so then.
 function notSaved(c: Context, why: string): Response {
   return problem(c, {
     status: 400,
     title: titleOf(400),
-    detail: `The verdict wasn't saved${why}. The review is still waiting: send {verdict: "pass" | "fail", reasons} again with that fixed.`,
+    detail: `The verdict wasn't saved${why}. Send {verdict: "pass" | "fail", reasons} again with that fixed.`,
     extensions: { reason: "invalid-verdict" },
   });
 }
@@ -33,7 +34,7 @@ function noVerdict(c: Context): Response {
     status: 400,
     title: titleOf(400),
     detail:
-      'The verdict wasn\'t saved: no verdict came with it. The review is still waiting: call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]}; a pass may send reasons: [].',
+      'The verdict wasn\'t saved: no verdict came with it. Call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]}; a pass may send reasons: [].',
     extensions: { reason: "invalid-verdict" },
   });
 }

@@ -87,7 +87,8 @@ it("tells an agent that sent no verdict to call submit_review_verdict with its b
   expect(refused.isError).toBe(true);
   const said = JSON.stringify(refused.content);
   expect(said).toContain("no verdict came with it");
-  expect(said).toContain("call submit_review_verdict again with body");
+  expect(said).toContain("Call submit_review_verdict again with body");
+  expect(said).not.toContain("still waiting");
   expect(said).toContain('{verdict: \\"pass\\" | \\"fail\\", reasons:');
   expect(externalReviewById(h.deps.db, h.projectId, "er1")?.state).toBe("waiting");
 });
@@ -200,7 +201,9 @@ it("refuses more than ten reasons, or a reason over 500 characters, and the revi
   });
   expect(many.refused).toBe(true);
   expect(many.said).toContain("at most 10 reasons");
-  expect(many.said).toContain("The review is still waiting");
+  expect(many.said).toContain("Send {verdict");
+  // Read before the review is looked up, it says nothing of whether the review still waits.
+  expect(many.said).not.toContain("still waiting");
   const long = await verdictOn(h, { verdict: "fail", reasons: ["x".repeat(501)] });
   expect(long.refused).toBe(true);
   expect(long.said).toContain("a reason is at most 500 characters");
