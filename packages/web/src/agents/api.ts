@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { errorOf, problemOf, understood } from "@/http";
 
 export const agentConnectionQueryKey: readonly string[] = ["agent-connection"];
 
@@ -19,6 +19,6 @@ export type AgentConnection = z.infer<typeof connectionSchema>;
 
 export async function readAgentConnection(api: Api): Promise<AgentConnection> {
   const response = await api.fetch(`${api.origin}/api/settings/agents`);
-  if (!response.ok) throw errorOf(response, undefined);
+  if (!response.ok) throw errorOf(response, await problemOf(response));
   return understood(connectionSchema, await response.json());
 }

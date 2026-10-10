@@ -5,18 +5,13 @@ import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { helpScope } from "@/components/kit/info-tip";
+import { LoadingBlock, QueryState } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
+import { startedAt } from "@/lib/utils";
+import { Stamp } from "@/library/time";
 import { agentConnectionQueryKey, readAgentConnection } from "./api";
-
-// "10 Sept 2026, 08:00"
-function stamp(iso: string): string {
-  const at = new Date(iso);
-  return Number.isNaN(at.getTime())
-    ? iso
-    : at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
-}
 
 // Settings → Connections → Agents (MCP): where an agent on this computer connects, the two
 // setup lines, whether one has connected, and what agents changed lately.
@@ -41,16 +36,6 @@ export function AgentSettings(): ReactElement {
         "error",
       );
   };
-  const last = connection.data?.lastConnectedAt;
-  const status =
-    connection.error !== null
-      ? `${connection.error.message} Reload the page to try again.`
-      : connection.data === undefined
-        ? "Checking for agents…"
-        : last === null || last === undefined
-          ? "No agent has connected yet."
-          : `Last connected ${stamp(last)}.`;
-  const recent = connection.data?.recent ?? [];
   return (
     <div className="flex max-w-prose flex-col gap-4" {...helpScope}>
       <SectionHead title="Agents (MCP)" info="settings.agents" />
@@ -77,29 +62,42 @@ export function AgentSettings(): ReactElement {
           <p className="m-0 text-small text-ink-2">{setup.where}</p>
         </div>
       ))}
-      <p
-        role="status"
-        className={
-          connection.error === null ? "m-0 text-small text-ink-2" : "m-0 text-small text-danger"
-        }
+      <QueryState
+        query={connection}
+        what="Agent activity"
+        loading={<LoadingBlock label="Loading agent activity…" rows={3} rowClassName="h-5" />}
       >
-        {status}
-      </p>
-      <section aria-label="What agents did" className="flex flex-col gap-1">
-        <h3 className="m-0 text-title-3">What agents did</h3>
-        {recent.length === 0 ? (
-          <p className="m-0 text-small text-ink-2">No agent has changed anything yet.</p>
-        ) : (
-          <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
-            {recent.map((action) => (
-              <li key={action.id}>
-                {action.title}
-                {action.subject === null ? "" : ` · ${action.subject}`} · {stamp(action.createdAt)}
-              </li>
-            ))}
-          </ul>
+        {(data) => (
+          <>
+            <p className="m-0 text-small text-ink-2">
+              {data.lastConnectedAt === null ? (
+                "No agent has connected yet."
+              ) : (
+                <>
+                  Last connected{" "}
+                  <Stamp iso={data.lastConnectedAt}>{startedAt(data.lastConnectedAt)}</Stamp>.
+                </>
+              )}
+            </p>
+            <section aria-label="What agents did" className="flex flex-col gap-1">
+              <h3 className="m-0 text-title-3">What agents did</h3>
+              {data.recent.length === 0 ? (
+                <p className="m-0 text-small text-ink-2">No agent has changed anything yet.</p>
+              ) : (
+                <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
+                  {data.recent.map((action) => (
+                    <li key={action.id}>
+                      {action.title}
+                      {action.subject === null ? "" : ` · ${action.subject}`} ·{" "}
+                      <Stamp iso={action.createdAt}>{startedAt(action.createdAt)}</Stamp>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
         )}
-      </section>
+      </QueryState>
     </div>
   );
 }
