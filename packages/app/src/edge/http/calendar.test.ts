@@ -420,6 +420,21 @@ it("reads an uploaded, settled project as done, with no need", () => {
   }
 });
 
+// A run a restart stopped asks for Continue the run first: its flagged item waits until then.
+it("asks a stopped run with a flagged item to continue, not to review", () => {
+  const f = fixture();
+  try {
+    heldAtAudio(f, "Cut off", "2026-09-11T05:00:00.000Z");
+    expect(calendarProject(f, "Cut off")).toMatchObject({
+      state: "pending",
+      stopped: true,
+      needs: "stopped",
+    });
+  } finally {
+    f.h.close();
+  }
+});
+
 // Finished projects that ended before the range are left out by the query itself; work still
 // going, paused or not started yet stays however old it is.
 it("leaves out projects that finished before the range and keeps unfinished ones", () => {
