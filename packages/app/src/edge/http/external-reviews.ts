@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { causedBy } from "../../kernel/errors.js";
 import { answerExternalReview } from "../../slices/reviews/external.js";
 import { verdictAnswerSchema, verdictIssue } from "../../slices/reviews/verdict.js";
 import { actorOf } from "./actor.js";
@@ -99,7 +100,7 @@ export function externalReviewRoutes(deps: AppDeps) {
         } catch (error) {
           deps.log.write("error", "review.wake", {
             projectId,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: causedBy(error),
           });
         }
         deps.hub.emit(projectId, { type: "project.updated", projectId });

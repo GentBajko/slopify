@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { causedBy } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
@@ -64,7 +65,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     const project = projectOf.safeParse(value);
     log.write("error", "attention.row", {
       ...(project.success ? { projectId: project.data.project_id } : {}),
-      detail: `needs_attention left out one of the ${source} it could not read: ${messageOf(error)}`,
+      detail: `needs_attention left out one of the ${source} it could not read: ${causedBy(error)}`,
     });
   };
   const sources: readonly (readonly [string, () => readonly AttentionEntry[]])[] = [
@@ -84,17 +85,13 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
         return read();
       } catch (error) {
         log.write("error", "attention.source", {
-          detail: `needs_attention left out all ${source} because reading them failed: ${messageOf(error)}`,
+          detail: `needs_attention left out all ${source} because reading them failed: ${causedBy(error)}`,
         });
         return [];
       }
     })
     .filter((entry) => entry.projectId === null || !aside.has(entry.projectId))
     .toSorted((a, b) => a.since.localeCompare(b.since));
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 function titles(db: DatabaseSync): ReadonlyMap<string, string> {

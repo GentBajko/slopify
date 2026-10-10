@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { causedBy } from "../../kernel/errors.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import { liveProject, projectTrashed } from "../admission/repo.js";
@@ -337,7 +338,7 @@ export function releaseDueReviews(deps: ReviewReleaseDeps): number {
     } catch (error) {
       deps.log.write("error", "review.deadline", {
         projectId: review.projectId,
-        detail: `Review ${review.id} passed at its deadline, but announcing it or waking the run failed: ${error instanceof Error ? error.message : String(error)}`,
+        detail: `Review ${review.id} passed at its deadline, but announcing it or waking the run failed: ${causedBy(error)}`,
       });
     }
   }

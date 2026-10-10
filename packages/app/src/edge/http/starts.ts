@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { MiddlewareHandler } from "hono";
 import type { Clock } from "../../kernel/clock.js";
+import { causedBy } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { projectsMadeBy } from "../../slices/agents/model.js";
 import { recordStart } from "../../slices/agents/repo.js";
@@ -42,7 +43,7 @@ export function startRecorder(deps: {
       } catch (error) {
         deps.log.write("error", "project.start", {
           projectId,
-          detail: error instanceof Error ? error.message : String(error),
+          detail: causedBy(error),
         });
       }
   };
