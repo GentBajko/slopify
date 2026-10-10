@@ -25,6 +25,7 @@ const standingRow = z.object({
   state: z.enum(stageStates),
   progress_current: z.number().nullable(),
   progress_total: z.number().nullable(),
+  source: z.enum(stageSources),
   admitted: z.number(),
   parked: z.number(),
 });
@@ -120,7 +121,7 @@ export function stageStandingsByProject(
   projectId?: string,
 ): Map<string, StageProgress[]> {
   const grouped = new Map<string, StageProgress[]>();
-  const select = `SELECT project_id, kind, state, progress_current, progress_total, ${admittedInItsState("stages")} AS admitted, ${parkedOnReview("stages")} AS parked FROM stages${
+  const select = `SELECT project_id, kind, state, progress_current, progress_total, source, ${admittedInItsState("stages")} AS admitted, ${parkedOnReview("stages")} AS parked FROM stages${
     projectId === undefined ? "" : " WHERE project_id=?"
   } ORDER BY rowid`;
   const rows =
@@ -132,6 +133,7 @@ export function stageStandingsByProject(
       state: parsed.state,
       progressCurrent: parsed.progress_current,
       progressTotal: parsed.progress_total,
+      source: parsed.source,
       ...(parsed.admitted === 1 ? { admitted: true } : {}),
       ...(parsed.parked === 1 ? { parked: true } : {}),
     };

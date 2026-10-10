@@ -86,6 +86,7 @@ it("reserves the finished result again when an edit is undone, instead of a new 
   expect(executionStandings(h.deps, h.projectId).find((row) => row.kind === "images")).toEqual({
     kind: "images",
     state: "pending",
+    source: "generate",
   });
 });
 

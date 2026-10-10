@@ -1,13 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
 import { createHub } from "../src/edge/events/hub.js";
 import { createApp } from "../src/edge/http/app.js";
 import { connectAgent } from "../src/edge/mcp/mcp.fake.js";
+import type { StageKind } from "../src/kernel/pipeline.js";
+import type { Registry } from "../src/kernel/ports/registry.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import type { RunConfig } from "../src/slices/admission/model.js";
 import { stageStandingsByProject, stagesOf } from "../src/slices/admission/repo.js";
 import { noticeOf } from "../src/slices/notifications/rules.js";
+import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { executionStandings } from "../src/slices/rebuild/runtime-store.js";
 import { answerExternalReview } from "../src/slices/reviews/external-repo.js";
 import { waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
@@ -27,8 +31,17 @@ const answer = (content: unknown): unknown =>
 async function failedBesideWait(wait: {
   readonly config?: (config: RunConfig) => RunConfig;
   readonly checkpoints?: readonly string[];
+  // The step the provider refuses: the narration unless said otherwise.
+  readonly failing?: { readonly kind: StageKind; readonly ports: Partial<Registry> };
 }) {
-  const h = await composedFixture({ tts: () => fakeTts({ refuse: "The narration was refused." }) });
+  const h = await composedFixture(
+    wait.failing?.ports ?? { tts: () => fakeTts({ refuse: "The narration was refused." }) },
+  );
+  h.setCatalogue({
+    ...h.deps.catalogue.read(),
+    providers: { ...h.deps.catalogue.read().providers, ...narrationCatalogue.providers },
+    llm: narrationCatalogue.llm,
+  });
   closers.push(() => h.audioPreviews.close());
   const app = createApp({
     db: h.deps.db,
@@ -80,7 +93,7 @@ async function failedBesideWait(wait: {
   await vi.waitFor(
     async () => {
       await h.runner.settled();
-      expect(states().audio).toBe("failed");
+      expect(states()[wait.failing?.kind ?? "audio"]).toBe("failed");
     },
     { timeout: 4_000, interval: 20 },
   );
@@ -213,4 +226,66 @@ it("reads a failed step beside images held at the person's checkpoint as Waiting
     calendar: { state: "pending", needs: "review" },
   });
   expect(waiting.attention).toEqual(expect.arrayContaining(["failed-step", "checkpoint"]));
+});
+
+// A thumbnail drawn from its own prompt needs no article (`dependenciesOf`), so the runner goes
+// on to it while the article has failed: parked on an agent's review, it still moves on once
+// answered, and the run reads by that wait. It reads Failed once, after the verdict.
+it("reads a failed article beside a thumbnail from its own prompt an agent reviews as waiting", {
+  timeout: 30_000,
+}, async () => {
+  const { h, states, read } = await failedBesideWait({
+    failing: {
+      kind: "article",
+      ports: { llm: () => fakeLlm({ refuse: "The article was refused." }) },
+    },
+    config: (config) => ({
+      ...config,
+      provided: {},
+      sources: { ...config.sources, article: "generate", thumbnail: "from_prompt" },
+      llm: { provider: "openrouter", model: "llm" },
+      rendered: { ...config.rendered, article: "Write about rope.", thumbnailPrompt: "Cover" },
+      reviews: {
+        provider: "",
+        model: "",
+        reviewer: "agent",
+        retries: 1,
+        stages: { thumbnail: { mode: "flag" } },
+      },
+    }),
+  });
+  await vi.waitFor(() => expect(waitingExternalReviews(h.deps.db, h.projectId)).toHaveLength(1), {
+    timeout: 4_000,
+  });
+  const waiting = await read();
+  expect(waiting).toMatchObject({
+    rows: "pending",
+    listed: "pending",
+    runner: "pending",
+    announced: "pending",
+    listing: { status: "pending", stateWord: "Waiting for the agent", stepFailed: true },
+  });
+
+  for (const review of waitingExternalReviews(h.deps.db, h.projectId))
+    answerExternalReview(h.deps.db, {
+      projectId: h.projectId,
+      id: review.id,
+      verdict: { passed: true, reasons: [] },
+      by: "agent",
+      at: new Date().toISOString(),
+    });
+  h.runner.tick(h.projectId);
+  await vi.waitFor(
+    async () => {
+      await h.runner.settled();
+      expect(states().thumbnail).toBe("done");
+    },
+    { timeout: 4_000, interval: 20 },
+  );
+  expect(await read()).toMatchObject({ rows: "failed", runner: "failed", announced: "failed" });
+  const announced = h.events.flatMap((event) =>
+    event.type === "project.state" && event.projectId === h.projectId ? [event.state] : [],
+  );
+  const notices = announced.map((state, at) => noticeOf(announced[at - 1], state));
+  expect(notices.filter((notice) => notice === "failed")).toHaveLength(1);
 });

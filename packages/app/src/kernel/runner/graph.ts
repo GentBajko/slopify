@@ -50,6 +50,9 @@ export interface StageStanding {
   // Set when the stage is parked on a review someone answers (`admission/admitted-work.ts`
   // parkedOnReview): an External agent's, or a checkpoint's not approved yet.
   readonly parked?: boolean | undefined;
+  // Where the stage's input comes from (`admission/model.ts` stageSources), which narrows what it
+  // waits for (`dependenciesOf`); absent reads as generated.
+  readonly source?: string | undefined;
 }
 
 // What a run is for, in order: the first of these the run asks for is the one that has to be
@@ -98,12 +101,18 @@ export function readmitted(stage: StageStanding, stages: readonly StageStanding[
   );
 }
 
-// A stage parked on a review that its own inputs let it reach: answered, it goes on.
+// A stage parked on a review that its own inputs let it reach, as the runner reads them for the
+// project's sources: answered, it goes on.
 function movesOnWhenAnswered(stage: StageStanding, stages: readonly StageStanding[]): boolean {
+  const sourceOf = (kind: StageKind): string =>
+    stages.find((other) => other.kind === kind)?.source ?? "generate";
   return (
     stage.state === "pending" &&
     stage.parked === true &&
-    deps[stage.kind].every((kind) => {
+    dependenciesOf(stage.kind, {
+      thumbnail: sourceOf("thumbnail"),
+      video: sourceOf("video"),
+    }).every((kind) => {
       const dependency = stages.find((other) => other.kind === kind);
       return dependency === undefined || releases(stage.kind, kind, dependency.state);
     })

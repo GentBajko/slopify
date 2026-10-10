@@ -208,7 +208,9 @@ export function executionStandings(
           ? "provided"
           : "done"
         : "pending";
-    return state === "pending" && retryAt !== null ? { kind, state, retryAt } : { kind, state };
+    return state === "pending" && retryAt !== null
+      ? { kind, state, source, retryAt }
+      : { kind, state, source };
   });
   const admitted = admittedStates(deps.db, projectId);
   const parked = parkedKinds(deps.db, projectId);
