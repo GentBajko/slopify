@@ -205,6 +205,30 @@ describe("a step failed while the run goes on", () => {
     expect(firstLines(posted)).toHaveLength(1);
   });
 
+  // A step failed earlier with nothing waiting is the run's end notice to tell; the one that
+  // fails now beside a wait is the news.
+  it("names in Step failed the step that just failed, not an earlier one still untold", async () => {
+    let now: {
+      readonly stepFailed?: boolean;
+      readonly status: ProjectState;
+      readonly failures: readonly StepFailure[];
+    } = {
+      status: "running",
+      failures: [{ id: "thumbnail@1", kind: "thumbnail", reason: "Cover refused." }],
+    };
+    const { notifier, posted } = harness({ failing: () => now });
+    notifier.observe(state("running"));
+    notifier.observe(stage("thumbnail", "failed"));
+    now = {
+      stepFailed: true,
+      status: "running",
+      failures: [...now.failures, failed("audio@2", "Narration refused.")],
+    };
+    notifier.observe(stage("audio", "failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Step failed: Black holes — Narration refused."]);
+  });
+
   it("leaves a step that fails as the run stops or ends to the run's own notice", async () => {
     let now: { readonly status: ProjectState; readonly failures: readonly StepFailure[] } = {
       status: "failed",
