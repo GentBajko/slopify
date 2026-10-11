@@ -24,7 +24,8 @@ import type { ProjectPlaces } from "./places.js";
 //   <Title>/Working/           what the current version was made from (narration, research,
 //                              subtitle timing, render settings): made again if lost
 //   <Title>/History/<date>/    files of older versions, by the day they were made: delete the
-//                              folder to free the space; going back to that version makes them again
+//                              folder to free the space; going back to that version makes them again.
+//                              An older version's images stay in Upload/Images/Earlier/<date>/
 //
 // Nothing is copied and no stored path changes: files are renamed on disk and `places.ts`
 // records where each one went. Only a project with nothing running or waiting to run is
@@ -47,8 +48,12 @@ export interface Arranged {
   readonly skipped: string | undefined;
 }
 
+// The pictures a video or short shows. Every version's stay in Upload, an older version's under
+// Images/Earlier/<date>/, never in History: making them again never gives the same ones.
+const imageRoles: ReadonlySet<string> = new Set(["image", "animated_image", "short_image"]);
+
 // Raised when a role's place changes, so every project arranged by the older places is moved
-// once: 2 put the images the video and shorts show into Upload (3.18.1).
+// once: 2 put every version's images the video and shorts show into Upload (3.18.1).
 const layoutVersion = 2;
 
 // What makes a project's arrangement current: the layout, its title, head version and files. A project
@@ -330,7 +335,9 @@ export function desiredPlaces(db: DatabaseSync, projectId: string): ReadonlyMap<
       reference.path,
       reference.current
         ? place
-        : `History/${day(reference.createdAt)}/${place.replace(/^Upload\//u, "")}`,
+        : imageRoles.has(reference.role)
+          ? `Upload/Images/Earlier/${day(reference.createdAt)}/${place.replace(/^Upload\/(?:Images\/)?/u, "")}`
+          : `History/${day(reference.createdAt)}/${place.replace(/^Upload\//u, "")}`,
     );
   }
   return out;

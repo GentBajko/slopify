@@ -34,17 +34,19 @@ function settle(h: { deps: { db: import("node:sqlite").DatabaseSync } }): void {
 
 // The fixture makes no pictures: give its current version an image the video shows and one
 // of short 1's images.
-function addImages(h: Awaited<ReturnType<typeof narrationFixture>>): void {
+function addImages(h: Awaited<ReturnType<typeof narrationFixture>>, older = false): void {
   const head = h.deps.db
     .prepare("SELECT revision_id FROM project_heads WHERE project_id=?")
     .get(h.projectId);
   const like = h.deps.db
     .prepare("SELECT descriptor FROM revision_outputs WHERE project_id=? LIMIT 1")
     .get(h.projectId);
-  for (const [id, path, slot, role] of [
-    ["img-1", "assets/img-1/image.png", "image:scene-1", "image"],
-    ["short-img-1", "assets/short-img-1/image.png", "shorts:1:image:1", "short_image"],
-  ] as const) {
+  for (const [id, path, slot, role] of older
+    ? ([["img-old", "assets/img-old/image.png", "image:scene-1", "image"]] as const)
+    : ([
+        ["img-1", "assets/img-1/image.png", "image:scene-1", "image"],
+        ["short-img-1", "assets/short-img-1/image.png", "shorts:1:image:1", "short_image"],
+      ] as const)) {
     const at = outputPath(h.deps.paths, h.projectId, path);
     mkdirSync(join(at, ".."), { recursive: true });
     writeFileSync(at, Buffer.alloc(10));
@@ -52,7 +54,9 @@ function addImages(h: Awaited<ReturnType<typeof narrationFixture>>): void {
       .prepare("INSERT INTO project_assets VALUES (?,?,?,10,'t')")
       .run(id, h.projectId, path);
     h.deps.db
-      .prepare("INSERT INTO revision_outputs VALUES (?,?,?,?,?,?,'f','ready',?,NULL,1,'t')")
+      .prepare(
+        "INSERT INTO revision_outputs VALUES (?,?,?,?,?,?,'f','ready',?,NULL,?,'2026-09-30')",
+      )
       .run(
         `o-${id}`,
         h.projectId,
@@ -61,6 +65,7 @@ function addImages(h: Awaited<ReturnType<typeof narrationFixture>>): void {
         slot,
         id,
         JSON.stringify({ ...JSON.parse(String(like?.descriptor)), id: `o-${id}`, role, path }),
+        older ? 0 : 1,
       );
   }
 }
@@ -407,6 +412,23 @@ it("moves a project arranged by an older layout into today's places once", async
     expect(arrangeChanged(deps)).toEqual([h.projectId]);
     expect(filesUnder(root)).toContain("Upload/Images/image.png");
     expect(arrangeChanged(deps)).toEqual([]);
+  } finally {
+    h.close();
+  }
+}, 30000);
+
+it("keeps an older version's images in Upload, where no cleanup deletes them", async () => {
+  const { h, deps } = await arranged();
+  try {
+    addImages(h, true);
+    arrangeProject(deps, h.projectId);
+    const root = projectDir(h.deps.paths, h.projectId);
+    expect(filesUnder(root)).toContain("Upload/Images/Earlier/2026-09-30/image.png");
+    expect(filesUnder(root).some((file) => /^History\/.*image\.png$/u.test(file))).toBe(false);
+    h.deps.db.exec("UPDATE stages SET state='done'");
+    deleteOldVersions(h.deps, h.projectId);
+    keepOutputsOnly(h.deps, h.projectId);
+    expect(filesUnder(root)).toContain("Upload/Images/Earlier/2026-09-30/image.png");
   } finally {
     h.close();
   }

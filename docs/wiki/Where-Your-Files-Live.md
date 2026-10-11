@@ -31,7 +31,7 @@ Each project has one folder in `Projects/`, named after its title (`Lolth | D&D 
 
 | Folder | What is in it | Safe to delete? |
 | --- | --- | --- |
-| `Upload/` | The current version, ready to publish: `video.mp4`, `thumbnail.png` (and `thumbnail 2.png`…), `subtitles.srt` and `.vtt`, `description.txt`, `tags.txt`, `titles.txt`, `pinned comment.txt`, `document.pdf`, `article.md`, `Images/` (every image the video shows, in order), and `Shorts/1 - <title>.mp4`… with each short's images beside it in `Shorts/1 - <title>/`. | No: it is what you upload. |
+| `Upload/` | The current version, ready to publish: `video.mp4`, `thumbnail.png` (and `thumbnail 2.png`…), `subtitles.srt` and `.vtt`, `description.txt`, `tags.txt`, `titles.txt`, `pinned comment.txt`, `document.pdf`, `article.md`, `Images/` (every image the video shows, in order; an older version's images in `Images/Earlier/<date>/`), and `Shorts/1 - <title>.mp4`… with each short's images beside it in `Shorts/1 - <title>/`. No cleanup ever deletes these images. | No: it is what you upload. |
 | `Working/` | What the current version was made from: `Narration/` (each chunk, the joined and levelled narration), `Research/`, `Article/`, `Subtitles/`, `Render/`. | Only to free space on a finished video: changing that project later makes these again, which takes time and provider credits. **Keep outputs only** does it for you. |
 | `History/<date>/` | Files of older versions, by the day they were made (an earlier render, the narration before a voice change). | Yes. Delete a day's folder, or all of `History/`, to free its space. Going back to that version in History makes its files again. |
 
