@@ -260,6 +260,7 @@ export function documentFromProject(
       ...(config.paragraphPauseSeconds === undefined
         ? {}
         : { paragraphPause: String(config.paragraphPauseSeconds) }),
+      ...(config.removeBreaths === true ? { removeBreaths: true } : {}),
       imagePrompts,
       ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
       ...(config.imageScenes === true ? { imageScenes: true } : {}),

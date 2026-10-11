@@ -81,6 +81,7 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Ambient sound | Video and style | Inputs › Ambient sound | `AmbientBedControls` | **closed in 3.0**: built-in beds or None; a project's own uploaded bed stays offered |
 | Level the volume (loudness) | Video and style (Export) | Inputs › Pauses and volume | `LoudnessControls` | same; Settings → General holds the default for new runs ([loudness.md](loudness.md)) |
 | Pauses between sentences and paragraphs | Video and style (Export) | Inputs › Pauses and volume | `PauseControls` | same ([pauses.md](pauses.md)) |
+| Remove breaths | Video and style (Export) | Inputs › Pauses and volume | `RemoveBreathsSwitch` | same ([breaths.md](breaths.md)) |
 | More images for long videos | Images | Images | none (the same rate control) | **closed in 3.0**: saving plans the extra images, keeping every existing one |
 | Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 

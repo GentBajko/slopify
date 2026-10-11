@@ -6,9 +6,9 @@ import { useApp } from "@/app-context";
 import type { RailProps } from "@/play/rail-frame";
 import { settingsQuery } from "@/queries";
 import { LoudnessControls } from "@/video/loudness-controls";
-import { PauseControls } from "@/video/pause-controls";
+import { PauseControls, RemoveBreathsSwitch } from "@/video/pause-controls";
 
-// Play's pauses between sentences and Level the volume, on the Export rail under the ambient
+// Play's pauses between sentences, Remove breaths and Level the volume, on the Export rail under the ambient
 // sound. A draft that never touched the volume follows Settings → General (on at the
 // recommended volumes unless changed there); the first change writes the whole choice onto the
 // draft. The pauses start at their defaults.
@@ -24,16 +24,24 @@ export function PlayLoudness({
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
       {form.sources.audio === "generate" ? (
-        <PauseControls
-          sentence={form.sentencePause ?? String(defaultSentencePauseSeconds)}
-          paragraph={form.paragraphPause ?? "0"}
-          problem={problem}
-          onChange={(field, text) =>
-            update(
-              field === "sentencePauseSeconds" ? { sentencePause: text } : { paragraphPause: text },
-            )
-          }
-        />
+        <>
+          <PauseControls
+            sentence={form.sentencePause ?? String(defaultSentencePauseSeconds)}
+            paragraph={form.paragraphPause ?? "0"}
+            problem={problem}
+            onChange={(field, text) =>
+              update(
+                field === "sentencePauseSeconds"
+                  ? { sentencePause: text }
+                  : { paragraphPause: text },
+              )
+            }
+          />
+          <RemoveBreathsSwitch
+            value={form.removeBreaths === true}
+            onChange={(removeBreaths) => update({ removeBreaths })}
+          />
+        </>
       ) : null}
       <LoudnessControls
         value={{

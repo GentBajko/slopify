@@ -16,6 +16,7 @@ import { prepareRequests } from "../narration/steering.js";
 import { groupTurns } from "../voices/grouping.js";
 import { type Speaker, speakerPace, type VoicesSettings } from "../voices/model.js";
 import { parseScript, type Script } from "../voices/script.js";
+import { breathValues } from "./recipe-breaths.js";
 import { describedText, describeFuture, describing } from "./recipe-describe.js";
 import {
   type RecipeContext,
@@ -203,6 +204,7 @@ export function voiceBodyRecipes(
             at === layout.length - 1 ? "end" : gap > 0 || turnEnds.has(at) ? "turn" : "sentence",
           ),
         ),
+        ...breathValues(context.config),
       ],
     },
     parts.map((part) => part.key),

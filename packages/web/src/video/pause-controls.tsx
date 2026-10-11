@@ -3,8 +3,9 @@ import {
   pauseSecondsMax,
   pauseSecondsStep,
 } from "@app/slices/narration/pauses-model.js";
-import type { ReactElement } from "react";
+import { type ReactElement, useId } from "react";
 import { Field, Input } from "@/components/kit/field";
+import { Switch } from "@/components/kit/switch";
 
 // Pauses between sentences and between paragraphs (`slices/narration/pauses-model.ts`), as
 // typed: Play keeps the text on its draft, Edit project turns it into the config's numbers.
@@ -55,6 +56,32 @@ export function PauseControls({
           onChange={(event) => onChange("paragraphPauseSeconds", event.target.value)}
         />
       </Field>
+    </div>
+  );
+}
+
+// Remove breaths (`slices/narration/breaths-model.ts`), beside the pauses: Play keeps it on its
+// draft, Edit project on the config, and both only while it is on.
+export function RemoveBreathsSwitch({
+  value,
+  onChange,
+}: {
+  readonly value: boolean;
+  readonly onChange: (next: boolean) => void;
+}): ReactElement {
+  const id = useId();
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <Switch
+        checked={value}
+        label="Remove breaths"
+        tip="project.remove-breaths"
+        describedBy={`${id}-line`}
+        onChange={onChange}
+      />
+      <p id={`${id}-line`} className="m-0 text-label text-ink-3">
+        Mutes the audible breaths between sentences. Words and timing stay the same.
+      </p>
     </div>
   );
 }

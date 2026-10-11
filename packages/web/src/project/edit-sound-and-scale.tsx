@@ -27,7 +27,12 @@ import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
 import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls";
-import { PauseControls, type PauseField, typedSeconds } from "@/video/pause-controls";
+import {
+  PauseControls,
+  type PauseField,
+  RemoveBreathsSwitch,
+  typedSeconds,
+} from "@/video/pause-controls";
 
 // Edit project's ambient sound, Level the volume and More images for long videos: the channel essentials Play
 // sets, changeable after the run. A setting left alone leaves the config exactly as it was, so
@@ -107,9 +112,9 @@ export function EditLoudness({
   );
 }
 
-// Pauses between sentences and paragraphs. Absent on every project made before them; setting
-// one joins the narration again from the pieces it already has, with the pauses made, and
-// times it again: no speech is made again.
+// Pauses between sentences and paragraphs, and Remove breaths. Absent on every project made
+// before them; setting one joins the narration again from the pieces it already has, with the
+// pauses made or the breaths muted, and times it again: no speech is made again.
 export function EditPauses({
   edit,
   problem,
@@ -131,19 +136,28 @@ export function EditPauses({
       : pauseProblem(value, field === "sentencePauseSeconds" ? "sentences" : "paragraphs");
   };
   return (
-    <PauseControls
-      sentence={typed.sentencePauseSeconds}
-      paragraph={typed.paragraphPauseSeconds}
-      problem={(field) => local(field) ?? problem(field)}
-      onChange={(field, text) => {
-        setTyped({ ...typed, [field]: text });
-        const value = typedSeconds(text);
-        // A pause still being typed keeps the last good one; the line says what to fix.
-        if (value === undefined) return;
-        const { [field]: _old, ...config } = edit.config;
-        onChange({ ...edit, config: value === 0 ? config : { ...config, [field]: value } });
-      }}
-    />
+    <div className="grid min-w-0 grid-cols-1 gap-3">
+      <PauseControls
+        sentence={typed.sentencePauseSeconds}
+        paragraph={typed.paragraphPauseSeconds}
+        problem={(field) => local(field) ?? problem(field)}
+        onChange={(field, text) => {
+          setTyped({ ...typed, [field]: text });
+          const value = typedSeconds(text);
+          // A pause still being typed keeps the last good one; the line says what to fix.
+          if (value === undefined) return;
+          const { [field]: _old, ...config } = edit.config;
+          onChange({ ...edit, config: value === 0 ? config : { ...config, [field]: value } });
+        }}
+      />
+      <RemoveBreathsSwitch
+        value={edit.config.removeBreaths === true}
+        onChange={(on) => {
+          const { removeBreaths: _old, ...config } = edit.config;
+          onChange({ ...edit, config: on ? { ...config, removeBreaths: true } : config });
+        }}
+      />
+    </div>
   );
 }
 

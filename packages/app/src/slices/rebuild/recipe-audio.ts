@@ -11,6 +11,7 @@ import {
   pronunciationFutureValues,
   voiceValues,
 } from "./recipe-audio-parts.js";
+import { breathValues } from "./recipe-breaths.js";
 import { levelRecipe } from "./recipe-loudness.js";
 import {
   type RecipeContext,
@@ -216,6 +217,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
                   : "sentence",
             ),
           ),
+          ...breathValues(config),
         ],
       },
       parts.map((part) => part.key),
@@ -311,6 +313,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
             config,
             parts.map((_part, at) => (at === parts.length - 1 ? "end" : "sentence")),
           ),
+          ...breathValues(config),
         ],
       },
       parts.map((part) => part.key),

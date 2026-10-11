@@ -30,6 +30,7 @@ import {
   type LoudnessSettings,
   loudnessOfForm,
 } from "../loudness/model.js";
+import { breathsOfForm } from "../narration/breaths-model.js";
 import { pausesOfForm } from "../narration/pauses-model.js";
 import { reviewSettingsFromForm } from "../reviews/model.js";
 import { stageMakesItems } from "../reviews/rules.js";
@@ -375,6 +376,8 @@ export function toAdmissionDraft(input: {
     ),
     // Pauses between sentences: the default for a new run, with a narration to pace.
     ...(sources.audio === "generate" ? pausesOfForm(form) : {}),
+    // Remove breaths: only while on, with a narration made here to clean.
+    ...(sources.audio === "generate" ? breathsOfForm(form) : {}),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

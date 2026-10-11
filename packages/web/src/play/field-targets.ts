@@ -120,6 +120,7 @@ export function playFieldTarget(
             "loudness",
             "sentencePauseSeconds",
             "paragraphPauseSeconds",
+            "removeBreaths",
             "llm",
           ])
         ? "outputs"

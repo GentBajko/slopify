@@ -58,6 +58,11 @@ export const projectHelp = {
     body: "The least quiet at the end of a paragraph, in seconds, when you want more than between sentences. Usually the narration prompt and the voice pace paragraphs well already, so it is 0 by default: paragraphs get the sentence pause. Try 0.8 to 1.2 for a slower read. A speaker's turn gap is set under Speakers instead. Runs on this computer.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
+  "project.remove-breaths": {
+    title: "Remove breaths",
+    body: "Mutes the audible in-breaths a voice takes between sentences and after commas (Inworld's TTS-2 takes a loud one almost every time). Only the breath goes quiet: every word, the pauses and the captions stay exactly where they were. Runs on this computer, no API calls; turning it on joins the narration again from the pieces it already has, never makes the speech again. Default: off.",
+    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
+  },
   "project.loudness": {
     title: "Level the volume",
     body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",
