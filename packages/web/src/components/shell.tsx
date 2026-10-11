@@ -248,6 +248,7 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
+      stageState: runs.observeStage,
       reviewFlagged: runs.observeReview,
       reviewAutoPassed: runs.observeAutoPass,
       scheduleTopics: (event) => {

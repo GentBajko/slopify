@@ -24,6 +24,7 @@ function harness(
     // What the project says of a failed step as each notice goes out.
     readonly failing?: () => {
       readonly stepFailed?: boolean;
+      readonly status?: ProjectState;
       readonly failures?: readonly StepFailure[];
     };
   } = {},
@@ -158,6 +159,52 @@ it("never tells an already told failure again once another failed step is fixed"
   notifier.observe(state("pending"));
   await notifier.settled();
   expect(firstLines(posted).filter((line) => line.startsWith("Step failed"))).toHaveLength(2);
+});
+
+// A step that fails while another still runs is told as it fails, once, and the run that then
+// ends Failed on it is not told again; one that fails as the run ends is the run's own notice.
+describe("a step failed while the run goes on", () => {
+  it("is told as it fails, once, and not again when the run ends Failed on it", async () => {
+    let now: { readonly status: ProjectState; readonly failures: readonly StepFailure[] } = {
+      status: "running",
+      failures: [],
+    };
+    const { notifier, posted } = harness({ failing: () => now });
+    notifier.observe(state("running"));
+    now = { status: "running", failures: [failed("audio@1", "Refused.")] };
+    notifier.observe(stage("audio", "failed"));
+    notifier.observe(stage("audio", "failed"));
+    // Another step's failure is that step's news, not the audio's again.
+    notifier.observe(stage("images", "failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Step failed: Black holes — Refused."]);
+    now = { status: "failed", failures: now.failures };
+    notifier.observe(state("failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toHaveLength(1);
+  });
+
+  it("leaves a step that fails as the run stops or ends to the run's own notice", async () => {
+    let now: { readonly status: ProjectState; readonly failures: readonly StepFailure[] } = {
+      status: "failed",
+      failures: [failed("audio@1", "Refused.")],
+    };
+    const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, ...now }) });
+    notifier.observe(state("running"));
+    notifier.observe(stage("audio", "failed"));
+    notifier.observe(state("failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Run failed: Black holes — Refused."]);
+    now = { status: "pending", failures: [failed("audio@2", "Again.")] };
+    notifier.observe(state("running"));
+    notifier.observe(stage("audio", "failed"));
+    notifier.observe(state("pending"));
+    await notifier.settled();
+    expect(firstLines(posted).slice(1)).toEqual([
+      "Waiting for you: Black holes",
+      "Step failed: Black holes — Again.",
+    ]);
+  });
 });
 
 // "Step failed" told one failure; the run then ends Failed on another with no end between.

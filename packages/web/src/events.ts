@@ -54,6 +54,8 @@ export interface GlobalSink {
   readonly refetch: (projectId?: string) => void;
   // Every project's state change, for run notifications (`notifications/watcher.ts`).
   readonly projectState?: (event: ProjectStateEvent) => void;
+  // Every project's steps reaching a new state: a step failing is told as it fails.
+  readonly stageState?: (event: StageStateEvent) => void;
   // A schedule held new generated topics for approval.
   readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
   // An automatic review kept an item flagged and waits for Overrule or Redo.
@@ -145,6 +147,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
         event.type === "stage.progress"
       ) {
         if (event.type === "project.state") sink.projectState?.(event);
+        if (event.type === "stage.state") sink.stageState?.(event);
         sink.refetch(event.projectId);
         return;
       }

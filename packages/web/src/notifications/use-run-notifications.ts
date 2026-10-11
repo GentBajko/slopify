@@ -30,6 +30,7 @@ export async function projectNoticeSubject(
     makesVideo: body.project.config.sources.video !== "off",
     startedBy: body.startedBy ?? null,
     waitingForAgent: body.project.waitingForAgent === true,
+    status: body.project.status,
     atItsDay: atItsDay(body.project.prepared === true, body.holding),
     ...(body.project.stepFailed === true ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),

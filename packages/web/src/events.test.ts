@@ -147,6 +147,21 @@ describe("the global event stream", () => {
     expect(sink.stagingChanged).not.toHaveBeenCalled();
   });
 
+  it("hands every step's new state to the run notifications", () => {
+    const source = fakeSource();
+    const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn(), stageState: vi.fn() };
+    subscribeGlobal(() => source, "/api/events/global", sink);
+    const failed = {
+      type: "stage.state",
+      projectId: "p1",
+      stage: "audio",
+      state: "failed",
+    } as const;
+    source.emit(failed);
+    expect(sink.stageState).toHaveBeenCalledWith(failed);
+    expect(sink.refetch).toHaveBeenCalledWith("p1");
+  });
+
   it("takes the running tally off its own event and nothing else", () => {
     const source = fakeSource();
     const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn() };

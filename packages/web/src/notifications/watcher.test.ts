@@ -13,9 +13,11 @@ import {
 // Each failure by its id, with the provider's reason.
 const failing = (said: {
   readonly stepFailed?: boolean;
+  readonly status?: ProjectState;
   readonly failures?: readonly string[];
 }) => ({
   ...(said.stepFailed === true ? { stepFailed: true } : {}),
+  ...(said.status === undefined ? {} : { status: said.status }),
   failures: (said.failures ?? []).map((id) => ({
     id,
     kind: "audio" as const,
@@ -31,6 +33,7 @@ function harness(
     // What a project says of a failed step as each notice goes out.
     readonly failing?: () => {
       readonly stepFailed?: boolean;
+      readonly status?: ProjectState;
       readonly failures?: readonly string[];
     };
   } = {},
@@ -153,6 +156,28 @@ describe("failures told beside a wait", () => {
       "step-failed",
     ]);
   });
+});
+
+// A step that fails while another still runs is told as it fails, once, and the run that then
+// ends Failed on it is not told again.
+it("tells a step failed while the run goes on as it fails, once", async () => {
+  let status: ProjectState = "running";
+  const { watcher, shown } = harness({
+    failing: () => ({ status, failures: ["audio@1"] }),
+  });
+  watcher.observe({ projectId: "p1", state: "running" });
+  watcher.observeStage({ projectId: "p1", stage: "audio", state: "failed" });
+  await watcher.settled();
+  watcher.observeStage({ projectId: "p1", stage: "audio", state: "failed" });
+  watcher.observeStage({ projectId: "p1", stage: "images", state: "done" });
+  await watcher.settled();
+  expect(shown.map((notice) => [notice.kind, notice.text.headline])).toEqual([
+    ["step-failed", "Step failed: Project p1 — Quota exceeded"],
+  ]);
+  status = "failed";
+  watcher.observe({ projectId: "p1", state: "failed" });
+  await watcher.settled();
+  expect(shown).toHaveLength(1);
 });
 
 describe("createRunWatcher", () => {

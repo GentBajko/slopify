@@ -1,6 +1,7 @@
-import type { ProjectState } from "@app/kernel/pipeline.js";
+import type { ProjectState, StageKind, StageState } from "@app/kernel/pipeline.js";
 import {
   autoPassNoticeText,
+  type NoticeCause,
   type NoticeSubject,
   type NoticeText,
   noticeOf,
@@ -88,6 +89,12 @@ export interface RunWatcherDeps {
 
 export interface RunWatcher {
   readonly observe: (event: { readonly projectId: string; readonly state: ProjectState }) => void;
+  // A step reached a new state: one that failed while the run goes on is told right away.
+  readonly observeStage: (event: {
+    readonly projectId: string;
+    readonly stage: StageKind;
+    readonly state: StageState;
+  }) => void;
   // A schedule held new suggested topics. Every tab hears it; one shows it.
   readonly observeTopics: (event: TopicsEvent) => void;
   // A review needs a decision. Every tab hears it; one shows it, once per verdict.
@@ -126,10 +133,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
   // The failures each project's notices named in this tab (`runNotices`), only those it still has.
   // ceiling: one entry per project with a failed step this page heard.
   const told = new Map<string, ReadonlySet<string>>();
-  const announce = async (projectId: string, state: ProjectState, kind: RunNotice) => {
+  // `state` is the transition's, when a transition is the cause.
+  const announce = async (projectId: string, cause: NoticeCause, state?: ProjectState) => {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(kind, subject, told.get(projectId) ?? new Set());
+    const now = runNotices(cause, subject, told.get(projectId) ?? new Set());
     if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
     const notices: RunNotices["notices"][number][] = [];
@@ -138,7 +146,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
         await deps.claim(
           one.kind === "step-failed"
             ? `${projectId}:step-failed:${now.news.join(",")}`
-            : `${projectId}:${state}`,
+            : `${projectId}:${state ?? ""}`,
         )
       )
         notices.push(one);
@@ -179,7 +187,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       if (ends.has(event.state)) started.delete(event.projectId);
       const kind = noticeOf(previous, event.state);
       if (kind === undefined || !on) return;
-      track(announce(event.projectId, event.state, kind));
+      track(announce(event.projectId, { kind }, event.state));
+    },
+    observeStage: (event) => {
+      if (event.state !== "failed" || !(deps.enabled() || sounding())) return;
+      track(announce(event.projectId, { stepFailed: event.stage }));
     },
     observeTopics: (event) => {
       if (event.added <= 0 || !deps.enabled() || deps.showTopics === undefined) return;

@@ -116,6 +116,8 @@ export interface NoticeSubject {
   readonly atItsDay?: boolean | undefined;
   // A step failed while the run still reads by a wait (`admission/state-words.ts`).
   readonly stepFailed?: boolean | undefined;
+  // The run's state as the Projects list reads it now.
+  readonly status?: ProjectState | undefined;
   // The failures the run has now (`failuresOf`), so each is told once.
   readonly failures?: readonly StepFailure[] | undefined;
 }
@@ -155,25 +157,37 @@ export interface RunNotices {
   readonly news: readonly string[];
 }
 
-// What a run's transition (`noticeOf`) says, for the server's Notification URL and the browser
-// alike, given the failures already told for the project. A step failed while the run still
-// reads by a wait is said right away ("Step failed"), when the run stops to wait on it, once per
-// failure. A run that ends on its failures names them all; one that ends Failed only on failures
-// already said is not told again. Each notice names the reason of a step failed now: the run's
-// first, or the first "Step failed" tells.
+// What a project's notices answer: its run's transition (`noticeOf`), or one of its steps failing.
+export type NoticeCause = { readonly kind: RunNotice } | { readonly stepFailed: StageKind };
+
+// What a project's notices say, for the server's Notification URL and the browser alike, given
+// the failures already told for the project. A step that fails while the run goes on is said
+// right away ("Step failed"): as it fails while another step still runs, or when the run stops
+// to wait beside it; once per failure. A run that ends on its failures names them all; one that
+// ends Failed only on failures already said is not told again. Each notice names the reason of
+// a step failed now: the run's first, or the first "Step failed" tells.
 export function runNotices(
-  kind: RunNotice,
-  subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay" | "stepFailed" | "failures">,
+  cause: NoticeCause,
+  subject: Pick<
+    NoticeSubject,
+    "waitingForAgent" | "atItsDay" | "stepFailed" | "status" | "failures"
+  >,
   told: ReadonlySet<string>,
 ): RunNotices {
   const failures = subject.failures ?? [];
   const untold = failures.filter((failure) => !told.has(failure.id));
-  const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
-  const notices: { kind: RunNotice; reason: string | undefined }[] =
-    !repeat && announces(kind, subject) ? [{ kind, reason: failures[0]?.reason }] : [];
-  const news = kind === "waiting" && subject.stepFailed === true ? untold : [];
+  const notices: { kind: RunNotice; reason: string | undefined }[] = [];
+  let news: readonly StepFailure[] = [];
+  if ("kind" in cause) {
+    const { kind } = cause;
+    const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
+    if (!repeat && announces(kind, subject)) notices.push({ kind, reason: failures[0]?.reason });
+    if (kind === "waiting" && subject.stepFailed === true) news = untold;
+  } else if (subject.status === "running")
+    // Stopped to wait or ended, the run's own transition tells it.
+    news = untold.filter((failure) => failure.kind === cause.stepFailed);
   if (news.length > 0) notices.push({ kind: "step-failed", reason: news[0]?.reason });
-  const ended = kind === "failed" || kind === "partial";
+  const ended = notices.some((one) => one.kind === "failed" || one.kind === "partial");
   return {
     notices,
     told: new Set(

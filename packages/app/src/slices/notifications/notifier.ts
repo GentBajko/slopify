@@ -7,7 +7,7 @@ import type {
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
-import type { NoticeSubject, NoticeText, RunNotice } from "./rules.js";
+import type { NoticeCause, NoticeSubject, NoticeText } from "./rules.js";
 import {
   autoPassNoticeText,
   noticeOf,
@@ -53,12 +53,12 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   // ceiling: one entry per project with a failed step since boot.
   const told = new Map<string, ReadonlySet<string>>();
 
-  const notify = (projectId: string, kind: RunNotice): void => {
+  const notify = (projectId: string, cause: NoticeCause): void => {
     const url = deps.url();
     if (url === null) return;
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(kind, subject, told.get(projectId) ?? new Set());
+    const now = runNotices(cause, subject, told.get(projectId) ?? new Set());
     if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
     for (const one of now.notices) {
@@ -139,6 +139,10 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     observe: (event) => {
       if (closed) return;
       try {
+        if (event.type === "stage.state") {
+          if (event.state === "failed") notify(event.projectId, { stepFailed: event.stage });
+          return;
+        }
         if (event.type === "review.flagged") {
           notifyReview(event);
           return;
@@ -152,7 +156,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         if (previous === event.state) return;
         states.set(event.projectId, event.state);
         const kind = noticeOf(previous, event.state);
-        if (kind !== undefined) notify(event.projectId, kind);
+        if (kind !== undefined) notify(event.projectId, { kind });
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,

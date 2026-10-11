@@ -27,6 +27,7 @@ export function noticeSubject(
     startedBy: lastStarter(db, projectId),
     waitingForAgent: holds.waitingForAgent.has(projectId),
     atItsDay: atItsDay(holds.prepared.has(projectId), holds.holding.get(projectId) ?? []),
+    status,
     ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
