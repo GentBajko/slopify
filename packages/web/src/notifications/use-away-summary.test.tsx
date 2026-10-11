@@ -68,3 +68,25 @@ it("says nothing the first time back after the update, and keeps a new snapshot"
   );
   expect(screen.queryByText(/While you were away/)).toBeNull();
 });
+
+// A step failure seen beside a wait stays seen in the snapshot kept after it, whether the page
+// comes back after a glance or after time away, while the run goes on with nothing waiting.
+it.each([
+  ["a glance", 10_000],
+  ["time away", 60 * 60_000],
+])("keeps a seen step failure in the snapshot after %s", async (_name, ago) => {
+  writeSnapshot({
+    at: Date.now() - ago,
+    states: { a: "pending" },
+    waiting: {},
+    stepFailures: ["a thumbnail@1"],
+  });
+  const listed = vi.fn(jsonAnswer({ projects: [{ id: "a", status: "running", progress: 0.6 }] }));
+  renderRouted(<Subject />, testDeps({ "GET /api/projects": listed }));
+  await vi.waitFor(() =>
+    expect(JSON.parse(window.localStorage.getItem("slopify.away.snapshot") ?? "{}")).toMatchObject({
+      states: { a: "running" },
+      stepFailures: ["a thumbnail@1"],
+    }),
+  );
+});

@@ -323,3 +323,19 @@ it("counts each new step failure, not each run once", () => {
     "While you were away: 2 steps failed beside a wait.",
   );
 });
+
+// A failure seen beside one wait is not news again when the run waits anew beside it: the
+// snapshot keeps it while the project is listed and its run isn't done, though the list names it
+// only while something waits.
+it("keeps a seen step failure seen while its run goes on to another wait", () => {
+  const waits = { id: "a", progress: 0.4, stepFailed: true, waitingForAgent: true } as const;
+  const seen = snapshotOf(0, [{ ...waits, status: "pending", stepFailures: ["thumbnail@1"] }]);
+  // The wait answered, nothing waits beside the failure for a while.
+  const between = snapshotOf(1, [{ id: "a", status: "running", progress: 0.6 }], seen);
+  expect(between.stepFailures).toEqual(["a thumbnail@1"]);
+  const again = [{ ...waits, status: "pending" as const, stepFailures: ["thumbnail@1"] }];
+  expect(awaySummary(between, again).stepsFailed).toBe(0);
+  // Gone or done, the project's failures are let go.
+  expect(snapshotOf(2, [], seen).stepFailures).toEqual([]);
+  expect(snapshotOf(2, [{ id: "a", status: "done", progress: 1 }], seen).stepFailures).toEqual([]);
+});

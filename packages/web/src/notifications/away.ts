@@ -14,7 +14,8 @@ export interface AwaySnapshot {
   // for an agent or its day waits for nobody.
   readonly waiting: Readonly<Record<string, string>>;
   // Each step failed while another of its run waited (`stepFailures`), by its project and its
-  // identity: `${projectId} ${failureId}`.
+  // identity: `${projectId} ${failureId}`. One seen stays seen while its project is listed and its
+  // run isn't done, though the list names it only while something waits (`snapshotOf`).
   readonly stepFailures: readonly string[];
 }
 
@@ -46,14 +47,25 @@ const key = "slopify.away.snapshot";
 // Shorter absences than this are a glance at another tab, not time away.
 export const awayAfterMs = 2 * 60_000;
 
-export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
+// `before`: the snapshot this one replaces, whose step failures stay seen while their project
+// is listed and its run isn't done, so a run that waits anew beside one doesn't tell it again.
+// ceiling: a project's failures since its run was last done, each a few dozen bytes.
+export function snapshotOf(
+  at: number,
+  now: readonly Standing[],
+  before?: AwaySnapshot,
+): AwaySnapshot {
+  const goesOn = new Set(now.filter((one) => one.status !== "done").map((one) => one.id));
+  const seen = (before?.stepFailures ?? []).filter((failure) =>
+    goesOn.has(failure.slice(0, failure.indexOf(" "))),
+  );
   return {
     at,
     states: Object.fromEntries(now.map((one) => [one.id, one.status])),
     waiting: Object.fromEntries(
       now.filter(waitsForPerson).map((one) => [one.id, waitPoints(one).join(",")]),
     ),
-    stepFailures: now.flatMap(stepFailuresOf),
+    stepFailures: [...new Set([...seen, ...now.flatMap(stepFailuresOf)])],
   };
 }
 

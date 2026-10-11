@@ -33,7 +33,7 @@ export function useAwaySummary(): void {
     const snapshot = async (): Promise<void> => {
       try {
         const now = await projects();
-        if (!stopped) writeSnapshot(snapshotOf(Date.now(), now));
+        if (!stopped) writeSnapshot(snapshotOf(Date.now(), now, readSnapshot()));
       } catch {
         // The next refresh tries again.
       }
@@ -48,7 +48,7 @@ export function useAwaySummary(): void {
         const now = await projects();
         if (stopped) return;
         const message = awayMessage(awaySummary(before, now));
-        writeSnapshot(snapshotOf(Date.now(), now));
+        writeSnapshot(snapshotOf(Date.now(), now, before));
         if (message !== undefined)
           notify(message, "info", {
             label: "Open Home",
