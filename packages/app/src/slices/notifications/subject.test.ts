@@ -63,7 +63,7 @@ it("says Waiting for you when a checkpoint of the person's holds the run beside 
   expect(noticeSubject(db, "p1")?.atItsDay).toBe(false);
 });
 
-// A step failed beside the run's wait is told right away (`tellsStepFailure`), once per failure:
+// A step failed beside the run's wait is told right away (`runNotices`), once per failure:
 // the subject says so, and which failure it is.
 it("says which step failed while the run still waits on its day's hold", () => {
   const f = prepared();

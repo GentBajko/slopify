@@ -1,15 +1,13 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import {
-  announces,
   autoPassNoticeText,
-  failureTold,
   type NoticeSubject,
   type NoticeText,
   noticeOf,
   noticeText,
   type RunNotice,
   reviewNoticeText,
-  tellsStepFailure,
+  runNotices,
   topicsNoticeText,
 } from "@app/slices/notifications/rules.js";
 
@@ -130,17 +128,19 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
   const announce = async (projectId: string, state: ProjectState, kind: RunNotice) => {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
-    const failure = subject.failure;
-    const news = tellsStepFailure(kind, subject, told.get(projectId));
-    const repeat = failureTold(kind, subject, told.get(projectId));
-    if (news && failure !== undefined) told.set(projectId, failure);
-    if (ends.has(state)) told.delete(projectId);
+    const now = runNotices(kind, subject, told.get(projectId));
+    if (now.told === undefined) told.delete(projectId);
+    else told.set(projectId, now.told);
     const notices: RunNotice[] = [];
-    if (!repeat && announces(kind, subject) && (await deps.claim(`${projectId}:${state}`)))
-      notices.push(kind);
-    // Shown last: a project's notifications share a tag, so it is the one left on screen.
-    if (news && (await deps.claim(`${projectId}:step-failed:${failure ?? ""}`)))
-      notices.push("step-failed");
+    for (const one of now.notices)
+      if (
+        await deps.claim(
+          one === "step-failed"
+            ? `${projectId}:step-failed:${now.told ?? ""}`
+            : `${projectId}:${state}`,
+        )
+      )
+        notices.push(one);
     if (notices.length > 0 && sounding()) deps.play?.("end");
     if (deps.enabled())
       for (const one of notices)

@@ -1,4 +1,4 @@
-import type { ProjectState } from "../../kernel/pipeline.js";
+import type { ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
 import type { Actor } from "../agents/model.js";
 import type { CheckpointHold } from "../reviews/holds.js";
 
@@ -7,7 +7,7 @@ import type { CheckpointHold } from "../reviews/holds.js";
 // imports this file.
 
 // `step-failed`: a step failed while the run still reads by a wait (`stepFailed`), told when the
-// run stops to wait on it (`tellsStepFailure`).
+// run stops to wait on it (`runNotices`).
 export type RunNotice = "ready" | "partial" | "failed" | "waiting" | "step-failed";
 
 // Only a run seen running or waiting can finish, fail or stop to wait: a project first seen
@@ -124,8 +124,8 @@ export interface NoticeSubject {
 // another failure.
 export function failureOf(
   stages: readonly {
-    readonly kind: string;
-    readonly state: string;
+    readonly kind: StageKind;
+    readonly state: StageState;
     readonly finishedAt: string | null;
   }[],
 ): string | undefined {
@@ -135,28 +135,33 @@ export function failureOf(
   return failed.length === 0 ? undefined : failed.join(",");
 }
 
-// A step failed while the run still reads by a wait: said right away ("Step failed"), when the
-// run stops to wait on it, once per failure. `told` is the failure said last for the project.
-export function tellsStepFailure(
-  kind: RunNotice,
-  subject: Pick<NoticeSubject, "stepFailed" | "failure">,
-  told: string | undefined,
-): boolean {
-  return (
-    kind === "waiting" &&
-    subject.stepFailed === true &&
-    subject.failure !== undefined &&
-    subject.failure !== told
-  );
+export interface RunNotices {
+  // In the order they go out: a project's notifications share a tag, so the last one stays.
+  readonly notices: readonly RunNotice[];
+  // The failure "Step failed" has said for the project from now on (`failureOf`).
+  readonly told: string | undefined;
 }
 
-// A run that ends Failed on the very failure "Step failed" already said is not told again.
-export function failureTold(
+// What a run's transition (`noticeOf`) says, for the server's Notification URL and the browser
+// alike, given the failure already told for the project. A step failed while the run still reads
+// by a wait is said right away ("Step failed"), when the run stops to wait on it, once per
+// failure; a run that ends Failed on the very failure already said is not told again.
+export function runNotices(
   kind: RunNotice,
-  subject: Pick<NoticeSubject, "failure">,
+  subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay" | "stepFailed" | "failure">,
   told: string | undefined,
-): boolean {
-  return kind === "failed" && told !== undefined && subject.failure === told;
+): RunNotices {
+  const { failure } = subject;
+  const repeat = kind === "failed" && told !== undefined && failure === told;
+  const notices: RunNotice[] = !repeat && announces(kind, subject) ? [kind] : [];
+  if (
+    kind === "waiting" &&
+    subject.stepFailed === true &&
+    failure !== undefined &&
+    failure !== told
+  )
+    return { notices: [...notices, "step-failed"], told: failure };
+  return { notices, told: kind === "waiting" ? told : undefined };
 }
 
 // Whether a prepared run's own Before Video hold is what holds it now (`atItsDay`), from the

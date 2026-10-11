@@ -9,13 +9,11 @@ import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { NoticeSubject, NoticeText, RunNotice } from "./rules.js";
 import {
-  announces,
   autoPassNoticeText,
-  failureTold,
   noticeOf,
   noticeText,
   reviewNoticeText,
-  tellsStepFailure,
+  runNotices,
   topicsNoticeText,
   webhookBody,
 } from "./rules.js";
@@ -63,15 +61,12 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     if (url === null) return;
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
-    const say = (one: RunNotice): void => {
+    const now = runNotices(kind, subject, told.get(projectId));
+    if (now.told === undefined) told.delete(projectId);
+    else told.set(projectId, now.told);
+    for (const one of now.notices) {
       const text = noticeText(one, { ...subject, reason: reasons.get(projectId) });
       post(url, { ...text, link: deps.link?.(projectId) }, one, { projectId });
-    };
-    if (failureTold(kind, subject, told.get(projectId))) return;
-    if (announces(kind, subject)) say(kind);
-    if (tellsStepFailure(kind, subject, told.get(projectId)) && subject.failure !== undefined) {
-      told.set(projectId, subject.failure);
-      say("step-failed");
     }
   };
 

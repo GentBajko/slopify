@@ -44,7 +44,7 @@ it("reads from the project's page whether its day's hold holds it", async () => 
   expect(await subjectOf({})).toMatchObject({ atItsDay: false });
 });
 
-// "Step failed" goes out once per failure (`tellsStepFailure`): the page says a step failed
+// "Step failed" goes out once per failure (`runNotices`): the page says a step failed
 // beside the run's wait, and which failure it is.
 it("reads from the project's page which step failed beside its wait", async () => {
   const failed = body({
