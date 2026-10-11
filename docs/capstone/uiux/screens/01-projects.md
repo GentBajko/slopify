@@ -3,6 +3,8 @@ generated_at_commit: d83482c1175e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
 content_hash: e0334aa0552a
+absorbed_from:
+  - features/2026-09-30-slopify-mcp@2026-10-11
 paths_covered:
   - ":(top)packages/web/src/routes/projects.tsx"
   - ":(top)packages/web/src/routes/projects-row.tsx"
@@ -31,25 +33,29 @@ Operate surface at `/projects`: every run ever started, newest first unless anot
 A `ProjectRow` holds (`packages/web/src/routes/projects-row.tsx`):
 - Lead: `RowCheck` "Select row: <title>", a 16px box in a 24px label so the pointer target meets WCAG 2.5.8; Shift+click ticks a range, Space toggles (`packages/web/src/components/selection.tsx`).
 - Title: router Link to `/projects/$projectId` (truncated, the full title as its `title` tooltip), plus a "Sample" `Badge` for the bundled sample projects read from the onboarding record (`packages/web/src/routes/projects.tsx:120-124`, `packages/web/src/routes/projects.tsx:340-347`).
-- Meta: `madeOf` (voice book label · the run's article prompt name · format, e.g. "Documentary dossier · 16:9") and `started <time>`, then ` · <n> views` and ` · <n>% CTR` once the Studio extension has read the long video's numbers (each omitted while unknown; `packages/web/src/routes/projects.tsx:352-355`, `packages/app/src/slices/admission/model.ts:358-360`); the meta line truncates with the full text as its tooltip; a running project adds a `Meter progress` (max 240px, `role="progressbar"` because it measures a task towards done) valued `<n>% done` (`packages/web/src/routes/projects.tsx:94-106`, `packages/web/src/routes/projects.tsx:348-365`, `packages/web/src/components/kit/stats.tsx:36-66`).
+- Meta: `madeOf` (voice book label · the run's article prompt name · format, e.g. "Documentary dossier · 16:9") and `started <time>`; the meta line truncates with the full text as its tooltip; a running project adds a `Meter progress` (max 240px, `role="progressbar"` because it measures a task towards done) valued `<n>% done` (`packages/web/src/routes/projects.tsx:94-106`, `packages/web/src/routes/projects.tsx:348-365`, `packages/web/src/components/kit/stats.tsx:36-66`).
 - Actions: `Status` lamp and word from `stateOf`, with an sr-only polite live region `<title>: <state>`; "Mark uploaded" quiet small button plus InfoTip `project.mark-uploaded` when the project is ready to upload; an "Uploaded" `Badge` when `uploadedAt` is set, plus quiet "Undo upload mark" (aria-label `Undo upload mark: <title>`, tooltip "Puts it back on Ready to upload. Offered for a day after marking.") only within 24 hours of `uploadedAt` (`uploadUndoable`); after that the selection bar's Mark not uploaded reverses it; an icon-only Delete (trash) button (`packages/web/src/routes/projects.tsx:366-412`, `packages/web/src/help/entries/project.ts:316-320`).
 
 `stateOf` words and tones (`packages/web/src/routes/projects-row.tsx`):
 
 | Project status | Word | Tone |
 |---|---|---|
-| waiting on the user, checked first (`isWaiting`, `packages/web/src/home/needs-you.tsx:47`) | Waiting for you | waiting |
 | running, a step held by a CLI plan limit | `limitWaitLine` text, e.g. "Waiting for Codex limits (resets at 14:00)" (`packages/web/src/project/limit-wait.ts:11`) | waiting |
+| otherwise `projectStateOf` (`packages/web/src/lib/state-words.ts`, words from `packages/app/src/slices/admission/state-words.ts`, the same the MCP tools say): | | |
+| held run (`heldRun`: pending with some of its run done, a step failed beside a wait, stopped, or parked on an agent), set aside | Kept as is | done |
+| held run parked on an External agent (MCP) review | Waiting for the agent | waiting |
+| held run a restart stopped (only Continue the run moves it) | Stopped | waiting |
+| held run prepared by a schedule, waiting for its day | Prepared | waiting |
+| any other held run | Waiting for your review | waiting |
 | running | Running | running (pulsing lamp) |
 | paused | Paused | waiting |
-| pending and `setAside` ("Keep as is" on Needs you, `packages/app/src/slices/admission/model.ts:340-342`) | Kept as is | done |
-| pending | Queued | off |
+| pending, none of its run done | Queued | off |
 | failed | Failed | failed |
-| partial | Done with problems | info |
-| done | Done | done |
+| partial | Done with problems | waiting |
+| done (an uploaded project with nothing left to run reads done) | Done | done |
 | canceled | Canceled | off |
 
-Filter predicates: Running = running or paused; Queued = `isQueued`; Needs you = `isWaiting`; Ready to upload = `isReadyToUpload`; Failed = failed or partial (`matches` in `packages/web/src/routes/projects-order.ts`, `packages/web/src/home/running-more.tsx:8`, `packages/web/src/home/ready.tsx:18`). The list is first narrowed to the rail's current channel (`useCurrentChannel`), then by filter and by case-insensitive title substring, then sorted (`sortProjects`: newest by `createdAt`; recently changed by `updatedAt`; name with numeric, case-insensitive collation; status ranks waiting on you, running, paused, queued, failed, done with problems, done, canceled; ties newest first) (`packages/web/src/routes/projects-order.ts`, `packages/web/src/channels/current.tsx:85-87`).
+Filter predicates (shared with Home, `packages/app/src/slices/admission/state-words.ts`): Running = `runningNow` (running, or parked on an External agent's review: exactly Home's "See all N running"; there is no separate "Running now" filter); Queued = `queuedRun`; Needs you = `waitsForPerson` (paused, or held for the person: not Waiting for the agent, Prepared or Kept as is); Ready to upload = `isReadyToUpload`; Failed = `failedRun` (failed, or a step failed while the run reads by a wait beside it) or partial (`matches` in `packages/web/src/routes/projects-order.ts`, `packages/web/src/home/running-more.tsx:8`, `packages/web/src/home/ready.tsx:18`). The list is first narrowed to the rail's current channel (`useCurrentChannel`), then by filter and by case-insensitive title substring, then sorted (`sortProjects`: newest by `createdAt`; recently changed by `updatedAt`; name with numeric, case-insensitive collation; status ranks waiting on you, running, paused, queued, failed, done with problems, done, canceled; ties newest first) (`packages/web/src/routes/projects-order.ts`, `packages/web/src/channels/current.tsx:85-87`).
 
 Bulk operations run each project on its own, so one refusal leaves the rest done, and report in a toast with Undo (`packages/web/src/routes/projects-bulk.tsx`):
 

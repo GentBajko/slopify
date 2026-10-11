@@ -278,10 +278,13 @@ section callouts and Ctrl+K all read it. The first situation that holds wins, in
 | Sample | the bundled sample project | Sample project | Make my own copy | none |
 | Paused | the project is paused | Paused | Continue the run | none |
 | Failed | a step failed and will not retry by itself | Failed | the fix-it (below), else Try images again / Try the article again | the step's section, with Error details |
-| Held | a checkpoint holds work for review | Waiting for you | Approve and render the video (or … make the images / record the narration) | the held stage's section |
+| Waiting for the agent | the run is parked on an External agent (MCP) review and nothing else holds it | Waiting for the agent | none: it carries on once the agent answers, or the review passes by itself 2 hours after it was asked | none |
+| Held | a checkpoint holds work for review | Waiting for your review | Approve and render the video (or … make the images / record the narration) | the held stage's section |
+| Prepared | a schedule prepared it ahead and its own Before Video hold now holds it | Prepared | Approve and render the video (approving now renders it before its day) | the Video section |
 | Waiting | a CLI plan's limit is reached, or a step waits to retry by itself | Waiting for limits / Waiting to try again | none: when it carries on, in words | the waiting stage's section |
 | Running | the run is at work | Running | Pause | none (the section shows progress) |
-| Stopped | canceled, failed without a failed step, or resumable work nothing will start | Stopped / Canceled | Continue the run | none |
+| Kept as is | pending and set aside with Keep as is | Kept as is | Prepare upload when the video is ready, else none | YouTube, or none |
+| Stopped | canceled, failed without a failed step, or resumable work nothing will start (a restart stopped the run) | Stopped / Canceled | Continue the run (after a Cancel, only work taken up again runs; canceled steps stay canceled) | none |
 | Queued | pending in the queue | Queued | none | none |
 | Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
 | Done (a short) | a short-mode project is done | Done | Make the full video on this topic (Play opens on a long video with the same topic, starter pack and providers) | none |
@@ -368,9 +371,12 @@ The regenerate confirmation stays: it spends money on a paid model and cannot be
   names the consequence, the action button repeats the verb with its object (Delete project).
   A destructive dialog's way out keeps the thing ("Keep it", "Keep them", "Keep running"),
   which `ConfirmDialog` uses by default; a neutral dialog's way out is "Cancel".
-- **States.** One word per state everywhere (`lib/state-words.ts`): a project not started is
-  Queued, a held one is Waiting for your review, a finished one with a failed step is Done with
-  problems, a step a setting turned off is Off, a failed step retrying by itself is Waiting to
+- **States.** One word per state everywhere, the MCP tools included
+  (`packages/app/src/slices/admission/state-words.ts`, read by `lib/state-words.ts`): a project
+  not started is Queued; a held one reads by what it waits for, in this order: Kept as is,
+  Waiting for the agent, Stopped, Prepared, Waiting for your review; a run with a failed step
+  beside such a wait reads by the wait while something can still move, and Failed once nothing
+  can; a finished one with a failed step is Done with problems, a step a setting turned off is Off, a failed step retrying by itself is Waiting to
   try again. Provider readiness reads as Settings → Providers says it: No key, Not found,
   Signed out, Needs an update, Needs attention. Spelling is en-US: canceled.
 - **Dates.** `startedAt` (clock time today, the date otherwise, the year when not this year)

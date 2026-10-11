@@ -3,8 +3,12 @@ generated_at_commit: 14480f26c13e
 generated_date: 2026-10-02
 capstone_version: 7.0.1
 content_hash: 4c2cfd83fb7a
+absorbed_from:
+  - features/2026-09-30-slopify-mcp@2026-10-11
 paths_covered:
   - ":(top)packages/web/src/routes/settings.tsx"
+  - ":(top)packages/web/src/routes/settings-sections.ts"
+  - ":(top)packages/web/src/agents/**"
   - ":(top)packages/web/src/routes/settings-about.tsx"
   - ":(top)packages/web/src/routes/settings-backups.tsx"
   - ":(top)packages/web/src/routes/settings-files.tsx"
@@ -46,7 +50,7 @@ Operate surface for everything install-wide: login autostart, provider keys and 
 
 - kit `PageHeader`: crumb "Settings", title = the current section's label, meta = its one line (`packages/web/src/routes/settings.tsx:250`, `:99`). Header actions: "Check all" (only on Providers; "Checking…" while pending) and a secondary `FileLink` "Download diagnostics" (download icon, saves `slopify-diagnostics.json` from `/api/diagnostics`) with InfoTip `settings.diagnostics` (`packages/web/src/routes/settings.tsx:256`, `:262`).
 - kit `Workspace` with a sections column and no aside: 180 px rail + fluid main; below 768 px one column and the rail becomes a sideways-scrolling row of tabs (`packages/web/src/routes/settings.tsx:275`, `packages/web/src/styles/shell.css:592`, `:985`).
-- kit `Rail` "Settings sections" with seven groups, one rail item each; a group with more than one section shows them as `TabLinks` above the section (`settingsGroups` in `packages/web/src/routes/settings-sections.ts`): Connections (Providers, Voices, Models), Production defaults (playback), Notifications, Publishing (Channel links, YouTube Studio), Backup & storage (storage, trash), General, About (About, Usage, Patch notes). `?section=` keeps each section's own id; the old `backups` id opens Backup & storage (`settingsSectionOf`). Sections and their lines:
+- kit `Rail` "Settings sections" with seven groups, one rail item each; a group with more than one section shows them as `TabLinks` above the section (`settingsGroups` in `packages/web/src/routes/settings-sections.ts`): Connections (Providers, Voices, Models, Agents (MCP)), Production defaults (playback), Notifications, Publishing (Channel links, YouTube Studio), Backup & storage (storage, trash), General, About (About, Usage, Patch notes). `?section=` keeps each section's own id; the old `backups` id opens Backup & storage (`settingsSectionOf`). Sections and their lines:
 
 | id | Rail label | Meta line | Renders | Source |
 |---|---|---|---|---|
@@ -54,6 +58,7 @@ Operate surface for everything install-wide: login autostart, provider keys and 
 | providers | Providers | Keys stay on this machine and go only to their provider. Readiness is checked again before each run. | `Welcome`, `ProviderKeys`, `ProviderHealthCheck` | `packages/web/src/routes/settings.tsx:292` |
 | voices | Voices | A wrong voice ID shows up when the audio stage uses it. | `Voices` | `packages/web/src/components/voices.tsx:25` |
 | models | Models | New models, prices and retirements, checked once a day. | `CatalogueSettings` | `packages/web/src/components/catalogue.tsx:39` |
+| agents | Agents (MCP) | Let an AI agent on this computer, such as Claude Code or Codex, run Slopify. | `AgentSettings` | `packages/web/src/agents/agent-settings.tsx:18` |
 | playback | Production defaults | How new runs pace the narration and level the volume. | `ProductionDefaults` (`packages/web/src/routes/settings-preferences.tsx`) | `packages/web/src/routes/settings.tsx:675` |
 | notifications | Notifications | When a run finishes, fails, waits for you, or a review needs a decision. | `NotificationSettings` | `packages/web/src/notifications/settings-panel.tsx:29` |
 | channel-links | Channel links | The links a YouTube description's {{Name}} placeholders fill from. | `ChannelLinksSettings` | `packages/web/src/youtube/channel-links.tsx:83` |
@@ -90,6 +95,15 @@ A `sl-table` (min 640 px, scrolls sideways) with columns Name, Provider, Voice I
 ### Models
 
 `SectionHead` "Model catalogue" (InfoTip) with "Check now" ("Checking…") and quiet "Replace with published file" ("Replacing…", InfoTip `settings.models.replace`), both disabled without a catalogue path; a `dl` of Catalogue file (mono), Verified, Last checked (date · "<n> new, <n> repriced, <n> retired" or "No changes"); then "New: …" and "Retired: …" lines (`packages/web/src/components/catalogue.tsx:125`, `:140`, `:162`). Section "Retired models in use" with primary "Switch all" ("Switching…"; disabled when nothing is switchable) and a list: kicker Template/Schedule/Draft/Project, name, "<slot>: <model> (retired | no longer listed)", a waiting-toned blocked reason, and "Switch to <replacement>" or "No replacement" (`packages/web/src/components/catalogue.tsx:179`, `:203`).
+
+### Agents (MCP)
+
+`SectionHead` "Agents (MCP)" (InfoTip `settings.agents`) over (`packages/web/src/agents/agent-settings.tsx:41`):
+- this install's MCP address in `Code`, selectable (`mcpUrl(api.origin)`, `packages/app/src/slices/agents/model.ts`);
+- two setup blocks, each a bold label, the line in `Code` and a quiet "Copy" button (copy icon; aria-label "Copy the Claude Code setup" / "Copy the Codex setup") with a line under it: Claude Code `claude mcp add --transport http slopify <url>` ("Run it once in a terminal."), Codex `[mcp_servers.slopify]` / `url = "<url>"` ("Add it to ~/.codex/config.toml."). Copy toasts "<Agent> setup copied. <where>"; a blocked clipboard says so and asks the person to select and copy the line;
+- a kit `QueryState` over `GET /api/settings/agents`: "Last connected <time>." (a `Stamp` with the exact time as its title) or "No agent has connected yet."; then h3 "What agents did", the latest 20 agent changes as "<tool title> · <project or schedule> · <time>", or "No agent has changed anything yet." A project's own agent changes are also in its History view (`03-project.md`).
+
+There is no switch and no token: `/mcp` is on whenever Slopify runs (`logic/45-mcp-agent-access.md`).
 
 ### Production defaults (and Appearance, now under General)
 
@@ -144,6 +158,7 @@ Three blocks in order (`packages/web/src/routes/settings.tsx:306`):
 | General | loading / error | "Checking…" status; danger "Starting at login couldn't be checked: …"; switch errors under it | `packages/web/src/autostart/autostart-settings.tsx:49`, `:75` |
 | Providers | loading | `SkeletonKeys`: three family blocks of raised bars and a detail placeholder, `role="status"` "Loading providers" | `packages/web/src/components/provider-keys.tsx:412` |
 | Providers | list error | danger paragraph with the message | `packages/web/src/components/provider-keys.tsx:77` |
+| Agents (MCP) | loading / error | `LoadingBlock` "Loading agent activity…" (three rows); an unreadable answer shows `QueryState`'s error for "Agent activity" with its retry, never an empty list; the setup lines stay usable | `packages/web/src/agents/agent-settings.tsx:65` |
 | Providers | key save / test / remove | Save disabled until something is typed; the draft clears on save and a Saved tick shows 2 s; save and remove failures are the `Field` error; test result is a status (accent) or alert (danger) line; Test disabled with "Paste a key first."; Remove asks `ConfirmDialog` "Remove the <name> key?", "Projects that used this provider cannot retry until a key is saved.", confirm "Remove key" | `packages/web/src/components/provider-keys.tsx:219`, `:331`, `:344`, `:366` |
 | Providers | CLI path | pending "Checking…"; server refusal as the `Field` error; Saved tick after success | `packages/web/src/components/provider-cli.tsx:167`, `:191` |
 | Providers | health | "The health check didn't finish: … Press Check all to try again."; per-row "The check didn't finish: … Press Check again on the provider to try again." | `packages/web/src/components/provider-health.tsx:88` |

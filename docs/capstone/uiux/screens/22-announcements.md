@@ -3,6 +3,8 @@ generated_at_commit: 54f5cb4c1dab
 generated_date: 2026-09-30
 capstone_version: 7.0.1
 content_hash: 424f1b2d9b41
+absorbed_from:
+  - features/2026-09-30-slopify-mcp@2026-10-11
 paths_covered:
   - ":(top)packages/web/src/whats-new/tour.tsx"
   - ":(top)packages/web/src/patch-notes/popup.tsx"
@@ -88,18 +90,20 @@ Browser notifications, via `new Notification(...)` (`packages/web/src/notificati
 
 | Event | Headline | Body | Tag | Click opens |
 |---|---|---|---|---|
-| run starts (first `running` not already seen started) | `Started: <title>` | "Slopify is working on it. You'll hear a different chime when it ends." | `slopify-run-<projectId>` | `/projects/$projectId` |
+| run starts (first `running` not already seen started) | `Started: <title>` (` · by agent` when an agent started it) | "Slopify is working on it. You'll hear a different chime when it ends." | `slopify-run-<projectId>` | `/projects/$projectId` |
 | `running` → `done`, video | `Video ready: <title>` | "Open the project to watch it." | `slopify-run-<projectId>` | project |
 | `running` → `done`, no video | `Run finished: <title>` | "Open the project to see its files." | same | project |
 | `running` → `partial` | `Video ready with problems: <title>` / `Run finished with problems: <title>`, `— <reason>` when known | "Open the project to see which step failed and the button that fixes it." | same | project |
 | `running` → `failed` | `Run failed: <title>` (`— <reason>`) | "Open the project to see what stopped it and press Retry." | same | project |
-| `running` → `pending` | `Waiting for you: <title>` | "Open the project to review the held step or press Continue the run." | same | project |
-| `review.flagged` | `Review needs a decision: <title>` (`— <reason>`) | `The automatic review flagged <item> and kept it. Open the project and press Overrule to keep it or Redo to make it again.` | `slopify-run-<projectId>` | project |
+| `running` → `pending`, held for the person (not for an External agent's review, not at its schedule's day hold) | `Waiting for you: <title>` | "Open the project to review the held step or press Continue the run." | same | project |
+| a step fails while another still waits for an External agent, the person or its day (`stepFailedWhileWaiting`), told right away, once per failure | `Step failed: <title>` (`— <reason>`) | "The run still waits on another step, so it isn't over. Open the project to see which step failed and press Retry." | same | project |
+| `review.auto-passed` (an External agent review nobody answered in 2 h) | `Passed without review: no agent answered in 2 h` | `<title>: <item> went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.` | `slopify-run-<projectId>` | project |
+| `review.flagged` | `Review needs a decision: <title>` (`— <reason>`, ` · by agent` for an agent's verdict) | `The automatic review` (or `An agent's review`) `flagged <item> and kept it. Open the project and press Overrule to keep it or Redo to make it again.` | `slopify-run-<projectId>` | project |
 | schedule topics added | `<n> new topic(s) is/are waiting for you` | `Open Calendar → Suggested topics → <schedule> to queue or reject it/them.` plus `<m> are waiting in all.` | `slopify-topics-<scheduleId>` | `/calendar` |
 
-Texts come from the shared server rules (`packages/app/src/slices/notifications/rules.ts:56-135`); an empty title reads "Untitled project", a reason is its first non-empty line cut to 140 characters with `…` (`packages/app/src/slices/notifications/rules.ts:74-84`). Paused and canceled say nothing; a project first seen already finished says nothing (`packages/app/src/slices/notifications/rules.ts:9-30`). Clicking focuses the window, navigates, and closes the notification (`packages/web/src/notifications/browser.ts:122-126`, `packages/web/src/notifications/use-run-notifications.ts:35-66`).
+A run an agent started adds ` · started by agent` to its run headlines. A step that fails with nothing else waiting is not told mid-run: the run's own end notice ("Run failed" / "Video ready with problems") names it, with the end chime; a run that ends Failed only on failures already told is not told again (`runNotices`, `packages/app/src/slices/notifications/rules.ts`). The browser and the server's Notification URL share these rules; the server keeps what it told in `told_failures`, so a restart neither repeats a notice nor loses one never told. Texts come from the shared server rules (`packages/app/src/slices/notifications/rules.ts:56-135`); an empty title reads "Untitled project", a reason is its first non-empty line cut to 140 characters with `…` (`packages/app/src/slices/notifications/rules.ts:74-84`). Paused and canceled say nothing; a project first seen already finished says nothing (`packages/app/src/slices/notifications/rules.ts:9-30`). Clicking focuses the window, navigates, and closes the notification (`packages/web/src/notifications/browser.ts:122-126`, `packages/web/src/notifications/use-run-notifications.ts:35-66`).
 
-Sounds: a start chime (784 Hz then 1175 Hz) and an end chime (1047, 1319, 1568 Hz, longer), synthesized with Web Audio sine plus triangle partials through a limiter; no audio files (`packages/web/src/notifications/sounds.ts:41-99`). The end chime plays on every end/wait transition that is announced; the start chime on a run start (`packages/web/src/notifications/watcher.ts:109-122`). Review and topics events play no chime (`packages/web/src/notifications/watcher.ts:141-169`).
+Sounds: a start chime (784 Hz then 1175 Hz) and an end chime (1047, 1319, 1568 Hz, longer), synthesized with Web Audio sine plus triangle partials through a limiter; no audio files (`packages/web/src/notifications/sounds.ts:41-99`). The end chime plays once for each announced end, wait or Step failed; the start chime on a run start (`packages/web/src/notifications/watcher.ts:109-122`). Review and topics events play no chime (`packages/web/src/notifications/watcher.ts:141-169`).
 
 ## States
 | State | Trigger | Rendered |

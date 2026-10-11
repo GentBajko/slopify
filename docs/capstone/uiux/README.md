@@ -11,6 +11,7 @@ absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-project-templates@2026-09-13
+  - features/2026-09-30-slopify-mcp@2026-10-11
 generated_date: '2026-09-25'
 capstone_version: 5.2.0
 generated_at_commit: 7bdb84e3f57e
@@ -31,14 +32,14 @@ The SPA has four top-level navigation destinations (Projects, Play, Library, Set
 | [01-direction.md](01-direction.md) | all | all |
 | [02-system.md](02-system.md) | all | all |
 | [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13, 17, 21-25 |
-| [screens/01-projects.md](screens/01-projects.md) | 07 Projects | 01, 13, 14 |
-| [screens/02-play.md](screens/02-play.md) | 06 Play, independent glossary preference | 04, 05, 08, 15, 17, 18, 22, 23 |
-| [screens/03-project.md](screens/03-project.md) | 08 Project, retained pronunciation, clean scripts and saved host paths | 01, 08, 09, 11, 12, 14, 17, 23 |
+| [screens/01-projects.md](screens/01-projects.md) | 07 Projects | 01, 13, 14, 38, 45 |
+| [screens/02-play.md](screens/02-play.md) | 06 Play, independent glossary preference | 04, 05, 08, 15, 17, 18, 22, 23, 33 |
+| [screens/03-project.md](screens/03-project.md) | 08 Project, retained pronunciation, clean scripts and saved host paths | 01, 08, 09, 11, 12, 14, 17, 23, 33, 45 |
 | [screens/04-prompts.md](screens/04-prompts.md) | 04 Prompts (Library tab) | 15 |
 | [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | 05 Prompt editor | 03, 15 |
 | [screens/06-entries.md](screens/06-entries.md) | Intros & outros (Library tab) | 08, 15 |
 | [screens/07-entry-editor.md](screens/07-entry-editor.md) | Intro/outro editor | 03, 08, 15 |
-| [screens/08-settings.md](screens/08-settings.md) | 03 Settings; native paths and host-managed CLI status | 02, 16, 19-21 |
+| [screens/08-settings.md](screens/08-settings.md) | 03 Settings; native paths and host-managed CLI status; Agents (MCP) | 02, 16, 19-21, 45 |
 | [screens/09-usage.md](screens/09-usage.md) | Usage (Settings section) | 16 |
 | [screens/10-marketing.md](screens/10-marketing.md) | 01 Marketing page | 16 |
 | [screens/11-first-run-tutorial.md](screens/11-first-run-tutorial.md) | 02 First-run notice and guide | 02, 15, 22 |

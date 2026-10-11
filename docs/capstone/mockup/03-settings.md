@@ -2,6 +2,7 @@
 host_cli_verified_at_commit: 9bd6517
 absorbed_from:
   - features/2026-09-24-host-cli-bridge@2026-09-24
+  - features/2026-09-30-slopify-mcp@2026-10-11
 screen: settings
 journeys: [J1-discover-and-install, J2-first-run-setup]
 assumed:
@@ -47,6 +48,13 @@ API keys per provider, the voice list, and the outro card text. Where a fresh in
 | PLAYBACK |
 | Silence between segments [ 3 ] s |
 | Appearance (•) System ( ) Dark ( ) Light [Save] |
+| |
+| AGENTS (MCP)  (Connections group) |
+| http://127.0.0.1:<port>/mcp |
+| Claude Code  claude mcp add --transport http slopify <url> [Copy] |
+| Codex        [mcp_servers.slopify] url = "<url>"           [Copy] |
+| Last connected 14:05.  (or: No agent has connected yet.) |
+| What agents did: Approve a checkpoint · Hypatia · 13:58 ... |
 +--------------------------------------------------------------------+
 | Free · your keys, your machine [Patreon] [☕] |
 +--------------------------------------------------------------------+
@@ -57,6 +65,7 @@ Element tree:
  - API keys: one row per supported provider, grouped LLM / TTS / image; CLI providers show readiness, effective command and editable executable path instead of a key field (`logic/02`)
  - Voices: table of name + provider + voice ID, add row
  - Playback: silence between segments in seconds, Appearance (`logic/11`)
+ - Agents (MCP), in the Connections group: this install's `/mcp` address, the Claude Code and Codex setup lines with Copy, when an agent last connected, and the latest 20 things agents changed (`logic/45`)
  - Footer: donation links
 
 ## Elements
@@ -68,6 +77,7 @@ Element tree:
 | Executable path / Save path (Claude Code, Codex, Gemini CLI) | Checks and saves an absolute executable/JS entry; blank resets to server PATH; existing CLI login is reused | Stays; refreshed readiness controls Play |
 | Add voice: Name, Provider, Voice ID | Appends an entry to the voice list | Stays; entry appears in 06 Play's voice dropdown |
 | Remove (per voice) | Deletes the entry | Stays |
+| Copy (Claude Code / Codex setup) | Copies the setup line for that agent; a toast says where it goes ("Run it once in a terminal.", "Add it to ~/.codex/config.toml.") | Stays; the agent connects to `/mcp` with no token (`logic/45`) |
 | Silence between segments, Appearance, Save | The gap inserted around the intro and outro (`logic/11`), and the theme | Stays |
 
 Provider names are placeholders: `for: stack`. OpenRouter is the one name surfaced.
@@ -77,6 +87,9 @@ Provider names are placeholders: `for: stack`. OpenRouter is the one name surfac
 - Docker host-managed CLI rows show the effective host command and “Runs on your host” guidance, without an Executable path input or Save path button. Known login/helper/version/missing errors retain their distinct guidance. Native rows keep editable paths. Play and project controls use “Sign In Required”, “Host Helper Unavailable”, “CLI Update Required” or “CLI Missing” as appropriate (`packages/web/src/components/provider-cli.tsx:84`, `packages/web/src/lib/provider-status.ts:3`).
 
 - CLI provider not found: status line "Not found on PATH" or "Not found at saved path"; greyed out on Play. The entered path remains editable. Checking disables that row until the version probe settles; errors appear inline and leave the previous saved path intact (`packages/web/src/components/provider-cli.tsx`, `logic/02`).
+
+- Agents (MCP), nothing connected: "No agent has connected yet." and "No agent has changed anything yet." The setup lines show regardless; the endpoint is always on while Slopify runs. A blocked clipboard leaves the line for the person to copy and says so (`packages/web/src/agents/agent-settings.tsx`).
+- Agents (MCP), loading or unreadable: a loading block, then the kit's error state (`QueryState`) with its retry, never an empty list.
 
 - No keys saved (fresh install): every field empty; whether Play is reachable `rule: logic (S13-credentials)`.
 - Key saved: field masked (assumed).
