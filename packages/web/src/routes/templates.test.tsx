@@ -209,7 +209,11 @@ it("does not install a template after the route unmounts during draft loading", 
     await screen.findByRole("button", { name: `Use ${template.name} in Play` }, playSession),
   );
   await screen.findByRole("button", { name: "Refresh templates" }, playSession);
-  leave();
+  // Inside act, so the route's unmount effects (its `mounted` flag) have run, not only its DOM
+  // removal, before the draft answers.
+  act(() => {
+    leave();
+  });
   await screen.findByText("Templates left", {}, playSession);
   draftResponse.resolve(Response.json(draftView));
   await waitFor(() => expect(opened).toBe(false), playSession);
