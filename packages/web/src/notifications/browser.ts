@@ -1,4 +1,4 @@
-import type { ShownNotice, ShownStartNotice, ShownTopicsNotice } from "./watcher.js";
+import type { ShownNotice, ShownStartNotice, ShownTopicsNotice, ToldFailures } from "./watcher.js";
 
 // The browser half of run notifications: the per-browser toggle, the permission, the one-tab
 // claim and the Notification itself. Storage can be missing or throw (private windows, blocked
@@ -6,6 +6,7 @@ import type { ShownNotice, ShownStartNotice, ShownTopicsNotice } from "./watcher
 
 const preferenceKey = "slopify.notifications.browser";
 const claimsKey = "slopify.notifications.sent";
+const toldKey = "slopify.notifications.told";
 // Every open tab hears the same event within a moment; a minute covers a slow project fetch.
 const claimWindowMs = 60_000;
 
@@ -108,6 +109,38 @@ export async function claimOnce(key: string, now: () => number = Date.now): Prom
   }
   return attempt();
 }
+
+function readTold(): Record<string, readonly string[]> {
+  try {
+    const stored: unknown = JSON.parse(window.localStorage.getItem(toldKey) ?? "{}");
+    if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return {};
+    return Object.fromEntries(
+      Object.entries(stored).flatMap(([id, told]) =>
+        Array.isArray(told) ? [[id, told.filter((one) => typeof one === "string")]] : [],
+      ),
+    );
+  } catch {
+    // Unreadable storage or a damaged value: nothing told yet.
+    return {};
+  }
+}
+
+// The failures each project's run notices named, kept in this browser so a reload or another tab
+// doesn't tell them again. ceiling: one entry per project whose told failure it still has.
+export const storedTold: ToldFailures = {
+  read: (projectId) => new Set(readTold()[projectId] ?? []),
+  write: (projectId, told) => {
+    const { [projectId]: _, ...others } = readTold();
+    try {
+      window.localStorage.setItem(
+        toldKey,
+        JSON.stringify(told.size === 0 ? others : { ...others, [projectId]: [...told] }),
+      );
+    } catch {
+      // Without storage a reload may tell a failure again; nothing else depends on it.
+    }
+  },
+};
 
 export function showBrowserNotification(
   notice: Pick<ShownNotice, "projectId" | "text">,

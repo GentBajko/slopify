@@ -12,6 +12,7 @@ import {
   showBrowserNotification,
   showStartNotification,
   showTopicsNotification,
+  storedTold,
 } from "./browser.js";
 import { onRunSoundsChange, playRunSound, runSoundsOn, unlockRunSounds } from "./sounds.js";
 import { useAwaySummary } from "./use-away-summary.js";
@@ -65,6 +66,7 @@ export function useRunNotifications(): RunWatcher {
           (await queryClient.fetchQuery({ ...projectsQuery(api), staleTime: 5_000 })).projects,
         subject: (projectId) => projectNoticeSubject(api, projectId),
         claim: (key) => claimOnce(key),
+        told: storedTold,
         showTopics: (notice) => {
           showTopicsNotification(notice, () => {
             void navigateRef.current({ to: "/calendar" });

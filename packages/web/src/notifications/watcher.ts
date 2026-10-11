@@ -66,6 +66,25 @@ export interface ShownReviewNotice {
   readonly text: NoticeText;
 }
 
+// The failures each project's notices named (`runNotices`), only those it still has.
+export interface ToldFailures {
+  readonly read: (projectId: string) => ReadonlySet<string>;
+  readonly write: (projectId: string, told: ReadonlySet<string>) => void;
+}
+
+// Kept for this page alone.
+function toldInMemory(): ToldFailures {
+  // ceiling: one entry per project with a failed step this page heard.
+  const told = new Map<string, ReadonlySet<string>>();
+  return {
+    read: (projectId) => told.get(projectId) ?? new Set(),
+    write: (projectId, now) => {
+      if (now.size === 0) told.delete(projectId);
+      else told.set(projectId, now);
+    },
+  };
+}
+
 export interface RunWatcherDeps {
   // The toggle is on and the browser has granted permission.
   readonly enabled: () => boolean;
@@ -85,6 +104,9 @@ export interface RunWatcherDeps {
   readonly showTopics?: (notice: ShownTopicsNotice) => void;
   readonly showReview?: (notice: ShownReviewNotice) => void;
   readonly report: (error: unknown) => void;
+  // Where told failures are kept: in the browser (`browser.ts` storedTold) so a reload or another
+  // tab doesn't tell them again; this page's memory when left out.
+  readonly told?: ToldFailures;
 }
 
 export interface RunWatcher {
@@ -130,16 +152,13 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     pending.add(done);
   };
 
-  // The failures each project's notices named in this tab (`runNotices`), only those it still has.
-  // ceiling: one entry per project with a failed step this page heard.
-  const told = new Map<string, ReadonlySet<string>>();
+  const told = deps.told ?? toldInMemory();
   // `state` is the transition's, when a transition is the cause.
   const announce = async (projectId: string, cause: NoticeCause, state?: ProjectState) => {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(cause, subject, told.get(projectId) ?? new Set());
-    if (now.told.size === 0) told.delete(projectId);
-    else told.set(projectId, now.told);
+    const now = runNotices(cause, subject, told.read(projectId));
+    told.write(projectId, now.told);
     const notices: RunNotices["notices"][number][] = [];
     for (const one of now.notices)
       if (

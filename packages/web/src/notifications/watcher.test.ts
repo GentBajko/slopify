@@ -1,6 +1,6 @@
 import type { ProjectState } from "@app/kernel/pipeline.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { claimOnce } from "./browser.js";
+import { claimOnce, storedTold } from "./browser.js";
 import {
   createRunWatcher,
   type RunWatcherDeps,
@@ -30,6 +30,7 @@ function harness(
     readonly enabled?: boolean;
     readonly seeded?: readonly { id: string; status: ProjectState }[];
     readonly claim?: RunWatcherDeps["claim"];
+    readonly told?: RunWatcherDeps["told"];
     // What a project says of a failed step as each notice goes out.
     readonly failing?: () => {
       readonly stepFailed?: boolean;
@@ -58,6 +59,7 @@ function harness(
                 },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),
+    ...(options.told === undefined ? {} : { told: options.told }),
     show: (notice) => {
       shown.push(notice);
     },
@@ -377,7 +379,8 @@ describe("review notices", () => {
   });
 });
 
-describe("claimOnce", () => {
+// A fresh storage for each test, put back afterwards.
+function withMemoryStorage(): void {
   const original = Object.getOwnPropertyDescriptor(window, "localStorage");
   beforeEach(() => {
     const items = new Map<string, string>();
@@ -394,6 +397,45 @@ describe("claimOnce", () => {
     if (original) Object.defineProperty(window, "localStorage", original);
     else Object.defineProperty(window, "localStorage", { configurable: true, value: undefined });
   });
+}
+
+// The failures told are kept in the browser: a reload or another tab doesn't tell them again.
+describe("told failures", () => {
+  withMemoryStorage();
+
+  it("doesn't tell Run failed after a reload for the failure Step failed told", async () => {
+    const failures = { stepFailed: true, failures: ["audio@1"] };
+    const before = harness({ told: storedTold, failing: () => failures });
+    for (const state of ["running", "pending"] as const)
+      before.watcher.observe({ projectId: "agent", state });
+    await before.watcher.settled();
+    expect(before.shown.map((notice) => notice.kind)).toEqual(["step-failed"]);
+    const reloaded = harness({
+      told: storedTold,
+      seeded: [{ id: "agent", status: "pending" }],
+      failing: () => failures,
+    });
+    await reloaded.watcher.seed();
+    reloaded.watcher.observe({ projectId: "agent", state: "failed" });
+    await reloaded.watcher.settled();
+    expect(reloaded.shown).toEqual([]);
+  });
+
+  it("keeps a project's failures only while it has them, and survives a damaged value", () => {
+    storedTold.write("p1", new Set(["audio@1"]));
+    storedTold.write("p2", new Set(["images@1"]));
+    expect([...storedTold.read("p1")]).toEqual(["audio@1"]);
+    storedTold.write("p1", new Set());
+    expect(window.localStorage.getItem("slopify.notifications.told")).toBe(
+      JSON.stringify({ p2: ["images@1"] }),
+    );
+    window.localStorage.setItem("slopify.notifications.told", "{not json");
+    expect(storedTold.read("p2").size).toBe(0);
+  });
+});
+
+describe("claimOnce", () => {
+  withMemoryStorage();
 
   it("lets one tab of many claim a transition, and the same one again after a minute", async () => {
     let now = 1_000_000;
