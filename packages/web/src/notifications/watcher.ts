@@ -6,7 +6,7 @@ import {
   noticeOf,
   noticeText,
   type RunNotice,
-  type RunNotices,
+  type RunNoticeOut,
   reviewNoticeText,
   runNotices,
   topicsNoticeText,
@@ -168,7 +168,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     if (subject === undefined) return;
     const now = runNotices(cause, subject, told.read(projectId));
     told.write(projectId, now.told);
-    const notices: RunNotices["notices"][number][] = [];
+    const notices: RunNoticeOut[] = [];
     for (const one of now.notices)
       if (
         await deps.claim(

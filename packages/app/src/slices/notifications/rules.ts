@@ -153,10 +153,15 @@ export function failuresOf(
     }));
 }
 
+// One notice to send, with the reason of the failure it names.
+export interface RunNoticeOut {
+  readonly kind: RunNotice;
+  readonly reason: string | undefined;
+}
+
 export interface RunNotices {
-  // In the order they go out, each with the failure's reason it names: a project's
-  // notifications share a tag, so the last one stays.
-  readonly notices: readonly { readonly kind: RunNotice; readonly reason: string | undefined }[];
+  // In the order they go out: a project's notifications share a tag, so the last one stays.
+  readonly notices: readonly RunNoticeOut[];
   // The failures told for the project from now on: those it still has that a notice named.
   readonly told: ReadonlySet<string>;
   // The failures "Step failed" names now, when it goes out.
@@ -183,26 +188,27 @@ export function runNotices(
 ): RunNotices {
   const failures = subject.failures ?? [];
   const untold = failures.filter((failure) => !told.has(failure.id));
-  const notices: { kind: RunNotice; reason: string | undefined }[] = [];
-  let news: readonly StepFailure[] = [];
+  const notices: RunNoticeOut[] = [];
+  // The failures "Step failed" names now.
+  let stepNews: readonly StepFailure[] = [];
   if ("kind" in cause) {
     const { kind } = cause;
     const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
     if (!repeat && announces(kind, subject)) notices.push({ kind, reason: failures[0]?.reason });
-    if (kind === "waiting" && subject.stepFailed === true) news = untold;
+    if (kind === "waiting" && subject.stepFailed === true) stepNews = untold;
   } else if (subject.status === "running" && subject.stepFailed === true)
     // Stopped to wait or ended, the run's own transition tells it.
-    news = untold.filter((failure) => failure.kind === cause.stepFailed);
-  if (news.length > 0) notices.push({ kind: "step-failed", reason: news[0]?.reason });
+    stepNews = untold.filter((failure) => failure.kind === cause.stepFailed);
+  if (stepNews.length > 0) notices.push({ kind: "step-failed", reason: stepNews[0]?.reason });
   const ended = notices.some((one) => one.kind === "failed" || one.kind === "partial");
   return {
     notices,
     told: new Set(
       failures
-        .filter((failure) => ended || told.has(failure.id) || news.includes(failure))
+        .filter((failure) => ended || told.has(failure.id) || stepNews.includes(failure))
         .map((failure) => failure.id),
     ),
-    news: news.map((failure) => failure.id),
+    news: stepNews.map((failure) => failure.id),
   };
 }
 
@@ -218,7 +224,7 @@ export function atItsDay(
 // A run parked on an agent's review waits for nobody: the agent answers, or the review passes
 // at its deadline and says so then. One at its day's hold waits for its scheduled day. Every
 // other notice goes out.
-export function announces(
+function announces(
   kind: RunNotice,
   subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay">,
 ): boolean {
