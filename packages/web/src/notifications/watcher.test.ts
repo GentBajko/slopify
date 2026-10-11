@@ -16,7 +16,10 @@ function harness(
     readonly seeded?: readonly { id: string; status: ProjectState }[];
     readonly claim?: RunWatcherDeps["claim"];
     // What a project says of a failed step as each notice goes out.
-    readonly failing?: () => { readonly stepFailed?: boolean; readonly failure?: string };
+    readonly failing?: () => {
+      readonly stepFailed?: boolean;
+      readonly failures?: readonly string[];
+    };
   } = {},
 ) {
   const shown: ShownNotice[] = [];
@@ -57,7 +60,7 @@ describe("a step failed beside a wait", () => {
     let failure = "audio@t1";
     const claimed: string[] = [];
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failure }),
+      failing: () => ({ stepFailed: true, failures: [failure] }),
       claim: (key) => {
         claimed.push(key);
         return Promise.resolve(true);
@@ -80,7 +83,7 @@ describe("a step failed beside a wait", () => {
 
   it("is told after Waiting for you beside the person's checkpoint", async () => {
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failure: "audio@t1" }),
+      failing: () => ({ stepFailed: true, failures: ["audio@t1"] }),
     });
     watcher.observe({ projectId: "p1", state: "running" });
     watcher.observe({ projectId: "p1", state: "pending" });
@@ -90,12 +93,53 @@ describe("a step failed beside a wait", () => {
 
   it("is told beside a prepared run's own hold for its day", async () => {
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failure: "thumbnail@t1" }),
+      failing: () => ({ stepFailed: true, failures: ["thumbnail@t1"] }),
     });
     watcher.observe({ projectId: "prepared", state: "running" });
     watcher.observe({ projectId: "prepared", state: "pending" });
     await watcher.settled();
     expect(shown.map((notice) => notice.kind)).toEqual(["step-failed"]);
+  });
+});
+
+// Each failure is told once by its own identity, and a run that then ends Failed on another
+// failure, with no end between, is told.
+describe("failures told beside a wait", () => {
+  it("never tells an already told failure again once another failed step is fixed", async () => {
+    let failures: readonly string[] = [];
+    const { watcher, shown } = harness({ failing: () => ({ stepFailed: true, failures }) });
+    const step = async (state: ProjectState, now?: readonly string[]) => {
+      if (now !== undefined) failures = now;
+      watcher.observe({ projectId: "p1", state });
+      await watcher.settled();
+    };
+    await step("running");
+    await step("pending", ["thumbnail@1"]);
+    await step("running");
+    await step("pending", ["thumbnail@1", "images@2"]);
+    await step("running");
+    await step("pending", ["thumbnail@1"]);
+    expect(shown.filter((notice) => notice.kind === "step-failed")).toHaveLength(2);
+  });
+
+  it("tells Run failed for a different failure, and not for the one already told", async () => {
+    let failures: readonly string[] = ["thumbnail@1"];
+    const { watcher, shown } = harness({ failing: () => ({ stepFailed: true, failures }) });
+    const step = async (projectId: string, state: ProjectState) => {
+      watcher.observe({ projectId, state });
+      await watcher.settled();
+    };
+    for (const state of ["running", "pending", "running"] as const) await step("agent", state);
+    failures = ["images@2"];
+    await step("agent", "failed");
+    expect(shown.map((notice) => notice.kind)).toEqual(["step-failed", "failed"]);
+    failures = ["thumbnail@1"];
+    for (const state of ["running", "pending", "running", "failed"] as const)
+      await step("other", state);
+    expect(shown.filter((notice) => notice.projectId === "other").map((n) => n.kind)).toEqual([
+      "waiting",
+      "step-failed",
+    ]);
   });
 });
 

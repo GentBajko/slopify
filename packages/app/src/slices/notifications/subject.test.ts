@@ -70,12 +70,12 @@ it("says which step failed while the run still waits on its day's hold", () => {
   const { db } = f.h.deps;
   db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
   expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailed");
-  expect(noticeSubject(db, "p1")).not.toHaveProperty("failure");
+  expect(noticeSubject(db, "p1")).not.toHaveProperty("failures");
   db.prepare(
     "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES ('thumbnail','p1','thumbnail','generate','failed','2026-09-10T00:05:00.000Z')",
   ).run();
   expect(noticeSubject(db, "p1")).toMatchObject({
     stepFailed: true,
-    failure: "thumbnail@2026-09-10T00:05:00.000Z",
+    failures: ["thumbnail@2026-09-10T00:05:00.000Z"],
   });
 });

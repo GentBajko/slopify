@@ -52,17 +52,17 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   const inflight = new Set<Promise<void>>();
   let closed = false;
 
-  // The failure each project's "Step failed" said (`failureOf`).
-  // ceiling: one entry per project with a step failed beside a wait since boot.
-  const told = new Map<string, string>();
+  // The failures each project's notices named (`runNotices`), only those it still has.
+  // ceiling: one entry per project with a failed step since boot.
+  const told = new Map<string, ReadonlySet<string>>();
 
   const notify = (projectId: string, kind: RunNotice): void => {
     const url = deps.url();
     if (url === null) return;
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(kind, subject, told.get(projectId));
-    if (now.told === undefined) told.delete(projectId);
+    const now = runNotices(kind, subject, told.get(projectId) ?? new Set());
+    if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
     for (const one of now.notices) {
       const text = noticeText(one, { ...subject, reason: reasons.get(projectId) });
@@ -165,7 +165,6 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         if (kind !== undefined) notify(event.projectId, kind);
         if (ends.has(event.state)) {
           reasons.delete(event.projectId);
-          told.delete(event.projectId);
         }
       } catch (error) {
         deps.log.write("warn", "notification.failed", {

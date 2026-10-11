@@ -64,7 +64,10 @@ it("reads from the project's page which step failed beside its wait", async () =
     }).api,
     "p1",
   );
-  expect(subject).toMatchObject({ stepFailed: true, failure: "audio@2026-09-13T00:05:00.000Z" });
+  expect(subject).toMatchObject({
+    stepFailed: true,
+    failures: ["audio@2026-09-13T00:05:00.000Z"],
+  });
   expect(await subjectOf({})).not.toHaveProperty("stepFailed");
-  expect(await subjectOf({})).not.toHaveProperty("failure");
+  expect(await subjectOf({})).not.toHaveProperty("failures");
 });

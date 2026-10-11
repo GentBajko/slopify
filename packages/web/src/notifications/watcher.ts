@@ -122,21 +122,21 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     pending.add(done);
   };
 
-  // The failure each project's "Step failed" said in this tab (`failureOf`).
-  // ceiling: one entry per project with a step failed beside a wait this page heard.
-  const told = new Map<string, string>();
+  // The failures each project's notices named in this tab (`runNotices`), only those it still has.
+  // ceiling: one entry per project with a failed step this page heard.
+  const told = new Map<string, ReadonlySet<string>>();
   const announce = async (projectId: string, state: ProjectState, kind: RunNotice) => {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(kind, subject, told.get(projectId));
-    if (now.told === undefined) told.delete(projectId);
+    const now = runNotices(kind, subject, told.get(projectId) ?? new Set());
+    if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
     const notices: RunNotice[] = [];
     for (const one of now.notices)
       if (
         await deps.claim(
           one === "step-failed"
-            ? `${projectId}:step-failed:${now.told ?? ""}`
+            ? `${projectId}:step-failed:${now.news.join(",")}`
             : `${projectId}:${state}`,
         )
       )

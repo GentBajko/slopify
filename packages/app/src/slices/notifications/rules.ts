@@ -116,52 +116,57 @@ export interface NoticeSubject {
   readonly atItsDay?: boolean | undefined;
   // A step failed while the run still reads by a wait (`admission/state-words.ts`).
   readonly stepFailed?: boolean | undefined;
-  // Which failure the run has now (`failureOf`), so one is told once.
-  readonly failure?: string | undefined;
+  // The failures the run has now (`failuresOf`), so each is told once.
+  readonly failures?: readonly string[] | undefined;
 }
 
 // The failed steps of a run, each by when it failed: a step that fails again after Try again is
 // another failure.
-export function failureOf(
+export function failuresOf(
   stages: readonly {
     readonly kind: StageKind;
     readonly state: StageState;
     readonly finishedAt: string | null;
   }[],
-): string | undefined {
-  const failed = stages
+): readonly string[] {
+  return stages
     .filter((stage) => stage.state === "failed")
     .map((stage) => `${stage.kind}@${stage.finishedAt ?? ""}`);
-  return failed.length === 0 ? undefined : failed.join(",");
 }
 
 export interface RunNotices {
   // In the order they go out: a project's notifications share a tag, so the last one stays.
   readonly notices: readonly RunNotice[];
-  // The failure "Step failed" has said for the project from now on (`failureOf`).
-  readonly told: string | undefined;
+  // The failures told for the project from now on: those it still has that a notice named.
+  readonly told: ReadonlySet<string>;
+  // The failures "Step failed" names now, when it goes out.
+  readonly news: readonly string[];
 }
 
 // What a run's transition (`noticeOf`) says, for the server's Notification URL and the browser
-// alike, given the failure already told for the project. A step failed while the run still reads
-// by a wait is said right away ("Step failed"), when the run stops to wait on it, once per
-// failure; a run that ends Failed on the very failure already said is not told again.
+// alike, given the failures already told for the project. A step failed while the run still
+// reads by a wait is said right away ("Step failed"), when the run stops to wait on it, once per
+// failure. A run that ends on its failures names them all; one that ends Failed only on failures
+// already said is not told again.
 export function runNotices(
   kind: RunNotice,
-  subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay" | "stepFailed" | "failure">,
-  told: string | undefined,
+  subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay" | "stepFailed" | "failures">,
+  told: ReadonlySet<string>,
 ): RunNotices {
-  const { failure } = subject;
-  const repeat = kind === "failed" && told !== undefined && failure === told;
+  const failures = subject.failures ?? [];
+  const untold = failures.filter((failure) => !told.has(failure));
+  const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
   const notices: RunNotice[] = !repeat && announces(kind, subject) ? [kind] : [];
-  if (
-    kind === "waiting" &&
-    subject.stepFailed === true &&
-    failure !== undefined &&
-    failure !== told
-  )
-    return { notices: [...notices, "step-failed"], told: failure };
-  return { notices, told: kind === "waiting" ? told : undefined };
+  const news = kind === "waiting" && subject.stepFailed === true ? untold : [];
+  if (news.length > 0) notices.push("step-failed");
+  const ended = kind === "failed" || kind === "partial";
+  return {
+    notices,
+    told: new Set(
+      failures.filter((failure) => ended || told.has(failure) || news.includes(failure)),
+    ),
+    news,
+  };
 }
 
 // Whether a prepared run's own Before Video hold is what holds it now (`atItsDay`), from the
