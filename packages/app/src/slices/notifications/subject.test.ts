@@ -79,3 +79,19 @@ it("says which step failed while the run still waits on its day's hold", () => {
     failures: [{ id: "thumbnail@2026-09-10T00:05:00.000Z", kind: "thumbnail" }],
   });
 });
+
+// An uploaded project with nothing left to run reads Done on the list (`settledStatus`): no step
+// of it fails beside a wait, so the notices say none did either.
+it("says no step failed beside a wait for an uploaded project that reads Done", () => {
+  const f = prepared();
+  const { db } = f.h.deps;
+  db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
+  db.prepare(
+    "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES ('thumbnail','p1','thumbnail','generate','failed','2026-09-10T00:05:00.000Z')",
+  ).run();
+  db.prepare("UPDATE revision_work SET state='done'").run();
+  db.prepare(
+    "INSERT INTO project_uploads(project_id,uploaded_at) VALUES ('p1','2026-09-10T00:06:00.000Z')",
+  ).run();
+  expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailed");
+});
