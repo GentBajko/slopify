@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { readSetting, writeSetting } from "../settings/repo.js";
-import { notificationUrlProblem } from "./rules.js";
+import { notificationUrlProblem } from "./address.js";
 
 // Its own row in the key/value `settings` table. Backups leave it out
 // (`slices/storage/portable.ts`): an ntfy topic in the URL is as good as a password.

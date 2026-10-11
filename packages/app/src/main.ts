@@ -86,8 +86,8 @@ import {
 } from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
+import { projectLink } from "./slices/notifications/address.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
-import { projectLink } from "./slices/notifications/rules.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
 import { noticeSubject } from "./slices/notifications/subject.js";

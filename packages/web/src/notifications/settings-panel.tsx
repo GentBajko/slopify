@@ -1,4 +1,4 @@
-import { notificationUrlProblem, testNotice } from "@app/slices/notifications/rules.js";
+import { notificationUrlProblem, testNotice } from "@app/slices/notifications/address.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, useSyncExternalStore } from "react";
 import { readNotificationUrl, saveNotificationUrl, sendTestNotification } from "@/api";

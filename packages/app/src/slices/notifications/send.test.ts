@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { noticeOf, noticeText, notificationUrlProblem } from "./rules.js";
+import { notificationUrlProblem } from "./address.js";
+import { noticeOf, noticeText } from "./rules.js";
 import { createNotificationSender } from "./send.js";
 
 describe("createNotificationSender", () => {

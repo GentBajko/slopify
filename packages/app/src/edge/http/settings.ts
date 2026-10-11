@@ -8,7 +8,7 @@ import {
   notificationUrlProblem,
   testNotice,
   webhookBody,
-} from "../../slices/notifications/rules.js";
+} from "../../slices/notifications/address.js";
 import { createNotificationSender, sendFailureText } from "../../slices/notifications/send.js";
 import { readNotificationUrl, saveNotificationUrl } from "../../slices/notifications/settings.js";
 import { appearances, providerIds } from "../../slices/settings/model.js";

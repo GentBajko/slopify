@@ -7,6 +7,7 @@ import type {
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
+import { webhookBody } from "./address.js";
 import type { NoticeCause, NoticeSubject, NoticeText } from "./rules.js";
 import {
   autoPassNoticeText,
@@ -15,7 +16,6 @@ import {
   reviewNoticeText,
   runNotices,
   topicsNoticeText,
-  webhookBody,
 } from "./rules.js";
 import type { SendNotification } from "./send.js";
 import { sendFailureText } from "./send.js";

@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
+import { projectLink } from "./address.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
-import { projectLink, reviewItemName, runNotices, type StepFailure } from "./rules.js";
+import { reviewItemName, runNotices, type StepFailure } from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
