@@ -171,13 +171,13 @@ export interface RunNotices {
 // What a project's notices answer: its run's transition (`noticeOf`), or one of its steps failing.
 export type NoticeCause = { readonly kind: RunNotice } | { readonly stepFailed: StageKind };
 
-// What a project's notices say, for the server's Notification URL and the browser alike, given
-// the failures already told for the project. A step that fails while another waits for the
-// agent, the person or its day is said right away ("Step failed"): as it fails while a third
-// step still runs, or when the run stops to wait beside it; once per failure. One that fails
-// with nothing waiting is told only by the run's end notice. A run that ends on its failures names them all; one that
-// ends Failed only on failures already said is not told again. Each notice names the reason of
-// a step failed now: the run's first, or the first "Step failed" tells.
+// What a project's notices say, for the server's Notification URL and the browser alike, given the
+// failures already told for the project. A step that fails while another waits for the agent, the
+// person or its day is said right away ("Step failed"): as it fails while a third step still runs,
+// or when the run stops to wait beside it; once per failure. One that fails with nothing waiting is
+// told only by the run's end notice. A run that ends on its failures names them all; one that ends
+// Failed only on failures already said is not told again. Each notice names the reason of a step
+// failed now: the run's first, or the first "Step failed" tells.
 export function runNotices(
   cause: NoticeCause,
   subject: Pick<
