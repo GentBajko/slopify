@@ -619,6 +619,12 @@ describe("GET /api/projects", () => {
     expect(beside?.status).toBe("running");
     expect(beside).not.toHaveProperty("stepFailed");
     expect(beside?.stepFailures).toEqual(["audio@2026-09-01T10:00:00.000Z"]);
+    // Paused, the run is the person's to resume: nothing is told beside its wait.
+    db.exec("INSERT INTO project_controls (project_id, paused) VALUES ('p1', 1)");
+    const paused = await listed();
+    expect(paused?.status).toBe("paused");
+    expect(paused).not.toHaveProperty("stepFailed");
+    expect(paused).not.toHaveProperty("stepFailures");
   });
 
   // What a restart leaves: a step held for Continue the run, and the video's step still allowed
