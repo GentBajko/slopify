@@ -19,6 +19,7 @@ import {
 } from "./rules.js";
 import type { SendNotification } from "./send.js";
 import { sendFailureText } from "./send.js";
+import { type ToldFailures, toldInMemory } from "./told.js";
 
 export interface RunNotifierDeps {
   // Read at the moment of the transition, so a URL saved mid-run is the one used.
@@ -28,8 +29,8 @@ export interface RunNotifierDeps {
   readonly link?: (projectId: string) => string | undefined;
   readonly send: SendNotification;
   readonly log: Log;
-  // The failures already told at boot (`subject.ts` toldBeforeBoot).
-  readonly told?: ReadonlyMap<string, ReadonlySet<string>>;
+  // The failures each project's notices named; in memory unless given (`told.ts`).
+  readonly told?: ToldFailures;
 }
 
 export interface RunNotifier {
@@ -51,22 +52,22 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   const inflight = new Set<Promise<void>>();
   let closed = false;
 
-  // The failures each project's notices named (`runNotices`), only those it still has.
-  // ceiling: one entry per project with a failed step since boot, or beside a wait at boot.
-  const told = new Map<string, ReadonlySet<string>>(deps.told ?? []);
+  const told = deps.told ?? toldInMemory();
 
   const notify = (projectId: string, cause: NoticeCause): void => {
     const url = deps.url();
     if (url === null) return;
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
-    const now = runNotices(cause, subject, told.get(projectId) ?? new Set());
-    if (now.told.size === 0) told.delete(projectId);
-    else told.set(projectId, now.told);
+    const before = told.read(projectId);
+    const now = runNotices(cause, subject, before);
     for (const one of now.notices) {
       const text = noticeText(one.kind, { ...subject, reason: one.reason });
       post(url, { ...text, link: deps.link?.(projectId) }, one.kind, { projectId });
     }
+    // Kept once the notices are on their way, and only when it changed.
+    if (now.told.size !== before.size || [...now.told].some((id) => !before.has(id)))
+      told.keep(projectId, now.told);
   };
 
   // Once per verdict: a review asked again for the same item replaces its verdict in place.

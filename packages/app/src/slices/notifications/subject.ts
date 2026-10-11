@@ -1,11 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { derive, waitsForAnswer } from "../../kernel/runner/graph.js";
-import {
-  projectById,
-  stageStandingsByProject,
-  stagesOf,
-  stepFailuresByProject,
-} from "../admission/repo.js";
+import { derive } from "../../kernel/runner/graph.js";
+import { projectById, stagesOf } from "../admission/repo.js";
 import { stepFailedWhileWaiting } from "../admission/state-words.js";
 import { lastStarter } from "../agents/repo.js";
 import { projectHolds } from "../reviews/holds.js";
@@ -36,17 +31,4 @@ export function noticeSubject(
     ...(stepFailedWhileWaiting(status, stages) ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
-}
-
-// What the Notification URL was told before a restart, which the notifier forgets: every step
-// failed beside a wait, told as it failed (`runNotices`). One failed with nothing waiting is
-// still the run's end notice to tell.
-export function toldBeforeBoot(db: DatabaseSync): ReadonlyMap<string, ReadonlySet<string>> {
-  const failures = stepFailuresByProject(db);
-  const told = new Map<string, ReadonlySet<string>>();
-  for (const [projectId, stages] of stageStandingsByProject(db)) {
-    const ids = failures.get(projectId) ?? [];
-    if (ids.length > 0 && waitsForAnswer(stages)) told.set(projectId, new Set(ids));
-  }
-  return told;
 }

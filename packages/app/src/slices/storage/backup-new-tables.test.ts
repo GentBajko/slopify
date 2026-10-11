@@ -54,6 +54,9 @@ const leftOut = new Set([
   "external_reviews",
   "agent_actions",
   "project_starts",
+  // What the Notification URL of this install was told: a restored project tells its run's end
+  // again.
+  "told_failures",
   // Carried as files (`files/images/<sha256>`), not rows.
   "image_blobs",
   // Where this install put each project's folder and files: a backup carries every file by

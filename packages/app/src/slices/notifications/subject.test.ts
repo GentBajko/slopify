@@ -1,7 +1,10 @@
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { waitingReviewFixture } from "../reviews/external-repo.fake.js";
 import { createRunNotifier } from "./notifier.js";
-import { noticeSubject, toldBeforeBoot } from "./subject.js";
+import { createServerNotifier } from "./server.js";
+import { saveNotificationUrl } from "./settings.js";
+import { noticeSubject } from "./subject.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -141,48 +144,190 @@ describe("Step failed on the Notification URL", () => {
   });
 });
 
-// A restart forgets what the Notification URL was told. A step failed beside a wait was told as
-// it failed, so it counts as told from boot and isn't told again when the run stops to wait;
-// one failed with nothing waiting is still the run's end notice to tell.
-describe("failures told before a restart", () => {
-  function failedNarration(atCheckpoint: boolean) {
+// What the Notification URL was told outlives a restart: each boot's notifier reads it from the
+// project's rows, and a failure never told is still told once, whatever waited at the restart.
+describe("failures told across a restart", () => {
+  // p1: the article done, the narration running, the thumbnail failed, the images and the video
+  // to make; nothing waits yet. The video doesn't need the thumbnail, so a checkpoint before it
+  // still waits beside the failure.
+  function failedThumbnail() {
     const f = waitingReviewFixture();
     open.push(f);
     const { db } = f.h.deps;
     db.prepare("UPDATE external_reviews SET state='answered'").run();
     db.prepare(
-      "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES ('audio','p1','audio','generate','failed','2026-09-10T00:05:00.000Z')",
+      "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('article','p1','article','generate','done'), ('audio','p1','audio','generate','running'), ('video','p1','video','generate','pending')",
     ).run();
-    if (atCheckpoint)
+    db.prepare(
+      "INSERT INTO stages(id,project_id,kind,source,state,finished_at,failure_reason) VALUES ('thumbnail','p1','thumbnail','generate','failed','2026-09-10T00:05:00.000Z','The thumbnail was refused.')",
+    ).run();
+    const hold = (stage: "images" | "video"): void => {
       db.prepare(
-        "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'images-gate','images','images-work',?,'held','2026-09-10T00:02:00.000Z')",
-      ).run(f.revisionId, "c".repeat(64));
-    return f;
-  }
-
-  it("counts a step failed beside a wait as told, and doesn't tell it again", async () => {
-    const f = failedNarration(true);
-    const { db } = f.h.deps;
-    const told = toldBeforeBoot(db);
-    expect([...(told.get("p1") ?? [])]).toEqual(["audio@2026-09-10T00:05:00.000Z"]);
+        "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,?,?,'images-work',?,'held','2026-09-10T00:02:00.000Z')",
+      ).run(f.revisionId, `${stage}-gate`, stage, "c".repeat(64));
+    };
+    const release = (): void => {
+      db.prepare("UPDATE review_checkpoints SET state='released'").run();
+    };
+    const finish = (): void => {
+      release();
+      db.prepare("UPDATE stages SET state='done' WHERE state IN ('pending','running')").run();
+    };
     const sent: string[] = [];
-    const notifier = createRunNotifier({
-      url: () => "https://ntfy.example/topic",
-      subject: (projectId) => noticeSubject(db, projectId),
-      send: async (_url, body) => {
-        sent.push(body.split("\n")[0] ?? "");
-        return { ok: true };
-      },
-      log: f.h.deps.log,
-      told,
-    });
-    notifier.observe({ type: "project.state", projectId: "p1", state: "running" });
-    notifier.observe({ type: "project.state", projectId: "p1", state: "pending" });
-    await notifier.settled();
-    expect(sent).toEqual(["Waiting for you: Saved"]);
+    // A boot's notifier, as `main.ts` makes it.
+    const boot = () =>
+      createServerNotifier(db, {
+        send: async (_url, body) => {
+          sent.push(body.split("\n")[0] ?? "");
+          return { ok: true };
+        },
+        log: f.h.deps.log,
+      });
+    const setUrl = (to: string): void => {
+      expect(saveNotificationUrl(db, to).ok).toBe(true);
+    };
+    setUrl("https://ntfy.example/topic");
+    return { db, hold, release, finish, boot, sent, setUrl };
+  }
+  const failed = (stage: "thumbnail" | "document" = "thumbnail") =>
+    ({ type: "stage.state", projectId: "p1", stage, state: "failed" }) as const;
+  const state = (value: "running" | "pending" | "failed" | "done") =>
+    ({ type: "project.state", projectId: "p1", state: value }) as const;
+  const told = (db: DatabaseSync): readonly unknown[] =>
+    db
+      .prepare("SELECT failure_id FROM told_failures ORDER BY failure_id")
+      .all()
+      .map((row) => row.failure_id);
+
+  it("tells the end of a run whose wait began after its step failed and before a restart", async () => {
+    const run = failedThumbnail();
+    const before = run.boot();
+    before.observe(state("running"));
+    before.observe(failed());
+    await before.settled();
+    run.hold("images");
+    expect(noticeSubject(run.db, "p1")).toMatchObject({ status: "running", stepFailed: true });
+    const after = run.boot();
+    run.finish();
+    after.observe(state("running"));
+    after.observe(state("failed"));
+    await after.settled();
+    expect(run.sent).toEqual(["Run failed: Saved — The thumbnail was refused."]);
   });
 
-  it("leaves a step failed with nothing waiting untold", () => {
-    expect(toldBeforeBoot(failedNarration(false).h.deps.db).size).toBe(0);
+  it("tells the end of a run whose step failed beside a wait while it was paused", async () => {
+    const run = failedThumbnail();
+    run.hold("images");
+    run.db.prepare("UPDATE stages SET state='pending' WHERE kind='audio'").run();
+    run.db.prepare("INSERT INTO project_controls(project_id,paused) VALUES ('p1',1)").run();
+    const before = run.boot();
+    before.observe(failed());
+    await before.settled();
+    const after = run.boot();
+    run.db.prepare("UPDATE project_controls SET paused=0").run();
+    run.finish();
+    after.observe(state("running"));
+    after.observe(state("failed"));
+    await after.settled();
+    expect(run.sent).toEqual(["Run failed: Saved — The thumbnail was refused."]);
+  });
+
+  it("tells the end of a run whose step failed beside a wait while no Notification URL was set", async () => {
+    const run = failedThumbnail();
+    run.hold("images");
+    run.setUrl("");
+    const before = run.boot();
+    before.observe(state("running"));
+    before.observe(failed());
+    await before.settled();
+    run.setUrl("https://ntfy.example/topic");
+    const after = run.boot();
+    run.finish();
+    after.observe(state("running"));
+    after.observe(state("failed"));
+    await after.settled();
+    expect(run.sent).toEqual(["Run failed: Saved — The thumbnail was refused."]);
+  });
+
+  it("doesn't tell a step failed beside one checkpoint again at the next after a restart", async () => {
+    const run = failedThumbnail();
+    const before = run.boot();
+    run.hold("images");
+    before.observe(state("running"));
+    before.observe(failed());
+    await before.settled();
+    expect(run.sent).toEqual(["Step failed: Saved — The thumbnail was refused."]);
+    // Restarted between the two checkpoints, while nothing waits.
+    run.release();
+    expect(noticeSubject(run.db, "p1")).not.toHaveProperty("stepFailed");
+    const after = run.boot();
+    run.db.prepare("UPDATE stages SET state='done' WHERE kind IN ('audio','images')").run();
+    run.hold("video");
+    expect(noticeSubject(run.db, "p1")).toMatchObject({ status: "pending", stepFailed: true });
+    after.observe(state("running"));
+    after.observe(state("pending"));
+    await after.settled();
+    expect(run.sent).toEqual([
+      "Step failed: Saved — The thumbnail was refused.",
+      "Waiting for you: Saved",
+    ]);
+  });
+
+  it("keeps each of several told failures told across a restart, tells a new one, and lets them go", async () => {
+    const run = failedThumbnail();
+    run.db
+      .prepare(
+        "INSERT INTO stages(id,project_id,kind,source,state,finished_at,failure_reason) VALUES ('research','p1','research','generate','failed','2026-09-10T00:06:00.000Z','The research was refused.')",
+      )
+      .run();
+    const before = run.boot();
+    run.hold("images");
+    run.db.prepare("UPDATE stages SET state='done' WHERE kind='audio'").run();
+    before.observe(state("running"));
+    before.observe(state("pending"));
+    await before.settled();
+    expect(run.sent).toEqual([
+      "Waiting for you: Saved",
+      "Step failed: Saved — The thumbnail was refused.",
+    ]);
+    expect(told(run.db)).toEqual([
+      "research@2026-09-10T00:06:00.000Z",
+      "thumbnail@2026-09-10T00:05:00.000Z",
+    ]);
+    run.release();
+    const after = run.boot();
+    run.db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
+    run.db
+      .prepare(
+        "INSERT INTO stages(id,project_id,kind,source,state,finished_at,failure_reason) VALUES ('document','p1','document','generate','failed','2026-09-10T00:09:00.000Z','The document broke.')",
+      )
+      .run();
+    run.hold("video");
+    after.observe(state("running"));
+    after.observe(state("pending"));
+    await after.settled();
+    expect(run.sent.slice(2)).toEqual([
+      "Waiting for you: Saved",
+      "Step failed: Saved — The document broke.",
+    ]);
+    // Retried, the failures are gone: the run that ends Done names none and keeps none.
+    run.db.prepare("DELETE FROM stages WHERE state='failed'").run();
+    run.finish();
+    after.observe(state("running"));
+    after.observe(state("done"));
+    await after.settled();
+    expect(told(run.db)).toEqual([]);
+  });
+
+  it("lets a deleted project's told failures go with it", async () => {
+    const run = failedThumbnail();
+    run.hold("images");
+    const notifier = run.boot();
+    notifier.observe(state("running"));
+    notifier.observe(failed());
+    await notifier.settled();
+    expect(told(run.db)).toEqual(["thumbnail@2026-09-10T00:05:00.000Z"]);
+    run.db.prepare("DELETE FROM projects WHERE id='p1'").run();
+    expect(told(run.db)).toEqual([]);
   });
 });
