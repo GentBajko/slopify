@@ -1,6 +1,6 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
 
-// The breath detector behind Remove breaths (`breaths-model.ts` says why). It reads 16-bit mono
+// The breath detector behind Soften breaths (`breaths-model.ts` says why). It reads 16-bit mono
 // PCM at 48 kHz in 20 ms frames, 10 ms apart, and gives each frame three numbers: its level
 // (RMS in dB), how often it crosses zero (noise crosses often, a voiced vowel seldom) and its
 // spectral centroid (where its sound sits: an in-breath low, an "s" or "f" high).
@@ -9,17 +9,24 @@ import { setImmediate as nextTurn } from "node:timers/promises";
 // 2. A run of breath-like frames 140 ms or longer is a breath. It grows back over the quiet
 //    frames before it until silence, a voiced word's tail or a fricative, and forward over the
 //    quiet after it until silence or the next word's voice.
-// 3. Each breath is muted to -60 dB with 5 ms fades inside its own stretch: a fade outside
-//    it once landed on the next word's first sound.
+// 3. A stretch whose loudest 10 ms (RMS over its non-overlapping 10 ms blocks) is above -26 dB
+//    at the calibration (8.74 dB under the voice's level) holds a word sound, and is left alone. 3.19.0 muted those too
+//    and clipped word edges ("Highs" came out "Hi…s").
+// 4. Each other breath is turned down 12 dB, with 45 ms linear fades inside its own stretch (a
+//    fade outside it once landed on the next word's first sound). Silencing it, as 3.19.0 did,
+//    dropped to nothing abruptly; a stretch of 90 ms or less is left as it is.
 // Levels are relative to the voice's own: the median level of its voiced frames. A quieter or
-// louder voice finds the same breaths. The thresholds are the ones of the prototype Gent
-// approved by ear, on a narration whose median voiced frame is -21.03 dB.
+// louder voice finds the same breaths. The thresholds are the prototype's absolute ones, which
+// Gent approved by ear on the finished video's audio: its median voiced frame (read as
+// `speechLevel` reads it, over the whole 2.5 h video) is -17.26 dB. The levelled pieces the
+// join works on sit about 4 dB lower, and every threshold moves down with them.
 
 export const breathRate = 48_000;
 const frameLength = 960; // 20 ms
 const hop = 480; // 10 ms
 
-const referenceSpeech = -21.03;
+// Calibrated on the finished video's audio, which is what was approved by ear.
+const referenceSpeech = -17.26;
 const breathCeiling = -22;
 const breathFloor = -55;
 const voicedFloor = -42;
@@ -30,34 +37,53 @@ const breathFrames = 14; // 140 ms
 // A voiced frame for the reference: under the noisy crossing rate and within 30 dB of the
 // voice's loud frames (the 95th percentile).
 const voicedSpan = 30;
-const mutedGain = 10 ** (-60 / 20);
-const fadeSamples = 240; // 5 ms
+// A stretch with a 10 ms block louder than this (at the calibration) is left alone.
+const wordCeiling = -26;
+const softGain = 10 ** (-12 / 20);
+const fadeSamples = 2160; // 45 ms
 // ceiling: 200 frames (2 s of audio, about 15 ms of work) between yields, so a long piece never
 // holds the server's event loop long enough for the page to notice.
 const framesPerTurn = 200;
 
-// A muted stretch, in samples of the piece at 48 kHz: [start, end).
+// A breath's stretch, in samples of the piece at 48 kHz: [start, end).
 export interface Stretch {
   readonly start: number;
   readonly end: number;
 }
 
+export interface BreathScan {
+  // The breaths to soften.
+  readonly stretches: readonly Stretch[];
+  // Found, but left alone: a word sound is in them.
+  readonly skipped: readonly Stretch[];
+}
+
 interface Features {
   readonly count: number;
   readonly db: Float32Array;
+  // Level of each 10 ms block (samples [k * hop, (k + 1) * hop)), count + 1 of them: every
+  // stretch starts and ends on a block edge.
+  readonly blockDb: Float32Array;
   readonly crossings: Float32Array;
   readonly centroid: Float32Array;
 }
 
-// Where the breaths are in a piece, read once from its PCM in order.
-export async function findBreaths(
+// Where the breaths are in a piece, and which hold a word sound, read once from its PCM in order.
+export async function scanBreaths(
   chunks: Iterable<Int16Array> | AsyncIterable<Int16Array>,
-): Promise<readonly Stretch[]> {
+): Promise<BreathScan> {
   return breathsIn(await featuresOf(chunks));
 }
 
-// The chunk starting `offset` samples into the piece with the stretches muted; a new array.
-export function muteChunk(
+// The breaths to soften in a piece.
+export async function findBreaths(
+  chunks: Iterable<Int16Array> | AsyncIterable<Int16Array>,
+): Promise<readonly Stretch[]> {
+  return (await scanBreaths(chunks)).stretches;
+}
+
+// The chunk starting `offset` samples into the piece with the stretches turned down; a new array.
+export function softenChunk(
   chunk: Int16Array,
   offset: number,
   stretches: readonly Stretch[],
@@ -66,7 +92,8 @@ export function muteChunk(
   const end = offset + chunk.length;
   for (const stretch of stretches) {
     if (stretch.end <= offset || stretch.start >= end) continue;
-    const fade = Math.min(fadeSamples, Math.floor((stretch.end - stretch.start) / 2));
+    if (stretch.end - stretch.start <= 2 * fadeSamples) continue;
+    const fade = fadeSamples;
     const from = Math.max(stretch.start, offset);
     const to = Math.min(stretch.end, end);
     for (let at = from; at < to; at += 1) {
@@ -79,10 +106,10 @@ export function muteChunk(
 
 function gainAt(stretch: Stretch, fade: number, at: number): number {
   const into = at - stretch.start;
-  if (into < fade) return fade === 1 ? 1 : 1 + ((mutedGain - 1) * into) / (fade - 1);
+  if (into < fade) return 1 + ((softGain - 1) * into) / (fade - 1);
   const out = at - (stretch.end - fade);
-  if (out >= 0) return fade === 1 ? 1 : mutedGain + ((1 - mutedGain) * out) / (fade - 1);
-  return mutedGain;
+  if (out >= 0) return softGain + ((1 - softGain) * out) / (fade - 1);
+  return softGain;
 }
 
 async function featuresOf(
@@ -92,6 +119,7 @@ async function featuresOf(
   let db = new Float32Array(capacity);
   let crossings = new Float32Array(capacity);
   let centroid = new Float32Array(capacity);
+  let blockDb = new Float32Array(capacity + 1);
   let count = 0;
   const work = fftWorkspace();
   const frame = new Float64Array(frameLength);
@@ -109,12 +137,16 @@ async function featuresOf(
         db = grown(db, capacity);
         crossings = grown(crossings, capacity);
         centroid = grown(centroid, capacity);
+        blockDb = grown(blockDb, capacity + 1);
       }
       const start = count * hop - base;
       for (let at = 0; at < frameLength; at += 1) frame[at] = (pending[start + at] ?? 0) / 32768;
       db[count] = levelOf(frame);
       crossings[count] = crossingsOf(frame);
       centroid[count] = powerSpectrumCentroid(frame, work);
+      // A frame's halves are blocks count and count + 1; the next frame reads the second again.
+      blockDb[count] = levelOf(frame.subarray(0, hop));
+      blockDb[count + 1] = levelOf(frame.subarray(hop));
       count += 1;
       if (count % framesPerTurn === 0) await nextTurn();
     }
@@ -122,7 +154,7 @@ async function featuresOf(
     carry = pending.slice(keep);
     base += keep;
   }
-  return { count, db, crossings, centroid };
+  return { count, db, crossings, centroid, blockDb };
 }
 
 function grown(values: Float32Array, capacity: number): Float32Array<ArrayBuffer> {
@@ -131,15 +163,16 @@ function grown(values: Float32Array, capacity: number): Float32Array<ArrayBuffer
   return next;
 }
 
-function breathsIn(features: Features): readonly Stretch[] {
+function breathsIn(features: Features): BreathScan {
   const speech = speechLevel(features);
-  if (speech === undefined) return [];
+  if (speech === undefined) return { stretches: [], skipped: [] };
   const level = (prototype: number): number => prototype - referenceSpeech + speech;
   const ceiling = level(breathCeiling);
   const floor = level(breathFloor);
   const voicedAbove = level(voicedFloor);
   const silentBelow = level(silenceFloor);
-  const { count, db, crossings, centroid } = features;
+  const wordAbove = level(wordCeiling);
+  const { count, db, crossings, centroid, blockDb } = features;
   const at = (values: Float32Array, index: number): number => values[index] ?? 0;
   const voiced = (index: number): boolean =>
     at(db, index) > voicedAbove && at(crossings, index) < noisyCrossings;
@@ -149,6 +182,12 @@ function breathsIn(features: Features): readonly Stretch[] {
     at(db, index) < ceiling &&
     at(centroid, index) < breathCentroid;
   const stretches: Stretch[] = [];
+  const skipped: Stretch[] = [];
+  // Blocks a to b: the stretch from a * hop to (b - 1) * hop + frameLength = (b + 1) * hop.
+  const holdsWord = (a: number, b: number): boolean => {
+    for (let block = a; block <= b; block += 1) if (at(blockDb, block) > wordAbove) return true;
+    return false;
+  };
   let i = 0;
   while (i < count) {
     if (!hit(i)) {
@@ -168,11 +207,12 @@ function breathsIn(features: Features): readonly Stretch[] {
         a -= 1;
       let b = j;
       while (b < count && at(db, b) > silentBelow && !voiced(b)) b += 1;
-      stretches.push({ start: a * hop, end: (b - 1) * hop + frameLength });
+      const stretch = { start: a * hop, end: (b - 1) * hop + frameLength };
+      (holdsWord(a, b) ? skipped : stretches).push(stretch);
     }
     i = j;
   }
-  return stretches;
+  return { stretches, skipped };
 }
 
 // The voice's own level: the median of its voiced frames, those under the noisy crossing rate

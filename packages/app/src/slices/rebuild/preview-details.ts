@@ -211,10 +211,11 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     after.paragraphPauseSeconds ?? 0,
   );
   add(
-    "Remove breaths",
+    "Soften breaths",
     before.removeBreaths === true ? "On" : "Off",
     after.removeBreaths === true ? "On" : "Off",
   );
+  add("Soften S sounds", before.deEss === true ? "On" : "Off", after.deEss === true ? "On" : "Off");
   add(
     "Level the volume",
     before.loudness === undefined ? "Off" : loudnessSummary(before.loudness),

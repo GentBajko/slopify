@@ -3,11 +3,11 @@ import { type FileHandle, open, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { FfmpegRun } from "../loudness/loudnorm.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
-import { breathRate, findBreaths, muteChunk, type Stretch } from "./breaths-detect.js";
+import { breathRate, type Stretch, scanBreaths, softenChunk } from "./breaths-detect.js";
 
-// Remove breaths, made in the join (`breaths-model.ts` says why there). Each narration piece is
+// Soften breaths, made in the join (`breaths-model.ts` says why there). Each narration piece is
 // decoded by ffmpeg to 16-bit mono PCM at 48 kHz in a file beside it, read once to find its
-// breaths (`breaths-detect.ts`) and once more to write it again as a WAV with them muted. Both
+// breaths (`breaths-detect.ts`) and once more to write it again as a WAV with them turned down. Both
 // reads go in chunks, so a long piece never sits in memory whole, and the detector yields to
 // the event loop as it goes, so the server stays responsive while it works. A piece without a
 // breath is written again all the same: the join takes every piece in the one format.
@@ -15,14 +15,19 @@ import { breathRate, findBreaths, muteChunk, type Stretch } from "./breaths-dete
 // ceiling: one second of audio per read.
 const chunkSamples = breathRate;
 
-export async function removeBreaths(
+export async function softenBreaths(
   run: FfmpegRun,
   files: readonly string[],
   directory: string,
-): Promise<{ readonly files: readonly string[]; readonly removed: number }> {
+): Promise<{
+  readonly files: readonly string[];
+  readonly softened: number;
+  readonly skipped: number;
+}> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const written: string[] = [];
-  let removed = 0;
+  let softened = 0;
+  let skipped = 0;
   for (const [index, file] of files.entries()) {
     run.signal.throwIfAborted();
     const name = `breaths-${String(index + 1).padStart(4, "0")}`;
@@ -36,14 +41,15 @@ export async function removeBreaths(
         log: run.log,
         onProgress: (): void => {},
       });
-      const stretches = await findBreaths(pcmChunks(raw));
+      const scan = await scanBreaths(pcmChunks(raw));
       run.signal.throwIfAborted();
-      await writeMuted(raw, output, stretches);
-      removed += stretches.length;
+      await writeSoftened(raw, output, scan.stretches);
+      softened += scan.stretches.length;
+      skipped += scan.skipped.length;
     } catch (error) {
       if (run.signal.aborted) throw error;
       throw new Error(
-        `Remove breaths could not process narration piece ${String(index + 1)} (${error instanceof Error ? error.message : String(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Remove breaths in Edit project → Pauses and volume and use Save changes, then use Download diagnostics in Settings and report it.`,
+        `Soften breaths could not process narration piece ${String(index + 1)} (${error instanceof Error ? error.message : String(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften breaths in Edit project → Pauses and volume and use Save changes, then use Download diagnostics in Settings and report it.`,
         { cause: error },
       );
     } finally {
@@ -51,7 +57,7 @@ export async function removeBreaths(
     }
     written.push(output);
   }
-  return { files: written, removed };
+  return { files: written, softened, skipped };
 }
 
 export function decodeArgs(input: string, output: string): string[] {
@@ -102,7 +108,7 @@ async function readChunk(handle: FileHandle): Promise<Int16Array | undefined> {
   return out;
 }
 
-async function writeMuted(
+async function writeSoftened(
   raw: string,
   output: string,
   stretches: readonly Stretch[],
@@ -114,9 +120,9 @@ async function writeMuted(
     await target.write(wavHeader(bytes));
     let offset = 0;
     for await (const chunk of pcmChunks(raw)) {
-      const muted = muteChunk(chunk, offset, stretches);
+      const soft = softenChunk(chunk, offset, stretches);
       // Typed arrays are little-endian on every platform Slopify ships for, as WAV is.
-      await target.write(Buffer.from(muted.buffer, muted.byteOffset, muted.byteLength));
+      await target.write(Buffer.from(soft.buffer, soft.byteOffset, soft.byteLength));
       offset += chunk.length;
     }
   } finally {

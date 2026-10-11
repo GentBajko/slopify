@@ -77,6 +77,7 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
       "sentencePauseSeconds",
       "paragraphPauseSeconds",
       "removeBreaths",
+      "deEss",
       "loudness",
       "videoEdit",
       "format",

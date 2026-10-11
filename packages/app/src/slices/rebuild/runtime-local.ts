@@ -8,7 +8,7 @@ import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { levelPieces } from "../loudness/level-pieces.js";
-import { removeBreaths } from "../narration/breaths.js";
+import { cleanPieces } from "../narration/clean-pieces.js";
 import { joinNarration } from "../narration/concat.js";
 import { applyPauses, type PiecePauses, planPieces } from "../narration/pauses.js";
 import type { PauseSettings } from "../narration/pauses-model.js";
@@ -18,7 +18,7 @@ import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { turnJoinArgs } from "../voices/join.js";
-import { breathsAsked } from "./recipe-breaths.js";
+import { breathsAsked, deEssAsked } from "./recipe-breaths.js";
 import { levelOperation } from "./recipe-loudness.js";
 import type { PieceNext } from "./recipe-pauses.js";
 import { executeFigureCard } from "./runtime-figure-card.js";
@@ -213,16 +213,17 @@ async function concatenate(
   try {
     const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
     const levelled = level ? await levelPieces(run, files, piecesDirectory) : undefined;
-    // Remove breaths: muted in what is joined, before the pauses; nothing moves, so the pauses
-    // are still planned from the pieces as spoken.
-    const breathless = breathsAsked(values)
-      ? await removeBreaths(run, levelled?.files ?? files, join(piecesDirectory, "breaths"))
-      : undefined;
-    if (breathless !== undefined)
+    // Soften breaths, then Soften S sounds: made in what is joined, before the pauses; nothing
+    // moves, so the pauses are still planned from the pieces as spoken.
+    const cleaned = await cleanPieces(run, levelled?.files ?? files, piecesDirectory, {
+      breaths: breathsAsked(values),
+      deEss: deEssAsked(values),
+    });
+    if (cleaned?.breaths !== undefined)
       deps.log.write("info", "narration.breaths", {
         projectId: context.work.projectId,
         stage: "audio",
-        detail: `${String(breathless.removed)} breaths muted in ${String(files.length)} pieces`,
+        detail: `${String(cleaned.breaths.softened)} breaths softened, ${String(cleaned.breaths.skipped)} left alone (a word sound in them) in ${String(files.length)} pieces`,
       });
     // Pauses between sentences: planned from the pieces as spoken, made in what is joined.
     const pauses = pausesIn(values);
@@ -231,7 +232,7 @@ async function concatenate(
         ? undefined
         : await applyPauses(
             run,
-            breathless?.files ?? levelled?.files ?? files,
+            cleaned?.files ?? levelled?.files ?? files,
             paceScaled(
               await planPieces(
                 run,
@@ -246,7 +247,7 @@ async function concatenate(
             ),
             join(piecesDirectory, "paced"),
           );
-    const joined = paced?.files ?? breathless?.files ?? levelled?.files ?? files;
+    const joined = paced?.files ?? cleaned?.files ?? levelled?.files ?? files;
     const durationMs =
       operation === "concat-turns-v1"
         ? await joinTurns(run, joined, values, pending.absolutePath)
@@ -257,7 +258,7 @@ async function concatenate(
               output: pending.absolutePath,
               listPath: join(dirname(pending.absolutePath), "parts.txt"),
               signal: context.signal,
-              reencode: level || paced !== undefined || breathless !== undefined,
+              reencode: level || paced !== undefined || cleaned !== undefined,
             },
           );
     rmSync(piecesDirectory, { recursive: true, force: true });

@@ -134,7 +134,8 @@ See [Narration Aliases and Glossary](Narration-Aliases-and-Glossary).
 | --- | --- | --- |
 | **Pause between sentences (seconds)** | The least quiet after each sentence. Adds silence where the pause is shorter; never shortens one or cuts a word. About 0.25 s is brisk, 0.35 to 0.45 natural, 0.5 to 0.8 an audiobook's pace, 0.8 and up sleep content. 0 keeps the voice's own. | 0.4; 0 to 2 in steps of 0.05 |
 | **Pause between paragraphs (seconds)** | The least quiet at the end of a paragraph, when you want more than between sentences. At 0 paragraphs get the sentence pause. Try 0.8 to 1.2 for a slower read. A speaker's turn gap is set under Speakers instead. | 0; 0 to 2 |
-| **Remove breaths** | Mutes the audible in-breaths a voice takes between sentences and after commas (Inworld's TTS-2 takes a loud one almost every time). Only the breath goes quiet: words, pauses and captions stay where they were. | Off |
+| **Soften breaths** | Turns the audible in-breaths a voice takes between sentences and after commas down by 12 dB, with soft fades (Inworld's TTS-2 takes a loud one almost every time). A breath with any word sound in it is left alone; words, pauses and captions stay where they were. | Off |
+| **Soften S sounds** | Takes the sharp edge off s and sh sounds with a very light de-esser; the voice keeps its brightness. Works with or without Soften breaths. | Off |
 | **Level the volume** | Brings every narration piece to one loudness before they are joined, then sets the video, shorts and audio files to a finished loudness. | On for new runs (Settings → General → **Level the volume for new runs**) |
 | **Video volume** | How loud the video and shorts are, in dB from the recommended level (0 dB is -14 LUFS, what YouTube and Spotify play at). -6 dB is about 50%, +4 dB about 158%. Peaks stay under -1.5 dBTP. | 0 dB; -10 to +4 dB in 0.5 dB steps |
 | **Audio files volume** | How loud the WAV, MP3 and M4B are, in dB from -18 LUFS (what audiobook shops such as ACX ask for). Peaks stay under -3 dBTP. | 0 dB; -10 to +4 dB |
@@ -143,7 +144,7 @@ You can type a volume in dB or as a percentage of the recommended level.
 
 What changing them remakes:
 
-- **Pauses or Remove breaths**: the narration is joined again from the pieces it already has and timed again, which remakes what is timed from it: captions, the video and, when on, the YouTube description and the shorts' pick (those two are text calls). No speech is made again.
+- **Pauses, Soften breaths or Soften S sounds**: the narration is joined again from the pieces it already has and timed again, which remakes what is timed from it: captions, the video and, when on, the YouTube description and the shorts' pick (those two are text calls). No speech is made again.
 - **Level the volume on or off**: the levelled narration is joined again and the exports rendered again. No speech is made again, and word timing, description, shorts' pick and reviews are not redone.
 - **A volume only**: the exports are mastered again, nothing else.
 

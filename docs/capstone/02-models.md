@@ -639,7 +639,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | loudness | `LoudnessSettings` | no |  |
 | sentencePauseSeconds | `number` | no |  |
 | paragraphPauseSeconds | `number` | no |  |
-| removeBreaths | `boolean` | no | absent is off |
+| removeBreaths | `boolean` | no | absent is off; shown as Soften breaths |
+| deEss | `boolean` | no | absent is off; Soften S sounds |
 | language | `LanguageCode` | no | accepted: id, en, es, de, fr, it, pt, nl, ca, pl, cs, ro, sv, da, nb, fi, hu, tr, vi, el, ru, uk, ar, he, hi, th, ja, zh, ko |
 
 ### TitleStyle
@@ -703,7 +704,8 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | loudness | `LoudnessSettings` | no |  |
 | sentencePauseSeconds | `number` | no |  |
 | paragraphPauseSeconds | `number` | no |  |
-| removeBreaths | `boolean` | no | absent is off |
+| removeBreaths | `boolean` | no | absent is off; shown as Soften breaths |
+| deEss | `boolean` | no | absent is off; Soften S sounds |
 | language | `LanguageCode` | no | accepted: id, en, es, de, fr, it, pt, nl, ca, pl, cs, ro, sv, da, nb, fi, hu, tr, vi, el, ru, uk, ar, he, hi, th, ja, zh, ko |
 
 ### Project
@@ -2152,7 +2154,8 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | loudness | `{ enabled: boolean; videoLufs?: number \| undefined; audioFilesLufs?: number \| undefined; }` | no |  |
 | sentencePause | `string` | no |  |
 | paragraphPause | `string` | no |  |
-| removeBreaths | `boolean` | no | absent is off |
+| removeBreaths | `boolean` | no | absent is off; shown as Soften breaths |
+| deEss | `boolean` | no | absent is off; Soften S sounds |
 | youtubeDescription | `boolean` | no |  |
 | showFigures | `boolean` | no |  |
 | descriptionPrompt | `string` | no |  |

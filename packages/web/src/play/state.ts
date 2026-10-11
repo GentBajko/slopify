@@ -25,7 +25,7 @@ import {
   type LoudnessDefault,
   loudnessOfForm,
 } from "@app/slices/loudness/model.js";
-import { breathsOfForm } from "@app/slices/narration/breaths-model.js";
+import { breathsOfForm, deEssOfForm } from "@app/slices/narration/breaths-model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import { pausesOfForm } from "@app/slices/narration/pauses-model.js";
 import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
@@ -120,8 +120,9 @@ export interface LegacyPlayFormState {
   // Pauses between sentences and paragraphs as typed; absent is the defaults.
   readonly sentencePause?: PlayDraftForm["sentencePause"];
   readonly paragraphPause?: PlayDraftForm["paragraphPause"];
-  // Remove breaths as the draft holds it; absent is off.
+  // Soften breaths and Soften S sounds as the draft holds them; absent is off.
   readonly removeBreaths?: PlayDraftForm["removeBreaths"];
+  readonly deEss?: PlayDraftForm["deEss"];
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -356,6 +357,7 @@ export function draftOf(input: DraftInput): RunDraft {
     ...(form.sources.audio === "generate" ? pausesOfForm(form) : {}),
     // As `slices/play-drafts/convert.ts` sends it: only while on, with a narration made here.
     ...(form.sources.audio === "generate" ? breathsOfForm(form) : {}),
+    ...(form.sources.audio === "generate" ? deEssOfForm(form) : {}),
     // As `slices/play-drafts/convert.ts` sends it: only while on, with a narration to level.
     ...pick(
       form.sources.audio === "off"

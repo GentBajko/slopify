@@ -6,9 +6,9 @@ import { useApp } from "@/app-context";
 import type { RailProps } from "@/play/rail-frame";
 import { settingsQuery } from "@/queries";
 import { LoudnessControls } from "@/video/loudness-controls";
-import { PauseControls, RemoveBreathsSwitch } from "@/video/pause-controls";
+import { PauseControls, SoftenBreathsSwitch, SoftenSSwitch } from "@/video/pause-controls";
 
-// Play's pauses between sentences, Remove breaths and Level the volume, on the Export rail under the ambient
+// Play's pauses between sentences, Soften breaths, Soften S sounds and Level the volume, on the Export rail under the ambient
 // sound. A draft that never touched the volume follows Settings → General (on at the
 // recommended volumes unless changed there); the first change writes the whole choice onto the
 // draft. The pauses start at their defaults.
@@ -37,10 +37,11 @@ export function PlayLoudness({
               )
             }
           />
-          <RemoveBreathsSwitch
+          <SoftenBreathsSwitch
             value={form.removeBreaths === true}
             onChange={(removeBreaths) => update({ removeBreaths })}
           />
+          <SoftenSSwitch value={form.deEss === true} onChange={(deEss) => update({ deEss })} />
         </>
       ) : null}
       <LoudnessControls

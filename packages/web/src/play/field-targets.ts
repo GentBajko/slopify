@@ -121,6 +121,7 @@ export function playFieldTarget(
             "sentencePauseSeconds",
             "paragraphPauseSeconds",
             "removeBreaths",
+            "deEss",
             "llm",
           ])
         ? "outputs"

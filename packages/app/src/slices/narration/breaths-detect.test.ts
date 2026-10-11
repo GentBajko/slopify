@@ -2,17 +2,20 @@ import { describe, expect, it } from "vitest";
 import {
   breathRate,
   findBreaths,
-  muteChunk,
   powerSpectrumCentroid,
   type Stretch,
+  scanBreaths,
+  softenChunk,
 } from "./breaths-detect.js";
 import { chunked, ms, noise, pcm, seeded, silence, tone } from "./breaths-fixture.js";
 
 const speech = 0.125; // about -18 dB RMS
 const breathLevel = 0.03; // about -30 dB RMS
 
-function muted(samples: Int16Array, stretches: readonly Stretch[]): Int16Array {
-  return muteChunk(samples, 0, stretches);
+const lowGain = 10 ** (-12 / 20);
+
+function softened(samples: Int16Array, stretches: readonly Stretch[]): Int16Array {
+  return softenChunk(samples, 0, stretches);
 }
 
 function rmsDb(samples: Int16Array, from: number, to: number): number {
@@ -30,20 +33,41 @@ describe("the breath detector", () => {
   const breathEnd = ms(1450);
   const secondWord = ms(1550);
 
-  it("finds a low, noisy breath between two words and mutes it", async () => {
+  it("finds a low, noisy breath between two words and turns it down 12 dB, not to silence", async () => {
     const stretches = await findBreaths(chunked(clip));
     expect(stretches).toHaveLength(1);
     const [found] = stretches as [Stretch];
     expect(found.start).toBeLessThanOrEqual(breathStart + ms(10));
     expect(found.end).toBeGreaterThanOrEqual(breathEnd - ms(10));
-    const out = muted(clip, stretches);
+    const out = softened(clip, stretches);
+    const inner = [found.start + ms(45), found.end - ms(45)] as const;
     expect(rmsDb(clip, breathStart, breathEnd)).toBeGreaterThan(-32);
-    expect(rmsDb(out, breathStart + ms(10), breathEnd - ms(10))).toBeLessThan(-85);
+    expect(rmsDb(out, ...inner)).toBeCloseTo(rmsDb(clip, ...inner) - 12, 1);
+  });
+
+  it("leaves a stretch alone whose loudest 10 ms is above the word ceiling", async () => {
+    // A word sound inside the breath: 30 ms at about -24 dB. The voice here is about -18 dB, so
+    // the breath ceiling the detector reads is -22.7 dB (so it is still found) and the word
+    // ceiling -26.7 dB (-26 at the calibration of -17.26).
+    const word = noise(ms(30), 900, 2400, 0.063, 9);
+    const touched = pcm([
+      tone(ms(1000), speech),
+      gap,
+      noise(ms(150), 900, 2400, breathLevel, 7),
+      word,
+      noise(ms(180), 900, 2400, breathLevel, 8),
+      gap,
+      tone(ms(1000), speech),
+    ]);
+    const scan = await scanBreaths(chunked(touched));
+    expect(scan.stretches).toEqual([]);
+    expect(scan.skipped).toHaveLength(1);
+    expect(softened(touched, scan.stretches)).toEqual(touched);
   });
 
   it("never reaches into the words on either side", async () => {
     const stretches = await findBreaths(chunked(clip));
-    const out = muted(clip, stretches);
+    const out = softened(clip, stretches);
     expect(out.subarray(0, ms(1000))).toEqual(clip.subarray(0, ms(1000)));
     expect(out.subarray(secondWord)).toEqual(clip.subarray(secondWord));
     for (const one of stretches) {
@@ -74,33 +98,39 @@ describe("the breath detector", () => {
   });
 });
 
-describe("muting a stretch", () => {
-  const flat = new Int16Array(4000).fill(10000);
+describe("softening a stretch", () => {
+  const flat = new Int16Array(ms(1000)).fill(10000);
+  const start = ms(100);
+  const end = ms(500);
+  const fade = ms(45);
 
-  it("fades down and back up inside the stretch, never outside it", () => {
-    const out = muteChunk(flat, 0, [{ start: 1000, end: 2000 }]);
-    expect(out[999]).toBe(10000);
-    expect(out[1000]).toBe(10000);
-    expect(out[2000]).toBe(10000);
-    expect(out[1999]).toBe(10000);
-    expect(Math.abs(out[1500] ?? 0)).toBeLessThanOrEqual(10);
-    // 5 ms fades at 48 kHz: 240 samples each, falling then rising.
-    expect(out[1120] ?? 0).toBeLessThan(10000);
-    expect(out[1120] ?? 0).toBeGreaterThan(out[1239] ?? 0);
-    expect(Math.abs(out[1240] ?? 0)).toBeLessThanOrEqual(10);
+  it("turns it down 12 dB with 45 ms fades inside the stretch, never outside it", () => {
+    const out = softenChunk(flat, 0, [{ start, end }]);
+    expect(out[start - 1]).toBe(10000);
+    expect(out[start]).toBe(10000);
+    expect(out[end - 1]).toBe(10000);
+    expect(out[end]).toBe(10000);
+    const low = Math.round(10000 * lowGain);
+    expect(out[start + fade - 1]).toBe(low);
+    expect(out[ms(300)]).toBe(low);
+    expect(out[end - fade]).toBe(low);
+    // Linear: halfway down the fade is halfway between the two gains.
+    const half = start + Math.round((fade - 1) / 2);
+    expect(Math.abs((out[half] ?? 0) - (10000 + low) / 2)).toBeLessThan(10);
+    expect(out[start + 100] ?? 0).toBeGreaterThan(out[start + 1000] ?? 0);
   });
 
-  it("mutes the right samples of a chunk that starts partway through the piece", () => {
-    const out = muteChunk(flat.subarray(0, 1000), 1500, [{ start: 1000, end: 2000 }]);
-    expect(Math.abs(out[0] ?? 0)).toBeLessThanOrEqual(10);
-    expect(out[600]).toBe(10000);
+  it("softens the right samples of a chunk that starts partway through the piece", () => {
+    const out = softenChunk(flat.subarray(0, 1000), ms(300), [{ start, end }]);
+    expect(out[0]).toBe(Math.round(10000 * lowGain));
+    const after = softenChunk(flat.subarray(0, 1000), end, [{ start, end }]);
+    expect(after[0]).toBe(10000);
   });
 
-  it("shortens the fades of a stretch shorter than two of them", () => {
-    const out = muteChunk(flat, 0, [{ start: 100, end: 200 }]);
-    expect(out[100]).toBe(10000);
-    expect(out[199]).toBe(10000);
-    expect(Math.abs(out[149] ?? 0)).toBeLessThanOrEqual(10);
+  it("leaves a stretch of 90 ms or less untouched", () => {
+    expect(softenChunk(flat, 0, [{ start, end: start + ms(90) }])).toEqual(flat);
+    const longer = softenChunk(flat, 0, [{ start, end: start + ms(90) + 2 }]);
+    expect(longer).not.toEqual(flat);
   });
 });
 

@@ -30,7 +30,8 @@ import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls"
 import {
   PauseControls,
   type PauseField,
-  RemoveBreathsSwitch,
+  SoftenBreathsSwitch,
+  SoftenSSwitch,
   typedSeconds,
 } from "@/video/pause-controls";
 
@@ -112,9 +113,10 @@ export function EditLoudness({
   );
 }
 
-// Pauses between sentences and paragraphs, and Remove breaths. Absent on every project made
-// before them; setting one joins the narration again from the pieces it already has, with the
-// pauses made or the breaths muted, and times it again: no speech is made again.
+// Pauses between sentences and paragraphs, Soften breaths and Soften S sounds. Absent on every
+// project made before them; setting one joins the narration again from the pieces it already
+// has, with the pauses made, the breaths turned down or the S sounds softened, and times it
+// again: no speech is made again.
 export function EditPauses({
   edit,
   problem,
@@ -150,11 +152,18 @@ export function EditPauses({
           onChange({ ...edit, config: value === 0 ? config : { ...config, [field]: value } });
         }}
       />
-      <RemoveBreathsSwitch
+      <SoftenBreathsSwitch
         value={edit.config.removeBreaths === true}
         onChange={(on) => {
           const { removeBreaths: _old, ...config } = edit.config;
           onChange({ ...edit, config: on ? { ...config, removeBreaths: true } : config });
+        }}
+      />
+      <SoftenSSwitch
+        value={edit.config.deEss === true}
+        onChange={(on) => {
+          const { deEss: _old, ...config } = edit.config;
+          onChange({ ...edit, config: on ? { ...config, deEss: true } : config });
         }}
       />
     </div>

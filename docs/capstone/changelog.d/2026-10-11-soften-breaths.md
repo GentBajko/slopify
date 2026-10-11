@@ -1,0 +1,4 @@
+# Soften breaths, Soften S sounds
+
+- **Remove breaths is now Soften breaths.** 3.19.0's version muted every breath it found to silence with 5 ms fades; on a full-length narration some of those stretches held the edge of a word, which came out clipped ("Highs" as "Hi…s"), and the drops to silence were abrupt. The thresholds are now calibrated on the finished video's audio, as approved by ear. Breaths are turned down 12 dB with 45 ms fades inside the breath, and any stretch with a word sound in it (a 10 ms moment above -26 dB on the finished video, 8.74 dB under the voice) is left untouched. Projects that had it on join their narration again once; no speech is made again. See `docs/breaths.md`.
+- A new **Soften S sounds** switch under it (Play → Video and style, Edit project → Pauses and volume) puts each narration piece through a very light de-esser. Off by default, independent of Soften breaths.

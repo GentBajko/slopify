@@ -59,8 +59,13 @@ export const projectHelp = {
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
   "project.remove-breaths": {
-    title: "Remove breaths",
-    body: "Mutes the audible in-breaths a voice takes between sentences and after commas (Inworld's TTS-2 takes a loud one almost every time). Only the breath goes quiet: every word, the pauses and the captions stay exactly where they were. Runs on this computer, no API calls; turning it on joins the narration again from the pieces it already has, never makes the speech again. Default: off.",
+    title: "Soften breaths",
+    body: "Turns the audible in-breaths between sentences and after commas down by 12 dB, with soft fades. A breath with any word sound in it is left as it is, and every word, pause and caption stays where it was. Runs on this computer, no API calls; turning it on joins the narration again from its pieces, never makes the speech again. Default: off.",
+    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
+  },
+  "project.soften-s": {
+    title: "Soften S sounds",
+    body: "Puts each narration piece through a very light de-esser, which takes the sharp edge off s and sh sounds while the voice keeps its brightness. Works with or without Soften breaths. Runs on this computer, no API calls; turning it on joins the narration again from the pieces it already has, never makes the speech again. Default: off.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
   "project.loudness": {

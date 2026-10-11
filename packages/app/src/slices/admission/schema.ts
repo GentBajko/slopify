@@ -211,8 +211,9 @@ export const runDraftSchema = z.object({
   // Pauses between sentences and paragraphs (`narration/pauses-model.ts`); checked by admission.
   sentencePauseSeconds: z.number().optional(),
   paragraphPauseSeconds: z.number().optional(),
-  // Remove breaths (`narration/breaths-model.ts`); absent is off.
+  // Soften breaths and Soften S sounds (`narration/breaths-model.ts`); absent is off.
   removeBreaths: z.boolean().optional(),
+  deEss: z.boolean().optional(),
   // Absent is English (`kernel/ports/languages.ts`).
   language: languageSchema.optional(),
 });

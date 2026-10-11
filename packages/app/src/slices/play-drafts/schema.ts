@@ -92,9 +92,10 @@ export const playDraftFormSchema = z
     // paragraph minimum (`narration/pauses-model.ts`).
     sentencePause: text.optional(),
     paragraphPause: text.optional(),
-    // Remove breaths (`narration/breaths-model.ts`). Absent on drafts and templates saved
-    // before it: off.
+    // Soften breaths and Soften S sounds (`narration/breaths-model.ts`). Absent on drafts and
+    // templates saved before them: off.
     removeBreaths: z.boolean().optional(),
+    deEss: z.boolean().optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     showFigures: z.boolean().optional(),

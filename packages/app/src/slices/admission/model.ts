@@ -258,10 +258,13 @@ export interface RunDraft {
   // every project saved before them was; a new run gets the sentence default.
   readonly sentencePauseSeconds?: number | undefined;
   readonly paragraphPauseSeconds?: number | undefined;
-  // Remove breaths: the narration join mutes the audible in-breaths between sentences
+  // Soften breaths: the narration join turns the audible in-breaths between sentences down
   // (`narration/breaths-model.ts`). Absent (or false) is off, which is what every project saved
   // before it was.
   readonly removeBreaths?: boolean | undefined;
+  // Soften S sounds: the narration join puts each piece through a very light de-esser
+  // (`narration/breaths-model.ts`). Absent (or false) is off.
+  readonly deEss?: boolean | undefined;
   // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
   // what every project saved before it was; English is never stored.
   readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;

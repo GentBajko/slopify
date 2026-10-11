@@ -60,27 +60,69 @@ export function PauseControls({
   );
 }
 
-// Remove breaths (`slices/narration/breaths-model.ts`), beside the pauses: Play keeps it on its
-// draft, Edit project on the config, and both only while it is on.
-export function RemoveBreathsSwitch({
+// Soften breaths and Soften S sounds (`slices/narration/breaths-model.ts`), beside the pauses:
+// Play keeps them on its draft, Edit project on the config, and both only while on.
+export function SoftenBreathsSwitch({
   value,
   onChange,
 }: {
   readonly value: boolean;
   readonly onChange: (next: boolean) => void;
 }): ReactElement {
+  return (
+    <CleanSwitch
+      value={value}
+      onChange={onChange}
+      label="Soften breaths"
+      tip="project.remove-breaths"
+      line="Turns the audible breaths between sentences down. Words and timing stay the same."
+    />
+  );
+}
+
+export function SoftenSSwitch({
+  value,
+  onChange,
+}: {
+  readonly value: boolean;
+  readonly onChange: (next: boolean) => void;
+}): ReactElement {
+  return (
+    <CleanSwitch
+      value={value}
+      onChange={onChange}
+      label="Soften S sounds"
+      tip="project.soften-s"
+      line="Takes the sharp edge off s and sh sounds; very light, the voice keeps its brightness."
+    />
+  );
+}
+
+function CleanSwitch({
+  value,
+  onChange,
+  label,
+  tip,
+  line,
+}: {
+  readonly value: boolean;
+  readonly onChange: (next: boolean) => void;
+  readonly label: string;
+  readonly tip: "project.remove-breaths" | "project.soften-s";
+  readonly line: string;
+}): ReactElement {
   const id = useId();
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
       <Switch
         checked={value}
-        label="Remove breaths"
-        tip="project.remove-breaths"
+        label={label}
+        tip={tip}
         describedBy={`${id}-line`}
         onChange={onChange}
       />
       <p id={`${id}-line`} className="m-0 text-label text-ink-3">
-        Mutes the audible breaths between sentences. Words and timing stay the same.
+        {line}
       </p>
     </div>
   );
