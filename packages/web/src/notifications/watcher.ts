@@ -70,6 +70,8 @@ export interface ShownReviewNotice {
 export interface ToldFailures {
   readonly read: (projectId: string) => ReadonlySet<string>;
   readonly write: (projectId: string, told: ReadonlySet<string>) => void;
+  // Lets go of every project but these: one trashed or done since says no more.
+  readonly keep: (projectIds: ReadonlySet<string>) => void;
 }
 
 // Kept for this page alone.
@@ -81,6 +83,9 @@ function toldInMemory(): ToldFailures {
     write: (projectId, now) => {
       if (now.size === 0) told.delete(projectId);
       else told.set(projectId, now);
+    },
+    keep: (projectIds) => {
+      for (const projectId of told.keys()) if (!projectIds.has(projectId)) told.delete(projectId);
     },
   };
 }
@@ -274,7 +279,9 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     },
     seed: async () => {
       try {
-        for (const project of await deps.seed())
+        const projects = await deps.seed();
+        told.keep(new Set(projects.filter((one) => one.status !== "done").map((one) => one.id)));
+        for (const project of projects)
           if (!states.has(project.id)) {
             states.set(project.id, project.status);
             // Already going when the page loaded: its start went by unheard.

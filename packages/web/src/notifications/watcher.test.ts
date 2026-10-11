@@ -473,6 +473,25 @@ describe("told failures", () => {
     expect(reloaded.shown).toEqual([]);
   });
 
+  // A project trashed or done since says no more, so what was told of it is let go as the
+  // projects are read.
+  it("keeps told failures only for projects listed that aren't done", async () => {
+    storedTold.write("gone", new Set(["audio@1"]));
+    storedTold.write("finished", new Set(["audio@2"]));
+    storedTold.write("agent", new Set(["audio@3"]));
+    const { watcher } = harness({
+      told: storedTold,
+      seeded: [
+        { id: "finished", status: "done" },
+        { id: "agent", status: "pending" },
+      ],
+    });
+    await watcher.seed();
+    expect(window.localStorage.getItem("slopify.notifications.told")).toBe(
+      JSON.stringify({ agent: ["audio@3"] }),
+    );
+  });
+
   it("keeps a project's failures only while it has them, and survives a damaged value", () => {
     storedTold.write("p1", new Set(["audio@1"]));
     storedTold.write("p2", new Set(["images@1"]));

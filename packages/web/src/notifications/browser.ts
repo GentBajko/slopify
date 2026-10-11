@@ -125,20 +125,27 @@ function readTold(): Record<string, readonly string[]> {
   }
 }
 
+function writeTold(told: Record<string, readonly string[]>): void {
+  try {
+    window.localStorage.setItem(toldKey, JSON.stringify(told));
+  } catch {
+    // Without storage a reload may tell a failure again; nothing else depends on it.
+  }
+}
+
 // The failures each project's run notices named, kept in this browser so a reload or another tab
-// doesn't tell them again. ceiling: one entry per project whose told failure it still has.
+// doesn't tell them again. ceiling: one entry per project not done, as the list read when
+// notifications or sounds came on, whose told failure it still had when last told.
 export const storedTold: ToldFailures = {
   read: (projectId) => new Set(readTold()[projectId] ?? []),
   write: (projectId, told) => {
     const { [projectId]: _, ...others } = readTold();
-    try {
-      window.localStorage.setItem(
-        toldKey,
-        JSON.stringify(told.size === 0 ? others : { ...others, [projectId]: [...told] }),
-      );
-    } catch {
-      // Without storage a reload may tell a failure again; nothing else depends on it.
-    }
+    writeTold(told.size === 0 ? others : { ...others, [projectId]: [...told] });
+  },
+  keep: (projectIds) => {
+    const told = readTold();
+    if (Object.keys(told).every((projectId) => projectIds.has(projectId))) return;
+    writeTold(Object.fromEntries(Object.entries(told).filter(([id]) => projectIds.has(id))));
   },
 };
 
