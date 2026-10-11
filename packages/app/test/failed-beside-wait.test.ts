@@ -182,7 +182,11 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
     calendar: { state: "pending", waitingForAgent: true, stepFailed: true },
     response: { project: { status: "pending", waitingForAgent: true } },
   });
-  expect(waiting.listing).toMatchObject({ stepFailed: true });
+  // Each failure by its identity, so While you were away tells each new one once.
+  expect(waiting.listing).toMatchObject({
+    stepFailed: true,
+    stepFailures: [expect.stringMatching(/^audio@\d{4}-/)],
+  });
   expect(waiting.calendar).not.toHaveProperty("needs");
   expect(waiting.attention).toEqual(expect.arrayContaining(["failed-step", "external-review"]));
   // The Notification URL hears what the runner said, read as it goes out.
@@ -232,6 +236,7 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
     calendar: { state: "failed", needs: "failed" },
   });
   expect(ended.listing).not.toHaveProperty("stepFailed");
+  expect(ended.listing).not.toHaveProperty("stepFailures");
   expect(ended.calendar).not.toHaveProperty("stepFailed");
   expect(ended.attention).toEqual(["failed-step"]);
   // The run ended on the failure "Step failed" already told: no second notice.

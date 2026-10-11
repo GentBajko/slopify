@@ -387,6 +387,9 @@ export interface ProjectListing
     > {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
+  // With `stepFailed`, each failed step by its identity (`notifications/rules.ts` failureId), so
+  // While you were away tells each new failure once.
+  readonly stepFailures?: readonly string[];
   // The channel the project belongs to (`project_channels`), the default one when unset, so
   // Home, the calendar and this list can show one channel at a time.
   readonly channelId: string;

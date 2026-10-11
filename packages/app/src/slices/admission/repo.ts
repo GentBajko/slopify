@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
+import { failureId } from "../notifications/rules.js";
 import { admittedInItsState, parkedOnReview } from "./admitted-work.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { formats, stageSources } from "./model.js";
@@ -145,6 +146,28 @@ export function stageStandingsByProject(
     }
   }
   return grouped;
+}
+
+const failedRow = z.object({
+  project_id: z.string(),
+  kind: z.enum(stageKinds),
+  finished_at: z.string().nullable(),
+});
+
+// Each project's failed steps by their identity (`notifications/rules.ts` failureId), in the
+// run's order, so a failure is told apart from one before it.
+export function stepFailuresByProject(db: DatabaseSync): ReadonlyMap<string, readonly string[]> {
+  const failures = new Map<string, string[]>();
+  for (const row of db
+    .prepare("SELECT project_id, kind, finished_at FROM stages WHERE state='failed' ORDER BY rowid")
+    .all()) {
+    const failed = failedRow.parse(row);
+    failures.set(failed.project_id, [
+      ...(failures.get(failed.project_id) ?? []),
+      failureId(failed.kind, failed.finished_at),
+    ]);
+  }
+  return failures;
 }
 
 export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {

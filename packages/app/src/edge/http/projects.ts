@@ -11,6 +11,7 @@ import {
   runDraftSchema,
   stageStandingsByProject,
   stagesOf,
+  stepFailuresByProject,
 } from "../../slices/admission/repo.js";
 import { stepFailedBesideWait } from "../../slices/admission/state-words.js";
 import { lastStarter } from "../../slices/agents/repo.js";
@@ -98,6 +99,7 @@ export function projectRoutes(deps: AppDeps) {
         const settled = uploadedAndSettled(deps.db);
         const holds = projectHolds(deps.db, { standings, settled });
         const waits = limitWaitsByProject(deps.db);
+        const failures = stepFailuresByProject(deps.db);
         const projects: ProjectListing[] = listProjectHeads(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           const waiting = waits.get(project.id);
@@ -113,7 +115,9 @@ export function projectRoutes(deps: AppDeps) {
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
-            ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+            ...(stepFailedBesideWait(status, stages)
+              ? { stepFailed: true, stepFailures: failures.get(project.id) ?? [] }
+              : {}),
             ...(holding === undefined ? {} : { holding }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
           };

@@ -129,6 +129,11 @@ export interface StepFailure {
   readonly reason?: string | undefined;
 }
 
+// A failure's identity: its step and when it failed.
+export function failureId(kind: StageKind, finishedAt: string | null): string {
+  return `${kind}@${finishedAt ?? ""}`;
+}
+
 // The failed steps of a run now, in the run's order: the first is the one a run's notice names.
 export function failuresOf(
   stages: readonly {
@@ -141,7 +146,7 @@ export function failuresOf(
   return stages
     .filter((stage) => stage.state === "failed")
     .map((stage) => ({
-      id: `${stage.kind}@${stage.finishedAt ?? ""}`,
+      id: failureId(stage.kind, stage.finishedAt),
       kind: stage.kind,
       ...(stage.failureReason === null ? {} : { reason: stage.failureReason }),
     }));

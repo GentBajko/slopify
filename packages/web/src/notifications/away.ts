@@ -13,8 +13,9 @@ export interface AwaySnapshot {
   // Home's Needs you), each with the points it waited at (`waitPoints`, comma-joined): one held
   // for an agent or its day waits for nobody.
   readonly waiting: Readonly<Record<string, string>>;
-  // The projects with a step failed while the run still read by a wait (`stepFailed`).
-  readonly stepFailed: readonly string[];
+  // Each step failed while its run still read by a wait (`stepFailed`), by its project and its
+  // identity (`stepFailures`): `${projectId} ${failureId}`.
+  readonly stepFailures: readonly string[];
 }
 
 type Standing = Pick<
@@ -28,6 +29,7 @@ type Standing = Pick<
   | "stopped"
   | "holding"
   | "stepFailed"
+  | "stepFailures"
   | "pauseCount"
   | "stopCount"
 >;
@@ -36,8 +38,8 @@ export interface AwaySummary {
   readonly finished: number;
   readonly failed: number;
   readonly waiting: number;
-  // Runs whose step failed while another still waits ("Step failed"): not over yet.
-  readonly stepFailed: number;
+  // Steps that failed while their run still waits on another ("Step failed"): not over yet.
+  readonly stepsFailed: number;
 }
 
 const key = "slopify.away.snapshot";
@@ -51,8 +53,14 @@ export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
     waiting: Object.fromEntries(
       now.filter(waitsForPerson).map((one) => [one.id, waitPoints(one).join(",")]),
     ),
-    stepFailed: now.filter((one) => one.stepFailed === true).map((one) => one.id),
+    stepFailures: now.flatMap(stepFailuresOf),
   };
+}
+
+function stepFailuresOf(project: Standing): readonly string[] {
+  return project.stepFailed === true
+    ? (project.stepFailures ?? []).map((failure) => `${project.id} ${failure}`)
+    : [];
 }
 
 // Where a run waiting for the person waits: at its latest pause or its latest stop by a restart
@@ -77,9 +85,11 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
   let finished = 0;
   let failed = 0;
   let waiting = 0;
-  let stepFailed = 0;
+  let stepsFailed = 0;
   for (const project of now) {
-    if (project.stepFailed === true && !before.stepFailed.includes(project.id)) stepFailed += 1;
+    stepsFailed += stepFailuresOf(project).filter(
+      (failure) => !before.stepFailures.includes(failure),
+    ).length;
     // A run that ended differently since the page looked: one started while away (a
     // schedule's), or a failed or finished one an agent took up again.
     const changed = before.states[project.id] !== project.status;
@@ -89,7 +99,7 @@ export function awaySummary(before: AwaySnapshot, now: readonly Standing[]): Awa
     else if (waitsForPerson(project) && waitsAnew(before.waiting[project.id], waitPoints(project)))
       waiting += 1;
   }
-  return { finished, failed, waiting, stepFailed };
+  return { finished, failed, waiting, stepsFailed };
 }
 
 export function awayMessage(summary: AwaySummary): string | undefined {
@@ -100,8 +110,8 @@ export function awayMessage(summary: AwaySummary): string | undefined {
     summary.failed > 0
       ? `${String(summary.failed)} ${summary.failed === 1 ? "run failed" : "runs failed"}`
       : undefined,
-    summary.stepFailed > 0
-      ? `${String(summary.stepFailed)} ${summary.stepFailed === 1 ? "run had a step fail" : "runs had a step fail"}`
+    summary.stepsFailed > 0
+      ? `${String(summary.stepsFailed)} ${summary.stepsFailed === 1 ? "step failed" : "steps failed"} beside a wait`
       : undefined,
     summary.waiting > 0
       ? `${String(summary.waiting)} ${summary.waiting === 1 ? "run waits" : "runs wait"} for you`
@@ -128,8 +138,8 @@ export function readSnapshot(): AwaySnapshot | undefined {
       typeof stored.waiting === "object" &&
       stored.waiting !== null &&
       !Array.isArray(stored.waiting) &&
-      "stepFailed" in stored &&
-      Array.isArray(stored.stepFailed)
+      "stepFailures" in stored &&
+      Array.isArray(stored.stepFailures)
     )
       return {
         at: stored.at,
@@ -144,7 +154,9 @@ export function readSnapshot(): AwaySnapshot | undefined {
             (entry): entry is [string, string] => typeof entry[1] === "string",
           ),
         ),
-        stepFailed: stored.stepFailed.filter((id): id is string => typeof id === "string"),
+        stepFailures: stored.stepFailures.filter(
+          (failure): failure is string => typeof failure === "string",
+        ),
       };
   } catch {
     // Unreadable storage or a damaged value: no summary this time.

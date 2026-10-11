@@ -8,7 +8,7 @@ describe("awaySummary", () => {
         at: 0,
         states: { a: "running", b: "running", c: "pending", d: "running", e: "done" },
         waiting: {},
-        stepFailed: [],
+        stepFailures: [],
       },
       [
         { id: "a", status: "done", progress: 1 },
@@ -24,7 +24,7 @@ describe("awaySummary", () => {
         { id: "g", status: "pending", progress: 0 },
       ],
     );
-    expect(summary).toEqual({ finished: 3, failed: 1, waiting: 1, stepFailed: 0 });
+    expect(summary).toEqual({ finished: 3, failed: 1, waiting: 1, stepsFailed: 0 });
     expect(awayMessage(summary)).toBe(
       "While you were away: 3 runs finished, 1 run failed, 1 run waits for you.",
     );
@@ -33,7 +33,7 @@ describe("awaySummary", () => {
   it("says nothing when nothing changed", () => {
     expect(
       awayMessage(
-        awaySummary({ at: 0, states: { a: "done" }, waiting: {}, stepFailed: [] }, [
+        awaySummary({ at: 0, states: { a: "done" }, waiting: {}, stepFailures: [] }, [
           { id: "a", status: "done", progress: 1 },
         ]),
       ),
@@ -45,22 +45,28 @@ describe("awaySummary", () => {
 // person's decision, 2026-10-10: told right away), and it is a failure only once nothing else
 // can go on.
 it("counts a run whose step failed beside the person's wait as waiting, then as failed", () => {
-  const before = { at: 0, states: { a: "running" as const }, waiting: {}, stepFailed: [] };
-  const failedBeside = { id: "a", status: "pending" as const, progress: 0, stepFailed: true };
+  const before = { at: 0, states: { a: "running" as const }, waiting: {}, stepFailures: [] };
+  const failedBeside = {
+    id: "a",
+    status: "pending" as const,
+    progress: 0,
+    stepFailed: true,
+    stepFailures: ["audio@1"],
+  };
   const summary = awaySummary(before, [failedBeside]);
-  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 1, stepFailed: 1 });
+  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 1, stepsFailed: 1 });
   expect(awayMessage(summary)).toBe(
-    "While you were away: 1 run had a step fail, 1 run waits for you.",
+    "While you were away: 1 step failed beside a wait, 1 run waits for you.",
   );
   expect(awaySummary(before, [{ id: "a", status: "failed", progress: 0 }])).toEqual({
     finished: 0,
     failed: 1,
     waiting: 0,
-    stepFailed: 0,
+    stepsFailed: 0,
   });
   // Already failed when the page last looked: not news.
   expect(awaySummary(snapshotOf(0, [failedBeside]), [failedBeside])).toMatchObject({
-    stepFailed: 0,
+    stepsFailed: 0,
   });
 });
 
@@ -69,9 +75,16 @@ it("counts a step failed beside a wait for the agent or the run's day", () => {
   const before = snapshotOf(0, [{ id: "a", status: "running", progress: 0.2 }]);
   expect(
     awaySummary(before, [
-      { id: "a", status: "pending", progress: 0.2, stepFailed: true, waitingForAgent: true },
+      {
+        id: "a",
+        status: "pending",
+        progress: 0.2,
+        stepFailed: true,
+        stepFailures: ["audio@1"],
+        waitingForAgent: true,
+      },
     ]),
-  ).toEqual({ finished: 0, failed: 0, waiting: 0, stepFailed: 1 });
+  ).toEqual({ finished: 0, failed: 0, waiting: 0, stepsFailed: 1 });
 });
 
 // The same rule as Home's Needs you (`waitsForPerson`): a run waiting for the agent or prepared
@@ -89,7 +102,7 @@ it("counts as waiting for you only the runs that newly wait for the person", () 
         f: "running",
       },
       waiting: { d: "held" },
-      stepFailed: [],
+      stepFailures: [],
     },
     [
       { id: "a", status: "pending", progress: 0.5, waitingForAgent: true },
@@ -101,7 +114,7 @@ it("counts as waiting for you only the runs that newly wait for the person", () 
       { id: "f", status: "pending", progress: 0.5, waitingForAgent: true },
     ],
   );
-  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 2, stepFailed: 0 });
+  expect(summary).toEqual({ finished: 0, failed: 0, waiting: 2, stepsFailed: 0 });
 });
 
 it("keeps in the snapshot which runs waited for the person", () => {
@@ -115,7 +128,7 @@ it("keeps in the snapshot which runs waited for the person", () => {
     at: 5,
     states: { a: "pending", b: "pending", c: "running" },
     waiting: { a: "held" },
-    stepFailed: [],
+    stepFailures: [],
   });
 });
 
@@ -210,14 +223,14 @@ it("counts a run paused or stopped again since the page looked", () => {
 it("tells a failed run that finished, and a finished one that failed, since the page looked", () => {
   expect(
     awaySummary(
-      { at: 0, states: { a: "failed", b: "done", c: "failed" }, waiting: {}, stepFailed: [] },
+      { at: 0, states: { a: "failed", b: "done", c: "failed" }, waiting: {}, stepFailures: [] },
       [
         { id: "a", status: "done", progress: 1 },
         { id: "b", status: "failed", progress: 1 },
         { id: "c", status: "failed", progress: 1 },
       ],
     ),
-  ).toEqual({ finished: 1, failed: 1, waiting: 0, stepFailed: 0 });
+  ).toEqual({ finished: 1, failed: 1, waiting: 0, stepsFailed: 0 });
 });
 
 describe("the stored snapshot", () => {
@@ -245,7 +258,7 @@ describe("the stored snapshot", () => {
       finished: 0,
       failed: 0,
       waiting: 0,
-      stepFailed: 0,
+      stepsFailed: 0,
     });
   });
 
@@ -266,4 +279,37 @@ describe("the stored snapshot", () => {
     );
     expect(readSnapshot()).toBe(undefined);
   });
+
+  // What the page keeps of the step failures it saw comes back as it was kept, so one already
+  // seen is not news on return.
+  it("reads back the step failures it saw", () => {
+    const now = [
+      { id: "a", status: "pending", progress: 0, stepFailed: true, stepFailures: ["audio@1"] },
+    ] as const;
+    writeSnapshot(snapshotOf(5, now));
+    const before = readSnapshot();
+    expect(before?.stepFailures).toEqual(["a audio@1"]);
+    if (before === undefined) throw new Error("a snapshot expected");
+    expect(awaySummary(before, now).stepsFailed).toBe(0);
+  });
+});
+
+// Each failure is news once, by its identity: another step failing beside the same wait, or the
+// same step failing again after Try again, is told; the one already seen is not.
+it("counts each new step failure, not each run once", () => {
+  const run = (failures: readonly string[]) => ({
+    id: "a",
+    status: "pending" as const,
+    progress: 0.4,
+    stepFailed: true,
+    waitingForAgent: true,
+    stepFailures: failures,
+  });
+  const before = snapshotOf(0, [run(["thumbnail@1"])]);
+  expect(awaySummary(before, [run(["thumbnail@1", "images@2"])]).stepsFailed).toBe(1);
+  expect(awaySummary(before, [run(["thumbnail@3"])]).stepsFailed).toBe(1);
+  expect(awaySummary(before, [run(["thumbnail@1"])]).stepsFailed).toBe(0);
+  expect(awayMessage({ finished: 0, failed: 0, waiting: 0, stepsFailed: 2 })).toBe(
+    "While you were away: 2 steps failed beside a wait.",
+  );
 });
