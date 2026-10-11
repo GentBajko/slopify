@@ -221,6 +221,19 @@ it("tells a step failed beside a wait while the run goes on as it fails, once", 
   expect(shown).toHaveLength(1);
 });
 
+// Only a step that failed is news: one that starts again or finishes says nothing, though the
+// project still lists its last failure as the page is read.
+it("says nothing as a step runs again or finishes beside a wait", async () => {
+  const { watcher, shown } = harness({
+    failing: () => ({ stepFailed: true, status: "running", failures: ["audio@1"] }),
+  });
+  watcher.observe({ projectId: "p1", state: "running" });
+  watcher.observeStage({ projectId: "p1", stage: "audio", state: "running" });
+  watcher.observeStage({ projectId: "p1", stage: "audio", state: "done" });
+  await watcher.settled();
+  expect(shown).toEqual([]);
+});
+
 describe("createRunWatcher", () => {
   it("notifies when a run already going at page load finishes", async () => {
     const { watcher, shown } = harness({ seeded: [{ id: "p1", status: "running" }] });
