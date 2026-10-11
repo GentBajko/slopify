@@ -117,26 +117,38 @@ export interface NoticeSubject {
   // A step failed while the run still reads by a wait (`admission/state-words.ts`).
   readonly stepFailed?: boolean | undefined;
   // The failures the run has now (`failuresOf`), so each is told once.
-  readonly failures?: readonly string[] | undefined;
+  readonly failures?: readonly StepFailure[] | undefined;
 }
 
-// The failed steps of a run, each by when it failed: a step that fails again after Try again is
-// another failure.
+// A failed step, by when it failed: a step that fails again after Try again is another failure.
+export interface StepFailure {
+  readonly id: string;
+  readonly kind: StageKind;
+  readonly reason?: string | undefined;
+}
+
+// The failed steps of a run now, in the run's order: the first is the one a run's notice names.
 export function failuresOf(
   stages: readonly {
     readonly kind: StageKind;
     readonly state: StageState;
     readonly finishedAt: string | null;
+    readonly failureReason: string | null;
   }[],
-): readonly string[] {
+): readonly StepFailure[] {
   return stages
     .filter((stage) => stage.state === "failed")
-    .map((stage) => `${stage.kind}@${stage.finishedAt ?? ""}`);
+    .map((stage) => ({
+      id: `${stage.kind}@${stage.finishedAt ?? ""}`,
+      kind: stage.kind,
+      ...(stage.failureReason === null ? {} : { reason: stage.failureReason }),
+    }));
 }
 
 export interface RunNotices {
-  // In the order they go out: a project's notifications share a tag, so the last one stays.
-  readonly notices: readonly RunNotice[];
+  // In the order they go out, each with the failure's reason it names: a project's
+  // notifications share a tag, so the last one stays.
+  readonly notices: readonly { readonly kind: RunNotice; readonly reason: string | undefined }[];
   // The failures told for the project from now on: those it still has that a notice named.
   readonly told: ReadonlySet<string>;
   // The failures "Step failed" names now, when it goes out.
@@ -147,25 +159,29 @@ export interface RunNotices {
 // alike, given the failures already told for the project. A step failed while the run still
 // reads by a wait is said right away ("Step failed"), when the run stops to wait on it, once per
 // failure. A run that ends on its failures names them all; one that ends Failed only on failures
-// already said is not told again.
+// already said is not told again. Each notice names the reason of a step failed now: the run's
+// first, or the first "Step failed" tells.
 export function runNotices(
   kind: RunNotice,
   subject: Pick<NoticeSubject, "waitingForAgent" | "atItsDay" | "stepFailed" | "failures">,
   told: ReadonlySet<string>,
 ): RunNotices {
   const failures = subject.failures ?? [];
-  const untold = failures.filter((failure) => !told.has(failure));
+  const untold = failures.filter((failure) => !told.has(failure.id));
   const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
-  const notices: RunNotice[] = !repeat && announces(kind, subject) ? [kind] : [];
+  const notices: { kind: RunNotice; reason: string | undefined }[] =
+    !repeat && announces(kind, subject) ? [{ kind, reason: failures[0]?.reason }] : [];
   const news = kind === "waiting" && subject.stepFailed === true ? untold : [];
-  if (news.length > 0) notices.push("step-failed");
+  if (news.length > 0) notices.push({ kind: "step-failed", reason: news[0]?.reason });
   const ended = kind === "failed" || kind === "partial";
   return {
     notices,
     told: new Set(
-      failures.filter((failure) => ended || told.has(failure) || news.includes(failure)),
+      failures
+        .filter((failure) => ended || told.has(failure.id) || news.includes(failure))
+        .map((failure) => failure.id),
     ),
-    news,
+    news: news.map((failure) => failure.id),
   };
 }
 

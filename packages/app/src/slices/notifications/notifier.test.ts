@@ -4,7 +4,7 @@ import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
-import { projectLink, reviewItemName } from "./rules.js";
+import { projectLink, reviewItemName, type StepFailure } from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
@@ -24,7 +24,7 @@ function harness(
     // What the project says of a failed step as each notice goes out.
     readonly failing?: () => {
       readonly stepFailed?: boolean;
-      readonly failures?: readonly string[];
+      readonly failures?: readonly StepFailure[];
     };
   } = {},
 ) {
@@ -79,6 +79,13 @@ const stage = (
   ...(failureReason === undefined ? {} : { failureReason }),
 });
 
+// A failed step by its id ("kind@finishedAt"), with the provider's reason.
+const failed = (id: string, reason?: string): StepFailure => ({
+  id,
+  kind: "audio",
+  ...(reason === undefined ? {} : { reason }),
+});
+
 const firstLines = (posted: readonly Posted[]): string[] =>
   posted.map((one) => one.body.split("\n")[0] ?? "");
 
@@ -87,23 +94,20 @@ const firstLines = (posted: readonly Posted[]): string[] =>
 // again.
 describe("a step failed beside a wait", () => {
   it("is told right away beside an agent's review, and not again when the run fails", async () => {
-    let failure = "audio@2026-10-10T10:00:00.000Z";
+    let failure = failed("audio@2026-10-10T10:00:00.000Z", "The narration was refused.");
     const { notifier, posted } = harness({
       waitingForAgent: true,
       failing: () => ({ stepFailed: true, failures: [failure] }),
     });
     notifier.observe(state("running"));
-    notifier.observe(stage("audio", "failed", "The narration was refused."));
     notifier.observe(state("pending"));
-    notifier.observe(stage("images", "running"));
     notifier.observe(state("running"));
     notifier.observe(state("failed"));
     await notifier.settled();
     expect(firstLines(posted)).toEqual(["Step failed: Black holes — The narration was refused."]);
     // Tried again, it failed again: another failure, told when the run ends on it.
-    failure = "audio@2026-10-10T11:00:00.000Z";
+    failure = failed("audio@2026-10-10T11:00:00.000Z", "Refused again.");
     notifier.observe(state("running"));
-    notifier.observe(stage("audio", "failed", "Refused again."));
     notifier.observe(state("failed"));
     await notifier.settled();
     expect(firstLines(posted).at(-1)).toBe("Run failed: Black holes — Refused again.");
@@ -111,10 +115,9 @@ describe("a step failed beside a wait", () => {
 
   it("is told beside the person's checkpoint as well as the wait", async () => {
     const { notifier, posted } = harness({
-      failing: () => ({ stepFailed: true, failures: ["audio@t"] }),
+      failing: () => ({ stepFailed: true, failures: [failed("audio@t", "Refused.")] }),
     });
     notifier.observe(state("running"));
-    notifier.observe(stage("audio", "failed", "Refused."));
     notifier.observe(state("pending"));
     notifier.observe(state("running"));
     notifier.observe(state("pending"));
@@ -129,10 +132,9 @@ describe("a step failed beside a wait", () => {
   it("is told beside a prepared run's own hold for its day", async () => {
     const { notifier, posted } = harness({
       atItsDay: true,
-      failing: () => ({ stepFailed: true, failures: ["thumbnail@t"] }),
+      failing: () => ({ stepFailed: true, failures: [failed("thumbnail@t", "Refused.")] }),
     });
     notifier.observe(state("running"));
-    notifier.observe(stage("thumbnail", "failed", "Refused."));
     notifier.observe(state("pending"));
     await notifier.settled();
     expect(firstLines(posted)).toEqual(["Step failed: Black holes — Refused."]);
@@ -142,17 +144,17 @@ describe("a step failed beside a wait", () => {
 // Each failure is told once by its own identity: fixing one failed step doesn't make another,
 // already told, news again.
 it("never tells an already told failure again once another failed step is fixed", async () => {
-  let failures: readonly string[] = [];
+  let failures: readonly StepFailure[] = [];
   const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, failures }) });
   notifier.observe(state("running"));
-  failures = ["thumbnail@1"];
+  failures = [failed("thumbnail@1")];
   notifier.observe(state("pending"));
   notifier.observe(state("running"));
-  failures = ["thumbnail@1", "images@2"];
+  failures = [failed("thumbnail@1"), failed("images@2")];
   notifier.observe(state("pending"));
   notifier.observe(state("running"));
   // Images tried again and made: the thumbnail's failure, told already, is all that is left.
-  failures = ["thumbnail@1"];
+  failures = [failed("thumbnail@1")];
   notifier.observe(state("pending"));
   await notifier.settled();
   expect(firstLines(posted).filter((line) => line.startsWith("Step failed"))).toHaveLength(2);
@@ -161,11 +163,11 @@ it("never tells an already told failure again once another failed step is fixed"
 // "Step failed" told one failure; the run then ends Failed on another with no end between.
 describe("a run that ends Failed after a step failed beside a wait", () => {
   for (const [label, ending] of [
-    ["on a different failure", ["images@2"]],
-    ["on the told failure and another", ["thumbnail@1", "images@2"]],
+    ["on a different failure", [failed("images@2")]],
+    ["on the told failure and another", [failed("thumbnail@1"), failed("images@2")]],
   ] as const)
     it(`is told ${label}`, async () => {
-      let failures: readonly string[] = ["thumbnail@1"];
+      let failures: readonly StepFailure[] = [failed("thumbnail@1")];
       const { notifier, posted } = harness({
         waitingForAgent: true,
         failing: () => ({ stepFailed: true, failures }),
@@ -182,7 +184,7 @@ describe("a run that ends Failed after a step failed beside a wait", () => {
   it("is not told again when it ends on the failure already told", async () => {
     const { notifier, posted } = harness({
       waitingForAgent: true,
-      failing: () => ({ stepFailed: true, failures: ["thumbnail@1"] }),
+      failing: () => ({ stepFailed: true, failures: [failed("thumbnail@1")] }),
     });
     for (const one of ["running", "pending", "running", "failed"] as const)
       notifier.observe(state(one));
@@ -191,16 +193,36 @@ describe("a run that ends Failed after a step failed beside a wait", () => {
   });
 });
 
-// A step going on after another failed doesn't take the failure's reason off the run's notice.
-it("keeps a failed step's reason while the rest of the run goes on", async () => {
-  const { notifier, posted } = harness();
+// Every notice names a step failed now, as the browser does: one retried and made is no longer
+// the run's reason.
+it("names the step failed now, not the last one to fail", async () => {
+  let failures: readonly StepFailure[] = [];
+  const { notifier, posted } = harness({ failing: () => ({ failures }) });
   notifier.observe(state("running"));
   notifier.observe(stage("thumbnail", "failed", "The cover was refused."));
-  notifier.observe(stage("video", "running"));
+  notifier.observe(stage("images", "failed", "The images broke."));
+  notifier.observe(stage("images", "running"));
+  failures = [failed("thumbnail@1", "The cover was refused.")];
   notifier.observe(state("partial"));
   await notifier.settled();
   expect(firstLines(posted)).toEqual([
     "Video ready with problems: Black holes — The cover was refused.",
+  ]);
+});
+
+// "Step failed" names the failure it tells, not the first one the run has.
+it("names in Step failed the failure it tells", async () => {
+  let failures: readonly StepFailure[] = [failed("thumbnail@1", "A broke.")];
+  const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, failures }) });
+  notifier.observe(state("running"));
+  notifier.observe(state("pending"));
+  notifier.observe(state("running"));
+  failures = [...failures, failed("images@2", "C broke.")];
+  notifier.observe(state("pending"));
+  await notifier.settled();
+  expect(firstLines(posted).filter((line) => line.startsWith("Step failed"))).toEqual([
+    "Step failed: Black holes — A broke.",
+    "Step failed: Black holes — C broke.",
   ]);
 });
 
@@ -220,15 +242,14 @@ describe("createRunNotifier", () => {
   });
 
   it("names the failing stage's short reason when a run fails", async () => {
-    const { notifier, posted } = harness();
-    notifier.observe(state("running"));
-    notifier.observe({
-      type: "stage.state",
-      projectId: "p1",
-      stage: "audio",
-      state: "failed",
-      failureReason: "The provider refused the request: quota exceeded\nsecond line",
+    const { notifier, posted } = harness({
+      failing: () => ({
+        failures: [
+          failed("audio@1", "The provider refused the request: quota exceeded\nsecond line"),
+        ],
+      }),
     });
+    notifier.observe(state("running"));
     notifier.observe(state("failed"));
     await notifier.settled();
     expect(posted.map((post) => post.body.split("\n")[0])).toEqual([

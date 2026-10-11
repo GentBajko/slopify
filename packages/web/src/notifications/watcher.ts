@@ -6,6 +6,7 @@ import {
   noticeOf,
   noticeText,
   type RunNotice,
+  type RunNotices,
   reviewNoticeText,
   runNotices,
   topicsNoticeText,
@@ -76,7 +77,7 @@ export interface RunWatcherDeps {
   // Every project's state now, so a run already going when the page loaded is known to be
   // running when it finishes.
   readonly seed: () => Promise<readonly { readonly id: string; readonly status: ProjectState }[]>;
-  readonly subject: (projectId: string) => Promise<NoticeSubject | undefined>;
+  readonly subject: (projectId: string) => Promise<Omit<NoticeSubject, "reason"> | undefined>;
   // One tab of many wins each transition.
   readonly claim: (key: string) => Promise<boolean>;
   readonly show: (notice: ShownNotice) => void;
@@ -131,11 +132,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     const now = runNotices(kind, subject, told.get(projectId) ?? new Set());
     if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
-    const notices: RunNotice[] = [];
+    const notices: RunNotices["notices"][number][] = [];
     for (const one of now.notices)
       if (
         await deps.claim(
-          one === "step-failed"
+          one.kind === "step-failed"
             ? `${projectId}:step-failed:${now.news.join(",")}`
             : `${projectId}:${state}`,
         )
@@ -144,7 +145,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
     if (notices.length > 0 && sounding()) deps.play?.("end");
     if (deps.enabled())
       for (const one of notices)
-        deps.show({ projectId, kind: one, text: noticeText(one, subject) });
+        deps.show({
+          projectId,
+          kind: one.kind,
+          text: noticeText(one.kind, { ...subject, reason: one.reason }),
+        });
   };
   const announceStart = async (projectId: string) => {
     const subject = await deps.subject(projectId);

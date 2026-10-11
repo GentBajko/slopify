@@ -10,6 +10,19 @@ import {
   type ShownTopicsNotice,
 } from "./watcher.js";
 
+// Each failure by its id, with the provider's reason.
+const failing = (said: {
+  readonly stepFailed?: boolean;
+  readonly failures?: readonly string[];
+}) => ({
+  ...(said.stepFailed === true ? { stepFailed: true } : {}),
+  failures: (said.failures ?? []).map((id) => ({
+    id,
+    kind: "audio" as const,
+    reason: "Quota exceeded",
+  })),
+});
+
 function harness(
   options: {
     readonly enabled?: boolean;
@@ -36,10 +49,9 @@ function harness(
               : {
                   title: `Project ${projectId}`,
                   makesVideo: true,
-                  reason: "Quota exceeded",
                   ...(projectId === "agent" ? { waitingForAgent: true } : {}),
                   ...(projectId === "prepared" ? { atItsDay: true } : {}),
-                  ...options.failing?.(),
+                  ...failing(options.failing?.() ?? { failures: ["audio@t0"] }),
                 },
           ),
     claim: options.claim ?? (() => Promise.resolve(true)),

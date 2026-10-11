@@ -76,6 +76,6 @@ it("says which step failed while the run still waits on its day's hold", () => {
   ).run();
   expect(noticeSubject(db, "p1")).toMatchObject({
     stepFailed: true,
-    failures: ["thumbnail@2026-09-10T00:05:00.000Z"],
+    failures: [{ id: "thumbnail@2026-09-10T00:05:00.000Z", kind: "thumbnail" }],
   });
 });

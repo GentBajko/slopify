@@ -19,7 +19,10 @@ import { createRunWatcher, type RunWatcher } from "./watcher.js";
 
 // What a notification says about a project, from its page's body (`GET /api/projects/:id`), as
 // the server's notifier reads it (`slices/notifications/subject.ts`).
-export async function projectNoticeSubject(api: Api, projectId: string): Promise<NoticeSubject> {
+export async function projectNoticeSubject(
+  api: Api,
+  projectId: string,
+): Promise<Omit<NoticeSubject, "reason">> {
   const body = await readProject(api, projectId);
   const failures = failuresOf(body.stages);
   return {
@@ -28,7 +31,6 @@ export async function projectNoticeSubject(api: Api, projectId: string): Promise
     startedBy: body.startedBy ?? null,
     waitingForAgent: body.project.waitingForAgent === true,
     atItsDay: atItsDay(body.project.prepared === true, body.holding),
-    reason: body.stages.find((stage) => stage.state === "failed")?.failureReason ?? undefined,
     ...(body.project.stepFailed === true ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };

@@ -43,12 +43,9 @@ export interface RunNotifier {
   readonly close: () => void;
 }
 
-const ends: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
-
 export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   // ceiling: one entry per project seen since boot, a few dozen bytes each.
   const states = new Map<string, ProjectState>();
-  const reasons = new Map<string, string>();
   const inflight = new Set<Promise<void>>();
   let closed = false;
 
@@ -65,8 +62,8 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     if (now.told.size === 0) told.delete(projectId);
     else told.set(projectId, now.told);
     for (const one of now.notices) {
-      const text = noticeText(one, { ...subject, reason: reasons.get(projectId) });
-      post(url, { ...text, link: deps.link?.(projectId) }, one, { projectId });
+      const text = noticeText(one.kind, { ...subject, reason: one.reason });
+      post(url, { ...text, link: deps.link?.(projectId) }, one.kind, { projectId });
     }
   };
 
@@ -142,13 +139,6 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     observe: (event) => {
       if (closed) return;
       try {
-        if (event.type === "stage.state") {
-          // Kept until the run ends: the steps that go on after it are no reason to forget it.
-          if (event.state !== "failed") return;
-          if (event.failureReason === undefined) reasons.delete(event.projectId);
-          else reasons.set(event.projectId, event.failureReason);
-          return;
-        }
         if (event.type === "review.flagged") {
           notifyReview(event);
           return;
@@ -163,9 +153,6 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         states.set(event.projectId, event.state);
         const kind = noticeOf(previous, event.state);
         if (kind !== undefined) notify(event.projectId, kind);
-        if (ends.has(event.state)) {
-          reasons.delete(event.projectId);
-        }
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,
