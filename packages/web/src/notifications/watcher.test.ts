@@ -518,6 +518,16 @@ describe("claimOnce", () => {
     expect(await claimOnce("p1:done", clock)).toBe(true);
   });
 
+  // Each transition is claimed by the state it reached: a run that stops to wait and then fails
+  // within the minute is told both times.
+  it("claims two transitions of one run within the minute", async () => {
+    const { watcher, shown } = harness({ claim: (key) => claimOnce(key) });
+    for (const state of ["running", "pending", "running", "failed"] as const)
+      watcher.observe({ projectId: "p1", state });
+    await watcher.settled();
+    expect(shown.map((notice) => notice.kind)).toEqual(["waiting", "failed"]);
+  });
+
   it("claims when storage is missing altogether", async () => {
     Object.defineProperty(window, "localStorage", { configurable: true, value: undefined });
     expect(await claimOnce("p1:done")).toBe(true);
