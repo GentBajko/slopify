@@ -4,7 +4,7 @@ import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
-import { projectLink, reviewItemName, type StepFailure } from "./rules.js";
+import { projectLink, reviewItemName, runNotices, type StepFailure } from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
@@ -491,4 +491,19 @@ it("names a reviewed item the way the project page does", () => {
   expect(reviewItemName("thumbnail:image", order)).toBe("the thumbnail");
   expect(reviewItemName("thumbnail:image:3", order)).toBe("thumbnail 3");
   expect(reviewItemName("something:else", order)).toBeUndefined();
+});
+
+// What is told is kept only while the run has it: a failure fixed, or a run that ended with none
+// left, leaves nothing behind (the notifiers' end-of-run cleanup).
+it("keeps a told failure only while the run still has it", () => {
+  const told = new Set(["thumbnail@1", "images@2"]);
+  const thumbnail = failed("thumbnail@1");
+  expect(
+    runNotices({ kind: "waiting" }, { stepFailed: true, failures: [thumbnail] }, told).told,
+  ).toEqual(new Set(["thumbnail@1"]));
+  expect(runNotices({ kind: "ready" }, {}, told).told.size).toBe(0);
+  // A run that ends on its failures names them all: told from then on.
+  expect(
+    runNotices({ kind: "partial" }, { failures: [thumbnail, failed("video@3")] }, new Set()).told,
+  ).toEqual(new Set(["thumbnail@1", "video@3"]));
 });
