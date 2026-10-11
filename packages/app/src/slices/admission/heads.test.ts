@@ -36,3 +36,17 @@ it("counts each pause and each stop a restart makes", () => {
   recoverWork(db);
   expect(head()).toMatchObject({ stopCount: 2 });
 });
+
+// A project still waiting its turn in a batch was never started: a restart leaves it queued and
+// stops nothing.
+it("counts no stop for a project still queued in a batch", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("INSERT INTO batches(id,created_at) VALUES ('b1','2026-10-10T00:00:00.000Z')").run();
+  db.prepare(
+    "INSERT INTO project_queue(project_id,batch_id,state) VALUES ('p1','b1','queued')",
+  ).run();
+  recoverWork(db);
+  expect(listProjectHeads(db).find((one) => one.id === "p1")).not.toHaveProperty("stopCount");
+});
