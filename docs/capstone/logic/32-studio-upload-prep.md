@@ -14,10 +14,10 @@ depends_on:
 - 28-shorts
 - 29-video-editing
 - 38-home-attention-and-uploads
-generated_at_commit: 8e5bc8b8156d
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: ea9ba0f3d3bd
+content_hash: 4694503e0f88
 paths_covered:
   - ":(top)packages/app/src/slices/studio/**"
   - ":(top)packages/app/src/edge/http/studio.ts"
@@ -28,6 +28,10 @@ paths_covered:
   - ":(top)packages/extension/static/manifest.json"
   - ":(top)packages/web/src/studio/**"
   - ":(top)packages/web/src/project/on-youtube.tsx"
+  - ":(top)packages/app/src/edge/mcp/excluded-routes.ts"
+  - ":(top)packages/app/src/edge/mcp/tools-publishing.ts"
+absorbed_from:
+  - features/2026-09-30-slopify-mcp@2026-10-11
 ---
 
 Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP routes are mounted at `/api/studio` (`packages/app/src/edge/http/app.ts:215`). The posting plan and release calendar, Studio's checks, the Details-page finishing touches, the pinned comment, A/B tests on request and Studio's numbers are `44-studio-autopilot.md`; this file covers the pack, its upload through the extension, and how Slopify learns an upload reached YouTube.
@@ -36,6 +40,7 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 
 - Slopify never uploads through YouTube's API and never presses Publish or Schedule; it builds an upload pack that the person copies into YouTube Studio or that the Slopify Studio browser extension puts into Studio's upload dialog (`slices/studio/model.ts:1-5`).
 - Entry points in the web app: the Prepare upload drawer on the project page (`packages/web/src/routes/project.tsx:713`), Home's Ready list (`packages/web/src/home/ready.tsx:74`) and the calendar (`packages/web/src/routes/calendar.tsx:672`). The `PrepareUpload` button is disabled until a finished video exists, "Available once the video has been made" (`packages/web/src/studio/prepare-upload.tsx:47-75`).
+- Agents through MCP stop at **Ready to upload**: they may read the pack and set what the person would set in Prepare upload (`get_upload_pack`, `set_pack_slot`, `set_pack_real_footage`, `set_pack_pick`, `set_pack_playlists`), read the fill queue and remove an entry from it (`get_fill_queue`, `remove_from_fill_queue`), and record links (`set_youtube_link`) (`packages/app/src/edge/mcp/tools-publishing.ts:40-90`, `:149`). No tool puts anything in the extension's queue: `POST /packs/:projectId/choose` (Fill in YouTube Studio) is excluded as acting on YouTube, and so is every extension-only `/ext/*` route, `/ext/upload` and `/ext/upload-all` included (`packages/app/src/edge/mcp/excluded-routes.ts:12-14`, `:81-99`). The pinned-comment setting `PUT /settings/auto-comment` is excluded too, since it posts comments in the person's name (`:82`). The pairing token is never made by an agent (`:80`).
 - Entry point in the extension: the toolbar popup "Ready to upload" (`packages/extension/src/popup.ts:227-243`), which asks the paired Slopify for `GET /ext/ready`.
 - Settings → YouTube Studio holds the playlists per channel, the posting plan (44), and the pairing token (`packages/web/src/studio/settings-panel.tsx:20-46`, `packages/web/src/routes/settings.tsx:136`, `:305`).
 - The extension (Manifest V3, "Slopify Studio" 1.1.2; permissions `storage`, `clipboardWrite`, `alarms`; host permissions `http://127.0.0.1/*`, `http://localhost/*`, `https://www.youtube.com/oembed*`; content script `content.js` on `https://studio.youtube.com/*` and `comment.js` on `https://www.youtube.com/watch*`; popup `popup.html`; `video-frame.html` web-accessible to Studio only) (`packages/extension/static/manifest.json:12-50`) must be installed from the zips the app serves and paired before Fill in YouTube Studio is enabled (`packages/web/src/studio/prepare-upload.tsx:225-252`).
@@ -166,6 +171,7 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 - A dialog is either filled field by field or not touched at all when a needed field is missing (`packages/extension/src/fill.ts:36-41`).
 - The pack generates nothing; it only reads current outputs and rows (`slices/studio/pack.ts:59-61`).
 - The pairing token and fill queues never travel in a backup; playlists, project playlist choices and real-footage ids do; `studio.uploadPick.*`, `studio.postingPlan`, `studio.autoComment` and `studio.leadHours` do too, each checked against its schema (`slices/storage/portable.ts:478-524`, `:533-545`). `youtube_videos` rows travel with their project (`slices/storage/backup-format.ts:63-64`).
+- No MCP tool reaches YouTube or the extension's queue; uploading is the person's, through the drawer or the popup (`packages/app/src/edge/mcp/excluded-routes.ts:81-99`, checked by `packages/app/src/edge/mcp/tools-parity.test.ts:41-69`). A video marked **Late · upload now** on Calendar → Releases is listed by `needs_attention` as `late-upload` with `agentCanAct: false`: the agent reports it and does nothing else (`packages/app/src/slices/agents/attention-work.ts:200-227`).
 - The extension only reads files listed in a pack as a video or a thumbnail (`edge/http/studio.ts:862-873`).
 - Every upload is marked not made for kids (`slices/studio/model.ts:13-15`).
 
@@ -181,6 +187,6 @@ Paths starting `slices/` or `edge/` are under `packages/app/src/`. All HTTP rout
 - Uploading or publishing through YouTube's API: absent by design.
 - D5 Money: none; the pack and the extension make no provider call.
 - D8 Concurrency between two Slopify tabs choosing items: last write of the settings row wins; `youtube_videos` upserts by `(project_id, short)`; no locking beyond SQLite's.
-- D1 Multi-user permissions: none beyond the pairing token and the same-origin check.
+- D1 Multi-user permissions: none beyond the pairing token and the same-origin check. An agent's in-process call carries no Origin, so it passes the page-only check (`edge/http/studio.ts:187-189`), and the exclusions above are what keep it from the upload queue.
 - D13 Notification: the extension's toasts on the Studio page only; Slopify emits no event or notification on fill or confirmation.
 - Custom thumbnails for shorts: absent; Studio's upload dialog offers none (`slices/studio/pack.ts:249-250`).

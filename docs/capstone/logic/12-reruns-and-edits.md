@@ -1,8 +1,8 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: 2cda7c622bb3
+content_hash: af91ec388784
 paths_covered:
   - ":(top)packages/app/src/slices/revisions/**"
   - ":(top)packages/app/src/slices/rebuild/service.ts"
@@ -42,6 +42,9 @@ paths_covered:
   - ":(top)packages/app/src/slices/rebuild/soften.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-shorts.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-youtube.ts"
+  - ":(top)packages/app/src/slices/rebuild/remake-outdated.ts"
+  - ":(top)packages/web/src/routes/projects-remake.ts"
+  - ":(top)packages/app/src/slices/reviews/holds.ts"
 absorbed_from:
 - features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-25-video-recovery@2026-09-25
@@ -49,6 +52,7 @@ absorbed_from:
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
 - features/2026-09-10-review-checkpoints@2026-09-13
+- features/2026-09-30-slopify-mcp@2026-10-11
 scenario: reruns-and-edits
 mockup_row: S10
 screens:
@@ -79,6 +83,8 @@ An existing project changes its setup, text, media and captions while retaining 
 | Rebuild preview / Start | `POST /:id/rebuild/preview`, `POST /:id/rebuild`; More → "Choose what to remake…" and the palette's "Remake …" commands | `packages/app/src/edge/http/revisions.ts:147`, `:158`, `packages/web/src/routes/project.tsx:444`, `:277` |
 | Re-run a section | `POST /:id/stages/:kind/rerun`, confirm dialog "Re-run this stage?" | `packages/app/src/edge/http/actions.ts:295`, `packages/web/src/project/confirmations.ts:62` |
 | Save as template | More → "Save as template…"; disabled without a revision or on the sample | `packages/web/src/routes/project.tsx:450`, `packages/app/src/slices/project-templates/from-project.ts:35` |
+| Remake outdated (several projects) | The Projects list's selection bar; an agent's `preview_remake_outdated` | `packages/web/src/routes/projects-remake.ts:3`, `packages/app/src/slices/rebuild/remake-outdated.ts:3-5`, `packages/app/src/edge/mcp/remake-tools.ts:43-120` |
+| Agent (MCP) | The same routes as tools, called in-process as the agent: `get_revision`, `read_narration_chunks`, `save_revision`, `restore_revision`, `preview_rebuild`, `start_rebuild`, `pause_project`, `resume_project`, `cancel_project`, `retry_stage`, `soften_stage`, `rerun_stage`, `redo_review` | `packages/app/src/edge/mcp/tools-runs.ts:3-107`, `packages/app/src/edge/mcp/tools-projects.ts:184-189` |
 
 Editing does not require idle stages or current provider credentials; readiness is checked when paid work is admitted. Save, Restore and Start carry the current base revision and a UUID idempotency key (`packages/app/src/slices/rebuild/model.ts:104`). A key already used by another operation, a rebuild admission, a control receipt or a recovery request is `idempotency-conflict`; a head that moved is `conflict` (`packages/app/src/slices/revisions/mutation-request.ts:37`). Unconditional legacy mutations (`PUT /:id/article`, image delete/regenerate, `PATCH /:id/providers`) answer 409 `revision-required` with "This change is now made from the Edit tab." (`packages/app/src/edge/http/actions.ts:314`).
 
@@ -112,6 +118,8 @@ Editing does not require idle stages or current provider credentials; readiness 
 15. Under the project lock, `admitCheckedPreview` rechecks the head, re-plans with the current catalogue and requires the stored review to still cover it (`stale-preview` otherwise), runs local readiness, refuses when a running row for a selected key has a different fingerprint, and admits (`packages/app/src/slices/rebuild/service.ts:166`). Admission clears the pause flag (`packages/app/src/slices/rebuild/admission-repo.ts:186`); the runner is ticked after commit (`packages/app/src/slices/rebuild/service.ts:210`).
 16. The web review drawer shows counts and cost, and lists beside Start what still holds it back (`packages/web/src/project/rebuild-review.tsx:12`). With `autoStart`, a preview needing no consent (nothing blocked, nothing to confirm, no unknown cost) starts at once (`packages/web/src/project/revision-workspace.tsx:375`).
 17. After admission the runner re-plans admitted work on every tick; an untouched waiting row (pending, one unsent piece, no attempt) takes new input fingerprints in place, so one step keeps one admitted row however many narration chunks land (`packages/app/src/slices/rebuild/runtime-materialize.ts:69`, `:122`).
+18. **Through MCP** an output edit is the same three calls the page makes: `save_revision` with `get_revision`'s `config` and `content` plus the change (a chunk's wording or delivery note in `content.narrationOverrides`, or its key in `edit.regenerate`), which starts nothing; `preview_rebuild` with the saved version as base, which is Choose what to remake with each output's estimate and the total and records nothing; then `start_rebuild` with the preview's id, `acknowledgeUnknownCosts` and the `confirmedProvidedWorkKeys` it accepts, which is the acknowledgement (`packages/app/src/edge/mcp/tools-runs.ts:70-106`). The route's own checks of Steps 13–15 apply unchanged, so no paid work starts unseen.
+19. **Remake outdated** (`remakeOutdated`, `packages/app/src/edge/mcp/remake-tools.ts:43-106`) takes up to 2,000 project ids and, one project at a time, reads the project, leaves it out with the page's own reason when it is running, the sample or otherwise blocked (`remakeBlocker`, `previewBlocker`, `packages/app/src/slices/rebuild/remake-outdated.ts:18-44`), prepares its baseline and previews `allAffected`; it answers each plan with its outdated work and cost, the projects left out and why, and the single total (`remakeTotal`, `:45`). Nothing starts: each plan the agent accepts is started with its own `start_rebuild`. The web's selection bar uses the same three functions (`packages/web/src/routes/projects-remake.ts:3`).
 
 ## Branches
 
@@ -122,6 +130,9 @@ Editing does not require idle stages or current provider credentials; readiness 
 - **Refusals before admit:** running or admitted work in the closure is `running`; an accepted provider job not yet collected is `accepted-job` (`packages/app/src/slices/rebuild/recovery-conflict.ts:15`, `:45`); a Video or Document rerun whose sources still need provider work is `readiness` "Use Continue the run…" (`packages/app/src/slices/rebuild/recovery.ts:227`); nothing generated is `invalid-selection` (`:107`). A refusal after the save returns `intentRevisionId` so the page offers Continue the run (`packages/app/src/edge/http/actions.ts:194`).
 - **Regenerate now** (web): with no unsaved draft, saves a revision marking the chosen work keys and then reviews `selected` those keys with `autoStart`; with an unsaved draft, the marks are added to the draft instead (`packages/web/src/project/revision-workspace.tsx:333`).
 - **Soften and retry** (`POST /:id/stages/:kind/soften`, `packages/app/src/edge/http/actions.ts:270-292`): the stage's softenable refused steps (`softenableKeys`, `packages/app/src/slices/rebuild/soften.ts:26-40`: every refused image of Images or Thumbnail, and refused short stills `shorts:N:image:M` of Video) get a softening request, then the stage is retried; none → 409. The image step (or a short's still, `packages/app/src/slices/rebuild/runtime-shorts.ts:254-275`) has the project's LLM reword the prompt, draws it, and clears the request once an image is made (scenario 13).
+- **Through MCP**: `retry_stage` is Try again; `soften_stage` and `rerun_stage` state the page's confirm sentence and are refused until called again with `confirmed: true` (`packages/app/src/edge/mcp/tools-runs.ts:24-46`, `packages/app/src/edge/mcp/call-route.ts:57-60`); `redo_review` is Redo beside a verdict (33-automatic-reviews.md). A re-run that needs a review first (supplied content to replace, or costs to acknowledge) is refused with the route's sentence, and the agent uses `preview_rebuild` and `start_rebuild` instead (`packages/app/src/edge/http/actions.ts:178-181`).
+- **Continue the run** (`resume_project`, `POST /:id/resume`, `packages/app/src/edge/http/actions.ts:243-248`) starts held and unfinished work, including work a saved edit left waiting. After a Cancel it continues only what was taken up again (`readmitted`: Try again, or Continue on the canceled run), each as Try again would; canceled stages stay canceled (`resumeSelection`, `packages/app/src/slices/rebuild/recovery-selection.ts:99-109`, `packages/app/src/kernel/runner/graph.ts:92-100`).
+- **Stopped runs**: a run a restart stopped before it finished, with no checkpoint of the person's reached and not parked only on an agent's review, reads **Stopped**; only Continue the run moves it, and the project's page offers it for exactly these (`resumable`, `packages/app/src/edge/http/actions.ts:85`; `projectHolds().stopped`, `packages/app/src/slices/reviews/holds.ts:128-143`). An agent may continue it as it may a paused run, once nothing in the project still needs fixing (45-mcp-agent-access.md).
 - **Retry** is `rebuild-required` in the legacy action wrapper (`packages/app/src/slices/rebuild/runtime-actions.ts:26`); routed Retry is direct recovery (scenario 13).
 
 ### Edits and affected work
@@ -152,7 +163,8 @@ Host-managed CLI paths are not compared with the container's path settings; nati
 
 ## Unhappy paths
 
-- Stale base: `conflict` with `currentRevisionId`; the page reloads the actual head (`packages/app/src/slices/revisions/mutation-request.ts:30`).
+- Stale base: `conflict` with `currentRevisionId`; the page reloads the actual head (`packages/app/src/slices/revisions/mutation-request.ts:30`). Through MCP the refusal adds "The project's current revision is <id>: read it with get_project, then call <tool> once more with baseRevisionId <id> and a new idempotencyKey." (`packages/app/src/edge/mcp/call-route.ts:288-291`).
+- MCP call to `soften_stage`, `rerun_stage` or `cancel_project` without `confirmed: true` → refused with the page's consequence and "call … again with confirmed: true"; nothing is sent to the route (`packages/app/src/edge/mcp/call-route.ts:57-60`).
 - Head moves during the save transaction: "Project head changed during the revision transaction." and nothing commits (`packages/app/src/slices/revisions/mutations.ts:204`).
 - Failure before commit leaves the prior head and outputs intact; prepared assets not referenced are discarded (`packages/app/src/slices/revisions/mutations.ts:229`).
 - Stale preview or changed catalogue at Start: `stale-preview` (`packages/app/src/slices/rebuild/service.ts:182`).
@@ -174,11 +186,11 @@ Save and Restore never initiate generation. Accepted work executes under revisio
 
 ## Outcomes & side effects
 
-Save and Restore persist a revision, manifest references and a `revision_mutations` receipt, and emit `project.updated` (`packages/app/src/edge/http/revisions.ts:131`). Start and recovery persist `rebuild_admissions` (and `project_recovery_requests`) and wake the runner after commit. Save as template snapshots the current revision into a new template with the project's channel (`packages/app/src/slices/project-templates/from-project.ts:64`). Tests: `packages/app/test/revision-*.test.ts`, `packages/app/test/direct-recovery*.test.ts`, `packages/app/test/e2e/editable-projects.test.ts`.
+Save and Restore persist a revision, manifest references and a `revision_mutations` receipt, and emit `project.updated` (`packages/app/src/edge/http/revisions.ts:131`). Start and recovery persist `rebuild_admissions` (and `project_recovery_requests`) and wake the runner after commit. Save as template snapshots the current revision into a new template with the project's channel (`packages/app/src/slices/project-templates/from-project.ts:64`). An agent's save, restore, remake start and recovery action is recorded as its action, once per idempotency key, and Project history marks the versions it saved "· by agent" and lists "Done by agents" (`packages/web/src/project/revision-history.tsx:99`, `:106-111`); a run an agent started or continued sends notices ending "· started by agent" (45-mcp-agent-access.md). Tests: `packages/app/test/revision-*.test.ts`, `packages/app/test/mcp-narration-fix.test.ts`, `packages/app/test/mcp-chunk-fix.test.ts`, `packages/app/test/direct-recovery*.test.ts`, `packages/app/test/e2e/editable-projects.test.ts`.
 
 ## Dimensions not in play
 
-- D1 authority: one local actor.
+- D1 authority: one local user; an agent through MCP has the same powers and checks, and differs only in the record.
 - D5 money: nothing is charged by Save/Restore; charges arise only from admitted work, shown as preview costs.
 - D7 time: no revision expiry and no automatic history purge.
 - D13 notification: no notification is sent by edits; run notices follow scenario 13's rules.

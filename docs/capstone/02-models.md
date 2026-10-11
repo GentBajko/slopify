@@ -1,8 +1,8 @@
 ---
-generated_at_commit: d83482c1175e
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: e3cc0ff8fc41
+content_hash: a62fcdb644b0
 paths_covered:
   - ":(top)packages/app/src/kernel/db/**"
   - ":(top)packages/app/src/kernel/ports/*.ts"
@@ -13,6 +13,7 @@ paths_covered:
   - ":(top)packages/app/src/catalog/*.ts"
   - ":(top)packages/app/src/updater/model.ts"
   - ":(top)packages/app/src/edge/http/*.ts"
+  - ":(top)packages/app/src/edge/mcp/*.ts"
   - ":(top)packages/app/src/edge/events/hub.ts"
   - ":(top)packages/app/src/edge/autostart/model.ts"
   - ":(top)packages/web/src/**/*api.ts"
@@ -25,7 +26,7 @@ paths_covered:
 
 # Models
 
-One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 42 SQL files numbered up to 0049 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
+One SQLite database (`slopify.db`, `packages/app/src/kernel/paths.ts:36`) opened with foreign keys on, WAL journaling and 0600 file modes (`packages/app/src/kernel/db/index.ts:8`), migrated by 55 SQL files numbered up to 0062 (`packages/app/src/kernel/db/migrations/`). Domain types live beside the slice that owns them (`packages/app/src/slices/*/model.ts`, `schema.ts`, `repo.ts`), provider contracts in `packages/app/src/kernel/ports/`, and the browser imports the app's own declarations through the `@app/*` path alias (`packages/web/tsconfig.json`, `packages/web/src/api.ts:1`). The Cloudflare collector has its own two-table D1 schema (`packages/collector/schema.sql:3`).
 
 Companion chapters own three areas in depth and are not repeated here: narration text preparation, glossary and pronunciation types in `02-models-narration.md`; research documents and the reader model in `02-models-research.md`; the Docker host, container and project-folder types in `02-models-docker.md`. `slices/narration/` and `slices/research/` types are listed there only.
 
@@ -50,8 +51,9 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Project | `packages/app/src/slices/admission/model.ts:292` | `projects` + `project_controls` | A project row with its accepted RunConfig and pause state |
 | StageActivity | `packages/app/src/slices/admission/model.ts:305` | In-memory | A running step in words, with its own progress: a percentage, or how many of its things are done |
 | Stage | `packages/app/src/slices/admission/model.ts:312` | `stages` | One stage of a project with state, progress, failure and ETA |
-| ProjectSummary | `packages/app/src/slices/admission/model.ts:338` | In-memory | Project plus derived status and the Keep as is mark (`project_set_aside`) |
-| ProjectListing | `packages/app/src/slices/admission/model.ts:349` | `projects` + `stages` + `project_channels` + `project_uploads` + `project_set_aside` + `video_stats` | Projects list row with progress, channel, upload mark, Keep as is mark, the long video's Studio views and CTR, and limit waits |
+| ProjectSummary | `packages/app/src/slices/admission/model.ts:344` | In-memory | Project plus derived status, the Keep as is mark (`project_set_aside`), the holds that name its held state word (prepared, waiting for the agent, stopped) and whether a step failed beside a wait |
+| ProjectHead | `packages/app/src/slices/admission/model.ts:370` | `projects` + `project_controls` | A live project with only its list settings, and how many times it was paused and stopped by a restart |
+| ProjectListing | `packages/app/src/slices/admission/model.ts:382` | `projects` + `stages` + `project_controls` + `project_channels` + `project_uploads` + `project_set_aside` + `review_checkpoints` + `external_reviews` | Projects list row with progress, channel, upload mark, Keep as is mark, holds, failed steps beside a wait, and limit waits |
 | ListingLimitWait | `packages/app/src/slices/admission/model.ts:366` | In-memory | A plan-limit wait shown on a project listing row |
 | FieldError | `packages/app/src/slices/admission/rules.ts:17` | In-memory | Field-level validation message |
 | AdmissionInput | `packages/app/src/slices/admission/rules.ts:27` | HTTP request/response | Input to admission rules: draft, staged files, required slots |
@@ -82,11 +84,12 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | ImageLandedEvent | `packages/app/src/kernel/events.ts:49` | SSE stream | One image saved, pushed to open pages |
 | NarrationPieceEvent | `packages/app/src/kernel/events.ts:58` | SSE stream | Narration piece saved, pushed to open pages |
 | ProjectStateEvent | `packages/app/src/kernel/events.ts:65` | SSE stream | Project state change pushed to open pages |
-| ReviewFlaggedEvent | `packages/app/src/kernel/events.ts:74` | SSE stream | Review flagged and kept an item, pushed to open pages |
+| ReviewFlaggedEvent | `packages/app/src/kernel/events.ts:74` | SSE stream | Review flagged and kept an item, pushed to open pages; says when the verdict was an agent's |
+| ReviewAutoPassedEvent | `packages/app/src/kernel/events.ts:89` | SSE stream | An External agent review got no verdict in its two hours and passed without review |
 | ProjectUpdatedEvent | `packages/app/src/kernel/events.ts:85` | SSE stream | Project changed; pages refetch |
 | RunningCountEvent | `packages/app/src/kernel/events.ts:90` | SSE stream | Number of running projects |
 | ScheduleTopicsEvent | `packages/app/src/kernel/events.ts:98` | SSE stream | Schedule held new topics for approval |
-| ProjectEvent | `packages/app/src/kernel/events.ts:107` | SSE stream (`kernel/events.ts`) | Union of every project event on the event stream |
+| ProjectEvent | `packages/app/src/kernel/events.ts:122` | SSE stream (`kernel/events.ts`) | Union of every project event on the event stream |
 | OutputMeta | `packages/app/src/slices/storage/model.ts:66` | `outputs.meta` JSON | Metadata JSON kept on an output row |
 | Output | `packages/app/src/slices/storage/model.ts:97` | `outputs` | A file a stage produced for a project |
 | StagedFile | `packages/app/src/slices/storage/model.ts:111` | `staged_files` + staging file | An uploaded file waiting in staging before a project owns it |
@@ -110,7 +113,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | RevisionOutputView | `packages/app/src/slices/revisions/model.ts:125` | In-memory | Revision output with selection and file availability |
 | RevisionPieceView | `packages/app/src/slices/revisions/model.ts:131` | In-memory | Revision piece with selection and file availability |
 | RevisionView | `packages/app/src/slices/revisions/model.ts:137` | In-memory | Saved revision with its outputs, pieces and article |
-| RevisionSummary | `packages/app/src/slices/revisions/model.ts:144` | In-memory | History row of a revision |
+| RevisionSummary | `packages/app/src/slices/revisions/model.ts:177` | In-memory | History row of a revision, marked when an agent saved it |
 | RevisionMutationResult | `packages/app/src/slices/revisions/model.ts:152` | In-memory | Save/Restore result or refusal |
 | BaselineResult | `packages/app/src/slices/revisions/model.ts:165` | In-memory | Lazy adoption of a legacy project into a first revision |
 | RevisionOutputRecord | `packages/app/src/slices/revisions/model.ts:178` | `revision_outputs` | Parsed revision_outputs row |
@@ -378,11 +381,22 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | NoticeSubject | `packages/app/src/slices/notifications/rules.ts:67` | In-memory | Project facts a finished/failed notification is written from |
 | TopicsNoticeSubject | `packages/app/src/slices/notifications/rules.ts:120` | In-memory | Held-topics facts a notification is written from |
 | ReviewStageSettings | `packages/app/src/slices/reviews/model.ts:16` | `RunConfig` JSON | Automatic review mode and prompt for one stage |
-| ReviewSettings | `packages/app/src/slices/reviews/model.ts:22` | `RunConfig.reviews` | Automatic review settings of a run: reviewer model, retries, per-stage modes |
+| ReviewSettings | `packages/app/src/slices/reviews/model.ts:37` | `RunConfig.reviews` | Automatic review settings of a run: reviewer (a model, or External agent (MCP)), retries, per-stage modes |
 | ReviewSettingsForm | `packages/app/src/slices/reviews/model.ts:90` | `play_drafts.document_json` | Review settings as Play and templates keep them |
 | ReviewVerdict | `packages/app/src/slices/reviews/model.ts:154` | In-memory | A reviewer's pass/fail answer with reasons |
-| ReviewRecord | `packages/app/src/slices/reviews/model.ts:160` | `review_verdicts` | One saved verdict, as the project page shows it |
+| ReviewRecord | `packages/app/src/slices/reviews/model.ts:185` | `review_verdicts` | One saved verdict, as the project page shows it, with who gave it and who acted on it |
 | ReviewView | `packages/app/src/slices/reviews/view.ts:11` | In-memory | Review verdict with current output, as the project page lists it |
+| ExternalMaterial | `packages/app/src/slices/reviews/external-model.ts:21` | `external_reviews.material` JSON | What the built-in reviewer would be sent: the prompt's parts and the pictures by stored path |
+| ExternalReview | `packages/app/src/slices/reviews/external-model.ts:26` | `external_reviews` | A review an External agent answers through MCP: material, state, deadline, verdict and who answered |
+| ReviewStanding | `packages/app/src/slices/reviews/external-model.ts:49` | In-memory | Where an external review stands: waiting, or why it takes no verdict |
+| ProjectHolds | `packages/app/src/slices/reviews/holds.ts:20` | In-memory (`review_checkpoints` + `external_reviews` + `revision_work` + `prepared_videos`) | What each held run waits for when it isn't the person: prepared, waiting for the agent, stopped, and the checkpoints holding it now |
+| CheckpointHold | `packages/app/src/slices/reviews/holds.ts:39` | In-memory | One checkpoint holding a run now, and whether it waits for the person or the run's day |
+| HeldStateWord | `packages/app/src/slices/admission/state-words.ts:45` | In-memory | The word a held run reads by: Kept as is, Waiting for the agent, Stopped, Prepared, Waiting for your review |
+| Actor | `packages/app/src/slices/agents/model.ts:7` | `project_starts.actor`, `review_verdicts.action_by`, `external_reviews.answered_by` | Who asked for a change: the person or an agent |
+| AgentAction | `packages/app/src/slices/agents/repo.ts:5` | `agent_actions` | One change an agent made through MCP |
+| AgentActionView | `packages/app/src/slices/agents/repo.ts:18` | In-memory | An agent action with the name of the project or schedule it changed |
+| AttentionEntry | `packages/app/src/slices/agents/attention.ts:36` | In-memory | One thing waiting for someone, as `needs_attention` lists it |
+| ToldFailures | `packages/app/src/slices/notifications/told.ts:6` | `told_failures` | The failed steps a project's notices already named |
 | UsageTotals | `packages/app/src/slices/run-cost/panel.ts:18` | In-memory | Token, character, image and second totals of a run |
 | CostLine | `packages/app/src/slices/run-cost/panel.ts:27` | In-memory | Calls and cost totals |
 | StageCost | `packages/app/src/slices/run-cost/panel.ts:37` | In-memory | Run cost of one stage |
@@ -447,6 +461,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | TutorialHit | `packages/app/src/slices/tutorials/library.ts:31` | In-memory | Tutorial search hit |
 | TutorialBook | `packages/app/src/slices/tutorials/library.ts:40` | In-memory | All tutorial pages |
 | UpdateInfo | `packages/app/src/updater/model.ts:5` | In-memory | Update check state |
+| RouteTool | `packages/app/src/edge/mcp/route-tool.ts:8` | In-memory (the `routeTools` table) | One `/api` route offered to agents as an MCP tool |
 | ProjectListBody | `packages/web/src/api.ts:98` | Browser HTTP DTO | GET projects body |
 | ProjectBody | `packages/web/src/api.ts:104` | Browser HTTP DTO | GET project body: head revision, project, stages, outputs |
 | CreatedProjectBody | `packages/web/src/api.ts:113` | Browser HTTP DTO | Project create body |
@@ -737,7 +752,11 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | status | `ProjectState` | yes | accepted: done, partial, pending, running, failed, canceled, paused |
-| setAside | `boolean` | no | "Keep as is" on Needs you, while `project_set_aside` names the current head revision (`packages/app/src/slices/admission/model.ts:341`) |
+| setAside | `boolean` | no | "Keep as is" on Needs you, while `project_set_aside` names the current head revision (`packages/app/src/slices/admission/model.ts:348`) |
+| prepared | `boolean` | no | Prepared ahead by a schedule, its own Before Video hold the only checkpoint left (`projectHolds`, `packages/app/src/slices/reviews/holds.ts:64`) |
+| waitingForAgent | `boolean` | no | Parked on an External agent review, no checkpoint of the person's reached |
+| stopped | `boolean` | no | Stopped before it finished, as a restart leaves a run: only Continue the run goes on |
+| stepFailed | `boolean` | no | A step failed while another still waits for the agent or the person: the run reads by that wait (`readsByWaitBesideFailure`) and is listed as failed too (`failedRun`, `packages/app/src/slices/admission/state-words.ts:126`, `:151`) |
 | id | `string` | yes |  |
 | title | `string` | yes |  |
 | format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
@@ -753,11 +772,17 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | progress | `number` | yes |  |
 | channelId | `string` | yes |  |
 | uploadedAt | `string \| null` | yes |  |
-| views | `number` | no | The long video's views from `video_stats` (`packages/app/src/slices/admission/model.ts:359`) |
-| ctr | `number` | no | The long video's click-through rate in percent from `video_stats` |
 | limitWaits | `readonly ListingLimitWait[]` | no |  |
-| status | `ProjectState` | yes | accepted: done, partial, pending, running, failed, canceled, paused |
+| stepFailures | `readonly string[]` | no | Each failed step by its identity (`failureId`) while another step waits for the agent, the person or its day (`stepFailedWhileWaiting`), so While you were away tells each new failure once (`packages/app/src/slices/admission/model.ts:392`) |
+| holding | `readonly CheckpointHold[]` | no | The checkpoints holding the run now; left out when none holds it |
+| pauseCount | `number` | no | From `project_controls.pauses`, only while the project is paused (`packages/app/src/slices/admission/heads.ts:54`) |
+| stopCount | `number` | no | From `project_controls.stops`, once a restart stopped it |
+| status | `ProjectState` | yes | accepted: done, partial, pending, running, failed, canceled, paused; an uploaded project with nothing left reads `done` (`uploadedAndSettled`) |
 | setAside | `boolean` | no |  |
+| prepared | `boolean` | no | As ProjectSummary |
+| waitingForAgent | `boolean` | no | As ProjectSummary |
+| stopped | `boolean` | no | As ProjectSummary |
+| stepFailed | `boolean` | no | As ProjectSummary |
 | id | `string` | yes |  |
 | title | `string` | yes |  |
 | format | `Format` | yes | accepted: 16:9, 9:16, 1:1 |
@@ -1104,9 +1129,28 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | stage | `string` | yes |
 | itemKey | `string` | yes |
 | reason | `string` | no |
+| byAgent | `boolean` | no |
 | revisionId | `string` | no |
 | workId | `string` | no |
 | workPieceId | `string` | no |
+
+`byAgent` is set when the verdict was an external agent's; the notice then reads "· by agent" and "An agent's review flagged …" (`packages/app/src/slices/notifications/rules.ts:75`).
+
+### ReviewAutoPassedEvent
+
+| Field | Type | Required |
+|---|---|---|
+| type | `"review.auto-passed"` | yes |
+| projectId | `string` | yes |
+| reviewId | `string` | yes |
+| stage | `string` | yes |
+| itemKey | `string` | yes |
+| item | `string` | no |
+| revisionId | `string` | no |
+| workId | `string` | no |
+| workPieceId | `string` | no |
+
+Emitted by `releaseDueReviews` for each review settled at its deadline (`packages/app/src/slices/reviews/external-release.ts:27`); `item` is the item as the project page names it ("image 3"). The notifier turns it into "Passed without review: no agent answered in 2 h" (`autoPassNoticeText`, `packages/app/src/slices/notifications/rules.ts:97`).
 
 ### ProjectUpdatedEvent
 
@@ -1142,9 +1186,9 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| type | `"stage.state" \| "stage.progress" \| "article.delta" \| "llm.preview" \| "image.landed" \| "narration.piece" \| "project.state" \| "review.flagged" \| "project.updated"` | yes | accepted: stage.state, stage.progress, article.delta, llm.preview, image.landed, narration.piece, project.state, review.flagged, project.updated |
+| type | `"stage.state" \| "stage.progress" \| "article.delta" \| "llm.preview" \| "image.landed" \| "narration.piece" \| "project.state" \| "review.flagged" \| "review.auto-passed" \| "project.updated"` | yes | accepted: stage.state, stage.progress, article.delta, llm.preview, image.landed, narration.piece, project.state, review.flagged, review.auto-passed, project.updated |
 | projectId | `string` | yes |  |
-| stage | `StageKind \| string` | no | accepted: research, article, audio, images, thumbnail, video, document; only when type is stage.state or stage.progress or llm.preview or review.flagged |
+| stage | `StageKind \| string` | no | accepted: research, article, audio, images, thumbnail, video, document; only when type is stage.state or stage.progress or llm.preview or review.flagged or review.auto-passed |
 | state | `StageState \| ProjectState` | no | accepted: done, pending, running, failed, canceled, provided, skipped, partial, paused; only when type is stage.state or project.state |
 | failureReason | `string` | no | only when type is stage.state |
 | failureKind | `string` | no | only when type is stage.state |
@@ -1163,10 +1207,13 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | key | `string` | no | only when type is narration.piece |
 | durationMs | `number \| null` | no | only when type is narration.piece |
 | verdictId | `string` | no | only when type is review.flagged |
-| itemKey | `string` | no | only when type is review.flagged |
+| itemKey | `string` | no | only when type is review.flagged or review.auto-passed |
 | reason | `string` | no | only when type is review.flagged |
+| byAgent | `boolean` | no | only when type is review.flagged |
+| reviewId | `string` | no | only when type is review.auto-passed |
+| item | `string` | no | only when type is review.auto-passed |
 
-Union of 9 object variants; a field present in only some variants is `Required: no`.
+Union of 10 object variants; a field present in only some variants is `Required: no`.
 
 ### OutputMeta
 
@@ -1439,6 +1486,9 @@ Union of 2 object variants; a field present in only some variants is `Required: 
 | title | `string` | yes |
 | createdAt | `string` | yes |
 | current | `boolean` | yes |
+| byAgent | `boolean` | no |
+
+`byAgent` marks a version an agent saved through MCP (an `agent_actions` row names it, `agentRevisionIds`, `packages/app/src/slices/agents/repo.ts:80`); Project history shows it "· by agent". `GET /api/projects/:id/revisions` answers `{revisions, agentActions}`.
 
 ### RevisionMutationResult
 
@@ -4263,6 +4313,7 @@ Union of 5 object variants; a field present in only some variants is `Required: 
 | provider | `string` | yes |  |
 | model | `string` | yes |  |
 | thinking | `ThinkingMode` | no | accepted: off, low, medium, high, xhigh, max, ultra |
+| reviewer | `"agent"` | no | "agent" is External agent (MCP): an external agent answers through MCP, `provider`/`model` are unused and the estimate charges nothing; absent is the model (`packages/app/src/slices/reviews/model.ts:44`) |
 | retries | `number` | no |  |
 | stages | `Partial<Record<ReviewStage, ReviewStageSettings>>` | yes |  |
 
@@ -4273,6 +4324,7 @@ Union of 5 object variants; a field present in only some variants is `Required: 
 | provider | `string` | yes |  |
 | model | `string` | yes |  |
 | thinking | `ThinkingMode` | no | accepted: off, low, medium, high, xhigh, max, ultra |
+| reviewer | `Reviewer` | no | accepted: model, agent; labels Model / External agent (MCP) (`reviewerLabels`, `packages/app/src/slices/reviews/model.ts:26`) |
 | retries | `string` | yes |  |
 | stages | ` Partial<Record<ReviewStage, { readonly mode: ReviewMode; readonly prompt: string }>> ` | yes |  |
 
@@ -4294,12 +4346,14 @@ Union of 5 object variants; a field present in only some variants is `Required: 
 | stage | `ReviewStage` | yes | accepted: article, images, thumbnail, narration, shorts |
 | itemFingerprint | `string` | yes |  |
 | reviewFingerprint | `string` | yes |  |
-| outcome | `ReviewOutcome` | yes | accepted: redo, passed, flagged |
+| outcome | `ReviewOutcome` | yes | accepted: redo, passed, flagged, auto-passed (an External agent review that passed at its deadline with no verdict) |
 | attempt | `number` | yes |  |
 | action | `"overruled" \| "redone" \| null` | yes | accepted: overruled, redone |
 | actionAt | `string \| null` | yes |  |
 | redoState | `"pending" \| "started" \| "failed" \| null` | yes | accepted: pending, failed, started |
 | redoError | `string \| null` | yes |  |
+| answeredBy | `ReviewAnswerer` | yes | accepted: model, agent, person, nobody (nobody for auto-passed) |
+| actionBy | `Actor \| null` | yes | Who overruled it or had it made again: person or agent |
 | createdAt | `string` | yes |  |
 | passed | `boolean` | yes |  |
 | reasons | `readonly string[]` | yes |  |
@@ -4318,15 +4372,161 @@ Union of 5 object variants; a field present in only some variants is `Required: 
 | stage | `ReviewStage` | yes | accepted: article, images, thumbnail, narration, shorts |
 | itemFingerprint | `string` | yes |  |
 | reviewFingerprint | `string` | yes |  |
-| outcome | `ReviewOutcome` | yes | accepted: redo, passed, flagged |
+| outcome | `ReviewOutcome` | yes | accepted: redo, passed, flagged, auto-passed (an External agent review that passed at its deadline with no verdict) |
 | attempt | `number` | yes |  |
 | action | `"overruled" \| "redone" \| null` | yes | accepted: overruled, redone |
 | actionAt | `string \| null` | yes |  |
 | redoState | `"pending" \| "started" \| "failed" \| null` | yes | accepted: pending, failed, started |
 | redoError | `string \| null` | yes |  |
+| answeredBy | `ReviewAnswerer` | yes | accepted: model, agent, person, nobody (nobody for auto-passed) |
+| actionBy | `Actor \| null` | yes | Who overruled it or had it made again: person or agent |
 | createdAt | `string` | yes |  |
 | passed | `boolean` | yes |  |
 | reasons | `readonly string[]` | yes |  |
+
+### ExternalMaterial
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| request | `ReviewMaterial` | yes | The prompt's parts as the built-in reviewer gets them (`reviewMaterial`, `packages/app/src/slices/rebuild/runtime-review.ts:183`) |
+| images | `readonly { stored: string; name: string }[]` | yes | Pictures by their stored path, found again where they are when read |
+
+### ExternalReview
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes |  |
+| projectId | `string` | yes |  |
+| revisionId | `string` | yes |  |
+| workId | `string` | yes |  |
+| pieceId | `string` | yes |  |
+| workKey | `string` | yes |  |
+| itemKey | `string` | yes |  |
+| stage | `ReviewStage` | yes | accepted: article, images, narration, thumbnail, shorts |
+| itemFingerprint | `string` | yes |  |
+| reviewFingerprint | `string` | yes | One row per review step fingerprint, like `review_verdicts` |
+| material | `ExternalMaterial` | yes |  |
+| state | `ExternalReviewState` | yes | accepted: waiting, answered, auto-passed, superseded, canceled (`externalReviewStates`, `packages/app/src/slices/reviews/external-model.ts:10`) |
+| waitingSince | `string` | yes |  |
+| deadlineAt | `string` | yes | `waitingSince` + `externalReviewWaitMs` (2 h, `packages/app/src/slices/reviews/external-model.ts:7`) |
+| verdict | `ReviewVerdict \| null` | yes | Null while waiting and for auto-passed |
+| answeredBy | `Actor \| null` | yes | person or agent; null until answered |
+| answeredAt | `string \| null` | yes | Also set when it auto-passes |
+
+States: `waiting` (opened by the review step, its stage held); `answered` (the first verdict saved, `answerExternalReview`, `packages/app/src/slices/reviews/external-repo.ts:80`); `auto-passed` (no verdict by `deadlineAt`, `settleExternalReviews`, `:131`); `superseded` (its item was made again or edited and a new review of it waits); `canceled` (Cancel closed it while it waited, `stopWaitingReviews`, `:51`; taken up again after Retry or Continue the run, its step opens a fresh review that waits a new two hours). Rows parse through `externalReviewOf` (`packages/app/src/slices/reviews/external-rows.ts:38`).
+
+### ReviewStanding
+
+`ExternalReviewState | "trashed" | "canceled" | "replaced-pending"` (`packages/app/src/slices/reviews/external-model.ts:49`), read by `reviewStanding` (`packages/app/src/slices/reviews/external-waiting.ts:36`). `trashed`: its project is in the Trash, so it takes no verdict and does not pass; it waits again once restored. `replaced-pending`: its item was replaced but no new review waits yet (the item is still being made again, or an edit is saved but not continued). Each standing other than `waiting` has one sentence in `closedReviewSentences` (`:53`), which `get_external_review` explains and a refused verdict repeats after "The verdict wasn't saved."
+
+### ProjectHolds
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| prepared | `ReadonlySet<string>` | yes | Projects prepared ahead by a schedule: its own Before Video hold not yet approved, no checkpoint of the person's left, not stopped |
+| waitingForAgent | `ReadonlySet<string>` | yes | Projects parked on an External agent review, with no checkpoint of the person's reached and no other step held for Continue the run |
+| stopped | `ReadonlySet<string>` | yes | Projects stopped before they finished, as a restart leaves a run; a project's page offers Continue the run for exactly these (`resumable`) |
+| holding | `ReadonlyMap<string, readonly CheckpointHold[]>` | yes | Each project's checkpoints that hold its run now, their stage's inputs made |
+
+`projectHolds` (`packages/app/src/slices/reviews/holds.ts:64`) is the one rule the Projects list, a project's page, the calendar, Home and the MCP tools read.
+
+### CheckpointHold
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| checkpointId | `string` | yes |  |
+| stage | `CheckpointStage` | yes |  |
+| waitsFor | `"person" \| "day"` | yes | `day`: a schedule's own Before Video hold waiting for its day |
+| revisionId | `string` | yes | What `approve_checkpoint` names |
+| fingerprint | `string` | yes |  |
+| since | `string` | yes |  |
+
+### State words
+
+One table of words for every state, browser-safe, read by the web's lists and pages and by the MCP tools (`stateWord` added to project lists and bodies, `packages/app/src/edge/mcp/state-shapes.ts:37`, `:50`) (`packages/app/src/slices/admission/state-words.ts:9`, `:20`).
+
+| State | Word |
+|---|---|
+| Project `pending` (none of its run done, nothing held) | Queued |
+| Project `running` / `paused` / `failed` / `partial` / `done` / `canceled` | Running / Paused / Failed / Done with problems / Done / Canceled |
+| Step `pending` / `running` / `done` / `provided` / `failed` / `canceled` / `skipped` | Not started / Running / Done / Provided / Failed / Canceled / Off |
+
+A held run (`heldRun`: pending with some of its run done, a step failed, stopped or parked on an agent's review) reads by `heldStateWord` in this order (`packages/app/src/slices/admission/state-words.ts:80`):
+
+| Precedence | Word | When |
+|---|---|---|
+| 1 | Kept as is | `setAside` |
+| 2 | Waiting for the agent | `waitingForAgent` |
+| 3 | Stopped | `stopped` |
+| 4 | Prepared | `prepared` |
+| 5 | Waiting for your review | otherwise: a checkpoint of the person's |
+
+Helpers over the same facts: `parkedOnAgent` and `runningNow` (running, or parked on an agent's review: Home's Running and the Projects Running filter), `queuedRun`, `waitsForPerson` (paused, or held for the person: Needs you), `readsByWaitBesideFailure` (the `stepFailed` flag), `stepFailedWhileWaiting` (a step failed while another waits for the agent, the person or its day, even while a third still runs: what "Step failed" is told for), `failedRun` (failed, or `stepFailed`) (`packages/app/src/slices/admission/state-words.ts:90`-`:151`). A failed step's identity is `failureId(kind, finishedAt)` = `kind@finishedAt`, so a step that fails again after Try again is another failure (`packages/app/src/kernel/pipeline.ts:42`).
+
+### Actor
+
+`"person" | "agent"` (`actors`, `packages/app/src/slices/agents/model.ts:6`). A route reads it with `actorOf(c)`: `agent` only when the request carries the MCP endpoint's in-process bindings `{actor: "agent"}`, which no network request can set (`packages/app/src/edge/http/actor.ts:7`, `:9`).
+
+### AgentAction
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes |  |
+| projectId | `string \| null` | yes | Null for a change that names no project (a schedule's topics, the Library, a setting) |
+| scheduleId | `string \| null` | yes |  |
+| tool | `string` | yes | The MCP tool |
+| title | `string` | yes | The tool's title as the history shows it |
+| revisionId | `string \| null` | yes | The version the action saved, when it saved one |
+| createdAt | `string` | yes |  |
+
+`AgentActionView` adds `subject: string | null`, the project or schedule name while it still exists (`packages/app/src/slices/agents/repo.ts:18`). `recordAgentAction` writes one row per successful non-GET call that is not `unrecorded`, once per `idempotencyKey` (`packages/app/src/slices/agents/repo.ts:51`); `recentAgentActions` lists the latest `recentAgentActionsMax` = 20 for Settings → Connections → Agents (MCP) (`:23`, `:91`).
+
+### AttentionEntry
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| kind | `AttentionKind` | yes | See below |
+| since | `string` | yes | Entries are listed oldest first |
+| projectId | `string \| null` | yes | Null for a schedule's held topics |
+| title | `string` | yes | The project's title, or the schedule's name |
+| stage | `string \| null` | yes |  |
+| itemKey | `string \| null` | yes |  |
+| reason | `string` | yes | The reason or error text |
+| autoRetryInFlight | `boolean` | yes | Slopify is already retrying or redoing it (a chunk retry waiting for a busy project included): an agent leaves it alone |
+| agentCanAct | `boolean` | yes | False for what an agent only reports and for anything in flight |
+| ids | `Record<string, string>` | yes | The fixing tools' arguments by name |
+| tools | `readonly string[]` | yes | The fixing tools, in the order the attend routine uses them |
+
+| Kind | What it lists |
+|---|---|
+| `external-review` | An External agent review waiting for its verdict |
+| `flagged-verdict` | A flagged verdict waiting for Overrule or Redo |
+| `checkpoint` | A reached checkpoint of the person's (a project's own template Before Video checkpoint included) |
+| `failed-step` | A failed step, a short whose pick stopped included |
+| `paused-run` | A paused run |
+| `stopped-run` | A run a restart stopped; an agent may Continue it |
+| `held-topics` | A schedule's held topics |
+| `late-upload` | A video marked Late · upload now (report only) |
+| `extension-failure` | A failed finishing touch of the Studio extension (report only) |
+
+`attentionKinds` (`packages/app/src/slices/agents/attention.ts:22`); `needsAttention` reads each source on its own and leaves out Kept as is projects, a prepared project's schedule Before Video hold and checkpoints not reached yet. A row it can't read is skipped and logged, and a source that fails is left out and logged (`packages/app/src/slices/agents/attention.ts:66`, `packages/app/src/slices/agents/attention-work.ts:11`).
+
+### RouteTool
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| name | `string` | yes | The MCP tool name |
+| route | `string` | yes | "POST /api/projects/:id/resume": method and path as the router declares it |
+| title | `string` | yes |  |
+| description | `string` | yes |  |
+| confirm | `string` | no | The web page's confirm-dialog consequence; the tool refuses until `confirmed: true` |
+| confirmFrom | `{ route: string; text: (value) => string \| undefined }` | no | Reads the page's GET route to word the consequence with this call's numbers |
+| unrecorded | `true` | no | A POST that only looks, checks or prices: not recorded in `agent_actions` |
+| reachesOut | `"asks" \| "sends"` | no | Marked open-world to the agent's client |
+| upload | `"multipart" \| "raw"` | no | A route that takes a file |
+| shape | `(value) => unknown` | no | What the agent is shown instead of the route's answer: state words added, or a credential left out |
+
+`routeTools` is the union of the nine `tools-*.ts` tables (`packages/app/src/edge/mcp/tools.ts:13`); `callRoute` calls the route in-process (`packages/app/src/edge/mcp/call-route.ts:44`). MCP annotations follow the method: `readOnlyHint` for GET or an unrecorded non-sending POST, `destructiveHint` for DELETE or `confirm`, `openWorldHint` when `reachesOut`. `/api` routes offered as no tool are listed with a reason in `excludedRoutes` (`packages/app/src/edge/mcp/excluded-routes.ts:20`).
 
 ### UsageTotals
 
@@ -5444,6 +5644,7 @@ Revisions and rebuilds:
 - `revision_mutations`, `project_control_receipts`, `rebuild_admissions` and `project_recovery_requests` are keyed by `(project_id, idempotency_key)`; `checkMutation` treats the four as one idempotency namespace (`packages/app/src/slices/revisions/mutation-request.ts:37`, `packages/app/src/kernel/db/migrations/0012-project-recovery.sql:3`).
 - `review_checkpoints` anchor one work row per revision and stage; `review_checkpoint_approvals` record the exact revision, checkpoint and fingerprint released (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:2`).
 - `review_verdicts` cascade from `projects`; `revision_id` and `item_key` are plain columns; `review_fingerprint` is unique per project, so one review of one output is asked once (`packages/app/src/kernel/db/migrations/0025-automatic-reviews.sql:20`).
+- `external_reviews` cascade from `projects`; `revision_id`, `work_id`, `piece_id` name the review step by value, and `review_fingerprint` is unique per project, so one review step opens one row; a superseded or canceled row is reopened in place when its step asks again (`packages/app/src/kernel/db/migrations/0059-external-review-canceled.sql:4`, `packages/app/src/slices/reviews/external-repo.ts:13`). An answered or auto-passed row becomes a `review_verdicts` row when the step resumes (`answered_by` agent or person, or `nobody` for `auto-passed`) (`packages/app/src/slices/rebuild/runtime-agent-review.ts:82`).
 
 Play drafts, templates and schedules:
 
@@ -5472,8 +5673,16 @@ Library and settings:
 - `library_versions` keys `(item_kind, item_id, version)` over `prompts` or `entries` without a foreign key; the save path deletes versions with their item (`packages/app/src/kernel/db/migrations/0031-prompt-history-and-description-edits.sql:6`, `packages/app/src/slices/library/history.ts:101`).
 - `document_themes` and `narration_aliases` are referenced by nothing; projects copy their values (`packages/app/src/kernel/db/migrations/0016-document-themes.sql:1`, `packages/app/src/kernel/db/migrations/0035-narration-aliases.sql:1`).
 - Trash: `project_trash` stamps a project; `deleted_at` columns stamp prompts, entries, templates and schedules; `schedules.purged_at` marks a schedule that left the trash (`packages/app/src/kernel/db/migrations/0039-channel-essentials.sql:11`). Lists skip stamped projects through `liveProject` (`packages/app/src/slices/admission/repo.ts:68`); `purgeExpired` removes rows older than `trashDays` = 30 (`packages/app/src/slices/trash/service.ts:288`, `packages/app/src/slices/trash/model.ts:10`).
-- `settings` rows are key/value strings. Keys in use: `silenceGapSeconds`, `appearance`, `loudness` (`packages/app/src/slices/settings/playback.ts:24`); `tutorial.session` (`packages/app/src/slices/settings/tutorial.ts:35`); `provider.defaults`, `first-run.done` (`packages/app/src/slices/settings/first-run.ts:15`); `cli.path.<installation>` (`packages/app/src/slices/settings/cli-paths.ts:40`); `voices.realPerson` (`packages/app/src/slices/settings/voices.ts:132`); `whats-new.seen-major` (`packages/app/src/slices/settings/whats-new.ts:9`); `patchNotes.seenVersion` (`packages/app/src/slices/patch-notes/seen.ts:11`); `notificationUrl` (`packages/app/src/slices/notifications/settings.ts:7`); `backups.config`, `backups.status` (`packages/app/src/slices/backups/model.ts:8`); `files.location`, `files.move` (`packages/app/src/slices/storage/files-location.ts:27`); `library.photorealisticPrompts` (`packages/app/src/slices/library/photorealistic.ts:14`); `channel_links` (`packages/app/src/slices/youtube/edits-repo.ts:22`); `channels.importFilter.<channelId>` (`packages/app/src/slices/channels/videos.ts:40`); `schedules.held-topic-values` (`packages/app/src/slices/schedules/topics.ts:368`); `studio.playlist[.<channelId>]`, `studio.pairing`, `studio.projectPlaylists`, `studio.realFootage`, `studio.fillQueue.<hash>` (`packages/app/src/slices/studio/settings.ts:10`, `packages/app/src/slices/studio/settings.ts:117`, `packages/app/src/slices/studio/settings.ts:167`, `packages/app/src/slices/studio/settings.ts:212`); `onboarding.dismissed`, `onboarding.sample[.<id>]`, `onboarding.packs`, `onboarding.short-requests` (`packages/app/src/slices/onboarding/state.ts:11`); `autostart.answered` (`packages/app/src/edge/autostart/model.ts:30`).
+- `settings` rows are key/value strings. Keys in use: `silenceGapSeconds`, `appearance`, `loudness` (`packages/app/src/slices/settings/playback.ts:24`); `tutorial.session` (`packages/app/src/slices/settings/tutorial.ts:35`); `provider.defaults`, `first-run.done` (`packages/app/src/slices/settings/first-run.ts:15`); `cli.path.<installation>` (`packages/app/src/slices/settings/cli-paths.ts:40`); `voices.realPerson` (`packages/app/src/slices/settings/voices.ts:132`); `whats-new.seen-major` (`packages/app/src/slices/settings/whats-new.ts:9`); `patchNotes.seenVersion` (`packages/app/src/slices/patch-notes/seen.ts:11`); `notificationUrl` (`packages/app/src/slices/notifications/settings.ts:7`); `backups.config`, `backups.status` (`packages/app/src/slices/backups/model.ts:8`); `files.location`, `files.move` (`packages/app/src/slices/storage/files-location.ts:27`); `library.photorealisticPrompts` (`packages/app/src/slices/library/photorealistic.ts:14`); `channel_links` (`packages/app/src/slices/youtube/edits-repo.ts:22`); `channels.importFilter.<channelId>` (`packages/app/src/slices/channels/videos.ts:40`); `schedules.held-topic-values` (`packages/app/src/slices/schedules/topics.ts:368`); `studio.playlist[.<channelId>]`, `studio.pairing`, `studio.projectPlaylists`, `studio.realFootage`, `studio.fillQueue.<hash>` (`packages/app/src/slices/studio/settings.ts:10`, `packages/app/src/slices/studio/settings.ts:117`, `packages/app/src/slices/studio/settings.ts:167`, `packages/app/src/slices/studio/settings.ts:212`); `onboarding.dismissed`, `onboarding.sample[.<id>]`, `onboarding.packs`, `onboarding.short-requests` (`packages/app/src/slices/onboarding/state.ts:11`); `autostart.answered` (`packages/app/src/edge/autostart/model.ts:30`); `agents.lastConnectedAt` (`packages/app/src/slices/agents/connection.ts:7`).
 - `provider_keys` is keyed by provider; `credential_generation` is a fresh UUID on every save (`packages/app/src/slices/settings/repo.ts:21`).
+
+Agents (MCP):
+
+- `agent_actions` cascade from `projects` when `project_id` is set; `schedule_id` and `revision_id` are plain columns; the partial unique index `agent_actions_once` over `(tool, project_id or '', idempotency_key)` records a replayed call once (`packages/app/src/kernel/db/migrations/0056-agent-actions.sql:4`, `packages/app/src/kernel/db/migrations/0057-agent-action-once.sql:3`). `subjectsOf` picks the projects a call changed: the one its path names, those its body lists, or those its answer made (`packages/app/src/edge/mcp/attribution.ts:20`).
+- `project_starts` has one row per project, replaced on each start by `startRecorder` with `actorOf(c)` (`packages/app/src/edge/http/starts.ts:35`, `packages/app/src/slices/agents/repo.ts:105`); `GET /api/projects/:id` answers it as `startedBy` (`lastStarter`, `:116`).
+- `told_failures` cascade from `projects`; `failure_id` is a `failureId` (`kind@finishedAt`), kept only while the project still has that failure (`packages/app/src/slices/notifications/told.ts:26`).
+- `project_controls.pauses` counts each pause (`setProjectPaused`, `packages/app/src/slices/admission/repo.ts:203`); `project_controls.stops` counts each restart that stopped the project's unfinished work (`recoverWork`, `packages/app/src/slices/rebuild/repo.ts:102`).
+- `settings` key `agents.lastConnectedAt`: written on each MCP `initialize` (`packages/app/src/slices/agents/connection.ts:7`).
 
 Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates` holds one row per counter key (`packages/collector/src/index.ts:71`, `packages/collector/src/index.ts:86`).
 
@@ -5494,10 +5703,11 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 | Runner → browser events | ProjectEvent objects are JSON-serialized onto SSE (`event` = type) by the hub; the browser `JSON.parse`s without validation | `packages/app/src/edge/events/hub.ts:105`, `packages/app/src/edge/http/app.ts:299`, `packages/web/src/events.ts:186` |
 | HTTP responses → browser | Route handlers `c.json` domain objects; `packages/web/src/api.ts` names the bodies from the app's declarations (`*Body` interfaces) and casts; drafts, revisions, checkpoints and the tutorial session parse request bodies (and draft/revision responses) with the app's zod schemas; problems are RFC 9457 `application/problem+json` with `fields`/`errors` members | `packages/web/src/api.ts:94`, `packages/web/src/http.ts:24`, `packages/web/src/play/draft-api.ts:94`, `packages/web/src/project/revision-api.ts:114`, `packages/web/src/tutorial/session-api.ts:28`, `packages/app/src/edge/http/problem.ts:29` |
 | Upload pack → extension | UploadPack/PackItem are copied, not imported, into the extension; the copy's PackItem makes the fields an older app omits optional and has no `pickable`; the worker base64-encodes thumbnails and captions into FillPayload, and the hidden video frame hands the video `File` to the Studio page by `postMessage` | `packages/app/src/slices/studio/model.ts:37`, `packages/extension/src/pack.ts:1`, `packages/extension/src/background.ts:96`, `packages/extension/src/video-frame.ts:28` |
-| Database → backup tar | Rows travel table by table as stored (`BackupRow` cells: string, finite number, null) with the schema version they fit; project tables per project, library and usage tables once; `image_blobs` travel as files; provider keys, the machine id and `project_queue` never leave | `packages/app/src/slices/storage/backup-format.ts:38`, `packages/app/src/slices/storage/backup-format.ts:83`, `packages/app/src/slices/storage/backup-export.ts:270` |
+| Database → backup tar | Rows travel table by table as stored (`BackupRow` cells: string, finite number, null) with the schema version they fit; project tables per project, library and usage tables once; `image_blobs` travel as files; provider keys, the machine id and `project_queue` never leave; `external_reviews`, `agent_actions`, `project_starts` and `told_failures` and the setting `agents.lastConnectedAt` are left out (a restored project asks its waiting reviews again and tells its run's end again) (`packages/app/src/slices/storage/backup-new-tables.test.ts:54`-`:59`, `packages/app/src/slices/storage/portable.ts:493`) | `packages/app/src/slices/storage/backup-format.ts:38`, `packages/app/src/slices/storage/backup-format.ts:83`, `packages/app/src/slices/storage/backup-export.ts:270` |
 | Backup tar → database | Import loads rows into a scratch database migrated `through` the backup's `databaseVersion`, then migrates it forward with the same files and copies rows in, renaming or skipping clashes (BackupImportSummary); `backup_imports` records the backup id once | `packages/app/src/slices/storage/backup-import.ts:159`, `packages/app/src/kernel/db/migrate.ts:10`, `packages/app/src/slices/storage/backup-import.ts:914` |
 | Older .zip backup | `importPortable` reads the version-1 portable manifest (settings, library, voices, templates, fonts, staged files) and returns PortableImportResult | `packages/app/src/slices/storage/portable.ts:276`, `packages/app/src/edge/http/storage.ts:139` |
 | Telemetry → collector | `telemetry_events.payload` JSON is re-read, stamped with the machine id (CollectorEvent) and posted; the collector validates with `ingestSchema` and adds `deltasFor` to `aggregates` | `packages/app/src/slices/telemetry/repo.ts:22`, `packages/app/src/slices/telemetry/collector-client.ts:6`, `packages/collector/src/index.ts:51`, `packages/collector/src/model.ts:90` |
+| MCP tool call → API route | A route tool's arguments become one in-process `app.request` with the bindings `{actor: "agent"}`: path parameters checked (no dots or slashes; the resolved path must equal the template), `body` sent as JSON or a file as multipart/raw, `query` as search params; a JSON answer is returned as text (through `shape` when set), an image as MCP image content, a refusal as `isError` text with the route's sentence | `packages/app/src/edge/http/app.ts:340`, `packages/app/src/edge/mcp/call-route.ts:44`, `packages/app/src/edge/mcp/call-route.ts:155` |
 | Catalogue YAML ↔ Catalogue | YAML parsed with `maxAliasCount: 20`, `uniqueKeys: true`, then `catalogueSchema` | `packages/app/src/catalog/store.ts:50` |
 | Host CLI bridge | App ↔ host helper speaks JSON bodies (HostLlmBody, HostImageBody) and NDJSON HostFrame streams, all zod-checked on both sides | `packages/app/src/kernel/ports/host-cli.ts:72`, `packages/app/src/kernel/ports/host-cli.ts:196` |
 
@@ -5516,12 +5726,22 @@ Collector: `events` are deduplicated by id with `INSERT OR IGNORE`; `aggregates`
 - Catalogue: unknown provider/family pairs, duplicate models and providers without concurrency limits are refused (`packages/app/src/catalog/schema.ts:85`).
 - Host CLI bridge: strict schemas with 1–128 messages, text up to 2 MiB, ids up to 256 characters without control characters; frames and faults are read leniently (unknown fields dropped) (`packages/app/src/kernel/ports/host-cli.ts:64`, `packages/app/src/kernel/ports/host-cli.ts:171`).
 - Studio: `postingPlanSchema` (≤ 14 rows, `name` 1-20, `series` ≤ 100 defaulting to `""`, ≤ 10 shorts each, `HH:MM` times, weekday 0-6) is parsed on write and on read, falling back to the empty plan (`packages/app/src/slices/studio/plan-model.ts:7-22`, `packages/app/src/slices/studio/plan.ts:32-46`); `studio.leadHours` is an integer 1-168 on write and reads as 24 otherwise (`packages/app/src/edge/http/studio.ts:286-300`, `packages/app/src/slices/studio/releases.ts:35-40`); `PUT /releases/:projectId` takes a strict `{short 0-99, at: ISO datetime or null, line? 1-20}` and `GET /releases` a `weeks` 1-8 (`packages/app/src/edge/http/studio.ts:302-306`, `:327-340`); `/ext/*` bodies are route-local zod schemas: video ids `^[A-Za-z0-9_-]{11}$`, `short` 1-99 or null, stats `ctr` 0-100, at most 3 `abVariantSchema` variants, backfill ≤ 200 rows of titles ≤ 200 with optional `checks` ≤ 100 and an optional `close`, task messages ≤ 2,000, upload pick indexes 0-9 (`packages/app/src/edge/http/studio.ts:115`-`:158`). `ab_results.variants` is re-parsed with `abVariantSchema` on read (`packages/app/src/slices/studio/stats.ts:117`).
+- External review verdicts: `{verdict: "pass" | "fail", reasons}` strict, each reason trimmed 1–500 characters, at most 10, a fail needs one (`verdictAnswerSchema`, `packages/app/src/slices/reviews/verdict.ts:9`); a refused shape answers 400 `invalid-verdict` with the body to send, a review that takes no verdict 409 with its `closedReviewSentences` sentence (`packages/app/src/edge/http/external-reviews.ts:77`). MCP requests: body at most 48 MB (413), JSON only (400), Origin loopback or the configured host (403) (`packages/app/src/edge/mcp/http.ts:18`, `:23`).
 - Collector: at most 500 events and 256 KiB per request, one machine per request, flat payloads of at most 20 keys (`packages/collector/src/model.ts:39`, `packages/collector/src/model.ts:75`).
 - Database: CHECK constraints below enforce enums, JSON validity (`json_valid`, text only, not shape), non-negative sizes and trimmed name lengths. Some legacy columns carry no SQL enum (`stages.source`, `stage_pieces.kind`/`state`, `attempts.outcome`, `outputs.role`); their row schemas check them (`packages/app/src/slices/admission/repo.ts:29`, `packages/app/src/kernel/runner/piece-repo.ts:32`). Writes that span tables run inside `transact` (a SAVEPOINT) (`packages/app/src/kernel/db/tx.ts:9`).
 
 ## Schema
 
-DDL below is the text SQLite holds after every migration runs in filename order (`packages/app/src/kernel/db/migrate.ts:16`); a quoted table name marks a table a later migration rebuilt, and `ALTER TABLE ... ADD COLUMN` columns appear at the end of their row. Each migration runs in one transaction and records its version in `schema_migrations`; a database newer than the newest known file is refused (`packages/app/src/kernel/db/migrate.ts:24`). A migration whose first line is `-- foreign-keys: off` runs with enforcement off and must pass `PRAGMA foreign_key_check` before commit (`packages/app/src/kernel/db/migrate.ts:44`). Version numbers 0020, 0021, 0023, 0028, 0029, 0033 and 0036 have no file. Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
+DDL below is the text SQLite holds after every migration runs in filename order (`packages/app/src/kernel/db/migrate.ts:16`); a quoted table name marks a table a later migration rebuilt, and `ALTER TABLE ... ADD COLUMN` columns appear at the end of their row. Each migration runs in one transaction and records its version in `schema_migrations`; a database newer than the newest known file is refused (`packages/app/src/kernel/db/migrate.ts:24`). A migration whose first line is `-- foreign-keys: off` runs with enforcement off and must pass `PRAGMA foreign_key_check` before commit (`packages/app/src/kernel/db/migrate.ts:44`). Version numbers 0020, 0021, 0023, 0028, 0029, 0033 and 0036 have no file. The newest schema is 62; the MCP feature's migrations:
+
+- 0055 `external_reviews`; `review_verdicts` copied with `answered_by`, `action_by` and outcome `auto-passed`.
+- 0056 `agent_actions` and `project_starts`.
+- 0057 `agent_actions.idempotency_key` and the unique index `agent_actions_once`.
+- 0058 index `revision_work_admission`.
+- 0059 `external_reviews` copied with state `canceled`.
+- 0060 index `revision_work_reservations_work`.
+- 0061 `project_controls.pauses` and `stops`.
+- 0062 `told_failures`. Migration 0017 inserts a saved `DiceMaster` document theme only on installs that already used the Document stage; 0022 deletes duplicate held work rows (`packages/app/src/kernel/db/migrations/0017-legacy-dicemaster-theme.sql:7`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:15`).
 
 ### projects
 
@@ -5652,10 +5872,10 @@ Migrations: `packages/app/src/kernel/db/migrations/0001-init.sql:17`. Code model
 CREATE TABLE project_controls (
   project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
   paused INTEGER NOT NULL DEFAULT 0 CHECK(paused IN (0, 1))
-);
+, pauses INTEGER NOT NULL DEFAULT 0, stops INTEGER NOT NULL DEFAULT 0);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0002-project-controls.sql:1`. Code model: Project.paused (`paused` column of `projectRow`, `packages/app/src/slices/admission/repo.ts:18`).
+Migrations: `packages/app/src/kernel/db/migrations/0002-project-controls.sql:1`, `packages/app/src/kernel/db/migrations/0061-project-control-counts.sql:3`. Code model: Project.paused (`paused` column of `projectRow`, `packages/app/src/slices/admission/repo.ts:18`); `pauses` and `stops` become ProjectHead `pauseCount` and `stopCount`, so While you were away tells a pause or a stop that came again (`packages/app/src/slices/admission/heads.ts:54`).
 
 ### batches
 
@@ -5841,9 +6061,10 @@ CREATE INDEX revision_work_stage ON revision_work(revision_id,stage_id);
 CREATE INDEX revision_work_dispatch ON revision_work(project_id,dispatch_state,state);
 CREATE UNIQUE INDEX revision_work_revision_identity ON revision_work(project_id,revision_id,id);
 CREATE INDEX revision_work_retry ON revision_work(retry_at) WHERE retry_at IS NOT NULL;
+CREATE INDEX revision_work_admission ON revision_work(admission_id) WHERE admission_id IS NOT NULL;
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:2`, `packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:52`, `packages/app/src/kernel/db/migrations/0030-automatic-retries.sql:5`. Code model: none as one type; WorkRef identity (`packages/app/src/kernel/runner/work.ts:15`), rows read ad hoc across `packages/app/src/slices/rebuild/`.
+Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:2`, `packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:52`, `packages/app/src/kernel/db/migrations/0030-automatic-retries.sql:5`, `packages/app/src/kernel/db/migrations/0058-revision-work-admission.sql:3`. Code model: none as one type; WorkRef identity (`packages/app/src/kernel/runner/work.ts:15`), rows read ad hoc across `packages/app/src/slices/rebuild/`.
 
 ### revision_work_pieces
 
@@ -5888,9 +6109,10 @@ CREATE TABLE revision_work_reservations (
  FOREIGN KEY(project_id,work_id) REFERENCES revision_work(project_id,id) ON DELETE CASCADE,
  FOREIGN KEY(work_id,piece_id) REFERENCES revision_work_pieces(work_id,id) ON DELETE CASCADE
 );
+CREATE INDEX revision_work_reservations_work ON revision_work_reservations(work_id);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:41`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:43`. Code model: none; read ad hoc (`packages/app/src/slices/rebuild/transition-repo.ts:53`).
+Migrations: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:41`, `packages/app/src/kernel/db/migrations/0022-drop-duplicate-held-work.sql:43`, `packages/app/src/kernel/db/migrations/0060-reservation-work.sql:4`. Code model: none; read ad hoc (`packages/app/src/slices/rebuild/transition-repo.ts:53`).
 
 ### rebuild_previews
 
@@ -6211,7 +6433,7 @@ Migrations: `packages/app/src/kernel/db/migrations/0018-backup-imports.sql:3`. C
 ### review_verdicts
 
 ```sql
-CREATE TABLE review_verdicts (
+CREATE TABLE "review_verdicts" (
  id TEXT PRIMARY KEY,
  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
  revision_id TEXT NOT NULL,
@@ -6221,12 +6443,14 @@ CREATE TABLE review_verdicts (
  review_fingerprint TEXT NOT NULL,
  passed INTEGER NOT NULL CHECK(passed IN (0,1)),
  reasons TEXT NOT NULL,
- outcome TEXT NOT NULL CHECK(outcome IN ('passed','flagged','redo')),
+ outcome TEXT NOT NULL CHECK(outcome IN ('passed','flagged','redo','auto-passed')),
  attempt INTEGER NOT NULL CHECK(attempt >= 1),
  action TEXT CHECK(action IN ('overruled','redone')),
  action_at TEXT,
+ action_by TEXT CHECK(action_by IN ('person','agent')),
  redo_state TEXT CHECK(redo_state IN ('pending','started','failed')),
  redo_error TEXT,
+ answered_by TEXT NOT NULL DEFAULT 'model' CHECK(answered_by IN ('model','agent','person','nobody')),
  created_at TEXT NOT NULL,
  UNIQUE(project_id,review_fingerprint)
 );
@@ -6234,7 +6458,7 @@ CREATE INDEX review_verdicts_item ON review_verdicts(project_id,item_key);
 CREATE INDEX review_verdicts_redo ON review_verdicts(redo_state);
 ```
 
-Migrations: `packages/app/src/kernel/db/migrations/0025-automatic-reviews.sql:20`. Code model: ReviewRecord via `rowSchema` (`packages/app/src/slices/reviews/repo.ts:5`).
+Migrations: `packages/app/src/kernel/db/migrations/0025-automatic-reviews.sql:20`, `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:28`, which copies the table to add `answered_by` (existing rows `model`), `action_by` (existing actions `person`) and the outcome `auto-passed`. Code model: ReviewRecord via `rowSchema` (`packages/app/src/slices/reviews/repo.ts:6`).
 
 ### schedule_topics
 
@@ -6674,6 +6898,78 @@ CREATE TABLE ab_results (
 ```
 
 Migrations: `packages/app/src/kernel/db/migrations/0047-studio-autopilot.sql:32`. Code model: AbResult; `variants` is `AbVariant[]` JSON (`saveAbResult`, `abResults`, `packages/app/src/slices/studio/stats.ts:93`, `:107`). In backups since 3.3.0.
+
+### external_reviews
+
+```sql
+CREATE TABLE "external_reviews" (
+ id TEXT PRIMARY KEY,
+ project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ revision_id TEXT NOT NULL,
+ work_id TEXT NOT NULL,
+ piece_id TEXT NOT NULL,
+ work_key TEXT NOT NULL,
+ item_key TEXT NOT NULL,
+ stage TEXT NOT NULL CHECK(stage IN ('article','images','narration','thumbnail','shorts')),
+ item_fingerprint TEXT NOT NULL,
+ review_fingerprint TEXT NOT NULL,
+ material TEXT NOT NULL CHECK(json_valid(material)),
+ state TEXT NOT NULL CHECK(state IN ('waiting','answered','auto-passed','superseded','canceled')),
+ waiting_since TEXT NOT NULL,
+ deadline_at TEXT NOT NULL,
+ verdict TEXT CHECK(verdict IS NULL OR json_valid(verdict)),
+ answered_by TEXT CHECK(answered_by IN ('person','agent')),
+ answered_at TEXT,
+ UNIQUE(project_id,review_fingerprint)
+);
+CREATE INDEX external_reviews_waiting ON external_reviews(state, deadline_at);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0055-external-reviews.sql:5`, `packages/app/src/kernel/db/migrations/0059-external-review-canceled.sql:4`, which copies the table to add the state `canceled`. `material` is ExternalMaterial JSON; `verdict` is ReviewVerdict JSON. Code model: ExternalReview via `externalReviewOf` (`packages/app/src/slices/reviews/external-rows.ts:38`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:54`).
+
+### agent_actions
+
+```sql
+CREATE TABLE agent_actions (
+ id TEXT PRIMARY KEY,
+ project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+ schedule_id TEXT,
+ tool TEXT NOT NULL,
+ title TEXT NOT NULL,
+ revision_id TEXT,
+ created_at TEXT NOT NULL
+, idempotency_key TEXT);
+CREATE INDEX agent_actions_project ON agent_actions(project_id, created_at);
+CREATE INDEX agent_actions_time ON agent_actions(created_at);
+CREATE UNIQUE INDEX agent_actions_once ON agent_actions(tool, COALESCE(project_id, ''), idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:4`, `packages/app/src/kernel/db/migrations/0057-agent-action-once.sql:3`. Code model: AgentAction via `actionRow` (`packages/app/src/slices/agents/repo.ts:25`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:55`).
+
+### project_starts
+
+```sql
+CREATE TABLE project_starts (
+ project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+ actor TEXT NOT NULL CHECK(actor IN ('person','agent')),
+ started_at TEXT NOT NULL
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0056-agent-actions.sql:16`. Who last started a project's work; the run's notices add "· started by agent". Code model: Actor via `recordStart`, `lastStarter` (`packages/app/src/slices/agents/repo.ts:105`, `:116`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:56`).
+
+### told_failures
+
+```sql
+CREATE TABLE told_failures (
+ project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ failure_id TEXT NOT NULL,
+ PRIMARY KEY(project_id, failure_id)
+);
+```
+
+Migrations: `packages/app/src/kernel/db/migrations/0062-told-failures.sql:4`. Each failed step the Notification URL was told of, by `failureId`, only while its project still has it; a project's rows are replaced together. Code model: ToldFailures via `toldFailures` (`packages/app/src/slices/notifications/told.ts:26`). Not in backups (`packages/app/src/slices/storage/backup-new-tables.test.ts:59`).
 
 ### collector.events
 

@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 8e5bc8b8156d
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: 40103f2a0f66
+content_hash: e91657f9b706
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/app/test/**"
@@ -30,7 +30,7 @@ paths_covered:
 - Functions over plain data everywhere. Across `packages/{app,web,collector,extension}/src` there are 16 `class` declarations. 13 are `Error` subclasses such as `BackupImportRefused` (`packages/app/src/slices/storage/backup-import.ts:87`) and `StylePreviewError` (`packages/app/src/slices/style-preview/render.ts:34`). The other three are small stateful helpers, `CommandRegistry` (`packages/web/src/components/kit/command-palette.tsx:55`), `ByteReader` (`packages/app/src/slices/storage/tar.ts:229`) and `Walker` (`packages/app/src/slices/narration/blocks.ts:122`).
 - Services are factory functions that close over a deps object. There are 44 exported `create*` factories and 8 exported `open*` functions in non-test app source (openers such as `openDb` and `openLog`, plus the `openAi*`/`openRouter*` adapter factories), for example `createScheduleRunner` (`packages/app/src/slices/schedules/scheduler.ts:35`), `createApp` (`packages/app/src/edge/http/app.ts:226`) and `openLog` (`packages/app/src/kernel/log.ts:25`).
 - Finite sets are `as const` arrays with a derived union type. No `enum` declaration occurs in any package. Examples: `stageKinds`, `stageStates`, `projectStates` and `formats` (`packages/app/src/kernel/pipeline.ts:6-52`), `providerErrorKinds` (`packages/app/src/kernel/ports/model.ts:43`), `reviewModes` (`packages/app/src/slices/reviews/model.ts:13`) and `trashKinds` (`packages/app/src/slices/trash/model.ts:13`).
-- The app is organised as vertical slices under `packages/app/src/slices/`, 45 directories: admission, article, backups, batch, cancel, channels, checkpoints, control, document, episodes, estimate, eta, fixes, fonts, images, library, loudness, model-upkeep, narration, notifications, onboarding, patch-notes, play-drafts, project-templates, rebuild, reruns, research, reviews, revisions, run-cost, schedules, settings, shorts, storage, studio, style-preview, subtitles, telemetry, thumbnail, trash, tutorials, uploads, video, voices and youtube. They sit on `kernel/` (ports, runner, db, log, pipeline vocabulary) and under `edge/` (HTTP, CLI, events). Provider implementations live in `adapters/`, and `main.ts` is the composition root.
+- The app is organised as vertical slices under `packages/app/src/slices/`, 47 directories: admission, agents, article, backups, batch, cancel, channels, checkpoints, control, document, episodes, estimate, eta, fixes, fonts, images, library, loudness, model-upkeep, narration, notifications, onboarding, outputs, patch-notes, play-drafts, project-templates, rebuild, reruns, research, reviews, revisions, run-cost, schedules, settings, shorts, storage, studio, style-preview, subtitles, telemetry, thumbnail, trash, tutorials, uploads, video, voices and youtube. They sit on `kernel/` (ports, runner, db, log, pipeline vocabulary) and under `edge/` (HTTP, MCP, CLI, events). Provider implementations live in `adapters/`, and `main.ts` is the composition root.
 - Pure rule modules are split from I/O. `reruns/cascade.ts` reads no row or file (`packages/app/src/slices/reruns/cascade.ts:9-11`), and `fixes/rules.ts` and `notifications/rules.ts` are pure so that the web bundle can import them (`packages/app/src/slices/fixes/rules.ts:4-6`, `packages/app/src/slices/notifications/rules.ts:3-5`). A module the browser also imports opens with a `Browser-safe:` comment (`packages/app/src/slices/reviews/model.ts:4`, `packages/app/src/slices/studio/model.ts:5`). The web package imports such modules through `@app/*` in 229 non-test files (`packages/web/tsconfig.json:15`).
 - The web package is React function components (367 exported PascalCase functions in non-test `.tsx`). It uses TanStack Query for server state (121 files use `useQuery`/`useMutation`) and TanStack Router (`packages/web/src/router.tsx`, `packages/web/src/main.tsx:10-11`).
 - The collector is one Cloudflare Worker default export (`packages/collector/src/index.ts:21`). The Studio extension is plain modules with no framework (`packages/extension/src/`). The marketing site is plain JS (`packages/site/public/`, shallow: not inventoried).
@@ -72,6 +72,19 @@ paths_covered:
 - **Error chains.** `causedBy` joins an error's `cause` chain for the log; the page shows only the top sentence (`packages/app/src/kernel/errors.ts:1-12`).
 - **Logging.** One JSON line per event (`ts`, `level`, `event`, optional `projectId`, `stage`, `detail`) goes to `slopify-YYYY-MM-DD.log` with mode `0600`. `LogFields` is a closed set of three strings, and `detail` is redacted (`packages/app/src/kernel/log.ts:5-45`).
 
+## MCP tool adapters
+
+Agents reach Slopify through `/mcp` (`packages/app/src/edge/mcp/`), and every tool is an adapter over something the web page already calls:
+
+- **A tool is a row naming an existing `/api` route.** `RouteTool` (`packages/app/src/edge/mcp/route-tool.ts:8`) holds `name`, `route` (`"POST /api/projects/:id/resume"`), `title`, `description`, and optional `confirm`, `confirmFrom`, `unrecorded`, `reachesOut`, `upload` and `shape`. The rows live in nine `tools-*.ts` tables joined by `routeTools` (`packages/app/src/edge/mcp/tools.ts:13`). A new `/api` route is either a row there or an entry in `excludedRoutes` with its reason (`packages/app/src/edge/mcp/excluded-routes.ts:20`); `tools-parity.test.ts` fails otherwise.
+- **Tools never call slices or adapters directly**, except the 7 bespoke ones that read or combine what no single route answers: `list_project_files`, `get_project_file` (`file-tools.ts`), `get_external_review` (`review-tools.ts`), `export_library`, `import_library` (`library-tools.ts`), `preview_remake_outdated` (`remake-tools.ts`) and `needs_attention` (`server.ts`). Where a bespoke tool and the web page share a total or a merge, the rule lives in the slice and both import it (`slices/library/transfer.ts`, `slices/rebuild/remake-outdated.ts`).
+- **The route decides.** `callRoute` (`packages/app/src/edge/mcp/call-route.ts:44`) sends the request to the app in-process, so validation, admission, the sample read-only guard, the shutdown and update gates, `baseRevisionId` + `idempotencyKey` and SSE events are the route's own.
+- **Refusals are the route's plain sentences naming the fix.** A problem answer becomes an MCP error result carrying the route's `detail` (`problemText`, `packages/app/src/edge/mcp/call-route.ts:273`). Two adjustments only: a schema refusal names the wrong arguments instead of the page's "reload the page", and a stale-revision conflict adds the current revision id and the tool to call again. Refusals the tool layer writes itself (a path parameter that isn't an id, an unreadable answer) follow the same what-failed / why / what-to-call shape (`:130`, `:240`).
+- **`confirmed: true` for page-confirmed actions.** A row with `confirm` is refused until called again with `confirmed: true`; the refusal states the page's consequence sentence, with this call's numbers when `confirmFrom` can read them (`packages/app/src/edge/mcp/call-route.ts:57`-`:60`).
+- **UI state words, not raw states.** Project and stage answers gain `stateWord` from the one table the web also reads, `slices/admission/state-words.ts` (`packages/app/src/edge/mcp/state-shapes.ts:37`, `:50`).
+- **The actor travels as Hono bindings.** The MCP endpoint calls `app.request(request, undefined, agentBindings)`; a route that cares who asked reads `actorOf(c)` (`packages/app/src/edge/http/actor.ts:9`) rather than a header or body field, so nothing over the network can claim to be an agent.
+- **Every agent change is recorded.** Each successful non-GET call not marked `unrecorded` writes an `agent_actions` row (project, schedule or neither; a retry with the same `idempotencyKey` is recorded once) through `recordAgentAction` (`packages/app/src/slices/agents/repo.ts:51`, called at `call-route.ts:78`). Project history and Settings → Connections → Agents (MCP) read these rows.
+
 ## Dependency injection
 
 - **App.** `boot` in `packages/app/src/main.ts:225` builds every dependency by hand and passes typed deps objects and closures, with no container or service locator. Steps: clock and ids (`:226-227`), `openDb` (`:252`), `openLog` (`:283`), the catalogue store (`:330`), the provider registry through `buildRegistry`/`curateRegistry` (`:335-336`), the schedule runner (`:533`), the HTTP app (`:599`) and the stage runner (`:907`).
@@ -108,7 +121,7 @@ paths_covered:
 
 - Every `.ts`/`.tsx` file name in `packages/{app,web,collector,extension}/src` and `packages/app/test` is lowercase kebab-case; a grep for other characters finds none.
 - Suffixes: `*.test.ts(x)` for tests, `*.fake.ts` for doubles, `*-schema.ts`/`schema.ts` for Zod shapes, `model.ts` for a slice's vocabulary, `repo.ts` for SQL access and `service.ts` for orchestration (for example `packages/app/src/slices/trash/{model,service}.ts`, `packages/app/src/slices/backups/{model,repo,service}.ts`).
-- SQL migrations are `NNNN-kebab-name.sql`: 40 files, the latest `0047-studio-autopilot.sql`, with gaps in the numbering (`packages/app/src/kernel/db/migrations/`).
+- SQL migrations are `NNNN-kebab-name.sql`: 55 files, the latest `0062-told-failures.sql`, with gaps in the numbering (`packages/app/src/kernel/db/migrations/`).
 - Identifiers follow the product's words: `trashDays`, `reviewModes`, `studioUploadUrl`, `earlierEpisodesMax`. Limits are `<thing>Max`/`<thing>Min` (`packages/app/src/slices/shorts/model.ts:32-35`, `packages/app/src/slices/backups/model.ts:11-13`). Result types are `<Slice>Result<T>` (`ChannelResult`, `TrashResult`, `ScheduleResult`, `DraftResult`).
 
 ## Tests and tooling

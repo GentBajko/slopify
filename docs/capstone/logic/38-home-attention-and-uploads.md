@@ -9,10 +9,10 @@ depends_on:
   - 23-review-checkpoints
   - 25-scheduled-jobs
   - 37-run-cost-and-eta
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: f795498a6a61
+content_hash: 6ec841b1647e
 paths_covered:
   - ":(top)packages/app/src/edge/http/home.ts"
   - ":(top)packages/app/src/slices/uploads/**"
@@ -27,6 +27,11 @@ paths_covered:
   - ":(top)packages/web/src/fixes/**"
   - ":(top)packages/web/src/project/fix-it.tsx"
   - ":(top)packages/web/src/routes/projects.tsx"
+  - ":(top)packages/web/src/routes/projects-order.ts"
+  - ":(top)packages/app/src/slices/admission/state-words.ts"
+  - ":(top)packages/app/src/slices/reviews/holds.ts"
+absorbed_from:
+  - features/2026-09-30-slopify-mcp@2026-10-11
 ---
 
 # 38 Home attention and uploads
@@ -45,12 +50,11 @@ Home (`/`) sorts the person's projects and schedules into what needs a decision,
 ## Steps
 
 1. **Project status and progress.** `GET /api/projects` derives each project's `status` with `derive` and `progress` with `progressOf`, and attaches `uploadedAt` from `project_uploads`, `setAside: true` when the project is kept as is on its current head revision, and the long video's `views`/`ctr` from `video_stats` when the extension has read them (`packages/app/src/edge/http/projects.ts:76`, `:88`, `:92`–`:98`). The single-project read attaches `setAside` the same way (`projects.ts:121`). `derive`: paused → `paused`; any stage running or pending with a `retryAt` → `running`; any canceled → `canceled`; any failed → `partial` when the headline output was made, else `failed`; all satisfied → `done`; otherwise `pending` (`packages/app/src/kernel/runner/graph.ts:57`). `progressOf` averages per-stage share over stages not `provided`/`skipped`, 1 when none are asked (`packages/app/src/kernel/runner/graph.ts:111`).
-2. **Home classifies** the channel's projects (`packages/web/src/routes/home.tsx:88`):
-   - Running now: `status === "running"`; first three shown as live cards (`packages/web/src/routes/home.tsx:210`).
-   - Queued: `pending` with `progress === 0` (`packages/web/src/home/running-more.tsx:8`); named in one line under Running now, first two titles then "and N more" (`packages/web/src/home/running-more.tsx:13`, `:26`).
-   - Waiting for you: `pending` with `progress > 0` and not kept as is — the runner stopped at a checkpoint or held work (`packages/web/src/home/needs-you.tsx:47`).
-   - Paused: `status === "paused"` (`packages/web/src/routes/home.tsx:91`).
-   - Failed: `status === "failed"` only; `partial` is not listed here (`packages/web/src/routes/home.tsx:93`).
+2. **Home classifies** the channel's projects with the one state table the Projects list and the MCP tools also read (`packages/app/src/slices/admission/state-words.ts`; `packages/web/src/routes/home.tsx:94-117`). The holds come from the server's `projectHolds` (`packages/app/src/slices/reviews/holds.ts:60-152`), sent on each list row as `prepared`, `waitingForAgent`, `stopped`, `holding`, `stepFailed` and `stepFailures`:
+   - Running now: `runningNow`, i.e. `running`, or parked on an External agent review (**Waiting for the agent**, not kept as is) (`state-words.ts:88-104`); such a run goes on by itself, so it is not in Needs you. The first three are live cards; "See all N running" links to the Projects Running filter (`packages/web/src/home/running-more.tsx:28`).
+   - Queued: `queuedRun`, `pending` with none of its run done, nothing failed, not stopped and not waiting for the agent (`state-words.ts:61-72`, `:106-110`); named in one line under Running now, first two titles then "and N more" (`packages/web/src/home/running-more.tsx:13`, `:26`).
+   - Needs you: `waitsForPerson`, a paused run, or a held run waiting for the person, i.e. not kept as is, not waiting for the agent and not Prepared (`state-words.ts:74-78`, `:117-121`). It holds runs **Waiting for your review** at a checkpoint of the person's, runs a restart **Stopped** (listed as their own kind, `packages/web/src/routes/home.tsx:118-124`), and paused runs (`:125-127`). A Prepared project held at its schedule's own Before Video hold waits for its day, and is not listed.
+   - Failed: `failedRun`, a run that failed, or one whose step failed while it still waits for the agent, the person or its day (`stepFailed`); such a run reads by its wait while something can still move, and is listed both by that wait and here; it reads Failed only once nothing else can go on (`state-words.ts:123-131`, `:149-153`; `packages/web/src/routes/home.tsx:105-107`). `partial` is not listed here.
    - Held topics: schedules not deleted, in `hold` topic mode, with `topics.held > 0`, whose template belongs to the channel (`packages/web/src/routes/home.tsx:99`).
    - Ready to upload: `done`, `partial`, or `pending` and kept as is; `sources.video !== "off"`; `uploadedAt === null` (`packages/web/src/home/ready.tsx:18`), minus the bundled sample projects (`packages/web/src/routes/home.tsx:95`).
 3. **Needs you order** is waiting, paused, held schedules, then failed capped at four (`packages/web/src/routes/home.tsx:109`, `shownPerSection` `:31`). Only the first item's action is `primary` (`packages/web/src/routes/home.tsx:167`). The heading counts the list as built, so the count includes at most four failed (`packages/web/src/routes/home.tsx:157`).
@@ -72,6 +76,7 @@ Home (`/`) sorts the person's projects and schedules into what needs a decision,
 8. **Mark uploaded** (`markUploaded`): 404 when the project row is missing; `uploaded: false` deletes the row and returns `uploadedAt: null`; `uploaded: true` inserts with `ON CONFLICT DO NOTHING` and returns the stored time (`packages/app/src/slices/uploads/repo.ts:10`). The client invalidates the project list on settle (`packages/web/src/home/ready.tsx:49`, `packages/web/src/routes/projects.tsx:144`).
 9. **Keep as is** (`setAside`, `packages/app/src/slices/uploads/repo.ts:43`): 404 when the project has no head revision; `setAside: true` upserts one `project_set_aside` row holding the current head `revision_id`; `false` deletes it. `setAsideProjects` counts a row only while its `revision_id` is still the head, so any edit that makes a new head brings the run back to Needs you without touching the row (`repo.ts:61`, `packages/app/src/kernel/db/migrations/0044-project-set-aside.sql:1`). The success toast offers **Undo** (`setAside: false`); the list is invalidated on settle (`packages/web/src/home/needs-you.tsx:158`–`:176`). A kept project reads "Kept as is" in the Projects list (`packages/web/src/routes/projects.tsx:87`) and on the project page, whose next action is **Prepare upload** when the video is ready, else none (`packages/web/src/project/next-action.ts:311`). Nothing is run or canceled; the project's stages stay as they are.
 10. **This week** (`weekSummary`): counts provider calls and cost since `since`, the API-equivalent of plan-billed calls, `video` outputs created since `since` (a remade video counts again), and each CLI plan's latest window readings, narrowed to one channel except plan standings (`packages/app/src/slices/run-cost/week.ts:65`, `:98`). Pricing and plan readings are 37-run-cost-and-eta.md's. Home shows videos, cost with "~$X via API" and "N calls without a price", and a meter per plan with a weekly percent, tone `waiting` at 80 % or more (`packages/web/src/home/week.tsx:15`, `:44`, `:58`). The query is stale after 30 s (`packages/web/src/home/api.ts:27`).
+10a. **The agent's reading** (`needs_attention`, `packages/app/src/slices/agents/attention.ts:64-108`) is Home's work list read by an agent: external reviews waiting for a verdict, flagged verdicts nobody acted on, checkpoints of the person's that hold a run now, failed steps (beside a wait too), paused runs, stopped runs, held topics, Late · upload now videos and the extension's failed finishing touches, oldest first. Kept as is projects, a Prepared project's own day hold and unreached checkpoints are left out, and runs waiting for the agent appear only as their external reviews. Its rules are 45-mcp-agent-access.md's.
 11. **Calendar attention**: `GET /api/calendar` (`calendarRange`, range ≤ 92 days) returns projects running or created before `to`, and terminal ones whose last stage finished inside the range (`packages/app/src/slices/schedules/agenda.ts:35`, `:190`, `:216`, `packages/app/src/slices/schedules/schema.ts:281`). Each carries (`packages/app/src/slices/schedules/agenda.ts:181`, `:222`):
     - `needs: "failed"` when failed; `"paused"` when paused; `"review"` when not canceled and the head revision has an unapproved `held`/`pending-review` checkpoint or a latest failed automatic-review verdict with no action and no redo under way (or a failed redo) (`packages/app/src/slices/schedules/agenda.ts:141`).
     - `readyToUpload: true` when `done`/`partial`, the config makes a video (unparseable or pre-sources config counts as yes), no upload mark and not a sample project (`packages/app/src/slices/schedules/agenda.ts:161`, `:223`).
@@ -85,7 +90,7 @@ Home (`/`) sorts the person's projects and schedules into what needs a decision,
 - **Sample projects**: Home and the calendar leave them out of Ready to upload (`packages/web/src/routes/home.tsx:98`, `packages/app/src/slices/schedules/agenda.ts:227`); the Projects list's `isReadyToUpload` does not, so the sample's row shows **Mark uploaded** (`packages/web/src/routes/projects.tsx:374`).
 - **Undo**: only the Projects list shows an **Uploaded** badge with **Undo** (`uploaded: false`) (`packages/web/src/routes/projects.tsx:387`). Home's toast mentions the way back ("Projects still lists it") (`packages/web/src/home/ready.tsx:38`).
 - **Kept as is**: off Waiting, onto Ready to upload when its video is made; any edit that moves the head revision undoes it (step 9).
-- **Projects list filters** reuse the same predicates: `waiting` = `isWaiting`, `ready` = `isReadyToUpload`, `queued` = `isQueued`; `failed` there includes `partial` (`packages/web/src/routes/projects.tsx:58`).
+- **Projects list filters** reuse the same predicates (`matches`, `packages/web/src/routes/projects-order.ts:19-45`): one **Running** filter = `runningNow` (running plus waiting for the agent; Home's "See all N running" opens it), **Queued** = `queuedRun`, **Needs you** = `waitsForPerson` (paused runs are here, not under Running), **Ready to upload** = `isReadyToUpload`, **Failed** = `failedRun` or `partial`, so a step failed beside a wait is listed under Failed while its row reads by the wait.
 - **Command palette** registers "Approve …"/"Open the held run" per waiting item and "Mark uploaded" per ready item (`packages/web/src/home/needs-you.tsx:178`, `packages/web/src/home/ready.tsx:53`).
 - **Empty states**: "Nothing is waiting for a decision"; Running now shows "Start the next video" only when nothing is running, loading or queued (`packages/web/src/routes/home.tsx:156`, `:203`).
 
@@ -119,7 +124,8 @@ Home (`/`) sorts the person's projects and schedules into what needs a decision,
 ## Invariants
 
 - One upload mark per project (`project_id` primary key), deleted with the project (`ON DELETE CASCADE`) (`packages/app/src/kernel/db/migrations/0037-project-uploads.sql:5`). One set-aside row per project, likewise cascaded (`packages/app/src/kernel/db/migrations/0044-project-set-aside.sql:5`).
-- A kept-as-is project is never Waiting on Home and never a Needs you count (`packages/web/src/home/needs-you.tsx:47`).
+- A kept-as-is project is never Waiting on Home and never a Needs you count (`packages/app/src/slices/admission/state-words.ts:74-78`).
+- A run waiting for the agent or Prepared at its own day hold is never in Needs you; a Stopped run always is (`packages/app/src/slices/admission/state-words.ts:74-78`, `:117-121`, `packages/app/src/slices/reviews/holds.ts:121-143`).
 - A marked project never appears in Ready to upload on Home, the calendar or the Projects filter (`packages/web/src/home/ready.tsx:25`, `packages/app/src/slices/schedules/agenda.ts:226`).
 - A project whose config turns Video off is never Ready to upload (`packages/web/src/home/ready.tsx:24`, `packages/app/src/slices/schedules/agenda.ts:225`).
 - Every failure the fix-it rules can name is named in `slices/fixes/rules.ts` only; the web renders, it does not re-derive (`packages/app/src/slices/fixes/rules.ts:4`).

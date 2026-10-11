@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: 512f5333c77b
+content_hash: 0eeddfc5290f
 paths_covered:
   - ":(top)package.json"
   - ":(top)package-lock.json"
@@ -13,6 +13,7 @@ paths_covered:
   - ":(top)packages/app/src/updater/**"
   - ":(top)packages/app/src/slices/telemetry/**"
   - ":(top)packages/app/src/slices/notifications/**"
+  - ":(top)packages/app/src/edge/mcp/**"
   - ":(top)packages/collector/wrangler.jsonc"
   - ":(top)packages/site/wrangler.jsonc"
   - ":(top)packages/extension/static/manifest.json"
@@ -23,7 +24,7 @@ paths_covered:
 
 # Dependencies
 
-Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 entries, last changed in `89ed947b` on 2026-10-02); the manifest range follows in brackets where it differs. Rows carrying a date keep the date the pick was researched or verified; the earlier inventory floors were verified on npm on 2026-09-02. One hoisted lockfile serves all five workspaces (`package.json:5`).
+Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 entries, last changed in `3572596c` on 2026-10-10); the manifest range follows in brackets where it differs. Rows carrying a date keep the date the pick was researched or verified; the earlier inventory floors were verified on npm on 2026-09-02. One hoisted lockfile serves all five workspaces (`package.json:5`).
 
 ## Runtime and frameworks
 
@@ -37,7 +38,7 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | @hono/zod-validator | 0.9.1 | MIT | request validation at the edge | `packages/app/package.json:34` |
 | zod | 4.5.4 | MIT | schemas at every boundary (also used by `packages/collector`) | `packages/app/package.json:48` |
 | @fastify/busboy | 3.2.2 | MIT | streaming `multipart/form-data` for uploads and font uploads | `packages/app/src/edge/http/multipart.ts:2`, `packages/app/src/edge/http/fonts.ts:3` |
-| @modelcontextprotocol/sdk | 1.30.1 | MIT | stdio MCP server that exposes project documents to agent CLIs | `packages/app/src/adapters/llm/document-reader.ts:6` |
+| @modelcontextprotocol/sdk | 1.32.1 (^1.32.1) | MIT | two uses: the stdio MCP server that exposes project documents to agent CLIs; and Slopify's own `/mcp` endpoint, stateless Streamable HTTP through `WebStandardStreamableHTTPServerTransport` with one `McpServer` per request, where agents call its tools (tests connect with the SDK's `Client` and `StreamableHTTPClientTransport`, `packages/app/src/edge/mcp/mcp.fake.ts:2`-`:3`) | `packages/app/src/adapters/llm/document-reader.ts:6`, `packages/app/src/edge/mcp/http.ts:1`, `packages/app/src/edge/mcp/server.ts:1` |
 | strip-json-comments | 5.0.3 | MIT | reads Gemini CLI's JSONC settings file | `packages/app/src/adapters/llm/gemini-workspace.ts:4` |
 | fflate | 0.8.3 | MIT | ZIP downloads and portable backup export/import | `packages/app/src/slices/storage/portable.ts:19`, `packages/app/src/slices/revisions/downloads.ts:3` |
 | ffmpeg-static | 5.3.0 | GPL-3.0-or-later (binary shipped unlinked, notice in `README.md:107`) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` / `FFMPEG_BIN` override; missing binary re-fetched with the package's own `install.js` into `<data-dir>/bin/`. The package's release tag reads `b6.1.1`; the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (measured) | `packages/app/src/main.ts:7`, `packages/app/src/adapters/ffmpeg.ts:21` |
@@ -89,6 +90,7 @@ Versions below are the ones resolved in `package-lock.json` (lockfile v3, 637 en
 | System/custom font catalog | `node:fs` directory scan plus SFNT metadata parsing; uploads reuse Busboy | `packages/app/src/slices/fonts/` |
 | Uploads | `@fastify/busboy`: Hono `c.req.formData()` was measured on Node 24 at +1586 MiB RSS for a 512 MiB part (undici buffers every part), so the no-dependency rung failed | `packages/app/src/edge/http/multipart.ts:2` |
 | Marketing page | plain HTML, CSS, one module, served as static assets | `packages/site/wrangler.jsonc` |
+| Mounting MCP on Hono | `@hono/mcp` not taken: the SDK's web-standard transport answers `c.req.raw` in one line (`transport.handleRequest(c.req.raw, { parsedBody })`) | `packages/app/src/edge/mcp/http.ts:96` |
 
 ## Picked but not yet installed
 

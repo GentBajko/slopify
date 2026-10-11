@@ -1,8 +1,8 @@
 ---
-generated_at_commit: e9226a34aa8a
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: 96417c8c541a
+content_hash: fb655ad71b76
 paths_covered:
   - ":(top)package.json"
   - ":(top)vitest.config.ts"
@@ -98,7 +98,7 @@ These are not Vitest suites; each is run as a plain `node`/`bash` command.
 | Script | What it proves | Run by |
 | --- | --- | --- |
 | `packages/app/scripts/install-smoke.mjs` | `npm pack` of `@gentbajko/slopify` (`:19`), two global installs (with and without install scripts) run one after another over npm's shared cache (`:21-48`), then they and `npm exec` (`:66`) each start and answer `/api/health` within 210 s (`:118`, `:175`) | CI `windows` |
-| `packages/app/scripts/container-smoke.sh` | on throwaway names (`:2`): image FFmpeg comes from the image (`:46`), bare image stays healthy (`:56`), compose install on a free port (`:68`), same-settings rerun is a no-op (`:90`), changed settings recreate with snapshot (`:94`), only the newest recovery volume is kept (`:102`), `update` no-op and recreate-from-volume (`:108`) | CI `container/image` |
+| `packages/app/scripts/container-smoke.sh` | on throwaway names (`:2`): image FFmpeg comes from the image (`:46`), bare image stays healthy (`:56`), compose install on a free port (`:68`), same-settings rerun is a no-op (`:90`), changed settings recreate with snapshot (`:94`), only the newest recovery volume is kept (`:102`), `update` no-op and recreate-from-volume (`:108`); an MCP `initialize` POST to `/mcp` through the published port, with no token, answers as `slopify` (`:77`-`:81`) | CI `container/image` |
 | `packages/app/scripts/host-cli-smoke.mjs` | Linux only (`:13`); installs the host helper under a disposable prefix with fake `claude`/`codex`/`gemini` CLIs under a test `HOME` and checks the container reaches them; image from `SLOPIFY_SMOKE_IMAGE` (default `slopify:smoke`, `:18`); 15-minute limit (`:23`) | CI `container/image` |
 | `packages/app/scripts/docker-install-smoke.mjs` | adopts an older `docker run` installation with the packaged install command, rolls a failing image back, reuses the data volume by name (`:1-3`); seeds data by running `packages/app/test/docker-projects-fixture.test.ts` with `SLOPIFY_DOCKER_FIXTURE_OUT` (`:131-138`); `SLOPIFY_SMOKE_KEEP=1` retains resources after failure (`:249`). Alias `npm run smoke:docker-install --workspace @gentbajko/slopify` (`packages/app/package.json:29`) | CI `container/docker-install` |
 | `packages/app/scripts/validate-multilingual-alignment.mjs` | aligns one local audio file against its text and prints timing quality; downloads the alignment model on first run (`:2-12`) | manual only |
@@ -144,6 +144,7 @@ Provider ports are replaced by structural fakes that implement the real port int
 | `preparationFixture` | `packages/app/test/revision-preparation.fake.ts:6` | narration preparation composition |
 | `legacyAttempts`, `legacyStage` | `packages/app/test/legacy-runner.ts:6-16` | pre-revision storage for old slice composition tests |
 | `seedLegacy`, `verifyPcmWav` | `packages/app/test/e2e/editable-projects.fixture.ts:33`, `:174` | legacy project on disk for real-HTTP tests |
+| `mcpFixture`, `connectAgent`, `routeCallDeps` | `packages/app/src/edge/mcp/mcp.fake.ts:17`, `:53`, `:69` | the whole app (`createApp`) over a `revisionFixture` database with one project, optionally with the rebuild service; an SDK `Client` connected in-process through `StreamableHTTPClientTransport` whose `fetch` is `app.request`; `callRoute`'s deps over a fake `api` and an empty migrated database, for tests of one call |
 
 **Web** (`packages/web/src/test-app.tsx`): component tests never reach a server (`packages/web/src/test-app.tsx:19-20`).
 
@@ -151,6 +152,15 @@ Provider ports are replaced by structural fakes that implement the real port int
 - `renderApp` mounts under `QueryClientProvider` (retries off) and `AppProvider` (`packages/web/src/test-app.tsx:174`, `:188-194`); `renderRouted` adds a memory-history TanStack router whose routes mirror `router.tsx` so `Link`s resolve (`:80`, `:180`).
 - Navigation helpers: `openEditSection`, `openProjectSection`, `openProjectTab`, `openProjectEditor`, `downloadItem` (`packages/web/src/test-app.tsx:201-229`).
 - Feature fixtures beside their tests: `playRoutes`, `draftView` (`packages/web/src/play/play-test-fixture.tsx:93`, `:292`); `sqliteSessionFixture` routes fetch through real draft CRUD on temporary SQLite (`packages/web/src/play/draft-sqlite-fixture.ts:19`); `mountSupplied` (`packages/web/src/play/draft-upload-test-fixture.ts:8`); `reviewFixture` (`packages/web/src/play/review-test-fixture.ts:7`); `reviewHarness` (`packages/web/src/play/review-test-harness.tsx:27`); project-page `stage`/`output`/`body` rows (`packages/web/src/routes/project-fixtures.ts:10-51`); `revisionRouteFixture` (`packages/web/src/routes/project-revision.fake.ts:8`); `revisionView` (`packages/web/src/project/revision-fixture.ts:2`); editor fixtures (`packages/web/src/project/revision-editor-test-fixtures.ts:5-80`); tutorial `mount`/`start`/`skipTo`/`fill` (`packages/web/src/tutorial/test-fixture.tsx:79-311`).
+
+**MCP tools** (`packages/app/src/edge/mcp/*.test.ts`, 12 files): tools are exercised as an agent sees them, through `connectAgent` over `mcpFixture`, or one call at a time with `routeCallDeps`.
+
+- `tools-parity.test.ts` enumerates `app.routes` and fails when an `/api` route is neither a tool nor in `excludedRoutes`, when an excluded route is also offered or no longer exists, when two tools share a name, when credentials, pairing, backups, the updater, host setup or YouTube actions are offered, and when a page-confirmed action lacks `confirm` (`packages/app/src/edge/mcp/tools-parity.test.ts:25`, `:36`, `:41`, `:87`).
+- `http.test.ts`: an agent connects with no token and the connection time is recorded; a request from a web page at another address is refused and records nothing; loopback origins and the configured host are accepted and nothing else; GET and DELETE answer 405; a non-JSON body is refused with a sentence (`packages/app/src/edge/mcp/http.test.ts:26`, `:42`, `:55`, `:67`, `:76`).
+- `call-route.test.ts`: path parameters, query and body reach the route; refusals pass through, a schema refusal names the wrong arguments; `confirmed: true` is asked before sending anything; agent changes are recorded once per `idempotencyKey` (`packages/app/src/edge/mcp/call-route.test.ts:30`-`:268`). Beside it, `file-tools`, `review-tools`, `library-tools`, `remake-tools`, `state-shapes`, `instructions`, `attribution`, `tools-projects` and `tools-setup` tests cover the bespoke tools and the answer shapes.
+- Slice side: `packages/app/src/slices/agents/attention.test.ts` checks `needs_attention` (every kind oldest first, in-flight retries, what is left out, one unreadable row skipped and logged); `packages/app/src/slices/reviews/external-repo.test.ts` checks the External agent review rules (first verdict wins, auto-pass at the deadline including paused projects, canceled runs never pass, Trash, superseded and replaced standings).
+- Composed: `packages/app/test/mcp-narration-fix.test.ts` and `packages/app/test/mcp-chunk-fix.test.ts` run the real runner (`composedFixture`) and fix a failed narration chunk through MCP the way the error says, voicing only that chunk again and continuing the run; `revision-agent-reviews.test.ts` and `revision-agent-reviews-shutdown.test.ts` run External agent reviews end to end (waiting, auto-pass after 2 h, restart, cancel, redo).
+- Backups: `packages/app/src/slices/storage/backup-new-tables.test.ts` lists every table as carried or in `leftOut` (`:33`); `external_reviews`, `agent_actions`, `project_starts` and `told_failures` are left out.
 
 **Other packages:**
 
@@ -167,7 +177,7 @@ File counts by directory (tracked `*.test.*` files, not instrumented coverage).
 | Area | Test files | Heaviest directories |
 | --- | ---: | --- |
 | `packages/app/src/slices` | 332 | `rebuild` 92, `revisions` 35, `storage` 17, `video` 17, `narration` 15, `play-drafts` 15, `settings` 11, `voices` 10, `schedules` 9 |
-| `packages/app/src/edge` | 73 | `http` 56, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3 |
+| `packages/app/src/edge` | 91 | `http` 62, `mcp` 12, `edge` root 6, `docker-install` 4, `events` 4, `autostart` 3 |
 | `packages/app/src/adapters` | 50 | `llm` 15, `alignment` 13, `image` 9, `tts` 8, `host-cli` 2, root 3 |
 | `packages/app/src/kernel` | 32 | `runner` 14, `ports` 7, root 7, `db` 3, `config` 1 |
 | `packages/app/src` other | 30 | `host-cli` 9, `updater` 9, root 7, `catalog` 5 |

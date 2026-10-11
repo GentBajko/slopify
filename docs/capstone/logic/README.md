@@ -12,7 +12,7 @@ paths_covered:
 
 # Business logic index
 
-One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation, the Studio extension's work in YouTube Studio, and Home. Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
+One scenario file per externally triggerable capability. Runs flow from setup (Play drafts, templates, schedules, onboarding) through admission, the revision runner and its stages, to downloads, upload preparation, the Studio extension's work in YouTube Studio, and Home; an external agent drives the same routes through MCP (45). Each file carries the eight scenario sections; this index carries the map and the rules every scenario shares.
 
 ## Trigger & preconditions
 
@@ -54,7 +54,7 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 | 30 Channels, brand kit, cast | [30-channels-and-cast.md](30-channels-and-cast.md) |
 | 31 Channel memory: episodes, existing videos | [31-channel-memory.md](31-channel-memory.md) |
 | 32 Studio upload prep: pack, upload pick, extension fill, popup, upload confirmation, links | [32-studio-upload-prep.md](32-studio-upload-prep.md) |
-| 33 Automatic reviews | [33-automatic-reviews.md](33-automatic-reviews.md) |
+| 33 Automatic reviews, External agent (MCP) reviewer and its 2 h auto-pass | [33-automatic-reviews.md](33-automatic-reviews.md) |
 | 34 Speakers and voices | [34-speakers-and-voices.md](34-speakers-and-voices.md) |
 | 35 Audio levelling and ambient bed | [35-audio-levelling-and-ambient.md](35-audio-levelling-and-ambient.md) |
 | 36 Style preview | [36-style-preview.md](36-style-preview.md) |
@@ -66,6 +66,7 @@ Open the scenario whose capability a change touches; `depends_on` in each file's
 | 42 In-app help, What's new, patch notes | [42-in-app-help.md](42-in-app-help.md) |
 | 43 Start at login | [43-autostart.md](43-autostart.md) |
 | 44 Studio autopilot: posting plan and release calendar, Studio checks, Details touches, pinned comment, A/B tests on request, Studio numbers | [44-studio-autopilot.md](44-studio-autopilot.md) |
+| 45 MCP agent access: endpoint and Origin rule, tool parity and exclusions, needs_attention, attend routine, "by agent" attribution | [45-mcp-agent-access.md](45-mcp-agent-access.md) |
 
 ## Branches
 
@@ -81,7 +82,7 @@ Drafts: active → starting → started (22). Projects and stages: 01. Checkpoin
 
 ## Invariants
 
-Saving setup or project edits dispatches no provider work; reviewed Start, rebuild Start, recovery, checkpoint approval and scheduler admission are the only authorities that admit work (04, 12, 13, 23, 25).
+Saving setup or project edits dispatches no provider work; reviewed Start, rebuild Start, recovery, checkpoint approval and scheduler admission are the only authorities that admit work (04, 12, 13, 23, 25), whether the person or an agent through MCP calls them (45).
 
 ## Outcomes & side effects
 

@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 8e5bc8b8156d
-generated_date: 2026-10-02
+generated_at_commit: d447a799ebc5
+generated_date: 2026-10-11
 capstone_version: 7.0.1
-content_hash: 223938c3548a
+content_hash: decaa4a5efdf
 paths_covered:
   - ":(top)package.json"
   - ":(top)Dockerfile"
@@ -26,6 +26,7 @@ paths_covered:
   - ":(top)packages/app/src/edge/http/studio.ts"
   - ":(top)packages/app/src/edge/http/host-cli.ts"
   - ":(top)packages/app/src/edge/http/backups.ts"
+  - ":(top)packages/app/src/edge/mcp/http.ts"
   - ":(top)packages/app/src/adapters/alignment/runner.ts"
   - ":(top)packages/app/src/updater/**"
   - ":(top)packages/app/src/host-cli/**"
@@ -110,7 +111,18 @@ Shutdown: SIGINT/SIGTERM run the graceful stop; a second signal exits 1 immediat
 
 ### In-process timers
 
-Batch queue pump every 1 s, schedule tick every 15 s, retry wake every 5 s, model-catalogue sync check hourly, backup tick every 60 s, trash purge hourly and once at start (`packages/app/src/main.ts:657`, `packages/app/src/main.ts:668`, `packages/app/src/main.ts:673`, `packages/app/src/main.ts:700`, `packages/app/src/main.ts:703`, `packages/app/src/main.ts:729`). Telemetry flushes once after listen (`packages/app/src/main.ts:733`).
+Batch queue pump every 1 s, schedule tick every 15 s, retry wake every 5 s, model-catalogue sync check hourly, backup tick every 60 s, trash purge hourly and once at start (`packages/app/src/main.ts:708`, `packages/app/src/main.ts:719`, `packages/app/src/main.ts:724`, `packages/app/src/main.ts:752`, `packages/app/src/main.ts:755`, `packages/app/src/main.ts:781`). External agent reviews past their 2 h deadline are settled once at boot, right after the server listens, and then on every 5 s retry tick (`releaseReviews`, `packages/app/src/main.ts:694`, `:707`, `:729`): each passes without review, its dependents run, and a "Passed without review" notice goes out. Telemetry flushes once after listen (`packages/app/src/main.ts:733`).
+
+### Agents (MCP)
+
+AI agents connect to `http://<host>:<port>/mcp`, served by the app itself (`packages/app/src/edge/http/app.ts:328`, `packages/app/src/edge/mcp/http.ts:51`): MCP Streamable HTTP, stateless (one server and transport per POST, JSON answers, GET and DELETE answer 405), no token and no stdio bridge. Setup is one line per agent, shown with Copy buttons in Settings → Connections → Agents (MCP) for this install's URL (`GET /api/settings/agents` also reports when an agent last connected):
+
+| Agent | Setup | Source |
+|---|---|---|
+| Claude Code | run once in a terminal: `claude mcp add --transport http slopify http://127.0.0.1:<port>/mcp` | `packages/app/src/slices/agents/model.ts:15` |
+| Codex | add to `~/.codex/config.toml`: `[mcp_servers.slopify]` with `url = "http://127.0.0.1:<port>/mcp"` | `packages/app/src/slices/agents/model.ts:20` |
+
+Docker uses the same URL through the published port (`127.0.0.1:${SLOPIFY_PORT-6969}`); `container-smoke.sh` checks an `initialize` there (`packages/app/scripts/container-smoke.sh:77`-`:81`). The Origin rule (`originAllowed`, `packages/app/src/edge/mcp/http.ts:23`) accepts a request with no `Origin` (CLI agents), or one from `localhost`, `*.localhost`, `127.0.0.1`, `[::1]` or the configured `--host` when that is not a wildcard; the port is not compared, so the container's own port does not matter. Anything else gets 403 naming Settings → Connections → Agents (MCP). Request bodies are capped at 48 MB (413).
 
 ### Start at login (per data folder)
 
@@ -246,7 +258,7 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 
 | Service | Configuration | Source |
 |---|---|---|
-| Local HTTP server | `@hono/node-server`, `/api/*`, `/files`, SPA static fallback from `dist/web`; `GET /api/health`; no login | `packages/app/src/edge/http/app.ts:168`, `packages/app/src/edge/http/app.ts:297`, `packages/app/src/edge/http/app.ts:314` |
+| Local HTTP server | `@hono/node-server`, `/api/*`, `/files`, `/mcp` (agents), SPA static fallback from `dist/web`; `GET /api/health`; no login | `packages/app/src/edge/http/app.ts:168`, `packages/app/src/edge/http/app.ts:297`, `packages/app/src/edge/http/app.ts:314` |
 | Request timeouts | Node `requestTimeout` set to 0; per-request 5-minute limit re-applied, except `PUT /api/storage/import` which only times out after 5 minutes of upload idleness; Node's 1-minute `headersTimeout` unchanged | `packages/app/src/edge/http/timeouts.ts:11`, `packages/app/src/edge/http/timeouts.ts:21`, `packages/app/src/main.ts:977` |
 | Telemetry collector | Cloudflare Worker `slopify-collector`, `src/index.ts`, compat date `2026-08-01`, custom domain `collector.slopify.stream`, observability on, D1 binding `DB` → `slopify-collector`; `POST /events`, `GET /aggregates`; CORS for `https://slopify.stream` | `packages/collector/wrangler.jsonc:3`, `packages/collector/src/index.ts:18`, `packages/collector/src/index.ts:25`, `packages/collector/schema.sql:3` |
 | Marketing site | Cloudflare static-assets Worker `slopify-site`, `./public`, custom domain `slopify.stream`, no server code; counters use `http://127.0.0.1:8787` on loopback origins | `packages/site/wrangler.jsonc:3`, `packages/site/public/main.js:7` |
@@ -262,7 +274,7 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 | Type check | `npm run typecheck` (workspaces; web first emits app declarations) | `package.json:10`, `packages/web/package.json:9` |
 | Tests | `npm test` → `vitest run`; CI shards `npx vitest run --shard=N/5` | `package.json:11`, `.github/workflows/ci.yml:43` |
 | Build | `npm run build` → web (`vite build`), extension, then app (`tsc -p tsconfig.build.json` + copy migrations, assets, web, extension) | `package.json:12`, `packages/app/package.json:26` |
-| Migrations | No standalone command; boot runs `migrate` over `dist/.../migrations/*.sql` (42 files, `0001`–`0049`) sorted by name, each in a transaction; a file whose first line is `-- foreign-keys: off` (a table rebuild such as `0049-square-format.sql`) runs with foreign-key enforcement off and a `PRAGMA foreign_key_check` before it commits; a DB newer than the app is refused | `packages/app/src/main.ts:253`, `packages/app/src/kernel/db/migrate.ts:16-18`, `packages/app/src/kernel/db/migrate.ts:23-28`, `packages/app/src/kernel/db/migrate.ts:44-67` |
+| Migrations | No standalone command; boot runs `migrate` over `dist/.../migrations/*.sql` (55 files, `0001`–`0062`; newest schema 62) sorted by name, each in a transaction; a file whose first line is `-- foreign-keys: off` (a table rebuild such as `0049-square-format.sql`) runs with foreign-key enforcement off and a `PRAGMA foreign_key_check` before it commits; a DB newer than the app is refused | `packages/app/src/main.ts:253`, `packages/app/src/kernel/db/migrate.ts:16-18`, `packages/app/src/kernel/db/migrate.ts:23-28`, `packages/app/src/kernel/db/migrate.ts:44-67` |
 | Packed-install smoke | `node packages/app/scripts/install-smoke.mjs` (after build): `npm pack`, global installs, starts bin and npm-exec forms until `/api/health` | `packages/app/scripts/install-smoke.mjs:19` |
 | Image smoke | `docker build -t slopify:smoke .` then `bash packages/app/scripts/container-smoke.sh` and `node packages/app/scripts/host-cli-smoke.mjs` | `.github/workflows/ci.yml:112-116` |
 | Docker-install smoke | `node packages/app/scripts/docker-install-smoke.mjs` (alias `npm run smoke:docker-install --workspace @gentbajko/slopify`) | `packages/app/package.json:29`, `.github/workflows/ci.yml:118` |
@@ -290,6 +302,7 @@ Install/update transaction (`applyDocker`, `packages/app/src/edge/docker-install
 - Export everything: `GET /api/storage/export` streams a `.tar` (`slopify-backup-YYYY-MM-DD.tar`), refused 409 while projects are being made; `GET /api/storage/export/summary` sizes it first (`packages/app/src/edge/http/storage.ts:90`, `packages/app/src/edge/http/storage.ts:106`).
 - Import: `PUT /api/storage/import` accepts `application/x-tar` (full) or `application/zip` (older portable export) (`packages/app/src/edge/http/storage.ts:139`).
 - Scheduled backups: `GET/PUT /api/backups`, `POST /api/backups/run`; settings keys `backups.config` (default off, `03:00`, keep 5, range 1–30, folder null) and `backups.status` (`packages/app/src/edge/http/backups.ts:16`, `packages/app/src/slices/backups/model.ts:8`, `packages/app/src/slices/backups/model.ts:47`). Timing: 2 min after start, retry 1 h after failure, 10 min while busy, catch-up unless one succeeded within 20 h (`packages/app/src/slices/backups/schedule.ts:6`). Files `slopify-backup-YYYY-MM-DDTHHMMSSZ.tar`, written as `.…tar.partial` at `0600` then renamed; pruning touches only that pattern (`packages/app/src/slices/backups/files.ts:9`, `packages/app/src/slices/backups/files.ts:51`, `packages/app/src/slices/backups/files.ts:121`). Free space is checked with `statfs`; a folder inside projects (other than its `Backups`), staging, logs or `models/` is refused (`packages/app/src/slices/backups/service.ts:1`, `packages/app/src/slices/backups/folder.ts:26`).
+- What backups leave out: besides keys and this install's own bookkeeping, the agent tables `external_reviews`, `agent_actions` and `project_starts`, the notice bookkeeping `told_failures`, and the setting `agents.lastConnectedAt`; a restored project asks its waiting reviews again (`packages/app/src/slices/storage/portable.ts:493`, `packages/app/src/slices/storage/backup-new-tables.test.ts:33`). `review_verdicts` is carried.
 - Docker installation backups consist of the named volume plus the host Projects folder; the per-update recovery volume covers only `/data` (`docs/docker.md:76`).
 
 ## Logging and diagnostics
