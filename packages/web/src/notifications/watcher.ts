@@ -1,7 +1,6 @@
 import type { ProjectState, StageKind, StageState } from "@app/kernel/pipeline.js";
 import {
   autoPassNoticeText,
-  type NoticeCause,
   type NoticeSubject,
   type NoticeText,
   noticeOf,
@@ -14,9 +13,10 @@ import {
 } from "@app/slices/notifications/rules.js";
 
 // Turns the global event stream's `project.state` frames into at most one browser notification
-// per transition, and a failed step's `stage.state` frame into Step failed while the run goes on. The rule is the server's own (`slices/notifications/rules.ts`): only a run
-// seen running or waiting can finish, fail or stop to wait, so a project that was already done
-// when the page loaded says nothing.
+// per transition, and a failed step's `stage.state` frame into Step failed while another step
+// waits. The rule is the server's own (`slices/notifications/rules.ts`): only a run seen running
+// or waiting can finish, fail or stop to wait, so a project that was already done when the page
+// loaded says nothing.
 
 export interface ShownNotice {
   readonly projectId: string;
@@ -129,6 +129,12 @@ export interface RunWatcher {
   readonly settled: () => Promise<void>;
 }
 
+// A run's transition (`noticeOf`) and the state it reached.
+interface Transition {
+  readonly kind: RunNotice;
+  readonly state: ProjectState;
+}
+
 const ends: ReadonlySet<ProjectState> = new Set(["done", "partial", "failed", "canceled"]);
 
 export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
@@ -153,8 +159,11 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
   };
 
   const told = deps.told ?? toldInMemory();
-  // `state` is the transition's, when a transition is the cause.
-  const announce = async (projectId: string, cause: NoticeCause, state?: ProjectState) => {
+  // A transition names the state it reached, which keys its claim.
+  const announce = async (
+    projectId: string,
+    cause: Transition | { readonly stepFailed: StageKind },
+  ) => {
     const subject = await deps.subject(projectId);
     if (subject === undefined) return;
     const now = runNotices(cause, subject, told.read(projectId));
@@ -165,7 +174,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
         await deps.claim(
           one.kind === "step-failed"
             ? `${projectId}:step-failed:${now.news.join(",")}`
-            : `${projectId}:${state ?? ""}`,
+            : `${projectId}:${"state" in cause ? cause.state : ""}`,
         )
       )
         notices.push(one);
@@ -206,7 +215,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       if (ends.has(event.state)) started.delete(event.projectId);
       const kind = noticeOf(previous, event.state);
       if (kind === undefined || !on) return;
-      track(announce(event.projectId, { kind }, event.state));
+      track(announce(event.projectId, { kind, state: event.state }));
     },
     observeStage: (event) => {
       if (event.state !== "failed" || !(deps.enabled() || sounding())) return;
