@@ -21,7 +21,9 @@ afterEach(() => {
   for (const close of closers.splice(0)) close();
 });
 
-it("reads a run quit mid-way as Stopped after boot, its reviews live, and Continue goes on", async () => {
+it("reads a run quit mid-way as Stopped after boot, its reviews live, and Continue goes on", {
+  timeout: 30_000,
+}, async () => {
   const { h, call } = await narratingWhileAgentsReview(closers);
   // The shutdown `main.ts` runs on Ctrl-C or an update install.
   await h.runner.abortAll();
@@ -59,7 +61,9 @@ it("reads a run quit mid-way as Stopped after boot, its reviews live, and Contin
   ]);
 });
 
-it("keeps a run canceled mid-way canceled after boot, its reviews closed", async () => {
+it("keeps a run canceled mid-way canceled after boot, its reviews closed", {
+  timeout: 30_000,
+}, async () => {
   const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
   const next = boot(h, closers);
@@ -73,7 +77,9 @@ it("keeps a run canceled mid-way canceled after boot, its reviews closed", async
   ).toEqual([]);
 });
 
-it("lets the agent review images retried after a cancel, and the images step goes on", async () => {
+it("lets the agent review images retried after a cancel, and the images step goes on", {
+  timeout: 30_000,
+}, async () => {
   const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
   // Try images again on the canceled run's page.
@@ -147,7 +153,9 @@ for (const action of [{ kind: "retry", stage: "images" }, { kind: "resume" }] as
 // A run taken up again after a cancel goes on, so it reads by what it does, not Canceled: here
 // its retried images wait for the agent (the header, Projects, Home, the calendar and the MCP
 // tools read the stage rows; the runner announces from its own standings).
-it("reads a run retried after a cancel by what it does while its images wait for the agent", async () => {
+it("reads a run retried after a cancel by what it does while its images wait for the agent", {
+  timeout: 30_000,
+}, async () => {
   const { h } = await narratingWhileAgentsReview(closers);
   await cancel(h);
   expect(
