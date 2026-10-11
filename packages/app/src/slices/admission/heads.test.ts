@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 import { recoverWork } from "../rebuild/repo.js";
 import { waitingReviewFixture } from "../reviews/external-repo.fake.js";
+import { projectHolds } from "../reviews/holds.js";
 import { listProjectHeads } from "./heads.js";
 import { setProjectPaused } from "./repo.js";
 
@@ -35,6 +36,21 @@ it("counts each pause and each stop a restart makes", () => {
   db.prepare("UPDATE revision_work SET dispatch_state='allowed'").run();
   recoverWork(db);
   expect(head()).toMatchObject({ stopCount: 2 });
+});
+
+// A step waiting to try again by itself is stopped by a restart like any other: only Continue the
+// run starts it again, so the stop is counted.
+it("counts the stop of a run whose step waits to try again by itself", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  db.prepare("UPDATE external_reviews SET state='answered'").run();
+  db.prepare(
+    "UPDATE revision_work SET state='pending',dispatch_state='allowed',retry_at='2026-10-10T00:10:00.000Z'",
+  ).run();
+  recoverWork(db);
+  expect(listProjectHeads(db).find((one) => one.id === "p1")).toMatchObject({ stopCount: 1 });
+  expect(projectHolds(db, { projectId: "p1" }).stopped.has("p1")).toBe(true);
 });
 
 // A project still waiting its turn in a batch was never started: a restart leaves it queued and

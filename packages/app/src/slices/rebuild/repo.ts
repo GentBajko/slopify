@@ -102,7 +102,7 @@ export function previewById(
 export function recoverWork(db: DatabaseSync): void {
   transact(db, () =>
     db.exec(`INSERT INTO project_controls(project_id, stops)
-  SELECT DISTINCT project_id, 1 FROM revision_work WHERE state NOT IN ('done','canceled') AND dispatch_state!='held' AND retry_at IS NULL AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued')
+  SELECT DISTINCT project_id, 1 FROM revision_work WHERE state NOT IN ('done','canceled') AND dispatch_state!='held' AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued')
   ON CONFLICT(project_id) DO UPDATE SET stops = stops + 1;
  UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE state!='done' AND work_id IN (SELECT id FROM revision_work WHERE state!='canceled' AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued'));
  UPDATE revision_work SET state='pending',dispatch_state='held' WHERE state NOT IN ('done','canceled') AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued');`),
