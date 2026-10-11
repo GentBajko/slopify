@@ -197,7 +197,7 @@ Only generated steps can have a checkpoint. Pausing the project still applies on
 
 ## Free space
 
-A finished project can drop the working files it was made from (images, narration parts, subtitle timing, render settings) and keep what gets published: the video, shorts, thumbnail, article, description, document and anything you uploaded. In the right rail, **Free space** shows the size of both, for example "Outputs 1.4 GB · working files 1.2 GB", with the button **Free 1.2 GB: keep the outputs, drop the working files**.
+A finished project can drop the working files it was made from (narration parts, subtitle timing, render settings) and keep what gets published: the video, shorts, the images they show, thumbnail, article, description, document and anything you uploaded. In the right rail, **Free space** shows the size of both, for example "Outputs 1.4 GB · working files 1.2 GB", with the button **Free 1.2 GB: keep the outputs, drop the working files**.
 
 1. Press the button.
 2. Read what goes, then confirm with **Free 1.2 GB**, or press **Keep the working files**.

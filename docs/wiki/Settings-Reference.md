@@ -198,7 +198,7 @@ After importing, enter your keys again in Settings → Providers. You can also r
 |---|---|
 | **Disk space** | What Slopify stores: the total, project files, staged uploads, and deleted projects still in the trash (freed when the trash removes them after 30 days, or with **Delete now**). |
 | Storage by project | Each project's size, split into outputs and working files, largest first. A finished project's page offers the same on its own (**Free space**, see [Project Page](Project-Page#free-space)). |
-| **Keep outputs only** | On a finished project, deletes the working files (images, narration parts, subtitle timing, render settings) and keeps the video, shorts, thumbnail, article, description, document and your uploads. You confirm first. Changing the project later makes those files again, which takes time and provider credits. |
+| **Keep outputs only** | On a finished project, deletes the working files (narration parts, subtitle timing, render settings) and keeps the video, shorts, the images they show, thumbnail, article, description, document and your uploads. You confirm first. Changing the project later makes those files again, which takes time and provider credits. |
 
 ### Sample projects
 

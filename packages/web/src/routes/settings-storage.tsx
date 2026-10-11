@@ -213,5 +213,5 @@ export function ProjectStorageList({
 // What Keep outputs only removes and what it costs later, asked before it runs here and on
 // the project page.
 export function keepOutputsConsequence(files: number, bytes: number): string {
-  return `This removes ${String(files)} working file(s) and frees ${fileSize(bytes)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
+  return `This removes ${String(files)} working file(s) and frees ${fileSize(bytes)}: the narration parts, subtitle timing and render settings the project was made from. The video, shorts, their images, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`;
 }

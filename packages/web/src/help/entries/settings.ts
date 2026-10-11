@@ -219,7 +219,7 @@ export const settingsHelp = {
   },
   "settings.storage.keep-outputs": {
     title: "Free disk space",
-    body: "Delete old versions removes a project's History folder (earlier renders and narration). Keep outputs only removes a finished project's working files (images, narration parts, timing, render settings). Clean up everything does both for every project; running or unfinished ones keep everything. The current video, shorts, thumbnail, documents and your uploads always stay. Remaking a project or going back to an old version makes the files again.",
+    body: "Delete old versions removes a project's History folder (earlier renders and narration). Keep outputs only removes a finished project's working files (narration parts, timing, render settings). Clean up everything does both for every project; running or unfinished ones keep everything. The current video, shorts, their images, thumbnail, documents and your uploads always stay. Remaking a project or going back to an old version makes the files again.",
     tutorial: { page: "Where-Your-Files-Live", anchor: "keep-outputs-only" },
   },
   "settings.sample.restore": {

@@ -59,20 +59,20 @@ function fixture() {
 it("splits a project's size into outputs and working files", () => {
   const { h } = fixture();
   expect(projectStorage(h.deps, "p1")).toEqual({
-    outputsBytes: 1000 + 400 + 50 + 10 + 5 + 30,
-    workingBytes: 300 + 700 + 2 + 90 + 7,
-    removableFiles: 3,
-    removableBytes: 300 + 700 + 2,
+    outputsBytes: 1000 + 400 + 50 + 10 + 5 + 30 + 300,
+    workingBytes: 700 + 2 + 90 + 7,
+    removableFiles: 2,
+    removableBytes: 700 + 2,
     historyFiles: 0,
     historyBytes: 0,
     finished: true,
   });
-  expect(storageUsage(h.deps).byProject[0]).toMatchObject({ id: "p1", removableBytes: 1002 });
+  expect(storageUsage(h.deps).byProject[0]).toMatchObject({ id: "p1", removableBytes: 702 });
 });
 
 it("keeps every output and every supplied file, and says what it freed", () => {
   const { h, dir } = fixture();
-  expect(keepOutputsOnly(h.deps, "p1")).toEqual({ ok: true, files: 3, bytesFreed: 1002 });
+  expect(keepOutputsOnly(h.deps, "p1")).toEqual({ ok: true, files: 2, bytesFreed: 702 });
   for (const kept of [
     "video.mp4",
     "shorts/short-01.mp4",
@@ -80,11 +80,12 @@ it("keeps every output and every supplied file, and says what it freed", () => {
     "article.md",
     "description.txt",
     "document.pdf",
+    "images/001.png",
     "reference.png",
     "stray.bin",
   ])
     expect(existsSync(join(dir, kept)), kept).toBe(true);
-  for (const gone of ["images/001.png", "audio-body.mp3", "render.json"])
+  for (const gone of ["audio-body.mp3", "render.json"])
     expect(existsSync(join(dir, gone)), gone).toBe(false);
   // The records stay: the project page shows those files as missing, and a rebuild makes them.
   expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_assets").get()).toEqual({ n: 10 });
@@ -116,6 +117,9 @@ it("counts the article, video, shorts, thumbnail, description and document as ou
     "article_md",
     "youtube_description",
     "document_pdf",
+    "image",
+    "animated_image",
+    "short_image",
   ] as const)
     expect(outputRoles).toContain(role);
 });

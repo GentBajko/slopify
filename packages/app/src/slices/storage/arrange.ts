@@ -19,9 +19,10 @@ import type { ProjectPlaces } from "./places.js";
 // files is put where a person looks for it:
 //
 //   <Title>/Upload/            the current version's publishable files: video, thumbnails,
-//                              subtitles, description, PDF, Shorts/<n> - <title>.mp4
-//   <Title>/Working/           what the current version was made from (images, narration,
-//                              research, subtitle timing, render settings): made again if lost
+//                              subtitles, description, PDF, the video's Images/, and
+//                              Shorts/<n> - <title>.mp4 with each short's images beside it
+//   <Title>/Working/           what the current version was made from (narration, research,
+//                              subtitle timing, render settings): made again if lost
 //   <Title>/History/<date>/    files of older versions, by the day they were made: delete the
 //                              folder to free the space; going back to that version makes them again
 //
@@ -46,7 +47,11 @@ export interface Arranged {
   readonly skipped: string | undefined;
 }
 
-// What makes a project's arrangement current: its title, head version and files. A project
+// Raised when a role's place changes, so every project arranged by the older places is moved
+// once: 2 put the images the video and shorts show into Upload (3.18.1).
+const layoutVersion = 2;
+
+// What makes a project's arrangement current: the layout, its title, head version and files. A project
 // whose key is unchanged since it was last arranged is left alone.
 export function arrangeKeys(db: DatabaseSync): ReadonlyMap<string, string> {
   const keys = new Map<string, string>();
@@ -61,7 +66,10 @@ export function arrangeKeys(db: DatabaseSync): ReadonlyMap<string, string> {
     .all())
     keys.set(
       String(row.id),
-      [row.title, row.revision_id, row.assets, row.legacy, row.current].map(String).join("|"),
+      [
+        `layout ${layoutVersion}`,
+        ...[row.title, row.revision_id, row.assets, row.legacy, row.current].map(String),
+      ].join("|"),
     );
   return keys;
 }
@@ -372,14 +380,15 @@ function placeFor(
       const key = /^image:(.+)$/u.exec(slot)?.[1];
       const at = key === undefined ? undefined : order.get(key);
       return at === undefined
-        ? `Working/Images/${file}`
-        : `Working/Images/${pad(at + 1)}${extension}`;
+        ? `Upload/Images/${file}`
+        : `Upload/Images/${pad(at + 1)}${extension}`;
     }
     case "short_image": {
       const match = /^shorts:([0-9]+):image:([0-9]+)$/u.exec(slot);
-      return match === null
-        ? `Working/Shorts/${file}`
-        : `Working/Shorts/Short ${match[1]}/image ${match[2]}${extension}`;
+      if (match === null) return `Upload/Shorts/Images/${file}`;
+      // Beside the short's video, in a folder named like it: Shorts/3 - Title/image 1.png.
+      const title = titles.get(Number(match[1]));
+      return `Upload/Shorts/${match[1]}${title === undefined || title === "" ? "" : ` - ${clean(title)}`}/image ${match[2]}${extension}`;
     }
     case "figure_card":
       return `Working/Cards/${file}`;

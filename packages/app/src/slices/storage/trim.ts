@@ -10,8 +10,9 @@ import type { OutputRole } from "./model.js";
 import type { ProjectPlaces } from "./places.js";
 import { pieceFile } from "./reconcile.js";
 
-// Keep outputs only: a finished project drops the working files it was made from (images,
-// narration parts, subtitle timing, render settings) and keeps what gets published. Two
+// Keep outputs only: a finished project drops the working files it was made from (narration
+// parts, subtitle timing, render settings) and keeps what gets published, the images the
+// video and shorts show included: making them again costs money and never gives the same ones. Two
 // rules keep it safe. A file the user supplied is never removed, because nothing could make
 // it again. And only files a project record names are removed: anything else in the folder
 // is reconcile's business (`reconcile.ts`), which leaves the Backups folder alone.
@@ -34,6 +35,9 @@ export const outputRoles: readonly OutputRole[] = [
   "audio_export",
   "subtitles_srt",
   "subtitles_vtt",
+  "image",
+  "animated_image",
+  "short_image",
 ];
 
 export interface ProjectStorage {

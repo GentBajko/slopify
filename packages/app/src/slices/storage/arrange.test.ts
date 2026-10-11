@@ -32,6 +32,39 @@ function settle(h: { deps: { db: import("node:sqlite").DatabaseSync } }): void {
   h.deps.db.exec("UPDATE revision_work SET dispatch_state='held' WHERE state='pending'");
 }
 
+// The fixture makes no pictures: give its current version an image the video shows and one
+// of short 1's images.
+function addImages(h: Awaited<ReturnType<typeof narrationFixture>>): void {
+  const head = h.deps.db
+    .prepare("SELECT revision_id FROM project_heads WHERE project_id=?")
+    .get(h.projectId);
+  const like = h.deps.db
+    .prepare("SELECT descriptor FROM revision_outputs WHERE project_id=? LIMIT 1")
+    .get(h.projectId);
+  for (const [id, path, slot, role] of [
+    ["img-1", "assets/img-1/image.png", "image:scene-1", "image"],
+    ["short-img-1", "assets/short-img-1/image.png", "shorts:1:image:1", "short_image"],
+  ] as const) {
+    const at = outputPath(h.deps.paths, h.projectId, path);
+    mkdirSync(join(at, ".."), { recursive: true });
+    writeFileSync(at, Buffer.alloc(10));
+    h.deps.db
+      .prepare("INSERT INTO project_assets VALUES (?,?,?,10,'t')")
+      .run(id, h.projectId, path);
+    h.deps.db
+      .prepare("INSERT INTO revision_outputs VALUES (?,?,?,?,?,?,'f','ready',?,NULL,1,'t')")
+      .run(
+        `o-${id}`,
+        h.projectId,
+        String(head?.revision_id),
+        slot,
+        slot,
+        id,
+        JSON.stringify({ ...JSON.parse(String(like?.descriptor)), id: `o-${id}`, role, path }),
+      );
+  }
+}
+
 async function arranged() {
   const h = await narrationFixture("First paragraph.\n\nSecond paragraph.");
   await h.pump();
@@ -45,6 +78,7 @@ async function arranged() {
 it("names a finished project's folder after its title and puts every file in its place", async () => {
   const { h, deps } = await arranged();
   try {
+    addImages(h);
     const before = h.view();
     const stored = before.outputs
       .filter((row) => row.selected)
@@ -76,6 +110,10 @@ it("names a finished project's folder after its title and puts every file in its
       files.filter((file) => file !== projectMarker && !/^(Upload|Working|History)\//u.test(file)),
     ).toEqual([]);
     expect(files.some((file) => file.startsWith("Working/Narration/"))).toBe(true);
+    // The images the video shows are kept with what gets published.
+    expect(files).toContain("Upload/Images/image.png");
+    expect(files).toContain("Upload/Shorts/1/image 1.png");
+    expect(files.some((file) => /^Working\/(Images|Shorts)\//u.test(file))).toBe(false);
     // Every stored path still reads the same bytes through the stored path.
     for (const [path, bytes] of content)
       expect(readFileSync(outputPath(h.deps.paths, h.projectId, path))).toEqual(bytes);
@@ -351,6 +389,24 @@ it("cleans up every finished project's old versions and working files at once", 
     const after = projectStorage(h.deps, h.projectId);
     expect([after.removableFiles, after.historyFiles]).toEqual([0, 0]);
     expect(reconcileStorage(h.deps.db, h.deps.paths).orphanFiles).toBe(0);
+  } finally {
+    h.close();
+  }
+}, 30000);
+
+it("moves a project arranged by an older layout into today's places once", async () => {
+  const { h, deps, places } = await arranged();
+  try {
+    addImages(h);
+    arrangeChanged(deps);
+    const root = projectDir(h.deps.paths, h.projectId);
+    // Arranged before images went to Upload: its key carries no layout version.
+    const key = places.moves.arrangedKey(h.projectId) ?? "";
+    expect(key.startsWith("layout ")).toBe(true);
+    places.moves.arranged(h.projectId, key.replace(/^layout [0-9]+\|/u, ""));
+    expect(arrangeChanged(deps)).toEqual([h.projectId]);
+    expect(filesUnder(root)).toContain("Upload/Images/image.png");
+    expect(arrangeChanged(deps)).toEqual([]);
   } finally {
     h.close();
   }
