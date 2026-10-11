@@ -14,7 +14,7 @@ import {
 } from "@app/slices/notifications/rules.js";
 
 // Turns the global event stream's `project.state` frames into at most one browser notification
-// per transition. The rule is the server's own (`slices/notifications/rules.ts`): only a run
+// per transition, and a failed step's `stage.state` frame into Step failed while the run goes on. The rule is the server's own (`slices/notifications/rules.ts`): only a run
 // seen running or waiting can finish, fail or stop to wait, so a project that was already done
 // when the page loaded says nothing.
 

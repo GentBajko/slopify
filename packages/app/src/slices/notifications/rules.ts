@@ -6,8 +6,8 @@ import type { CheckpointHold } from "../reviews/holds.js";
 // notifications so both say the same thing about the same transition. Pure: the web bundle
 // imports this file.
 
-// `step-failed`: a step failed while the run still reads by a wait (`stepFailed`), told when the
-// run stops to wait on it (`runNotices`).
+// `step-failed`: a step failed while the run goes on, told as it fails or when the run stops to
+// wait beside it (`runNotices`).
 export type RunNotice = "ready" | "partial" | "failed" | "waiting" | "step-failed";
 
 // Only a run seen running or waiting can finish, fail or stop to wait: a project first seen
