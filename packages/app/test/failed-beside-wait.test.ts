@@ -178,11 +178,12 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
     announced: "pending",
     // A run parked on an agent's review sends no "Waiting for you" (`announces`).
     listing: { status: "pending", stateWord: "Waiting for the agent", waitingForAgent: true },
-    // Listed as a failed item on the calendar too, as on Home (`failedRun`).
-    calendar: { state: "pending", waitingForAgent: true, needs: "failed" },
+    // Read by its wait on the calendar, the failed step listed apart as on Home.
+    calendar: { state: "pending", waitingForAgent: true, stepFailed: true },
     response: { project: { status: "pending", waitingForAgent: true } },
   });
   expect(waiting.listing).toMatchObject({ stepFailed: true });
+  expect(waiting.calendar).not.toHaveProperty("needs");
   expect(waiting.attention).toEqual(expect.arrayContaining(["failed-step", "external-review"]));
   // The Notification URL hears what the runner said, read as it goes out.
   const sent: string[] = [];
@@ -231,6 +232,7 @@ it("reads a failed step beside images an agent reviews as Waiting for the agent,
     calendar: { state: "failed", needs: "failed" },
   });
   expect(ended.listing).not.toHaveProperty("stepFailed");
+  expect(ended.calendar).not.toHaveProperty("stepFailed");
   expect(ended.attention).toEqual(["failed-step"]);
   // The run ended on the failure "Step failed" already told: no second notice.
   await hear();
@@ -249,7 +251,7 @@ it("reads a failed step beside images held at the person's checkpoint as Waiting
     announced: "pending",
     notice: "waiting",
     listing: { status: "pending", stateWord: "Waiting for your review", stepFailed: true },
-    calendar: { state: "pending", needs: "failed" },
+    calendar: { state: "pending", needs: "review", stepFailed: true },
     // The page's header reads the project's own body: by its wait, not Queued.
     response: { project: { status: "pending", stepFailed: true } },
     page: { project: { stateWord: "Waiting for your review", stepFailed: true } },

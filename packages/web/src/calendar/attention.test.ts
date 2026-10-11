@@ -36,3 +36,20 @@ it("asks the person to open a stopped run to continue it, and counts it as waiti
   expect(attentionMeta([stopped])).toBe("1 waiting for you");
   expect(needingAttention([project, stopped])).toEqual([stopped]);
 });
+
+// A step failed beside a wait reads by the wait and is one more item for the person, as on
+// Home's Needs you: never Failed while the wait remains.
+it("reads a step failed beside a wait by its wait and counts the failed step apart", () => {
+  const agent = { ...project, waitingForAgent: true, stepFailed: true } as const;
+  const review = { ...project, needs: "review", stepFailed: true } as const;
+  expect(projectLook(agent)).toEqual({ tone: "waiting", word: "Waiting for the agent" });
+  expect(projectLook(review)).toEqual({
+    tone: "waiting",
+    word: "Waiting for your review",
+    action: { kind: "open", label: "Open to review" },
+  });
+  expect(needingAttention([project, agent, review])).toEqual([agent, review]);
+  expect(attentionMeta([agent, review])).toBe("3 waiting for you");
+  const ready = { ...project, state: "done", readyToUpload: true } as const;
+  expect(attentionMeta([agent, ready])).toBe("1 waiting for you · 1 ready to upload");
+});

@@ -52,10 +52,16 @@ export function projectLook(
   return projectStateOf({ ...project, status: project.state });
 }
 
+// What a project asks of the person, counted as Home's Needs you counts it: what it needs, and a
+// step failed beside its wait as one more item.
+function asks(project: CalendarProject): number {
+  return (project.needs === undefined ? 0 : 1) + (project.stepFailed === true ? 1 : 0);
+}
+
 // "2 waiting for you · 1 ready to upload".
 export function attentionMeta(projects: readonly CalendarProject[]): string {
-  const needs = projects.filter((project) => project.needs !== undefined).length;
-  const ready = projects.length - needs;
+  const needs = projects.reduce((total, project) => total + asks(project), 0);
+  const ready = projects.filter((project) => asks(project) === 0).length;
   return [
     needs === 0 ? undefined : `${String(needs)} waiting for you`,
     ready === 0 ? undefined : `${String(ready)} ready to upload`,
@@ -68,7 +74,7 @@ export function attentionMeta(projects: readonly CalendarProject[]): string {
 // calendar's "Needs you" list shows them.
 export function needingAttention(projects: readonly CalendarProject[]): readonly CalendarProject[] {
   return [
-    ...projects.filter((project) => project.needs !== undefined),
-    ...projects.filter((project) => project.needs === undefined && project.readyToUpload === true),
+    ...projects.filter((project) => asks(project) > 0),
+    ...projects.filter((project) => asks(project) === 0 && project.readyToUpload === true),
   ];
 }

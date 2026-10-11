@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
-import { failedRun, stepFailedBesideWait } from "../admission/state-words.js";
+import { stepFailedBesideWait } from "../admission/state-words.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
@@ -177,8 +177,9 @@ function sampleProjectIds(db: DatabaseSync): ReadonlySet<string> {
 }
 
 // What a project on the calendar asks of the person, if anything. The same readings Home's
-// Needs you uses: a failed run or one with a step failed beside a wait (`failedRun`), a paused
-// run, one a restart stopped (Continue the run), or one waiting for a review. One Kept as is asks nothing, nor does an uploaded one that reads Done
+// Needs you uses: a failed run, a paused run, one a restart stopped (Continue the run), or one
+// waiting for a review. A step failed beside a wait reads by that wait and is listed apart
+// (`stepFailed`). One Kept as is asks nothing, nor does an uploaded one that reads Done
 // (`uploadedAndSettled`).
 function needsOf(
   state: ProjectState,
@@ -187,10 +188,9 @@ function needsOf(
     readonly reviewing: boolean;
     readonly aside: boolean;
     readonly settled: boolean;
-    readonly stepFailed: boolean;
   },
 ): CalendarNeed | undefined {
-  if (failedRun({ status: state, stepFailed: ask.stepFailed })) return "failed";
+  if (state === "failed") return "failed";
   if (state === "paused") return "paused";
   if (ask.aside || ask.settled) return undefined;
   if (ask.stopped) return "stopped";
@@ -255,7 +255,6 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
         reviewing: reviewing.has(project.id),
         aside: aside.has(project.id),
         settled: settled.has(project.id),
-        stepFailed: stepFailedBesideWait(state, standings.get(project.id) ?? []),
       });
       const ready =
         (state === "done" || state === "partial") &&
@@ -278,6 +277,9 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
           ...(waitingForAgent ? { waitingForAgent: true } : {}),
           ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
+          ...(stepFailedBesideWait(state, standings.get(project.id) ?? [])
+            ? { stepFailed: true }
+            : {}),
           ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),
         },
       ];

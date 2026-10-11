@@ -267,6 +267,9 @@ export const calendarProjectSchema = z
     prepared: z.literal(true).optional(),
     waitingForAgent: z.literal(true).optional(),
     stopped: z.literal(true).optional(),
+    // A step failed while the run still reads by a wait (`stepFailedBesideWait`): listed as a
+    // failed item beside what it waits for, as on Home. Older servers leave it out.
+    stepFailed: z.literal(true).optional(),
     // Stages waiting for a CLI plan's limits to reset.
     limitWaits: z
       .array(
