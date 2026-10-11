@@ -4,7 +4,7 @@ import {
   parkedOnAgent,
   projectStateWord,
   queuedRun,
-  stepFailedBesideWait,
+  readsByWaitBesideFailure,
   waitsForPerson,
 } from "./state-words.js";
 
@@ -85,9 +85,11 @@ it("lists a run failed, or waiting beside a failed step, as failed", () => {
   expect(failedRun({ status: "pending", stepFailed: true })).toBe(true);
   expect(failedRun({ status: "pending" })).toBe(false);
   expect(failedRun({ status: "partial" })).toBe(false);
-  expect(stepFailedBesideWait("pending", [{ state: "failed" }, { state: "pending" }])).toBe(true);
-  expect(stepFailedBesideWait("pending", [{ state: "pending" }])).toBe(false);
-  expect(stepFailedBesideWait("failed", [{ state: "failed" }])).toBe(false);
+  expect(readsByWaitBesideFailure("pending", [{ state: "failed" }, { state: "pending" }])).toBe(
+    true,
+  );
+  expect(readsByWaitBesideFailure("pending", [{ state: "pending" }])).toBe(false);
+  expect(readsByWaitBesideFailure("failed", [{ state: "failed" }])).toBe(false);
   expect(waitsForPerson({ status: "pending", progress: 0, stepFailed: true })).toBe(true);
   expect(queuedRun({ status: "pending", progress: 0, stepFailed: true })).toBe(false);
 });

@@ -12,11 +12,11 @@ import {
 
 // Each failure by its id, with the provider's reason.
 const failing = (said: {
-  readonly stepFailed?: boolean;
+  readonly stepFailedWhileWaiting?: boolean;
   readonly status?: ProjectState;
   readonly failures?: readonly string[];
 }) => ({
-  ...(said.stepFailed === true ? { stepFailed: true } : {}),
+  ...(said.stepFailedWhileWaiting === true ? { stepFailedWhileWaiting: true } : {}),
   ...(said.status === undefined ? {} : { status: said.status }),
   failures: (said.failures ?? []).map((id) => ({
     id,
@@ -33,7 +33,7 @@ function harness(
     readonly told?: RunWatcherDeps["told"];
     // What a project says of a failed step as each notice goes out.
     readonly failing?: () => {
-      readonly stepFailed?: boolean;
+      readonly stepFailedWhileWaiting?: boolean;
       readonly status?: ProjectState;
       readonly failures?: readonly string[];
     };
@@ -77,7 +77,7 @@ describe("a step failed beside a wait", () => {
     let failure = "audio@t1";
     const claimed: string[] = [];
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failures: [failure] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: [failure] }),
       claim: (key) => {
         claimed.push(key);
         return Promise.resolve(true);
@@ -100,7 +100,7 @@ describe("a step failed beside a wait", () => {
 
   it("is told after Waiting for you beside the person's checkpoint", async () => {
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failures: ["audio@t1"] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: ["audio@t1"] }),
     });
     watcher.observe({ projectId: "p1", state: "running" });
     watcher.observe({ projectId: "p1", state: "pending" });
@@ -110,7 +110,7 @@ describe("a step failed beside a wait", () => {
 
   it("is told beside a prepared run's own hold for its day", async () => {
     const { watcher, shown } = harness({
-      failing: () => ({ stepFailed: true, failures: ["thumbnail@t1"] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: ["thumbnail@t1"] }),
     });
     watcher.observe({ projectId: "prepared", state: "running" });
     watcher.observe({ projectId: "prepared", state: "pending" });
@@ -124,7 +124,9 @@ describe("a step failed beside a wait", () => {
 describe("failures told beside a wait", () => {
   it("never tells an already told failure again once another failed step is fixed", async () => {
     let failures: readonly string[] = [];
-    const { watcher, shown } = harness({ failing: () => ({ stepFailed: true, failures }) });
+    const { watcher, shown } = harness({
+      failing: () => ({ stepFailedWhileWaiting: true, failures }),
+    });
     const step = async (state: ProjectState, now?: readonly string[]) => {
       if (now !== undefined) failures = now;
       watcher.observe({ projectId: "p1", state });
@@ -141,7 +143,9 @@ describe("failures told beside a wait", () => {
 
   it("tells Run failed for a different failure, and not for the one already told", async () => {
     let failures: readonly string[] = ["thumbnail@1"];
-    const { watcher, shown } = harness({ failing: () => ({ stepFailed: true, failures }) });
+    const { watcher, shown } = harness({
+      failing: () => ({ stepFailedWhileWaiting: true, failures }),
+    });
     const step = async (projectId: string, state: ProjectState) => {
       watcher.observe({ projectId, state });
       await watcher.settled();
@@ -204,7 +208,11 @@ it("says nothing mid-run for a step failed with nothing waiting, and Run failed 
 it("tells a step failed beside a wait while the run goes on as it fails, once", async () => {
   let status: ProjectState = "running";
   const { watcher, shown } = harness({
-    failing: () => ({ stepFailed: status === "running", status, failures: ["audio@1"] }),
+    failing: () => ({
+      stepFailedWhileWaiting: status === "running",
+      status,
+      failures: ["audio@1"],
+    }),
   });
   watcher.observe({ projectId: "p1", state: "running" });
   watcher.observeStage({ projectId: "p1", stage: "audio", state: "failed" });
@@ -225,7 +233,7 @@ it("tells a step failed beside a wait while the run goes on as it fails, once", 
 // project still lists its last failure as the page is read.
 it("says nothing as a step runs again or finishes beside a wait", async () => {
   const { watcher, shown } = harness({
-    failing: () => ({ stepFailed: true, status: "running", failures: ["audio@1"] }),
+    failing: () => ({ stepFailedWhileWaiting: true, status: "running", failures: ["audio@1"] }),
   });
   watcher.observe({ projectId: "p1", state: "running" });
   watcher.observeStage({ projectId: "p1", stage: "audio", state: "running" });
@@ -456,7 +464,7 @@ describe("told failures", () => {
   withMemoryStorage();
 
   it("doesn't tell Run failed after a reload for the failure Step failed told", async () => {
-    const failures = { stepFailed: true, failures: ["audio@1"] };
+    const failures = { stepFailedWhileWaiting: true, failures: ["audio@1"] };
     const before = harness({ told: storedTold, failing: () => failures });
     for (const state of ["running", "pending"] as const)
       before.watcher.observe({ projectId: "agent", state });

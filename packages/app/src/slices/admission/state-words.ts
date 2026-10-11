@@ -120,9 +120,10 @@ export function waitsForPerson(project: ProjectStanding): boolean {
   return project.status === "paused" || (heldRun(project) && heldForPerson(project));
 }
 
-// A step failed while another waits for the agent or the person, so the run reads by that wait
-// (`derive`): what `stepFailed` says on the Projects list and a project's page.
-export function stepFailedBesideWait(
+// A step failed and the run reads Pending by the wait beside it, nothing else running
+// (`derive`): what `stepFailed` says on the Projects list, a project's page and the calendar.
+// Unlike `stepFailedWhileWaiting`, false while a third step still runs.
+export function readsByWaitBesideFailure(
   status: ProjectState,
   stages: readonly { readonly state: StageState }[],
 ): boolean {
@@ -132,7 +133,8 @@ export function stepFailedBesideWait(
 // A step failed while another waits for the agent, the person or its day (`waitsForAnswer`),
 // whether or not a third still runs: what "Step failed" is told for (`notifications/rules.ts`
 // runNotices) and While you were away counts. A failed step in a run with nothing waiting is
-// told by the run's own end notice.
+// told by the run's own end notice. Unlike `readsByWaitBesideFailure`, true while a third step
+// still runs.
 export function stepFailedWhileWaiting(
   status: ProjectState,
   stages: readonly StageStanding[],

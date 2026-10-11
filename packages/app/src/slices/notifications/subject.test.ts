@@ -73,13 +73,13 @@ it("says which step failed while the run still waits on its day's hold", () => {
   const f = prepared();
   const { db } = f.h.deps;
   db.prepare("UPDATE stages SET state='done' WHERE kind='images'").run();
-  expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailed");
+  expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailedWhileWaiting");
   expect(noticeSubject(db, "p1")).not.toHaveProperty("failures");
   db.prepare(
     "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES ('thumbnail','p1','thumbnail','generate','failed','2026-09-10T00:05:00.000Z')",
   ).run();
   expect(noticeSubject(db, "p1")).toMatchObject({
-    stepFailed: true,
+    stepFailedWhileWaiting: true,
     failures: [{ id: "thumbnail@2026-09-10T00:05:00.000Z", kind: "thumbnail" }],
   });
 });
@@ -97,7 +97,7 @@ it("says no step failed beside a wait for an uploaded project that reads Done", 
   db.prepare(
     "INSERT INTO project_uploads(project_id,uploaded_at) VALUES ('p1','2026-09-10T00:06:00.000Z')",
   ).run();
-  expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailed");
+  expect(noticeSubject(db, "p1")).not.toHaveProperty("stepFailedWhileWaiting");
 });
 
 // The person's decisions (2026-10-10, 2026-10-11), as the Notification URL hears them from the
@@ -206,7 +206,10 @@ describe("failures told across a restart", () => {
     before.observe(failed());
     await before.settled();
     run.hold("images");
-    expect(noticeSubject(run.db, "p1")).toMatchObject({ status: "running", stepFailed: true });
+    expect(noticeSubject(run.db, "p1")).toMatchObject({
+      status: "running",
+      stepFailedWhileWaiting: true,
+    });
     const after = run.boot();
     run.finish();
     after.observe(state("running"));
@@ -259,11 +262,14 @@ describe("failures told across a restart", () => {
     expect(run.sent).toEqual(["Step failed: Saved — The thumbnail was refused."]);
     // Restarted between the two checkpoints, while nothing waits.
     run.release();
-    expect(noticeSubject(run.db, "p1")).not.toHaveProperty("stepFailed");
+    expect(noticeSubject(run.db, "p1")).not.toHaveProperty("stepFailedWhileWaiting");
     const after = run.boot();
     run.db.prepare("UPDATE stages SET state='done' WHERE kind IN ('audio','images')").run();
     run.hold("video");
-    expect(noticeSubject(run.db, "p1")).toMatchObject({ status: "pending", stepFailed: true });
+    expect(noticeSubject(run.db, "p1")).toMatchObject({
+      status: "pending",
+      stepFailedWhileWaiting: true,
+    });
     after.observe(state("running"));
     after.observe(state("pending"));
     await after.settled();

@@ -24,7 +24,7 @@ function harness(
     readonly atItsDay?: boolean;
     // What the project says of a failed step as each notice goes out.
     readonly failing?: () => {
-      readonly stepFailed?: boolean;
+      readonly stepFailedWhileWaiting?: boolean;
       readonly status?: ProjectState;
       readonly failures?: readonly StepFailure[];
     };
@@ -99,7 +99,7 @@ describe("a step failed beside a wait", () => {
     let failure = failed("audio@2026-10-10T10:00:00.000Z", "The narration was refused.");
     const { notifier, posted } = harness({
       waitingForAgent: true,
-      failing: () => ({ stepFailed: true, failures: [failure] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: [failure] }),
     });
     notifier.observe(state("running"));
     notifier.observe(state("pending"));
@@ -117,7 +117,7 @@ describe("a step failed beside a wait", () => {
 
   it("is told beside the person's checkpoint as well as the wait", async () => {
     const { notifier, posted } = harness({
-      failing: () => ({ stepFailed: true, failures: [failed("audio@t", "Refused.")] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: [failed("audio@t", "Refused.")] }),
     });
     notifier.observe(state("running"));
     notifier.observe(state("pending"));
@@ -134,7 +134,10 @@ describe("a step failed beside a wait", () => {
   it("is told beside a prepared run's own hold for its day", async () => {
     const { notifier, posted } = harness({
       atItsDay: true,
-      failing: () => ({ stepFailed: true, failures: [failed("thumbnail@t", "Refused.")] }),
+      failing: () => ({
+        stepFailedWhileWaiting: true,
+        failures: [failed("thumbnail@t", "Refused.")],
+      }),
     });
     notifier.observe(state("running"));
     notifier.observe(state("pending"));
@@ -147,7 +150,9 @@ describe("a step failed beside a wait", () => {
 // already told, news again.
 it("never tells an already told failure again once another failed step is fixed", async () => {
   let failures: readonly StepFailure[] = [];
-  const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, failures }) });
+  const { notifier, posted } = harness({
+    failing: () => ({ stepFailedWhileWaiting: true, failures }),
+  });
   notifier.observe(state("running"));
   failures = [failed("thumbnail@1")];
   notifier.observe(state("pending"));
@@ -187,13 +192,17 @@ describe("a step failed while the run goes on", () => {
 
   it("is told as it fails beside a wait, once, and not again when the run ends Failed on it", async () => {
     let now: {
-      readonly stepFailed?: boolean;
+      readonly stepFailedWhileWaiting?: boolean;
       readonly status: ProjectState;
       readonly failures: readonly StepFailure[];
     } = { status: "running", failures: [] };
     const { notifier, posted } = harness({ failing: () => now });
     notifier.observe(state("running"));
-    now = { stepFailed: true, status: "running", failures: [failed("audio@1", "Refused.")] };
+    now = {
+      stepFailedWhileWaiting: true,
+      status: "running",
+      failures: [failed("audio@1", "Refused.")],
+    };
     notifier.observe(stage("audio", "failed"));
     notifier.observe(stage("audio", "failed"));
     // Another step's failure is that step's news, not the audio's again.
@@ -210,7 +219,7 @@ describe("a step failed while the run goes on", () => {
   // fails now beside a wait is the news.
   it("names in Step failed the step that just failed, not an earlier one still untold", async () => {
     let now: {
-      readonly stepFailed?: boolean;
+      readonly stepFailedWhileWaiting?: boolean;
       readonly status: ProjectState;
       readonly failures: readonly StepFailure[];
     } = {
@@ -221,7 +230,7 @@ describe("a step failed while the run goes on", () => {
     notifier.observe(state("running"));
     notifier.observe(stage("thumbnail", "failed"));
     now = {
-      stepFailed: true,
+      stepFailedWhileWaiting: true,
       status: "running",
       failures: [...now.failures, failed("audio@2", "Narration refused.")],
     };
@@ -235,7 +244,9 @@ describe("a step failed while the run goes on", () => {
       status: "failed",
       failures: [failed("audio@1", "Refused.")],
     };
-    const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, ...now }) });
+    const { notifier, posted } = harness({
+      failing: () => ({ stepFailedWhileWaiting: true, ...now }),
+    });
     notifier.observe(state("running"));
     notifier.observe(stage("audio", "failed"));
     notifier.observe(state("failed"));
@@ -263,7 +274,7 @@ describe("a run that ends Failed after a step failed beside a wait", () => {
       let failures: readonly StepFailure[] = [failed("thumbnail@1")];
       const { notifier, posted } = harness({
         waitingForAgent: true,
-        failing: () => ({ stepFailed: true, failures }),
+        failing: () => ({ stepFailedWhileWaiting: true, failures }),
       });
       notifier.observe(state("running"));
       notifier.observe(state("pending"));
@@ -277,7 +288,7 @@ describe("a run that ends Failed after a step failed beside a wait", () => {
   it("is not told again when it ends on the failure already told", async () => {
     const { notifier, posted } = harness({
       waitingForAgent: true,
-      failing: () => ({ stepFailed: true, failures: [failed("thumbnail@1")] }),
+      failing: () => ({ stepFailedWhileWaiting: true, failures: [failed("thumbnail@1")] }),
     });
     for (const one of ["running", "pending", "running", "failed"] as const)
       notifier.observe(state(one));
@@ -306,7 +317,9 @@ it("names the step failed now, not the last one to fail", async () => {
 // "Step failed" names the failure it tells, not the first one the run has.
 it("names in Step failed the failure it tells", async () => {
   let failures: readonly StepFailure[] = [failed("thumbnail@1", "A broke.")];
-  const { notifier, posted } = harness({ failing: () => ({ stepFailed: true, failures }) });
+  const { notifier, posted } = harness({
+    failing: () => ({ stepFailedWhileWaiting: true, failures }),
+  });
   notifier.observe(state("running"));
   notifier.observe(state("pending"));
   notifier.observe(state("running"));
@@ -545,7 +558,8 @@ it("keeps a told failure only while the run still has it", () => {
   const told = new Set(["thumbnail@1", "images@2"]);
   const thumbnail = failed("thumbnail@1");
   expect(
-    runNotices({ kind: "waiting" }, { stepFailed: true, failures: [thumbnail] }, told).told,
+    runNotices({ kind: "waiting" }, { stepFailedWhileWaiting: true, failures: [thumbnail] }, told)
+      .told,
   ).toEqual(new Set(["thumbnail@1"]));
   expect(runNotices({ kind: "ready" }, {}, told).told.size).toBe(0);
   // A run that ends on its failures names them all: told from then on.

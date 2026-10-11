@@ -28,7 +28,7 @@ export function noticeSubject(
     waitingForAgent: holds.waitingForAgent.has(projectId),
     atItsDay: atItsDay(holds.prepared.has(projectId), holds.holding.get(projectId) ?? []),
     status,
-    ...(stepFailedWhileWaiting(status, stages) ? { stepFailed: true } : {}),
+    ...(stepFailedWhileWaiting(status, stages) ? { stepFailedWhileWaiting: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
 }

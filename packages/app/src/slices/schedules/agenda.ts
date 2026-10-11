@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { ProjectState } from "../../kernel/pipeline.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import { liveProject, stageStandingsByProject } from "../admission/repo.js";
-import { stepFailedBesideWait } from "../admission/state-words.js";
+import { readsByWaitBesideFailure } from "../admission/state-words.js";
 import { queueEntries } from "../batch/index.js";
 import { sampleIds } from "../onboarding/model.js";
 import { readSampleRecord } from "../onboarding/state.js";
@@ -277,7 +277,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
           ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
           ...(waitingForAgent ? { waitingForAgent: true } : {}),
           ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
-          ...(stepFailedBesideWait(state, standings.get(project.id) ?? [])
+          ...(readsByWaitBesideFailure(state, standings.get(project.id) ?? [])
             ? { stepFailed: true }
             : {}),
           ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),

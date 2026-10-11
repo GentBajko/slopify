@@ -14,7 +14,7 @@ import {
   stepFailuresByProject,
 } from "../../slices/admission/repo.js";
 import {
-  stepFailedBesideWait,
+  readsByWaitBesideFailure,
   stepFailedWhileWaiting,
 } from "../../slices/admission/state-words.js";
 import { lastStarter } from "../../slices/agents/repo.js";
@@ -67,7 +67,7 @@ export function projectRoutes(deps: AppDeps) {
     return {
       ...project,
       status,
-      ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+      ...(readsByWaitBesideFailure(status, stages) ? { stepFailed: true } : {}),
     };
   };
 
@@ -118,7 +118,7 @@ export function projectRoutes(deps: AppDeps) {
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
-            ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+            ...(readsByWaitBesideFailure(status, stages) ? { stepFailed: true } : {}),
             ...(stepFailedWhileWaiting(status, stages)
               ? { stepFailures: failures.get(project.id) ?? [] }
               : {}),

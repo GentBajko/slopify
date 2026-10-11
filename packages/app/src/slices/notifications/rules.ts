@@ -117,7 +117,7 @@ export interface NoticeSubject {
   readonly atItsDay?: boolean | undefined;
   // A step failed while another waits for the agent, the person or its day, the run running or
   // reading by that wait (`admission/state-words.ts` stepFailedWhileWaiting).
-  readonly stepFailed?: boolean | undefined;
+  readonly stepFailedWhileWaiting?: boolean | undefined;
   // The run's state as the Projects list reads it now.
   readonly status?: ProjectState | undefined;
   // The failures the run has now (`failuresOf`), so each is told once.
@@ -178,7 +178,7 @@ export function runNotices(
   cause: NoticeCause,
   subject: Pick<
     NoticeSubject,
-    "waitingForAgent" | "atItsDay" | "stepFailed" | "status" | "failures"
+    "waitingForAgent" | "atItsDay" | "stepFailedWhileWaiting" | "status" | "failures"
   >,
   told: ReadonlySet<string>,
 ): RunNotices {
@@ -191,8 +191,8 @@ export function runNotices(
     const { kind } = cause;
     const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
     if (!repeat && announces(kind, subject)) notices.push({ kind, reason: failures[0]?.reason });
-    if (kind === "waiting" && subject.stepFailed === true) stepNews = untold;
-  } else if (subject.status === "running" && subject.stepFailed === true)
+    if (kind === "waiting" && subject.stepFailedWhileWaiting === true) stepNews = untold;
+  } else if (subject.status === "running" && subject.stepFailedWhileWaiting === true)
     // Stopped to wait or ended, the run's own transition tells it.
     stepNews = untold.filter((failure) => failure.kind === cause.stepFailed);
   if (stepNews.length > 0) notices.push({ kind: "step-failed", reason: stepNews[0]?.reason });

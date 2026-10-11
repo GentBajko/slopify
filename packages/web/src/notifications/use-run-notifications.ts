@@ -34,7 +34,9 @@ export async function projectNoticeSubject(
     waitingForAgent: body.project.waitingForAgent === true,
     status: body.project.status,
     atItsDay: atItsDay(body.project.prepared === true, body.holding),
-    ...(stepFailedWhileWaiting(body.project.status, body.stages) ? { stepFailed: true } : {}),
+    ...(stepFailedWhileWaiting(body.project.status, body.stages)
+      ? { stepFailedWhileWaiting: true }
+      : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
 }

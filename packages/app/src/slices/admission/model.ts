@@ -355,7 +355,7 @@ export interface ProjectSummary extends Project {
   // Stopped before it finished, as a restart leaves a run: only Continue the run goes on.
   readonly stopped?: boolean;
   // A step failed while another still waits for the agent or the person: the run reads by that
-  // wait (`derive`) and is listed as failed too (`failedRun`).
+  // wait (`readsByWaitBesideFailure`) and is listed as failed too (`failedRun`).
   readonly stepFailed?: boolean;
 }
 

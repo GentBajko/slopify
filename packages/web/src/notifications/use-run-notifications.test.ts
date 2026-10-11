@@ -65,9 +65,9 @@ it("reads from the project's page which step failed beside its wait", async () =
     "p1",
   );
   expect(subject).toMatchObject({
-    stepFailed: true,
+    stepFailedWhileWaiting: true,
     failures: [{ id: "audio@2026-09-13T00:05:00.000Z", kind: "audio", reason: "Refused." }],
   });
-  expect(await subjectOf({})).not.toHaveProperty("stepFailed");
+  expect(await subjectOf({})).not.toHaveProperty("stepFailedWhileWaiting");
   expect(await subjectOf({})).not.toHaveProperty("failures");
 });
