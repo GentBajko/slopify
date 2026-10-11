@@ -59,6 +59,42 @@ const pictures = [1, 2].map((index) =>
   }),
 );
 
+it("names each image by its own scene, not the prompt's shared opening", () => {
+  const shared = "Create an official illustration in the style of the core rulebooks.";
+  const scened = [1, 2].map((index) =>
+    output("image", "images", {
+      id: `o-scene-${String(index)}`,
+      path: `images/${String(index)}.png`,
+      meta: {
+        index,
+        prompt: `${shared}\n\nScene: ${index === 1 ? "A priestess before a rift." : "Islands over a sea."}\n\nNo text.`,
+      },
+    }),
+  );
+  renderApp(<ImagesBody {...props(scened).props} />, testDeps({}));
+  const grid = screen.getByRole("region", { name: "Slideshow images" });
+  expect(within(grid).getByText("A priestess before a rift.")).toBeTruthy();
+  expect(within(grid).getByText("Islands over a sea.")).toBeTruthy();
+});
+
+it("says an image's prompt once in its lightbox: its scene on the bar, the prompt below", async () => {
+  const prompt = (scene: string) =>
+    `Create an official illustration about "Caves". Scene: ${scene} Composition: a wide view.`;
+  const scened = ["A priestess before a rift.", "Islands over a sea."].map((scene, at) =>
+    output("image", "images", {
+      id: `o-scene-${String(at)}`,
+      path: `images/${String(at)}.png`,
+      meta: { index: at + 1, prompt: prompt(scene) },
+    }),
+  );
+  renderApp(<ImagesBody {...props(scened).props} />, testDeps({}));
+  await userEvent.click(screen.getByRole("button", { name: "Open image 1 full size" }));
+  const lightbox = await screen.findByRole("dialog", {
+    name: "1 of 2 · A priestess before a rift.",
+  });
+  expect(within(lightbox).getAllByText(prompt("A priestess before a rift."))).toHaveLength(1);
+});
+
 it("shows the images in the media grid, and offers Regenerate and Download at full size", async () => {
   const { props: given, run } = props(pictures);
   renderApp(<ImagesBody {...given} />, testDeps({}));

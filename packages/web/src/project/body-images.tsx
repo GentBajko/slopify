@@ -21,6 +21,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { ThumbnailPanel } from "./body-thumbnail.js";
 import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
+import { imageTitles } from "./image-titles.js";
 import { useOutdated, useOutputChange, useRegenerateAll } from "./output-change.js";
 import { OutputFolder } from "./parts.js";
 import { useRegenerateByNumber } from "./regenerate-by-number.js";
@@ -60,8 +61,12 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
   const [open, setOpen] = useState<number | null>(null);
   // The pictures the lightbox pages through, and the output behind each, for its actions.
   const openable = shown.filter((image) => files.has(image.id));
-  const items: LightboxItem[] = openable.map((image) => ({
+  const titles = imageTitles(openable.map((image) => image.meta.prompt));
+  const items: LightboxItem[] = openable.map((image, index) => ({
     src: files.get(image.id)?.url ?? "",
+    ...(image.role === "figure_card" || titles[index] === undefined
+      ? {}
+      : { title: titles[index] }),
     alt:
       image.role === "figure_card"
         ? `On-screen card ${String(image.meta.index ?? "")}`
@@ -186,13 +191,15 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                   : null
               }
             >
-              {(limit) =>
-                group.images
+              {(limit) => {
+                const titles = imageTitles(group.images.map((image) => image.meta.prompt));
+                return group.images
                   .slice(0, limit)
-                  .map((image) => (
+                  .map((image, index) => (
                     <ImageTile
                       key={image.id}
                       image={image}
+                      title={titles[index]}
                       projectId={project.id}
                       review={reviewFor(reviews, { outputId: image.id })}
                       format={project.format}
@@ -200,8 +207,8 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
                       busy={busy}
                       onOpen={() => setOpen(opened(openable, image))}
                     />
-                  ))
-              }
+                  ));
+              }}
             </ImageGroup>
           ))}
           {cards.length === 0 ? null : (
@@ -513,9 +520,12 @@ function ImageTile({
   actions,
   busy,
   card = false,
+  title,
   onOpen,
 }: {
   readonly image: Output;
+  // What tells this image from the others in its grid (`image-titles.ts`); the prompt otherwise.
+  readonly title?: string | undefined;
   readonly projectId: string;
   // A card drawn from the article: made again from the article, never deleted on its own.
   readonly card?: boolean;
@@ -548,7 +558,7 @@ function ImageTile({
         kind={isClip(image) ? "video" : "image"}
         aspect={frameAspect(format)}
         {...(media === undefined ? {} : { src: media.url })}
-        title={card ? `Card${number}` : (image.meta.prompt ?? `Image${number}`)}
+        title={card ? `Card${number}` : (title ?? image.meta.prompt ?? `Image${number}`)}
         {...(image.meta.index === undefined ? {} : { meta: `#${String(image.meta.index)}` })}
         onOpen={onOpen}
         openLabel={`Open ${name} full size`}

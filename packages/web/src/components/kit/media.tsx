@@ -145,6 +145,9 @@ export interface LightboxItem {
   readonly alt: string;
   readonly kind?: "image" | "video";
   readonly poster?: string;
+  // The short name on the bar; the alt text otherwise. A long alt (an image's whole prompt) is
+  // then said once, in the caption, instead of on the bar as well.
+  readonly title?: string;
   readonly caption?: ReactNode;
 }
 
@@ -210,7 +213,7 @@ export function Lightbox({
             <>
               <div className="sl-lightbox__bar">
                 <DialogPrimitive.Title className="m-0 text-small font-semibold">
-                  {`${String(index + 1)} of ${String(count)} · ${item.alt}`}
+                  {`${String(index + 1)} of ${String(count)} · ${item.title ?? item.alt}`}
                 </DialogPrimitive.Title>
                 <div className="sl-btn-row">
                   {actions?.(item, index)}
