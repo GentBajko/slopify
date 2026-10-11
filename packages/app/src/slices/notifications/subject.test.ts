@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { waitingReviewFixture } from "../reviews/external-repo.fake.js";
 import { createRunNotifier } from "./notifier.js";
-import { noticeSubject } from "./subject.js";
+import { noticeSubject, toldBeforeBoot } from "./subject.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -138,5 +138,51 @@ describe("Step failed on the Notification URL", () => {
 
   it("is not told mid-run with nothing waiting", async () => {
     expect(await narrationFails(false)).toEqual([]);
+  });
+});
+
+// A restart forgets what the Notification URL was told. A step failed beside a wait was told as
+// it failed, so it counts as told from boot and isn't told again when the run stops to wait;
+// one failed with nothing waiting is still the run's end notice to tell.
+describe("failures told before a restart", () => {
+  function failedNarration(atCheckpoint: boolean) {
+    const f = waitingReviewFixture();
+    open.push(f);
+    const { db } = f.h.deps;
+    db.prepare("UPDATE external_reviews SET state='answered'").run();
+    db.prepare(
+      "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES ('audio','p1','audio','generate','failed','2026-09-10T00:05:00.000Z')",
+    ).run();
+    if (atCheckpoint)
+      db.prepare(
+        "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1',?,'images-gate','images','images-work',?,'held','2026-09-10T00:02:00.000Z')",
+      ).run(f.revisionId, "c".repeat(64));
+    return f;
+  }
+
+  it("counts a step failed beside a wait as told, and doesn't tell it again", async () => {
+    const f = failedNarration(true);
+    const { db } = f.h.deps;
+    const told = toldBeforeBoot(db);
+    expect([...(told.get("p1") ?? [])]).toEqual(["audio@2026-09-10T00:05:00.000Z"]);
+    const sent: string[] = [];
+    const notifier = createRunNotifier({
+      url: () => "https://ntfy.example/topic",
+      subject: (projectId) => noticeSubject(db, projectId),
+      send: async (_url, body) => {
+        sent.push(body.split("\n")[0] ?? "");
+        return { ok: true };
+      },
+      log: f.h.deps.log,
+      told,
+    });
+    notifier.observe({ type: "project.state", projectId: "p1", state: "running" });
+    notifier.observe({ type: "project.state", projectId: "p1", state: "pending" });
+    await notifier.settled();
+    expect(sent).toEqual(["Waiting for you: Saved"]);
+  });
+
+  it("leaves a step failed with nothing waiting untold", () => {
+    expect(toldBeforeBoot(failedNarration(false).h.deps.db).size).toBe(0);
   });
 });

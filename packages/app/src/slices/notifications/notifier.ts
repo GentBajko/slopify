@@ -28,6 +28,8 @@ export interface RunNotifierDeps {
   readonly link?: (projectId: string) => string | undefined;
   readonly send: SendNotification;
   readonly log: Log;
+  // The failures already told at boot (`subject.ts` toldBeforeBoot).
+  readonly told?: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 export interface RunNotifier {
@@ -50,8 +52,8 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
   let closed = false;
 
   // The failures each project's notices named (`runNotices`), only those it still has.
-  // ceiling: one entry per project with a failed step since boot.
-  const told = new Map<string, ReadonlySet<string>>();
+  // ceiling: one entry per project with a failed step since boot, or beside a wait at boot.
+  const told = new Map<string, ReadonlySet<string>>(deps.told ?? []);
 
   const notify = (projectId: string, cause: NoticeCause): void => {
     const url = deps.url();

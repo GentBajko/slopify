@@ -90,7 +90,7 @@ import { projectLink } from "./slices/notifications/address.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
-import { noticeSubject } from "./slices/notifications/subject.js";
+import { noticeSubject, toldBeforeBoot } from "./slices/notifications/subject.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
@@ -320,6 +320,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       link: (projectId) => projectLink(config.host, listeningPort, projectId),
       send: sendNotification,
       log,
+      told: toldBeforeBoot(eventDb),
     });
     // Episode memory summarises a project that has just finished; wired once the providers
     // exist, below.
