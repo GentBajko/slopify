@@ -1,5 +1,9 @@
-import type { ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
-import { failureId } from "../admission/state-words.js";
+import {
+  failureId,
+  type ProjectState,
+  type StageKind,
+  type StageState,
+} from "../../kernel/pipeline.js";
 import type { Actor } from "../agents/model.js";
 import type { CheckpointHold } from "../reviews/holds.js";
 

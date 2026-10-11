@@ -1,4 +1,4 @@
-import type { ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
+import type { ProjectState, StageState } from "../../kernel/pipeline.js";
 import { type StageStanding, waitsForAnswer } from "../../kernel/runner/graph.js";
 
 // One word per state, everywhere a state is said: the MCP tools, and the web's lists and pages
@@ -144,12 +144,6 @@ export function stepFailedWhileWaiting(
     stages.some((stage) => stage.state === "failed") &&
     waitsForAnswer(stages)
   );
-}
-
-// A failed step's identity: its step and when it failed, so one that fails again after Try again
-// is another failure (`stepFailures`, `notifications/rules.ts` failuresOf).
-export function failureId(kind: StageKind, finishedAt: string | null): string {
-  return `${kind}@${finishedAt ?? ""}`;
 }
 
 // A run listed as failed, on Home's Needs you and under the Projects Failed filter: it failed, or

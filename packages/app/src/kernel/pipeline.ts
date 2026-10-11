@@ -36,6 +36,13 @@ export const stageStates = [
 ] as const;
 export type StageState = (typeof stageStates)[number];
 
+// A failed step's identity: its step and when it failed, so one that fails again after Try again
+// is another failure (`admission/repo.ts` stepFailuresByProject, `notifications/rules.ts`
+// failuresOf).
+export function failureId(kind: StageKind, finishedAt: string | null): string {
+  return `${kind}@${finishedAt ?? ""}`;
+}
+
 // A persisted pause overrides the stage-derived status. A completed run need not
 // include a video: all selected stages being satisfied is enough. `partial` is a run whose
 // main output was made while another step failed (the video is there, its thumbnail is

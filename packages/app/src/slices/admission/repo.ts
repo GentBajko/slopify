@@ -1,12 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { stageKinds, stageStates } from "../../kernel/pipeline.js";
+import { failureId, stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
 import { admittedInItsState, parkedOnReview } from "./admitted-work.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { formats, stageSources } from "./model.js";
 import { runConfigSchema } from "./schema.js";
-import { failureId } from "./state-words.js";
 
 export { runConfigSchema, runDraftSchema } from "./schema.js";
 
@@ -154,7 +153,7 @@ const failedRow = z.object({
   finished_at: z.string().nullable(),
 });
 
-// Each project's failed steps by their identity (`state-words.ts` failureId), in the
+// Each project's failed steps by their identity (`kernel/pipeline.ts` failureId), in the
 // run's order, so a failure is told apart from one before it.
 export function stepFailuresByProject(db: DatabaseSync): ReadonlyMap<string, readonly string[]> {
   const failures = new Map<string, string[]>();
