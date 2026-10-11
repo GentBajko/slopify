@@ -122,6 +122,7 @@ Slopify does not check YouTube, so it can't know when you've published. After yo
 - Set the playlists once in Settings (per channel if your channels upload to different playlists), and tick the few a single video joins in its Prepare upload.
 - Upload the long video first, then paste its link as the shorts' **Full video link** so each short's description points to it.
 - If the AI use answer surprises you, read its reason: it names the voice, footage or prompt that made it Yes.
+- A connected [agent](Agents-MCP) can take a video as far as **Ready to upload** and mark it uploaded, but never uploads it or sends it to the extension: that stays yours.
 
 ## Related pages
 

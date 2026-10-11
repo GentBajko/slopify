@@ -87,6 +87,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | [Schedules](Schedules) | Videos on a cadence, topic lists and self-filling topics |
 | [Calendar](Calendar) | What needs you, what is coming up, the video queue |
 | [Notifications](Notifications) | Browser and phone (ntfy) notifications |
+| [Agents (MCP)](Agents-MCP) | Letting Claude Code, Codex or another agent run Slopify, the External agent reviewer and the attend routine |
 | [Backups](Backups) | Automatic backups, export and import |
 
 ### Channels

@@ -109,6 +109,7 @@ It is a normal project: you can edit the script, change an image, pick another v
 - Make a long video with more control: [Play Overview](Play-Overview).
 - Cut shorts from a long video automatically: [Shorts](Shorts).
 - Reuse the style: add the starter pack and pick its template on Play ([Templates](Templates)).
+- Let Claude Code or Codex look after your runs, fix failures and answer reviews: [Agents (MCP)](Agents-MCP).
 
 ## Tips
 

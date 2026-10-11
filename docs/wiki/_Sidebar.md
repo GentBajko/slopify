@@ -49,6 +49,7 @@
 - [Schedules](Schedules)
 - [Calendar](Calendar)
 - [Notifications](Notifications)
+- [Agents (MCP)](Agents-MCP)
 - [Backups](Backups)
 
 **Channels**

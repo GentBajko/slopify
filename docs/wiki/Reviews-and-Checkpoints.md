@@ -52,12 +52,14 @@ The checkpoint then says "Checkpoint approved. Work will run when its dependenci
 
 | Message | Meaning |
 | --- | --- |
-| "Images is held for your review. Its dependent work waits for this approval; independent work can continue." | Waiting for you. |
+| "Images is held for your review. Its dependent work waits for this approval; independent work can continue." | Waiting for you. The project reads **Waiting for your review**. |
 | "Inputs changed. Review the current revision before approving." | You edited something the held step uses. Check the new version before approving. |
 | "Authorized for this revision. Work can run when dependencies are ready and the project is resumed." | Approved; it runs when it can. |
 | "Checkpoint satisfied. Its reviewed work is complete." | Done. |
 
 If the project is paused, the panel says "The project is paused. Continue the run before approving held work." Pausing always applies on top of checkpoints.
+
+A checkpoint is approved once. If it was already approved (by you in another tab, or by an [agent](Agents-MCP)), approving again changes nothing and says so.
 
 ### Change checkpoints after the run started
 
@@ -70,11 +72,12 @@ Only generated steps can have one. If the project was edited elsewhere in the me
 
 ## Automatic reviews
 
-A reviewer model checks each finished item and saves its verdict and reasons on the project page. Each review is a text-model call, counted in usage and in the estimate.
+A reviewer checks each finished item and saves its verdict and reasons on the project page. The reviewer is a model Slopify asks (each review is a text-model call, counted in usage and in the estimate), or an agent you connected (free; see [The External agent reviewer](#the-external-agent-reviewer)).
 
 | Option | What it does | Default / range |
 | --- | --- | --- |
-| **Reviewer** | Who runs the review model. Picture reviews (images, the thumbnail and shorts) need Claude Code or Codex, which can look at images; other providers review text only. | None |
+| **Who reviews** | **Model**: Slopify asks the reviewer model below, one paid call per item. **External agent (MCP)**: an agent connected in Settings → Connections → Agents (MCP) answers each review instead, at no API cost. | Model |
+| **Reviewer** | Who runs the review model (greyed for **External agent (MCP)**). Picture reviews (images, the thumbnail and shorts) need Claude Code or Codex, which can look at images; other providers review text only. | None |
 | **Reviewer model** | The model that judges each item. A stronger model catches more but costs more per review. It can differ from the model that wrote the text. | None |
 | **Redos per item** | How many times **Flag and redo** makes a failed item again before it keeps the last one and flags it. Each redo costs the item again plus one more review. | 2; 0 to 5 |
 
@@ -106,16 +109,28 @@ The prompt next to each mode is **Built-in** or a **Review** prompt from the Lib
 4. For each stage you want checked, pick **Flag only** or **Flag and redo**, and optionally a Review prompt.
 5. Check the estimate: each review adds one text-model call. Redos are not in the estimate; each costs what the item cost, at most the redos allowed.
 
+### The External agent reviewer
+
+With **Who reviews** set to **External agent (MCP)**, no model is called: each review waits for an agent connected to Slopify to answer it (see [Agents (MCP)](Agents-MCP)). Every stage can use it, picture stages included, since the agent is shown the pictures. It adds nothing to the estimate.
+
+- While a review waits, what depends on the item waits, as with any review. If nothing else holds the run, the project reads **Waiting for the agent** (header, Projects, Home's Running now, the calendar). It is not in **Needs you**, sends no "Waiting for you" notice and has no **Continue the run**: it goes on by itself.
+- The agent answers **pass** or **fail**. A fail needs at least one reason, at most 10, each up to 500 characters. The answer then follows the stage's mode like a model's verdict: **Flag only** flags it, **Flag and redo** makes it again up to **Redos per item**.
+- The first answer saved wins. A second answer to the same review is refused ("This review was already answered").
+- **No answer in 2 hours:** the review passes by itself. Its badge reads **Passed without review**, the work goes on and a notification says "Passed without review: no agent answered in 2 h". The deadline is saved, so it survives a restart. A paused project's review still passes at its deadline, but nothing runs until you continue the run.
+- **Canceled runs:** canceling stops the run's waiting reviews, and they never pass. Taking the step up again asks again, with a fresh two hours.
+
 ### Reviews on the project page
 
-Beside the article, the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. For a failed item nobody has acted on:
+Beside the article, the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With the External agent reviewer, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
 
 - **Overrule** accepts it as it is.
 - **Redo** makes it again (a new version of the project, then the item and what depends on it are rebuilt), and it is reviewed again.
 
+A flagged item takes one decision. If it was already decided (by an agent, for example), pressing **Overrule** or **Redo** changes nothing and says how it was decided.
+
 Both buttons wait while other work on the project is running, with one exception: while a **Flag and redo** review's automatic redo is still waiting to start (**Waiting to be made again**), **Overrule** stays available and calls the redo off. The item is accepted as it is, the badge turns to **Accepted by you**, and the work waiting on it goes ahead. Once the redo has started, Overrule is greyed: "Slopify is already making this item again; wait for the new version".
 
-When an automatic review flags an item and keeps it (its redos ran out, or the stage is on **Flag only**), Slopify sends a **Review needs a decision** notification (see [Notifications](Notifications)), and the project shows in the Calendar's **Needs you** with **Open to review** (see [Calendar](Calendar#needs-you)). Everything that uses a reviewed item waits for its review, in the same way a checkpoint holds work. Reviewing the same output with the same reviewer and prompt again reuses the earlier verdict.
+When an automatic review flags an item and keeps it (its redos ran out, or the stage is on **Flag only**), Slopify sends a **Review needs a decision** notification (see [Notifications](Notifications)), and the project shows in the Calendar's **Needs you** with **Open to review** (see [Calendar](Calendar#needs-you)). When an agent's review flagged it, the notification ends in **· by agent**. Everything that uses a reviewed item waits for its review, in the same way a checkpoint holds work. Reviewing the same output with the same reviewer and prompt again reuses the earlier verdict.
 
 ## Checkpoints or reviews?
 
@@ -125,6 +140,7 @@ When an automatic review flags an item and keeps it (its redos ran out, or the s
 | Look at the images before the render | **Before Images** is too early; use **Before Video / export** |
 | Catch broken hands or stray text without watching every run | **Images** review, **Flag and redo** |
 | Run unattended on a schedule and fix things later | Reviews on **Flag only**, no checkpoints |
+| Have reviews done without paying a reviewer model | **External agent (MCP)** with an hourly agent routine; see [Agents (MCP)](Agents-MCP) |
 
 ## Tips
 
@@ -140,4 +156,5 @@ When an automatic review flags an item and keeps it (its redos ran out, or the s
 - [Recovery and Retries](Recovery-and-Retries)
 - [Prompts](Prompts)
 - [AI CLIs](AI-CLIs)
+- [Agents (MCP)](Agents-MCP)
 - [Costs and Run Cost](Costs-and-Run-Cost)

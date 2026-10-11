@@ -10,7 +10,7 @@ The calendar starts on this week's Monday and shows four weeks, Monday to Sunday
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
 - **Needs you**, above the weeks: every project that is waiting on you or ready to upload (see below).
-- **Projects** running or finished on their day, with their state: **Running**, **Paused**, **Queued**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
+- **Projects** running or finished on their day, with their state: **Running**, **Waiting for the agent**, **Paused**, **Queued**, **Waiting for your review**, **Prepared**, **Stopped**, **Kept as is**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
 - **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
@@ -26,6 +26,7 @@ Above the weeks, **Needs you** lists what cannot move on without you, then what 
 | --- | --- | --- |
 | A failed project | **Failed** | **Open to fix** |
 | A project you paused | **Paused** | **Open to continue** |
+| A project a restart stopped before it finished | **Stopped** | **Open to continue** |
 | A project held at a review checkpoint, or with an automatic review that flagged an item and waits for **Overrule** or **Redo** | **Waiting for your review** | **Open to review** |
 | A finished video not marked uploaded | **Ready to upload** | **Prepare upload** |
 

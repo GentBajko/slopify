@@ -127,7 +127,9 @@ If an install or update fails, the message names what failed and, in Docker, the
 | **Queued** | Other videos in the batch queue go first. The Calendar's **Batch queue** shows the order. |
 | **Waiting for limits** / "Waiting for Codex limits (resets at 14:00)" | A CLI plan is used up; the run waits and carries on after the reset time shown. |
 | **Waiting to try again** | A rate limit or timeout; it retries at the time shown. |
-| **Waiting for you** | A checkpoint is holding the run. Press **Approve ...**. |
+| **Waiting for your review** | A checkpoint is holding the run. Press **Approve ...**. |
+| **Waiting for the agent** | A review set to **External agent (MCP)** waits for your agent. Check the agent's routine is running; with no answer, the review passes by itself after 2 hours. See [Agents (MCP)](Agents-MCP). |
+| **Prepared** | Its schedule made it ahead; the video is made on its day. |
 | A step says **taking longer than usual** | It has run longer than the same step usually takes in your finished runs. It is still going; open **Live** to see whether text or images are still arriving. |
 | **Paused** | Press **Continue the run**. |
 | **Stopped** | The run was interrupted (for example by a restart). Press **Continue the run**. |

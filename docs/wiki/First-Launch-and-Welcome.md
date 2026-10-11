@@ -140,6 +140,7 @@ Settings → **Providers** shows a short welcome on a fresh install that names t
 - Try a sample before you add any keys: every screen works on it, and nothing costs anything.
 - You can come back to the first-run screen at `/welcome` until you skip it or make a real project.
 - After an update to a new major version, a **What's new** tour opens instead. See [Updating and Patch Notes](Updating-and-Patch-Notes).
+- Already use Claude Code or Codex? Settings → Connections → **Agents (MCP)** has one line that lets it run Slopify for you: start and fix runs, answer reviews, everything up to Ready to upload. See [Agents (MCP)](Agents-MCP).
 
 ## Related pages
 

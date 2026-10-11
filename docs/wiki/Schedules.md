@@ -95,7 +95,7 @@ Slopify makes the project now, exactly as the schedule would on the day (the tem
 On the scheduled day the schedule finds that project by its title and continues it instead of making another: the hold is lifted and the video, its captions, shorts and YouTube description are made. The same goes for an unfinished project you made yourself under the same title. A finished one counts as a video already made, and the day makes a new one.
 
 - You can open the prepared project and change anything before its day, for example with Edit project.
-- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it.
+- A **Before Video** checkpoint the template already has stays: the day waits for you to approve it, and the project reads **Waiting for your review** and is listed under **Needs you** (and for a connected [agent](Agents-MCP)). A project held only by Prepare's own hold reads **Prepared** and is not listed as waiting anywhere: it waits for its day, not for you.
 - A setup that makes no video has nothing to hold back, so Prepare runs it to the end.
 - A schedule without topics gives every run the same title, so only a prepared project continues there.
 - The spend limit applies to Prepare as it does to a scheduled run.

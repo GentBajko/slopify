@@ -11,6 +11,7 @@ Every section of Settings, what each control does and its default. Sections with
 | Connections | [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
 | Connections | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
 | Connections | [Models](#models) | Model catalogue, retired models | [Models](Models) |
+| Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
 | Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
@@ -98,6 +99,20 @@ See [Providers-and-Keys](Providers-and-Keys#add-a-voice).
 | **Switch all** | Replaces every retired choice that has a suggestion. |
 
 Templates and schedules that pick a retired model are also flagged on their own rows, with the same **Switch to <model>**. See [Models](Models).
+
+## Agents (MCP)
+
+"Let an AI agent on this computer, such as Claude Code or Codex, run Slopify."
+
+| Control | What it does |
+|---|---|
+| **MCP address** | This install's address with `/mcp`, for example `http://127.0.0.1:6969/mcp`. No token: only requests from a web page at another address are refused. |
+| **Claude Code** → **Copy** | Copies `claude mcp add --transport http slopify <address>`. Run it once in a terminal. |
+| **Codex** → **Copy** | Copies the `[mcp_servers.slopify]` lines. Add them to `~/.codex/config.toml`. |
+| Last connected | When an agent last connected, or "No agent has connected yet." |
+| **What agents did** | The latest 20 changes agents made, with the project or schedule and the time. |
+
+There is nothing to turn on: the address works whenever Slopify runs. See [Agents (MCP)](Agents-MCP).
 
 ## Production defaults
 

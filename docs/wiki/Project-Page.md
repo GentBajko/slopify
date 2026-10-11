@@ -39,6 +39,11 @@ The status beside the title reads one of:
 | **Done with problems** | The main output was made (the video, or the narration when there is no video, or the article when there is neither), but another step failed. Each failed step shows its error and its fix. |
 | **Failed** | A step failed and the main output was not made. |
 | **Canceled** | You canceled the run. Finished outputs are kept. |
+| **Waiting for your review** | A review checkpoint is holding the run for you to approve. |
+| **Waiting for the agent** | An [External agent](Agents-MCP#the-external-agent-reviewer) is reviewing what was made. It goes on by itself once the agent answers, or after 2 hours. |
+| **Prepared** | Made ahead by its schedule; only the video is left, for its day. See [Schedules](Schedules#prepare-a-video-ahead). |
+| **Stopped** | The run stopped before it finished (for example after a restart). Press **Continue the run**. |
+| **Kept as is** | What is left was set aside with **Keep as is** and won't run. Editing the project brings it back. |
 
 ## The next action button
 
@@ -49,7 +54,8 @@ The right rail always shows at most one button, named for what it will do. It is
 | The bundled sample project | Sample project | **Make my own copy** (the sample is read-only; your copy can be edited and made again) |
 | Paused | Paused | **Continue the run** |
 | A step failed and will not retry by itself | Failed | The step's fix-it button (for example **Copy sign-in command** with **Check again**, **Soften and retry**, **Edit the prompt**, **Switch model**), or **Try the article again**, **Try images again** and so on. See [Recovery and Retries](Recovery-and-Retries#fix-it-buttons). |
-| A checkpoint is holding the run | Waiting for you | **Approve and record the narration**, **Approve and make the images**, **Approve and render the video**, or **Approve the ...** when nothing waits on it |
+| A checkpoint is holding the run | Waiting for your review | **Approve and record the narration**, **Approve and make the images**, **Approve and render the video**, or **Approve the ...** when nothing waits on it |
+| An External agent is reviewing what was made | Waiting for the agent | No button. "An agent is reviewing what was made." The run carries on once the agent answers, and a review nobody answers passes by itself after 2 hours. |
 | A CLI plan limit is used up | Waiting for limits | No button. The line says, for example, "Waiting for Codex limits (resets at 14:00)." and that the run carries on by itself. |
 | A step is waiting to retry | Waiting to try again | No button. The line says the time it tries again. |
 | Running | Running | **Pause** |
@@ -84,7 +90,7 @@ A step that is waiting to retry or waiting for a CLI limit also stays held while
 2. Choose **Cancel the run…**.
 3. Confirm with **Cancel run**, or press **Keep running** to leave it alone.
 
-Canceling stops every running stage; finished outputs are kept. You can continue a canceled run later with **Continue the run**. A project has to be canceled (not running) before you can delete it from Projects.
+Canceling stops every running stage; finished outputs are kept. You can continue a canceled run later with **Continue the run**. If you took a step up again after canceling (**Try ... again**), Continue carries on only that work; see [Recovery and Retries](Recovery-and-Retries#cancel-then-continue). A project has to be canceled (not running) before you can delete it from Projects.
 
 ## The sections
 

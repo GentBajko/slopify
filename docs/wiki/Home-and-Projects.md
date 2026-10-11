@@ -53,19 +53,22 @@ One work list: the things that don't move on until you act, then the finished vi
 
 | Item | Status | Button |
 | --- | --- | --- |
-| A run held at a review before a step | **Waiting for you · review before the narration** (or the images, or the video) | **Approve the article and record**, **Approve and draw the images** or **Approve and render**. Approving here lets the run continue. Open the project to look first. |
-| A run whose next step is held another way | **Waiting for you** | **Open to continue** |
-| A run you paused | **Paused** | **Open to continue** |
+| A run held at a review before a step | **Waiting for your review · before the narration** (or the images, or the video) | **Approve the article and record**, **Approve and draw the images** or **Approve and render**. Approving here lets the run continue. Open the project to look first. |
+| A run whose next step is held another way | **Waiting for your review** | **Open to continue** |
+| A run a restart stopped before it finished | **Stopped** | **Continue the run**, or **Keep as is** to leave the rest unmade |
+| A run you (or an agent) paused | **Paused** | **Open to continue** |
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
 | A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
 | A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `gemini`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
 | A finished video you have not marked uploaded | **Ready to upload** | **Prepare upload** lists everything YouTube Studio asks for, with Copy buttons (Slopify never uploads for you; see [Publishing to YouTube](Publishing-to-YouTube)). **Mark uploaded** takes it off the list, with **Undo** in the notice; Projects still has it. |
 
+A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running now. A step that failed while the run waits on something else shows here as a failed item.
+
 Up to 4 failed runs and 4 videos ready to upload show here; **See all N ready to upload** opens Projects filtered to them. The bundled samples never show as ready to upload. Only the first item's button is lime; the rest are plain buttons. The heading says how many decisions are waiting and how many videos are ready to upload. With nothing waiting and nothing running, Home says **Nothing needs you and nothing is running**. See [Reviews and Checkpoints](Reviews-and-Checkpoints), [Schedules](Schedules) and [Recovery and Retries](Recovery-and-Retries).
 
 ### Running now
 
-Videos being made or paused, up to 3. Each shows the step it is on, how long each step has taken, the running step's time left (for example `2 of 8 · about 4 min left`), the last few images as they land (with a tile for the one being drawn) and **Images N of M** while drawing. A run waiting for a CLI plan says so instead of the step, for example **Waiting for Codex limits (resets at 14:00)**. Open one to follow it live, pause it or cancel it. With nothing running it says **Start the next video**.
+Videos being made, and runs **Waiting for the agent** (an External agent reviews what they made; they carry on once it answers or after 2 hours), up to 3. Paused runs are under Needs you. Each shows the step it is on, how long each step has taken, the running step's time left (for example `2 of 8 · about 4 min left`), the last few images as they land (with a tile for the one being drawn) and **Images N of M** while drawing. A run waiting for a CLI plan says so instead of the step, for example **Waiting for Codex limits (resets at 14:00)**. Open one to follow it live, pause it or cancel it. With nothing running it says **Start the next video**.
 
 - With more than three running, **See all N running** opens Projects filtered to running.
 - Queued runs show as one line under them, for example "Queued, waiting to start (2): Hypatia, Cleopatra", with **See queued** (Projects filtered to queued).
@@ -102,11 +105,11 @@ Every run ever started, newest first unless you pick another order, for the chan
 | Filter | Shows |
 | --- | --- |
 | **All** | Everything. |
-| **Running** | Running and paused projects. |
+| **Running** | Projects running, and those **Waiting for the agent**: the same runs Home's **See all N running** counts. |
 | **Queued** | Projects waiting for their turn in the video queue. |
-| **Needs you** | Projects waiting at a review or held step. |
+| **Needs you** | Projects waiting for you: at a review or held step, paused, or **Stopped**. |
 | **Ready to upload** | Finished videos not marked uploaded. |
-| **Failed** | Failed projects and those **Done with problems**. |
+| **Failed** | Failed projects, those **Done with problems**, and runs with a failed step that still wait on something else. |
 
 3. Pick an order beside the filter: **Newest first**, **Recently changed**, **Name (A–Z)** or **Status** (waiting for you first, then running, queued, failed and finished).
 
@@ -128,9 +131,13 @@ If nothing matches, the list says **No project matches. Clear the search or pick
 | State | Meaning |
 | --- | --- |
 | **Running** | A step is being made. A run waiting for a CLI plan says **Waiting for Codex limits (resets at 14:00)** instead. |
-| **Paused** | Paused by you; nothing runs until you resume. |
+| **Paused** | Paused by you or an agent; nothing runs until it is continued. |
 | **Queued** | Waiting for its turn in the video queue. |
-| **Waiting for you** | Held at a review or checkpoint. |
+| **Waiting for your review** | Held at a review or checkpoint. |
+| **Waiting for the agent** | An External agent is reviewing what it made; it goes on by itself. |
+| **Prepared** | Made ahead by its schedule; only the video is left, for its day. |
+| **Stopped** | Stopped before it finished, for example by a restart. Open it and press **Continue the run**. |
+| **Kept as is** | What is left was set aside with **Keep as is**. |
 | **Done** | Finished. |
 | **Done with problems** | Finished, but part of it failed. |
 | **Failed** | Stopped with an error. |
