@@ -54,16 +54,13 @@ it("reads from the project's page which step failed beside its wait", async () =
         finishedAt: "2026-09-13T00:05:00.000Z",
         failureReason: "Refused.",
       }),
-      stage("images", "pending"),
+      stage("images", "pending", { parked: true }),
     ],
     outputs: [],
   });
   const subject = await projectNoticeSubject(
     testDeps({
-      "GET /api/projects/p1": jsonAnswer({
-        ...failed,
-        project: { ...failed.project, stepFailed: true },
-      }),
+      "GET /api/projects/p1": jsonAnswer(failed),
     }).api,
     "p1",
   );

@@ -10,7 +10,12 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
-import type { ProjectSummary, RunDraft, Stage } from "../../slices/admission/model.js";
+import type {
+  ProjectListing,
+  ProjectSummary,
+  RunDraft,
+  Stage,
+} from "../../slices/admission/model.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { createCastMember } from "../../slices/channels/service.js";
 import { defaultVoicesSettings } from "../../slices/voices/model.js";
@@ -584,6 +589,36 @@ describe("GET /api/projects", () => {
     expect(agent.page.waitingForAgent).toBe(true);
     expect(agent.resumable).toBe(false);
     expect(agent.holding).toEqual([]);
+  });
+
+  // The person's decision (2026-10-11): a step failed while another waits is told right away,
+  // though a third still runs, and While you were away counts it by `stepFailures`; one failed in
+  // a run with nothing waiting is the run's end notice to tell.
+  it("lists each step failed beside a wait while the run still runs, and none with nothing waiting", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"generate","images":"provide","thumbnail":"generate","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("INSERT INTO project_heads VALUES ('p1','r1')");
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state, finished_at) VALUES ('s1','p1','article','provide','done',NULL), ('s2','p1','audio','generate','failed','2026-09-01T10:00:00.000Z'), ('s3','p1','images','provide','pending',NULL), ('s4','p1','thumbnail','generate','running',NULL), ('s5','p1','video','generate','pending',NULL)",
+    );
+    const listed = async () =>
+      ((await (await app.request("/api/projects")).json()) as { projects: ProjectListing[] })
+        .projects[0];
+    const plain = await listed();
+    expect(plain?.status).toBe("running");
+    expect(plain).not.toHaveProperty("stepFailures");
+    db.exec(
+      "INSERT INTO review_checkpoints (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at) VALUES ('p1','r1','images-gate','images','w1','" +
+        "a".repeat(64) +
+        "','held','2026-09-01')",
+    );
+    const beside = await listed();
+    expect(beside?.status).toBe("running");
+    expect(beside).not.toHaveProperty("stepFailed");
+    expect(beside?.stepFailures).toEqual(["audio@2026-09-01T10:00:00.000Z"]);
   });
 
   // What a restart leaves: a step held for Continue the run, and the video's step still allowed

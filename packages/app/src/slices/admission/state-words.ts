@@ -1,4 +1,5 @@
 import type { ProjectState, StageState } from "../../kernel/pipeline.js";
+import { type StageStanding, waitsForAnswer } from "../../kernel/runner/graph.js";
 
 // One word per state, everywhere a state is said: the MCP tools, and the web's lists and pages
 // (`web/src/lib/state-words.ts` projectStateOf, Home's Needs you, the project's next action).
@@ -126,6 +127,21 @@ export function stepFailedBesideWait(
   stages: readonly { readonly state: StageState }[],
 ): boolean {
   return status === "pending" && stages.some((stage) => stage.state === "failed");
+}
+
+// A step failed while another waits for the agent, the person or its day (`waitsForAnswer`),
+// whether or not a third still runs: what "Step failed" is told for (`notifications/rules.ts`
+// runNotices) and While you were away counts. A failed step in a run with nothing waiting is
+// told by the run's own end notice.
+export function stepFailedWhileWaiting(
+  status: ProjectState,
+  stages: readonly StageStanding[],
+): boolean {
+  return (
+    (status === "running" || status === "pending") &&
+    stages.some((stage) => stage.state === "failed") &&
+    waitsForAnswer(stages)
+  );
 }
 
 // A run listed as failed, on Home's Needs you and under the Projects Failed filter: it failed, or

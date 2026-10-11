@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectById, stagesOf } from "../admission/repo.js";
-import { stepFailedBesideWait } from "../admission/state-words.js";
+import { stepFailedWhileWaiting } from "../admission/state-words.js";
 import { lastStarter } from "../agents/repo.js";
 import { projectHolds } from "../reviews/holds.js";
 import { uploadedAndSettled } from "../uploads/repo.js";
@@ -28,7 +28,7 @@ export function noticeSubject(
     waitingForAgent: holds.waitingForAgent.has(projectId),
     atItsDay: atItsDay(holds.prepared.has(projectId), holds.holding.get(projectId) ?? []),
     status,
-    ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+    ...(stepFailedWhileWaiting(status, stages) ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
 }

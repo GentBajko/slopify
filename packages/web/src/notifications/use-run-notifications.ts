@@ -1,3 +1,4 @@
+import { stepFailedWhileWaiting } from "@app/slices/admission/state-words.js";
 import { atItsDay, failuresOf, type NoticeSubject } from "@app/slices/notifications/rules.js";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -33,7 +34,7 @@ export async function projectNoticeSubject(
     waitingForAgent: body.project.waitingForAgent === true,
     status: body.project.status,
     atItsDay: atItsDay(body.project.prepared === true, body.holding),
-    ...(body.project.stepFailed === true ? { stepFailed: true } : {}),
+    ...(stepFailedWhileWaiting(body.project.status, body.stages) ? { stepFailed: true } : {}),
     ...(failures.length === 0 ? {} : { failures }),
   };
 }

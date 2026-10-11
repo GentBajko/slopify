@@ -161,17 +161,38 @@ it("never tells an already told failure again once another failed step is fixed"
   expect(firstLines(posted).filter((line) => line.startsWith("Step failed"))).toHaveLength(2);
 });
 
-// A step that fails while another still runs is told as it fails, once, and the run that then
-// ends Failed on it is not told again; one that fails as the run ends is the run's own notice.
+// The person's decision (2026-10-11): a step that fails in an ordinary run, with nothing waiting
+// beside it, says nothing mid-run; the run's own end notice tells it. One that fails while another
+// step waits for the agent, the person or its day is told as it fails, once, and the run that
+// then ends Failed on it is not told again; one that fails as the run ends is the run's own notice.
 describe("a step failed while the run goes on", () => {
-  it("is told as it fails, once, and not again when the run ends Failed on it", async () => {
+  it("says nothing mid-run with nothing waiting, and Run failed when the run ends", async () => {
     let now: { readonly status: ProjectState; readonly failures: readonly StepFailure[] } = {
       status: "running",
       failures: [],
     };
     const { notifier, posted } = harness({ failing: () => now });
     notifier.observe(state("running"));
+    // The narration fails while the images still run.
     now = { status: "running", failures: [failed("audio@1", "Refused.")] };
+    notifier.observe(stage("audio", "failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual([]);
+    now = { status: "failed", failures: now.failures };
+    notifier.observe(state("failed"));
+    await notifier.settled();
+    expect(firstLines(posted)).toEqual(["Run failed: Black holes — Refused."]);
+  });
+
+  it("is told as it fails beside a wait, once, and not again when the run ends Failed on it", async () => {
+    let now: {
+      readonly stepFailed?: boolean;
+      readonly status: ProjectState;
+      readonly failures: readonly StepFailure[];
+    } = { status: "running", failures: [] };
+    const { notifier, posted } = harness({ failing: () => now });
+    notifier.observe(state("running"));
+    now = { stepFailed: true, status: "running", failures: [failed("audio@1", "Refused.")] };
     notifier.observe(stage("audio", "failed"));
     notifier.observe(stage("audio", "failed"));
     // Another step's failure is that step's news, not the audio's again.

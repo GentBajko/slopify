@@ -79,7 +79,7 @@ export function derive(stages: readonly StageStanding[], paused = false): Projec
     // A failed step ends the run only once nothing else can go on: while a step it doesn't
     // depend on waits for the agent or the person, the run reads by that wait (`reviews/holds.ts`
     // says which), the failed step still shown and listed as failed.
-    if (stages.some((stage) => movesOnWhenAnswered(stage, stages))) return "pending";
+    if (waitsForAnswer(stages)) return "pending";
     return headlineMade(stages) ? "partial" : "failed";
   }
   if (stages.length > 0 && stages.every((stage) => satisfied(stage.state))) {
@@ -99,6 +99,12 @@ export function readmitted(stage: StageStanding, stages: readonly StageStanding[
     stage.admitted === true &&
     stages.some((other) => other.state === "canceled")
   );
+}
+
+// Whether a step of the run waits for the agent, the person or its day: parked on a review its
+// own inputs let it reach, so it goes on once answered.
+export function waitsForAnswer(stages: readonly StageStanding[]): boolean {
+  return stages.some((stage) => movesOnWhenAnswered(stage, stages));
 }
 
 // A stage parked on a review that its own inputs let it reach, as the runner reads them for the

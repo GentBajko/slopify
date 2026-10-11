@@ -13,7 +13,10 @@ import {
   stagesOf,
   stepFailuresByProject,
 } from "../../slices/admission/repo.js";
-import { stepFailedBesideWait } from "../../slices/admission/state-words.js";
+import {
+  stepFailedBesideWait,
+  stepFailedWhileWaiting,
+} from "../../slices/admission/state-words.js";
 import { lastStarter } from "../../slices/agents/repo.js";
 import { defaultChannelId } from "../../slices/channels/model.js";
 import { channelById, projectChannels, setProjectChannel } from "../../slices/channels/repo.js";
@@ -115,8 +118,9 @@ export function projectRoutes(deps: AppDeps) {
             ...(holds.prepared.has(project.id) ? { prepared: true } : {}),
             ...(holds.waitingForAgent.has(project.id) ? { waitingForAgent: true } : {}),
             ...(holds.stopped.has(project.id) ? { stopped: true } : {}),
-            ...(stepFailedBesideWait(status, stages)
-              ? { stepFailed: true, stepFailures: failures.get(project.id) ?? [] }
+            ...(stepFailedBesideWait(status, stages) ? { stepFailed: true } : {}),
+            ...(stepFailedWhileWaiting(status, stages)
+              ? { stepFailures: failures.get(project.id) ?? [] }
               : {}),
             ...(holding === undefined ? {} : { holding }),
             ...(waiting === undefined ? {} : { limitWaits: waiting.map(listingWait) }),

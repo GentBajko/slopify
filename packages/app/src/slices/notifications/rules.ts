@@ -6,8 +6,8 @@ import type { CheckpointHold } from "../reviews/holds.js";
 // notifications so both say the same thing about the same transition. Pure: the web bundle
 // imports this file.
 
-// `step-failed`: a step failed while the run goes on, told as it fails or when the run stops to
-// wait beside it (`runNotices`).
+// `step-failed`: a step failed while another waits for the agent, the person or its day, told
+// as it fails or when the run stops to wait beside it (`runNotices`).
 export type RunNotice = "ready" | "partial" | "failed" | "waiting" | "step-failed";
 
 // Only a run seen running or waiting can finish, fail or stop to wait: a project first seen
@@ -114,7 +114,8 @@ export interface NoticeSubject {
   readonly waitingForAgent?: boolean | undefined;
   // Held now by its schedule's own Before Video hold, waiting for its day (`reviews/holds.ts`).
   readonly atItsDay?: boolean | undefined;
-  // A step failed while the run still reads by a wait (`admission/state-words.ts`).
+  // A step failed while another waits for the agent, the person or its day, the run running or
+  // reading by that wait (`admission/state-words.ts` stepFailedWhileWaiting).
   readonly stepFailed?: boolean | undefined;
   // The run's state as the Projects list reads it now.
   readonly status?: ProjectState | undefined;
@@ -166,9 +167,10 @@ export interface RunNotices {
 export type NoticeCause = { readonly kind: RunNotice } | { readonly stepFailed: StageKind };
 
 // What a project's notices say, for the server's Notification URL and the browser alike, given
-// the failures already told for the project. A step that fails while the run goes on is said
-// right away ("Step failed"): as it fails while another step still runs, or when the run stops
-// to wait beside it; once per failure. A run that ends on its failures names them all; one that
+// the failures already told for the project. A step that fails while another waits for the
+// agent, the person or its day is said right away ("Step failed"): as it fails while a third
+// step still runs, or when the run stops to wait beside it; once per failure. One that fails
+// with nothing waiting is told only by the run's end notice. A run that ends on its failures names them all; one that
 // ends Failed only on failures already said is not told again. Each notice names the reason of
 // a step failed now: the run's first, or the first "Step failed" tells.
 export function runNotices(
@@ -188,7 +190,7 @@ export function runNotices(
     const repeat = kind === "failed" && failures.length > 0 && untold.length === 0;
     if (!repeat && announces(kind, subject)) notices.push({ kind, reason: failures[0]?.reason });
     if (kind === "waiting" && subject.stepFailed === true) news = untold;
-  } else if (subject.status === "running")
+  } else if (subject.status === "running" && subject.stepFailed === true)
     // Stopped to wait or ended, the run's own transition tells it.
     news = untold.filter((failure) => failure.kind === cause.stepFailed);
   if (news.length > 0) notices.push({ kind: "step-failed", reason: news[0]?.reason });

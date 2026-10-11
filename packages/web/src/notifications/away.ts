@@ -13,8 +13,8 @@ export interface AwaySnapshot {
   // Home's Needs you), each with the points it waited at (`waitPoints`, comma-joined): one held
   // for an agent or its day waits for nobody.
   readonly waiting: Readonly<Record<string, string>>;
-  // Each step failed while its run still read by a wait (`stepFailed`), by its project and its
-  // identity (`stepFailures`): `${projectId} ${failureId}`.
+  // Each step failed while another of its run waited (`stepFailures`), by its project and its
+  // identity: `${projectId} ${failureId}`.
   readonly stepFailures: readonly string[];
 }
 
@@ -58,9 +58,7 @@ export function snapshotOf(at: number, now: readonly Standing[]): AwaySnapshot {
 }
 
 function stepFailuresOf(project: Standing): readonly string[] {
-  return project.stepFailed === true
-    ? (project.stepFailures ?? []).map((failure) => `${project.id} ${failure}`)
-    : [];
+  return (project.stepFailures ?? []).map((failure) => `${project.id} ${failure}`);
 }
 
 // Where a run waiting for the person waits: at its latest pause or its latest stop by a restart

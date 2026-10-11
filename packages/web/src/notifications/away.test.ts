@@ -87,6 +87,16 @@ it("counts a step failed beside a wait for the agent or the run's day", () => {
   ).toEqual({ finished: 0, failed: 0, waiting: 0, stepsFailed: 1 });
 });
 
+// The person's decision (2026-10-11): a step that fails while another waits is told right away
+// even while a third still runs, so it counts here too; one in a run with nothing waiting is the
+// run's to tell when it ends (the list carries no `stepFailures` for it).
+it("counts a step failed beside a wait while the run still runs", () => {
+  const before = snapshotOf(0, [{ id: "a", status: "running", progress: 0.2 }]);
+  expect(
+    awaySummary(before, [{ id: "a", status: "running", progress: 0.3, stepFailures: ["audio@1"] }]),
+  ).toEqual({ finished: 0, failed: 0, waiting: 0, stepsFailed: 1 });
+});
+
 // The same rule as Home's Needs you (`waitsForPerson`): a run waiting for the agent or prepared
 // for its day waits for nobody, and one already waiting when the page last looked is not news.
 it("counts as waiting for you only the runs that newly wait for the person", () => {

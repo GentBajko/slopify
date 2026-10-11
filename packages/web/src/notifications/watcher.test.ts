@@ -160,12 +160,51 @@ describe("failures told beside a wait", () => {
   });
 });
 
-// A step that fails while another still runs is told as it fails, once, and the run that then
-// ends Failed on it is not told again.
-it("tells a step failed while the run goes on as it fails, once", async () => {
+// The person's decision (2026-10-11): a step that fails in an ordinary run, with nothing waiting
+// beside it, says nothing mid-run; the run's own end notice tells it, with its chime.
+it("says nothing mid-run for a step failed with nothing waiting, and Run failed at the end", async () => {
+  let status: ProjectState = "running";
+  const played: string[] = [];
+  const shown: ShownNotice[] = [];
+  const watcher = createRunWatcher({
+    enabled: () => true,
+    sounds: () => true,
+    play: (sound) => {
+      played.push(sound);
+    },
+    seed: () => Promise.resolve([]),
+    subject: () =>
+      Promise.resolve({
+        title: "Project p1",
+        makesVideo: true,
+        ...failing({ status, failures: ["audio@1"] }),
+      }),
+    claim: () => Promise.resolve(true),
+    show: (notice) => {
+      shown.push(notice);
+    },
+    report: () => {},
+  });
+  watcher.observe({ projectId: "p1", state: "running" });
+  watcher.observeStage({ projectId: "p1", stage: "audio", state: "failed" });
+  await watcher.settled();
+  expect(shown).toEqual([]);
+  expect(played).toEqual(["start"]);
+  status = "failed";
+  watcher.observe({ projectId: "p1", state: "failed" });
+  await watcher.settled();
+  expect(shown.map((notice) => notice.text.headline)).toEqual([
+    "Run failed: Project p1 — Quota exceeded",
+  ]);
+  expect(played).toEqual(["start", "end"]);
+});
+
+// A step that fails while another waits and another still runs is told as it fails, once, and
+// the run that then ends Failed on it is not told again.
+it("tells a step failed beside a wait while the run goes on as it fails, once", async () => {
   let status: ProjectState = "running";
   const { watcher, shown } = harness({
-    failing: () => ({ status, failures: ["audio@1"] }),
+    failing: () => ({ stepFailed: status === "running", status, failures: ["audio@1"] }),
   });
   watcher.observe({ projectId: "p1", state: "running" });
   watcher.observeStage({ projectId: "p1", stage: "audio", state: "failed" });
