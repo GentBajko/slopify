@@ -47,13 +47,16 @@ import { current, save, start, tone } from "./revision-rebuild.fake.js";
 // No provider or CLI is called.
 
 // Every word at one a second, so the word timing hears exactly what was said.
-vi.mock("../src/adapters/alignment/index.js", () => ({
-  alignSubtitles: async (request: { readonly text: string }) =>
-    request.text
-      .split(/\s+/)
-      .filter((word) => word !== "")
-      .map((text, index) => ({ text, start: index, end: index + 0.9 })),
-}));
+vi.mock("../src/adapters/alignment/index.js", () => {
+  const mocked = {
+    alignSubtitles: async (request: { readonly text: string }) =>
+      request.text
+        .split(/\s+/)
+        .filter((word) => word !== "")
+        .map((text, index) => ({ text, start: index, end: index + 0.9 })),
+  };
+  return { ...mocked, alignSubtitlesWith: () => mocked.alignSubtitles };
+});
 
 const scratch = mkdtempSync(join(tmpdir(), "slopify-review-stages-"));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));

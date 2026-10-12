@@ -29,13 +29,16 @@ const article = [
 ].join("\n");
 const narrationSeconds = 24;
 
-vi.mock("../src/adapters/alignment/index.js", () => ({
-  alignSubtitles: async (request: { readonly text: string }) =>
-    request.text
-      .split(/\s+/)
-      .filter((word) => word !== "")
-      .map((text, index) => ({ text, start: index, end: index + 0.9 })),
-}));
+vi.mock("../src/adapters/alignment/index.js", () => {
+  const mocked = {
+    alignSubtitles: async (request: { readonly text: string }) =>
+      request.text
+        .split(/\s+/)
+        .filter((word) => word !== "")
+        .map((text, index) => ({ text, start: index, end: index + 0.9 })),
+  };
+  return { ...mocked, alignSubtitlesWith: () => mocked.alignSubtitles };
+});
 
 const scratch = mkdtempSync(join(tmpdir(), "slopify-edit-fixtures-"));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));

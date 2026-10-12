@@ -3,16 +3,19 @@ import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { materializeAdmittedWork } from "../src/slices/rebuild/runtime-materialize.js";
 import { composedFixture, current, save, start } from "./revision-rebuild.fake.js";
 
-vi.mock("../src/adapters/alignment/index.js", () => ({
-  alignSubtitles: async (request: { readonly text: string }) => {
-    const words = request.text.split(/\s+/).filter((word) => word !== "");
-    return words.map((text, index) => ({
-      text,
-      start: (index * 0.09) / words.length,
-      end: ((index + 1) * 0.09) / words.length,
-    }));
-  },
-}));
+vi.mock("../src/adapters/alignment/index.js", () => {
+  const mocked = {
+    alignSubtitles: async (request: { readonly text: string }) => {
+      const words = request.text.split(/\s+/).filter((word) => word !== "");
+      return words.map((text, index) => ({
+        text,
+        start: (index * 0.09) / words.length,
+        end: ((index + 1) * 0.09) / words.length,
+      }));
+    },
+  };
+  return { ...mocked, alignSubtitlesWith: () => mocked.alignSubtitles };
+});
 
 const answer = JSON.stringify({
   summary: "How rope holds.",

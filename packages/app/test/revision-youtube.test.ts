@@ -7,16 +7,19 @@ import { composedFixture, current, save, start } from "./revision-rebuild.fake.j
 
 // The real aligner downloads a speech model; this one hears every word of the text in the
 // first tenth of a second, which is as long as the fake narration lasts.
-vi.mock("../src/adapters/alignment/index.js", () => ({
-  alignSubtitles: async (request: { readonly text: string }) => {
-    const words = request.text.split(/\s+/).filter((word) => word !== "");
-    return words.map((text, index) => ({
-      text,
-      start: (index * 0.09) / words.length,
-      end: ((index + 1) * 0.09) / words.length,
-    }));
-  },
-}));
+vi.mock("../src/adapters/alignment/index.js", () => {
+  const mocked = {
+    alignSubtitles: async (request: { readonly text: string }) => {
+      const words = request.text.split(/\s+/).filter((word) => word !== "");
+      return words.map((text, index) => ({
+        text,
+        start: (index * 0.09) / words.length,
+        end: ((index + 1) * 0.09) / words.length,
+      }));
+    },
+  };
+  return { ...mocked, alignSubtitlesWith: () => mocked.alignSubtitles };
+});
 
 const answer = (first: string) =>
   JSON.stringify({
