@@ -3,7 +3,7 @@
 1. In Play, enable narration or provide matching English audio and article text.
 2. In Subtitles, choose **Subtitle files (.srt + .vtt)** or **Burn into video + files**.
 3. For burned captions, select a bundled or system font, or upload a `.ttf` or `.otf` file (up to 32 MiB). Choose a size from 16 to 120 and a position: top, upper-middle, center, lower-middle or bottom. The side preview shows the selected font, size and position in a 16:9 or 9:16 frame.
-4. Start the run. Slopify times the article against the actual narration on your computer. The first use downloads an approximately 95 MB English speech model; later runs work offline with the cached model. Allow roughly 1 GB of available memory during alignment. No extra API key, Python, or compiler is needed.
+4. Start the run. Slopify times the article against the actual narration on your computer. The first use downloads the English speech model chosen in Settings → Production defaults → **Subtitle timing model** (378 MB unless changed); later runs work offline with the cached model. Allow roughly 1.2 GB of available memory during alignment (0.7 GB with Smallest). No extra API key, Python, or compiler is needed.
 5. Download SRT/VTT beside the final export. Files mode adds an optional native caption track to the in-app video preview. Burned captions remain visible in the downloaded MP4.
 
 For a completed project, open its final Video or Audio export section, set subtitles, and click **Save subtitles**. This rebuilds only the local export from saved narration and images. Changing font, size or position reuses word timing when the audio and spoken text are unchanged. A paused run saves these choices until Resume; pause an active run before editing. Failed alignment or rendering keeps the previous finished export.
@@ -18,6 +18,14 @@ Fonts are copied into the completed project's caption assets, so an existing exp
 
 Speech inference uses MIT-licensed `onnxruntime-node@1.30.0` (native CPU) in a separate process, with `min(8, CPUs − 1)` threads; set `SLOPIFY_SUBTITLE_THREADS` to override. The npm package bundles CPU builds for Linux x64/arm64, Windows x64/arm64 and Apple silicon macOS (about 220 MB unpacked); Intel Macs have no build, so subtitle timing falls back to the slower single-threaded `onnxruntime-web` there. Its postinstall script only fetches optional CUDA files on Linux x64 and is not needed (the Docker image installs with `--ignore-scripts`); model weights are downloaded lazily into `<data-dir>/models/english-subtitles/`.
 
-Model: [Xenova/wav2vec2-base-960h](https://huggingface.co/Xenova/wav2vec2-base-960h/tree/a19f851b3d42865797e410752b4c570c871e4825), an ONNX conversion of [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h), licensed Apache-2.0. Pinned revision: `a19f851b3d42865797e410752b4c570c871e4825`. The quantized model is 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`; every cached/downloaded model is verified before use.
+Model: [Xenova/wav2vec2-base-960h](https://huggingface.co/Xenova/wav2vec2-base-960h/tree/a19f851b3d42865797e410752b4c570c871e4825), an ONNX conversion of [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h), licensed Apache-2.0. Pinned revision: `a19f851b3d42865797e410752b4c570c871e4825`. Three precisions of that revision can be chosen per computer, each verified before use and kept under its own file name so they can sit side by side:
+
+| Setting | File | Bytes | SHA256 |
+|---|---|---|---|
+| Most accurate (default) | `onnx/model.onnx` (fp32) | 377,887,594 | `e46614273f03ff4b87923a965e417fa72004825522cb007c9c25633b8475490d` |
+| Balanced | `onnx/model_fp16.onnx` | 189,192,204 | `378348ee38b739cc77e77e3fb8502f0f40ed53da0dbf7401b24c25c8fafe03de` |
+| Smallest | `onnx/model_quantized.onnx` (int8) | 95,286,046 | `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3` |
+
+On a 2 h 28 min narration fp32 aligned in 2 min 40 s (1.1 GB peak) and fp16 in 3 min 16 s (1.2 GB), both hearing every line; int8 took 5 min 35 s (0.7 GB) and misheard two lines, stopping the run with a false "Subtitles stopped matching the audio".
 
 The bundled Barlow font uses the SIL Open Font License; its license and source record ship in `dist/assets/fonts/`. Uploaded/system font licensing remains with its author.

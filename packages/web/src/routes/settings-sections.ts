@@ -25,7 +25,7 @@ export const settingsSections = [
   {
     id: "playback",
     label: "Production defaults",
-    meta: "How new runs pace the narration and level the volume.",
+    meta: "How new runs pace the narration and level the volume, and which model times English captions.",
   },
   {
     id: "notifications",

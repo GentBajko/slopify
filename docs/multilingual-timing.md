@@ -13,7 +13,7 @@ re-run.
 |---|---|---|---|
 | Article, narration preparation, YouTube description, chapters, tags, Shorts titles and hashtags, multi-voice scripts | English | Written in the language | Written in the language |
 | Sentence splitting and narration chunks | Unicode rules | Unicode rules | Unicode rules; Chinese, Japanese and Thai words are counted with the platform's word breaker |
-| Word timing (captions, SRT/VTT, chapters, Shorts clips) | Word by word, English model (95 MB) | Word by word, multilingual model (248 MB, downloaded on first use) | Sentence by sentence, no model |
+| Word timing (captions, SRT/VTT, chapters, Shorts clips) | Word by word, English model (378 MB by default; 189 MB or 95 MB by choice) | Word by word, multilingual model (248 MB, downloaded on first use) | Sentence by sentence, no model |
 | Word-by-word Shorts captions, cuts that follow the narration | On | On | Off: Shorts show whole caption groups, cuts fall every N seconds |
 | Pronunciation glossary | Standard-English IPA | Full IPA (ç, ʁ, ø, y, ɲ, x, …) | Full IPA |
 | Caption font | As chosen | As chosen, or bundled Noto Sans if the font lacks the letters | Bundled Noto for Latin, Greek, Cyrillic, Arabic, Hebrew, Devanagari and Thai; a font on the computer for Chinese, Japanese and Korean, or upload one |
@@ -35,7 +35,8 @@ voice is listed for other languages.
 ## Word timing
 
 - **English** keeps `Xenova/wav2vec2-base-960h` (Apache-2.0), its constants and its fingerprints
-  (`wav2vec2-en-a19f851-v2-omissions`).
+  (`wav2vec2-en-a19f851-v2-omissions`). The precision is a per-computer setting (fp32
+  by default, fp16 or int8); it is not part of the fingerprint.
 - **Spanish, German, French, Italian, Portuguese, Dutch, Catalan, Polish and Czech** use
   `voidful/wav2vec2-xlsr-multilingual-56` (Apache-2.0) as converted to ONNX by NewComer00, the
   4-bit file `onnx/model_q4.onnx` at revision `2d48b01b6429d9018f81914550565112d56f6ba7`

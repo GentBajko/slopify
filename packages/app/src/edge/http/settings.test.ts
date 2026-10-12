@@ -78,6 +78,7 @@ describe("GET /api/settings", () => {
       silenceGapSeconds: 3,
       appearance: "system",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
   });
 });
@@ -96,12 +97,45 @@ describe("PUT /api/settings", () => {
       silenceGapSeconds: 5,
       appearance: "dark",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
     expect(await (await app.request("/api/settings")).json()).toEqual({
       silenceGapSeconds: 5,
       appearance: "dark",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
+  });
+
+  it("saves the subtitle timing model, and keeps it when a client leaves it out", async () => {
+    const { app } = harness();
+
+    const chosen = await json(app, "/api/settings", "PUT", {
+      silenceGapSeconds: 3,
+      appearance: "system",
+      subtitleModel: "fp16",
+    });
+    expect(chosen.status).toBe(200);
+    expect(await chosen.json()).toMatchObject({ subtitleModel: "fp16" });
+
+    // A client from before the setting still saves the others without resetting it.
+    await json(app, "/api/settings", "PUT", { silenceGapSeconds: 4, appearance: "system" });
+    expect(await (await app.request("/api/settings")).json()).toMatchObject({
+      silenceGapSeconds: 4,
+      subtitleModel: "fp16",
+    });
+  });
+
+  it("refuses a subtitle timing model this build does not have", async () => {
+    const { app } = harness();
+
+    const response = await json(app, "/api/settings", "PUT", {
+      silenceGapSeconds: 3,
+      appearance: "system",
+      subtitleModel: "fp8",
+    });
+
+    expect(response.status).toBe(400);
   });
 
   it("names the field when the gap is out of range", async () => {

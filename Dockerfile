@@ -27,7 +27,7 @@ ENV NODE_ENV=production \
     SLOPIFY_SKIP_MANAGED_UPDATE=1 \
     SLOPIFY_DISABLE_UPDATES=1 \
     SLOPIFY_CONTAINER=1 \
-    SLOPIFY_SUBTITLE_MODEL_SEED=/opt/slopify/models/english-subtitles/wav2vec2-base-960h-cd5040c1.onnx
+    SLOPIFY_SUBTITLE_MODEL_SEED=/opt/slopify/models/english-subtitles/wav2vec2-base-960h-fp32-e4661427.onnx
 
 WORKDIR /opt/slopify
 COPY package.json package-lock.json ./
@@ -46,10 +46,11 @@ RUN apt-get update \
     && chown -R node:node /data
 COPY --from=build /src/packages/app/dist packages/app/dist
 COPY LICENSE NOTICE packages/app/
-# The subtitle model ships in the image: the app copies it into /data on first start instead
-# of downloading 95 MB. prepareModel checks its size and SHA-256 before keeping it.
+# The default (fp32) subtitle model ships in the image: the app copies it into /data on first
+# start instead of downloading 378 MB. prepareModel checks its size and SHA-256 before keeping
+# it. Choosing Balanced or Smallest in Settings downloads that one on first use instead.
 COPY docker/subtitle-model/ models/english-subtitles/
-RUN node --input-type=module -e "const { prepareModel } = await import('/opt/slopify/packages/app/dist/adapters/alignment/cache.js'); const path = await prepareModel({ cacheDir: '/opt/slopify/models/english-subtitles', signal: AbortSignal.timeout(1800000) }); if (path !== process.env.SLOPIFY_SUBTITLE_MODEL_SEED) throw new Error('Subtitle model landed at ' + path + ', not ' + process.env.SLOPIFY_SUBTITLE_MODEL_SEED);" \
+RUN node --input-type=module -e "const { prepareModel } = await import('/opt/slopify/packages/app/dist/adapters/alignment/cache.js'); const path = await prepareModel({ cacheDir: '/opt/slopify/models/english-subtitles', signal: AbortSignal.timeout(3600000) }); if (path !== process.env.SLOPIFY_SUBTITLE_MODEL_SEED) throw new Error('Subtitle model landed at ' + path + ', not ' + process.env.SLOPIFY_SUBTITLE_MODEL_SEED);" \
     && chmod 755 models models/english-subtitles \
     && chmod 644 models/english-subtitles/*
 

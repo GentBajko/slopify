@@ -58,8 +58,8 @@ Dependency direction: edge → `recoverProject` / `previewRebuild` / `startRebui
 | `recovery-repo.ts` | `recoveryKey` (`:26`), `recoveryAuthority` (`:29`, hash of control receipts and admissions), `readRecovery` (`:40`), `reserveRecovery` (`:76`), `rememberRecovery` (`:99`), `resumable` (`:118`) | Persists each request in `project_recovery_requests`; a key already used by a mutation, admission or control receipt is `idempotency-conflict` (`:48`-`:62`) |
 | `recovery-selection.ts` | `sectionRoots` (`:8`), `redoTarget` (`:47`), `dependentClosure` (`:77`), `recoverySelection` (`:94`), `regenerationEdit` (`:106`) | Resume = `allAffected`; Retry = the stage's unreused keys (`:94`-`:104`) |
 | `recovery-conflict.ts` | `activeConflict` (`:15`), `conflictRefusal` (`:47`) | Returns `running` or `accepted-job` |
-| `adapters/alignment/cache.ts` | `ModelFile` (`:10`), `ModelDeps` (`:27`), `alignmentModel` (`:33`, 95 286 046 bytes, pinned revision), `prepareModel` (`:40`) | See Communication |
-| `adapters/alignment/prefetch.ts` | `prefetchModel` (`:15`) | Clears a lock left under this pid, takes the worker lock, then `prepareModel` with the optional seed (`:17`-`:23`) |
+| `adapters/alignment/cache.ts` | `ModelFile` (`:14`), `ModelDeps` (`:31`), `englishModels` (`:41`, fp32 / fp16 / int8 of one pinned revision), `alignmentModel` (`:64`, the fp32 default and Docker seed), `prepareModel` (`:66`) | See Communication |
+| `adapters/alignment/prefetch.ts` | `prefetchModel` (`:21`) | Clears a lock left under this pid, takes the worker lock, then `prepareModel` for the English model chosen in Settings (`choice`) with the optional seed |
 | `adapters/alignment/lock.ts` | `claimWorker(cacheDir, signal)` (`:7`) | One model worker per data directory via `alignment-worker.lock` |
 
 ## Entry points
@@ -95,7 +95,7 @@ Subtitle model: `prepareModel` returns the cached file when size and SHA-256 mat
 
 - `RebuildDeps` is assembled in `packages/app/src/main.ts:470` (db, paths, ids, clock, log, runner, catalogue, `measureAudio`, `providers`, `modelsFor`, `emit`).
 - The aligner is injected as `alignSubtitles: aligner = alignSubtitles` into the runner's execution deps (`packages/app/src/main.ts:850`, `:866`); `sample-build` substitutes its own.
-- Startup prefetch runs `prefetchModel({ cacheDir: subtitleModelDir(...), seed: options.subtitleModelSeed })` when `prefetchSubtitleModel` is set; failure is logged and non-fatal (`packages/app/src/main.ts:735`-`:744`).
+- Startup prefetch runs `prefetchModel({ cacheDir: subtitleModelDir(...), seed: options.subtitleModelSeed, choice: readSettings(...).subtitleModel })` when `prefetchSubtitleModel` is set; failure is logged and non-fatal (`packages/app/src/main.ts:735`-`:744`).
 - Tests: admission/recovery in `packages/app/src/slices/rebuild/recovery.test.ts`, `service-reuse.test.ts`, `service-*.test.ts`; download retries in `packages/app/src/adapters/alignment/cache-retry.test.ts:25`; prefetch locking in `packages/app/src/adapters/alignment/prefetch.test.ts:26`.
 
 ## Frontend

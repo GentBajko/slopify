@@ -1,10 +1,30 @@
 import { languageInfo, wordTimingUnavailable } from "@app/kernel/ports/languages.js";
+import type { EnglishSubtitleModel } from "@app/kernel/ports/subtitles.js";
 
 // The caption-timing model each language downloads the first time it makes captions, in bytes.
 // The same files `adapters/alignment` fetches (cache.ts and multilingual.ts); model-facts.test.ts
-// fails when either changes, so these words never drift from the real download.
-export const englishModelBytes = 95_286_046;
+// fails when either changes, so these words never drift from the real download. English is the
+// default of Settings → Production defaults → Subtitle timing model.
+export const englishModelBytes = 377_887_594;
 export const multilingualModelBytes = 247_576_761;
+
+// Settings → Production defaults → Subtitle timing model: the English model at three
+// precisions, most accurate first (`adapters/alignment/cache.ts#englishModels`).
+const fp16Bytes = 189_192_204;
+const int8Bytes = 95_286_046;
+export const englishModelChoices: readonly {
+  readonly value: EnglishSubtitleModel;
+  readonly bytes: number;
+  readonly label: string;
+}[] = [
+  {
+    value: "fp32",
+    bytes: englishModelBytes,
+    label: `Most accurate (${megabytes(englishModelBytes)}, recommended)`,
+  },
+  { value: "fp16", bytes: fp16Bytes, label: `Balanced (${megabytes(fp16Bytes)})` },
+  { value: "int8", bytes: int8Bytes, label: `Smallest (${megabytes(int8Bytes)}, less accurate)` },
+];
 
 function megabytes(bytes: number): string {
   return `${String(Math.round(bytes / 1_000_000))} MB`;
@@ -20,7 +40,7 @@ export function subtitleFacts(code: string | undefined): {
   if (language.timing === "english")
     return {
       tag: "English · local · no paid API",
-      detail: `Timed from your narration on this computer. The first English captions download a ${megabytes(englishModelBytes)} speech model. Review the subtitles before publishing.`,
+      detail: `Timed from your narration on this computer. The first English captions download the speech model chosen in Settings → Production defaults (${megabytes(englishModelBytes)} unless changed). Review the subtitles before publishing.`,
     };
   if (language.timing === "multilingual")
     return {

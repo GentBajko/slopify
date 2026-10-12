@@ -261,6 +261,39 @@ describe("the settings screen", () => {
     expect(sent).toEqual({ silenceGapSeconds: 5, appearance: "system" });
   });
 
+  it("offers the subtitle timing models, most accurate first, and saves the choice", async () => {
+    const user = userEvent.setup();
+    let sent: unknown;
+    renderApp(
+      <SettingsRoute section="playback" />,
+      deps({
+        "PUT /api/settings": async (request) => {
+          sent = await request.json();
+          return jsonAnswer({ ...settings, subtitleModel: "fp16" })(request);
+        },
+      }),
+    );
+
+    // A settings answer from before the setting reads as its default.
+    const select = (await screen.findByLabelText("Subtitle timing model")) as HTMLSelectElement;
+    expect(select.value).toBe("fp32");
+    expect([...select.options].map((option) => option.text)).toEqual([
+      "Most accurate (378 MB, recommended)",
+      "Balanced (189 MB)",
+      "Smallest (95 MB, less accurate)",
+    ]);
+    expect(
+      screen.getByText(
+        "Bigger hears the narration more accurately and, on most computers, is also faster. It downloads once, the first time captions are timed.",
+      ),
+    ).not.toBeNull();
+
+    await user.selectOptions(select, "fp16");
+
+    await waitFor(() => expect(sent).toEqual({ ...settings, subtitleModel: "fp16" }));
+    expect(select.value).toBe("fp16");
+  });
+
   it("names the problem when the settings cannot be read", async () => {
     renderApp(
       <SettingsRoute section="playback" />,

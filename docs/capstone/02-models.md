@@ -234,7 +234,7 @@ Coverage: every table and every exported object type of the slices' `model.ts`/`
 | Provider | `packages/app/src/slices/settings/model.ts:67` | In-memory | Union of KeyedProvider, CliProvider and LocalProvider |
 | ProviderStatus | `packages/app/src/slices/settings/model.ts:177` | In-memory | Provider identity plus readiness and CLI path, as Settings lists it |
 | Voice | `packages/app/src/slices/settings/model.ts:189` | `voices` | A saved TTS voice |
-| AppSettings | `packages/app/src/slices/settings/model.ts:207` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness` | App-wide playback settings: silence gap, appearance, loudness |
+| AppSettings | `packages/app/src/slices/settings/model.ts:211` | `settings` keys `silenceGapSeconds`, `appearance`, `loudness`, `subtitleModel` | App-wide settings: silence gap, appearance, loudness, English subtitle timing model |
 | TutorialSession | `packages/app/src/slices/settings/tutorial-schema.ts:46` | `settings` key `tutorial.session` | Persisted in-app tutorial cursor |
 | TutorialWrite | `packages/app/src/slices/settings/tutorial-schema.ts:47` | In-memory | Compare-and-set tutorial save |
 | TutorialView | `packages/app/src/slices/settings/tutorial-schema.ts:48` | In-memory | Versioned tutorial progress |
@@ -2889,6 +2889,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | silenceGapSeconds | `number` | yes |  |
 | appearance | `Appearance` | yes | accepted: system, light, dark |
 | loudness | `LoudnessDefault` | yes |  |
+| subtitleModel | `EnglishSubtitleModel` | yes | accepted: fp32, fp16, int8; default fp32; this computer's English caption-timing model, never part of a fingerprint |
 
 ### TutorialSession
 

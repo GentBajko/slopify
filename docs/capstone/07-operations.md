@@ -170,7 +170,7 @@ Values of names matching `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, `*_KEY` are shown 
 | FFMPEG_BIN | unset; lower-priority override; set on the recovery installer child | `packages/app/src/adapters/ffmpeg.ts:22`, `packages/app/src/adapters/ffmpeg.ts:57` | Error text `packages/app/src/adapters/ffmpeg.ts:78` |
 | SLOPIFY_NO_MODEL_PREFETCH | unset → caption model fetched at start | `packages/app/src/edge/cli.ts:88` | `README.md:112` |
 | SLOPIFY_NO_MODEL_REFRESH | unset → model catalogue synced daily | `packages/app/src/edge/cli.ts:97` | source only |
-| SLOPIFY_SUBTITLE_MODEL_SEED | unset; image points at `/opt/slopify/models/english-subtitles/wav2vec2-base-960h-cd5040c1.onnx` | `packages/app/src/edge/cli.ts:90`, `Dockerfile:30` | `Dockerfile:49` comment |
+| SLOPIFY_SUBTITLE_MODEL_SEED | unset; image points at `/opt/slopify/models/english-subtitles/wav2vec2-base-960h-fp32-e4661427.onnx` (the default fp32 model; only used when the chosen model is fp32) | `packages/app/src/edge/cli.ts:90`, `Dockerfile:30` | `Dockerfile:49` comment |
 | SLOPIFY_SUBTITLE_THREADS | `min(8, CPUs−1)` | `packages/app/src/adapters/alignment/threads.ts:12` | source only |
 | SLOPIFY_COLLECTOR_URL | `https://collector.slopify.stream`; invalid/non-HTTP falls back | `packages/app/src/slices/telemetry/collector-client.ts:29` | Test seam per `packages/app/src/slices/telemetry/collector-client.ts:23` |
 | SLOPIFY_PIPER_VOICES | empty → Piper voices omitted; `:`-separated `.onnx` paths | `packages/app/src/kernel/ports/system-speech.ts:165` | source comment `:162` |

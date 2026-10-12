@@ -8,7 +8,7 @@ import { serve } from "@hono/node-server";
 import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
-import { alignSubtitles } from "./adapters/alignment/index.js";
+import { alignSubtitlesWith } from "./adapters/alignment/index.js";
 import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
@@ -116,6 +116,7 @@ import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
+import { readSettings } from "./slices/settings/playback.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { readSetting } from "./slices/settings/repo.js";
 import { arrangeChanged } from "./slices/storage/arrange.js";
@@ -804,6 +805,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       ? prefetchModel({
           cacheDir: subtitleModelDir(paths.dataDir),
           seed: options.subtitleModelSeed,
+          choice: readSettings({ db, log }).subtitleModel,
           signal: modelPrefetch.signal,
         }).then(
           () => log.write("info", "subtitle-model.ready"),
@@ -916,7 +918,8 @@ export function wireRunner({
   registry,
   catalogue,
   ffmpeg,
-  alignSubtitles: aligner = alignSubtitles,
+  // Settings → Production defaults → Subtitle timing model, read as each alignment starts.
+  alignSubtitles: aligner = alignSubtitlesWith(() => readSettings({ db, log }).subtitleModel),
 }: Wiring): Runner & { readonly checkpoints: CheckpointAuthority<CheckpointRow> } {
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the

@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { englishModels } from "./cache.js";
 import { prefetchModel } from "./prefetch.js";
 
 const roots: string[] = [];
@@ -29,6 +30,23 @@ describe("subtitle model prefetch", () => {
     const file = await prefetchModel({ cacheDir: dir, signal: new AbortController().signal }, deps);
     expect(await readFile(file)).toEqual(Buffer.from(bytes));
     await expect(readFile(join(dir, "alignment-worker.lock"))).rejects.toThrow(/ENOENT/);
+  });
+  it("fetches only the model chosen in Settings", async () => {
+    for (const choice of ["fp32", "fp16", "int8"] as const) {
+      const dir = await cache();
+      const asked: string[] = [];
+      const fetchModel: typeof fetch = async (url) => {
+        asked.push(String(url));
+        return new Response("gone", { status: 404 });
+      };
+      await expect(
+        prefetchModel(
+          { cacheDir: dir, choice, signal: new AbortController().signal },
+          { fetch: fetchModel },
+        ),
+      ).rejects.toThrow(/HTTP 404/);
+      expect(asked).toEqual([englishModels[choice].url]);
+    }
   });
   it("clears a lock left by an earlier run under this process's pid", async () => {
     // In a container the app is pid 1 on every start, so the leftover names a live process.

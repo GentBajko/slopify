@@ -2,6 +2,10 @@
 
 import type { HostCliId } from "../../kernel/ports/host-cli.js";
 import type { ProviderFamily, Readiness } from "../../kernel/ports/model.js";
+import {
+  defaultEnglishSubtitleModel,
+  type EnglishSubtitleModel,
+} from "../../kernel/ports/subtitles.js";
 import { defaultLoudness, type LoudnessDefault } from "../loudness/model.js";
 
 export type { ProviderFamily } from "../../kernel/ports/model.js";
@@ -211,10 +215,14 @@ export interface AppSettings {
   // Level the volume for new runs: on at the recommended targets unless changed here
   // (`loudness/model.ts`). A project keeps what it was started with.
   readonly loudness: LoudnessDefault;
+  // Which English model times the captions on this computer. It is the install's, not a
+  // project's, and no fingerprint carries it (`kernel/ports/subtitles.ts`).
+  readonly subtitleModel: EnglishSubtitleModel;
 }
 
 export const defaultSettings: AppSettings = {
   silenceGapSeconds: 3,
   appearance: "system",
   loudness: defaultLoudness,
+  subtitleModel: defaultEnglishSubtitleModel,
 };

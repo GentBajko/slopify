@@ -32,7 +32,7 @@ This applies with the brand kit off too, because language is not styling. Projec
 | | English | Spanish, German, French, Italian, Portuguese, Dutch, Catalan, Polish, Czech | All other languages |
 |---|---|---|---|
 | Article, narration preparation, YouTube description, chapters, tags, shorts titles and hashtags, multi-voice scripts | English | Written in the language | Written in the language |
-| Caption timing | Word by word, English model (95 MB) | Word by word, multilingual model (248 MB, downloaded once, on first use) | Sentence by sentence, no model |
+| Caption timing | Word by word, English model (378 MB; 189 MB or 95 MB in Settings → Production defaults) | Word by word, multilingual model (248 MB, downloaded once, on first use) | Sentence by sentence, no model |
 | Word-by-word Shorts captions | On | On | Off: shorts show whole caption groups |
 | Cuts that follow the narration | Available | Available | Off: cuts fall every N seconds |
 | Pronunciation Glossary | Standard-English IPA | Full IPA (ç, ʁ, ø, y, ɲ, x and so on) | Full IPA |

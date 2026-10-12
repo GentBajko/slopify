@@ -192,8 +192,9 @@ export function StepContent({
           </p>
           <p>
             English captions are timed locally from your narration with no paid API. First use
-            downloads an approximately <strong>95 MB</strong> speech model. Audio must be active;
-            WAV exports support separate subtitle files.
+            downloads an approximately <strong>378 MB</strong> speech model (a smaller one can be
+            chosen in Settings → Production defaults). Audio must be active; WAV exports support
+            separate subtitle files.
           </p>
           <p>
             Pick a font or upload a TTF/OTF file, then adjust its size in the preview. Styling

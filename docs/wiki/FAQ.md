@@ -48,7 +48,7 @@ What you write is sent only to the AI providers you pick, because they make the 
 
 ### Does it work offline?
 
-Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call providers over the internet, or CLIs that do. Rendering the video, levelling the volume, captions, the style preview and the System voice run on your computer. Captions need a speech model of about 95 MB that is downloaded once, on first use. Patch notes ship with the app and open offline.
+Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call providers over the internet, or CLIs that do. Rendering the video, levelling the volume, captions, the style preview and the System voice run on your computer. Captions need a speech model of about 378 MB (smaller ones can be chosen in Settings → Production defaults) that is downloaded once, on first use. Patch notes ship with the app and open offline.
 
 ## Making and editing videos
 

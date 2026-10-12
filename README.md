@@ -109,7 +109,7 @@ yourself, in the [Docker guide](docs/docker.md).
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` | Where the database, projects and logs live |
 | `--no-open` | `SLOPIFY_NO_OPEN` | opens a browser | Keeps the browser shut |
 | | `SLOPIFY_FFMPEG` | bundled | Use another [ffmpeg](docs/ffmpeg.md) |
-| | `SLOPIFY_NO_MODEL_PREFETCH` | downloads at start | Skip fetching the 95 MB caption model at start |
+| | `SLOPIFY_NO_MODEL_PREFETCH` | downloads at start | Skip fetching the caption model (378 MB by default) at start |
 
 A flag beats the variable. There is no login: keep it on `127.0.0.1`, because whoever
 reaches the port controls the app and its keys.

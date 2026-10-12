@@ -1,5 +1,13 @@
 import type { NarrationAlias } from "./narration-aliases.js";
 
+// The English timing model, chosen per computer in Settings → Production defaults: the same
+// pinned wav2vec2 conversion at three precisions. Bigger hears more accurately and, on most
+// computers, also runs faster. The choice never enters a fingerprint: every precision times the
+// same words, so switching must not mark finished subtitles outdated.
+export const englishSubtitleModels = ["fp32", "fp16", "int8"] as const;
+export type EnglishSubtitleModel = (typeof englishSubtitleModels)[number];
+export const defaultEnglishSubtitleModel: EnglishSubtitleModel = "fp32";
+
 export interface SubtitleOmission {
   readonly start: number;
   readonly text: string;

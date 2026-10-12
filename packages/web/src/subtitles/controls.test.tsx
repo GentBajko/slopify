@@ -58,7 +58,7 @@ describe("subtitle controls", () => {
     await user.clear(size);
     await user.type(size, "64");
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":64');
-    expect(screen.getByText(/95 MB speech model/)).not.toBeNull();
+    expect(screen.getByText(/378 MB unless changed/)).not.toBeNull();
     expect(screen.getByText("Changed · default 48")).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Reset subtitle font size to 48" }));
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":48');

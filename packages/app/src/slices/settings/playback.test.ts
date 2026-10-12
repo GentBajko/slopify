@@ -36,17 +36,24 @@ describe("readSettings", () => {
       silenceGapSeconds: 3,
       appearance: "system",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
   });
 
   it("answers with what was saved", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 0, appearance: "dark", loudness: defaultLoudness });
+    saveSettings(deps, {
+      silenceGapSeconds: 0,
+      appearance: "dark",
+      loudness: defaultLoudness,
+      subtitleModel: "fp32",
+    });
 
     expect(readSettings(deps)).toEqual({
       silenceGapSeconds: 0,
       appearance: "dark",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
   });
 
@@ -78,13 +85,19 @@ describe("readSettings", () => {
   // One row per setting, so a broken gap costs the gap and not the theme.
   it("keeps the other setting when one row is unreadable", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 5, appearance: "light", loudness: defaultLoudness });
+    saveSettings(deps, {
+      silenceGapSeconds: 5,
+      appearance: "light",
+      loudness: defaultLoudness,
+      subtitleModel: "fp32",
+    });
     writeSetting(deps.db, "appearance", "{");
 
     expect(readSettings(deps)).toEqual({
       silenceGapSeconds: 5,
       appearance: "system",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
   });
 });
@@ -94,24 +107,45 @@ describe("saveSettings", () => {
     const { deps } = harness();
 
     expect(
-      saveSettings(deps, { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness }),
+      saveSettings(deps, {
+        silenceGapSeconds: 7,
+        appearance: "light",
+        loudness: defaultLoudness,
+        subtitleModel: "fp32",
+      }),
     ).toEqual({
       ok: true,
-      settings: { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness },
+      settings: {
+        silenceGapSeconds: 7,
+        appearance: "light",
+        loudness: defaultLoudness,
+        subtitleModel: "fp32",
+      },
     });
   });
 
   it("overwrites a previous save", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness });
-    saveSettings(deps, { silenceGapSeconds: 1, appearance: "dark", loudness: defaultLoudness });
+    saveSettings(deps, {
+      silenceGapSeconds: 7,
+      appearance: "light",
+      loudness: defaultLoudness,
+      subtitleModel: "fp32",
+    });
+    saveSettings(deps, {
+      silenceGapSeconds: 1,
+      appearance: "dark",
+      loudness: defaultLoudness,
+      subtitleModel: "fp32",
+    });
 
     expect(readSettings(deps)).toEqual({
       silenceGapSeconds: 1,
       appearance: "dark",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
-    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 3 });
+    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 4 });
   });
 
   it("refuses a negative gap", () => {
@@ -121,6 +155,7 @@ describe("saveSettings", () => {
       silenceGapSeconds: -1,
       appearance: "system",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
 
     expect(result).toEqual({
@@ -137,6 +172,7 @@ describe("saveSettings", () => {
         silenceGapSeconds: silenceGapSecondsMax + 1,
         appearance: "system",
         loudness: defaultLoudness,
+        subtitleModel: "fp32",
       }).ok,
     ).toBe(false);
   });
@@ -149,6 +185,7 @@ describe("saveSettings", () => {
         silenceGapSeconds: 2.5,
         appearance: "system",
         loudness: defaultLoudness,
+        subtitleModel: "fp32",
       }).ok,
     ).toBe(false);
   });
@@ -161,6 +198,7 @@ describe("saveSettings", () => {
       // @ts-expect-error the route's schema stops this; the rule is the second gate.
       appearance: "sepia",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
 
     expect(result).toEqual({
@@ -177,6 +215,7 @@ describe("saveSettings", () => {
       // @ts-expect-error as above: both fields are wrong, both are reported.
       appearance: "sepia",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
 
     expect(result.ok ? [] : result.fields.map((field) => field.field)).toEqual([
@@ -188,13 +227,65 @@ describe("saveSettings", () => {
   it("writes nothing when a field is refused", () => {
     const { deps } = harness();
 
-    saveSettings(deps, { silenceGapSeconds: -1, appearance: "dark", loudness: defaultLoudness });
+    saveSettings(deps, {
+      silenceGapSeconds: -1,
+      appearance: "dark",
+      loudness: defaultLoudness,
+      subtitleModel: "fp32",
+    });
 
     expect(readSettings(deps)).toEqual({
       silenceGapSeconds: 3,
       appearance: "system",
       loudness: defaultLoudness,
+      subtitleModel: "fp32",
     });
+  });
+});
+
+describe("the subtitle timing model", () => {
+  // A property of this computer's install, not of a project: the most accurate model unless
+  // someone picked another one.
+  it("is the most accurate model on a fresh install", () => {
+    expect(readSettings(harness().deps).subtitleModel).toBe("fp32");
+  });
+
+  it("keeps each choice that was saved", () => {
+    for (const subtitleModel of ["fp16", "int8", "fp32"] as const) {
+      const { deps } = harness();
+      saveSettings(deps, { ...readSettings(deps), subtitleModel });
+      expect(readSettings(deps).subtitleModel).toBe(subtitleModel);
+    }
+  });
+
+  it("refuses a model this build does not have, and says where to choose one", () => {
+    const { deps } = harness();
+
+    const result = saveSettings(deps, {
+      ...readSettings(deps),
+      // @ts-expect-error a client from another build can still send it.
+      subtitleModel: "fp8",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      fields: [
+        {
+          field: "subtitleModel",
+          message:
+            "Choose Most accurate, Balanced or Smallest in Settings → Production defaults → Subtitle timing model.",
+        },
+      ],
+    });
+    expect(readSettings(deps).subtitleModel).toBe("fp32");
+  });
+
+  it("falls back to the most accurate model and warns when the stored choice is unknown", () => {
+    const { deps, lines } = harness();
+    writeSetting(deps.db, "subtitleModel", JSON.stringify("q4"));
+
+    expect(readSettings(deps).subtitleModel).toBe("fp32");
+    expect(lines).toEqual([`warn settings.invalid ${storedWarning("subtitleModel")}`]);
   });
 });
 

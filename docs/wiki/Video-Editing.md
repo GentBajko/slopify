@@ -90,7 +90,7 @@ With **Level the volume** on, the bed is mixed and ducked first, then the whole 
 | **Subtitle font size** | How big burned-in captions are. Larger is easier to read on phones but covers more of the picture. | 48; 16 to 120 |
 | **Subtitle position** | Where burned-in captions sit: **Top**, **Upper-middle**, **Center**, **Lower-middle** or **Bottom**. Move them up when pictures have detail near the bottom. | Bottom |
 
-Captions are timed from your narration on your computer, with no paid API. The first use downloads a speech model of about 95 MB. Subtitle files carry no font, size or position, because players style them. Changing the font, size or position remakes only the video.
+Captions are timed from your narration on your computer, with no paid API. The first use downloads a speech model of about 378 MB (Settings → Production defaults → **Subtitle timing model** offers smaller ones). Subtitle files carry no font, size or position, because players style them. Changing the font, size or position remakes only the video.
 
 Subtitles need narration: with Audio off the section says "Turn Audio on to add subtitles." With Video off (an audio export), only subtitle files are offered.
 

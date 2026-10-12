@@ -84,7 +84,7 @@ Below the ambient sound are **Pause between sentences**, **Pause between paragra
 
 ## Captions
 
-Captions are timed from your narration on this computer, with no paid API. The first use downloads a speech model of about 95 MB. They need narration: with narration Off, the section says "Turn Audio on to add subtitles."
+Captions are timed from your narration on this computer, with no paid API. The first use downloads a speech model of about 378 MB (Settings → Production defaults → **Subtitle timing model** offers smaller ones). They need narration: with narration Off, the section says "Turn Audio on to add subtitles."
 
 | Option | What it does | Default / range |
 | --- | --- | --- |

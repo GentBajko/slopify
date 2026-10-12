@@ -53,6 +53,21 @@ describe("project language and the recipes", () => {
     expect(fingerprints({ ...english, language: "en" })).toEqual(fingerprints(english));
   });
 
+  // Settings → Production defaults → Subtitle timing model picks fp32, fp16 or int8 of the same
+  // pinned model on this computer. Every precision times the same words, so the choice is never
+  // an input: the English timing fingerprint stays the one recorded before the choice existed,
+  // and a run config that somehow carried it would hash the same.
+  it("keeps the English timing fingerprint whatever subtitle timing model Settings names", () => {
+    for (const subtitleModel of ["fp32", "fp16", "int8"]) {
+      const carried = { ...english, subtitleModel } as RunConfig;
+      expect(fingerprints(carried)["subtitles:timing"]).toBe(
+        "1b9f060f9a8b23071ef4695c259414c6b83af82d225071bc6416c0af6086ed0e",
+      );
+      expect(digest(carried)).toBe(digest(english));
+    }
+    expect(timingOperation(english)).toBe("wav2vec2-en-a19f851-v2-omissions");
+  });
+
   it("times each language with its own operation", () => {
     expect(timingOperation(english)).toBe("wav2vec2-en-a19f851-v2-omissions");
     expect(timingOperation({ ...english, language: "de" })).toBe("wav2vec2-xlsr56-2d48b01-v1");

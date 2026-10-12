@@ -105,7 +105,7 @@ export const projectHelp = {
   },
   "project.subtitles.mode": {
     title: "Subtitles",
-    body: "Off makes none. Subtitle files gives you .srt and .vtt files to upload beside the video. Burn into video draws the captions into the picture and also makes the files; it needs Video on. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 95 MB. Default: Off.",
+    body: "Off makes none. Subtitle files gives you .srt and .vtt files to upload beside the video. Burn into video draws the captions into the picture and also makes the files; it needs Video on. Captions are timed from your narration on this computer, with no paid API; the first use downloads a speech model of about 378 MB (Settings → Production defaults → Subtitle timing model offers smaller ones). Default: Off.",
     tutorial: { page: "Video-Editing", anchor: "subtitles" },
   },
   "project.subtitles.font": {

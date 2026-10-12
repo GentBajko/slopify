@@ -5,11 +5,12 @@ import { type ReactElement, useEffect, useState } from "react";
 import { saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
+import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { keys, settingsQuery } from "@/queries";
+import { englishModelChoices } from "@/subtitles/model-facts";
 import { LoudnessControls } from "@/video/loudness-controls";
 
 // The bound slices/admission/rules.ts validates a run's gap against, so the field refuses
@@ -141,6 +142,30 @@ export function ProductionDefaults(): ReactElement {
           </Button>
           <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
         </div>
+      </Field>
+
+      <Field
+        label="Subtitle timing model"
+        tip="settings.subtitle-model"
+        help="Bigger hears the narration more accurately and, on most computers, is also faster. It downloads once, the first time captions are timed."
+        error={
+          save.error && save.variables?.subtitleModel !== current.subtitleModel
+            ? `The subtitle timing model wasn't saved. ${save.error.message}`
+            : undefined
+        }
+      >
+        <Select
+          className="self-start"
+          // A settings answer from before the setting reads as its default.
+          value={current.subtitleModel ?? "fp32"}
+          options={englishModelChoices}
+          onChange={(event) => {
+            const picked = englishModelChoices.find(
+              (choice) => choice.value === event.target.value,
+            );
+            if (picked !== undefined) save.mutate({ ...current, subtitleModel: picked.value });
+          }}
+        />
       </Field>
 
       <div className="md:col-span-2">

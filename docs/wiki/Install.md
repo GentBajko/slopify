@@ -11,7 +11,7 @@ Slopify is a local web app you start from a terminal. It runs on your own comput
 | Node.js | Version 26 or newer, with npm (it comes with Node). Get it from nodejs.org. |
 | Operating system | Windows, macOS or Linux for the normal install. The managed Docker install is Linux only (see [Docker](Docker)). |
 | ffmpeg | Nothing to install: Slopify brings its own copy. See [ffmpeg](#ffmpeg) below. |
-| Disk space | Enough for your videos. Every project keeps its video, images, narration and working files. The caption model is a 95 MB download. |
+| Disk space | Enough for your videos. Every project keeps its video, images, narration and working files. The caption model is a 378 MB download (95 MB if you pick Smallest in Settings → Production defaults). |
 | Keys or CLIs | Text and images can come from Claude Code, Codex or Gemini CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
 
 ## Choose how to run it
@@ -71,7 +71,7 @@ A flag beats the environment variable, and the variable beats the default.
 | `--no-open` | `SLOPIFY_NO_OPEN` | opens a browser | Doesn't open a browser tab. For the variable, any value except empty, `0` or `false` counts as on. |
 | `--autostart` / `--no-autostart` | | asks once | Turns [Start at Login](Start-at-Login) on or off without asking. Useful in scripts. |
 | | `SLOPIFY_FFMPEG` | the bundled ffmpeg | The full path of another ffmpeg to use. |
-| | `SLOPIFY_NO_MODEL_PREFETCH` | downloads at start | Set to `1` to skip fetching the 95 MB caption model when Slopify starts. It is then fetched the first time a video needs captions. |
+| | `SLOPIFY_NO_MODEL_PREFETCH` | downloads at start | Set to `1` to skip fetching the caption model (the one chosen in Settings → Production defaults, 378 MB by default) when Slopify starts. It is then fetched the first time a video needs captions. |
 
 Options that only work with `--docker`: `--projects-dir <folder>`, `--host-cli=off` and `--accept-host-cli`. See [Docker](Docker). With `--docker`, `--host` and `--data-dir` are refused, because the Docker version always listens on localhost and keeps its data in a Docker volume.
 
@@ -112,7 +112,7 @@ The bundled ffmpeg is a separate program under the GPL-3.0-or-later licence. Slo
 
 ## The caption model
 
-Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model (95 MB) is downloaded when Slopify starts, in the background, so a run never waits for it later. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
+Captions are timed against the narration by a speech model that runs on your computer, at no cost. The English model is downloaded when Slopify starts, in the background, so a run never waits for it later: the one chosen in Settings → Production defaults → **Subtitle timing model**, Most accurate (378 MB) unless changed. The Docker image already carries it. It is kept in `<data folder>/models/`. Set `SLOPIFY_NO_MODEL_PREFETCH=1` to skip the download at start. Other languages use a separate model that is downloaded the first time a project in that language needs it.
 
 ## Anonymous usage stats
 

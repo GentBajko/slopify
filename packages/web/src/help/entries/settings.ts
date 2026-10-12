@@ -146,6 +146,11 @@ export const settingsHelp = {
     body: "Whether a new run on Play (and a template or quick short) starts with Level the volume on, and at which volumes. On evens out every narration piece and sets the video to about -14 LUFS, the loudness YouTube plays at, and the audio files to -18 LUFS. A project keeps what it started with; change it there in Edit project. Default: on.",
     tutorial: { page: "Settings-Reference", anchor: "level-the-volume-for-new-runs" },
   },
+  "settings.subtitle-model": {
+    title: "Subtitle timing model",
+    body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks subtitles outdated. Default: Most accurate.",
+    tutorial: { page: "Settings-Reference", anchor: "subtitle-timing-model" },
+  },
   "settings.appearance": {
     title: "Appearance",
     body: "Light or dark colours for Slopify on this computer. System follows your operating system's setting and changes with it. Default: System. It changes at once and does not affect your videos.",

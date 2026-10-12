@@ -116,7 +116,7 @@ There is nothing to turn on: the address works whenever Slopify runs. See [Agent
 
 ## Production defaults
 
-"How new runs pace the narration and level the volume."
+"How new runs pace the narration and level the volume, and which model times English captions."
 
 ### Silence between segments
 
@@ -135,6 +135,14 @@ Videos already started keep their own gap. A value that is not a whole number fr
 | **Audio files volume** | How loud the audio-only WAV and an audiobook's MP3 and M4B are, in dB from the recommended -18 LUFS. Peaks stay under -3 dBTP. | 0 dB (-18 LUFS); -10 dB to +4 dB |
 
 The volume fields show only while the switch is on. A project keeps what it started with; change it there in **Edit project**. Levelling runs on this computer and makes no API calls. Changes save as you make them.
+
+### Subtitle timing model
+
+| Control | What it does | Default / range |
+|---|---|---|
+| **Subtitle timing model** | The speech model that times English captions on this computer. The same model in three sizes: **Most accurate (378 MB, recommended)**, **Balanced (189 MB)** and **Smallest (95 MB, less accurate)**. Bigger hears the narration more accurately and, on most computers, also runs faster. | Most accurate |
+
+The chosen model downloads once, the first time captions are timed (or when Slopify starts, unless `SLOPIFY_NO_MODEL_PREFETCH` is set), and is kept in `<data folder>/models/english-subtitles/`. A model already downloaded stays there when you switch, so switching back costs nothing. Smallest can mishear a line and stop a run with "Subtitles stopped matching the audio" where the narration is fine. Changing the model never marks finished subtitles outdated, and a timing that is already running finishes with the model it started with; the next one uses the new choice. It is a setting of this computer, not of a project. Other languages use their own model and are not affected. Changes save as you make them.
 
 ## Notifications
 

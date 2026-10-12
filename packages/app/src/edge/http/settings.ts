@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { englishSubtitleModels } from "../../kernel/ports/subtitles.js";
 import { lastAgentConnection } from "../../slices/agents/connection.js";
 import { recentAgentActions } from "../../slices/agents/repo.js";
 import {
@@ -66,6 +67,8 @@ const playbackBody = z.object({
   loudness: z
     .object({ enabled: z.boolean(), videoLufs: z.number(), audioFilesLufs: z.number() })
     .optional(),
+  // Absent keeps what is saved, as with loudness.
+  subtitleModel: z.enum(englishSubtitleModels).optional(),
 });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -80,9 +83,11 @@ export function settingsRoutes(deps: AppDeps) {
       .get("/", (c) => c.json(readSettings(playback)))
       .put("/", zValidator("json", playbackBody, onInvalid), (c) => {
         const body = c.req.valid("json");
+        const saved = readSettings(playback);
         const result = saveSettings(playback, {
           ...body,
-          loudness: body.loudness ?? readSettings(playback).loudness,
+          loudness: body.loudness ?? saved.loudness,
+          subtitleModel: body.subtitleModel ?? saved.subtitleModel,
         });
         if (!result.ok) {
           return problem(c, {

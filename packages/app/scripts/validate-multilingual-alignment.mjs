@@ -9,8 +9,9 @@
 //     [--cache ./model-cache] [--reference checked.json] [--ffmpeg /usr/bin/ffmpeg] [--json]
 //
 // --cache      where the model is kept; the first run downloads it there (248 MB for the
-//              multilingual model, 95 MB for English), SHA-256 checked. Defaults to a folder
-//              beside this script's working directory, never the app's data folder.
+//              multilingual model, 378 MB for the default English fp32 model), SHA-256
+//              checked. Defaults to a folder beside this script's working directory, never
+//              the app's data folder.
 // --reference  hand-checked word starts, [{ "index": 12, "start": 4.31 }, ...] (index into
 //              the text's words, counting from 0); the script reports the drift from them.
 // --transcribe prints what the model hears, window by window with times, instead of

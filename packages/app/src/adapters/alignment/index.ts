@@ -1,15 +1,40 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { languageInfo } from "../../kernel/ports/languages.js";
-import type { AlignmentRequest, SubtitleAligner, TimedWord } from "../../kernel/ports/subtitles.js";
+import {
+  type AlignmentRequest,
+  defaultEnglishSubtitleModel,
+  type EnglishSubtitleModel,
+  type SubtitleAligner,
+  type TimedWord,
+} from "../../kernel/ports/subtitles.js";
 import { decodeAudio } from "./audio.js";
-import { alignmentModel, prepareModel } from "./cache.js";
+import { englishModels, type ModelFile, prepareModel } from "./cache.js";
 import { claimWorker } from "./lock.js";
 import { alignmentSpecFor, multilingualModel } from "./multilingual.js";
 import { runAlignmentWorker } from "./runner.js";
 import { sentenceTiming, speechShape } from "./sentences.js";
 
-export const alignSubtitles: SubtitleAligner = async (request) => {
+// The model file that times a language: English with the model chosen in Settings, every other
+// word-timed language with the multilingual one.
+export function modelFor(language: string | undefined, english: EnglishSubtitleModel): ModelFile {
+  return language === undefined || language === "en" ? englishModels[english] : multilingualModel;
+}
+
+// `chosen` is asked once per alignment, when it starts: an alignment already running keeps the
+// model it opened, and the next one uses whatever Settings says then.
+export function alignSubtitlesWith(chosen: () => EnglishSubtitleModel): SubtitleAligner {
+  return (request) => align(request, chosen);
+}
+
+export const alignSubtitles: SubtitleAligner = alignSubtitlesWith(
+  () => defaultEnglishSubtitleModel,
+);
+
+async function align(
+  request: AlignmentRequest,
+  chosen: () => EnglishSubtitleModel,
+): Promise<readonly TimedWord[]> {
   request.signal.throwIfAborted();
   if (languageInfo(request.language).timing === "sentences") return timeSentences(request);
   const english = request.language === undefined || request.language === "en";
@@ -24,7 +49,7 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
         onProgress: (current, total) =>
           request.onProgress?.(Math.round((current / total) * 20), 100),
       },
-      { model: english ? alignmentModel : multilingualModel, fetch: globalThis.fetch },
+      { model: modelFor(request.language, chosen()), fetch: globalThis.fetch },
     );
     request.onProgress?.(20, 100);
     const working = await mkdtemp(join(request.cacheDir, ".alignment-audio-"));
@@ -51,7 +76,7 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
   } finally {
     await release();
   }
-};
+}
 
 // No model and no download: the narration's loudness says where it pauses, and the sentences
 // are laid over it (`sentences.ts`).

@@ -60,14 +60,15 @@ const settings: readonly RouteTool[] = [
     name: "get_settings",
     route: "GET /api/settings",
     title: "Read production defaults",
-    description: "Settings → Production defaults: silence gap, appearance and loudness.",
+    description:
+      "Settings → Production defaults: silence gap, appearance, loudness and the English subtitle timing model.",
   },
   {
     name: "update_settings",
     route: "PUT /api/settings",
     title: "Save production defaults",
     description:
-      "Body: {silenceGapSeconds, appearance: system | light | dark, loudness?: {enabled, videoLufs, audioFilesLufs}}.",
+      "Body: {silenceGapSeconds, appearance: system | light | dark, loudness?: {enabled, videoLufs, audioFilesLufs}, subtitleModel?: fp32 | fp16 | int8}. subtitleModel is this computer's English caption-timing model (fp32 378 MB most accurate, the default; fp16 189 MB; int8 95 MB, less accurate); it never marks subtitles outdated.",
   },
   {
     name: "get_default_channel_links",
