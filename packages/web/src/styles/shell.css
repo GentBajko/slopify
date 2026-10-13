@@ -729,7 +729,11 @@
     .sl-project .sl-workspace__sections,
     .sl-project .sl-workspace__main,
     .sl-project .sl-workspace__aside {
-      position: static;
+      /* Relative, not static: absolutely placed things inside a column (the screen-reader
+         headings) then stay inside its scroll, instead of stretching the page so the window
+         scrolls too and slides the whole project up into an empty screen. */
+      position: relative;
+      top: auto;
       min-height: 0;
       overflow-y: auto;
       overscroll-behavior: contain;
