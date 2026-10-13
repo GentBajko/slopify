@@ -1,0 +1,6 @@
+# Pronunciation glossary rules 2
+
+- **Possessives get the name's pronunciation.** "Gygax's", "Lolth’s" and "Drizzt's" now match their glossary entry; the "'s" is added inside the same slashes as the sound it makes (`/ˈɡaɪɡæksɪz/`, `/lɒlθs/`, `/drɪzts/`: "ɪz" after s z sh zh ch j, "s" after p t k f th, "z" otherwise). A bare trailing apostrophe ("Iuz' army") is still left alone, because it cannot be told from a closing quote; contractions ("Lolth'll") and quoted names are unchanged. English projects only.
+- **Hyphenated names work.** `Arach-Tinilith | /əˈræk ˈtɪnɪlɪθ/` is accepted when the IPA words match the hyphen-separated parts; the parts are joined with "." into the one IPA word Inworld wants per written word (`/əˈræk.ˈtɪnɪlɪθ/`).
+- **A blank IPA cell is not an error.** "—", "–", "-", "n/a" or nothing means the name is read as written. It is counted in one calm line ("49 names have no pronunciation given and are read as written") instead of being listed as a skipped entry, in the rebuild review and the article's Pronunciation tab.
+- **No existing project becomes outdated.** The narration fingerprints include the pronunciation spans, so the new matching would have changed them. Every new project records `pronunciationRules: 2` in its config; a project without it keeps rules 1 (the old matching, parsing and notices) for good.

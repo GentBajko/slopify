@@ -4,6 +4,7 @@ import type { RunConfig } from "../admission/model.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
 import {
+  pronunciationRulesOf,
   skippedGlossaryNotice,
   skippedSpeakerPronunciations,
   skippedSpeakerPronunciationsNotice,
@@ -146,8 +147,8 @@ export function planRevisionWork(
         ? "Whole-text narration is one logical request. Editing its text rebuilds every provider part of that request."
         : null,
     glossaryNotice:
-      glossary?.ok === true && glossary.skipped !== undefined
-        ? skippedGlossaryNotice(glossary.skipped)
+      glossary?.ok === true
+        ? skippedGlossaryNotice(glossary.skipped ?? [], glossary.unpronounced)
         : null,
     // Only speakers whose voice reads IPA use their pronunciations at all.
     speakerPronunciationNotice:
@@ -156,6 +157,7 @@ export function planRevisionWork(
             skippedSpeakerPronunciations(
               revision.config.voices.speakers.filter(readsIpa),
               revision.config.language,
+              pronunciationRulesOf(revision.config),
             ),
           )
         : null,

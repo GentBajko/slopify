@@ -9,7 +9,9 @@ import {
   type GlossaryEntry,
   type GlossaryResult,
   parsePronunciationGlossary,
+  pronunciationRulesOf,
   pronunciationSpans,
+  readsPossessives,
 } from "../narration/pronunciation.js";
 import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { prepareRequests } from "../narration/steering.js";
@@ -303,7 +305,7 @@ function groupParts(
     )?.tts.maxCharacters ?? Math.max(2, logicalText.length * 4);
   // Narration aliases apply to every voice, the speaker's pronunciations to IPA voices only.
   const spans = withAliasSpans(
-    pronunciationSpans(logicalText, entries.entries),
+    pronunciationSpans(logicalText, entries.entries, readsPossessives(context.config)),
     aliasSpans(logicalText, narrationAliasesOf(context.config)),
   );
   if (preparesTurns(context.config, speaker)) {
@@ -387,7 +389,11 @@ function speakerGlossary(
 ): GlossaryResult {
   if (!readsIpa(speaker)) return { ok: true, entries: [] };
   const own = speaker.pronunciations?.trim()
-    ? parsePronunciationGlossary(speaker.pronunciations, context.config.language)
+    ? parsePronunciationGlossary(
+        speaker.pronunciations,
+        context.config.language,
+        pronunciationRulesOf(context.config),
+      )
     : { ok: true as const, entries: [] as readonly GlossaryEntry[] };
   if (!own.ok)
     return {

@@ -53,6 +53,7 @@ export function pronunciationChunks(
   overriddenKeys: ReadonlySet<string> = new Set(),
   sources: Readonly<Record<string, NarrationSource>> = {},
   anchors?: NarrationAnchors,
+  possessives = false,
 ): readonly PronunciationChunk[] {
   const occurrences = new Map<string, number>();
   const usedKeys = new Set<string>();
@@ -110,7 +111,7 @@ export function pronunciationChunks(
     })),
   ].sort((a, b) => a.start - b.start);
   let blockedIndex = 0;
-  const matches = pronunciationMatches(source, entries).filter((match) => {
+  const matches = pronunciationMatches(source, entries, possessives).filter((match) => {
     while ((blocked[blockedIndex]?.end ?? Infinity) <= match.start) blockedIndex++;
     return (blocked[blockedIndex]?.start ?? Infinity) >= match.end;
   });

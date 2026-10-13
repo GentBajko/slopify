@@ -1,7 +1,10 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import { sourceEntries } from "@app/slices/article/source-lines.js";
 import { splitEndMatter } from "@app/slices/article/split.js";
-import { parsePronunciationGlossary } from "@app/slices/narration/pronunciation.js";
+import {
+  parsePronunciationGlossary,
+  pronunciationRulesOf,
+} from "@app/slices/narration/pronunciation.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { CopyIcon } from "lucide-react";
@@ -87,11 +90,17 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
   const entries = useMemo(() => sourceEntries(parts.sources), [parts.sources]);
   const table = withoutHeading(parts.glossary);
   // The rows narration leaves out, numbered as the narration counts them, never quoted.
-  const skipped = useMemo(() => {
-    if (parts.glossary.trim() === "") return [];
-    const parsed = parsePronunciationGlossary(parts.glossary);
-    return parsed.ok ? (parsed.skipped ?? []) : [];
-  }, [parts.glossary]);
+  const { skipped, unpronounced } = useMemo(() => {
+    if (parts.glossary.trim() === "") return { skipped: [], unpronounced: 0 };
+    const parsed = parsePronunciationGlossary(
+      parts.glossary,
+      project.config.language,
+      pronunciationRulesOf(project.config),
+    );
+    return parsed.ok
+      ? { skipped: parsed.skipped ?? [], unpronounced: parsed.unpronounced ?? 0 }
+      : { skipped: [], unpronounced: 0 };
+  }, [parts.glossary, project.config]);
   const script =
     voices === undefined || running
       ? ""
@@ -315,6 +324,15 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
                 The other entries are used. To fix these, edit the Pronunciation Glossary at the end
                 of the article in Edit settings → Article.
               </p>
+            </Callout>
+          )}
+          {unpronounced === 0 ? null : (
+            <Callout
+              className="mb-3"
+              title={`${unpronounced === 1 ? "1 name has" : `${unpronounced} names have`} no pronunciation given and ${unpronounced === 1 ? "is" : "are"} read as written`}
+            >
+              To give {unpronounced === 1 ? "it one" : "them one"}, fill in its IPA in the
+              Pronunciation Glossary at the end of the article in Edit settings → Article.
             </Callout>
           )}
           <div className="sl-stage-scroll pr-3">

@@ -91,6 +91,7 @@ export const runDraftSchema = z.object({
     })
     .optional(),
   narrationAliases: narrationAliasesSchema.optional(),
+  pronunciationRules: z.union([z.literal(1), z.literal(2)]).optional(),
   sharedGlossary: z
     .array(
       z.object({

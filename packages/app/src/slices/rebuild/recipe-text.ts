@@ -11,7 +11,11 @@ import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
 import { withEarlierEpisodes } from "../episodes/related.js";
-import { type GlossaryResult, parsePronunciationGlossary } from "../narration/pronunciation.js";
+import {
+  type GlossaryResult,
+  parsePronunciationGlossary,
+  pronunciationRulesOf,
+} from "../narration/pronunciation.js";
 import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
@@ -439,7 +443,11 @@ function glossaryOf(
   if (!usesPronunciationGlossary(context.config)) return { ok: true, entries: [] };
   if (endMatter === null) return null;
   return withShared(
-    parsePronunciationGlossary(endMatter.glossary, context.config.language),
+    parsePronunciationGlossary(
+      endMatter.glossary,
+      context.config.language,
+      pronunciationRulesOf(context.config),
+    ),
     context.config,
   );
 }

@@ -11,7 +11,11 @@ import {
   normalizeNarrationText,
   planNarration,
 } from "../narration/plan.js";
-import { type GlossaryResult, pronunciationSpans } from "../narration/pronunciation.js";
+import {
+  type GlossaryResult,
+  pronunciationSpans,
+  readsPossessives,
+} from "../narration/pronunciation.js";
 import { prepareRequests } from "../narration/steering.js";
 import { type RecipeContext, type ResolvedWorkRecipe, recipe } from "./recipe-model.js";
 import { preparationForGroup } from "./recipe-preparation.js";
@@ -51,7 +55,7 @@ export function narrationParts(
   const aliases = narrationAliasesOf(context.config);
   const matches = aliasMatches(logicalText, aliases);
   const spans = withAliasSpans(
-    pronunciationSpans(logicalText, glossary.entries),
+    pronunciationSpans(logicalText, glossary.entries, readsPossessives(context.config)),
     aliasSpans(logicalText, aliases),
   );
   const wholeRequest = segment !== "body" || (context.config.chunking?.mode ?? "whole") === "whole";
@@ -217,7 +221,7 @@ export function pronunciationFutureValues(
           ],
         ];
   const clean = normalizeNarrationText(override?.kind === "text" ? override.text : source);
-  const spans = pronunciationSpans(clean, glossary.entries);
+  const spans = pronunciationSpans(clean, glossary.entries, readsPossessives(context.config));
   return spans.length === 0
     ? []
     : [

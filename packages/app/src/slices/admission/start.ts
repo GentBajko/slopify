@@ -6,6 +6,7 @@ import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
 import { earlierEpisodesFor } from "../episodes/related.js";
 import { listNarrationAliases } from "../narration/aliases-library.js";
+import { currentPronunciationRules } from "../narration/pronunciation.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
@@ -84,6 +85,7 @@ export function startRun(
     rendered,
     ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
     ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
+    pronunciationRules: currentPronunciationRules,
     ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
   };
   const project: Project = {

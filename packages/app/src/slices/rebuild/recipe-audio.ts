@@ -3,6 +3,7 @@ import { usesNarrationPreparation, usesPronunciationGlossary } from "../admissio
 import { defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
 import { normalizeNarrationText } from "../narration/plan.js";
+import { readsPossessives } from "../narration/pronunciation.js";
 import { pronunciationChunks } from "../narration/pronunciation-chunks.js";
 import type { ScriptSection } from "../voices/script.js";
 import {
@@ -51,6 +52,7 @@ export function bodyNarrationGroups(
     new Set(Object.keys(context.content.narrationOverrides)),
     context.content.narrationSources,
     context.content.narrationAnchors,
+    readsPossessives(context.config),
   );
   // A chunk's key is its text's, so an article edit that makes a chunk say what its narration
   // edit already said (a line dropped from both) would make a new chunk to voice again. It

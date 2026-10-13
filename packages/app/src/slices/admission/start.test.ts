@@ -415,6 +415,25 @@ describe("startRun with the shorts' background music", () => {
   });
 });
 
+describe("pronunciation rules", () => {
+  it("records the current glossary rules in a new project, whatever its draft carried", async () => {
+    const storage = deps();
+    const image = await upload(storage, "images", "one");
+    const started = startRun(
+      storage,
+      draft({
+        pronunciationRules: 1,
+        sources: { ...draft().sources, audio: "generate" },
+        audio: { provider: "voice", model: "tts", voice: "v1" },
+        provided: { article: "Hi.", images: [image] },
+      }),
+      {},
+      true,
+    );
+    expect(started.project.config.pronunciationRules).toBe(2);
+  });
+});
+
 describe("narration aliases", () => {
   it("copies Library → Aliases into a generated-audio project that uses them", async () => {
     const storage = deps();

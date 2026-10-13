@@ -156,6 +156,12 @@ export interface RunDraft {
   // Library → Aliases as copied when this project started or was last refreshed in Edit
   // project; used only while `audio.useNarrationAliases` is on. Absent when none were copied.
   readonly narrationAliases?: readonly NarrationAlias[] | undefined;
+  // Which pronunciation glossary rules the narration follows (`narration/pronunciation.ts`).
+  // Every new project records the current ones; absent is rules 1, what every project saved
+  // before possessives and hyphenated names were supported narrates with, so none is outdated.
+  readonly pronunciationRules?:
+    | import("../narration/pronunciation.js").PronunciationRules
+    | undefined;
   readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;
