@@ -119,3 +119,16 @@ describe("subtitle speech normalization", () => {
     expect(() => speechWords("Hello 世界")).toThrow(/English/);
   });
 });
+
+describe("narration aliases spoken as IPA", () => {
+  const ipa = { written: "Gygax's", spoken: "/ˈɡaɪɡæksɪz/", wholeWord: true, caseSensitive: true };
+  it("matches the written word, as a glossary pronunciation does, instead of refusing the IPA", () => {
+    const words = speechWords("with Gary Gygax's adventurers", "", [ipa]);
+    expect(words.map((word) => word.text)).toEqual(["with", "Gary", "Gygax's", "adventurers"]);
+    expect(words[2]?.spoken).toBe("GYGAX'S");
+  });
+  it("still uses a spoken alias written in letters", () => {
+    const doctor = { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false };
+    expect(speechWords("Dr. Who", "", [doctor])[0]?.spoken).toBe("DOCTOR");
+  });
+});

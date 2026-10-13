@@ -22,7 +22,10 @@ export function speechWords(
   formsOf: (raw: string) => readonly string[] = wordForms,
   empty = "Local subtitles currently require an English transcript with spoken words.",
 ): readonly SpeechWord[] {
-  const matches = aliases.length === 0 ? [] : aliasMatches(text, aliases);
+  // An alias spoken as IPA ("Gygax's" said /ˈɡaɪɡæksɪz/) is a pronunciation, not other
+  // words: like a glossary entry, the recording is matched against the written word.
+  const worded = aliases.filter((alias) => !spokenAsIpa(alias.spoken));
+  const matches = worded.length === 0 ? [] : aliasMatches(text, worded);
   const words: { text: string; spoken: string; forms: string[]; aliased: boolean }[] = [];
   for (const token of text.matchAll(/\S+/g)) {
     const textWord = token[0];
@@ -72,6 +75,10 @@ export function speechWords(
   return words.map(({ text: shown, spoken, forms, aliased }) =>
     forms.length > 1 || aliased ? { text: shown, spoken, forms } : { text: shown, spoken },
   );
+}
+
+function spokenAsIpa(spoken: string): boolean {
+  return /^\/[^/]+\/(?:\s+\/[^/]+\/)*$/u.test(spoken.trim());
 }
 
 // The form of a word the recording seems to say, else its default.
