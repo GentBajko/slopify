@@ -98,6 +98,26 @@ export function SoftenSSwitch({
   );
 }
 
+// Level each sentence (`slices/loudness/sentence-level.ts`), beside the softening: Play keeps it
+// on its draft, Edit project on the config, and both only while on.
+export function LevelSentencesSwitch({
+  value,
+  onChange,
+}: {
+  readonly value: boolean;
+  readonly onChange: (next: boolean) => void;
+}): ReactElement {
+  return (
+    <CleanSwitch
+      value={value}
+      onChange={onChange}
+      label="Level each sentence"
+      tip="project.level-sentences"
+      line="Holds each sentence to the ones around it, so no line jumps out or drops away. Needs Level the volume."
+    />
+  );
+}
+
 function CleanSwitch({
   value,
   onChange,
@@ -108,7 +128,7 @@ function CleanSwitch({
   readonly value: boolean;
   readonly onChange: (next: boolean) => void;
   readonly label: string;
-  readonly tip: "project.remove-breaths" | "project.soften-s";
+  readonly tip: "project.remove-breaths" | "project.soften-s" | "project.level-sentences";
   readonly line: string;
 }): ReactElement {
   const id = useId();

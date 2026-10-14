@@ -28,6 +28,7 @@ import { Segmented, Switch } from "@/components/kit/switch";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
 import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls";
 import {
+  LevelSentencesSwitch,
   PauseControls,
   type PauseField,
   SoftenBreathsSwitch,
@@ -164,6 +165,13 @@ export function EditPauses({
         onChange={(on) => {
           const { deEss: _old, ...config } = edit.config;
           onChange({ ...edit, config: on ? { ...config, deEss: true } : config });
+        }}
+      />
+      <LevelSentencesSwitch
+        value={edit.config.levelSentences === true}
+        onChange={(on) => {
+          const { levelSentences: _old, ...config } = edit.config;
+          onChange({ ...edit, config: on ? { ...config, levelSentences: true } : config });
         }}
       />
     </div>

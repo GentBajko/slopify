@@ -6,6 +6,8 @@ import {
   truePeakOf,
   usesLoudness,
 } from "../loudness/model.js";
+import { sentenceLevel } from "../loudness/sentence-level-model.js";
+import { usesVoices } from "../voices/model.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -24,6 +26,22 @@ export type NarrationSegment = "intro" | "body" | "outro";
 
 export function levelKey(segment: NarrationSegment): string {
   return `level:${segment}`;
+}
+
+export const sentencesValue = "sentences-v1";
+
+// Level each sentence (`loudness/sentence-level.ts`): asked for, with Level the volume on and one
+// voice (a multi-voice run is levelled line by line instead).
+export function sentencesLevelled(config: RecipeContext["config"]): boolean {
+  return config.levelSentences === true && usesLoudness(config) && !usesVoices(config);
+}
+
+// Whether a levelled join's values ask for it.
+export function sentencesAsked(values: unknown): boolean {
+  return (
+    Array.isArray(values) &&
+    values.slice(3).some((value) => Array.isArray(value) && value[0] === sentencesValue)
+  );
 }
 
 export function levelRecipe(
@@ -45,6 +63,21 @@ export function levelRecipe(
         join.input.operation,
         join.input.values,
         ["piece-level-v1", pieceLufs, pieceTruePeak],
+        // Level each sentence: the body's sentences instead of its loud phrases. Nothing while
+        // it is off, so every levelled join made before it keeps its fingerprint.
+        ...(sentencesLevelled(context.config) && segment === "body"
+          ? [
+              [
+                sentencesValue,
+                sentenceLevel.contextSeconds,
+                sentenceLevel.raiseDb,
+                sentenceLevel.lowerDb,
+                sentenceLevel.peakCeilingDb,
+                sentenceLevel.cutSeconds,
+                sentenceLevel.partSecondsMin,
+              ],
+            ]
+          : []),
       ],
     },
     join.dependsOn,

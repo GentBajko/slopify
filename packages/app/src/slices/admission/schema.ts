@@ -215,6 +215,8 @@ export const runDraftSchema = z.object({
   // Soften breaths and Soften S sounds (`narration/breaths-model.ts`); absent is off.
   removeBreaths: z.boolean().optional(),
   deEss: z.boolean().optional(),
+  // Level each sentence (`loudness/sentence-level.ts`); absent is off.
+  levelSentences: z.boolean().optional(),
   // Absent is English (`kernel/ports/languages.ts`).
   language: languageSchema.optional(),
 });

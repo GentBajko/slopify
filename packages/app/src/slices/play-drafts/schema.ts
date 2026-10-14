@@ -96,6 +96,8 @@ export const playDraftFormSchema = z
     // templates saved before them: off.
     removeBreaths: z.boolean().optional(),
     deEss: z.boolean().optional(),
+    // Level each sentence (`loudness/sentence-level.ts`). Absent on drafts saved before it: off.
+    levelSentences: z.boolean().optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     showFigures: z.boolean().optional(),

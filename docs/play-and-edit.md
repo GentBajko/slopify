@@ -83,6 +83,7 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Pauses between sentences and paragraphs | Video and style (Export) | Inputs › Pauses and volume | `PauseControls` | same ([pauses.md](pauses.md)) |
 | Soften breaths | Video and style (Export) | Inputs › Pauses and volume | `SoftenBreathsSwitch` | same ([breaths.md](breaths.md)) |
 | Soften S sounds | Video and style (Export) | Inputs › Pauses and volume | `SoftenSSwitch` | same ([breaths.md](breaths.md)) |
+| Level each sentence | Video and style (Export) | Inputs › Pauses and volume | `LevelSentencesSwitch` | same (`slices/loudness/sentence-level.ts`) |
 | More images for long videos | Images | Images | none (the same rate control) | **closed in 3.0**: saving plans the extra images, keeping every existing one |
 | Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 

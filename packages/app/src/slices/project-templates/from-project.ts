@@ -262,6 +262,7 @@ export function documentFromProject(
         : { paragraphPause: String(config.paragraphPauseSeconds) }),
       ...(config.removeBreaths === true ? { removeBreaths: true } : {}),
       ...(config.deEss === true ? { deEss: true } : {}),
+      ...(config.levelSentences === true ? { levelSentences: true } : {}),
       imagePrompts,
       ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
       ...(config.imageScenes === true ? { imageScenes: true } : {}),

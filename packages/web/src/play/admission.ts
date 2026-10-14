@@ -166,6 +166,7 @@ const readingOrder: readonly string[] = [
   "paragraphPauseSeconds",
   "removeBreaths",
   "deEss",
+  "levelSentences",
   "loudness.videoLufs",
   "loudness.audioFilesLufs",
 ];

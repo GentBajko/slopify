@@ -4,6 +4,7 @@ import type { RevisionContent } from "../revisions/model.js";
 import type { Speaker, VoicesSettings } from "../voices/model.js";
 import { buildRecipes } from "./recipe-build.js";
 import { catalogue, config, content } from "./recipe-fixture.js";
+import { sentencesAsked } from "./recipe-loudness.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 
 // Level the volume adds a levelled join beside each narration join and masters the exports.
@@ -129,5 +130,29 @@ describe("Level the volume fingerprints", () => {
     expect(level?.dependsOn.every((key) => key.startsWith("audio:body:turn:"))).toBe(true);
     const changed = Object.keys(off).filter((key) => on[key] !== off[key]);
     expect(changed.sort()).toEqual(["export:wav", "voices:files"]);
+  });
+});
+
+describe("Level each sentence fingerprints", () => {
+  const levelled = { ...narrated, loudness };
+
+  it("change only the body's levelled join and what plays it", () => {
+    const off = fingerprints(levelled);
+    const on = fingerprints({ ...levelled, levelSentences: true });
+    expect(Object.keys(on).sort()).toEqual(Object.keys(off).sort());
+    const changed = Object.keys(off).filter((key) => on[key] !== off[key]);
+    expect(changed.sort()).toEqual(["export:video", "level:body"]);
+  });
+
+  it("ask the body's join for it, and no other", () => {
+    const recipes = plan({ ...levelled, levelSentences: true });
+    const body = recipes.find((one) => one.key === "level:body");
+    const intro = recipes.find((one) => one.key === "level:intro");
+    expect(body?.input.kind === "local" && sentencesAsked(body.input.values)).toBe(true);
+    expect(intro?.input.kind === "local" && sentencesAsked(intro.input.values)).toBe(false);
+  });
+
+  it("do nothing without Level the volume", () => {
+    expect(fingerprints({ ...narrated, levelSentences: true })).toEqual(fingerprints(narrated));
   });
 });

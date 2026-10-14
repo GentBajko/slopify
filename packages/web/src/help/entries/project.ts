@@ -68,6 +68,11 @@ export const projectHelp = {
     body: "Puts each narration piece through a very light de-esser, which takes the sharp edge off s and sh sounds while the voice keeps its brightness. Works with or without Soften breaths. Runs on this computer, no API calls; turning it on joins the narration again from the pieces it already has, never makes the speech again. Default: off.",
     tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
   },
+  "project.level-sentences": {
+    title: "Level each sentence",
+    body: "Holds each sentence to the sentences in the minute around it, so no line jumps out or drops away: loud ones come down by up to 6 dB, quiet ones up by up to 3 dB, and the volume only changes in the pauses. Runs before Soften breaths and Soften S sounds. Needs Level the volume and one voice. Joins the narration again, never makes the speech again. Default: off.",
+    tutorial: { page: "Editing-a-Project", anchor: "pauses-and-volume" },
+  },
   "project.loudness": {
     title: "Level the volume",
     body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",

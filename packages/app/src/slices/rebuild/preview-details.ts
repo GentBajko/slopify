@@ -217,6 +217,11 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   );
   add("Soften S sounds", before.deEss === true ? "On" : "Off", after.deEss === true ? "On" : "Off");
   add(
+    "Level each sentence",
+    before.levelSentences === true ? "On" : "Off",
+    after.levelSentences === true ? "On" : "Off",
+  );
+  add(
     "Level the volume",
     before.loudness === undefined ? "Off" : loudnessSummary(before.loudness),
     after.loudness === undefined ? "Off" : loudnessSummary(after.loudness),

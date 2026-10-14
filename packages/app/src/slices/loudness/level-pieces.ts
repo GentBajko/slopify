@@ -18,6 +18,8 @@ export async function levelPieces(
   run: FfmpegRun,
   files: readonly string[],
   directory: string,
+  // Level each sentence takes the place of the phrase step (`sentence-level.ts`).
+  options: { readonly phrases: boolean } = { phrases: true },
 ): Promise<{ readonly files: readonly string[]; readonly report: LoudnessReport }> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const levelled: string[] = [];
@@ -32,7 +34,7 @@ export async function levelPieces(
     // are quieter too, and an opening still stands above them. Quiet passages are never raised.
     let source = file;
     const made: string[] = [];
-    for (let pass = 1; pass <= phrasePasses; pass++) {
+    for (let pass = 1; options.phrases && pass <= phrasePasses; pass++) {
       const phrased = `${output}.phrases-${String(pass)}.wav`;
       if (!(await lowerLoudPhrases(run, source, phrased))) break;
       made.push(phrased);

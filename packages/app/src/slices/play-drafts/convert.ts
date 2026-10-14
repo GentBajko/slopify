@@ -379,6 +379,10 @@ export function toAdmissionDraft(input: {
     // Soften breaths and Soften S sounds: only while on, with a narration made here to clean.
     ...(sources.audio === "generate" ? breathsOfForm(form) : {}),
     ...(sources.audio === "generate" ? deEssOfForm(form) : {}),
+    // Level each sentence: only while on, with a narration made here.
+    ...(sources.audio === "generate" && form.levelSentences === true
+      ? { levelSentences: true }
+      : {}),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

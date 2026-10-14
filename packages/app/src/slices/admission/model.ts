@@ -271,6 +271,10 @@ export interface RunDraft {
   // Soften S sounds: the narration join puts each piece through a very light de-esser
   // (`narration/breaths-model.ts`). Absent (or false) is off.
   readonly deEss?: boolean | undefined;
+  // Level each sentence: the levelled narration holds each sentence to the minute around it,
+  // before Soften breaths and Soften S sounds (`loudness/sentence-level.ts`). Only with Level the
+  // volume on and one voice. Absent (or false) is off.
+  readonly levelSentences?: boolean | undefined;
   // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
   // what every project saved before it was; English is never stored.
   readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;

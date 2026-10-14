@@ -123,6 +123,8 @@ export interface LegacyPlayFormState {
   // Soften breaths and Soften S sounds as the draft holds them; absent is off.
   readonly removeBreaths?: PlayDraftForm["removeBreaths"];
   readonly deEss?: PlayDraftForm["deEss"];
+  // Level each sentence as the draft holds it; absent is off.
+  readonly levelSentences?: PlayDraftForm["levelSentences"];
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -358,6 +360,9 @@ export function draftOf(input: DraftInput): RunDraft {
     // As `slices/play-drafts/convert.ts` sends it: only while on, with a narration made here.
     ...(form.sources.audio === "generate" ? breathsOfForm(form) : {}),
     ...(form.sources.audio === "generate" ? deEssOfForm(form) : {}),
+    ...(form.sources.audio === "generate" && form.levelSentences === true
+      ? { levelSentences: true }
+      : {}),
     // As `slices/play-drafts/convert.ts` sends it: only while on, with a narration to level.
     ...pick(
       form.sources.audio === "off"

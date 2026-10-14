@@ -8,6 +8,7 @@ import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { levelPieces } from "../loudness/level-pieces.js";
+import { levelSentences } from "../loudness/sentence-level.js";
 import { cleanPieces } from "../narration/clean-pieces.js";
 import { joinNarration } from "../narration/concat.js";
 import { applyPauses, type PiecePauses, planPieces } from "../narration/pauses.js";
@@ -19,7 +20,7 @@ import type { OutputRole } from "../storage/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { turnJoinArgs } from "../voices/join.js";
 import { breathsAsked, deEssAsked } from "./recipe-breaths.js";
-import { levelOperation } from "./recipe-loudness.js";
+import { levelOperation, sentencesAsked } from "./recipe-loudness.js";
 import type { PieceNext } from "./recipe-pauses.js";
 import { executeFigureCard } from "./runtime-figure-card.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
@@ -206,13 +207,36 @@ async function concatenate(
     recipe.input.kind !== "local"
       ? ["", undefined]
       : level
-        ? z.tuple([z.string(), z.unknown(), z.unknown()]).parse(recipe.input.values)
+        ? z
+            .tuple([z.string(), z.unknown(), z.unknown()])
+            .rest(z.unknown())
+            .parse(recipe.input.values)
         : [recipe.input.operation, recipe.input.values];
   const pending = allocateAsset(deps, context.work.projectId, "narration.mp3");
   const piecesDirectory = join(dirname(pending.absolutePath), "levelled");
   try {
     const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
-    const levelled = level ? await levelPieces(run, files, piecesDirectory) : undefined;
+    // Level each sentence: in place of the phrase step, then sentence by sentence, before the
+    // breaths and S sounds are softened (`loudness/sentence-level.ts`).
+    const sentences =
+      level && sentencesAsked(recipe.input.kind === "local" ? recipe.input.values : undefined);
+    const pieceLevelled = level
+      ? await levelPieces(run, files, piecesDirectory, { phrases: !sentences })
+      : undefined;
+    const levelledSentences =
+      pieceLevelled !== undefined && sentences
+        ? await levelSentences(run, pieceLevelled.files, join(piecesDirectory, "sentences"))
+        : undefined;
+    if (levelledSentences !== undefined)
+      deps.log.write("info", "narration.sentences", {
+        projectId: context.work.projectId,
+        stage: "audio",
+        detail: `${String(levelledSentences.sentences)} sentences: ${String(levelledSentences.raised)} raised and ${String(levelledSentences.lowered)} lowered by more than 1 dB`,
+      });
+    const levelled =
+      pieceLevelled === undefined
+        ? undefined
+        : { ...pieceLevelled, files: levelledSentences?.files ?? pieceLevelled.files };
     // Soften breaths, then Soften S sounds: made in what is joined, before the pauses; nothing
     // moves, so the pauses are still planned from the pieces as spoken.
     const cleaned = await cleanPieces(run, levelled?.files ?? files, piecesDirectory, {
