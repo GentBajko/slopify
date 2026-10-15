@@ -37,7 +37,7 @@ export interface FailedStep {
 const signIn: Readonly<Record<SignInCli, { readonly name: string; readonly command: string }>> = {
   "claude-code": { name: "Claude Code", command: "claude auth login" },
   codex: { name: "Codex", command: "codex login" },
-  gemini: { name: "Gemini", command: "gemini" },
+  gemini: { name: "Antigravity", command: "agy" },
 };
 
 const signedOut =
@@ -89,7 +89,7 @@ function cliOf(provider: string | undefined, reason: string): SignInCli | undefi
   if (provider === "codex" || provider === "codex-image") return "codex";
   if (/Codex CLI/.test(reason)) return "codex";
   if (/Claude Code CLI/.test(reason)) return "claude-code";
-  if (/Gemini CLI/.test(reason)) return "gemini";
+  if (/Antigravity CLI|Gemini CLI/.test(reason)) return "gemini";
   return undefined;
 }
 

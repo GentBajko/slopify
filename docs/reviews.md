@@ -35,7 +35,7 @@ otherwise:
   folder). The answer is used only when the run's tool calls show every picture was opened.
 - **Codex**: each picture is attached with `--image` (`codex exec --help`: "Optional image(s)
   to attach to the initial prompt"); the `view_image` tool stays off.
-- The **Gemini CLI** has no image flag, and the **OpenRouter** adapter sends text only, so
+- The **Antigravity CLI** has no image input, and the **OpenRouter** adapter sends text only, so
   neither reviews pictures.
 
 Each review is one text-model call, counted in Usage and in the estimate like the others. A

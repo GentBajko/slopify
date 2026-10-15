@@ -16,11 +16,11 @@ It depends on the providers, models, length and number of images. Play shows an 
 
 ### Can I use my Claude, ChatGPT (Codex) or Gemini subscription instead of API keys?
 
-Yes, through the command-line tools you are already signed in to: Claude Code, Codex or Gemini CLI. Calls through them cost $0 on your plan; Slopify shows what the same work would cost through the API, for comparison only. When a plan's limit is used up, the run waits for the reset and carries on by itself. See [AI CLIs](AI-CLIs).
+Yes, through the command-line tools you are already signed in to: Claude Code, Codex or Antigravity CLI. Calls through them cost $0 on your plan; Slopify shows what the same work would cost through the API, for comparison only. When a plan's limit is used up, the run waits for the reset and carries on by itself. See [AI CLIs](AI-CLIs).
 
 ### Can I make a video without any API key?
 
-Yes. Sign in to Claude Code, Codex or Gemini CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Providers and Keys](Providers-and-Keys#the-system-voice).
+Yes. Sign in to Claude Code, Codex or Antigravity CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Providers and Keys](Providers-and-Keys#the-system-voice).
 
 ### How do I know a key works before I save it?
 

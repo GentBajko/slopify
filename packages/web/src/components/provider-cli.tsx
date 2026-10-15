@@ -67,7 +67,9 @@ export function CliProviderDetail({
       ? "claude"
       : provider.id === "codex-image"
         ? "codex"
-        : provider.id;
+        : provider.id === "gemini"
+          ? "agy"
+          : provider.id;
   const command = provider.cliPath?.command ?? defaultCommand;
   const value = draft ?? configured ?? "";
   const usable = readinessIsUsable(readiness);

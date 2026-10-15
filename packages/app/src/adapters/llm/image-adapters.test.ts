@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent } from "../../kernel/ports/llm.js";
+import { antigravityLlm } from "./antigravity.js";
 import { claudeCodeArgs, claudeCodeLlm } from "./claude-code.js";
 import { codexArgs, codexLlm } from "./codex.js";
-import { geminiLlm } from "./gemini.js";
 import { imageWorkspace } from "./image-workspace.js";
 import { openRouterLlm } from "./openrouter.js";
 import type { CliRun, RunCli } from "./run-cli.js";
@@ -144,7 +144,7 @@ describe("Codex with pictures", () => {
 describe("providers that can't be shown pictures", () => {
   it("refuses rather than answering blind", async () => {
     await expect(
-      drain(geminiLlm({ run: streaming([]).run }).complete(request(picture()))),
+      drain(antigravityLlm({ run: streaming([]).run }).complete(request(picture()))),
     ).rejects.toMatchObject({ fault: { kind: "unsupported" } });
     await expect(
       drain(

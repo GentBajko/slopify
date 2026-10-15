@@ -99,9 +99,9 @@ export const providers: readonly Provider[] = [
   {
     id: "gemini",
     family: "llm",
-    displayName: "Gemini CLI",
+    displayName: "Antigravity CLI",
     auth: "cli",
-    binary: "gemini",
+    binary: "agy",
     versionArgs: ["--version"],
   },
   { id: "elevenlabs", family: "tts", displayName: "ElevenLabs", auth: "key" },

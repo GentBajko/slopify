@@ -47,7 +47,7 @@ The wait is saved in the database, so quitting or restarting Slopify keeps it: t
 
 ## Waiting for CLI plan limits
 
-When Claude Code, Codex or Gemini says your plan allowance is used up, the call does not fail: it waits. Slopify stores the reset time for that CLI, and every call to it, from any project, waits until two minutes after the reset. Without a stated reset time it checks again every 30 minutes.
+When Claude Code, Codex or Antigravity says your plan allowance is used up, the call does not fail: it waits. Slopify stores the reset time for that CLI, and every call to it, from any project, waits until two minutes after the reset. Without a stated reset time it checks again every 30 minutes.
 
 The next action panel shows **Waiting for limits**, for example "Waiting for Codex limits (resets at 14:00)." with "Nothing to do: the run carries on by itself when they reset, and work that does not need Codex keeps going." There is nothing to press. A reset on another day shows the weekday (`Tue 14:00`); with no reset time, it says "(checking again at 14:30)"; with two plans, "Waiting for Codex and Claude limits".
 
@@ -79,12 +79,12 @@ The same fix-it buttons appear elsewhere too: Home's **Needs you** offers **Copy
 
 ### Sign a CLI in again
 
-1. Press **Copy sign-in command**. It copies `claude auth login` (Claude Code), `codex login` (Codex) or `gemini` (Gemini), and says so.
+1. Press **Copy sign-in command**. It copies `claude auth login` (Claude Code), `codex login` (Codex) or `agy` (Antigravity), and says so.
 2. Paste it in a terminal on the computer running Slopify and sign in.
 3. Press **Check again**. Slopify asks that CLI alone whether it is signed in now.
    - Signed in: "Codex is signed in. Trying again." and the failed step runs again by itself.
    - Still signed out: it says so and repeats the command; sign in, then press **Check again** once more.
-   - Can't tell (Gemini sometimes can't say): try the step again with **Try … again**.
+   - Can't tell (Antigravity sometimes can't say): try the step again with **Try … again**.
 
 If the browser blocks the clipboard, type the command yourself; the notice names it.
 

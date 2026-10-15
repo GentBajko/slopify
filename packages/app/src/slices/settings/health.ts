@@ -50,7 +50,7 @@ export interface HealthDeps extends ReadinessDeps, KeyTestDeps {
 const signInCommand: Readonly<Record<HostLlmId, string>> = {
   "claude-code": "claude auth login",
   codex: "codex login",
-  gemini: "gemini",
+  gemini: "agy",
 };
 function loginSource(id: HostCliId): HostLlmId {
   return id === "codex-image" ? "codex" : id;
@@ -187,7 +187,7 @@ async function cliHealth(
             state: "problem",
             detail:
               source === "gemini"
-                ? `Gemini CLI is not signed in: ~/.gemini has no Google sign-in and no GEMINI_API_KEY is set. Open a terminal on the computer running it, run "gemini" and choose Login with Google (or set GEMINI_API_KEY), then choose Check all again.`
+                ? `Antigravity CLI is in API-key mode ("modelProvider": "gemini" in ~/.gemini/antigravity-cli/settings.json) but GEMINI_API_KEY is not set. Set GEMINI_API_KEY for the program running Slopify, or remove that setting and run "agy" in a terminal to sign in with Google, then choose Check all again.`
                 : `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
           }
         : {
@@ -195,7 +195,7 @@ async function cliHealth(
             state: "skipped",
             detail:
               source === "gemini"
-                ? `Slopify could not tell from the Gemini CLI's files (~/.gemini/settings.json) whether it is signed in. Run "gemini" in a terminal once to confirm it is signed in.`
+                ? `Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read, so it could not tell whether it is signed in. Run "agy" in a terminal once to confirm it is signed in.`
                 : `Slopify could not tell whether ${name} is signed in. Run "${signInCommand[source]}" in a terminal if runs fail with a sign-in error.`,
           },
   );

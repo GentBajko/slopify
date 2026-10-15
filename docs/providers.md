@@ -2,10 +2,10 @@
 
 ## First launch: no keys needed
 
-On a first launch (no API key saved yet) Slopify looks for Claude Code, Codex and Gemini CLI on
+On a first launch (no API key saved yet) Slopify looks for Claude Code, Codex and Antigravity CLI on
 the computer. If it finds any, Play and Settings → Providers say "You can make a video now, no
 API keys needed", and a new draft on Play starts with the found tool picked for text (Claude
-Code first, then Codex, then Gemini) and Codex for images. Narration can use the computer's own
+Code first, then Codex, then Antigravity) and Codex for images. Narration can use the computer's own
 **System voice** (below) with no key; a voice provider key gives a better one. Choose **Got it**
 to hide the message. The same facts are at `GET /api/providers/first-run` for the guided setup
 to build on.
@@ -55,9 +55,10 @@ answers with raw audio, which Slopify turns into MP3 with its own ffmpeg.
 
 **Check all** under Settings → Providers checks, for every provider: that the command-line tool
 is installed (`--version`), new enough and signed in (`claude auth status`, `codex login
-status`; Gemini CLI has no such command, so its sign-in is read from its own files:
-`~/.gemini/settings.json` for the chosen method, `~/.gemini/oauth_creds.json` for a Google
-sign-in, `GEMINI_API_KEY` in the environment or `~/.gemini/.env` for a key); that each saved key
+status`; Antigravity CLI (`agy`) has no such command and keeps its Google sign-in in the system keyring,
+so Slopify can confirm it only in API-key mode: `"modelProvider": "gemini"` in
+`~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set; otherwise it asks you to run
+`agy` once); that each saved key
 passes Test; and that the models your templates, schedules, drafts and unfinished projects use
 are still offered. For a keyed provider, **Model reachable** then asks the provider with the saved
 key about each chosen model (its model page, or its model list for OpenRouter and ElevenLabs):

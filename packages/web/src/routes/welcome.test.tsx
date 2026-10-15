@@ -34,7 +34,7 @@ const view: FirstRunView = {
     },
     {
       id: "gemini",
-      name: "Gemini CLI",
+      name: "Antigravity CLI",
       installed: false,
       ready: false,
       version: null,

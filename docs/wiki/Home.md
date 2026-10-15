@@ -1,6 +1,6 @@
 # Slopify Wiki
 
-Slopify turns a prompt and a few keywords into a narrated, captioned video. It writes the article, narrates it, makes the images and cuts the video, and can also give you shorts, a PDF of the article and a ready-to-paste YouTube description. It runs as a local web app on your own machine, with your own provider keys or the Claude Code, Codex or Gemini CLI you already use. It is free.
+Slopify turns a prompt and a few keywords into a narrated, captioned video. It writes the article, narrates it, makes the images and cuts the video, and can also give you shorts, a PDF of the article and a ready-to-paste YouTube description. It runs as a local web app on your own machine, with your own provider keys or the Claude Code, Codex or Antigravity CLI you already use. It is free.
 
 These pages cover Slopify 3.0: every screen, every setting and every workflow, step by step.
 
@@ -41,7 +41,7 @@ These pages cover Slopify 3.0: every screen, every setting and every workflow, s
 | Page | What it covers |
 |---|---|
 | [Providers and keys](Providers-and-Keys) | Every API provider, testing and saving keys, the system voice, Settings → Voices |
-| [AI CLIs](AI-CLIs) | Claude Code, Codex and Gemini CLI: sign-in, use and plan limits |
+| [AI CLIs](AI-CLIs) | Claude Code, Codex and Antigravity CLI: sign-in, use and plan limits |
 | [Models](Models) | The model catalogue, retired models and switching |
 | [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the run cost line, the Run cost tab and usage |
 

@@ -101,7 +101,7 @@ export async function planShortProviders(input: {
     gaps.push({
       need: "text",
       message:
-        "No text model is ready. Install Claude Code, Codex or Gemini CLI and sign in to it (Settings → Providers shows what Slopify found), or add an OpenRouter key in Settings → Providers.",
+        "No text model is ready. Install Claude Code, Codex or Antigravity CLI and sign in to it (Settings → Providers shows what Slopify found), or add an OpenRouter key in Settings → Providers.",
     });
 
   let images: ProviderChoice | undefined;

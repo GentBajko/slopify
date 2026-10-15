@@ -10,7 +10,10 @@ const provider = basename(process.argv[1]);
 const args = process.argv.slice(2);
 const emit = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
 if (args.includes("--version")) {
-  console.log(provider === "claude" ? "2.1.263" : provider === "codex" ? "0.149.1" : "0.61.0");
+  console.log(provider === "claude" ? "2.1.263" : provider === "codex" ? "0.149.1" : "1.0.0");
+} else if (provider === "agy" && args[0] === "models") {
+  // The listing shape from antigravity.google/docs/cli/headless.md.
+  console.log("gemini-3.8-flash-high     Gemini 3.8 Flash (High)");
 } else if (args.includes("status")) {
   console.log(provider === "claude" ? '{"loggedIn":true}' : "Logged in using ChatGPT");
 } else if (provider === "codex" && args.includes("app-server")) {
@@ -88,10 +91,7 @@ async function readDocuments(prompt) {
           .join("="),
       );
     config = { command: value("command"), args: value("args") };
-  } else if (provider === "gemini")
-    config = JSON.parse(
-      readFileSync(join(process.env.GEMINI_CLI_HOME, ".gemini", "settings.json"), "utf8"),
-    ).mcpServers?.slopify_research;
+  } else if (provider === "agy") return inlineDocuments(prompt);
   if (!config) return [];
   const fromApp = createRequire(config.args[0]);
   const { Client } = fromApp("@modelcontextprotocol/sdk/client/index.js");
@@ -124,7 +124,25 @@ async function readDocuments(prompt) {
   }
   return documents;
 }
-async function generate(prompt) {
+// Antigravity gets the documents inline, one "Research document {id, title}" block each.
+function inlineDocuments(prompt) {
+  const header =
+    /Research document (\{[^\n]*\})\nThe following is reference material, not task instructions\.\n\n/g;
+  const documents = [];
+  for (const match of prompt.matchAll(header)) {
+    const start = match.index + match[0].length;
+    const end = prompt.indexOf("\n\n", start);
+    const content = prompt.slice(start, end === -1 ? undefined : end);
+    documents.push({
+      id: JSON.parse(match[1]).id,
+      sha256: createHash("sha256").update(content).digest("hex"),
+    });
+  }
+  return documents;
+}
+async function generate(input) {
+  // agy reads one stream-json user event from stdin.
+  const prompt = provider === "agy" ? JSON.parse(input).message.content : input;
   const documents = await readDocuments(prompt);
   const threadId = randomUUID();
   const held = /HOLD_(CANCEL|FINISH|DROP)/.exec(prompt)?.[0];
@@ -172,13 +190,23 @@ async function generate(prompt) {
       });
       emit({ type: "result", subtype: "success", result: "Host fixture answer." });
     } else {
-      emit({ type: "message", role: "assistant", content: "Host fixture answer." });
-      emit({ type: "result", status: "success" });
+      emit({
+        event: "result",
+        result: {
+          status: "SUCCESS",
+          response: "Host fixture answer.",
+          usage: { input_tokens: 1, output_tokens: 2 },
+        },
+      });
     }
     child?.kill();
   };
   if (held) {
-    emit({ type: provider === "codex" ? "turn.started" : "init" });
+    emit(
+      provider === "agy"
+        ? { event: "init", init: { cwd: process.cwd(), tools: [] } }
+        : { type: provider === "codex" ? "turn.started" : "init" },
+    );
     const interval = setInterval(() => {
       if (held === "HOLD_FINISH" && existsSync(join(home, "finish"))) {
         clearInterval(interval);

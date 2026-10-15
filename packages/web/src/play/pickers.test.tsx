@@ -28,12 +28,12 @@ const providers: readonly ProviderStatus[] = [
   {
     id: "gemini",
     family: "llm",
-    displayName: "Gemini CLI",
+    displayName: "Antigravity CLI",
     readiness: {
       kind: "cli",
       installed: true,
       version: "0.148.0",
-      issue: "Gemini CLI update required.",
+      issue: "Antigravity CLI update required.",
       issueKind: "version",
     },
   },
@@ -135,8 +135,8 @@ describe("the provider picker", () => {
       />,
     );
 
-    const outdated = option(/Gemini CLI/);
-    expect(outdated.textContent).toBe("Gemini CLI · Needs an update");
+    const outdated = option(/Antigravity CLI/);
+    expect(outdated.textContent).toBe("Antigravity CLI · Needs an update");
     expect(outdated.disabled).toBe(true);
   });
 

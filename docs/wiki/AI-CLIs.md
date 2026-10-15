@@ -1,8 +1,8 @@
 # AI CLIs
 
-Slopify can write the text with the Claude Code, Codex or Gemini command-line tools, and draw the images with Codex, using the sign-in you already have. You need no API key for those steps, and their calls count toward your plan's limits instead of costing per call.
+Slopify can write the text with the Claude Code, Codex or Antigravity command-line tools, and draw the images with Codex, using the sign-in you already have. You need no API key for those steps, and their calls count toward your plan's limits instead of costing per call.
 
-**Where to find it:** Settings → Providers → the **Text** list (Claude Code CLI, Codex CLI, Gemini CLI) and the **Images** list (Codex CLI).
+**Where to find it:** Settings → Providers → the **Text** list (Claude Code CLI, Codex CLI, Antigravity CLI) and the **Images** list (Codex CLI).
 
 ## What each tool does
 
@@ -10,7 +10,7 @@ Slopify can write the text with the Claude Code, Codex or Gemini command-line to
 |---|---|---|---|---|
 | **Claude Code CLI** | `claude` | Text: research, script, article, titles, descriptions, reviews | Your Claude account | 3 |
 | **Codex CLI** | `codex` | Text | Your ChatGPT account | 3 |
-| **Gemini CLI** | `gemini` | Text | Your Google account | 3 |
+| **Antigravity CLI** | `agy` | Text (no web search, no pictures) | Your Google account | 3 |
 | **Codex CLI** (Images) | `codex` | Images and thumbnails | Your ChatGPT account (the same sign-in and path as Codex text) | 4 |
 
 Codex text and Codex images share one sign-in, one executable path and one plan allowance.
@@ -23,12 +23,23 @@ Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs attenti
 2. Sign in once in a terminal:
    - Claude Code: `claude auth login`
    - Codex: `codex login`
-   - Gemini: run `gemini` and follow its login steps.
+   - Antigravity: run `agy` and sign in with your Google account (a browser opens; over SSH it shows a URL and a code).
 3. Open **Settings → Providers** (reload the page if it was already open).
 4. Pick the tool in the **Text** or **Images** list. Its row should say **Ready**, and its setup shows **Installed, version …** and the **Command** Slopify runs.
 5. Choose **Check all** to confirm it is signed in.
 
-On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says so and picks one for text on new Play drafts, preferring Claude Code, then Codex, then Gemini, and Codex for images when found. The CLIs can't speak, but the narration needs no key either: without a voice key, the [System voice](Providers-and-Keys#the-system-voice) reads it with your computer's own speech. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
+On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says so and picks one for text on new Play drafts, preferring Claude Code, then Codex, then Antigravity, and Codex for images when found. The CLIs can't speak, but the narration needs no key either: without a voice key, the [System voice](Providers-and-Keys#the-system-voice) reads it with your computer's own speech. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
+
+## Antigravity CLI: what is different
+
+Antigravity CLI (`agy`) replaced the Gemini CLI, which Google retired for personal accounts on 18 June 2026. Install it with `curl -fsSL https://antigravity.google/cli/install.sh | bash` (it lands in `~/.local/bin`) and update it with `agy update`. The first `agy` run signs you in through the browser, or with a URL and code over SSH.
+
+It cannot do everything the Gemini CLI did:
+
+- **No web-search research.** A research step that needs web search stops with "This command-line tool cannot search the web for research…". Use Claude Code, Codex or OpenRouter for that step.
+- **No pictures.** Reviews that need to look at pictures are refused.
+- **Its sign-in can't be confirmed from files.** The Google sign-in lives in the system keyring, which Slopify does not read. Only API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set) shows **Signed in**; otherwise the check says it can't tell and asks you to run `agy` once.
+- **Old model ids are gone.** Models come from `agy models`. A project that still names a Gemini CLI model such as `gemini-2.5-pro` stops with "The chosen model is not available…" until you pick a new one in **Edit project → Providers**. A saved path to a program still called `gemini` is refused: clear it or set the Antigravity CLI path in Settings → Providers.
 
 ## Row states
 
@@ -57,7 +68,7 @@ Slopify finds each tool on PATH, the list of folders your terminal searches. Set
 **Check all** (Settings → Providers) asks each tool:
 
 - **Installed**: found, with its version.
-- **Signed in**: Slopify asks Claude Code and Codex directly. If one is signed out, the line tells you the command to run (`claude auth login` or `codex login`). For Gemini CLI, Slopify reads the sign-in from its own files in `~/.gemini`, without starting it: the method saved in `settings.json`, then a Google sign-in in `oauth_creds.json` or a `GEMINI_API_KEY`. When the files don't say, it asks you to run `gemini` in a terminal once to confirm.
+- **Signed in**: Slopify asks Claude Code and Codex directly. If one is signed out, the line tells you the command to run (`claude auth login` or `codex login`). Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read, so it can confirm the sign-in only in API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set). Otherwise it asks you to run `agy` in a terminal once to confirm.
 - **Chosen models**: every model your templates, schedules, drafts and unfinished projects pick is still offered by the tool.
 
 Each tool's row has **Check again**, to check that tool alone after you fix something.
@@ -91,7 +102,7 @@ The CLIs bill your subscription, which gives a share of a 5-hour and a weekly al
 
 - **Claude Code** reports its 5-hour and 7-day windows during each call.
 - **Codex** is asked before and after each call. It reports whole percents, so a short run can show "under 1%".
-- **Gemini** reports none.
+- **Antigravity** reports none.
 
 You see these on a project's **Run cost** tab, in the run's **Cost so far** panel, and on Home under **This week**. See [Costs-and-Run-Cost](Costs-and-Run-Cost).
 
@@ -104,7 +115,7 @@ When a tool says its allowance is used up, the run does not fail:
 
 Other providers are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or canceled meanwhile is left alone.
 
-Gemini's daily quota is handled the same way ("Slopify waits and tries again later by itself").
+Antigravity's quota is handled the same way ("Slopify waits and tries again later by itself").
 
 ## In Docker: the host helper
 

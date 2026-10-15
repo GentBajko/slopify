@@ -2,13 +2,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { codexImage, codexImageTimeoutMs } from "../adapters/image/codex.js";
+import { antigravityLlm } from "../adapters/llm/antigravity.js";
+import { nodeAntigravityModels } from "../adapters/llm/antigravity-models.js";
 import { claudeCodeLlm } from "../adapters/llm/claude-code.js";
 import { nodeClaudeCodeModels } from "../adapters/llm/claude-code-models.js";
 import { codexLlm } from "../adapters/llm/codex.js";
 import { nodeCodexLimits } from "../adapters/llm/codex-limits.js";
 import { nodeCodexModels } from "../adapters/llm/codex-models.js";
-import { geminiLlm } from "../adapters/llm/gemini.js";
-import { nodeGeminiModels } from "../adapters/llm/gemini-models.js";
 import type { RunCli } from "../adapters/llm/run-cli.js";
 import type { HostCliId, HostCliRuntime, HostLlmId } from "../kernel/ports/host-cli.js";
 import { providerError } from "../kernel/ports/model.js";
@@ -35,21 +35,22 @@ export function createHostRuntime(
       });
     return deps.resolve(id === "codex-image" ? "codex" : id);
   }
-  const factories = { "claude-code": claudeCodeLlm, codex: codexLlm, gemini: geminiLlm };
+  const factories = { "claude-code": claudeCodeLlm, codex: codexLlm, gemini: antigravityLlm };
   const models = async (id: HostLlmId) => {
     const binary = await deps.resolve(id);
     return id === "claude-code"
       ? nodeClaudeCodeModels(binary)
       : id === "codex"
         ? nodeCodexModels(deps.env, binary)
-        : nodeGeminiModels(binary);
+        : nodeAntigravityModels(binary);
   };
   return {
     status,
     ...(deps.folders === undefined ? {} : { openFolder: createHostFolderOpener(deps.folders) }),
     llm: (id) => ({
       id,
-      capabilities: { streams: true, reportsUsage: true, webSearch: true },
+      // Antigravity names no web search tool for headless runs (`adapters/llm/antigravity.ts`).
+      capabilities: { streams: true, reportsUsage: true, webSearch: id !== "gemini" },
       models: () => models(id),
       complete: async function* (request) {
         request.signal.throwIfAborted();

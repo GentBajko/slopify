@@ -98,7 +98,8 @@ const cliNames: Readonly<Record<string, string>> = {
   claude: "Claude Code CLI",
   "claude-code": "Claude Code CLI",
   codex: "Codex CLI",
-  gemini: "Gemini CLI",
+  gemini: "Antigravity CLI",
+  agy: "Antigravity CLI",
 };
 
 // A configured path (`/opt/bin/claude`, `C:\\tools\\codex.cmd`) still names the CLI the user chose.

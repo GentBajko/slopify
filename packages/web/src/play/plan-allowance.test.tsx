@@ -24,7 +24,7 @@ const week = {
     },
     {
       account: "gemini",
-      name: "Gemini CLI",
+      name: "Antigravity CLI",
       weeklyPercent: 10,
       fiveHourPercent: null,
       weeklyResetsAt: null,
@@ -41,7 +41,7 @@ it("says how much of the setup's CLI plan its last reading showed used", async (
   expect((await screen.findByRole("list", { name: "Plan limits used" })).textContent).toMatch(
     /^Codex: 42% of the weekly limit used at its last reading/,
   );
-  expect(screen.queryByText(/Gemini CLI/)).toBeNull();
+  expect(screen.queryByText(/Antigravity CLI/)).toBeNull();
 });
 
 it("says nothing for a setup on API keys", () => {

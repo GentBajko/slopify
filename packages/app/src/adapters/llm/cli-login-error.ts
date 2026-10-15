@@ -13,7 +13,7 @@ export function cliLoginError(provider: string, text: string): ProviderError | u
     provider === "claude-code"
       ? "claude auth login"
       : provider === "gemini"
-        ? "gemini"
+        ? "agy"
         : "codex login";
   return providerError({
     kind: "missing_key",

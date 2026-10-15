@@ -125,7 +125,7 @@ export async function firstRunStatus(
       ? null
       : names.length > 0
         ? `Slopify found ${list(names)} and picked ${names.length === 1 ? "it" : "them"} on Play. ${narration} Keys are optional extras in Settings → Providers.`
-        : "Install Claude Code, Codex or Gemini CLI and sign in once in a terminal, then reload this page. Or paste an API key in Settings → Providers.",
+        : "Install Claude Code, Codex or Antigravity CLI and sign in once in a terminal, then reload this page. Or paste an API key in Settings → Providers.",
   };
 }
 

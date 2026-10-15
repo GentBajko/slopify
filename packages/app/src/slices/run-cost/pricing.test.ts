@@ -136,6 +136,10 @@ describe("apiEquivalentOf", () => {
     expect(apiEquivalentOf("gemini", "gemini-3.8-flash", catalogue)?.id).toBe(
       "google/gemini-3.8-flash",
     );
+    // An Antigravity slug names its effort; the API prices the model without it.
+    expect(apiEquivalentOf("gemini", "gemini-3.8-flash-high", catalogue)?.id).toBe(
+      "google/gemini-3.8-flash",
+    );
   });
   it("has no API price for a default or unlisted model", () => {
     expect(apiEquivalentOf("codex", "", catalogue)).toBeUndefined();

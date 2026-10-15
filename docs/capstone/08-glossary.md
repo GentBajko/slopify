@@ -39,7 +39,7 @@ paths_covered:
 | Catalogue | Refreshable model metadata (models, capabilities, concurrency, pricing). It is checked daily, and OpenRouter prices come from its public list. | `packages/app/src/catalog/store.ts:18-23` |
 | Thinking | An optional LLM reasoning mode, accepted only when the chosen catalogue model lists it. | `packages/app/src/catalog/registry.ts:54-56` |
 | Retired model | A model the catalogue no longer offers that a template, schedule, draft or project still names (the model-upkeep usage slots `llm`, `audio`, `images`, `animate`). | `packages/app/src/slices/model-upkeep/model.ts:4-20` |
-| Host CLI bridge | The helper service (`slopify-cli-bridge.service`) on the host machine. It lets a Docker install run the host's `claude-code`, `codex`, `gemini` and `codex-image` CLIs. It is used when `SLOPIFY_HOST_CLI_DIR` is set. | `packages/app/src/host-cli/service.ts:12`; `packages/app/src/kernel/ports/host-cli.ts:8-11`; `packages/app/src/main.ts:333` |
+| Host CLI bridge | The helper service (`slopify-cli-bridge.service`) on the host machine. It lets a Docker install run the host's `claude-code`, `codex`, `gemini` (the Antigravity CLI, command `agy`) and `codex-image` CLIs. It is used when `SLOPIFY_HOST_CLI_DIR` is set. | `packages/app/src/host-cli/service.ts:12`; `packages/app/src/kernel/ports/host-cli.ts:8-11`; `packages/app/src/main.ts:333` |
 
 ### Revisions, reviews and held work
 

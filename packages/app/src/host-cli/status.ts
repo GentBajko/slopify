@@ -11,10 +11,16 @@ import {
   cliProbeTimeoutMs,
   readinessFromProbe,
 } from "../slices/settings/cli-status.js";
-import { type GeminiLoginHost, nodeGeminiLoginHost, readGeminiLogin } from "./gemini-login.js";
+import {
+  type AntigravityLoginHost,
+  nodeAntigravityLoginHost,
+  readAntigravityLogin,
+} from "./antigravity-login.js";
 
 export function hostCommandName(id: HostCliId): string {
-  return id === "claude-code" ? "claude" : id === "codex-image" ? "codex" : id;
+  if (id === "claude-code") return "claude";
+  if (id === "gemini") return "agy";
+  return id === "codex-image" ? "codex" : id;
 }
 export async function resolveHostCommand(
   id: HostLlmId,
@@ -59,10 +65,10 @@ export async function readHostLogin(
   binary: string,
   id: HostLlmId,
   signal: AbortSignal,
-  gemini: GeminiLoginHost = nodeGeminiLoginHost(),
+  antigravity: AntigravityLoginHost = nodeAntigravityLoginHost(),
 ): Promise<HostCliStatus["login"]> {
-  // The Gemini CLI has no status command; its settings and credential files answer instead.
-  if (id === "gemini") return readGeminiLogin(gemini);
+  // The Antigravity CLI has no status command; only its API-key mode shows in its files.
+  if (id === "gemini") return readAntigravityLogin(antigravity);
   const command = cliCommand(binary);
   return new Promise((resolve) => {
     execFile(

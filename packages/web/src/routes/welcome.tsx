@@ -277,8 +277,8 @@ export function WelcomeRoute(): ReactElement {
               </ButtonLink>
             }
           >
-            Install Claude Code, Codex or Gemini CLI and sign in to it, then press Check again; or
-            add an OpenRouter key in Settings → Providers.
+            Install Claude Code, Codex or Antigravity CLI and sign in to it, then press Check again;
+            or add an OpenRouter key in Settings → Providers.
           </Callout>
         ) : null}
 

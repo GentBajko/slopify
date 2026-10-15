@@ -17,7 +17,7 @@ paths_covered:
   - ":(top)packages/app/src/adapters/llm/document-*.ts"
   - ":(top)packages/app/src/adapters/llm/claude-code.ts"
   - ":(top)packages/app/src/adapters/llm/codex.ts"
-  - ":(top)packages/app/src/adapters/llm/gemini*.ts"
+  - ":(top)packages/app/src/adapters/llm/antigravity*.ts"
   - ":(top)packages/app/src/adapters/llm/openrouter.ts"
   - ":(top)packages/app/src/adapters/host-cli/**"
   - ":(top)packages/app/src/host-cli/runtime.ts"
@@ -40,7 +40,7 @@ Scope: how research reports travel from the research recipes to an LLM provider 
 | kernel/ports | `packages/app/src/kernel/ports/llm-documents.ts`, `llm.ts`, `host-cli.ts` | Nothing above kernel (`biome.json:44`) |
 | kernel/runner | `packages/app/src/kernel/runner/providers.ts` | kernel/ports |
 | slices | `packages/app/src/slices/research/`, `packages/app/src/slices/rebuild/recipe-text.ts`, `runtime-provider.ts`, `runtime-article.ts`, `preview-details.ts` | kernel; never edge or adapters (`biome.json:70`) |
-| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `gemini.ts`, `gemini-workspace.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command} only (`biome.json:99`) |
+| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `antigravity.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command} only (`biome.json:99`) |
 | host helper | `packages/app/src/host-cli/runtime.ts`, `server.ts`, `packages/app/src/edge/host-cli.ts`, `packages/app/src/edge/http/host-cli.ts` | adapters/llm and kernel/ports (`packages/app/src/host-cli/runtime.ts:4`) |
 
 Dependency direction: slices build `LlmDocument[]` values and hand them to the wrapped `providers.llm` call; the wrapper forwards them to an `LlmPort` adapter (`packages/app/src/kernel/runner/providers.ts:208`). No adapter imports a slice.
@@ -64,7 +64,7 @@ Dependency direction: slices build `LlmDocument[]` values and hand them to the w
 | Entry | Site |
 |---|---|
 | Rebuild research/article execution | `executeProviderRecipe` (`packages/app/src/slices/rebuild/runtime-provider.ts:43`) |
-| Per-provider workspace creation | `documentWorkspace` calls in `packages/app/src/adapters/llm/claude-code.ts:189`, `codex.ts:202`, `gemini.ts:68` |
+| Per-provider workspace creation | `documentWorkspace` calls in `packages/app/src/adapters/llm/claude-code.ts:189`, `codex.ts:202` (Antigravity CLI inlines documents into the prompt instead, `antigravity.ts:85-87`) |
 | Document reader process | `packages/app/src/adapters/llm/document-reader.ts:10` (spawned with `process.execPath <reader> <dir>`, `packages/app/src/adapters/llm/document-workspace.ts:50`-`:55`) |
 | Host helper process | `packages/app/src/edge/host-cli.ts:50` (`startHostServer` with `createHostRuntime`) |
 | Host LLM route | `POST /v1/llm/:provider` (`packages/app/src/edge/http/host-cli.ts:229`) |
@@ -77,19 +77,19 @@ Dependency direction: slices build `LlmDocument[]` values and hand them to the w
 | Wrapper → `LlmPort.complete` | `packages/app/src/kernel/runner/providers.ts:203` | adapter `complete` | `LlmCompletion.documents` (`packages/app/src/kernel/ports/llm.ts:87`) | `LlmEvent` stream |
 | Claude Code CLI | `packages/app/src/adapters/llm/claude-code.ts:198` | `claude -p` | Prompt on stdin: document instructions + messages (`:210`); args add `--restricted`, empty `--setting-sources`, hooks/memory/plugins off, `--strict-mcp-config`, `--mcp-config <dir>/mcp.json`, `--allowedTools mcp__slopify_research__read_document` (`:82`-`:115`) | stream-json; with documents only the final `result` text is yielded (`:225`, `:248`, `:296`) |
 | Codex CLI | `packages/app/src/adapters/llm/codex.ts:204` | `codex exec` | `--ignore-user-config`, read-only sandbox, `mcp_servers.slopify_research` with `enabled_tools=["read_document"]` and `required=true`; prompt via stdin `-` (`:95`-`:158`) | JSON events |
-| Gemini CLI | `packages/app/src/adapters/llm/gemini.ts:73` | `gemini` | Private `GEMINI_CLI_HOME` with a generated `settings.json`: MCP allowlist = `slopify_research` only, hooks/skills/IDE/telemetry off, context file disabled; the user's auth `selectedType` is copied and `oauth_creds.json` is referenced via `GOOGLE_APPLICATION_CREDENTIALS` (`packages/app/src/adapters/llm/gemini-workspace.ts:57`-`:151`) | stream events |
+| Antigravity CLI | `packages/app/src/adapters/llm/antigravity.ts:96` | `agy` | No MCP: documents are inlined into the prompt (`:85`-`:87`). Empty private temp folder holding only an `AGENTS.md` (`:92`-`:94`); one `{"event":"user"}` line on stdin (`:100`-`:106`); `AGY_CLI_DISABLE_AUTO_UPDATE=true`, `HOME` kept for the keyring sign-in (`:98`) | stream-json `init`, `step_update`, `result` (`:107`-`:131`) |
 | MCP `read_document` | CLI | `packages/app/src/adapters/llm/document-reader.ts:64` | `{ id: string, offset: int multiple of 16000 }` | JSON `{ id, title, offset, nextOffset: number \| null, totalCharacters, text }` (`:84`-`:91`) |
 | OpenRouter HTTP | `packages/app/src/adapters/llm/openrouter.ts:80` | OpenRouter API | `documentMessages(documents)` prepended as separate user messages labelled as reference material (`packages/app/src/kernel/ports/llm-documents.ts:36`) | SSE stream |
 | Container → host helper | `packages/app/src/adapters/host-cli/index.ts:154` over the Unix socket `<dir>/cli.sock` (`packages/app/src/adapters/host-cli/transport.ts:58`) | `packages/app/src/edge/http/host-cli.ts:232` | `hostLlmSchema`: `{ model, messages[≤128], documents?, thinking?, webSearch? }` (`packages/app/src/kernel/ports/host-cli.ts:72`); bearer token checked with `timingSafeEqual` (`packages/app/src/edge/http/host-cli.ts:113`) | NDJSON `hostFrameSchema` frames: `delta`, `activity`, `done`, `error` (`packages/app/src/kernel/ports/host-cli.ts:196`) |
 
 Document contents cross the bridge inside the JSON body; no container or host path is sent. The host runtime runs the same CLI adapters with the captured host environment (`packages/app/src/host-cli/runtime.ts:54`-`:84`), so the workspace is materialised on the host.
 
-Read verification: every adapter calls `documents?.verifyRead()` before accepting a result (`packages/app/src/adapters/llm/claude-code.ts:294`, `codex.ts:253`, `gemini.ts:97`). It requires a receipt for every 16 000-character page of every document; a missing page throws `providerError({ kind: "unavailable" })` (`packages/app/src/adapters/llm/document-workspace.ts:69`-`:97`). Cleanup: `documents?.remove()` runs in each adapter's `finally` (`claude-code.ts:317`, `codex.ts:305`, `gemini.ts:119`).
+Read verification: every adapter calls `documents?.verifyRead()` before accepting a result (`packages/app/src/adapters/llm/claude-code.ts:294`, `codex.ts:253`; Antigravity CLI sends no document reader, so it has nothing to verify). It requires a receipt for every 16 000-character page of every document; a missing page throws `providerError({ kind: "unavailable" })` (`packages/app/src/adapters/llm/document-workspace.ts:69`-`:97`). Cleanup: `documents?.remove()` runs in each adapter's `finally` (`claude-code.ts:317`, `codex.ts:305`; Antigravity CLI removes its temp folder instead, `antigravity.ts:139`).
 
 ## Composition
 
-- Container app: `createHostCliClient` is built when `SLOPIFY_CONTAINER=1` or `SLOPIFY_HOST_CLI_DIR` is set (`packages/app/src/main.ts:331`); `buildRegistry` registers `hostCli.llm(id)` for each of `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:155`).
-- Host helper: `packages/app/src/edge/host-cli.ts:50` wires `startHostServer` + `createHostRuntime({ run: nodeRunCli, ... })`; `createHostRuntime` maps IDs to `claudeCodeLlm`, `codexLlm`, `geminiLlm` (`packages/app/src/host-cli/runtime.ts:38`).
+- Container app: `createHostCliClient` is built when `SLOPIFY_CONTAINER=1` or `SLOPIFY_HOST_CLI_DIR` is set (`packages/app/src/main.ts:331`); `buildRegistry` registers `hostCli.llm(id)` for each of `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:157`).
+- Host helper: `packages/app/src/edge/host-cli.ts:50` wires `startHostServer` + `createHostRuntime({ run: nodeRunCli, ... })`; `createHostRuntime` maps IDs to `claudeCodeLlm`, `codexLlm`, `antigravityLlm` (`packages/app/src/host-cli/runtime.ts:38`).
 - Slices receive only the wrapped provider calls, never adapters (`biome.json:83`-`:89`).
 
 ## Frontend

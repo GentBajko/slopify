@@ -29,7 +29,7 @@ API keys per provider, the voice list, and the outro card text. Where a fresh in
 | OpenRouter [sk-or-••••••••••••••••••] [Save] [Remove] |
 | Claude Code CLI Installed, 2.1.89 |
 | Codex CLI Not found on PATH |
-| Gemini CLI Installed, 0.16.0 |
+| Antigravity CLI Installed, 1.0.0 |
 | Native CLI: Command, Executable path [ ] [Save path] |
 | Docker CLI: Command, Runs on your host (read-only) |
 | Text to speech |
@@ -74,7 +74,7 @@ Element tree:
 |---|---|---|
 | Key field + Save (per provider) | Stores that provider's API key on this machine | Stays; the provider becomes selectable on 06 Play (assumed) |
 | Remove (per key) | Deletes the stored key | Stays |
-| Executable path / Save path (Claude Code, Codex, Gemini CLI) | Checks and saves an absolute executable/JS entry; blank resets to server PATH; existing CLI login is reused | Stays; refreshed readiness controls Play |
+| Executable path / Save path (Claude Code, Codex, Antigravity CLI) | Checks and saves an absolute executable/JS entry; blank resets to server PATH; existing CLI login is reused | Stays; refreshed readiness controls Play |
 | Add voice: Name, Provider, Voice ID | Appends an entry to the voice list | Stays; entry appears in 06 Play's voice dropdown |
 | Remove (per voice) | Deletes the entry | Stays |
 | Copy (Claude Code / Codex setup) | Copies the setup line for that agent; a toast says where it goes ("Run it once in a terminal.", "Add it to ~/.codex/config.toml.") | Stays; the agent connects to `/mcp` with no token (`logic/45`) |
@@ -97,4 +97,4 @@ Provider names are placeholders: `for: stack`. OpenRouter is the one name surfac
 - Removing a key a past project used: effect on that project's re-runs `rule: logic (S13-credentials)`.
 - Voice list empty: TTS Generate cannot pick a voice on 06; what 06 shows `rule: logic (S13-credentials)`.
 
-Native readiness confirms launch/version only. Host-managed Claude/Codex additionally expose known login failures; Gemini auth status remains unknown rather than guessed. No status check proves paid generation eligibility. Sign-in is completed in the user's host terminal, never by opening authentication from a job (`packages/app/src/host-cli/status.ts:55`, `packages/app/src/adapters/llm/gemini.ts`).
+Native readiness confirms launch/version only. Host-managed Claude/Codex additionally expose known login failures; Antigravity CLI sign-in stays unknown rather than guessed (its Google sign-in is in the OS keyring; only API-key mode shows). No status check proves paid generation eligibility. Sign-in is completed in the user's host terminal, never by opening authentication from a job (`packages/app/src/host-cli/status.ts:55`, `packages/app/src/adapters/llm/antigravity.ts`).

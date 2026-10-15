@@ -64,7 +64,7 @@ Actor: the single local user; seeding runs with no actor.
 7. A `requestId` already recorded for a live project answers `{projectId, replayed: true}` (`packages/app/src/edge/http/onboarding.ts:100-102`, `packages/app/src/slices/onboarding/state.ts:31-35`, `:84-86`). The client keeps one id per press across retries (`packages/web/src/routes/welcome.tsx:106-107`, `:119-130`).
 8. The pack is `packId` or the starter set; the model lister must be wired, else 503 (`onboarding.ts:103-118`).
 9. **`planShortProviders`** (`packages/app/src/slices/onboarding/quick-short.ts:78-165`):
-   - text: the first usable of `claude-code`, `codex`, `gemini`, `openrouter` whose model list is non-empty; the model is the preferred one (`claude-code` → `/sonnet/i`) else the first (`quick-short.ts:38-46`, `:91-105`);
+   - text: the first usable of `claude-code`, `codex`, `gemini` (the Antigravity CLI), `openrouter` whose model list is non-empty; the model is the preferred one (`claude-code` → `/sonnet/i`) else the first (`quick-short.ts:38-46`, `:91-105`);
    - images: the first usable of `codex-image`, `openai-image`, `google-image`, `fal`, `replicate` with a model (`quick-short.ts:107-121`);
    - voice: a saved voice of a usable keyed provider, else the pack's suggested provider when usable (voice id = saved or suggested; model preferred `gpt-4o-mini-tts` for OpenAI), else the system voice when usable and a speech engine was found (a saved system voice id first) (`quick-short.ts:123-148`);
    - each missing need adds a gap sentence naming the fix (`quick-short.ts:100-105`, `:116-121`, `:149-160`).

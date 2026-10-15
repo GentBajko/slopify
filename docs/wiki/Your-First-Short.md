@@ -22,7 +22,7 @@ You need three things. Slopify checks them when you press the button and tells y
 
 | Need | What Slopify uses, in this order |
 | --- | --- |
-| Text | Claude Code CLI (a Sonnet model when it has one), Codex CLI, Gemini CLI, then an OpenRouter key. |
+| Text | Claude Code CLI (a Sonnet model when it has one), Codex CLI, Antigravity CLI, then an OpenRouter key. |
 | Images | Codex CLI, then an OpenAI, Google, fal.ai or Replicate key. |
 | Voice | Your first saved voice whose provider has a key. If none, the style's suggested OpenAI voice when an OpenAI key is saved. If there is no voice key at all, your computer's own voice (the **System voice**): macOS or Windows speech, or Piper, SVOX Pico, eSpeak NG or eSpeak on Linux. |
 
@@ -30,7 +30,7 @@ Command-line tools can't speak, but you don't need a voice key to start: with no
 
 To set these up:
 
-1. Install and sign in to Claude Code, Codex or Gemini CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Providers** (see [Providers and Keys](Providers-and-Keys)).
+1. Install and sign in to Claude Code, Codex or Antigravity CLI (see [AI CLIs](AI-CLIs)), or add keys in Settings → **Providers** (see [Providers and Keys](Providers-and-Keys)).
 2. Optional: add a voice key in Settings → **Providers**. An OpenAI key is the simplest: the suggested voice works with it right away.
 3. Back on the first-run screen, step **1 · What you have** shows which tools are ready and who will narrate.
 
@@ -88,7 +88,7 @@ The message names what is missing and where to fix it:
 
 | Message starts with | Fix |
 | --- | --- |
-| No text model is ready. | Install Claude Code, Codex or Gemini CLI and sign in, or add an OpenRouter key in Settings → Providers. |
+| No text model is ready. | Install Claude Code, Codex or Antigravity CLI and sign in, or add an OpenRouter key in Settings → Providers. |
 | No image model is ready. | Install Codex CLI and sign in, or add an OpenAI, Google, fal.ai or Replicate key in Settings → Providers. |
 | No voice is ready to narrate the short | Install `espeak-ng` (Linux) so the computer's voice can narrate, or add an OpenAI, ElevenLabs, Cartesia or Inworld key in Settings → Providers. |
 | Your voice provider has no saved voice yet. | Add a voice in Settings → Voices, then try again. |

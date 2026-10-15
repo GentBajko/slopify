@@ -59,7 +59,7 @@ One work list: the things that don't move on until you act, then the finished vi
 | A run you (or an agent) paused | **Paused** | **Open to continue** |
 | Topics a schedule suggested | **N new topics** | **Review topics**, on the calendar: queue the ones you want and reject the rest. |
 | A failed run | **Failed · <step>**, with a short reason | The fix to try: a button to Settings → Providers or Backup & storage when that is the fix, otherwise **Open to retry**. |
-| A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `gemini`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
+| A run that failed because a CLI is signed out | **Failed · <step>** | **Copy sign-in command** copies the command (`claude auth login`, `codex login` or `agy`). Run it in a terminal on the computer running Slopify, then **Open to retry** and press **Check again** on the project. |
 | A finished video you have not marked uploaded | **Ready to upload** | **Prepare upload** lists everything YouTube Studio asks for, with Copy buttons (Slopify never uploads for you; see [Publishing to YouTube](Publishing-to-YouTube)). **Mark uploaded** takes it off the list, with **Undo** in the notice; Projects still has it. |
 
 A held run also offers **Keep as is**, which takes it off Needs you and leaves the rest unmade (with **Undo**); editing the project brings it back. A run waiting for an [agent's review](Agents-MCP#the-external-agent-reviewer) is not here: it goes on by itself, so it shows under Running now. A step that failed while the run waits on something else shows here as a failed item.

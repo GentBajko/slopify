@@ -149,7 +149,7 @@ function ChannelCommands(): ReactElement {
 // Words people type for a section that its name and line do not hold.
 const sectionWords: Readonly<Record<string, readonly string[]>> = {
   general: ["appearance", "theme", "dark", "light", "start at login", "autostart"],
-  providers: ["api keys", "sign in", "openai", "gemini", "claude", "codex"],
+  providers: ["api keys", "sign in", "openai", "gemini", "antigravity", "agy", "claude", "codex"],
   voices: ["voice id", "elevenlabs", "tts"],
   agents: ["mcp", "claude code", "codex", "agent"],
   playback: ["pace", "loudness", "volume", "narration"],

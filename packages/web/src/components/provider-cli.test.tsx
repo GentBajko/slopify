@@ -66,7 +66,7 @@ describe("CLI executable settings", () => {
   it.each([
     ["codex", "Codex CLI", "codex"],
     ["claude-code", "Claude Code CLI", "claude"],
-    ["gemini", "Gemini CLI", "gemini"],
+    ["gemini", "Antigravity CLI", "agy"],
     ["codex-image", "Codex CLI", "codex"],
   ] as const)(
     "offers an accessible path field for %s without an API key",

@@ -5,13 +5,13 @@ import { falImage } from "./adapters/image/fal.js";
 import { googleImage } from "./adapters/image/google.js";
 import { openAiImage } from "./adapters/image/openai.js";
 import { replicateImage } from "./adapters/image/replicate.js";
+import { antigravityLlm } from "./adapters/llm/antigravity.js";
+import { nodeAntigravityModels } from "./adapters/llm/antigravity-models.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { nodeClaudeCodeModels } from "./adapters/llm/claude-code-models.js";
 import { codexLlm } from "./adapters/llm/codex.js";
 import { nodeCodexLimits } from "./adapters/llm/codex-limits.js";
 import { nodeCodexModels } from "./adapters/llm/codex-models.js";
-import { geminiLlm } from "./adapters/llm/gemini.js";
-import { nodeGeminiModels } from "./adapters/llm/gemini-models.js";
 import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
@@ -92,9 +92,10 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ],
     [
       "gemini",
-      geminiLlm({
+      antigravityLlm({
         run: cliFor("gemini"),
-        readModels: () => nodeGeminiModels(cliBinary(deps.db, "gemini")),
+        binary: () => cliBinary(deps.db, "gemini"),
+        readModels: () => nodeAntigravityModels(cliBinary(deps.db, "gemini")),
       }),
     ],
   ]);

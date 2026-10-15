@@ -73,7 +73,7 @@ export const visionStages: readonly ReviewStage[] = ["images", "thumbnail", "sho
 
 // The text providers whose adapter hands the model image files (`capabilities.images` in
 // `adapters/llm`): Claude Code reads them with its Read tool in a private folder, Codex
-// attaches them with `--image`. The Gemini CLI and OpenRouter adapters send text only.
+// attaches them with `--image`. The Antigravity CLI and OpenRouter adapters send text only.
 export const imageReviewers: readonly string[] = ["claude-code", "codex"];
 
 export function reviewModeOf(settings: ReviewSettings | undefined, stage: ReviewStage): ReviewMode {

@@ -12,7 +12,7 @@ describe("registry CLI paths", () => {
   it.each([
     ["codex", "codex"],
     ["claude-code", "claude"],
-    ["gemini", "gemini"],
+    ["gemini", "agy"],
   ] as const)(
     "uses the latest saved %s path without rebuilding the registry",
     async (id, fallback) => {

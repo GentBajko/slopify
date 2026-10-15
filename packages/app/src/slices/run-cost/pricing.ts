@@ -70,7 +70,8 @@ export function apiEquivalentOf(
   }
   if (bare === "" || bare === "codex-imagegen") return undefined;
   if (provider === "codex" || provider === "codex-image") return listed(`openai/${bare}`);
-  if (provider === "gemini") return listed(`google/${bare}`);
+  // Antigravity slugs carry the effort ("gemini-3.8-flash-high"); the API prices the model.
+  if (provider === "gemini") return listed(`google/${bare.replace(/-(?:low|medium|high)$/, "")}`);
   return undefined;
 }
 

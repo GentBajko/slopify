@@ -63,11 +63,11 @@ The other packages sit beside the app:
 
 | Family | Provider IDs |
 | --- | --- |
-| LLM | `openrouter`, `claude-code`, `codex`, `gemini` (`packages/app/src/adapter-registry.ts:76`) |
+| LLM | `openrouter`, `claude-code`, `codex`, `gemini` (the Antigravity CLI, command `agy`; `packages/app/src/adapter-registry.ts:76`) |
 | TTS | `elevenlabs`, `openai-tts`, `cartesia`, `inworld`, `system-voice` (the computer's own speech program, `packages/app/src/adapters/tts/system.ts:33`) and `google-tts` (`packages/app/src/adapter-registry.ts:105`) |
 | Image | `fal`, `replicate`, `openai-image`, `google-image`, `codex-image` (`packages/app/src/adapter-registry.ts:137`) |
 
-In a Docker install, `claude-code`, `codex`, `gemini` and `codex-image` are replaced by clients of the host helper (`packages/app/src/adapter-registry.ts:155`, `packages/app/src/kernel/ports/host-cli.ts:8`). `01-architecture-docker.md` covers that.
+In a Docker install, `claude-code`, `codex`, `gemini` and `codex-image` are replaced by clients of the host helper (`packages/app/src/adapter-registry.ts:157`, `packages/app/src/kernel/ports/host-cli.ts:8`). `01-architecture-docker.md` covers that.
 
 ### Slices
 

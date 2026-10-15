@@ -38,7 +38,7 @@ Before Start, Play's review prices the reviewed runs from the model catalogue. A
 
 - **Estimate:** the user opens Review in Play (or a Schedule fires). A draft has 1–50 runs including the base (at most 49 variants) and expected words 1–100000; a pending font upload blocks review (`packages/app/src/slices/play-drafts/review-inputs.ts:62-80`). `POST /api/projects/estimate` prices an ad-hoc planning body without a draft (`packages/app/src/edge/http/planning.ts:66-83`). Neither creates a project.
 - **Run cost:** any provider call a stage makes after admission, and calls made outside a project for a schedule or channel (topics, episode summaries, cast pictures) (`packages/app/src/kernel/runner/meter.ts:36-53`).
-- **Plan limits:** a call to a provider whose `planAccountOf` is `claude-code`, `codex` (also `codex-image`) or `gemini` (`packages/app/src/kernel/ports/plan-limits.ts:7-15`).
+- **Plan limits:** a call to a provider whose `planAccountOf` is `claude-code`, `codex` (also `codex-image`) or `gemini` (the Antigravity CLI; `packages/app/src/kernel/ports/plan-limits.ts:7-15`).
 - **Batch:** Start on a reviewed draft with more than one run whose document's `queue` is not `false`, or the legacy `POST /api/projects/batch` (`packages/app/src/slices/play-drafts/start.ts:148-157`, `packages/app/src/edge/http/planning.ts:84-124`).
 
 ## Steps

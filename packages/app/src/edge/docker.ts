@@ -83,10 +83,10 @@ export async function planDockerHostCli(options: DockerHostOptions): Promise<Doc
   if (!approved) {
     if (!options.interactive)
       throw new Error(
-        "Slopify needs your OK to use the Claude Code, Codex or Gemini CLI installed on this machine, but can't ask because this isn't an interactive terminal. Rerun with --accept-host-cli to allow it, or with --host-cli=off to use API keys only.",
+        "Slopify needs your OK to use the Claude Code, Codex or Antigravity CLI installed on this machine, but can't ask because this isn't an interactive terminal. Rerun with --accept-host-cli to allow it, or with --host-cli=off to use API keys only.",
       );
     approved = await options.prompt(
-      "Allow Slopify to run your host Claude Code, Codex and Gemini CLIs using their existing logins? This installs a private helper and enables automatic startup. User lingering keeps your user services running after logout and at boot. Credentials stay on the host. [y/N] ",
+      "Allow Slopify to run your host Claude Code, Codex and Antigravity CLIs using their existing logins? This installs a private helper and enables automatic startup. User lingering keeps your user services running after logout and at boot. Credentials stay on the host. [y/N] ",
     );
     if (!approved)
       throw new Error(

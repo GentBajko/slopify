@@ -11,7 +11,7 @@ export function hostUnavailable(submitted = false): ProviderError {
     kind: "unavailable",
     message: submitted
       ? "The connection to the host helper dropped before the CLI's answer arrived, so Slopify cannot tell whether it finished (it may already have used your quota). Check the host helper is still running, then use Try again."
-      : "Slopify cannot reach its host helper, which runs the Claude Code, Codex and Gemini CLIs outside Docker. On the host computer, run npx @gentbajko/slopify@latest --docker to set it up or restart it, then use Try again.",
+      : "Slopify cannot reach its host helper, which runs the Claude Code, Codex and Antigravity CLIs outside Docker. On the host computer, run npx @gentbajko/slopify@latest --docker to set it up or restart it, then use Try again.",
   });
 }
 export interface HostRequestOptions {

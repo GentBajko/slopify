@@ -115,7 +115,7 @@ function catalogNotice(provider: string): { readonly notice?: string } {
   const notices: Readonly<Record<string, string>> = {
     codex: "Models come from your Codex installation. Refresh to check again.",
     gemini:
-      "Models come from your installed Gemini CLI, not an account access check. Missing a new model? Update Gemini CLI, rerun the Docker launcher if applicable, then refresh this list.",
+      'Models come from "agy models" in your installed Antigravity CLI. Missing a new model? Run "agy update", rerun the Docker launcher if applicable, then refresh this list.',
     "claude-code":
       "Models come from Claude Code. Missing a new model? Update Claude Code, rerun the Docker launcher if applicable, then refresh this list. You can also enter an exact model ID.",
     inworld: "These are Inworld’s documented TTS models. You can also enter a compatible model ID.",

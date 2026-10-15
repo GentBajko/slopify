@@ -43,8 +43,8 @@ export const settingsHelp = {
     tutorial: { page: "AI-CLIs", anchor: "set-up-a-cli" },
   },
   "settings.provider.gemini": {
-    title: "Gemini CLI",
-    body: "Writes the text with the Gemini command-line tool on this computer, using your own Google sign-in, so no API key is needed. Sign in first by running gemini in a terminal and following its login steps. Slopify runs up to 3 calls at once.",
+    title: "Antigravity CLI",
+    body: "Writes the text with Google's Antigravity command-line tool (agy), which replaced the Gemini CLI, using your own Google sign-in, so no API key is needed. Install it from antigravity.google, then run agy in a terminal once to sign in. It can't search the web for research or look at pictures; pick another provider for those. Slopify runs up to 3 calls at once.",
     tutorial: { page: "AI-CLIs", anchor: "set-up-a-cli" },
   },
   "settings.provider.codex-image": {
@@ -334,7 +334,7 @@ export const settingsHelp = {
   },
   "welcome.found": {
     title: "Found on this computer",
-    body: "Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration uses a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) when one is saved in Settings → Providers, and otherwise your computer's built-in voice, so no key is needed to start.",
+    body: "Claude Code, Codex and Antigravity CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration uses a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) when one is saved in Settings → Providers, and otherwise your computer's built-in voice, so no key is needed to start.",
     tutorial: { page: "First-Launch-and-Welcome", anchor: "found-on-this-computer" },
   },
   "welcome.voice": {

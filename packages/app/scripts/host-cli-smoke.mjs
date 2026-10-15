@@ -74,7 +74,7 @@ try {
   );
   await writeFile(join(home, "image.png"), png);
   const fake = await readFile(new URL("../test/fixtures/host-cli.cjs", import.meta.url), "utf8");
-  for (const provider of ["claude", "codex", "gemini"]) {
+  for (const provider of ["claude", "codex", "agy"]) {
     const path = join(bin, provider);
     await writeFile(path, `#!${process.execPath}\n${fake}`);
     await chmod(path, 0o700);
@@ -85,12 +85,6 @@ try {
     JSON.stringify({
       models: [{ slug: "gpt-test", display_name: "GPT Test", visibility: "list" }],
     }),
-  );
-  const modelDir = join(bin, "node_modules/@google/gemini-cli-core/dist/src/config");
-  await mkdir(modelDir, { recursive: true });
-  await writeFile(
-    join(modelDir, "models.js"),
-    'export const DEFAULT_GEMINI_FLASH_MODEL = "gemini-3.8-flash";',
   );
   await writeFile(
     join(state, "host-environment.json"),

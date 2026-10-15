@@ -47,7 +47,7 @@ async function fixture() {
   );
   await writeFile(join(home, "image.png"), png);
   const script = await readFile(new URL("./fixtures/host-cli.cjs", import.meta.url), "utf8");
-  for (const name of ["claude", "codex", "gemini"]) {
+  for (const name of ["claude", "codex", "agy"]) {
     const path = join(bin, name);
     await writeFile(path, `#!${process.execPath}\n${script}`);
     await chmod(path, 0o700);
@@ -59,25 +59,15 @@ async function fixture() {
       models: [{ slug: "gpt-test", display_name: "GPT Test", visibility: "list" }],
     }),
   );
-  const gemini = join(bin, "node_modules/@google/gemini-cli-core/dist/src/config");
-  await mkdir(gemini, { recursive: true });
+  // Antigravity has no status command and keeps a Google sign-in in the keyring: the fixture
+  // uses its API-key mode, which Slopify can read from files.
+  await mkdir(join(home, ".gemini/antigravity-cli"), { recursive: true });
   await writeFile(
-    join(gemini, "models.js"),
-    'export const DEFAULT_GEMINI_FLASH_MODEL = "gemini-3.8-flash";',
-  );
-  // Gemini CLI has no status command: Slopify reads its sign-in from ~/.gemini, so the
-  // fixture home carries a Google sign-in of its own.
-  await mkdir(join(home, ".gemini"));
-  await writeFile(
-    join(home, ".gemini/settings.json"),
-    JSON.stringify({ security: { auth: { selectedType: "oauth-personal" } } }),
-  );
-  await writeFile(
-    join(home, ".gemini/oauth_creds.json"),
-    JSON.stringify({ refresh_token: "fixture-refresh-token" }),
+    join(home, ".gemini/antigravity-cli/settings.json"),
+    JSON.stringify({ modelProvider: "gemini" }),
   );
   vi.stubEnv("HOME", home);
-  vi.stubEnv("GEMINI_API_KEY", undefined);
+  vi.stubEnv("GEMINI_API_KEY", "fixture-key");
   vi.stubEnv("CODEX_HOME", join(home, ".codex"));
   vi.stubEnv("CLAUDE_CONFIG_DIR", join(home, ".claude"));
   vi.stubEnv("PATH", bin);

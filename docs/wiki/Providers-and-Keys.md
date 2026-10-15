@@ -10,7 +10,7 @@ Settings → Providers shows three lists, one per kind of work. Each row says wh
 
 | List | What it makes | Providers |
 |---|---|---|
-| **Text** | Research, script, article, titles, descriptions, reviews | OpenRouter (API key), Claude Code CLI, Codex CLI, Gemini CLI (command line) |
+| **Text** | Research, script, article, titles, descriptions, reviews | OpenRouter (API key), Claude Code CLI, Codex CLI, Antigravity CLI (command line) |
 | **Speech** | Narration | ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini (API key), System voice (built in, no key) |
 | **Images** | Images, thumbnails, animated clips | fal.ai, Replicate, OpenAI, Google (API key), Codex CLI (command line) |
 
@@ -84,7 +84,7 @@ Writes the text with hundreds of models from many companies through one key. Cha
 
 Keys have no scopes. If you set a credit limit on the key, keep it above what a run costs. OpenRouter is the only provider whose Test also shows missing credit.
 
-### Claude Code CLI, Codex CLI, Gemini CLI
+### Claude Code CLI, Codex CLI, Antigravity CLI
 
 No key. See [AI CLIs](AI-CLIs).
 
@@ -230,7 +230,7 @@ The keyed providers' numbers come from the model catalogue.
 
 For each provider it checks:
 
-- **Installed** and **Signed in** for a command-line tool. Gemini CLI's sign-in is read from its own files in `~/.gemini` (the sign-in method in `settings.json`, the Google sign-in in `oauth_creds.json`, or `GEMINI_API_KEY`), without starting it. When the files don't say, it tells you to run `gemini` once to confirm.
+- **Installed** and **Signed in** for a command-line tool. Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read. Slopify can confirm the sign-in only in API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set); otherwise it tells you to run `agy` in a terminal once to confirm.
 - **Speech program found** for the System voice, with the program it speaks with.
 - **Key saved** and **Key valid** for a keyed provider, using the same call as **Test**. Nothing is generated or billed.
 - **Model reachable** for a keyed provider: Slopify asks the provider, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without generating anything. It reads, for example, "OpenRouter answered for … with this key." A provider with no such check says so.

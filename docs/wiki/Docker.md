@@ -18,7 +18,7 @@ On Windows, macOS or anything else, run Slopify without Docker ([Install](Instal
 
 1. Open a terminal as your normal user.
 2. Run `npx @gentbajko/slopify@latest --docker`.
-3. If Claude Code, Codex or Gemini CLI is installed on this computer, the installer asks once whether Slopify may use them (see [The host CLI bridge](#the-host-cli-bridge)). Answer `y` to allow it, or anything else to stop without changing anything. To use API keys only, run the command with `--host-cli=off` instead.
+3. If Claude Code, Codex or Antigravity CLI is installed on this computer, the installer asks once whether Slopify may use them (see [The host CLI bridge](#the-host-cli-bridge)). Answer `y` to allow it, or anything else to stop without changing anything. To use API keys only, run the command with `--host-cli=off` instead.
 4. It asks `Start Slopify when you log in? (Y/n)` once. See [Start at Login](Start-at-Login#docker).
 5. When it finishes it prints:
    - `Slopify 3.0.0 is running at http://127.0.0.1:6969`
@@ -99,7 +99,7 @@ The recovery volume covers the database and settings, not your Projects folder. 
 
 ## The host CLI bridge
 
-If Claude Code, Codex or Gemini CLI is installed on the host, Slopify in Docker can use them with the logins you already have. Nothing about your logins is copied into Docker.
+If Claude Code, Codex or Antigravity CLI is installed on the host, Slopify in Docker can use them with the logins you already have. Nothing about your logins is copied into Docker.
 
 - With your OK, the installer sets up a small helper, at the same version as the image, and keeps it in step on every install and update.
 - The helper runs as the systemd user service `slopify-cli-bridge.service`, as you. User lingering is turned on so it runs at boot and after you log out.

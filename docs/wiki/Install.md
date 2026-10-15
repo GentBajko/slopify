@@ -12,7 +12,7 @@ Slopify is a local web app you start from a terminal. It runs on your own comput
 | Operating system | Windows, macOS or Linux for the normal install. The managed Docker install is Linux only (see [Docker](Docker)). |
 | ffmpeg | Nothing to install: Slopify brings its own copy. See [ffmpeg](#ffmpeg) below. |
 | Disk space | Enough for your videos. Every project keeps its video, images, narration and working files. The caption model is a 378 MB download (95 MB if you pick Smallest in Settings → Production defaults). |
-| Keys or CLIs | Text and images can come from Claude Code, Codex or Gemini CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
+| Keys or CLIs | Text and images can come from Claude Code, Codex or Antigravity CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
 
 ## Choose how to run it
 

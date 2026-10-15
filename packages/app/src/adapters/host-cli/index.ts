@@ -135,7 +135,8 @@ export function createHostCliClient(options: {
     },
     llm: (id) => ({
       id,
-      capabilities: { streams: true, reportsUsage: true, webSearch: true },
+      // Antigravity names no web search tool for headless runs (`adapters/llm/antigravity.ts`).
+      capabilities: { streams: true, reportsUsage: true, webSearch: id !== "gemini" },
       models: () => models(id),
       complete: async function* (req) {
         const parsed = hostLlmSchema.safeParse({
@@ -247,7 +248,7 @@ export function withPlanLimit(error: ProviderError, id: HostCliId): ProviderErro
     id === "claude-code"
       ? claudePlanLimit(error.message, 429, undefined)
       : id === "gemini"
-        ? /daily quota/i.test(error.message)
+        ? /quota is used up|daily quota/i.test(error.message)
           ? { account: "gemini" as const, resetsAt: null }
           : undefined
         : codexPlanLimit(error.message, new Date());

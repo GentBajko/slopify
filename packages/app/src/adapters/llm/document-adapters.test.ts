@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname } from "node:path";
 import { expect, it } from "vitest";
 import { hostLlmSchema } from "../../kernel/ports/host-cli.js";
 import type { LlmCompletion } from "../../kernel/ports/llm.js";
 import { claudeCodeLlm } from "./claude-code.js";
 import { codexLlm } from "./codex.js";
-import { geminiLlm } from "./gemini.js";
 import type { RunCli } from "./run-cli.js";
 
 const request = (): LlmCompletion => ({
@@ -17,7 +16,6 @@ const request = (): LlmCompletion => ({
 const providers = [
   ["claude", claudeCodeLlm, { type: "result", subtype: "success", result: "Ignored documents." }],
   ["codex", codexLlm, { type: "turn.completed" }],
-  ["gemini", geminiLlm, { type: "result", status: "success" }],
 ] as const;
 it.each(providers)(
   "%s refuses an unread report and cleans up on normal or failed spawn",
@@ -35,7 +33,7 @@ it.each(providers)(
           expect(args[args.indexOf("--allowedTools") + 1]).toBe(
             "mcp__slopify_research__read_document",
           );
-        } else if (name === "codex") {
+        } else {
           const paths = JSON.parse(
             args
               .find((a) => a.startsWith("mcp_servers.slopify_research.args="))
@@ -47,18 +45,6 @@ it.each(providers)(
           expect(args).toContain("--ignore-user-config");
           expect(args).toContain('mcp_servers.slopify_research.enabled_tools=["read_document"]');
           expect(args).toContain("mcp_servers.slopify_research.required=true");
-        } else {
-          const settings = JSON.parse(
-            readFileSync(
-              join(options?.env?.GEMINI_CLI_HOME ?? "", ".gemini", "settings.json"),
-              "utf8",
-            ),
-          );
-          directory = settings.mcpServers.slopify_research.args[1];
-          expect(settings.mcp.allowed).toEqual(["slopify_research"]);
-          expect(settings.tools.core).toEqual([]);
-          expect(settings.mcpServers.slopify_research.includeTools).toEqual(["read_document"]);
-          expect(settings.mcpServers.slopify_research.trust).toBe(true);
         }
         if (spawnFails) throw new Error("Failed to spawn fixture");
         return {

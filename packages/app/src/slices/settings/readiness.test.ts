@@ -151,11 +151,11 @@ describe("providerStatuses", () => {
     await providerStatuses({ ...harness(probe), host: { platform: "linux", env: {} } });
 
     expect(probed.toSorted()).toEqual([
+      "agy",
       "claude",
       "codex",
       "espeak",
       "espeak-ng",
-      "gemini",
       "sh pico2wave",
       // Piper is asked only when SLOPIFY_PIPER_VOICES names a voice model.
     ]);
@@ -205,9 +205,9 @@ describe("providerStatuses", () => {
     probed.length = 0;
     const statuses = await providerStatuses(deps);
     expect(probed).toContain(process.execPath);
-    expect(probed).not.toContain("gemini");
+    expect(probed).not.toContain("agy");
     expect(statusOf(statuses, "gemini")).toMatchObject({
-      displayName: "Gemini CLI",
+      displayName: "Antigravity CLI",
       cliPath: { configured: process.execPath, command: process.execPath },
       readiness: { installed: true, version: "0.16.0" },
     });

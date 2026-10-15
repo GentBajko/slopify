@@ -66,7 +66,7 @@ doesn't start.
 
 ## How it works
 
-1. **Settings:** add your provider keys and voices, or use the Claude Code, Codex or Gemini CLI you're signed in to.
+1. **Settings:** add your provider keys and voices, or use the Claude Code, Codex or Antigravity CLI you're signed in to.
 2. **Library → Prompts:** write article, image and thumbnail prompts once, with `{{keywords}}` where the subject goes.
 3. **Play:** pick the prompts, fill in the keywords, choose your outputs, review, press **Start run**.
 4. **The project page** shows each stage as it runs. Download the video, captions, PDF and description when it's done.
@@ -95,7 +95,7 @@ npx @gentbajko/slopify@latest --docker
 Runs Slopify in the background on Linux from one [compose.yaml](compose.yaml), restarting
 with Docker. Project files go to `Documents/Slopify/Projects` (installs from before 3.0 keep
 `~/Slopify/Projects`); the database and keys stay private in
-the `slopify-data` volume. If you use the Claude Code, Codex or Gemini CLI, it asks once to
+the `slopify-data` volume. If you use the Claude Code, Codex or Antigravity CLI, it asks once to
 set up a small helper so they run on your machine with your existing logins. Update with
 `npx @gentbajko/slopify@latest update`. Full details, including running the compose file
 yourself, in the [Docker guide](docs/docker.md).

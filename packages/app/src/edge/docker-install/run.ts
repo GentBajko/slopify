@@ -119,7 +119,7 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
       hostCli.enabled
         ? "Host CLI bridge ready: Claude Code, Codex and Gemini run on this machine with their existing logins."
         : command.hostCli === "off"
-          ? "Using API keys only (--host-cli=off). Leave that option out to use the Claude Code, Codex or Gemini CLI installed on this machine."
+          ? "Using API keys only (--host-cli=off). Leave that option out to use the Claude Code, Codex or Antigravity CLI installed on this machine."
           : "Using API keys only. Install Claude Code, Codex or Gemini on this machine and run the command again to use them.",
     );
     if (result.recovery)

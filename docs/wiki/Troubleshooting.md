@@ -28,18 +28,21 @@ Most problems in Slopify show up as a failed step on the project page with a mes
 
 Keys and how to get them: [Providers and Keys](Providers-and-Keys).
 
-## AI CLIs (Claude Code, Codex, Gemini)
+## AI CLIs (Claude Code, Codex, Antigravity)
 
 | Message (or part of it) | Fix |
 | --- | --- |
-| "The *CLI* is not signed in, or its sign-in has expired." | Press **Copy sign-in command** on the project (or on Home's Needs you), run it in a terminal on the computer running Slopify (`claude auth login`, `codex login`, or `gemini`), sign in, then press **Check again**: once the CLI answers that it is signed in, the step runs again by itself. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again). |
-| "Your Codex plan's usage limit is used up ... Slopify waits for it to reset and then carries on by itself." (also Claude and Gemini) | Nothing to do: the run waits instead of failing. The project, Home, Projects and the Calendar say "Waiting for Codex limits (resets at 14:00)". See [Recovery and Retries](Recovery-and-Retries#waiting-for-cli-plan-limits). |
+| "The *CLI* is not signed in, or its sign-in has expired." | Press **Copy sign-in command** on the project (or on Home's Needs you), run it in a terminal on the computer running Slopify (`claude auth login`, `codex login`, or `agy`), sign in, then press **Check again**: once the CLI answers that it is signed in, the step runs again by itself. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again). |
+| "Your Codex plan's usage limit is used up ... Slopify waits for it to reset and then carries on by itself." (also Claude and Antigravity) | Nothing to do: the run waits instead of failing. The project, Home, Projects and the Calendar say "Waiting for Codex limits (resets at 14:00)". See [Recovery and Retries](Recovery-and-Retries#waiting-for-cli-plan-limits). |
 | "The *CLI* stopped without answering" | Run the CLI in a terminal to check it works and is signed in, then try again. |
 | "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota)." | Use **Try again**. This is not retried automatically, so you choose whether to spend the quota again. |
 | "No Codex model is chosen for images." | Choose a model (or Codex default) for images in **Edit project → Providers**, then try again. |
 | "Slopify could not get the model list from the *CLI* CLI." | Check the CLI is installed and signed in (Settings → Providers), refresh the list, or type an exact model ID. |
 | A CLI shows as not installed in Settings | Install the CLI so it is on your `PATH`, or, in Docker, rerun the Docker install after installing or moving a CLI so the host helper finds it. Then press **Check again** on its row under **Health check**. |
-| Gemini CLI shows "Slopify could not tell from the Gemini CLI's files (~/.gemini/settings.json) whether it is signed in." | Run `gemini` in a terminal once and sign in (Login with Google), or set `GEMINI_API_KEY`, then press **Check again**. |
+| Antigravity CLI shows "Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read…" | Run `agy` in a terminal once and sign in with your Google account (or use API-key mode: `"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` and `GEMINI_API_KEY` set), then press **Check again**. |
+| "The Antigravity CLI is not signed in…" | Run `agy` in a terminal, sign in with your Google account, then press **Try again**. |
+| A research step says the command-line tool cannot search the web | Antigravity CLI cannot search the web. Pick Claude Code, Codex or OpenRouter for the research step in **Edit project → Providers**. |
+| A run stops with "The chosen model is not available…" after the move from Gemini CLI | The old Gemini CLI model ids (for example `gemini-2.5-pro`) are not in the Antigravity CLI list. Run `agy models` and pick a model in **Edit project → Providers**. |
 
 See [AI CLIs](AI-CLIs).
 

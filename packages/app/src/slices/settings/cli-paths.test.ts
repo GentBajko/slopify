@@ -33,7 +33,7 @@ describe("CLI executable paths", () => {
     const { db } = harness();
     expect(cliPathStatus(db, "codex")).toEqual({ configured: null, command: "codex" });
     expect(cliBinary(db, "claude-code")).toBe("claude");
-    expect(cliBinary(db, "gemini")).toBe("gemini");
+    expect(cliBinary(db, "gemini")).toBe("agy");
     expect(() => cliBinary(db, "openrouter")).toThrow(/CLI/);
   });
 

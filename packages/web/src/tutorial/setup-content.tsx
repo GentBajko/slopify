@@ -59,7 +59,7 @@ export function SetupContent({
             </li>
           </ol>
           <p>
-            Already using Claude Code, Codex or Gemini CLI? You can use its existing CLI login
+            Already using Claude Code, Codex or Antigravity CLI? You can use its existing CLI login
             instead. “Installed” means Slopify found the CLI; sign in through that CLI before
             generating. If it is missing, enter its executable path and save to check again.
           </p>

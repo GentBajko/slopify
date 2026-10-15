@@ -16,7 +16,7 @@ The first-run screen stops appearing for good when you press **Skip** (it reads 
 
 ### Found on this computer
 
-Slopify looks for Claude Code, Codex and Gemini CLI and shows one row for each:
+Slopify looks for Claude Code, Codex and Antigravity CLI and shows one row for each:
 
 | Row says | Meaning |
 | --- | --- |
