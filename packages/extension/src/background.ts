@@ -359,7 +359,12 @@ async function answer(request: WorkerRequest): Promise<WorkerAnswer<unknown>> {
         ok: true,
         value: await post(
           "/api/studio/ext/video/done",
-          { projectId: request.projectId, short: request.short, videoId: request.videoId },
+          {
+            projectId: request.projectId,
+            short: request.short,
+            videoId: request.videoId,
+            captionsAdded: request.captionsAdded === true,
+          },
           "the finished upload",
         ),
       };

@@ -379,36 +379,89 @@ async function captions(file: File): Promise<Step> {
   ].find((one) => laidOut(one) && /^\s*Subtitles\b/i.test(one.textContent ?? ""));
   if (trigger === undefined) return byHand("The Subtitles editor wasn't found.");
   click(trigger);
+  return captionsInEditor(file, byHand);
+}
+
+// The upload dialog's Video elements step: Add subtitles (`ytcp-button#subtitles-button`), then
+// the same Subtitles editor as on the Details page. Read from Studio's own code on 2026-10-15
+// (not clicked through on a live upload): Add subtitles stays disabled, with a tooltip saying
+// why, until the video has processed far enough to play and has a language, and opens the
+// editor on "Select how you want to add subtitles" with Upload file (`#choose-upload-file`).
+// Where it fails, the captions wait for the Details-page touches after the upload
+// (`finishDetails`), as before.
+const subtitlesButton = "ytcp-uploads-video-elements ytcp-button#subtitles-button";
+
+export function videoElementsShown(dialog: Element): boolean {
+  return shownIn(dialog, "ytcp-uploads-video-elements") !== undefined;
+}
+
+// Why Add subtitles can't be pressed yet (Studio's own tooltip, else a general sentence), or
+// undefined once it can. Studio enables it on its own when the reason goes away.
+export function subtitlesBlocked(dialog: Element): string | undefined {
+  const add = shownIn(dialog, subtitlesButton);
+  if (add === undefined) return undefined;
+  if (!add.hasAttribute("disabled") && add.getAttribute("aria-disabled") !== "true")
+    return undefined;
+  const tip = dialog.querySelector("#subtitles-button-tooltip")?.textContent?.trim();
+  return tip !== undefined && tip !== "" ? tip : "Studio hasn't enabled Add subtitles yet.";
+}
+
+export async function uploadCaptions(dialog: Element, file: File): Promise<Step> {
+  const later = (why: string): Step => ({
+    ok: false,
+    message: `${why} Slopify uploads the captions on the video's Details page once the upload is scheduled or published.`,
+  });
+  const add = shownIn(dialog, subtitlesButton);
+  if (add === undefined) return later("The Video elements step's Add subtitles wasn't found.");
+  const blocked = subtitlesBlocked(dialog);
+  if (blocked !== undefined) return later(`Add subtitles can't be pressed: ${blocked}`);
+  press(add);
+  return captionsInEditor(file, later);
+}
+
+// Studio's Subtitles editor, once asked to open: Upload file (on the first screen for a video
+// without subtitles, else under ⋮), With timing, the file, then the editor's own Done once
+// Studio enables it.
+async function captionsInEditor(file: File, fail: (why: string) => Step): Promise<Step> {
   const modal = await until(() => shownIn(document, "ytve-captions-editor-modal"), 15000);
   if (modal === null)
-    return byHand("The Subtitles editor didn't open (it may ask for the video's language first).");
-  const more = [...modal.querySelectorAll("ytcp-icon-button, button")].find(
-    (one) => laidOut(one) && /more|option|action/i.test(one.getAttribute("aria-label") ?? ""),
+    return fail("The Subtitles editor didn't open (it may ask for the video's language first).");
+  let upload: Element | null | undefined = await until(
+    () => shownIn(modal, "#choose-upload-file"),
+    3000,
   );
-  if (more === undefined) return byHand("The Subtitles editor's ⋮ menu wasn't found.");
-  press(more);
-  const upload = await until(() => byText(document, "tp-yt-paper-item", /^Upload file$/i), 3000);
-  if (upload === null) return byHand("Upload file wasn't offered in the Subtitles editor.");
+  if (upload === null) {
+    const more = [...modal.querySelectorAll("ytcp-icon-button, button")].find(
+      (one) => laidOut(one) && /more|option|action/i.test(one.getAttribute("aria-label") ?? ""),
+    );
+    if (more === undefined) return fail("The Subtitles editor's ⋮ menu wasn't found.");
+    press(more);
+    upload = await until(() => byText(document, "tp-yt-paper-item", /^Upload file$/i), 3000);
+  }
+  if (upload === null) return fail("Upload file wasn't offered in the Subtitles editor.");
   press(upload);
   const dialog = await until(
     () => shownIn(document, "ytve-captions-editor-upload-dialog tp-yt-paper-dialog"),
     4000,
   );
-  if (dialog === null) return byHand("The caption upload dialog didn't open.");
+  if (dialog === null) return fail("The caption upload dialog didn't open.");
   const timing = byText(dialog, "tp-yt-paper-radio-button", /^With timing$/i);
   if (timing !== undefined && timing.getAttribute("aria-checked") !== "true") press(timing);
   const input = document.querySelector<HTMLInputElement>(
     "ytve-captions-editor-upload-dialog input#captions-file-loader",
   );
-  if (input === null) return byHand("The caption upload's file field wasn't found.");
+  if (input === null) return fail("The caption upload's file field wasn't found.");
   setFiles(input, [file]);
   await until(() => (laidOut(dialog) ? null : true), 10000);
-  const done = shownIn(modal, "ytcp-button#publish-button");
-  if (done === undefined) return byHand("The Subtitles editor's Done wasn't found.");
+  const done = await until(() => {
+    const button = shownIn(modal, "ytcp-button#publish-button");
+    return button !== undefined && !button.hasAttribute("disabled") ? button : null;
+  }, 10000);
+  if (done === null) return fail("The Subtitles editor's Done wasn't found or stayed greyed out.");
   pressToSave(done);
   const closed = await until(() => (laidOut(modal) ? null : true), 15000);
   return closed === null
-    ? byHand("The Subtitles editor didn't close after Done.")
+    ? fail("The Subtitles editor didn't close after Done.")
     : { ok: true, message: "Captions uploaded." };
 }
 

@@ -803,6 +803,23 @@ describe("YouTube videos and their A/B tests", () => {
     expect((await h.call("/ext/tasks")).status).toBe(401);
   });
 
+  it("queues no Details touches when the captions went in during the upload", async () => {
+    const h = harness();
+    finished(h.output);
+    h.output("subtitles_srt", "captions.srt", "1\n00:00:00,000 --> 00:00:02,000\nA fox.\n");
+    const token = await paired(h);
+    const upload = { projectId: "p1", short: null, videoId: "lKS3FAjekpI" };
+    await h.call("/ext/video", ext(token, upload));
+    await h.call("/ext/video/done", ext(token, { ...upload, captionsAdded: true }));
+    expect(await (await h.call("/videos/p1")).json()).toMatchObject({
+      videos: [{ uploadState: "done", finishState: "none" }],
+    });
+    const tasks = (await (await h.call("/ext/tasks", ext(token))).json()) as {
+      finish: unknown[];
+    };
+    expect(tasks.finish).toEqual([]);
+  });
+
   it("forgets a video Studio says was deleted, but not a slot uploaded again since", async () => {
     const h = harness();
     finished(h.output);

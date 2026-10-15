@@ -11,6 +11,9 @@ import {
   monetizationUnset,
   rateAdSuitability,
   readAbResult,
+  subtitlesBlocked,
+  uploadCaptions,
+  videoElementsShown,
 } from "./studio-pages.js";
 import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 
@@ -23,7 +26,8 @@ import type { VideoAnswer, VideoRequest } from "./video-frame.js";
 // then offers "Fill again from Slopify". If Studio's dialog lacks a field the item needs, it
 // fills nothing and puts the whole pack on the clipboard instead. Every message whose text has
 // to be pasted by hand has a Copy button, since the page may refuse a clipboard write that no
-// click asked for. It never presses Next, Save or Publish.
+// click asked for. It never presses Next, Save or Publish. Once the person presses Next to the
+// Video elements step, a long video's captions are uploaded there.
 
 const api = browserApi();
 const panelId = "slopify-studio-panel";
@@ -33,6 +37,10 @@ let payload: FillPayload | undefined;
 let againRow: HTMLElement | undefined;
 // Whether Slopify was told this dialog's item is filled, so it leaves the queue once.
 let reported = false;
+// The upload whose captions went in during the upload dialog (`projectId`), so its
+// confirmation tells Slopify and the Details-page touches skip them.
+let captioned: string | undefined;
+const captionedKey = (projectId: string) => `captionsAdded:${projectId}`;
 
 function toastArea(): HTMLElement {
   let area = document.getElementById(panelId);
@@ -154,6 +162,8 @@ async function fill(next: boolean): Promise<void> {
       return;
     }
     payload = answer.value;
+    // A new upload of this project: its captions aren't in yet.
+    await api.storage.local.set({ [captionedKey(payload.projectId)]: null });
   }
   const current = payload;
   const { item, thumbnails } = current;
@@ -250,6 +260,7 @@ async function recordVideo(current: FillPayload): Promise<void> {
   const done = (await api.runtime.sendMessage({
     type: "video-done",
     ...upload,
+    captionsAdded: upload.short === null && captioned === current.projectId,
   })) as WorkerAnswer<unknown>;
   if (!done.ok) {
     toast(done.message, "error");
@@ -396,8 +407,10 @@ async function runFinish(projectId: string, short: number | null): Promise<void>
     await report(false, "Slopify didn't send the upload's details.");
     return;
   }
+  const key = captionedKey(projectId);
+  const added = typeof (await api.storage.local.get([key]))[key] === "number";
   const captions =
-    payload.captions === undefined
+    payload.captions === undefined || added
       ? undefined
       : file({
           filename: payload.captions.filename,
@@ -603,6 +616,10 @@ function look(): void {
   // A long video's Monetization step: turned on once. Ad suitability: answered once.
   let monetized = false;
   let rated = false;
+  // A long video's captions, in the Video elements step: added once, as soon as Studio enables
+  // Add subtitles; why it can't yet is said once.
+  let subtitled = false;
+  let waitSaid = false;
   const closed = setInterval(() => {
     if (
       !monetized &&
@@ -617,6 +634,39 @@ function look(): void {
     if (!rated && dialog !== null && shown(dialog) && adSuitabilityShown(dialog)) {
       rated = true;
       void rateAdSuitability(dialog).then((step) => toast(step.message, step.ok ? "ok" : "error"));
+    }
+    const withCaptions = payload;
+    if (
+      !subtitled &&
+      withCaptions?.item.kind === "video" &&
+      withCaptions.captions !== undefined &&
+      dialog !== null &&
+      shown(dialog) &&
+      videoElementsShown(dialog)
+    ) {
+      const blocked = subtitlesBlocked(dialog);
+      if (blocked !== undefined) {
+        if (!waitSaid)
+          toast(
+            `Slopify adds the captions here once Studio enables Add subtitles: ${blocked} Stay on Video elements to have them added during the upload, or go on and they are added on the Details page afterwards.`,
+            "info",
+          );
+        waitSaid = true;
+      } else {
+        subtitled = true;
+        const captionsFile = file({
+          filename: withCaptions.captions.filename,
+          contentType: "application/x-subrip",
+          base64: withCaptions.captions.base64,
+        });
+        void uploadCaptions(dialog, captionsFile).then(async (step) => {
+          if (step.ok) {
+            captioned = withCaptions.projectId;
+            await api.storage.local.set({ [captionedKey(withCaptions.projectId)]: Date.now() });
+          }
+          toast(step.message, step.ok ? "ok" : "info");
+        });
+      }
     }
     const at = payload?.item.scheduleAt;
     const visibility = dialog?.querySelector("ytcp-video-visibility-select");
@@ -647,6 +697,7 @@ function look(): void {
   againRow.append(button("Fill again from Slopify", () => void fill(false)));
   payload = undefined;
   reported = false;
+  captioned = undefined;
   void fill(true);
 }
 

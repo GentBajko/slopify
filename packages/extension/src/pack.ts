@@ -123,6 +123,8 @@ export type WorkerRequest =
       readonly projectId: string;
       readonly short: number | null;
       readonly videoId: string;
+      // The captions went in during the upload dialog, not after.
+      readonly captionsAdded?: boolean;
     }
   // A Studio page opened for one upload (A/B test, Details touches) asks for its item.
   | { readonly type: "item"; readonly projectId: string; readonly short: number | null }

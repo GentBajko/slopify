@@ -129,6 +129,8 @@ const extVideoBody = z.object({
   projectId: id,
   short: shortField,
   videoId: z.string().regex(videoIdPattern),
+  // `/ext/video/done`: the captions went in during the upload dialog's Video elements step.
+  captionsAdded: z.boolean().optional(),
 });
 const goneBody = z.object({
   videos: z.array(extVideoBody).max(1000),
@@ -931,8 +933,8 @@ export function studioRoutes(deps: AppDeps) {
       .post("/ext/video/done", zValidator("json", extVideoBody, onInvalid), (c) => {
         allowOrigin(c, false);
         if (!extAllowed(c)) return refused(c);
-        const { projectId, short, videoId } = c.req.valid("json");
-        confirmVideoUpload(deps, projectId, short ?? null, videoId);
+        const { projectId, short, videoId, captionsAdded } = c.req.valid("json");
+        confirmVideoUpload(deps, projectId, short ?? null, videoId, captionsAdded === true);
         return c.json({ confirmed: true });
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
@@ -976,13 +978,14 @@ export function studioRoutes(deps: AppDeps) {
 }
 
 // Studio said the upload was scheduled or published: it is on YouTube, and the Details touches
-// (a short's related video, the long video's end screen and captions) wait for the extension,
-// the pinned comment for the video to be public.
+// (a short's related video, the long video's end screen and captions, unless they went in
+// during the upload) wait for the extension, the pinned comment for the video to be public.
 function confirmVideoUpload(
   deps: AppDeps,
   projectId: string,
   short: number | null,
   videoId: string,
+  captionsAdded = false,
 ): void {
   if (!confirmUpload(deps.db, projectId, short, videoId))
     recordVideo(deps.db, projectId, short, videoId, deps.clock.now().toISOString());
@@ -994,7 +997,7 @@ function confirmVideoUpload(
     confirmedItem !== undefined &&
     (confirmedItem.relatedVideoId !== undefined ||
       confirmedItem.endScreenVideoId !== undefined ||
-      confirmedItem.captions !== undefined)
+      (confirmedItem.captions !== undefined && !captionsAdded))
   )
     setTaskState(deps.db, "finish", projectId, short, "waiting", null);
   if (
