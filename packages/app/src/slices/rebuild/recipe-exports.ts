@@ -22,6 +22,9 @@ import {
 export function exportRecipes(
   context: RecipeContext,
   audio: AudioRecipes,
+  // The timelines a finished timing may have been made from before Soften breaths or Soften S
+  // sounds were turned on (`recipe-softening.ts`).
+  unsoftened: () => readonly FingerprintValue[] = () => [],
 ): readonly ResolvedWorkRecipe[] {
   const { config, content } = context;
   if (audio.mediaFingerprint === null) return [];
@@ -44,29 +47,43 @@ export function exportRecipes(
     reviewsNarration(config) ||
     voices?.audioFiles === true ||
     lined;
-  const timing = timed
-    ? recipe(
-        context,
-        "subtitles:timing",
-        "video",
-        {
-          kind: "local",
-          version: 1,
-          operation: timingOperation(projectLanguage(config)),
-          // The lead-in moves every word, so the edge silence is part of the timing.
-          values: [
-            audio.timeline,
-            config.silenceGapSeconds,
-            // The project language; an English project reads "en" here as it always did.
-            config.language ?? config.subtitles?.language ?? "en",
-            config.edgeSilenceSeconds,
-            // Each word learns its speaker and turn on a multi-voice run.
-            ...(voices === undefined ? [] : ["voice-words-v1"]),
-          ],
-        },
-        audio.keys,
-      )
-    : undefined;
+  const timingOf = (timeline: FingerprintValue) =>
+    recipe(
+      context,
+      "subtitles:timing",
+      "video",
+      {
+        kind: "local",
+        version: 1,
+        operation: timingOperation(projectLanguage(config)),
+        // The lead-in moves every word, so the edge silence is part of the timing.
+        values: [
+          timeline,
+          config.silenceGapSeconds,
+          // The project language; an English project reads "en" here as it always did.
+          config.language ?? config.subtitles?.language ?? "en",
+          config.edgeSilenceSeconds,
+          // Each word learns its speaker and turn on a multi-voice run.
+          ...(voices === undefined ? [] : ["voice-words-v1"]),
+        ],
+      },
+      audio.keys,
+    );
+  const timedNow = timed ? timingOf(audio.timeline) : undefined;
+  // A finished timing made before the narration was softened is kept: softening moves no word.
+  const doneTiming = (fingerprint: string) =>
+    (context.history ?? context.manifest).pieces.some(
+      (row) =>
+        row.key === "subtitles:timing" &&
+        row.piece.state === "done" &&
+        row.fingerprint === fingerprint,
+    );
+  const timing =
+    timedNow === undefined || doneTiming(timedNow.fingerprint)
+      ? timedNow
+      : (unsoftened()
+          .map(timingOf)
+          .find((one) => doneTiming(one.fingerprint)) ?? timedNow);
   const lines = linePlan(context, timing);
   // The timing goes ahead of what waits for it; any other run keeps its old order.
   if (lined && timing !== undefined) recipes.push(timing);

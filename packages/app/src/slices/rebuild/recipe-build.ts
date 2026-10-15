@@ -11,6 +11,7 @@ import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
 import { imageScenes, thumbnailScenes } from "./recipe-scenes.js";
 import { shortsRecipes } from "./recipe-shorts.js";
+import { unsoftenedTimelines } from "./recipe-softening.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
 import { youtubeRecipes } from "./recipe-youtube.js";
@@ -63,7 +64,7 @@ const descriptionKey = "youtube:description";
 function buildEach(context: RecipeContext): readonly ResolvedWorkRecipe[] {
   const text = textRecipes(context);
   const audio = audioRecipes(context, text);
-  const exports = exportRecipes(context, audio);
+  const exports = exportRecipes(context, audio, () => unsoftenedTimelines(context, text));
   const captions = exports.find((value) => value.key === "subtitles:files");
   const timing = exports.find((value) => value.key === "subtitles:timing");
   // How the subject and characters look, looked up when a prompt has `{{Appearance}}`.

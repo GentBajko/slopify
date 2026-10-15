@@ -1,0 +1,3 @@
+# Softening keeps the word timing
+
+- **Turning on Soften breaths or Soften S sounds no longer rewrites the description or re-picks the shorts.** Softening changes how the narration sounds but never moves a word, yet the word timing read the softened narration as new, so it timed every word again and wrote the YouTube description and the shorts' pick again (text calls) to the same result. A finished timing made before the narration was softened is now kept, with everything written from it; the narration is joined again, and the video and shorts are rendered again. Any other change to the narration still times the words again.
