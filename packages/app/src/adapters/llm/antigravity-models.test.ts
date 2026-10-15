@@ -19,6 +19,17 @@ describe("Antigravity model list", () => {
     ]);
   });
 
+  it("reads the tab-separated listing agy 1.3.6 really prints", () => {
+    // Captured from agy 1.3.6 on 2026-10-15, including its progress line.
+    const real =
+      "Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\nclaude-sonnet-4-6\tClaude Sonnet 4.6 (Thinking)\ngpt-oss-120b-medium\tGPT-OSS 120B (Medium)\n";
+    expect(parseAntigravityModels(real)).toEqual([
+      { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
+      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)" },
+      { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" },
+    ]);
+  });
+
   it("runs agy models and explains a failure with what to do", async () => {
     let called: readonly string[] = [];
     const models = await nodeAntigravityModels("agy", async (file, args) => {

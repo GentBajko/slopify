@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import { access, stat } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { z } from "zod";
+import { parseAntigravityModels } from "../adapters/llm/antigravity-models.js";
 import { cliLoginError } from "../adapters/llm/cli-login-error.js";
 import { cliCommand } from "../kernel/cli-command.js";
 import type { HostCliId, HostCliStatus, HostLlmId } from "../kernel/ports/host-cli.js";
@@ -11,11 +12,6 @@ import {
   cliProbeTimeoutMs,
   readinessFromProbe,
 } from "../slices/settings/cli-status.js";
-import {
-  type AntigravityLoginHost,
-  nodeAntigravityLoginHost,
-  readAntigravityLogin,
-} from "./antigravity-login.js";
 
 export function hostCommandName(id: HostCliId): string {
   if (id === "claude-code") return "claude";
@@ -47,7 +43,13 @@ export function parseHostLogin(
   stdout: string,
   stderr: string,
 ): HostCliStatus["login"] {
-  if (id === "gemini") return "unknown";
+  if (id === "gemini") {
+    // agy has no status command; "agy models" lists models only when signed in (agy 1.3.6).
+    if (parseAntigravityModels(stdout).length > 0) return "signed-in";
+    return /Please sign in|authentication required/i.test(`${stdout}\n${stderr}`)
+      ? "signed-out"
+      : "unknown";
+  }
   if (id === "codex") {
     const text = `${stdout}\n${stderr}`.trim();
     if (/^Not logged in\.?$/i.test(text)) return "signed-out";
@@ -65,15 +67,19 @@ export async function readHostLogin(
   binary: string,
   id: HostLlmId,
   signal: AbortSignal,
-  antigravity: AntigravityLoginHost = nodeAntigravityLoginHost(),
 ): Promise<HostCliStatus["login"]> {
-  // The Antigravity CLI has no status command; only its API-key mode shows in its files.
-  if (id === "gemini") return readAntigravityLogin(antigravity);
   const command = cliCommand(binary);
   return new Promise((resolve) => {
     execFile(
       command.file,
-      [...command.args, ...(id === "claude-code" ? ["auth", "status"] : ["login", "status"])],
+      [
+        ...command.args,
+        ...(id === "claude-code"
+          ? ["auth", "status"]
+          : id === "gemini"
+            ? ["models"]
+            : ["login", "status"]),
+      ],
       { timeout: cliProbeTimeoutMs, maxBuffer: 64 * 1024, signal, windowsHide: true },
       (error, stdout, stderr) => {
         if (error && (error.killed || typeof error.code !== "number")) return resolve("unknown");

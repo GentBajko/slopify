@@ -177,7 +177,6 @@ Values of names matching `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, `*_KEY` are shown 
 | SLOPIFY_CODEX_MODELS_FILE | `<CODEX_HOME>/models_cache.json` | `packages/app/src/adapters/llm/codex-models.ts:41` | source only |
 | CODEX_HOME | `~/.codex` | `packages/app/src/adapters/llm/codex-models.ts:40`, `packages/app/src/adapters/image/codex-output.ts:32`; captured for the helper `packages/app/src/host-cli/environment.ts:11` | source only |
 | CLAUDE_CONFIG_DIR | inherited | Model-discovery env allowlist `packages/app/src/adapters/llm/claude-code-models.ts:65`; helper capture `packages/app/src/host-cli/environment.ts:12` | source only |
-| GEMINI_API_KEY | `<redacted>` | Antigravity CLI API-key-mode sign-in check `packages/app/src/host-cli/antigravity-login.ts:40`, `packages/app/src/slices/settings/health.ts:190` | Health message |
 | SLOPIFY_SKIP_MANAGED_UPDATE | unset; image `1`; update candidates `1` | `packages/app/src/updater/forward.ts:9`, `packages/app/src/updater/worker.ts:56`, `Dockerfile:27` | internal |
 | SLOPIFY_DISABLE_UPDATES | unset; image `1` (registry not asked, in-app install replaced by the terminal command) | `packages/app/src/main.ts:430`, `Dockerfile:28` | internal |
 | SLOPIFY_CONTAINER | unset; image `1` (Docker file layout, Docker autostart view, host CLI client) | `packages/app/src/main.ts:256`, `packages/app/src/main.ts:332`, `packages/app/src/edge/autostart/index.ts:24`, `Dockerfile:29` | internal |
@@ -204,7 +203,7 @@ Values of names matching `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, `*_KEY` are shown 
 | USERPROFILE / APPDATA / LOCALAPPDATA / WINDIR | Windows Documents fallback, Docker Desktop settings path, font dirs | `packages/app/src/slices/storage/documents.ts:62`, `packages/app/src/edge/autostart/docker.ts:87`, `packages/app/src/slices/fonts/discovery.ts:16` | source only |
 | WSL_DISTRO_NAME / WSL_INTEROP | presence = WSL | `packages/app/src/edge/open-browser.ts:8` | source only |
 | NODE_ENV / HOME (image) | `production` / `/data/home` | `Dockerfile:21` | image |
-| AGY_CLI_DISABLE_AUTO_UPDATE=true | set on Antigravity CLI children (calls and `agy models`) | `packages/app/src/adapters/llm/antigravity.ts:98`, `packages/app/src/adapters/llm/antigravity-models.ts:29` | internal |
+| AGY_CLI_DISABLE_AUTO_UPDATE=true | set on Antigravity CLI children (calls and `agy models`) | `packages/app/src/adapters/llm/antigravity.ts:128`, `packages/app/src/adapters/llm/antigravity-models.ts:29` | internal |
 | SLOPIFY_SPEECH_VOICE / _OUT / _TEXT | set on the Windows System.Speech PowerShell child | `packages/app/src/adapters/tts/system.ts:65` | internal |
 | npm_config_update_notifier | `false` on the update installer child | `packages/app/src/updater/worker.ts:139` | internal |
 | SLOPIFY_SMOKE_IMAGE / SLOPIFY_SMOKE_KEEP / SLOPIFY_DOCKER_FIXTURE_OUT | `slopify:smoke` / unset (failed smoke material removed unless `1`) / unset | `packages/app/scripts/container-smoke.sh:12`, `packages/app/scripts/docker-install-smoke.mjs:249`, `packages/app/scripts/docker-install-smoke.mjs:136` | scripts only |

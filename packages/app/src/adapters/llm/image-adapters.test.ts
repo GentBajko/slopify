@@ -138,14 +138,12 @@ describe("Codex with pictures", () => {
   it("says it can see pictures", () => {
     expect(codexLlm({ run: streaming([]).run }).capabilities.images).toBe(true);
     expect(claudeCodeLlm({ run: streaming([]).run }).capabilities.images).toBe(true);
+    expect(antigravityLlm({ run: streaming([]).run }).capabilities.images).toBe(true);
   });
 });
 
 describe("providers that can't be shown pictures", () => {
   it("refuses rather than answering blind", async () => {
-    await expect(
-      drain(antigravityLlm({ run: streaming([]).run }).complete(request(picture()))),
-    ).rejects.toMatchObject({ fault: { kind: "unsupported" } });
     await expect(
       drain(
         openRouterLlm({ fetch: () => Promise.reject(new Error("no")), key: () => "k" }).complete(

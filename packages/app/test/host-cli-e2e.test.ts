@@ -59,15 +59,9 @@ async function fixture() {
       models: [{ slug: "gpt-test", display_name: "GPT Test", visibility: "list" }],
     }),
   );
-  // Antigravity has no status command and keeps a Google sign-in in the keyring: the fixture
-  // uses its API-key mode, which Slopify can read from files.
-  await mkdir(join(home, ".gemini/antigravity-cli"), { recursive: true });
-  await writeFile(
-    join(home, ".gemini/antigravity-cli/settings.json"),
-    JSON.stringify({ modelProvider: "gemini" }),
-  );
+  // Antigravity has no status command: Slopify asks "agy models", which the fake answers.
   vi.stubEnv("HOME", home);
-  vi.stubEnv("GEMINI_API_KEY", "fixture-key");
+  vi.stubEnv("GEMINI_API_KEY", undefined);
   vi.stubEnv("CODEX_HOME", join(home, ".codex"));
   vi.stubEnv("CLAUDE_CONFIG_DIR", join(home, ".claude"));
   vi.stubEnv("PATH", bin);

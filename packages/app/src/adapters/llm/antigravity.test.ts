@@ -1,4 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent } from "../../kernel/ports/llm.js";
 import { antigravityArgs, antigravityLlm } from "./antigravity.js";
@@ -122,8 +124,7 @@ describe("Antigravity CLI", () => {
       "stream-json",
       "--output-format",
       "stream-json",
-      "--print-timeout",
-      "60m",
+      "--disable-slash-commands",
       "--model",
       "gemini-3.8-flash-high",
     ]);
@@ -188,12 +189,73 @@ describe("Antigravity CLI", () => {
     expect(one.killed()).toBe(1);
   });
 
-  it("refuses images and declares no web search it cannot prove", async () => {
-    const port = antigravityLlm({ run: fake(success).run });
-    expect(port.capabilities.webSearch).toBe(false);
-    await expect(
-      drain(fake(success).run, request({ images: [{ path: "/x.png", name: "x.png" }] })),
-    ).rejects.toThrow("Antigravity CLI");
+  it("searches the web with search_web only, never opening pages it may not read", async () => {
+    let rules = "";
+    const one = fake(success, {
+      inspect: (options) => {
+        rules = readFileSync(join(options.cwd ?? "", "AGENTS.md"), "utf8");
+      },
+    });
+    expect(antigravityLlm({ run: one.run }).capabilities.webSearch).toBe(true);
+    await drain(one.run, request({ webSearch: true }));
+    expect(rules).toContain("use only the search_web tool");
+    expect(rules).toContain("Never open web pages");
+    await drain(one.run, request());
+    expect(rules).toContain("Do not search the web");
+  });
+
+  it("copies pictures into its folder and refuses an answer that skipped one", async () => {
+    const source = mkdtempSync(join(tmpdir(), "slopify-agy-pictures-"));
+    try {
+      writeFileSync(join(source, "a.png"), "png");
+      writeFileSync(join(source, "b.jpg"), "jpg");
+      const images = [
+        { path: join(source, "a.png"), name: "Scene 1" },
+        { path: join(source, "b.jpg"), name: "Scene 2" },
+      ];
+      const viewed = (file: string) => ({
+        event: "step_update",
+        step_update: {
+          step_index: 1,
+          state: "DONE",
+          step_type: "tool",
+          tool_name: "view_file",
+          tool_info: { name: "view_file", parameters: { AbsolutePath: `/somewhere/${file}` } },
+        },
+      });
+      let files: string[] = [];
+      let prompt = "";
+      const both = fake([viewed("image-1.png"), viewed("image-2.jpg"), result()], {
+        inspect: (options) => {
+          files = readdirSync(options.cwd ?? "").toSorted();
+          prompt = JSON.parse(options.stdin ?? "").message.content;
+        },
+      });
+      const events = await drain(both.run, request({ images }));
+      expect(files).toEqual(["AGENTS.md", "image-1.png", "image-2.jpg"]);
+      expect(prompt).toContain("image-1.png: Scene 1");
+      expect(events).toContainEqual({ type: "delta", text: "Once upon a time." });
+      await expect(
+        drain(fake([viewed("image-1.png"), result()]).run, request({ images })),
+      ).rejects.toThrow("without opening every picture");
+    } finally {
+      rmSync(source, { recursive: true, force: true });
+    }
+  });
+
+  it("treats an empty answer as a failure and explains a denied tool", async () => {
+    // agy 1.3.6 ends a headless turn whose tool was refused with SUCCESS, no text and exit 0.
+    const denied = fake([result({ response: "" })], {
+      stderr:
+        'jetski: no output produced — a tool required the "read_url" permission that headless mode cannot prompt for, so it was auto-denied.',
+    });
+    await expect(drain(denied.run)).rejects.toMatchObject({
+      fault: { kind: "other" },
+      message: expect.stringContaining("tried to use a tool Slopify does not allow"),
+    });
+    await expect(drain(fake([result({ response: "" })]).run)).rejects.toThrow(
+      "answered with no text",
+    );
   });
 
   it("reports a failed run with the CLI's words, redacted", async () => {
@@ -205,11 +267,22 @@ describe("Antigravity CLI", () => {
   });
 
   it("tells a signed-out user exactly how to sign in", async () => {
-    const one = fake([], { stderr: "Error: authentication required", code: 1 });
-    await expect(drain(one.run)).rejects.toMatchObject({
+    // What agy 1.3.6 prints when it has no sign-in: an ERROR result and a stderr line.
+    const one = fake(
+      [result({ status: "ERROR", response: "", error: "authentication failed or timed out" })],
+      {
+        stderr:
+          "Error: authentication required. Run 'agy' to log in, then retry.\nerror: authentication failed or timed out\n",
+        code: 1,
+      },
+    );
+    const message =
+      'The Antigravity CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running it, run "agy" and sign in with your Google account, then use Try again.';
+    await expect(drain(one.run)).rejects.toMatchObject({ fault: { kind: "missing_key" }, message });
+    const bare = fake([], { stderr: "Error: authentication required", code: 1 });
+    await expect(drain(bare.run)).rejects.toMatchObject({
       fault: { kind: "missing_key" },
-      message:
-        'The Antigravity CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running it, run "agy" and sign in with your Google account (or set GEMINI_API_KEY with "modelProvider": "gemini" in ~/.gemini/antigravity-cli/settings.json), then use Try again.',
+      message,
     });
   });
 
@@ -229,11 +302,33 @@ describe("Antigravity CLI", () => {
     });
   });
 
-  it("waits for a used-up Antigravity quota instead of failing", async () => {
-    const one = fake([
-      result({ status: "ERROR", response: "", error: "You have exhausted your weekly quota." }),
-    ]);
-    await expect(drain(one.run)).rejects.toMatchObject({
+  it("retries a short capacity limit soon and waits for a used-up allowance", async () => {
+    // Captured from agy 1.3.6 when three calls ran at once.
+    const capacity =
+      "API error (attempt 1): RESOURCE_EXHAUSTED (code 429): You have exhausted your capacity on this model. Resets in 0s.";
+    const fail = (error: string) => fake([result({ status: "ERROR", response: "partial", error })]);
+    const port = (error: string) =>
+      antigravityLlm({ run: fail(error).run, now: () => Date.parse("2026-10-15T12:00:00Z") });
+    const take = async (error: string) => {
+      for await (const _ of port(error).complete(request())) {
+        /* drain */
+      }
+    };
+    await expect(take(capacity)).rejects.toMatchObject({
+      fault: { kind: "rate_limit", retryAfterMs: 1000 },
+    });
+    await expect(take(capacity)).rejects.not.toMatchObject({ fault: { planLimit: {} } });
+    await expect(
+      take(
+        "RESOURCE_EXHAUSTED (code 429): You have exhausted your capacity on this model. Resets in 3h20m5s.",
+      ),
+    ).rejects.toMatchObject({
+      fault: {
+        kind: "rate_limit",
+        planLimit: { account: "gemini", resetsAt: "2026-10-15T15:20:05.000Z" },
+      },
+    });
+    await expect(take("You have exhausted your weekly quota.")).rejects.toMatchObject({
       fault: { kind: "rate_limit", planLimit: { account: "gemini", resetsAt: null } },
     });
   });

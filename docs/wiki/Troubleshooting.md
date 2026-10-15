@@ -39,9 +39,10 @@ Keys and how to get them: [Providers and Keys](Providers-and-Keys).
 | "No Codex model is chosen for images." | Choose a model (or Codex default) for images in **Edit project → Providers**, then try again. |
 | "Slopify could not get the model list from the *CLI* CLI." | Check the CLI is installed and signed in (Settings → Providers), refresh the list, or type an exact model ID. |
 | A CLI shows as not installed in Settings | Install the CLI so it is on your `PATH`, or, in Docker, rerun the Docker install after installing or moving a CLI so the host helper finds it. Then press **Check again** on its row under **Health check**. |
-| Antigravity CLI shows "Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read…" | Run `agy` in a terminal once and sign in with your Google account (or use API-key mode: `"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` and `GEMINI_API_KEY` set), then press **Check again**. |
+| "The Antigravity CLI tried to use a tool Slopify does not allow (it said: …), so it gave no answer." | Headless `agy` refuses page reading, the browser and commands, and then ends its turn with no text. Press **Try again**. If it keeps happening, choose another model or text provider in the **Providers** section of **Edit project**. |
+| "The Antigravity CLI answered with no text." | Press **Try again**. If it keeps happening, run `agy` in a terminal to check it works, or choose another model in the **Providers** section of **Edit project**. |
+| "The Antigravity CLI is busy: Google's capacity for this model is used for the moment…" | Nothing to do: Slopify tries again by itself shortly. If it keeps happening, run fewer projects at once or choose another model in the **Providers** section of **Edit project**. |
 | "The Antigravity CLI is not signed in…" | Run `agy` in a terminal, sign in with your Google account, then press **Try again**. |
-| A research step says the command-line tool cannot search the web | Antigravity CLI cannot search the web. Pick Claude Code, Codex or OpenRouter for the research step in **Edit project → Providers**. |
 | A run stops with "The chosen model is not available…" after the move from Gemini CLI | The old Gemini CLI model ids (for example `gemini-2.5-pro`) are not in the Antigravity CLI list. Run `agy models` and pick a model in **Edit project → Providers**. |
 
 See [AI CLIs](AI-CLIs).

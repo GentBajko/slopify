@@ -4,12 +4,12 @@ import type { ModelInfo } from "../../kernel/ports/model.js";
 
 export type ReadCliOutput = (file: string, args: readonly string[]) => Promise<string>;
 
-// `agy models` prints one model per line: its slug, spaces, then its display name
-// (antigravity.google/docs/cli/headless.md). Lines that are not a slug are skipped.
+// `agy models` prints one model per line: its slug, a tab (spaces in Google's docs), then its
+// display name. Lines that are not a slug are skipped.
 export function parseAntigravityModels(text: string): readonly ModelInfo[] {
   const models = new Map<string, ModelInfo>();
   for (const line of text.split(/\r?\n/).slice(0, 1000)) {
-    const match = /^\s*([a-z0-9][a-z0-9._-]{1,127})\s{2,}(\S.{0,255}?)\s*$/.exec(line);
+    const match = /^\s*([a-z0-9][a-z0-9._-]{1,127})(?:\t+|\s{2,})(\S.{0,255}?)\s*$/.exec(line);
     if (match?.[1] === undefined || match[2] === undefined || models.has(match[1])) continue;
     models.set(match[1], { id: match[1], name: match[2] });
   }

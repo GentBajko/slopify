@@ -44,7 +44,7 @@ export const settingsHelp = {
   },
   "settings.provider.gemini": {
     title: "Antigravity CLI",
-    body: "Writes the text with Google's Antigravity command-line tool (agy), which replaced the Gemini CLI, using your own Google sign-in, so no API key is needed. Install it from antigravity.google, then run agy in a terminal once to sign in. It can't search the web for research or look at pictures; pick another provider for those. Slopify runs up to 3 calls at once.",
+    body: "Writes the text with Google's Antigravity command-line tool (agy), which replaced the Gemini CLI, using your own Google sign-in, so no API key is needed. Install it from antigravity.google, then run agy in a terminal once to sign in. It researches with web search and can look at pictures, but never opens web pages or runs commands. Slopify runs up to 3 calls at once.",
     tutorial: { page: "AI-CLIs", anchor: "set-up-a-cli" },
   },
   "settings.provider.codex-image": {

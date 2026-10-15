@@ -20,6 +20,22 @@ it("reads only documented login status", () => {
   expect(parseHostLogin("codex", "Not logged in\n", "")).toBe("signed-out");
   expect(parseHostLogin("codex", "", "permission denied")).toBe("unknown");
   expect(parseHostLogin("gemini", "", "")).toBe("unknown");
+  // agy has no status command: "agy models" lists models only when signed in (agy 1.3.6).
+  expect(
+    parseHostLogin(
+      "gemini",
+      "gemini-3.8-flash-high\tGemini 3.8 Flash (High)\n",
+      "Fetching available models...\n",
+    ),
+  ).toBe("signed-in");
+  expect(
+    parseHostLogin(
+      "gemini",
+      "",
+      "Fetching available models...\nError: Please sign in to view available models. Launch the CLI without arguments to sign in.\n",
+    ),
+  ).toBe("signed-out");
+  expect(parseHostLogin("gemini", "", "Error: network unreachable")).toBe("unknown");
 });
 it.skipIf(process.platform === "win32")(
   "resolves the current PATH launcher without pinning a symlink",

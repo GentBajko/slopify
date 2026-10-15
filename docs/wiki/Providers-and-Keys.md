@@ -230,7 +230,7 @@ The keyed providers' numbers come from the model catalogue.
 
 For each provider it checks:
 
-- **Installed** and **Signed in** for a command-line tool. Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read. Slopify can confirm the sign-in only in API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set); otherwise it tells you to run `agy` in a terminal once to confirm.
+- **Installed** and **Signed in** for a command-line tool. For Antigravity CLI, Slopify runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy` in a terminal), and anything else shows as unknown.
 - **Speech program found** for the System voice, with the program it speaks with.
 - **Key saved** and **Key valid** for a keyed provider, using the same call as **Test**. Nothing is generated or billed.
 - **Model reachable** for a keyed provider: Slopify asks the provider, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without generating anything. It reads, for example, "OpenRouter answered for … with this key." A provider with no such check says so.

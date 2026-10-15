@@ -185,18 +185,12 @@ async function cliHealth(
         ? {
             label: "Signed in",
             state: "problem",
-            detail:
-              source === "gemini"
-                ? `Antigravity CLI is in API-key mode ("modelProvider": "gemini" in ~/.gemini/antigravity-cli/settings.json) but GEMINI_API_KEY is not set. Set GEMINI_API_KEY for the program running Slopify, or remove that setting and run "agy" in a terminal to sign in with Google, then choose Check all again.`
-                : `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
+            detail: `${name} is not signed in. Open a terminal on the computer running it, run "${signInCommand[source]}" and sign in, then choose Check all again.`,
           }
         : {
             label: "Signed in",
             state: "skipped",
-            detail:
-              source === "gemini"
-                ? `Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read, so it could not tell whether it is signed in. Run "agy" in a terminal once to confirm it is signed in.`
-                : `Slopify could not tell whether ${name} is signed in. Run "${signInCommand[source]}" in a terminal if runs fail with a sign-in error.`,
+            detail: `Slopify could not tell whether ${name} is signed in. Run "${signInCommand[source]}" in a terminal if runs fail with a sign-in error.`,
           },
   );
   if (used.length > 0) checks.push(await cliModels(deps, status, used));

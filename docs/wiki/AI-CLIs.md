@@ -10,7 +10,7 @@ Slopify can write the text with the Claude Code, Codex or Antigravity command-li
 |---|---|---|---|---|
 | **Claude Code CLI** | `claude` | Text: research, script, article, titles, descriptions, reviews | Your Claude account | 3 |
 | **Codex CLI** | `codex` | Text | Your ChatGPT account | 3 |
-| **Antigravity CLI** | `agy` | Text (no web search, no pictures) | Your Google account | 3 |
+| **Antigravity CLI** | `agy` | Text (research from search results; no page reading or commands) | Your Google account | 3 |
 | **Codex CLI** (Images) | `codex` | Images and thumbnails | Your ChatGPT account (the same sign-in and path as Codex text) | 4 |
 
 Codex text and Codex images share one sign-in, one executable path and one plan allowance.
@@ -32,13 +32,15 @@ On the very first launch, before any key is saved, Slopify looks for all three t
 
 ## Antigravity CLI: what is different
 
-Antigravity CLI (`agy`) replaced the Gemini CLI, which Google retired for personal accounts on 18 June 2026. Install it with `curl -fsSL https://antigravity.google/cli/install.sh | bash` (it lands in `~/.local/bin`) and update it with `agy update`. The first `agy` run signs you in through the browser, or with a URL and code over SSH.
+Antigravity CLI (`agy`) replaced the Gemini CLI, which Google retired for personal accounts on 18 June 2026. Install it with `curl -fsSL https://antigravity.google/cli/install.sh | bash` (it lands in `~/.local/bin` and adds that folder to your `PATH` in your shell's startup files, so open a new terminal afterwards). Update it with `agy update`. The first `agy` run signs you in through the browser, or with a URL and code over SSH. The Antigravity desktop app is a different program and does not provide `agy`, but `agy` reuses its Google sign-in.
 
-It cannot do everything the Gemini CLI did:
+It works differently from the Gemini CLI in a few ways:
 
-- **No web-search research.** A research step that needs web search stops with "This command-line tool cannot search the web for research…". Use Claude Code, Codex or OpenRouter for that step.
-- **No pictures.** Reviews that need to look at pictures are refused.
-- **Its sign-in can't be confirmed from files.** The Google sign-in lives in the system keyring, which Slopify does not read. Only API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set) shows **Signed in**; otherwise the check says it can't tell and asks you to run `agy` once.
+- **Research uses search results only.** Web search works: the model runs Google searches and cites the same kind of Google redirect links the Gemini CLI returned. Opening web pages, the browser and shell commands are switched off in headless mode, so Slopify tells the model to use only its search tool. A long high-effort research step can take several minutes (one test run made 14 searches).
+- **Pictures work on this computer.** For reviews that need to look at pictures, Slopify copies them into the run's private folder and the model opens each one. An answer that skipped a picture is refused with "The reviewer answered without opening every picture…". Over the Docker host bridge no CLI is given pictures, so there Antigravity sees text only.
+- **No timeout of its own.** `agy` waits as long as the model needs; Slopify's own stall checks end a run that stops making progress.
+- **Busy messages are retried.** When several calls run at once, Google can answer that its capacity for the model is used for the moment. A reset of 5 minutes or less is retried by itself within seconds; a longer reset is handled as a plan limit and the run waits for it.
+- **Its sign-in is checked with `agy models`.** Slopify runs the command: if it lists models, the CLI is **Signed in**; if it says "Please sign in", the CLI is signed out and the check gives the command to run (`agy`); anything else shows as unknown. `GEMINI_API_KEY` is not read.
 - **Old model ids are gone.** Models come from `agy models`. A project that still names a Gemini CLI model such as `gemini-2.5-pro` stops with "The chosen model is not available…" until you pick a new one in **Edit project → Providers**. A saved path to a program still called `gemini` is refused: clear it or set the Antigravity CLI path in Settings → Providers.
 
 ## Row states
@@ -68,7 +70,7 @@ Slopify finds each tool on PATH, the list of folders your terminal searches. Set
 **Check all** (Settings → Providers) asks each tool:
 
 - **Installed**: found, with its version.
-- **Signed in**: Slopify asks Claude Code and Codex directly. If one is signed out, the line tells you the command to run (`claude auth login` or `codex login`). Antigravity CLI keeps its Google sign-in in the system keyring, which Slopify does not read, so it can confirm the sign-in only in API-key mode (`"modelProvider": "gemini"` in `~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set). Otherwise it asks you to run `agy` in a terminal once to confirm.
+- **Signed in**: Slopify asks each CLI directly. If one is signed out, the line tells you the command to run (`claude auth login`, `codex login` or `agy`). For Antigravity CLI it runs `agy models`: a model list means signed in, "Please sign in" means signed out (run `agy`), and anything else is shown as unknown.
 - **Chosen models**: every model your templates, schedules, drafts and unfinished projects pick is still offered by the tool.
 
 Each tool's row has **Check again**, to check that tool alone after you fix something.

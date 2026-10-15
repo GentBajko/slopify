@@ -49,8 +49,7 @@ export function createHostRuntime(
     ...(deps.folders === undefined ? {} : { openFolder: createHostFolderOpener(deps.folders) }),
     llm: (id) => ({
       id,
-      // Antigravity names no web search tool for headless runs (`adapters/llm/antigravity.ts`).
-      capabilities: { streams: true, reportsUsage: true, webSearch: id !== "gemini" },
+      capabilities: { streams: true, reportsUsage: true, webSearch: true },
       models: () => models(id),
       complete: async function* (request) {
         request.signal.throwIfAborted();

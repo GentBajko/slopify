@@ -35,8 +35,12 @@ otherwise:
   folder). The answer is used only when the run's tool calls show every picture was opened.
 - **Codex**: each picture is attached with `--image` (`codex exec --help`: "Optional image(s)
   to attach to the initial prompt"); the `view_image` tool stays off.
-- The **Antigravity CLI** has no image input, and the **OpenRouter** adapter sends text only, so
-  neither reviews pictures.
+- The **Antigravity CLI**: the pictures are copied into a private folder that becomes the CLI's
+  working directory, and the model opens each with its `view_file` tool (no permission needed
+  inside that folder). The answer is used only when the run's tool calls show every picture was
+  opened. Over the Docker host bridge pictures are not passed for any CLI, so there it sees text
+  only and cannot review pictures.
+- The **OpenRouter** adapter sends text only, so it does not review pictures.
 
 Each review is one text-model call, counted in Usage and in the estimate like the others. A
 redo is not in the estimate: it costs what the item cost, at most the redos allowed.

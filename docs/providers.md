@@ -55,10 +55,8 @@ answers with raw audio, which Slopify turns into MP3 with its own ffmpeg.
 
 **Check all** under Settings → Providers checks, for every provider: that the command-line tool
 is installed (`--version`), new enough and signed in (`claude auth status`, `codex login
-status`; Antigravity CLI (`agy`) has no such command and keeps its Google sign-in in the system keyring,
-so Slopify can confirm it only in API-key mode: `"modelProvider": "gemini"` in
-`~/.gemini/antigravity-cli/settings.json` plus `GEMINI_API_KEY` set; otherwise it asks you to run
-`agy` once); that each saved key
+status`; for Antigravity CLI (`agy`) it runs `agy models`: a model list means signed in, "Please sign
+in" means signed out and the fix is to run `agy`, anything else is unknown); that each saved key
 passes Test; and that the models your templates, schedules, drafts and unfinished projects use
 are still offered. For a keyed provider, **Model reachable** then asks the provider with the saved
 key about each chosen model (its model page, or its model list for OpenRouter and ElevenLabs):
