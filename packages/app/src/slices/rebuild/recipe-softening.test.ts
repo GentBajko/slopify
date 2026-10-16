@@ -120,6 +120,19 @@ describe("turning on Soften breaths and Soften S sounds", () => {
     expect(provider.map((one) => one.key)).toEqual([]);
   });
 
+  it("finds the earlier joins once the saved change has marked them outdated", () => {
+    // Saving the softened version marks the joins it will make again as outdated.
+    const outdated: RevisionManifest = {
+      ...before.manifest,
+      outputs: before.manifest.outputs.map((row) =>
+        /^(audio|level):/.test(row.workKey) ? { ...row, state: "outdated" } : row,
+      ),
+    };
+    const after = plan(softened, outdated, outdated);
+    for (const key of kept)
+      expect(fingerprintOf(after, key), key).toBe(fingerprintOf(before.recipes, key));
+  });
+
   it("times the words again when the narration itself changes", () => {
     const after = plan(
       { ...softened, silenceGapSeconds: (narrated.silenceGapSeconds ?? 0) + 1 },

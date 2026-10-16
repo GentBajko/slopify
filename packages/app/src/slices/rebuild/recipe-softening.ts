@@ -32,7 +32,12 @@ export function unsoftenedTimelines(
     const timeline = entries.map((entry, at) => {
       const key = plain.keys[at];
       const made = past.outputs.find(
-        (row) => row.workKey === key && row.fingerprint === entry.audio[0] && row.state === "ready",
+        // Found by its fingerprint: once the softened version is saved, the join it will make
+        // again is marked outdated.
+        (row) =>
+          row.workKey === key &&
+          row.fingerprint === entry.audio[0] &&
+          (row.state === "ready" || row.state === "outdated"),
       );
       return made === undefined
         ? undefined
