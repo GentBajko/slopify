@@ -71,13 +71,25 @@ export function exportRecipes(
     );
   const timedNow = timed ? timingOf(audio.timeline) : undefined;
   // A finished timing made before the narration was softened is kept: softening moves no word.
-  const doneTiming = (fingerprint: string) =>
-    (context.history ?? context.manifest).pieces.some(
-      (row) =>
-        row.key === "subtitles:timing" &&
-        row.piece.state === "done" &&
-        row.fingerprint === fingerprint,
+  // A timing is finished when a done piece or an output of it has the fingerprint (a project
+  // from before an older fingerprint scheme carries different ones on the two).
+  const doneTiming = (fingerprint: string) => {
+    const past = context.history ?? context.manifest;
+    return (
+      past.pieces.some(
+        (row) =>
+          row.key === "subtitles:timing" &&
+          row.piece.state === "done" &&
+          row.fingerprint === fingerprint,
+      ) ||
+      past.outputs.some(
+        (row) =>
+          row.workKey === "subtitles:timing" &&
+          row.fingerprint === fingerprint &&
+          (row.state === "ready" || row.state === "outdated"),
+      )
     );
+  };
   const timing =
     timedNow === undefined || doneTiming(timedNow.fingerprint)
       ? timedNow

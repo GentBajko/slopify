@@ -31,21 +31,33 @@ export function unsoftenedTimelines(
     }[];
     const timeline = entries.map((entry, at) => {
       const key = plain.keys[at];
-      const made = past.outputs.find(
-        // Found by its fingerprint: once the softened version is saved, the join it will make
-        // again is marked outdated.
+      // Found by its fingerprint, as an output or as the finished piece that made it: once the
+      // softened version is saved, the join it will make again is marked outdated, and on a
+      // project from before an older fingerprint scheme its outputs carry another fingerprint
+      // than its pieces.
+      const fingerprint = entry.audio[0];
+      const output = past.outputs.find(
         (row) =>
           row.workKey === key &&
-          row.fingerprint === entry.audio[0] &&
+          row.fingerprint === fingerprint &&
           (row.state === "ready" || row.state === "outdated"),
       );
-      return made === undefined
-        ? undefined
-        : {
-            audio: [entry.audio[0], made.assetId],
-            transcript: entry.transcript,
-            durationMs: made.output.durationMs ?? null,
-          };
+      const piece = past.pieces.find(
+        (row) =>
+          row.key === key &&
+          row.fingerprint === fingerprint &&
+          row.piece.state === "done" &&
+          row.assetId !== null,
+      );
+      const assetId = output?.assetId ?? piece?.assetId ?? undefined;
+      if (assetId === undefined || assetId === null) return undefined;
+      const made =
+        output ?? past.outputs.find((row) => row.workKey === key && row.assetId === assetId);
+      return {
+        audio: [fingerprint, assetId],
+        transcript: entry.transcript,
+        durationMs: made?.output.durationMs ?? null,
+      };
     });
     return timeline.every((entry) => entry !== undefined) && timeline.length > 0 ? [timeline] : [];
   });
