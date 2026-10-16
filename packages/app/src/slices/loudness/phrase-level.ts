@@ -1,7 +1,7 @@
-import { rmSync, writeFileSync } from "node:fs";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { type Frame, parseFrames } from "./line-level.js";
 import type { FfmpegRun } from "./loudnorm.js";
+import { volumeCommands } from "./volume-commands.js";
 
 // The voice provider speaks a narration piece in one request, and now and then a phrase bursts
 // out above the narration around it - above all the first words of a request, which start with
@@ -140,16 +140,13 @@ export async function lowerLoudPhrases(
   const gains = phraseGains(parseFrames(stderr));
   if (gains === undefined) return false;
   // Each change, at its time, as a command to the volume filter.
-  const commands = `${output}.phrases.txt`;
-  writeFileSync(
-    commands,
+  const commands = volumeCommands(
     gains
       .map(
         (one) =>
           `${one.at.toFixed(3)} volume@phrases volume ${(10 ** (one.gainDb / 20)).toFixed(5)};`,
       )
       .join("\n"),
-    { mode: 0o600 },
   );
   try {
     await runFfmpeg({
@@ -164,7 +161,7 @@ export async function lowerLoudPhrases(
         "-i",
         input,
         "-af",
-        `asendcmd=f=${commands.replaceAll("\\", "/").replaceAll(":", "\\\\:")},volume@phrases=volume=1:precision=float:eval=frame`,
+        `asendcmd=f=${commands.filterPath},volume@phrases=volume=1:precision=float:eval=frame`,
         "-c:a",
         "pcm_s16le",
         "-f",
@@ -176,7 +173,7 @@ export async function lowerLoudPhrases(
       onProgress: (): void => {},
     });
   } finally {
-    rmSync(commands, { force: true });
+    commands.dispose();
   }
   return true;
 }

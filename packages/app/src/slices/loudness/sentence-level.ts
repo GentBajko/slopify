@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { isAbsolute, join, resolve as resolvePath } from "node:path";
 import { measurePiece, type Silence } from "../narration/pauses.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { FfmpegRun } from "./loudnorm.js";
 import { sentenceLevel } from "./sentence-level-model.js";
+import { volumeCommands } from "./volume-commands.js";
 
 export { sentenceLevel } from "./sentence-level-model.js";
 
@@ -346,16 +347,13 @@ export async function levelSentences(
       continue;
     }
     const output = join(directory, `sentences-${String(index + 1).padStart(4, "0")}.wav`);
-    const commands = `${output}.gains.txt`;
-    writeFileSync(
-      commands,
+    const commands = volumeCommands(
       changes
         .map(
           (one) =>
             `${one.at.toFixed(3)} volume@sentences volume ${(10 ** (one.gainDb / 20)).toFixed(5)};`,
         )
         .join("\n"),
-      { mode: 0o600 },
     );
     try {
       await runFfmpeg({
@@ -370,7 +368,7 @@ export async function levelSentences(
           "-i",
           file,
           "-af",
-          `asendcmd=f=${commands.replaceAll("\\", "/").replaceAll(":", "\\\\:")},volume@sentences=volume=${(10 ** ((changes[0]?.at === 0 ? changes[0].gainDb : 0) / 20)).toFixed(5)}:precision=float:eval=frame`,
+          `asendcmd=f=${commands.filterPath},volume@sentences=volume=${(10 ** ((changes[0]?.at === 0 ? changes[0].gainDb : 0) / 20)).toFixed(5)}:precision=float:eval=frame`,
           "-c:a",
           "pcm_f32le",
           "-f",
@@ -382,7 +380,7 @@ export async function levelSentences(
         onProgress: (): void => {},
       });
     } finally {
-      rmSync(commands, { force: true });
+      commands.dispose();
     }
     written.push(output);
   }

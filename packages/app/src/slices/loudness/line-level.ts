@@ -1,6 +1,6 @@
-import { rmSync, writeFileSync } from "node:fs";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { FfmpegRun } from "./loudnorm.js";
+import { volumeCommands } from "./volume-commands.js";
 
 // Level the volume, line by line, for a narration with several speakers. The pieces are levelled
 // before they are joined (`level-pieces.ts`), but a piece is one request to the voice provider,
@@ -135,16 +135,13 @@ export async function levelLines(
   const gains = lineGains(lines, parseFrames(stderr));
   if (gains.every((one) => one.gainDb === 0)) return false;
   // The gain for each line, set at its start by a timed command to the volume filter.
-  const commands = `${output}.lines.txt`;
-  writeFileSync(
-    commands,
+  const commands = volumeCommands(
     gains
       .map(
         (one) =>
           `${Math.max(0, one.at).toFixed(3)} volume@lines volume ${(10 ** (one.gainDb / 20)).toFixed(5)};`,
       )
       .join("\n"),
-    { mode: 0o600 },
   );
   try {
     await runFfmpeg({
@@ -159,7 +156,7 @@ export async function levelLines(
         "-i",
         input,
         "-af",
-        `asendcmd=f=${commands.replaceAll("\\", "/").replaceAll(":", "\\\\:")},volume@lines=volume=1:precision=float:eval=frame`,
+        `asendcmd=f=${commands.filterPath},volume@lines=volume=1:precision=float:eval=frame`,
         "-c:a",
         "pcm_s16le",
         "-f",
@@ -171,7 +168,7 @@ export async function levelLines(
       onProgress: (): void => {},
     });
   } finally {
-    rmSync(commands, { force: true });
+    commands.dispose();
   }
   return true;
 }
