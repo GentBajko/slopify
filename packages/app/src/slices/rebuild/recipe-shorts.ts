@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fingerprint } from "../../kernel/runner/work.js";
+import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import { subjectOf } from "../admission/model.js";
 import { usesShorts } from "../admission/rules.js";
 import { withoutScene } from "../images/scenes.js";
@@ -20,6 +20,7 @@ import {
   type ResolvedWorkRecipe,
   recipe,
   resourceIdentity,
+  selectedAsset,
   selectedReference,
 } from "./recipe-model.js";
 import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
@@ -55,55 +56,73 @@ export function shortsRecipes(
   const shorts = config.shorts;
   const timing = exports.find((value) => value.key === "subtitles:timing");
   if (!usesShorts(config) || shorts === undefined || timing === undefined) return [];
-  const pick = recipe(
-    context,
-    shortsPickKey,
-    "video",
-    {
-      kind: "local",
-      version: 1,
-      operation: "shorts-pick-v1",
-      values: [
-        resourceIdentity(context, timing),
-        config.llm?.provider ?? "",
-        config.llm?.model ?? "",
-        config.llm?.thinking ?? null,
-        // Blank means the built-in prompt; the step fills it in, so a new built-in wording
-        // ships as a new operation version rather than a silent change here.
-        shorts.prompt?.trim() ? renderedPrompt(context, "shorts") : "",
-        shorts.count,
-        shorts.minSeconds,
-        shorts.maxSeconds,
-        subjectOf(config),
-        // The project language, only when it is not English, so English keeps its fingerprint.
-        ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
-        // The shorts kept through a change of their moments, only when there are any, so
-        // every other project keeps its fingerprint (`shorts/keep.ts`).
-        ...(context.content.shortsKeep === undefined
-          ? []
-          : [
-              [
-                "keep-v1",
-                context.content.shortsKeep.map((short) => [
-                  short.from,
-                  short.opening,
-                  short.closing,
-                  short.sentences,
-                  short.title,
-                  short.description,
-                  [...short.hashtags],
-                  short.why,
-                  short.seed ?? null,
-                ]),
-              ],
-            ]),
-      ],
-    },
-    [timing.key],
-    // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
-    { kind: "provider" },
+  const pickFor = (timingIdentity: FingerprintValue): ResolvedWorkRecipe =>
+    recipe(
+      context,
+      shortsPickKey,
+      "video",
+      {
+        kind: "local",
+        version: 1,
+        operation: "shorts-pick-v1",
+        values: [
+          timingIdentity,
+          config.llm?.provider ?? "",
+          config.llm?.model ?? "",
+          config.llm?.thinking ?? null,
+          // Blank means the built-in prompt; the step fills it in, so a new built-in wording
+          // ships as a new operation version rather than a silent change here.
+          shorts.prompt?.trim() ? renderedPrompt(context, "shorts") : "",
+          shorts.count,
+          shorts.minSeconds,
+          shorts.maxSeconds,
+          subjectOf(config),
+          // The project language, only when it is not English, so English keeps its fingerprint.
+          ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
+          // The shorts kept through a change of their moments, only when there are any, so
+          // every other project keeps its fingerprint (`shorts/keep.ts`).
+          ...(context.content.shortsKeep === undefined
+            ? []
+            : [
+                [
+                  "keep-v1",
+                  context.content.shortsKeep.map((short) => [
+                    short.from,
+                    short.opening,
+                    short.closing,
+                    short.sentences,
+                    short.title,
+                    short.description,
+                    [...short.hashtags],
+                    short.why,
+                    short.seed ?? null,
+                  ]),
+                ],
+              ]),
+        ],
+      },
+      [timing.key],
+      // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
+      { kind: "provider" },
+    );
+  const pick = pickFor(resourceIdentity(context, timing));
+  // The same pick asked of the finished timing as it was recorded: a run's plan reads the
+  // catalogue, which gives the timing another fingerprint than the one the version was saved
+  // with, while the timing file is the same.
+  const asset = selectedAsset(context, timing.key, timing.fingerprint);
+  const recorded = context.manifest.outputs.find(
+    (row) =>
+      row.workKey === timing.key &&
+      row.assetId === asset &&
+      asset !== null &&
+      row.fingerprint !== timing.fingerprint &&
+      selectedReference(row),
   );
-  const picked = savedPicked(context, pick);
+  const picked = savedPicked(
+    context,
+    pick,
+    recorded === undefined ? [] : [pickFor([recorded.fingerprint, asset]).fingerprint],
+  );
   const images = config.images ?? { provider: "", model: "" };
   // A shorts image prompt may name `{{Scene}}` like the video's: the prompts call already writes
   // each image's moment from what the clip says, so that line is left out here.
@@ -302,6 +321,8 @@ export function shortRemakeKey(number: number): string {
 export function savedPicked(
   context: RecipeContext,
   pick: ResolvedWorkRecipe,
+  // Other fingerprints the same pick has (the one recorded with the finished timing).
+  also: readonly string[] = [],
 ): PickedShorts | undefined {
   const done = context.manifest.pieces.filter(
     (row) => row.key === pick.key && selectedReference(row) && row.piece.state === "done",
@@ -316,7 +337,7 @@ export function savedPicked(
       (row) =>
         row.workKey === pick.key &&
         selectedReference(row) &&
-        row.fingerprint === pick.fingerprint &&
+        (row.fingerprint === pick.fingerprint || also.includes(row.fingerprint)) &&
         (row.state === "ready" || row.state === "outdated"),
     )
       ? done[0]

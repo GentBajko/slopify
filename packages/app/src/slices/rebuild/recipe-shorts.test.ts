@@ -628,3 +628,31 @@ describe("the saved pick of a project from an older fingerprint scheme", () => {
     expect(savedPicked(context, pick)).not.toBeUndefined();
   });
 });
+
+describe("the saved pick of an older project while its run is planned", () => {
+  it("is the selected pick when its output carries the pick asked of the recorded timing", () => {
+    // A run's plan reads the catalogue, so the pick's fingerprint is not the one the version
+    // was saved with; the same pick asked of the finished timing as recorded is.
+    const payload = JSON.stringify({ shorts: [] });
+    const pick = { key: "shorts:pick", fingerprint: "catalogue-fp" } as unknown as Parameters<
+      typeof savedPicked
+    >[1];
+    const context = {
+      manifest: {
+        outputs: [
+          { workKey: "shorts:pick", fingerprint: "logical-fp", assetId: "a1", state: "ready" },
+        ],
+        pieces: [
+          {
+            key: "shorts:pick",
+            fingerprint: "full-fp",
+            assetId: null,
+            piece: { state: "done", payload },
+          },
+        ],
+      },
+    } as unknown as Parameters<typeof savedPicked>[0];
+    expect(savedPicked(context, pick)).toBeUndefined();
+    expect(savedPicked(context, pick, ["logical-fp"])).not.toBeUndefined();
+  });
+});
