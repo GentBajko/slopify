@@ -360,6 +360,7 @@ function librarySnapshot(deps: BackupDeps): {
     "project_template_revisions",
     rowsOf(db, "SELECT * FROM project_template_revisions ORDER BY template_id,version"),
   );
+  put("template_gates", rowsOf(db, "SELECT * FROM template_gates ORDER BY template_id,version"));
   put("schedules", rowsOf(db, "SELECT * FROM schedules ORDER BY rowid"));
   put("schedule_runs", rowsOf(db, "SELECT * FROM schedule_runs ORDER BY rowid"));
   put("schedule_topics", rowsOf(db, "SELECT * FROM schedule_topics ORDER BY rowid"));

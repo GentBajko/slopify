@@ -10,6 +10,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { insertProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
+import { draftFixture } from "../play-drafts/draft.fake.js";
 import { writeSetting } from "../settings/repo.js";
 import { writeUploadPick } from "../studio/pick.js";
 import { writePlan } from "../studio/plan.js";
@@ -63,6 +64,11 @@ const leftOut = new Set([
   // its stored path, and the importing install arranges them itself.
   "project_folders",
   "file_places",
+  // The template studio's hidden sample projects, their versions and queued jobs: this
+  // install's working copies. A restored template makes its samples again on its next Save.
+  "template_samples",
+  "template_sample_versions",
+  "template_sample_jobs",
 ]);
 
 function install(): BackupDeps & { readonly db: DatabaseSync; readonly paths: Paths } {
@@ -301,6 +307,34 @@ describe("backups carry everything added since 2.5.0", () => {
     expect(again.channelVideos).toEqual({ added: 0, renamed: 0, skipped: 1 });
     expect(rows(target.db, "SELECT count(*) AS n FROM library_versions")).toEqual([{ n: 2 }]);
     expect(rows(target.db, "SELECT count(*) AS n FROM standalone_usage")).toEqual([{ n: 1 }]);
+  });
+
+  it("carries each template version's studio gate, and keeps an unchecked version unchecked", async () => {
+    const source = install();
+    const fixture = draftFixture();
+    const document = JSON.stringify(fixture.document);
+    fixture.close();
+    const id = "00000000-0000-4000-8000-000000000001";
+    source.db
+      .prepare(
+        "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES (?,2,'h','a')",
+      )
+      .run(id);
+    source.db
+      .prepare(
+        "INSERT INTO project_template_revisions VALUES (?,1,'Show',?,'a'),(?,2,'Show',?,'b')",
+      )
+      .run(id, document, id, document);
+    source.db
+      .prepare(
+        "INSERT INTO template_gates (template_id,version,state,checks_json,marked_at) VALUES (?,1,'ready','[]','a')",
+      )
+      .run(id);
+    const target = install();
+    await importBackup(target, once(await exported(source)));
+    expect(
+      rows(target.db, "SELECT template_id,version,state,marked_at FROM template_gates"),
+    ).toEqual([{ template_id: id, version: 1, state: "ready", marked_at: "a" }]);
   });
 
   it("keeps a default channel this install already edited, and merges cast into it by id", async () => {

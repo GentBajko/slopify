@@ -110,6 +110,8 @@ export const libraryTables = [
   // Since 3.0.0: what topic generation, episode summaries and cast pictures cost, which
   // belongs to a schedule or channel rather than a project.
   "standalone_usage",
+  // Since 4.0.0: which template versions the template studio marked ready.
+  "template_gates",
 ] as const;
 export type LibraryTable = (typeof libraryTables)[number];
 

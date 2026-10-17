@@ -111,6 +111,10 @@ describe("migrate", () => {
       "standalone_usage",
       "studio_reports",
       "telemetry_events",
+      "template_gates",
+      "template_sample_jobs",
+      "template_sample_versions",
+      "template_samples",
       "told_failures",
       "video_stats",
       "voices",
@@ -230,6 +234,7 @@ describe("migrate", () => {
       { version: 60, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 61, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 62, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 64, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -239,16 +244,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 55 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 56 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(63, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(65, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 63 is newer than this app knows (62)",
+      "database schema 65 is newer than this app knows (64)",
     );
   });
 
@@ -705,4 +710,51 @@ it("keeps every external review and lets Cancel close one as canceled", () => {
   expect(db.prepare("SELECT state FROM external_reviews WHERE id='er3'").get()).toEqual({
     state: "canceled",
   });
+});
+
+it("marks every template version saved before the studio as legacy, and forgets it with its template", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 62 });
+  db.exec(
+    `INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',2,'h','a'),('t2',1,'h','a');
+     INSERT INTO project_template_revisions VALUES ('t1',1,'One','{}','a'),('t1',2,'One','{}','b'),('t2',1,'Two','{}','a');`,
+  );
+  migrate(db, clock);
+  expect(
+    db
+      .prepare(
+        "SELECT template_id,version,state,carried_from,checks_json FROM template_gates ORDER BY template_id,version",
+      )
+      .all(),
+  ).toEqual([
+    { template_id: "t1", version: 1, state: "legacy", carried_from: null, checks_json: null },
+    { template_id: "t1", version: 2, state: "legacy", carried_from: null, checks_json: null },
+    { template_id: "t2", version: 1, state: "legacy", carried_from: null, checks_json: null },
+  ]);
+  db.exec("INSERT INTO project_template_revisions VALUES ('t2',2,'Two','{}','c')");
+  expect(
+    db.prepare("SELECT count(*) AS n FROM template_gates WHERE template_id='t2'").get(),
+  ).toEqual({ n: 1 });
+  expect(() =>
+    db.exec("INSERT INTO template_gates (template_id,version,state) VALUES ('t2',2,'unknown')"),
+  ).toThrow();
+  db.exec(
+    `INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','p9','The history of the lighthouse','fixed',0,'a');
+     INSERT INTO template_sample_versions (template_id,template_version,revision_id,state,updated_at) VALUES ('t1',2,NULL,'queued','a');
+     INSERT INTO template_sample_jobs (template_id,template_version,ack_high,kind,requested_at,state) VALUES ('t1',2,0,'save','a','queued');`,
+  );
+  expect(() =>
+    db.exec(
+      "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t2','p8','','fixed',0,'a')",
+    ),
+  ).toThrow();
+  db.exec("DELETE FROM project_templates WHERE id='t1'");
+  for (const table of [
+    "template_gates WHERE template_id='t1'",
+    "template_samples",
+    "template_sample_versions",
+    "template_sample_jobs",
+  ])
+    expect(db.prepare(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 });
+  db.close();
 });

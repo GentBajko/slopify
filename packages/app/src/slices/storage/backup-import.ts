@@ -823,6 +823,12 @@ function commit(
           }
           insertRow(db, "project_template_revisions", next);
         }
+        for (const gate of rowsOf(
+          scratch,
+          "SELECT * FROM template_gates WHERE template_id=? ORDER BY version",
+          id,
+        ))
+          insertRow(db, "template_gates", gate);
         if (renamed) templates.renamed += 1;
         else templates.added += 1;
       }
