@@ -435,15 +435,19 @@ async function render(
 
 // The clips the pick saved for this plan, with any range set by hand in place: the
 // selected pick whose fingerprint is the one the plan asks for.
-function savedClips(snapshot: ExportSnapshot): readonly ShortPick[] {
+export function savedClips(snapshot: Pick<ExportSnapshot, "plan" | "view">): readonly ShortPick[] {
   const recipe = snapshot.plan.recipes.find((one) => one.key === shortsPickKey);
-  const row = snapshot.view.pieces.find(
-    (one) =>
-      one.key === shortsPickKey &&
-      one.selected &&
-      one.piece.state === "done" &&
-      one.fingerprint === recipe?.fingerprint,
+  const done = snapshot.view.pieces.filter(
+    (one) => one.key === shortsPickKey && one.selected && one.piece.state === "done",
   );
+  // A project from before an older fingerprint scheme keeps its pick under another
+  // fingerprint; the plan planned its clips from the version's one selected pick
+  // (`savedPicked` in `recipe-shorts.ts`), so the clips are that pick's.
+  const row =
+    done.find((one) => one.fingerprint === recipe?.fingerprint) ??
+    (done.length === 1 && snapshot.plan.recipes.some((one) => /^shorts:\d+:/.test(one.key))
+      ? done[0]
+      : undefined);
   const picked = pickedShortsOf(row?.piece.payload);
   const shorts = snapshot.view.revision.config.shorts;
   if (picked === undefined || recipe === undefined || shorts === undefined) return [];
