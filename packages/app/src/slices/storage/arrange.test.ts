@@ -183,6 +183,69 @@ it("moves the replaced version to History and gives the new one the current name
   }
 }, 30000);
 
+it("arranges past records of files that are gone, such as History deleted by Delete old versions", async () => {
+  const { h, deps } = await arranged();
+  try {
+    arrangeProject(deps, h.projectId);
+    const root = projectDir(h.deps.paths, h.projectId);
+    const first = filesUnder(root).filter((file) => file.startsWith("Working/Narration/"));
+    const base = h.view();
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: base.revision.id,
+      idempotencyKey: "voice",
+      edit: {
+        config: {
+          ...base.revision.config,
+          audio: { provider: "openai-tts", model: "tts", voice: "other" },
+        },
+        content: base.revision.content,
+      },
+    });
+    if (!saved.ok) throw new Error(JSON.stringify(saved));
+    admitPendingRevision(h.deps, saved.view, narrationCatalogue);
+    await h.pump();
+    settle(h);
+    // Records left by files that are gone from disk hold the names the old narration is about
+    // to take in History, on every day a file of this project was made.
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const days = new Set(
+      (
+        h.deps.db
+          .prepare("SELECT created_at FROM revision_outputs WHERE project_id=?")
+          .all(h.projectId) as { created_at: string }[]
+      ).map(({ created_at }) => {
+        const at = new Date(created_at);
+        return `${String(at.getFullYear())}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+      }),
+    );
+    let gone = 0;
+    for (const day of days)
+      for (const file of first) {
+        gone += 1;
+        h.deps.db
+          .prepare(
+            "INSERT INTO file_places(project_id,path,place,previous,state) VALUES (?,?,?,NULL,'placed')",
+          )
+          .run(h.projectId, `assets/gone-${String(gone)}/file`, `History/${day}/${file}`);
+      }
+    // Slopify reads the records once, as it starts.
+    const restarted = createPlaces(h.deps.db);
+    attachPlaces(h.deps.paths, restarted);
+    expect(() => arrangeProject({ ...deps, places: restarted }, h.projectId)).not.toThrow();
+    const files = filesUnder(root);
+    expect(files.filter((file) => file.startsWith("Working/Narration/"))).toEqual(first);
+    expect(
+      files.some((file) =>
+        /^History\/[0-9]{4}-[0-9]{2}-[0-9]{2}\/Working\/Narration\//u.test(file),
+      ),
+    ).toBe(true);
+    expect(files.some((file) => / \([0-9]+\)\./u.test(file))).toBe(false);
+  } finally {
+    h.close();
+  }
+}, 30000);
+
 it("arranges a finished project whose only waiting rows are deferred stand-ins", async () => {
   const { h, deps } = await arranged();
   try {

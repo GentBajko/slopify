@@ -22,6 +22,8 @@ export interface PlaceMoves {
   file(projectId: string, path: string, place: string, previous: string | undefined): void;
   fileDone(projectId: string, path: string): void;
   fileUndone(projectId: string, path: string): void;
+  // Drops the record of a file that is gone from disk, so its place is free again.
+  forget(projectId: string, path: string): void;
   arranged(projectId: string, key: string): void;
   arrangedKey(projectId: string): string | undefined;
 }
@@ -129,6 +131,10 @@ export function createPlaces(db: DatabaseSync): ProjectPlaces {
       const row = files.get(projectId)?.get(path);
       if (row !== undefined)
         setFile(projectId, path, { ...row, state: "placed", previous: undefined });
+    },
+    forget(projectId, path) {
+      db.prepare("DELETE FROM file_places WHERE project_id=? AND path=?").run(projectId, path);
+      setFile(projectId, path, undefined);
     },
     fileUndone(projectId, path) {
       const row = files.get(projectId)?.get(path);

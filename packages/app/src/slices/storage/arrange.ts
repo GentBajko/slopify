@@ -122,6 +122,13 @@ export function arrangeProject(deps: ArrangeDeps, projectId: string): Arranged {
   }
   const root = projectDir(paths, projectId);
 
+  // Records of files gone from both their stored path and their place (History that Delete old
+  // versions removed, a file deleted by hand) are forgotten, so the names they held are free:
+  // otherwise a file moving there is refused and nothing after it is arranged.
+  for (const [path, place] of places.placesOf(projectId))
+    if (!existsSync(join(root, place)) && !existsSync(join(root, path)))
+      places.moves.forget(projectId, path);
+
   // 2. Each file to its place. Files leaving for History go first, so the new version takes
   // the names they free ("video.mp4", not "video (2).mp4").
   const desired = [...desiredPlaces(db, projectId)].toSorted(
@@ -133,15 +140,18 @@ export function arrangeProject(deps: ArrangeDeps, projectId: string): Arranged {
     const at = placed.get(path) ?? path;
     if (sameBase(at, base) || !existsSync(join(root, at))) continue;
     const to = freeName(base, (name) => existsSync(join(root, name)));
-    places.moves.file(projectId, path, to, placed.get(path));
+    let recorded = false;
     try {
+      places.moves.file(projectId, path, to, placed.get(path));
+      recorded = true;
       mkdirSync(dirname(join(root, to)), { recursive: true });
       renameSync(join(root, at), join(root, to));
       places.moves.fileDone(projectId, path);
       moved += 1;
     } catch {
-      // In use (a player or download on Windows): it stays and is tried again next time.
-      places.moves.fileUndone(projectId, path);
+      // In use (a player or download on Windows), or its name refused: it stays where it is and
+      // is tried again next time, and the files after it are still arranged.
+      if (recorded) places.moves.fileUndone(projectId, path);
     }
   }
   removeEmptyFolders(root);
