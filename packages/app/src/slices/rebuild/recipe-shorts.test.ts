@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
 import type { ManifestPiece, RevisionContent } from "../revisions/model.js";
+import { pickedShortsOf } from "../shorts/clips.js";
 import type { ShortPick } from "../shorts/pick.js";
 import { buildRecipes } from "./recipe-build.js";
 import { config, content, emptyView, readyView, workFor } from "./recipe-fixture.js";
 import { type ResolvedWorkRecipe, recipe, resourceIdentity } from "./recipe-model.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
+import { savedPicked } from "./recipe-shorts.js";
 import { priceRecipes } from "./recipe-work.js";
 import { planRevision } from "./recipes.js";
 
@@ -598,5 +600,31 @@ describe("a shorts image prompt with the keywords Slopify fills", () => {
     expect(said).toContain(
       "Looks: The Keeper: A tall man in a grey coat.\nshort 1: A figure in red.",
     );
+  });
+});
+
+describe("the saved pick of a project from an older fingerprint scheme", () => {
+  it("is the selected pick when only its output carries the plan's fingerprint", () => {
+    const payload = JSON.stringify({ shorts: [] });
+    const pick = { key: "shorts:pick", fingerprint: "logical-fp" } as unknown as Parameters<
+      typeof savedPicked
+    >[1];
+    const context = {
+      manifest: {
+        outputs: [
+          { workKey: "shorts:pick", fingerprint: "logical-fp", assetId: "a1", state: "ready" },
+        ],
+        pieces: [
+          {
+            key: "shorts:pick",
+            fingerprint: "full-fp",
+            assetId: null,
+            piece: { state: "done", payload },
+          },
+        ],
+      },
+    } as unknown as Parameters<typeof savedPicked>[0];
+    expect(savedPicked(context, pick)).toEqual(pickedShortsOf(payload));
+    expect(savedPicked(context, pick)).not.toBeUndefined();
   });
 });

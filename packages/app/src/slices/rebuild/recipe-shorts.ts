@@ -303,13 +303,24 @@ export function savedPicked(
   context: RecipeContext,
   pick: ResolvedWorkRecipe,
 ): PickedShorts | undefined {
-  const piece = context.manifest.pieces.find(
-    (row) =>
-      row.key === pick.key &&
-      selectedReference(row) &&
-      row.piece.state === "done" &&
-      row.fingerprint === pick.fingerprint,
+  const done = context.manifest.pieces.filter(
+    (row) => row.key === pick.key && selectedReference(row) && row.piece.state === "done",
   );
+  const piece =
+    done.find((row) => row.fingerprint === pick.fingerprint) ??
+    // A project from before an older fingerprint scheme: its output carries the plan's
+    // fingerprint and its piece another one. The version's one selected pick belongs with its
+    // selected output, so that output's fingerprint vouches for it.
+    (done.length === 1 &&
+    context.manifest.outputs.some(
+      (row) =>
+        row.workKey === pick.key &&
+        selectedReference(row) &&
+        row.fingerprint === pick.fingerprint &&
+        (row.state === "ready" || row.state === "outdated"),
+    )
+      ? done[0]
+      : undefined);
   return pickedShortsOf(piece?.piece.payload);
 }
 
