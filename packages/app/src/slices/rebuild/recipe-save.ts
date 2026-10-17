@@ -291,9 +291,9 @@ function planEdit(
   const fingerprints = Object.fromEntries(desired.map((row) => [row.key, row.fingerprint]));
   const outputs = proposedManifest.outputs.map((row) => {
     const next = desired.find((value) => value.key === row.workKey);
+    const before = old.find((value) => value.key === row.workKey)?.fingerprint;
     const unchanged =
-      next !== undefined &&
-      old.find((value) => value.key === row.workKey)?.fingerprint === next.fingerprint;
+      next !== undefined && before === next.fingerprint && !staleRender(base, row, before);
     const state =
       next === undefined
         ? row.state
@@ -324,6 +324,17 @@ function planEdit(
     recipes: desired,
     shortMoves: [...moves.entries()],
   };
+}
+// A render a version from an older Slopify never recorded, made for another recipe than the
+// one the version asks for: its narration was changed (levelled or softened) since, and saving
+// the version again must not take the old file for the new render. Only renders: they are made
+// on this computer and nothing paid is made from them.
+function staleRender(base: RevisionView, row: ManifestOutput, before: string | undefined): boolean {
+  return (
+    (row.workKey === "export:video" || /^shorts:\d+:render$/.test(row.workKey)) &&
+    base.revision.fingerprints[row.workKey] === undefined &&
+    row.fingerprint !== before
+  );
 }
 function normalizeImages(content: RevisionContent): RevisionContent {
   return {
