@@ -65,7 +65,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects/:id/run-cost",
     title: "Read a project's run cost",
     description:
-      "What the project's runs cost so far, by stage and provider, and any wait on a CLI plan's limits, as its Run cost tab shows.",
+      'What the project\'s runs cost so far, by stage and provider, and any wait on a CLI plan\'s limits, as its Run cost tab shows. Each plan window has two figures: usedPercent, this run\'s own share from each call\'s before→after readings (basis "measured"; "split" when overlapping calls shared a rise by tokens; "shared" when some calls ran beside other use on the account and are not counted, usedPercent null if none could be told apart; "approximate" for projects run before per-call readings were kept, the account\'s rise as an upper bound), and fromPercent → nowPercent, all use on the account while the run went (accountPercent, never above 100), with resetsAt.',
   },
   {
     name: "get_week",

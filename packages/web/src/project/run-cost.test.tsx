@@ -1,5 +1,5 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
-import type { RunCost } from "@app/slices/run-cost/panel.js";
+import type { PlanWindowUse, RunCost } from "@app/slices/run-cost/panel.js";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,18 @@ import {
 } from "./run-cost";
 
 afterEach(cleanup);
+
+const weekly: PlanWindowUse = {
+  kind: "weekly",
+  usedPercent: 4,
+  basis: "measured",
+  sharedCalls: 0,
+  fromPercent: 11,
+  accountPercent: 4,
+  rolledOver: false,
+  nowPercent: 15,
+  resetsAt: null,
+};
 
 describe("the plan-limit status line", () => {
   it("names the CLI and when it resets", () => {
@@ -65,12 +77,40 @@ describe("the Run cost summary", () => {
         name: "Codex",
         calls: 3,
         reported: true,
-        windows: [{ kind: "weekly", usedPercent: 4, nowPercent: 15, resetsAt: null }],
+        windows: [{ ...weekly, usedPercent: 4, fromPercent: 11, accountPercent: 4 }],
       }),
-    ).toBe("This run used ~4% of your weekly Codex limit (now at 15%).");
+    ).toBe(
+      "This run used 4% of your weekly Codex limit, from each call's own readings. Codex weekly: 11% → 15% while this ran (all use on this account).",
+    );
     expect(
       planUse({ account: "claude-code", name: "Claude", calls: 1, reported: false, windows: [] }),
     ).toContain("did not report its plan limits");
+  });
+  it("says plainly when a share is split, shared with other use, or from older data", () => {
+    const plan = (window: Partial<PlanWindowUse>) =>
+      planUse({
+        account: "claude-code",
+        name: "Claude",
+        calls: 6,
+        reported: true,
+        windows: [{ ...weekly, ...window }],
+      });
+    expect(plan({ basis: "split", usedPercent: 6 })).toContain(
+      "This run used about 6% of your weekly Claude limit. Calls that ran at the same time split their rise by tokens.",
+    );
+    expect(plan({ basis: "shared", usedPercent: null, sharedCalls: 6 })).toContain(
+      "This run's share of your weekly Claude limit is shared with other use",
+    );
+    expect(plan({ basis: "shared", usedPercent: 2, sharedCalls: 3 })).toContain(
+      "This run used at least 2% of your weekly Claude limit. 3 calls ran while other calls on this account did",
+    );
+    // The project the bug was found on: never above 100%, and said to be approximate.
+    expect(plan({ basis: "approximate", usedPercent: 45, fromPercent: 40, nowPercent: 85 })).toBe(
+      "This project ran before Slopify kept each call's own readings, so its share of your weekly Claude limit is shared with other use on this account: up to 45%. Claude weekly: 40% → 85% while this ran (all use on this account).",
+    );
+    expect(
+      plan({ kind: "five_hour", rolledOver: true, fromPercent: 92, nowPercent: 12 }),
+    ).toContain("Claude 5-hour: 92% → 12% while this ran, with a reset in between");
   });
   it("lists usage in plain units", () => {
     expect(
@@ -122,7 +162,7 @@ describe("the Run cost tab", () => {
         name: "Codex",
         calls: 2,
         reported: true,
-        windows: [{ kind: "weekly", usedPercent: 18, nowPercent: 40, resetsAt: null }],
+        windows: [{ ...weekly, usedPercent: 18, fromPercent: 22, accountPercent: 18 }],
       },
     ],
     waits: [],

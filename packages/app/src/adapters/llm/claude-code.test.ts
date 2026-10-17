@@ -196,6 +196,19 @@ describe("claudeCodeLlm.complete", () => {
     ]);
   });
 
+  it("keeps a multi-turn call's first windows as its before and its last as its after", async () => {
+    // The grounded run's one rate_limit_event again after its search turn, a point higher.
+    const lines = fixture("claude-code-web-search.jsonl").trim().split("\n");
+    const event = lines.find((line) => line.includes('"rate_limit_event"')) ?? "";
+    const later = event.replace('"utilization":0.1,', '"utilization":0.11,');
+    const events = await drain([...lines.slice(0, -1), later, lines.at(-1)].join("\n"));
+    const done = events.at(-1);
+    expect(done?.type === "done" ? done.limits : undefined).toMatchObject({
+      before: [{ kind: "five_hour", usedPercent: 10 }, { kind: "weekly" }],
+      after: [{ kind: "five_hour", usedPercent: 11 }, { kind: "weekly" }],
+    });
+  });
+
   it("ignores the hook, init, thinking-token and rate-limit events around the answer", async () => {
     // Nine recorded lines, two of which say anything the port has a word for.
     expect(fixture("claude-code-success.jsonl").trim().split("\n")).toHaveLength(9);

@@ -29,13 +29,14 @@ export function createUsageMeter(deps: MeterDeps): UsageMeter {
     record: (call: MeteredCall): void => {
       const priced = priceCall(call, deps.catalogue());
       const at = deps.clock.now().toISOString();
+      const usageId = deps.ids.next();
       deps.db
         .prepare(
           `INSERT INTO provider_usage (id, project_id, stage, kind, provider, model, tokens_in, tokens_out, tokens_cached, characters, images, seconds, size, quality, wall_ms, on_plan, cost, api_model, api_cost, price_json, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
-          deps.ids.next(),
+          usageId,
           call.projectId,
           call.stage,
           call.kind,
@@ -57,13 +58,20 @@ export function createUsageMeter(deps: MeterDeps): UsageMeter {
           priced.price === null ? null : JSON.stringify(priced.price),
           at,
         );
+      // The reading names its call, so the Run cost tab knows when the call ran and its tokens.
       const account = planAccountOf(call.provider);
       if (account !== undefined && call.limits !== undefined)
         deps.db
           .prepare(
             "INSERT INTO plan_limit_readings (id, project_id, account, reading_json, created_at) VALUES (?, ?, ?, ?, ?)",
           )
-          .run(deps.ids.next(), call.projectId, account, JSON.stringify(call.limits), at);
+          .run(
+            deps.ids.next(),
+            call.projectId,
+            account,
+            JSON.stringify({ ...call.limits, usageId }),
+            at,
+          );
     },
   };
 }

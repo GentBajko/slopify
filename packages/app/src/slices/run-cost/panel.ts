@@ -2,14 +2,16 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { type StageKind, stageKinds } from "../../kernel/pipeline.js";
 import {
-  type LimitWindow,
   type PlanAccount,
   planAccountNames,
-  planAccountOf,
   planAccounts,
 } from "../../kernel/ports/plan-limits.js";
 import type { ListingLimitWait } from "../admission/model.js";
+import { type PlanUse, planUses } from "./plan-readings.js";
 import { projectTiming, type RunTiming } from "./timing.js";
+
+export type { PlanUse } from "./plan-readings.js";
+export type { PlanWindowUse, WindowBasis } from "./plan-use.js";
 
 // The data behind a project's Run cost tab: what the run actually cost, per stage and per
 // model, what its CLI calls would have cost through the API, the usage behind both, and how
@@ -46,25 +48,6 @@ export interface ModelCost extends CostLine, UsageTotals {
   readonly kind: "llm" | "tts" | "image" | "video";
   readonly onPlan: boolean;
   readonly apiModel: string | null;
-}
-
-export interface PlanWindowUse {
-  readonly kind: LimitWindow["kind"];
-  // How many percentage points of the window the run took, as the CLI's own readings show.
-  readonly usedPercent: number;
-  // The window's reading after the run's last call.
-  readonly nowPercent: number;
-  readonly resetsAt: string | null;
-}
-
-export interface PlanUse {
-  readonly account: PlanAccount;
-  readonly name: string;
-  readonly calls: number;
-  // False when the CLI reported no windows at all for this run (e.g. through the Docker
-  // host bridge): the tab says so rather than guessing.
-  readonly reported: boolean;
-  readonly windows: readonly PlanWindowUse[];
 }
 
 export interface LimitWait {
@@ -106,16 +89,6 @@ const usageRow = z.object({
   price_json: z.string().nullable(),
 });
 type UsageRow = z.infer<typeof usageRow>;
-
-const windowSchema = z.object({
-  kind: z.enum(["five_hour", "weekly", "other"]),
-  usedPercent: z.number(),
-  resetsAt: z.string().nullable(),
-});
-const readingSchema = z.object({
-  before: z.array(windowSchema).optional(),
-  after: z.array(windowSchema).optional(),
-});
 
 const emptyTotals: UsageTotals = {
   tokensIn: 0,
@@ -201,7 +174,11 @@ export function runCostOf(db: DatabaseSync, projectId: string, now = Date.now())
   for (const [stage, wallMs] of walls)
     if (!stages.has(stage)) stages.set(stage, { stage, wallMs, ...emptyLine, ...emptyTotals });
 
-  const plans = planUses(db, projectId, rows);
+  const plans = planUses(
+    db,
+    projectId,
+    rows.map((row) => row.provider),
+  );
   return {
     currency: "USD",
     ...total,
@@ -236,67 +213,6 @@ function catalogueOf(json: string | null): string | null {
   if (json === null) return null;
   const parsed = z.object({ catalogue: z.string() }).safeParse(JSON.parse(json));
   return parsed.success ? parsed.data.catalogue : null;
-}
-
-// Two readings belong to the same window when their resets agree to within a few minutes;
-// a reset moving on means the window rolled over between them.
-const sameWindowMs = 5 * 60_000;
-
-export function windowUse(readings: readonly (readonly LimitWindow[])[]): PlanWindowUse[] {
-  const byKind = new Map<LimitWindow["kind"], LimitWindow[]>();
-  for (const reading of readings)
-    for (const window of reading)
-      byKind.set(window.kind, [...(byKind.get(window.kind) ?? []), window]);
-  const uses: PlanWindowUse[] = [];
-  for (const [kind, seen] of byKind) {
-    let used = 0;
-    for (let at = 1; at < seen.length; at += 1) {
-      const previous = seen[at - 1];
-      const current = seen[at];
-      if (previous === undefined || current === undefined) continue;
-      const same =
-        previous.resetsAt === current.resetsAt ||
-        (previous.resetsAt !== null &&
-          current.resetsAt !== null &&
-          Math.abs(Date.parse(previous.resetsAt) - Date.parse(current.resetsAt)) < sameWindowMs);
-      used += same ? Math.max(0, current.usedPercent - previous.usedPercent) : current.usedPercent;
-    }
-    const last = seen.at(-1);
-    if (last !== undefined)
-      uses.push({ kind, usedPercent: used, nowPercent: last.usedPercent, resetsAt: last.resetsAt });
-  }
-  const order: readonly LimitWindow["kind"][] = ["five_hour", "weekly", "other"];
-  return uses.toSorted((left, right) => order.indexOf(left.kind) - order.indexOf(right.kind));
-}
-
-function planUses(db: DatabaseSync, projectId: string, rows: readonly UsageRow[]): PlanUse[] {
-  const readings = db
-    .prepare(
-      "SELECT account, reading_json FROM plan_limit_readings WHERE project_id = ? ORDER BY created_at, rowid",
-    )
-    .all(projectId)
-    .map((row) => z.object({ account: z.string(), reading_json: z.string() }).parse(row));
-  return planAccounts.flatMap((account): PlanUse[] => {
-    const calls = rows.filter((row) => planAccountOf(row.provider) === account).length;
-    if (calls === 0) return [];
-    const sequence: LimitWindow[][] = [];
-    for (const row of readings) {
-      if (row.account !== account) continue;
-      const parsed = readingSchema.safeParse(JSON.parse(row.reading_json));
-      if (!parsed.success) continue;
-      if (parsed.data.before?.length) sequence.push(parsed.data.before);
-      if (parsed.data.after?.length) sequence.push(parsed.data.after);
-    }
-    return [
-      {
-        account,
-        name: planAccountNames[account],
-        calls,
-        reported: sequence.length > 0,
-        windows: windowUse(sequence),
-      },
-    ];
-  });
 }
 
 export function limitWaitsOf(db: DatabaseSync, projectId: string): LimitWait[] {

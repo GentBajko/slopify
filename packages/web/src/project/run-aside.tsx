@@ -18,6 +18,7 @@ import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
 import { retryingWord } from "@/lib/state-words";
 import { stageWords } from "./next-action.js";
+import { accountLine, shareShort, shareValue, windowName } from "./plan-share.js";
 import { money, workDuration } from "./run-cost.js";
 import { finalOutput, summaryOf } from "./summary.js";
 
@@ -161,20 +162,7 @@ export function CostSoFar({
 }): ReactElement | null {
   if (cost === undefined || (cost.calls === 0 && cost.byStage.length === 0)) return null;
   const windows = cost.plans.flatMap((plan) =>
-    plan.reported
-      ? plan.windows.map((window) => ({
-          key: `${plan.account}/${window.kind}`,
-          name: plan.name,
-          window:
-            window.kind === "five_hour"
-              ? "5-hour"
-              : window.kind === "weekly"
-                ? "weekly"
-                : "current",
-          used: window.usedPercent,
-          now: window.nowPercent,
-        }))
-      : [],
+    plan.reported ? plan.windows.map((window) => ({ plan, window })) : [],
   );
   return (
     <section aria-labelledby="cost-so-far-title" className="flex flex-col gap-3">
@@ -194,18 +182,19 @@ export function CostSoFar({
           ? null
           : ` · ${workDuration(cost.run.workingMs)} of work`}
       </p>
-      {windows.map((row) => {
-        const used = row.used < 1 ? "under 1%" : `${percent.format(row.used)}%`;
-        const name = `${row.window} ${row.name} limit`;
+      {windows.map(({ plan, window }) => {
+        const used = shareValue(window);
+        const name = `${windowName(window.kind)} ${plan.name} limit`;
         return (
-          <div key={row.key} className="flex flex-col gap-1">
-            <p className="m-0 text-small text-ink-2">{`${row.name}: ${used} of your ${row.window} limit`}</p>
+          <div key={`${plan.account}/${window.kind}`} className="flex flex-col gap-1">
+            <p className="m-0 text-small text-ink-2">{shareShort(plan, window)}</p>
             <Meter
-              value={row.used / 100}
+              value={(window.usedPercent ?? 0) / 100}
               label={`Share of the ${name} this run used`}
-              valueText={`${used} of your ${name}; now at ${percent.format(row.now)}%`}
-              tone={row.now >= 80 ? "waiting" : "accent"}
+              valueText={`${used} of your ${name}; the account is at ${percent.format(window.nowPercent)}%`}
+              tone={window.nowPercent >= 80 ? "waiting" : "accent"}
             />
+            <p className="m-0 text-small text-ink-3">{accountLine(plan, window)}</p>
           </div>
         );
       })}

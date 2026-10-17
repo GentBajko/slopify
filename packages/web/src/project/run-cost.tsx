@@ -18,6 +18,7 @@ import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/sta
 import { usd } from "@/lib/format";
 import { runCostQuery } from "@/queries";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
+import { accountLine, shareLabel, shareLine, shareValue, windowName } from "./plan-share.js";
 import { stageNames } from "./summary.js";
 
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
@@ -147,10 +148,6 @@ const modelColumns: readonly Column<ModelCost>[] = [
   { id: "calls", header: "Calls", numeric: true, cell: (row) => whole.format(row.calls) },
 ];
 
-function windowName(kind: PlanUse["windows"][number]["kind"]): string {
-  return kind === "five_hour" ? "5-hour" : kind === "weekly" ? "weekly" : "current";
-}
-
 function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
   if (cost.calls === 0 && cost.byStage.length === 0)
     return (
@@ -175,13 +172,17 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
           )}
           {meters.map(({ plan, window }) => {
             const name = `${windowName(window.kind)} ${plan.name} limit`;
-            const used = window.usedPercent < 1 ? "<1%" : `${percent.format(window.usedPercent)}%`;
+            const used = shareValue(window);
             return (
-              <Stat key={`${plan.account}/${window.kind}`} value={used} label={`of ${name}`}>
+              <Stat
+                key={`${plan.account}/${window.kind}`}
+                value={used}
+                label={shareLabel(window, name)}
+              >
                 <Meter
-                  value={window.usedPercent / 100}
+                  value={(window.usedPercent ?? 0) / 100}
                   label={`Share of the ${name} this run used`}
-                  valueText={`${used} of your ${name}; now at ${percent.format(window.nowPercent)}%`}
+                  valueText={`${used} of your ${name}; the account is at ${percent.format(window.nowPercent)}%`}
                   tone={window.nowPercent >= 80 ? "waiting" : "accent"}
                 />
               </Stat>
@@ -260,20 +261,14 @@ export function planLine(cost: Pick<RunCost, "apiEquivalent" | "apiUnpriced">): 
   return `CLI calls: $0 on your plan · ~${money(api)} via API${unpriced}.`;
 }
 
-// "This run used ~3% of your weekly Codex limit", or a plain word that it is not known.
+// Each window's share of the run and the account's own reading beside it, or a plain word
+// that it is not known.
 export function planUse(plan: PlanUse): string {
   if (!plan.reported)
     return `${plan.name} did not report its plan limits for this run, so the share it used is not known.`;
   if (plan.windows.length === 0) return `${plan.name} reported no limit windows for this run.`;
   return plan.windows
-    .map((window) => {
-      const name = windowName(window.kind);
-      const used =
-        // Codex reports whole percents, so a short run can read as no change at all.
-        window.usedPercent < 1 ? "under 1%" : `~${percent.format(window.usedPercent)}%`;
-      const now = `now at ${percent.format(window.nowPercent)}%${window.resetsAt === null ? "" : `, resets ${day(window.resetsAt)}`}`;
-      return `This run used ${used} of your ${name} ${plan.name} limit (${now}).`;
-    })
+    .map((window) => `${shareLine(plan, window)} ${accountLine(plan, window)}`)
     .join(" ");
 }
 
@@ -351,12 +346,4 @@ function clock(iso: string): string {
   return at.toDateString() === today.toDateString()
     ? time
     : `${at.toLocaleDateString(undefined, { weekday: "short" })} ${time}`;
-}
-
-function day(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
