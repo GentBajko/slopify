@@ -12,14 +12,12 @@ import { currentRevisionId, listRevisionHistory } from "../../slices/revisions/r
 import { restoreRevisionSchema, saveRevisionSchema } from "../../slices/revisions/schema.js";
 import { getRevisionView } from "../../slices/revisions/view.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam, idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
-const projectParam = z.object({ id });
+const id = idString;
+const projectParam = idParam;
 const revisionParam = projectParam.extend({ revisionId: id });
 const saveBody = saveRevisionSchema.extend({ idempotencyKey: z.uuid() });
 const restoreBody = restoreRevisionSchema.extend({ idempotencyKey: z.uuid() });
@@ -63,13 +61,11 @@ function refused(
     readonly fields?: readonly FieldError[] | undefined;
   },
 ): Response {
-  const status = statuses[value.reason];
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, value.reason, {
+    statuses,
+    otherwise: 409,
     detail: details[value.reason],
     extensions: {
-      reason: value.reason,
       currentRevisionId: currentRevisionId(deps.db, projectId) ?? null,
       fields: value.fields ?? [],
     },
@@ -78,7 +74,6 @@ function refused(
 function unavailable(c: Context): Response {
   return problem(c, {
     status: 503,
-    title: titleOf(503),
     detail:
       "Rebuilding is not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
   });

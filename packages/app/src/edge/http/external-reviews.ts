@@ -8,13 +8,10 @@ import { answerExternalReview } from "../../slices/reviews/external-repo.js";
 import { verdictAnswerSchema, verdictIssue } from "../../slices/reviews/verdict.js";
 import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, problemFromError, titleOf, type ValidationIssue } from "./problem.js";
+import { idString } from "./ids.js";
+import { onInvalid, problem, problemFromError, type ValidationIssue } from "./problem.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
+const id = idString;
 const reviewParam = z.object({ id, reviewId: id });
 
 // A verdict that wasn't saved, what was wrong with it, and the tool and body to send instead.
@@ -23,7 +20,6 @@ const reviewParam = z.object({ id, reviewId: id });
 function notSaved(c: Context, why: string): Response {
   return problem(c, {
     status: 400,
-    title: titleOf(400),
     detail: `The verdict wasn't saved${why}. Call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]} and that fixed; a pass may send reasons: [].`,
     extensions: { reason: "invalid-verdict" },
   });
@@ -34,7 +30,6 @@ function notSaved(c: Context, why: string): Response {
 function noVerdict(c: Context): Response {
   return problem(c, {
     status: 400,
-    title: titleOf(400),
     detail:
       'The verdict wasn\'t saved: no verdict came with it. Call submit_review_verdict again with body {verdict: "pass" | "fail", reasons: ["one short sentence per problem"]}; a pass may send reasons: [].',
     extensions: { reason: "invalid-verdict" },
@@ -92,14 +87,12 @@ export function externalReviewRoutes(deps: AppDeps) {
           return result.reason === "not-found"
             ? problem(c, {
                 status: 404,
-                title: titleOf(404),
                 detail:
                   "This review doesn't exist: the project may have been deleted. Call needs_attention to see what is waiting now.",
                 extensions: { reason: "not-found" },
               })
             : problem(c, {
                 status: 409,
-                title: titleOf(409),
                 detail: `The verdict wasn't saved. ${closedReviewSentences[result.reason]}`,
                 extensions: { reason: result.reason },
               });

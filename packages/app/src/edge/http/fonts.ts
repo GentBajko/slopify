@@ -30,7 +30,6 @@ export function fontsRoutes(deps: AppDeps) {
       if (contentType === undefined || !contentType.toLowerCase().startsWith("multipart/form-data"))
         return problem(c, {
           status: 415,
-          title: titleOf(415),
           detail:
             "The font was not sent as a file. Reload the page and choose a .ttf or .otf file again.",
         });
@@ -38,7 +37,6 @@ export function fontsRoutes(deps: AppDeps) {
       if (body === null)
         return problem(c, {
           status: 400,
-          title: titleOf(400),
           detail: "No font file arrived. Choose a .ttf or .otf file and try again.",
         });
       const part = await readUpload(contentType, body);
@@ -62,7 +60,6 @@ export function fontsRoutes(deps: AppDeps) {
         if (!result.success)
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "This font no longer exists; it may have been deleted. Reload the page to see your current fonts.",
           });
@@ -80,7 +77,6 @@ export function fontsRoutes(deps: AppDeps) {
           if (!isMissingFont(error)) throw error;
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "This font no longer exists; it may have been deleted. Reload the page to see your current fonts.",
           });
@@ -147,7 +143,7 @@ async function readUpload(
 
 function failure(reason: Extract<FontUploadResult, { ok: false }>["reason"]): {
   readonly status: 400 | 413 | 415;
-  readonly title: string;
+  readonly title?: string;
   readonly detail: string;
 } {
   switch (reason) {
@@ -160,21 +156,18 @@ function failure(reason: Extract<FontUploadResult, { ok: false }>["reason"]): {
     case "unsupported-format":
       return {
         status: 415,
-        title: titleOf(415),
         detail:
           "Slopify only accepts .ttf or .otf font files. Choose a file with one of those endings.",
       };
     case "unsafe-filename":
       return {
         status: 400,
-        title: titleOf(400),
         detail:
           "The font's file name contains characters Slopify cannot use. Rename the file on your computer, then upload it again.",
       };
     case "invalid-font":
       return {
         status: 400,
-        title: titleOf(400),
         detail:
           "This file is not a valid TrueType (.ttf) or OpenType (.otf) font; it may be damaged. Download the font again or choose another.",
       };

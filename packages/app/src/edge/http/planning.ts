@@ -17,7 +17,7 @@ import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import { stagedFiles } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const planningBody = z.object({
   draft: runDraftSchema,
@@ -87,7 +87,6 @@ export function planningRoutes(deps: AppDeps) {
           if (result.ok) return c.json({ queue: result.queue });
           return problem(c, {
             status: 409,
-            title: titleOf(409),
             detail:
               result.reason === "edge"
                 ? "This video is already at that end of the waiting videos, so it can't move further."
@@ -102,7 +101,6 @@ export function planningRoutes(deps: AppDeps) {
         if (fields.length)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail:
               "Some settings need fixing before Slopify can estimate the cost. Fix the highlighted fields.",
             extensions: { fields },
@@ -118,7 +116,6 @@ export function planningRoutes(deps: AppDeps) {
         if (input.draft.checkpoints?.length)
           return problem(c, {
             status: 409,
-            title: titleOf(409),
             detail:
               "Videos with checkpoints turned on cannot be queued. Start them one at a time from Play with Review and start.",
           });
@@ -131,7 +128,6 @@ export function planningRoutes(deps: AppDeps) {
           } catch {
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail:
                 "The subtitle font you picked is no longer available. Choose another font before starting.",
             });
@@ -142,7 +138,6 @@ export function planningRoutes(deps: AppDeps) {
         if (fields.length)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: "No videos were queued. Fix the highlighted fields, then try again.",
             extensions: { fields },
           });

@@ -47,7 +47,7 @@ import { openFolderRoutes } from "./open-folder.js";
 import { outputRoutes } from "./outputs.js";
 import { patchNotesRoutes } from "./patch-notes.js";
 import { planningRoutes } from "./planning.js";
-import { problem, problemFromError, titleOf } from "./problem.js";
+import { problem, problemFromError } from "./problem.js";
 import { projectTemplateRoutes } from "./project-templates.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
@@ -251,7 +251,6 @@ export function createApp(deps: AppDeps): Hono {
       if (deps.installationPending?.() && new URL(c.req.url).pathname !== "/api/update/activate")
         return problem(c, {
           status: 503,
-          title: titleOf(503),
           detail:
             "Slopify is still finishing its Docker setup. Wait for the launcher to finish, then try again.",
         });
@@ -259,7 +258,6 @@ export function createApp(deps: AppDeps): Hono {
       if (deps.mutations !== undefined && releaseRequest === undefined)
         return problem(c, {
           status: 503,
-          title: titleOf(503),
           detail:
             "Slopify is shutting down, so changes cannot be saved right now. Start it again, reload the page and try again.",
         });
@@ -275,7 +273,6 @@ export function createApp(deps: AppDeps): Hono {
         releaseRequest?.();
         return problem(c, {
           status: 409,
-          title: titleOf(409),
           detail: "Slopify is updating. Wait for it to restart, reload the page and try again.",
         });
       }
@@ -300,7 +297,6 @@ export function createApp(deps: AppDeps): Hono {
         return next();
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail:
           "This is the sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top of the sample's page, then edit and rebuild the copy.",
         extensions: { reason: "sample-read-only" },
@@ -361,7 +357,6 @@ const sampleReadOnlyExempt = /\/(revisions\/prepare|rebuild\/preview|open-folder
 function missing(c: Context): Response {
   return problem(c, {
     status: 404,
-    title: titleOf(404),
     detail: `${c.req.method} ${c.req.path} is not a route of this API.`,
   });
 }

@@ -22,7 +22,7 @@ import { createModelCatalog } from "../../slices/settings/models.js";
 import type { ReadinessDeps } from "../../slices/settings/readiness.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const providerParam = z.object({ id: z.enum(providerIds) });
 const healthQuery = z.object({ provider: z.enum(providerIds).optional() });
@@ -86,8 +86,7 @@ export function providerRoutes(deps: AppDeps) {
       // answering for the key. `?provider=codex` checks that one only (its row's Check again,
       // or a sign-in fix-it's).
       .post("/health", zValidator("query", healthQuery, onInvalid), async (c) => {
-        if (deps.fetch === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.fetch === undefined) return problem(c, { status: 503, detail: noFetch });
         const catalogue = deps.catalogue;
         return c.json(
           await checkProviderHealth(
@@ -109,7 +108,6 @@ export function providerRoutes(deps: AppDeps) {
         if (!deps.catalogue?.sync)
           return problem(c, {
             status: 503,
-            title: titleOf(503),
             detail:
               "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
           });
@@ -125,20 +123,17 @@ export function providerRoutes(deps: AppDeps) {
         });
       })
       .post("/catalogue/retired/switch", zValidator("json", switchBody, onInvalid), async (c) => {
-        if (deps.catalogue === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.catalogue === undefined) return problem(c, { status: 503, detail: noFetch });
         const result = await switchRetiredModel(
           upkeep(),
           deps.catalogue.read(),
           c.req.valid("json"),
         );
-        if (!result.ok)
-          return problem(c, { status: 409, title: titleOf(409), detail: result.message });
+        if (!result.ok) return problem(c, { status: 409, detail: result.message });
         return c.json(result);
       })
       .post("/catalogue/retired/switch-all", async (c) => {
-        if (deps.catalogue === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.catalogue === undefined) return problem(c, { status: 503, detail: noFetch });
         return c.json(await switchAllRetired(upkeep(), deps.catalogue.read()));
       })
       .get("/catalogue", (c) =>
@@ -153,7 +148,6 @@ export function providerRoutes(deps: AppDeps) {
         if (!deps.catalogue)
           return problem(c, {
             status: 503,
-            title: titleOf(503),
             detail:
               "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
           });
@@ -162,7 +156,6 @@ export function providerRoutes(deps: AppDeps) {
         } catch {
           return problem(c, {
             status: 502,
-            title: titleOf(502),
             detail:
               "Slopify could not download the latest model list. Your current list is still in use; check your internet connection and try Refresh again.",
           });
@@ -225,7 +218,6 @@ export function providerRoutes(deps: AppDeps) {
           if (!result.ok)
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail: result.message,
               extensions: { fields: [{ field: "path", message: result.message }] },
             });
@@ -254,14 +246,12 @@ export function providerRoutes(deps: AppDeps) {
       .post("/:id/key/test", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
         if (providerById(id).auth !== "key") return refusal(c, id, "cli-provider");
-        if (deps.fetch === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.fetch === undefined) return problem(c, { status: 503, detail: noFetch });
         const raw: unknown = await c.req.json().catch(() => undefined);
         const candidate = raw === undefined ? undefined : keyBody.safeParse(raw);
         if (candidate !== undefined && !candidate.success)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
           });
         return c.json(
@@ -293,7 +283,6 @@ function refusal(
   if (reason === "cli-provider") {
     return problem(c, {
       status: 400,
-      title: titleOf(400),
       detail:
         providerById(id).auth === "local"
           ? `${name} is your computer's own speech, so it has no API key to save. It works as soon as a speech program is installed.`
@@ -303,13 +292,11 @@ function refusal(
   if (reason === "absent") {
     return problem(c, {
       status: 404,
-      title: titleOf(404),
       detail: `There is no saved API key for ${name}, so there is nothing to remove.`,
     });
   }
   return problem(c, {
     status: 400,
-    title: titleOf(400),
     detail: "This API key cannot be saved yet. Paste the key and try again.",
     extensions: {
       fields: [{ field: "key", message: "Paste the API key from your provider's account page." }],

@@ -4,7 +4,8 @@ import { z } from "zod";
 import { weekSummary } from "../../slices/run-cost/week.js";
 import { markUploaded, setAside } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 const weekQuery = z.object({
   since: z.iso.datetime({ offset: true }),
@@ -19,14 +20,6 @@ export function homeRoutes(deps: Pick<AppDeps, "db">) {
     return c.json(weekSummary(deps.db, new Date(since).toISOString(), channelId));
   });
 }
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
 
 // Home's "Mark uploaded" and its undo. Slopify never uploads, so this only records what the
 // person says they did.
@@ -48,7 +41,6 @@ export function uploadedRoutes(deps: Pick<AppDeps, "db" | "clock">) {
           if (!result.ok)
             return problem(c, {
               status: 404,
-              title: titleOf(404),
               detail: "This project no longer exists. Go back to Projects to pick another.",
             });
           return c.json({ setAside: c.req.valid("json").setAside });
@@ -68,7 +60,6 @@ export function uploadedRoutes(deps: Pick<AppDeps, "db" | "clock">) {
           if (!result.ok)
             return problem(c, {
               status: 404,
-              title: titleOf(404),
               detail: "This project no longer exists. Go back to Projects to pick another.",
             });
           return c.json({ uploadedAt: result.uploadedAt });

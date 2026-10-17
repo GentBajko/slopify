@@ -6,7 +6,7 @@ import type { Log } from "../../kernel/log.js";
 
 export interface ProblemInit {
   readonly status: ContentfulStatusCode;
-  readonly title: string;
+  readonly title?: string | undefined;
   readonly type?: string | undefined;
   readonly detail?: string | undefined;
   readonly extensions?: Readonly<Record<string, unknown>> | undefined;
@@ -31,7 +31,7 @@ export function problem(c: Context, init: ProblemInit): Response {
     // Extensions go first so a route cannot shadow a member RFC 9457 reserves.
     ...init.extensions,
     type: init.type ?? "about:blank",
-    title: init.title,
+    title: init.title ?? titleOf(init.status),
     status: init.status,
     ...(init.detail === undefined ? {} : { detail: init.detail }),
     instance: c.req.path,
@@ -45,7 +45,6 @@ export function problemFromError(c: Context, error: Error, deps: ProblemDeps): R
   if (error instanceof HTTPException) {
     return problem(c, {
       status: error.status,
-      title: titleOf(error.status),
       detail: error.message === "" ? undefined : error.message,
     });
   }
@@ -58,7 +57,6 @@ export function problemFromError(c: Context, error: Error, deps: ProblemDeps): R
   });
   return problem(c, {
     status: 500,
-    title: titleOf(500),
     detail: `Slopify hit an internal error while handling this request. Try again; if it keeps happening, use Download diagnostics in Settings and report it (reference ${correlationId}).`,
     extensions: { correlationId },
   });
@@ -86,7 +84,6 @@ export function onInvalid(
   }
   return problem(c, {
     status: 400,
-    title: titleOf(400),
     detail:
       "Slopify could not read this request, which usually means the page is out of date. Reload the page and try again.",
     extensions: {

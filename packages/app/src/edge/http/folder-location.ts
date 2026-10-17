@@ -3,7 +3,7 @@ import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import type { Context } from "hono";
 import type { AppDeps } from "./app.js";
 import { folderReplySchema } from "./folder-location-schema.js";
-import { problem, titleOf } from "./problem.js";
+import { problem } from "./problem.js";
 
 type FolderDeps = Pick<AppDeps, "openFolder" | "folderLocation" | "log"> & {
   readonly paths: Pick<AppDeps["paths"], "projects">;
@@ -21,7 +21,6 @@ export async function replyForFolder(
     if (!host)
       return problem(c, {
         status: 503,
-        title: titleOf(503),
         detail:
           "Slopify cannot show where this file is on your computer because its Docker project folder was not set up. You can still use the download buttons, or run the Slopify Docker launcher again to set up the folder.",
       });
@@ -58,7 +57,6 @@ export async function replyForFolder(
       });
       return problem(c, {
         status: 404,
-        title: titleOf(404),
         detail:
           "This output's folder was deleted or moved. Use More → make it again in its section on the project page to make the file again.",
       });
@@ -75,7 +73,6 @@ export async function replyForFolder(
     });
     return problem(c, {
       status: 503,
-      title: titleOf(503),
       detail:
         "Slopify could not open a file manager window on the computer it runs on. Make sure you are signed in to that computer's desktop, or use the download buttons instead.",
     });

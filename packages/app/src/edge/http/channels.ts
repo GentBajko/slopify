@@ -26,7 +26,8 @@ import {
   updateChannel,
 } from "../../slices/channels/service.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid } from "./problem.js";
+import { jsonBody, refusal } from "./refusal.js";
 
 const idParam = z.object({ id: z.uuid() });
 const memberParam = z.object({ memberId: z.uuid() });
@@ -48,7 +49,7 @@ export function channelRoutes(deps: AppDeps) {
     new Hono()
       .get("/", (c) => c.json({ channels: listChannels(service) }))
       .post("/", async (c) => {
-        const result = createChannel(service, await body(c));
+        const result = createChannel(service, await jsonBody(c));
         return result.ok ? c.json(result.value, 201) : refused(c, result);
       })
       // The pictures by content hash: they never change, so the browser may keep them.
@@ -62,11 +63,11 @@ export function channelRoutes(deps: AppDeps) {
         });
       })
       .put("/templates/:templateId", zValidator("param", templateParam, onInvalid), async (c) => {
-        const result = moveTemplate(service, c.req.valid("param").templateId, await body(c));
+        const result = moveTemplate(service, c.req.valid("param").templateId, await jsonBody(c));
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .put("/cast/:memberId", zValidator("param", memberParam, onInvalid), async (c) => {
-        const result = updateCastMember(service, c.req.valid("param").memberId, await body(c));
+        const result = updateCastMember(service, c.req.valid("param").memberId, await jsonBody(c));
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .delete("/cast/:memberId", zValidator("param", memberParam, onInvalid), (c) => {
@@ -93,7 +94,7 @@ export function channelRoutes(deps: AppDeps) {
         },
       )
       .post("/cast/:memberId/generate", zValidator("param", memberParam, onInvalid), async (c) => {
-        const result = generateCastImage(service, c.req.valid("param").memberId, await body(c));
+        const result = generateCastImage(service, c.req.valid("param").memberId, await jsonBody(c));
         return result.ok ? c.json(result.value, 202) : refused(c, result);
       })
       .delete(
@@ -110,11 +111,11 @@ export function channelRoutes(deps: AppDeps) {
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .put("/:id", zValidator("param", idParam, onInvalid), async (c) => {
-        const result = updateChannel(service, c.req.valid("param").id, await body(c));
+        const result = updateChannel(service, c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .put("/:id/ai-disclosure", zValidator("param", idParam, onInvalid), async (c) => {
-        const result = setChannelAiDisclosure(service, c.req.valid("param").id, await body(c));
+        const result = setChannelAiDisclosure(service, c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
@@ -122,23 +123,15 @@ export function channelRoutes(deps: AppDeps) {
         return result.ok ? c.body(null, 204) : refused(c, result);
       })
       .post("/:id/cast", zValidator("param", idParam, onInvalid), async (c) => {
-        const result = createCastMember(service, c.req.valid("param").id, await body(c));
+        const result = createCastMember(service, c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json(result.value, 201) : refused(c, result);
       })
       // Move up, Move down and their Undo: one member to a place in the cast's order.
       .post("/:id/cast/move", zValidator("param", idParam, onInvalid), async (c) => {
-        const result = moveCastMember(service, c.req.valid("param").id, await body(c));
+        const result = moveCastMember(service, c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json({ cast: result.value }) : refused(c, result);
       })
   );
-}
-
-async function body(c: Context): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    return undefined;
-  }
 }
 
 const details: Readonly<Record<Extract<ChannelResult<never>, { ok: false }>["reason"], string>> = {
@@ -160,16 +153,9 @@ const details: Readonly<Record<Extract<ChannelResult<never>, { ok: false }>["rea
 };
 
 function refused(c: Context, result: Extract<ChannelResult<never>, { ok: false }>): Response {
-  const status =
-    result.reason === "not-found"
-      ? 404
-      : result.reason === "conflict" || result.reason === "has-templates"
-        ? 409
-        : 400;
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, result.reason, {
+    statuses: { "not-found": 404, conflict: 409, "has-templates": 409 },
+    otherwise: 400,
     detail: result.message ?? details[result.reason],
-    extensions: { reason: result.reason },
   });
 }

@@ -33,7 +33,7 @@ import {
   channelLinkUrlMax,
 } from "../../slices/youtube/placeholders.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const idParam = z.object({ id: z.string().min(1).max(64) });
 // Shape only. The rules - trimming, emptiness, length, the provider speaking at all -
@@ -92,7 +92,6 @@ export function settingsRoutes(deps: AppDeps) {
         if (!result.ok) {
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: "These settings cannot be saved yet. Fix the highlighted fields and try again.",
             extensions: { fields: result.fields },
           });
@@ -108,7 +107,6 @@ export function settingsRoutes(deps: AppDeps) {
         if (refused !== undefined)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `The channel links weren't saved: ${refused} Then press Save in Settings → Channel links.`,
           });
         writeChannelLinks(deps.db, links);
@@ -120,7 +118,6 @@ export function settingsRoutes(deps: AppDeps) {
         if (!result.ok) {
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `The Notification URL wasn't saved: ${result.message} Fix it in Settings → Notifications → Notification URL, then press Save.`,
             extensions: { fields: [{ field: "url", message: result.message }] },
           });
@@ -136,7 +133,6 @@ export function settingsRoutes(deps: AppDeps) {
         if (invalid !== undefined) {
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `The test notification wasn't sent: ${invalid}`,
             extensions: { fields: [{ field: "url", message: invalid }] },
           });
@@ -146,7 +142,6 @@ export function settingsRoutes(deps: AppDeps) {
           deps.log.write("warn", "notification.test", { detail: sendFailureText(result) });
           return problem(c, {
             status: 502,
-            title: titleOf(502),
             detail: `The test notification wasn't delivered: ${sendFailureText(result)}. Check the address in Settings → Notifications → Notification URL (for ntfy, https://ntfy.sh/your-topic), then press Send test notification again.`,
           });
         }
@@ -178,13 +173,11 @@ export function settingsRoutes(deps: AppDeps) {
           return result.reason === "duplicate-voice-id"
             ? problem(c, {
                 status: 409,
-                title: titleOf(409),
                 detail:
                   "This voice ID is already saved for this provider. Use the existing voice, or enter a different voice ID.",
               })
             : problem(c, {
                 status: 400,
-                title: titleOf(400),
                 detail: "This voice cannot be added yet. Fix the highlighted field and try again.",
                 extensions: { fields: [fieldOf(result.reason)] },
               });
@@ -205,13 +198,11 @@ export function settingsRoutes(deps: AppDeps) {
           return result.reason === "missing"
             ? problem(c, {
                 status: 404,
-                title: titleOf(404),
                 detail:
                   "This voice no longer exists; it may have been deleted. Reload Settings → Voices to see your voices.",
               })
             : problem(c, {
                 status: 400,
-                title: titleOf(400),
                 detail: "The languages weren't saved. Fix the highlighted field and try again.",
                 extensions: { fields: [fieldOf("unknown-language")] },
               });
@@ -232,7 +223,6 @@ export function settingsRoutes(deps: AppDeps) {
             ? c.body(null, 204)
             : problem(c, {
                 status: 404,
-                title: titleOf(404),
                 detail:
                   "This voice no longer exists; it may have been deleted. Reload Settings → Voices to see your voices.",
               });
@@ -242,7 +232,6 @@ export function settingsRoutes(deps: AppDeps) {
         if (!removeVoice(voiceDeps, c.req.valid("param").id).ok) {
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "This voice no longer exists; it may have been deleted already. Reload the page to see your voices.",
           });

@@ -39,7 +39,8 @@ import {
   replaceTopics,
   transferTopic,
 } from "../../slices/schedules/topics.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
 const id = z.object({ id: z.uuid() });
 const topicParam = z.object({ id: z.uuid(), topicId: z.string().min(1).max(100) });
@@ -61,18 +62,6 @@ const heldRestore = z
   })
   .strict();
 function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false }>): Response {
-  const status = ["not-found", "missing-template", "topic-not-found"].includes(result.reason)
-    ? 404
-    : [
-          "conflict",
-          "cancel-required",
-          "spend-limit",
-          "unsupported-media",
-          "queue-full",
-          "busy",
-        ].includes(result.reason)
-      ? 409
-      : 400;
   const detail: Record<string, string> = {
     "invalid-input": "Some schedule settings are not valid. Check each field and save again.",
     "not-found":
@@ -97,11 +86,20 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
     "invalid-topics":
       "Some topics name keywords this template does not use. Check each topic under Schedules → Edit and save again.",
   };
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, result.reason, {
+    statuses: {
+      "not-found": 404,
+      "missing-template": 404,
+      "topic-not-found": 404,
+      conflict: 409,
+      "cancel-required": 409,
+      "spend-limit": 409,
+      "unsupported-media": 409,
+      "queue-full": 409,
+      busy: 409,
+    },
+    otherwise: 400,
     detail: result.message ?? detail[result.reason],
-    extensions: { reason: result.reason },
   });
 }
 
@@ -252,7 +250,6 @@ function routes(deps: ScheduleDeps | undefined) {
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,
-            title: titleOf(result.reason === "not-found" ? 404 : 409),
             detail:
               detail[result.reason] ??
               (result.detail === undefined
@@ -282,7 +279,6 @@ function routes(deps: ScheduleDeps | undefined) {
         if (refusal !== undefined)
           return problem(c, {
             status: 409,
-            title: titleOf(409),
             detail: refusal,
             extensions: { reason: "busy" },
           });
@@ -418,7 +414,6 @@ export function calendarRoutes(deps: ScheduleDeps | undefined) {
     if (!result.ok)
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: `Choose a range whose end is after its start and at most ${String(calendarMaxDays)} days long.`,
         extensions: { reason: result.reason },
       });

@@ -1,6 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { z } from "zod";
 import { projectExists } from "../../slices/admission/repo.js";
 import {
   BackupBusyError,
@@ -23,15 +22,8 @@ import {
   projectStorage,
 } from "../../slices/storage/trim.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 const exportFailed =
   "Slopify could not create the backup. Check there is free disk space and try again; if it keeps failing, use Download diagnostics in Settings and report it.";
@@ -59,7 +51,6 @@ export function storageRoutes(deps: AppDeps) {
         if (!projectExists(deps.db, id))
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail: "This project no longer exists. Go back to Projects to pick another.",
           });
         c.header("Cache-Control", "no-store");
@@ -80,13 +71,11 @@ export function storageRoutes(deps: AppDeps) {
         return result.reason === "no-project"
           ? problem(c, {
               status: 404,
-              title: titleOf(404),
               detail:
                 "This project no longer exists. Reload Settings → Storage to see the current list.",
             })
           : problem(c, {
               status: 409,
-              title: titleOf(409),
               detail:
                 "Only a finished project can drop its working files, and this one is running, waiting or has unfinished steps. Let it finish (or cancel it on its project page), then drop the working files again from the project page or Settings → Storage.",
             });
@@ -101,13 +90,11 @@ export function storageRoutes(deps: AppDeps) {
         return result.reason === "no-project"
           ? problem(c, {
               status: 404,
-              title: titleOf(404),
               detail:
                 "This project no longer exists. Reload Settings → Backup & storage to see the current list.",
             })
           : problem(c, {
               status: 409,
-              title: titleOf(409),
               detail:
                 "This project is running or has steps waiting to run, and its files stay where they are until then. Let it finish, or cancel its run on its project page, then press Delete old versions again.",
             });
@@ -143,7 +130,7 @@ export function storageRoutes(deps: AppDeps) {
           if (error instanceof BackupBusyError)
             return c.json({ ready: false as const, detail: error.message, busy: error.projects });
           deps.log.write("error", "storage.export", { detail: String(error) });
-          return problem(c, { status: 500, title: titleOf(500), detail: exportFailed });
+          return problem(c, { status: 500, detail: exportFailed });
         }
       })
       .get("/export", (c) => {
@@ -152,9 +139,9 @@ export function storageRoutes(deps: AppDeps) {
           plan = planBackup(backup());
         } catch (error) {
           if (error instanceof BackupBusyError)
-            return problem(c, { status: 409, title: titleOf(409), detail: error.message });
+            return problem(c, { status: 409, detail: error.message });
           deps.log.write("error", "storage.export", { detail: String(error) });
-          return problem(c, { status: 500, title: titleOf(500), detail: exportFailed });
+          return problem(c, { status: 500, detail: exportFailed });
         }
         // Pulled one chunk at a time, so a slow download reads files no faster than it sends.
         const chunks = streamBackup(plan);
@@ -185,7 +172,6 @@ export function storageRoutes(deps: AppDeps) {
         if (!contentType.includes("application/zip"))
           return problem(c, {
             status: 415,
-            title: titleOf(415),
             detail:
               "Choose a Slopify backup file: a .tar made with Export everything, or an older .zip made with Export backup, both in Settings → Backup & storage.",
           });
@@ -193,7 +179,6 @@ export function storageRoutes(deps: AppDeps) {
         if (!upload.ok)
           return problem(c, {
             status: 413,
-            title: titleOf(413),
             detail:
               "This backup file is empty or larger than 100 MB. Choose a Slopify backup file under 100 MB.",
           });
@@ -211,7 +196,6 @@ export function storageRoutes(deps: AppDeps) {
         } catch {
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail:
               "This file is not a complete Slopify backup; it may be damaged or a different kind of ZIP. Choose a backup made with Backup & storage in Settings.",
           });
@@ -221,7 +205,6 @@ export function storageRoutes(deps: AppDeps) {
           if (request.body === null)
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail:
                 "The backup file arrived empty. Choose the .tar made with Export everything and import it again.",
             });
@@ -232,13 +215,11 @@ export function storageRoutes(deps: AppDeps) {
             if (error instanceof BackupImportRefused)
               return problem(c, {
                 status: error.status,
-                title: titleOf(error.status),
                 detail: error.message,
               });
             deps.log.write("error", "storage.import", { detail: String(error) });
             return problem(c, {
               status: 500,
-              title: titleOf(500),
               detail:
                 "The backup wasn't imported and nothing in this install changed. Try again; if it keeps failing, use Download diagnostics in Settings and report it.",
             });

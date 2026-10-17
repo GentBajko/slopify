@@ -9,14 +9,11 @@ import {
 import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
 import { replyForFolder } from "./folder-location.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 import { waveformAnswer } from "./waveform.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
+const id = idString;
 const revisionParam = z.object({ projectId: id, revisionId: id });
 const recordParam = revisionParam.extend({ recordId: id });
 const folderParam = z.object({ id, revisionId: id, recordId: id });
@@ -96,7 +93,6 @@ export function revisionFolderRoutes(deps: AppDeps) {
       if (origin !== undefined && origin !== new URL(c.req.url).origin)
         return problem(c, {
           status: 403,
-          title: titleOf(403),
           detail:
             "For your safety, folders can only be opened from the Slopify page itself. Open Slopify and try again there.",
         });
@@ -111,7 +107,6 @@ export function revisionFolderRoutes(deps: AppDeps) {
 function unavailable(c: Context, reason: string): Response {
   return problem(c, {
     status: 404,
-    title: titleOf(404),
     detail:
       reason === "missing-file"
         ? "This file was deleted or moved from the project folder. In the Edit tab, use Choose what to remake (in the project's More menu) to make it again."

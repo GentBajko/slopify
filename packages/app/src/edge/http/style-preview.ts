@@ -5,7 +5,7 @@ import { StylePreviewError } from "../../slices/style-preview/render.js";
 import { stylePreviewRequestSchema } from "../../slices/style-preview/schema.js";
 import type { StylePreviews } from "../../slices/style-preview/service.js";
 import { fileResponse } from "./byte-range.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 export { byteRange } from "./byte-range.js";
 
@@ -33,7 +33,6 @@ export function stylePreviewRoutes(deps: { readonly stylePreviews?: StylePreview
           error.reason === "font-missing" ? 409 : error.reason === "ffmpeg-missing" ? 503 : 500;
         return problem(c, {
           status,
-          title: titleOf(status),
           detail: error.message,
           extensions: { reason: error.reason },
         });
@@ -44,7 +43,6 @@ export function stylePreviewRoutes(deps: { readonly stylePreviews?: StylePreview
       if (saved === undefined)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "This style preview is no longer saved; Slopify keeps only the most recent ones. Press Render again to make it.",
         });
@@ -59,7 +57,6 @@ export function stylePreviewRoutes(deps: { readonly stylePreviews?: StylePreview
 function unavailable(c: Context): Response {
   return problem(c, {
     status: 503,
-    title: titleOf(503),
     detail:
       "The style preview isn't available because this Slopify started without its video renderer. Restart Slopify, then press Render again.",
   });
