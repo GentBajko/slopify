@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { ProviderId, ProviderStatus } from "./model.js";
-import { keyedProviders, readSetting, writeSetting } from "./repo.js";
+import { keyedProviders, readJsonSetting, readSetting, writeSetting } from "./repo.js";
 
 // What a fresh Play form picks before the user picks anything. Written once, on the first
 // launch that finds a command-line tool, and read by Play for every new draft.
@@ -39,14 +39,7 @@ export interface FirstRunStatus {
 const textPreference: readonly ProviderId[] = ["claude-code", "codex", "gemini"];
 
 export function readProviderDefaults(db: DatabaseSync): ProviderDefaults {
-  const raw = readSetting(db, defaultsKey);
-  if (raw === undefined) return {};
-  try {
-    const parsed = providerDefaultsSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : {};
-  } catch {
-    return {};
-  }
+  return readJsonSetting(db, defaultsKey, providerDefaultsSchema, {});
 }
 
 export function dismissFirstRun(db: DatabaseSync): void {

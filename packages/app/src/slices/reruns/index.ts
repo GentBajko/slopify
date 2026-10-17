@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -279,7 +280,7 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
 export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readonly (() => void)[] {
   if (currentRevisionId(deps.db, projectId) !== undefined)
     throw new Error(
-      "Slopify hit an internal error (narration was changed the old way on a project that uses versions). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      internalError("narration was changed the old way on a project that uses versions"),
     );
   const stage = stagesOf(deps.db, projectId).find((one) => one.kind === "audio");
   if (
@@ -358,7 +359,7 @@ function removeFiles(deps: RerunDeps, projectId: string, orphaned: readonly stri
       // the action here would leave the user with a stage that cannot be re-run.
       deps.log.write("warn", "reruns.file", {
         projectId,
-        detail: `${path}: ${messageOf(error)}`,
+        detail: `${path}: ${errorText(error)}`,
       });
     }
   }
@@ -377,8 +378,4 @@ function stageOf(stages: readonly Stage[], kind: StageKind): Stage | undefined {
 
 function imageOf(outputs: readonly Output[], outputId: string): Output | undefined {
   return outputs.find((output) => output.id === outputId && output.role === "image");
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

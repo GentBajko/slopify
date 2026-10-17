@@ -1,7 +1,12 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import {
+  deleteSetting,
+  readJsonSetting,
+  stringListSchema,
+  writeSetting,
+} from "../settings/repo.js";
 import {
   type PlaylistUse,
   playlistUses,
@@ -72,17 +77,11 @@ export function readChannelPlaylists(db: DatabaseSync): Record<string, StudioPla
 }
 
 function storedPlaylists(db: DatabaseSync, key: string): StudioPlaylist[] | null {
-  const stored = readSetting(db, key);
-  if (stored === undefined) return null;
-  try {
-    const parsed = storedPlaylistsSchema.safeParse(JSON.parse(stored));
-    if (!parsed.success) return null;
-    if (typeof parsed.data === "string")
-      return parsed.data.trim() === "" ? null : [{ name: parsed.data.trim(), byDefault: true }];
-    return parsed.data.length === 0 ? null : parsed.data;
-  } catch {
-    return null;
-  }
+  const stored = readJsonSetting(db, key, storedPlaylistsSchema, null);
+  if (stored === null) return null;
+  if (typeof stored === "string")
+    return stored.trim() === "" ? null : [{ name: stored.trim(), byDefault: true }];
+  return stored.length === 0 ? null : stored;
 }
 
 // Why a list can't be saved, in words for Settings → YouTube Studio; undefined when it can.
@@ -117,7 +116,7 @@ export function saveStudioPlaylists(
     .filter((one) => one.name !== "");
   const key = playlistKey(channelId);
   if (value.length === 0) {
-    db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+    deleteSetting(db, key);
     return [];
   }
   writeSetting(db, key, JSON.stringify(value));
@@ -133,14 +132,7 @@ export const storedProjectPlaylistsSchema = z.record(
 );
 
 function projectChoices(db: DatabaseSync): Record<string, string[]> {
-  const stored = readSetting(db, studioProjectPlaylistsKey);
-  if (stored === undefined) return {};
-  try {
-    const parsed = storedProjectPlaylistsSchema.safeParse(JSON.parse(stored));
-    return parsed.success ? parsed.data : {};
-  } catch {
-    return {};
-  }
+  return readJsonSetting(db, studioProjectPlaylistsKey, storedProjectPlaylistsSchema, {});
 }
 
 // The channel's playlists, each ticked as this project goes into it: the project's own choice
@@ -169,8 +161,7 @@ export function saveProjectPlaylists(
 ): void {
   const { [projectId]: _previous, ...others } = projectChoices(db);
   const next = names === null ? others : { ...others, [projectId]: [...names] };
-  if (Object.keys(next).length === 0)
-    db.prepare("DELETE FROM settings WHERE key = ?").run(studioProjectPlaylistsKey);
+  if (Object.keys(next).length === 0) deleteSetting(db, studioProjectPlaylistsKey);
   else writeSetting(db, studioProjectPlaylistsKey, JSON.stringify(next));
 }
 
@@ -182,16 +173,8 @@ export const studioRealFootageKey = "studio.realFootage";
 export const autoCommentKey = "studio.autoComment";
 
 function realFootageIds(db: DatabaseSync): readonly string[] {
-  const stored = readSetting(db, studioRealFootageKey);
-  if (stored === undefined) return [];
-  try {
-    const value: unknown = JSON.parse(stored);
-    return Array.isArray(value)
-      ? value.filter((one): one is string => typeof one === "string")
-      : [];
-  } catch {
-    return [];
-  }
+  const value = readJsonSetting(db, studioRealFootageKey, stringListSchema, []);
+  return value;
 }
 
 export function readRealFootage(db: DatabaseSync, projectId: string): boolean {
@@ -201,23 +184,15 @@ export function readRealFootage(db: DatabaseSync, projectId: string): boolean {
 export function saveRealFootage(db: DatabaseSync, projectId: string, on: boolean): void {
   const others = realFootageIds(db).filter((one) => one !== projectId);
   const next = on ? [...others, projectId].sort() : others;
-  if (next.length === 0) db.prepare("DELETE FROM settings WHERE key = ?").run(studioRealFootageKey);
+  if (next.length === 0) deleteSetting(db, studioRealFootageKey);
   else writeSetting(db, studioRealFootageKey, JSON.stringify(next));
 }
 
 // The pairing token, made on first read. One per install: a new one (Settings → YouTube
 // Studio → New pairing token) forgets the extension that used the old one.
 export function studioPairing(db: DatabaseSync): StudioPairingView {
-  const stored = readSetting(db, studioPairingKey);
-  if (stored !== undefined) {
-    try {
-      const parsed = pairingSchema.safeParse(JSON.parse(stored));
-      if (parsed.success) return parsed.data;
-    } catch {
-      // A damaged row is replaced below.
-    }
-  }
-  return resetStudioPairing(db);
+  // A damaged row is replaced.
+  return readJsonSetting(db, studioPairingKey, pairingSchema, undefined) ?? resetStudioPairing(db);
 }
 
 // What is waiting to be filled in Studio is kept per pairing (`queue.ts`): one row,

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -68,9 +69,7 @@ export async function executeReviewRecipe(
       ? valuesSchema.safeParse(input.values)
       : undefined;
   if (values === undefined || !values.success)
-    throw new Error(
-      "Slopify hit an internal error (a review step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a review step was set up wrongly"));
   const [stage, itemKey, , provider, model, thinking, prompt, mode, retries] = values.data;
   const snapshot = exportSnapshot(deps, context, piece);
   const material = reviewMaterial(deps, context, snapshot, stage, itemKey, prompt);

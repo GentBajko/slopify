@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { NarrationSegment } from "../narration/preparation.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -31,9 +32,7 @@ export function narrationTextParts(
     (row) => row.key === (segment === "body" ? "audio:body:concat" : `audio:${segment}`),
   );
   if (concat === undefined)
-    throw new Error(
-      `Slopify hit an internal error (the ${segment} narration is missing from the project plan). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-    );
+    throw new Error(internalError(`the ${segment} narration is missing from the project plan`));
   return concat.dependsOn.map((key) => {
     const recipe = plan.recipes.find((row) => row.key === key);
     const selected = view.pieces.find(
@@ -60,9 +59,7 @@ export function narrationTextParts(
         requestText: null,
       };
     if (input.kind !== "tts")
-      throw new Error(
-        "Slopify hit an internal error (a narration chunk's text was never worked out). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a narration chunk's text was never worked out"));
     const payload = z
       .object({ text: z.string().optional(), spokenText: z.string().optional() })
       .parse(JSON.parse(selected.piece.payload ?? "{}"));
@@ -88,9 +85,7 @@ export async function publishNarrationText(
   piece: WorkPiece,
 ): Promise<void> {
   if (piece.input.kind !== "local")
-    throw new Error(
-      "Slopify hit an internal error (the narration text file step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the narration text file step was set up wrongly"));
   const { segment } = z
     .object({ segment: z.enum(["body", "intro", "outro"]) })
     .parse(piece.input.values);
@@ -99,9 +94,7 @@ export async function publishNarrationText(
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
   if (view === undefined)
-    throw new Error(
-      "Slopify hit an internal error (the project version being narrated is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the project version being narrated is missing"));
   const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
   if (
     !plan.recipes.some(
@@ -109,7 +102,7 @@ export async function publishNarrationText(
     )
   )
     throw new Error(
-      "Slopify hit an internal error (the narration text no longer matches the project's saved inputs). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      internalError("the narration text no longer matches the project's saved inputs"),
     );
   const parts = narrationTextParts(view, plan, segment);
   const outputs = preparedTexts(deps, context, piece, [

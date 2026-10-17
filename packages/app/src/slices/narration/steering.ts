@@ -1,3 +1,4 @@
+import { internalError } from "../../kernel/errors.js";
 import { type Cue, sourceSentences } from "./preparation.js";
 import type { PronunciationSpan } from "./pronunciation.js";
 
@@ -25,17 +26,13 @@ function atoms(
     const span = spans.get(at);
     if (span !== undefined) {
       if (span.end > to || span.end <= at)
-        throw new Error(
-          "Slopify hit an internal error (a pronunciation fix spans more than one word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a pronunciation fix spans more than one word"));
       result.push({ text: span.text, spokenText: source.slice(at, span.end) });
       at = span.end;
     } else {
       const point = source.codePointAt(at);
       if (point === undefined)
-        throw new Error(
-          "Slopify hit an internal error (a narration position is outside the article text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a narration position is outside the article text"));
       const text = String.fromCodePoint(point);
       // An empty span is a later word of a multi-word alias (its spoken form sits on the first
       // word), so the whitespace in front of it would leave two spaces where one word was.
@@ -68,9 +65,7 @@ function checkedSpans(source: string, pronunciation: readonly PronunciationSpan[
       span.end > source.length ||
       !/^[^\s\uD800-\uDFFF]+$/u.test(source.slice(span.start, span.end))
     )
-      throw new Error(
-        "Slopify hit an internal error (pronunciation fixes overlap or split a word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("pronunciation fixes overlap or split a word"));
     spans.set(span.start, span);
     end = span.end;
   }

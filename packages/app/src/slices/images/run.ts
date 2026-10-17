@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -77,9 +78,7 @@ export async function runImages(
   if (pieces.length === 0) {
     // Admission makes an image source mandatory and puts the Number at one or more, so an
     // empty plan is a bug upstream rather than a run with no pictures.
-    throw new Error(
-      "Slopify hit an internal error (no image prompt was selected). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("no image prompt was selected"));
   }
   // The run's own frame. The adapter turns it into whatever its provider spells the
   // closest supported size, and the render crops whatever is left over.
@@ -126,9 +125,7 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
     // it, so the run carries the substituted text under this key.
     const prompt = config.rendered[`imagePrompts.${String(at)}`];
     if (prompt === undefined) {
-      throw new Error(
-        `Slopify hit an internal error (the image prompt ${picked.name} was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-      );
+      throw new Error(internalError(`the image prompt ${picked.name} was never filled in`));
     }
     for (let send = 1; send <= (counts[at] ?? picked.number); send += 1) {
       planned.push({
@@ -308,9 +305,7 @@ function report(deps: ImagesDeps, context: StageContext, done: number, total: nu
 
 function payloadOf(piece: StagePiece): ImagePayload {
   if (piece.payload === null) {
-    throw new Error(
-      "Slopify hit an internal error (a saved image step is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a saved image step is empty"));
   }
   return imagePayload.parse(JSON.parse(piece.payload));
 }

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { setProjectPaused } from "../admission/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { requestHash as hash } from "../revisions/mutation-request.js";
@@ -134,7 +135,7 @@ export function admitPreview(
       }
       if (existing?.state === "running")
         throw new Error(
-          "Slopify hit an internal error (a step is already running for a different version of the project). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+          internalError("a step is already running for a different version of the project"),
         );
       deps.db
         .prepare("DELETE FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
@@ -142,9 +143,7 @@ export function admitPreview(
       const key = reservationKey(recipe, view);
       const fingerprint = snapshot.anchors[key];
       if (fingerprint === undefined)
-        throw new Error(
-          "Slopify hit an internal error (a step has no saved starting point). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a step has no saved starting point"));
       const work = insertInvocation(
         deps,
         view,

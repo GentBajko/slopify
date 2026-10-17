@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { stagesOf } from "../admission/repo.js";
 import { withProjectControl } from "../control/lock.js";
 import type { RevisionView } from "../revisions/model.js";
@@ -137,9 +138,7 @@ export async function recoverProject(
       if (record.edit !== null) {
         const prior = retainedPreviewPlan(deps, base, deps.catalogue.read());
         if (input.action.kind !== "rerun" && input.action.kind !== "redo")
-          throw new Error(
-            "Slopify hit an internal error (a recovery edit has nothing to re-run). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-          );
+          throw new Error(internalError("a recovery edit has nothing to re-run"));
         const affected = dependentClosure(prior.recipes, rootsOf(base, prior));
         const savedIntent = deps.db
           .prepare(
@@ -258,9 +257,7 @@ export async function recoverProject(
       storePreview(deps, preview.value.preview, preview.value.execution);
       const stored = previewById(deps.db, projectId, preview.value.preview.id);
       if (stored === undefined)
-        throw new Error(
-          "Slopify hit an internal error (the saved recovery preview is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("the saved recovery preview is missing"));
       return {
         plan: { preview: stored, execution: preview.value.execution },
         view,

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
+import { errorText } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { TelemetryCounters, TelemetryEvent, TelemetryEventType } from "./model.js";
@@ -54,11 +55,7 @@ export function record(
     writeEvent(deps, type, counters);
   } catch (error) {
     deps.log.write("warn", "telemetry.record", {
-      detail: `${type}: ${messageOf(error)}`,
+      detail: `${type}: ${errorText(error)}`,
     });
   }
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

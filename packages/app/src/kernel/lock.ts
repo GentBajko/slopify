@@ -1,4 +1,5 @@
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { errnoCode } from "./errors.js";
 
 export interface InstanceLock {
   readonly release: () => void;
@@ -50,7 +51,7 @@ function claim(lockPath: string, pid: number): boolean {
     writeFileSync(lockPath, `${pid} ${startedAt}\n`, { flag: "wx", mode: 0o600 });
     return true;
   } catch (error) {
-    if (errnoOf(error) === "EEXIST") {
+    if (errnoCode(error) === "EEXIST") {
       return false;
     }
     throw error;
@@ -82,7 +83,7 @@ function discard(lockPath: string): void {
   try {
     unlinkSync(lockPath);
   } catch (error) {
-    if (errnoOf(error) !== "ENOENT") {
+    if (errnoCode(error) !== "ENOENT") {
       throw error;
     }
   }
@@ -94,13 +95,6 @@ function isAlive(pid: number): boolean {
     return true;
   } catch (error) {
     // EPERM means the process exists and belongs to someone else.
-    return errnoOf(error) === "EPERM";
+    return errnoCode(error) === "EPERM";
   }
-}
-
-function errnoOf(error: unknown): string | undefined {
-  if (error instanceof Error && "code" in error && typeof error.code === "string") {
-    return error.code;
-  }
-  return undefined;
 }

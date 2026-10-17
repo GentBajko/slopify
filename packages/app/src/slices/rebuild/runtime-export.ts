@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
+import { internalError } from "../../kernel/errors.js";
 import type { SubtitleAligner } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -51,9 +52,7 @@ export async function executeExportRecipe(
   const audio = await revisionAudio(deps, context, view, { levelled: true });
   const wav = piece.key === "export:wav";
   if (!wav && piece.key !== "export:video")
-    throw new Error(
-      "Slopify hit an internal error (unknown kind of export). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("unknown kind of export"));
   if (wav && audio.length === 0)
     throw new Error(
       "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Try again.",

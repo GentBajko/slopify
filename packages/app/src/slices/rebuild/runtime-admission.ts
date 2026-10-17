@@ -1,5 +1,6 @@
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { narrationRegenerationToken } from "../narration/plan.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -42,9 +43,7 @@ export function admitInitialRevision(
         .prepare("SELECT 1 FROM revision_work WHERE project_id=? LIMIT 1")
         .get(view.revision.projectId) !== undefined
     )
-      throw new Error(
-        "Slopify hit an internal error (this project was started twice). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("this project was started twice"));
     const snapshot = executionCatalogue(catalogue, view.revision.config);
     const plan = executionPlan(deps, view, snapshot);
     for (const recipe of plan.recipes) {
@@ -53,9 +52,7 @@ export function admitInitialRevision(
       const logicalKey = recipe.input.kind === "tts" ? `${recipe.input.logicalKey}:1` : recipe.key;
       const anchor = view.revision.fingerprints[logicalKey] ?? desired;
       if (anchor === undefined)
-        throw new Error(
-          `Slopify hit an internal error (step ${recipe.key} has no saved starting point). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-        );
+        throw new Error(internalError(`step ${recipe.key} has no saved starting point`));
       const reuse = plan.work.find((row) => row.key === recipe.key)?.disposition === "reuse";
       if (reuse) bindNarrationReuse(deps, view, recipe, narrationOrdinal(plan.recipes, recipe.key));
       insertInvocation(
@@ -84,10 +81,7 @@ export function insertInvocation(
   const stage = deps.db
     .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
     .get(projectId, recipe.stage);
-  if (typeof stage?.id !== "string")
-    throw new Error(
-      "Slopify hit an internal error (a step has no matching stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (typeof stage?.id !== "string") throw new Error(internalError("a step has no matching stage"));
   const work: WorkRef = {
     projectId,
     revisionId,

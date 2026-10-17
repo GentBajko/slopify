@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
@@ -51,7 +52,7 @@ export function reviewRoutes(deps: AppDeps) {
     } catch (error) {
       deps.log.write("error", "review.notify", {
         projectId,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
   };

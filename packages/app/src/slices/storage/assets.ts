@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, relative, sep } from "node:path";
+import { errorText, internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectAsset, RevisionDeps } from "../revisions/model.js";
 import { outputPath } from "./layout.js";
@@ -35,9 +36,7 @@ export function allocateAsset(
   const absolutePath = outputPath(deps.paths, projectId, path);
   const directory = outputPath(deps.paths, projectId, `assets/${id}`);
   if (dirname(absolutePath) !== directory)
-    throw new Error(
-      "Slopify hit an internal error (a file name to save is not a plain file name). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a file name to save is not a plain file name"));
   mkdirSync(outputPath(deps.paths, projectId, "assets"), { recursive: true, mode: 0o700 });
   mkdirSync(directory, { mode: 0o700 });
   return { id, projectId, path, absolutePath };
@@ -47,10 +46,7 @@ export function sealAsset(deps: Pick<RevisionDeps, "clock">, pending: PendingAss
   const file = openSync(pending.absolutePath, "r+");
   try {
     const stats = fstatSync(file);
-    if (!stats.isFile())
-      throw new Error(
-        "Slopify hit an internal error (a saved file is not a regular file). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+    if (!stats.isFile()) throw new Error(internalError("a saved file is not a regular file"));
     fchmodSync(file, 0o600);
     fsyncSync(file);
     return {
@@ -95,9 +91,7 @@ export function discardPreparedAssets(
       const filename = basename(asset.path);
       requireBasename(filename);
       if (asset.path !== `assets/${asset.id}/${filename}`) {
-        throw new Error(
-          "Slopify hit an internal error (a prepared file is not in its allocated directory). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a prepared file is not in its allocated directory"));
       }
       const directory = outputPath(deps.paths, asset.projectId, `assets/${asset.id}`);
       const registered = deps.db
@@ -106,9 +100,7 @@ export function discardPreparedAssets(
       const retained = registered.some((row) => {
         if (row.id === asset.id) return true;
         if (typeof row.path !== "string")
-          throw new Error(
-            "Slopify hit an internal error (a saved file has no path). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-          );
+          throw new Error(internalError("a saved file has no path"));
         const inside = relative(directory, outputPath(deps.paths, asset.projectId, row.path));
         return (
           inside === "" ||
@@ -135,23 +127,17 @@ function requireBasename(filename: string): void {
     /[. ]$/.test(filename) ||
     /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(filename)
   )
-    throw new Error(
-      "Slopify hit an internal error (a file name to save is not allowed on every system). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+    throw new Error(internalError("a file name to save is not allowed on every system"));
 }
 
 function warnCleanup(deps: Pick<RevisionDeps, "log">, projectId: string, error: unknown): void {
   try {
-    deps.log.write("warn", "asset.cleanup", { projectId, detail: messageOf(error) });
+    deps.log.write("warn", "asset.cleanup", { projectId, detail: errorText(error) });
   } catch (loggingError) {
     // A full disk can prevent both cleanup and file logging; preserve the write error.
     process.emitWarning(
       redact(
-        `asset.cleanup ${projectId}: ${messageOf(error)}; logging failed: ${messageOf(loggingError)}`,
+        `asset.cleanup ${projectId}: ${errorText(error)}; logging failed: ${errorText(loggingError)}`,
       ),
     );
   }

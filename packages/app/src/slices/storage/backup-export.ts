@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { hasErrnoCode } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
 import { projectMarker } from "./arrange.js";
@@ -320,7 +321,7 @@ function projectFiles(root: string): { path: string; bytes: number }[] {
     try {
       entries = readdirSync(join(root, relative), { withFileTypes: true });
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+      if (hasErrnoCode(error, "ENOENT")) return;
       throw error;
     }
     for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {

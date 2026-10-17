@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, readSetting, writeSetting } from "../settings/repo.js";
 import type { SampleId } from "./model.js";
 
 // What the first five minutes remember, in the settings table: whether the first-run screen
@@ -35,14 +35,7 @@ const shortRequests = z.record(z.string(), z.string());
 const shortRequestsKept = 20;
 
 function readJson<T>(db: DatabaseSync, key: string, schema: z.ZodType<T>): T | undefined {
-  const raw = readSetting(db, key);
-  if (raw === undefined) return undefined;
-  try {
-    const parsed = schema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
+  return readJsonSetting(db, key, schema, undefined);
 }
 
 export function firstRunDismissed(db: DatabaseSync): boolean {

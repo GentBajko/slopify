@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RevisionView } from "../revisions/model.js";
 import { outputPath } from "../storage/layout.js";
@@ -46,7 +47,7 @@ export async function exportBed(
   } catch (error) {
     context.signal.throwIfAborted();
     throw new Error(
-      `The ambient sound's audio file couldn't be read as audio (${error instanceof Error ? error.message : String(error)}). ${fix}`,
+      `The ambient sound's audio file couldn't be read as audio (${errorText(error)}). ${fix}`,
     );
   }
   if (durationMs <= 0) throw new Error(`The ambient sound's audio file holds no sound. ${fix}`);

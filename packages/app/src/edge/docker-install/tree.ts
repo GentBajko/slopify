@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { chmod, lchown, lstat, mkdir, open, readdir, readlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { hasErrnoCode } from "../../kernel/errors.js";
 
 export interface Identity {
   readonly dev: string;
@@ -64,7 +65,7 @@ export async function safePath(
   for (const [i, part] of parts.entries()) {
     current = join(current, part);
     let s = await lstat(current).catch((error: unknown) => {
-      if (isMissing(error)) return undefined;
+      if (hasErrnoCode(error, "ENOENT")) return undefined;
       throw error;
     });
     if (s === undefined && i < parts.length - 1 && createParents) {
@@ -85,9 +86,6 @@ export async function safePath(
         `Other users can write to ${current}, which contains the project folder. Choose a project folder inside your home folder with --projects-dir <folder>, or fix it with chmod go-w ${current}.`,
       );
   }
-}
-export function isMissing(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 export async function syncDirectory(path: string): Promise<void> {
   const fd = await open(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);

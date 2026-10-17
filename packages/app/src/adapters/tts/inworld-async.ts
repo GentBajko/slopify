@@ -1,16 +1,10 @@
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsRequest } from "../../kernel/ports/tts.js";
-import {
-  httpFailure,
-  internalError,
-  noAudio,
-  providerSaid,
-  unreadable,
-  voiceFix,
-} from "../explain.js";
+import { httpFailure, noAudio, providerSaid, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 
 interface AsyncDeps {

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { errorText } from "../errors.js";
 
 // SQLite starts a transaction for a SAVEPOINT issued outside one and nests it inside one
 // already open, so a slice can wrap its own writes without knowing whether its caller did
@@ -38,7 +39,7 @@ function unwind(db: DatabaseSync, error: unknown): void {
     db.exec(`ROLLBACK TO ${savepoint}`);
     db.exec(`RELEASE ${savepoint}`);
   } catch (cleanup) {
-    throw new Error(`the transaction could not be unwound: ${messageOf(cleanup)}`, {
+    throw new Error(`the transaction could not be unwound: ${errorText(cleanup)}`, {
       cause: error,
     });
   }
@@ -51,8 +52,4 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
     "then" in value &&
     typeof value.then === "function"
   );
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

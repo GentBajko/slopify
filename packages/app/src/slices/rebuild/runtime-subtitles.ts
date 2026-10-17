@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { subtitleModelDir } from "../../kernel/paths.js";
 import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
@@ -82,9 +83,7 @@ export async function executeSubtitleRecipe(
   if (piece.key === "subtitles:timing") return timing(deps, context, piece, snapshot);
   if (piece.key === "subtitles:cues") return cues(deps, context, piece, snapshot);
   if (piece.key === "subtitles:files") return files(deps, context, piece, snapshot);
-  throw new Error(
-    "Slopify hit an internal error (unknown kind of caption step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-  );
+  throw new Error(internalError("unknown kind of caption step"));
 }
 async function timing(
   deps: ExportExecutionDeps,
@@ -99,9 +98,7 @@ async function timing(
     );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)
-    throw new Error(
-      "Slopify hit an internal error (the caption timing tool is missing from this build). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the caption timing tool is missing from this build"));
   if (!context.maySubmit(piece.id)) return "held";
   const words: SpeakerWord[] = [];
   const omissions: SubtitleOmission[] = [];
@@ -226,9 +223,7 @@ async function files(
   const { view } = snapshot;
   const config = view.revision.config.subtitles;
   if (config === undefined || config.mode === "off")
-    throw new Error(
-      "Slopify hit an internal error (captions are off for this version of the project). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("captions are off for this version of the project"));
   const row = view.pieces.find(
     (one) =>
       one.key === "subtitles:cues" && one.selected && one.available && one.piece.state === "done",

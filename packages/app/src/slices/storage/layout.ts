@@ -1,4 +1,5 @@
 import { extname, isAbsolute, relative, resolve } from "node:path";
+import { internalError } from "../../kernel/errors.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { OutputRole, StageKind } from "./model.js";
 
@@ -44,9 +45,7 @@ function contained(root: string, path: string): string {
   const target = resolve(root, path);
   const inside = relative(root, target);
   if (inside === "" || inside.startsWith("..") || isAbsolute(inside)) {
-    throw new Error(
-      `Slopify hit an internal error (the saved file path ${path} resolves outside ${root}). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-    );
+    throw new Error(internalError(`the saved file path ${path} resolves outside ${root}`));
   }
   return target;
 }

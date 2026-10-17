@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline/promises";
+import { errorText } from "../../kernel/errors.js";
 import type { AutostartService } from "./service.js";
 
 export const autostartQuestion = "Start Slopify when you log in? (Y/n) ";
@@ -82,6 +83,6 @@ export async function settleAutostart(options: {
         : `${view.summary} Turn it on any time in Settings → General.`,
     );
   } catch (error) {
-    options.warn(error instanceof Error ? error.message : String(error));
+    options.warn(errorText(error));
   }
 }

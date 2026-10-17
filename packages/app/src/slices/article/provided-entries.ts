@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { piecesOf } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -29,10 +30,7 @@ export async function prepareProvidedArticleSegments(
   if (!config.intro && !config.outro) return "done";
   audioContext.signal.throwIfAborted();
   const article = stagesOf(deps.db, projectId).find((stage) => stage.kind === "article");
-  if (!article)
-    throw new Error(
-      "Slopify hit an internal error (the project has no article stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (!article) throw new Error(internalError("the project has no article stage"));
   const outputs = outputsOf(deps.db, projectId);
   const plain = outputs.find((output) => output.role === "article_txt");
   if (!plain)

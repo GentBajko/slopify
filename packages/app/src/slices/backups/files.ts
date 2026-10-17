@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { errnoCode } from "../../kernel/errors.js";
 import type { BackupFile } from "./model.js";
 
 // Only files whose whole name matches these are this feature's. Pruning and the leftover sweep
@@ -104,7 +105,7 @@ export async function listBackups(folder: string): Promise<BackupFile[]> {
   try {
     names = await readdir(folder);
   } catch (error) {
-    if (codeOf(error) === "ENOENT") return [];
+    if (errnoCode(error) === "ENOENT") return [];
     throw error;
   }
   const out: BackupFile[] = [];
@@ -136,10 +137,4 @@ export async function removeLeftovers(folder: string): Promise<number> {
     removed += 1;
   }
   return removed;
-}
-
-export function codeOf(error: unknown): string | undefined {
-  return error instanceof Error && "code" in error && typeof error.code === "string"
-    ? error.code
-    : undefined;
 }

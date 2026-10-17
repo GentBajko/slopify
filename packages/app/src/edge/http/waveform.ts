@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { errorText } from "../../kernel/errors.js";
 import type { DecodePeaks } from "./narration-peaks.js";
 import { problem, titleOf } from "./problem.js";
 
@@ -70,7 +71,7 @@ export function waveformAnswer(decode: DecodePeaks | undefined) {
         return problem(c, {
           status: 500,
           title: titleOf(500),
-          detail: `Slopify couldn't read this audio to draw its waveform (${error instanceof Error ? error.message : String(error)}). The audio still plays.`,
+          detail: `Slopify couldn't read this audio to draw its waveform (${errorText(error)}). The audio still plays.`,
         });
       }
       cache.set(key, waveform);

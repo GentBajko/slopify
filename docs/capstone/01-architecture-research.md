@@ -40,7 +40,7 @@ Scope: how research reports travel from the research recipes to an LLM provider 
 | kernel/ports | `packages/app/src/kernel/ports/llm-documents.ts`, `llm.ts`, `host-cli.ts` | Nothing above kernel (`biome.json:44`) |
 | kernel/runner | `packages/app/src/kernel/runner/providers.ts` | kernel/ports |
 | slices | `packages/app/src/slices/research/`, `packages/app/src/slices/rebuild/recipe-text.ts`, `runtime-provider.ts`, `runtime-article.ts`, `preview-details.ts` | kernel; never edge or adapters (`biome.json:70`) |
-| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `antigravity.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command} only (`biome.json:99`) |
+| adapters | `packages/app/src/adapters/llm/document-workspace.ts`, `document-reader.ts`, `claude-code.ts`, `codex.ts`, `antigravity.ts`, `openrouter.ts`, `packages/app/src/adapters/host-cli/` | kernel/ports and kernel/{clock,log,cli-command,errors} only (`biome.json:99`) |
 | host helper | `packages/app/src/host-cli/runtime.ts`, `server.ts`, `packages/app/src/edge/host-cli.ts`, `packages/app/src/edge/http/host-cli.ts` | adapters/llm and kernel/ports (`packages/app/src/host-cli/runtime.ts:4`) |
 
 Dependency direction: slices build `LlmDocument[]` values and hand them to the wrapped `providers.llm` call; the wrapper forwards them to an `LlmPort` adapter (`packages/app/src/kernel/runner/providers.ts:208`). No adapter imports a slice.

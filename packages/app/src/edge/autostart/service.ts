@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { errnoCode, errorText } from "../../kernel/errors.js";
 import { readSetting, writeSetting } from "../../slices/settings/repo.js";
 import { desktopHowTo, howToFor, type LoginStart } from "./docker.js";
 import { type AutostartView, autostartAnsweredKey } from "./model.js";
@@ -112,11 +113,8 @@ function desktopSummary(docker: LoginStart["docker"]): string {
 
 // The native steps already speak in sentences; a file error from the disk doesn't.
 function plain(error: unknown, enabled: boolean): string {
-  const message = error instanceof Error ? error.message : String(error);
-  const code =
-    error instanceof Error && "code" in error && typeof error.code === "string"
-      ? error.code
-      : undefined;
+  const message = errorText(error);
+  const code = errnoCode(error);
   if (code === undefined) return message;
   const path =
     error instanceof Error && "path" in error && typeof error.path === "string"

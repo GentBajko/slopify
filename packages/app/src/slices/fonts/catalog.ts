@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isUnreachablePath } from "../../kernel/errors.js";
 import type { Paths } from "../../kernel/paths.js";
 import { discoverSystemFonts } from "./discovery.js";
-import { readFontFile, unavailable } from "./files.js";
+import { readFontFile } from "./files.js";
 import type { FontSummary, ResolvedFont } from "./model.js";
 import { fontSummary } from "./model.js";
 import { readFontMetadata } from "./sfnt.js";
@@ -92,7 +93,7 @@ async function uploadedFonts(paths: Paths, wanted?: string): Promise<readonly Re
     if (!(await lstat(root)).isDirectory()) return [];
     names = wanted === undefined ? await readdir(root) : [`${wanted}.ttf`, `${wanted}.otf`];
   } catch (error) {
-    if (unavailable(error)) return [];
+    if (isUnreachablePath(error)) return [];
     throw error;
   }
   const result: ResolvedFont[] = [];

@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { fingerprint } from "../../kernel/runner/work.js";
@@ -62,10 +63,7 @@ export function preparedText(
   text: string,
 ): PreparedOutput {
   const output = preparedTexts(deps, context, piece, [[role, filename, text]])[0];
-  if (output === undefined)
-    throw new Error(
-      "Slopify hit an internal error (a text file could not be prepared). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (output === undefined) throw new Error(internalError("a text file could not be prepared"));
   return output;
 }
 
@@ -251,13 +249,11 @@ export function retainPartialArticle(
       });
       if (authority === undefined) return;
       if (authority.key !== piece.key || authority.fingerprint !== piece.fingerprint)
-        throw new Error(
-          "Slopify hit an internal error (a partly written article doesn't match its saved step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a partly written article doesn't match its saved step"));
       const revision = revisionById(deps.db, context.work.projectId, context.work.revisionId);
       if (revision === undefined)
         throw new Error(
-          "Slopify hit an internal error (the project version for a partly written article is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+          internalError("the project version for a partly written article is missing"),
         );
       insertAsset(deps.db, result.asset);
       insertManifestOutput(

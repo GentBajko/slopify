@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { type LoudnessGoal, masterFile, masterReport } from "../loudness/loudnorm.js";
 import type { MasterReport } from "../loudness/model.js";
@@ -85,7 +86,10 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
     if (cards.length > 0) {
       if (font === undefined)
         throw new Error(
-          "Slopify hit an internal error (the chapter cards have no font). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
+          internalError(
+            "the chapter cards have no font",
+            "Use More → Render the video again in the Video section",
+          ),
         );
       mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
       copyFileSync(font.path, join(workspace, "fonts", `card${extname(font.path)}`));
@@ -153,7 +157,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
             }
           }
         } catch (error) {
-          run.log.write("warn", "video.cache", { detail: messageOf(error) });
+          run.log.write("warn", "video.cache", { detail: errorText(error) });
           rmSync(output, { force: true });
         }
         await runFfmpeg({
@@ -173,7 +177,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
           try {
             keepClip(cache, key, output);
           } catch (error) {
-            run.log.write("warn", "video.cache", { detail: messageOf(error) });
+            run.log.write("warn", "video.cache", { detail: errorText(error) });
           }
         }
       });
@@ -235,7 +239,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport |
       try {
         pruneClips(run.cache, keys);
       } catch (error) {
-        run.log.write("warn", "video.cache", { detail: messageOf(error) });
+        run.log.write("warn", "video.cache", { detail: errorText(error) });
       }
     }
     // What the finished video measures, after its AAC encode.
@@ -324,8 +328,4 @@ export function burnParts(
   if (names.length > 0)
     parts.push({ name: `p${String(parts.length + 1)}`, names, start, frames: at - start });
   return parts;
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

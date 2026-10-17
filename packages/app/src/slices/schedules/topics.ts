@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText } from "../../kernel/errors.js";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { liveProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { projectChannels, scheduleChannel } from "../channels/repo.js";
 import { channelVideoTitles } from "../channels/videos.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
 import {
@@ -172,7 +174,7 @@ async function ask(
   } catch (error) {
     if (options.signal?.aborted === true)
       return { ok: false, reason: "failed", message: "Slopify was closing." };
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = errorText(error);
     return fail(
       `${llm.provider} (${llm.model}) did not answer: ${detail.trim().slice(0, 300)}. Check it in Settings → Providers, or pick another LLM under Edit → Topic generation.`,
     );
@@ -333,18 +335,8 @@ export function topicMessages(
 
 // A JSON array of strings, or failing that one topic per line with bullets and numbers dropped.
 export function parseTopics(answer: string): string[] {
-  const start = answer.indexOf("[");
-  const end = answer.lastIndexOf("]");
-  let lines: unknown[] | undefined;
-  if (start !== -1 && end > start) {
-    try {
-      const parsed: unknown = JSON.parse(answer.slice(start, end + 1));
-      if (Array.isArray(parsed)) lines = parsed;
-    } catch {
-      lines = undefined;
-    }
-  }
-  lines ??= answer.split(/\r?\n/);
+  const parsed = jsonBetween(answer, "[", "]");
+  const lines: unknown[] = Array.isArray(parsed) ? parsed : answer.split(/\r?\n/);
   return lines
     .map((line) =>
       typeof line === "string"
@@ -370,14 +362,7 @@ const heldValuesSchema = z.record(z.string(), z.record(z.string(), z.string()));
 type HeldValues = z.infer<typeof heldValuesSchema>;
 
 function readHeldValues(db: ScheduleDeps["db"]): HeldValues {
-  const raw = readSetting(db, heldValuesKey);
-  if (raw === undefined) return {};
-  try {
-    const parsed = heldValuesSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : {};
-  } catch {
-    return {};
-  }
+  return readJsonSetting(db, heldValuesKey, heldValuesSchema, {});
 }
 
 // Entries of topics that are no longer held (approved, turned down, or gone with their

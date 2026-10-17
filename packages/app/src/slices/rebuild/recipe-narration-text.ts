@@ -1,3 +1,4 @@
+import { internalError } from "../../kernel/errors.js";
 import type { NarrationSegment } from "../narration/preparation.js";
 import {
   type RecipeContext,
@@ -47,9 +48,7 @@ export function narrationFileRecipe(
             ];
           if (part.input.kind === "provided")
             return [resourceIdentity(context, part), part.input.semantic, null];
-          throw new Error(
-            "Slopify hit an internal error (a narration chunk has an unexpected source). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-          );
+          throw new Error(internalError("a narration chunk has an unexpected source"));
         }),
       },
     },

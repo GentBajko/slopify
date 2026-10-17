@@ -30,7 +30,7 @@ Repo-wide chapter for the npm-workspaces monorepo (`package.json:4`): `packages/
 | --- | --- | --- | --- |
 | kernel | `packages/app/src/kernel/` (config, db, runner, ports, events, paths, clock, log, ids, lock, pipeline) | kernel only | Forbidden: `slices`, `edge`, `adapter-registry.js` (`biome.json:44`) |
 | slices | `packages/app/src/slices/<feature>/` (47 directories) | kernel, other slices | Forbidden: `edge`; `adapters`, `kernel/ports/registry.js`, `adapter-registry.js` (`biome.json:70`). A grep of every slice file finds no `adapters/` or `edge/` import. |
-| adapters | `packages/app/src/adapters/` (llm, tts, image, alignment, host-cli, fake, `ffmpeg.ts`, `key-probes.ts`) | `kernel/ports/**`, `kernel/{clock,log,cli-command}.js`, `kernel/clock.fake.js` | Everything else in kernel, plus slices, edge and the registry, is forbidden (`biome.json:99`) |
+| adapters | `packages/app/src/adapters/` (llm, tts, image, alignment, host-cli, fake, `ffmpeg.ts`, `key-probes.ts`) | `kernel/ports/**`, `kernel/{clock,log,cli-command,errors}.js`, `kernel/clock.fake.js` | Everything else in kernel, plus slices, edge and the registry, is forbidden (`biome.json:99`) |
 | edge | `packages/app/src/edge/` (CLI, `http/`, `mcp/`, `events/`, autostart, docker-install, open-folder, update worker, host-cli entry) | everything below | No Biome override; observed by imports in `packages/app/src/edge/http/app.ts` |
 | composition root | `packages/app/src/main.ts`, `packages/app/src/adapter-registry.ts` | all tiers | `boot` wires adapters into slices through kernel ports (`packages/app/src/main.ts:225`) |
 

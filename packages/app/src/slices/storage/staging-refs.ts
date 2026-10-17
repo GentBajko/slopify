@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
+import { errorText } from "../../kernel/errors.js";
 import { stagingPath } from "./layout.js";
 import { deleteStagedFile, stagedFileById } from "./repo.js";
 import type { StorageDeps } from "./staging.js";
@@ -21,7 +22,7 @@ export function releaseStagedFile(deps: StorageDeps, id: string): void {
     rmSync(stagingPath(deps.paths, file?.path ?? id), { force: true });
   } catch (error) {
     deps.log.write("warn", "staging.release", {
-      detail: `${id}: ${error instanceof Error ? error.message : String(error)}`,
+      detail: `${id}: ${errorText(error)}`,
     });
     return;
   }

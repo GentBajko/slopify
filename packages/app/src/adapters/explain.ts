@@ -90,10 +90,6 @@ export function voiceFix(voiceId: string): string {
   return `Check that voice "${voiceId}" still exists in Settings → Voices and that each narration part fits the model's length limit (Chunking, in the Providers section of Edit project), then use Try again.`;
 }
 
-export function internalError(what: string): string {
-  return `Slopify hit an internal error (${what}). Use Try again; if it happens again, use Download diagnostics in Settings and report it.`;
-}
-
 const cliNames: Readonly<Record<string, string>> = {
   claude: "Claude Code CLI",
   "claude-code": "Claude Code CLI",

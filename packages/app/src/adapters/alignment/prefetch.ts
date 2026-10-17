@@ -1,5 +1,6 @@
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { hasErrnoCode } from "../../kernel/errors.js";
 import {
   defaultEnglishSubtitleModel,
   type EnglishSubtitleModel,
@@ -48,7 +49,7 @@ async function clearOwnLock(cacheDir: string): Promise<void> {
   try {
     owner = await readFile(path, "utf8");
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    if (hasErrnoCode(error, "ENOENT")) return;
     throw error;
   }
   if (Number(owner) === process.pid) await rm(path, { force: true });

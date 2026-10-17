@@ -1,4 +1,5 @@
 import type { Clock } from "../clock.js";
+import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage } from "../ports/image.js";
@@ -201,7 +202,7 @@ function meter(deps: StandaloneDeps, use: StandaloneUse, call: ProviderUse): voi
     deps.meter.record({ ...call, owner: use.owner, purpose: use.purpose });
   } catch (error) {
     deps.log.write("warn", "usage.record", {
-      detail: `${use.purpose} for ${use.owner.kind} ${use.owner.id}: ${error instanceof Error ? error.message : String(error)}`,
+      detail: `${use.purpose} for ${use.owner.kind} ${use.owner.id}: ${errorText(error)}`,
     });
   }
 }

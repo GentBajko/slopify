@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { subtitleModelDir } from "../../kernel/paths.js";
 import { projectLanguage } from "../../kernel/ports/languages.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
@@ -195,9 +196,7 @@ async function alignSegments(
   language: string,
 ): Promise<readonly TimedWord[]> {
   if (deps.alignSubtitles === undefined)
-    throw new Error(
-      "Slopify hit an internal error (the caption timing tool is missing from this build). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the caption timing tool is missing from this build"));
   const words: TimedWord[] = [];
   const total = segments.reduce((sum, segment) => sum + segment.seconds, 0);
   let offset = 0;

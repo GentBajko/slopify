@@ -3,9 +3,10 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { type HostSetupRunner, installHostPackage } from "../host-cli/install.js";
-import { ensureBridgeToken, hasCode, prepareHostPaths } from "../host-cli/paths.js";
+import { ensureBridgeToken, prepareHostPaths } from "../host-cli/paths.js";
 import { ensureHostService, privateRead, privateWrite } from "../host-cli/service.js";
 import { hostCommandName, resolveHostCommand } from "../host-cli/status.js";
+import { errorText, hasErrnoCode } from "../kernel/errors.js";
 import { hostLlmIds } from "../kernel/ports/host-cli.js";
 
 export function assertManagedDockerHost(
@@ -51,9 +52,9 @@ export async function planDockerHostCli(options: DockerHostOptions): Promise<Doc
       await resolveHostCommand(id, options.env);
       installed = true;
     } catch (error) {
-      if (!hasCode(error, "ENOENT"))
+      if (!hasErrnoCode(error, "ENOENT"))
         throw new Error(
-          `Could not check whether ${hostCommandName(id)} is installed on this machine (${error instanceof Error ? error.message : String(error)}). Nothing was changed. Fix the problem, or start with --host-cli=off to use API keys only.`,
+          `Could not check whether ${hostCommandName(id)} is installed on this machine (${errorText(error)}). Nothing was changed. Fix the problem, or start with --host-cli=off to use API keys only.`,
         );
     }
   }
@@ -118,7 +119,7 @@ async function ensureDockerHostCli(
       await mkdir(lock, { mode: 0o700 });
       break;
     } catch (error) {
-      if (!hasCode(error, "EEXIST")) throw error;
+      if (!hasErrnoCode(error, "EEXIST")) throw error;
       if (Date.now() >= deadline)
         throw new Error(
           `Another Slopify launcher is setting up the host CLI helper right now. Wait for it to finish and try again. If no other launcher is running, delete the folder ${lock} and retry.`,

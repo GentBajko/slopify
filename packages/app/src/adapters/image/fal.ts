@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import type {
   AnimateRequest,
@@ -10,14 +11,7 @@ import type {
 } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import {
-  httpFailure,
-  internalError,
-  missingKey,
-  noImage,
-  providerSaid,
-  unreadable,
-} from "../explain.js";
+import { httpFailure, missingKey, noImage, providerSaid, unreadable } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
 import { referencePictures, withReferences } from "./reference.js";

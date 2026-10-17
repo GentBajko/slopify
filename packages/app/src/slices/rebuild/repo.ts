@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { PublicationRef } from "../../kernel/runner/work.js";
 import { workExists } from "../../kernel/runner/work-authority.js";
 import type { RevisionDeps } from "../revisions/model.js";
@@ -21,22 +22,16 @@ export function publicationTargets(
 ): readonly PublicationTarget[] {
   const { work, pieceId, publicationId } = publication;
   if (publicationId !== (pieceId ?? work.workId))
-    throw new Error(
-      "Slopify hit an internal error (a finished result is filed under the wrong step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a finished result is filed under the wrong step"));
   if (!workExists(db, work)) return [];
   if (pieceId !== null) {
     const piece = db
       .prepare("SELECT work_key,fingerprint FROM revision_work_pieces WHERE id=? AND work_id=?")
       .get(pieceId, work.workId);
     if (piece === undefined)
-      throw new Error(
-        "Slopify hit an internal error (a finished result belongs to a different step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a finished result belongs to a different step"));
     if (piece.work_key !== workKey || piece.fingerprint !== workFingerprint)
-      throw new Error(
-        "Slopify hit an internal error (a finished result doesn't match its saved step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a finished result doesn't match its saved step"));
   }
   const currentId = currentRevisionId(db, work.projectId);
   const owns = (revisionId: string): boolean => {

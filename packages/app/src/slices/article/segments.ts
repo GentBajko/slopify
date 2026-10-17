@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -40,9 +41,7 @@ export async function writeSegment(
   if (picked === undefined) return { ok: true, value: undefined };
   const body = config.rendered[category];
   if (body === undefined)
-    throw new Error(
-      `Slopify hit an internal error (the ${category} text was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-    );
+    throw new Error(internalError(`the ${category} text was never filled in`));
   const common = { category, name: picked.name, mode: picked.mode };
   if (picked.mode === "text")
     return { ok: true, value: { ...common, text: body, tokens: noTokens } };

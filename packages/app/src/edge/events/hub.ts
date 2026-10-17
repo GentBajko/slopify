@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type {
   ArticleDeltaEvent,
   ImageLandedEvent,
@@ -108,7 +109,7 @@ export function createHub(deps: HubDeps): Hub {
       .writeSSE({ event: event.type, data: JSON.stringify(event), id: deps.ids.next() })
       .catch((error: unknown) => {
         subscriber.drop();
-        deps.log.write("warn", "sse.write", { detail: `${event.type}: ${messageOf(error)}` });
+        deps.log.write("warn", "sse.write", { detail: `${event.type}: ${errorText(error)}` });
       });
   };
 
@@ -210,8 +211,4 @@ export function observedHub(hub: Hub, observe: (event: ProjectEvent) => void): H
       observe(event);
     },
   };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

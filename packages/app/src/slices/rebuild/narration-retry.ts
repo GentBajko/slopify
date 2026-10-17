@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText } from "../../kernel/errors.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { recoverProject } from "./recovery.js";
 import type { RecoveryResult } from "./recovery-model.js";
@@ -101,7 +102,7 @@ export function createNarrationRetries(): {
         .catch((error: unknown) => {
           deps.log.write("error", "narration.retry", {
             projectId: retry.projectId,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: errorText(error),
           });
           settle(deps.db, retry, "failed", "internal error", deps.clock.now().toISOString());
         })

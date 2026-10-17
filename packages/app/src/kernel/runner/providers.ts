@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Clock } from "../clock.js";
+import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage, GeneratedVideo } from "../ports/image.js";
@@ -161,7 +162,7 @@ export function stageProviders(
       deps.log.write("warn", "usage.record", {
         projectId: context.stage.projectId,
         stage: context.stage.kind,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
   };

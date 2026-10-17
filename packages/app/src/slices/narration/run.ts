@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { Clock } from "../../kernel/clock.js";
+import { internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -313,9 +314,7 @@ function segmentPieces(deps: NarrationDeps, projectId: string): readonly StagePi
   if (article === undefined) {
     // Admission writes all six stage rows with the project, so a project without an article
     // stage is a bug rather than a run the user configured.
-    throw new Error(
-      "Slopify hit an internal error (the project has no article stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the project has no article stage"));
   }
   return piecesOf(deps.db, article.id, "segment");
 }
@@ -390,18 +389,14 @@ function store(
 
 function chunkOf(piece: StagePiece): z.infer<typeof chunkPayload> {
   if (piece.payload === null) {
-    throw new Error(
-      "Slopify hit an internal error (a saved narration chunk is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a saved narration chunk is empty"));
   }
   return chunkPayload.parse(JSON.parse(piece.payload));
 }
 
 function segmentOf(piece: StagePiece): z.infer<typeof segmentPayload> {
   if (piece.payload === null) {
-    throw new Error(
-      "Slopify hit an internal error (a saved intro or outro is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a saved intro or outro is empty"));
   }
   return segmentPayload.parse(JSON.parse(piece.payload));
 }

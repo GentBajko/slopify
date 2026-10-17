@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type { Log } from "../../kernel/log.js";
 import type { ProviderId, Voice } from "./model.js";
 import { providerIds } from "./model.js";
 
@@ -96,6 +97,45 @@ export function deleteVoice(db: DatabaseSync, id: string): boolean {
 export function readSetting(db: DatabaseSync, key: string): string | undefined {
   const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
   return row === undefined ? undefined : settingRow.parse(row).value;
+}
+
+// A list of strings that keeps its strings when something else sits among them.
+export const stringListSchema = z
+  .array(z.unknown())
+  .transform((items) => items.filter((one): one is string => typeof one === "string"));
+
+const warnedSettings = new Set<string>();
+
+// A row that is absent reads as `fallback`. So does a row that is not JSON or does not fit the
+// schema (a hand-edited database, or a newer Slopify's), which also leaves one warning naming the
+// setting, never its value, so a damaged row neither stops the app nor goes unnoticed. With no
+// `log` to hand the warning goes to the process warnings, once per setting.
+export function readJsonSetting<T, F>(
+  db: DatabaseSync,
+  key: string,
+  schema: z.ZodType<T>,
+  fallback: F,
+  log?: Pick<Log, "write">,
+): T | F {
+  const stored = readSetting(db, key);
+  if (stored === undefined) return fallback;
+  try {
+    const parsed = schema.safeParse(JSON.parse(stored));
+    if (parsed.success) return parsed.data;
+  } catch {
+    // Not JSON: reported below with the rows that parse but do not fit.
+  }
+  const detail = `setting ${key} is not a value this build understands; using the default`;
+  if (log !== undefined) log.write("warn", "settings.invalid", { detail });
+  else if (!warnedSettings.has(key)) {
+    warnedSettings.add(key);
+    process.emitWarning(detail, { code: "SLOPIFY_SETTING_INVALID" });
+  }
+  return fallback;
+}
+
+export function deleteSetting(db: DatabaseSync, key: string): void {
+  db.prepare("DELETE FROM settings WHERE key = ?").run(key);
 }
 
 export function writeSetting(db: DatabaseSync, key: string, value: string): void {

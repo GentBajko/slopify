@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { defaultMotionStyle, defaultZoomPercent } from "../admission/rules.js";
@@ -193,7 +194,7 @@ async function renderShortPreview(
 
 function explained(log: Log, error: unknown): StylePreviewError {
   if (error instanceof StylePreviewError) return error;
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   if (isMissingFont(error))
     return new StylePreviewError(
       "font-missing",

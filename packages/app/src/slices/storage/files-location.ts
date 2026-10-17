@@ -14,9 +14,10 @@ import {
 import { dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { errorText, hasErrnoCode } from "../../kernel/errors.js";
 import type { FilesLayout, Paths } from "../../kernel/paths.js";
 import { repoint } from "../../kernel/paths.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { deleteSetting, readSetting, writeSetting } from "../settings/repo.js";
 import type { BusyProject } from "./backup-export.js";
 import { backupsFolderName, renderCacheFolder } from "./layout.js";
 
@@ -105,7 +106,7 @@ export async function ensureFilesFolders(layout: FilesLayout): Promise<void> {
 
 async function emptyOrMissing(path: string): Promise<boolean> {
   const entries = await readdir(path).catch((error: unknown) => {
-    if (hasCode(error, "ENOENT")) return [];
+    if (hasErrnoCode(error, "ENOENT")) return [];
     throw error;
   });
   return entries.length === 0;
@@ -271,7 +272,7 @@ export function createFilesService(deps: FilesDeps): FilesService {
         finished = {
           ...current.progress,
           phase: "failed",
-          error: error instanceof Error ? error.message : String(error),
+          error: errorText(error),
         };
       })
       .finally(() => {
@@ -410,7 +411,7 @@ function sourceFiles(pair: Pair): SourceFile[] {
     try {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch (error) {
-      if (hasCode(error, "ENOENT")) return;
+      if (hasErrnoCode(error, "ENOENT")) return;
       throw error;
     }
     for (const entry of entries) {
@@ -513,7 +514,7 @@ async function runMove(
   }
   const to: FilesLocation = { kind: "root", root: target };
   writeSetting(deps.db, filesLocationKey, JSON.stringify(to));
-  deps.db.prepare("DELETE FROM settings WHERE key=?").run(filesMoveKey);
+  deleteSetting(deps.db, filesMoveKey);
   const old = from.kind === "root" ? from.root : deps.paths.projects;
   repoint(deps.paths, filesLayoutOf(to, deps.paths.dataDir));
   return old;
@@ -655,10 +656,6 @@ function within(root: string, path: string): boolean {
 
 function samePath(a: string, b: string): boolean {
   return relative(resolve(a), resolve(b)) === "";
-}
-
-function hasCode(error: unknown, code: string): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }
 
 function formatBytes(bytes: number): string {

@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type {
   ProjectEvent,
   ReviewAutoPassedEvent,
@@ -129,7 +130,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
       .catch((error: unknown) => {
         deps.log.write("warn", "notification.failed", {
           ...about,
-          detail: `${kind} notification not delivered: ${error instanceof Error ? error.message : String(error)}`,
+          detail: `${kind} notification not delivered: ${errorText(error)}`,
         });
       })
       .finally(() => {
@@ -163,7 +164,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,
-          detail: `notification skipped: ${error instanceof Error ? error.message : String(error)}`,
+          detail: `notification skipped: ${errorText(error)}`,
         });
       }
     },
@@ -175,7 +176,7 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         post(url, topicsNoticeText(event), "topics", {});
       } catch (error) {
         deps.log.write("warn", "notification.failed", {
-          detail: `topics notification skipped: ${error instanceof Error ? error.message : String(error)}`,
+          detail: `topics notification skipped: ${errorText(error)}`,
         });
       }
     },

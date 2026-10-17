@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { errorText } from "../kernel/errors.js";
 import { redact } from "../kernel/log.js";
 
 interface FfmpegSetup {
@@ -94,5 +95,5 @@ async function verify(bin: string): Promise<void> {
 }
 
 function detail(error: unknown): string {
-  return redact(error instanceof Error ? error.message : String(error));
+  return redact(errorText(error));
 }

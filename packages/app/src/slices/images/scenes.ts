@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { detectSlots, render, sceneKeyword } from "../admission/substitute.js";
 
@@ -146,7 +147,7 @@ export function checkScenes(
   | { readonly ok: false; readonly reason: string } {
   const fix =
     "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
-  const parsed = z.array(z.string()).safeParse(jsonArrayOf(text));
+  const parsed = z.array(z.string()).safeParse(jsonBetween(text, "[", "]"));
   if (!parsed.success)
     return {
       ok: false,
@@ -161,15 +162,4 @@ export function checkScenes(
   if (scenes.some((scene) => scene === ""))
     return { ok: false, reason: `One of the AI model's image scenes is empty. ${fix}` };
   return { ok: true, scenes };
-}
-
-function jsonArrayOf(text: string): unknown {
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
 }

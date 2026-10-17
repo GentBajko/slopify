@@ -1,3 +1,4 @@
+import { internalError } from "../../kernel/errors.js";
 import { thumbnailAspect } from "../../kernel/pipeline.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, subjectOf, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
@@ -43,9 +44,7 @@ export function visualRecipes(
   for (const key of imageKeys) {
     const image = content.imageDefinitions[key];
     if (image === undefined)
-      throw new Error(
-        "Slopify hit an internal error (one of the project's images has no saved settings). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("one of the project's images has no saved settings"));
     const raw =
       image.templateKey === undefined || image.templateKey === null
         ? undefined

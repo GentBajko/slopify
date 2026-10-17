@@ -3,10 +3,10 @@ import { lstat, mkdir, open, rename, unlink } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { hostRequest, readHostBytes } from "../adapters/host-cli/transport.js";
+import { hasErrnoCode } from "../kernel/errors.js";
 import { bridgeLimits, hostHealthSchema } from "../kernel/ports/host-cli.js";
 import { hostEnvironment } from "./environment.js";
 import type { HostSetupRunner } from "./install.js";
-import { hasCode } from "./paths.js";
 
 const marker = "# Managed by Slopify host CLI bridge, protocol 1";
 export const hostUnit = "slopify-cli-bridge.service";
@@ -64,7 +64,7 @@ export async function privateRead(path: string, uid: number): Promise<string | u
       await file.close();
     }
   } catch (error) {
-    if (hasCode(error, "ENOENT")) return undefined;
+    if (hasErrnoCode(error, "ENOENT")) return undefined;
     throw error;
   }
 }
@@ -81,7 +81,7 @@ export async function privateWrite(path: string, text: string): Promise<void> {
     await rename(temporary, path);
   } finally {
     await unlink(temporary).catch((error) => {
-      if (!hasCode(error, "ENOENT")) throw error;
+      if (!hasErrnoCode(error, "ENOENT")) throw error;
     });
   }
 }

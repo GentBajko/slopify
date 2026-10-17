@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { z } from "zod";
+import { deleteSetting, readJsonSetting, writeSetting } from "../settings/repo.js";
 import { notificationUrlProblem } from "./address.js";
 
 // Its own row in the key/value `settings` table. Backups leave it out
@@ -11,14 +12,7 @@ export type SaveNotificationUrlResult =
   | { readonly ok: false; readonly message: string };
 
 export function readNotificationUrl(db: DatabaseSync): string | null {
-  const stored = readSetting(db, notificationUrlKey);
-  if (stored === undefined) return null;
-  let value: unknown;
-  try {
-    value = JSON.parse(stored);
-  } catch {
-    return null;
-  }
+  const value = readJsonSetting(db, notificationUrlKey, z.unknown(), null);
   // A hand-edited row that no longer passes the rules is treated as not set rather than
   // POSTed to.
   return typeof value === "string" && value !== "" && notificationUrlProblem(value) === undefined
@@ -31,7 +25,7 @@ export function saveNotificationUrl(db: DatabaseSync, raw: string): SaveNotifica
   if (problem !== undefined) return { ok: false, message: problem };
   const url = raw.trim();
   if (url === "") {
-    db.prepare("DELETE FROM settings WHERE key = ?").run(notificationUrlKey);
+    deleteSetting(db, notificationUrlKey);
     return { ok: true, url: null };
   }
   writeSetting(db, notificationUrlKey, JSON.stringify(url));

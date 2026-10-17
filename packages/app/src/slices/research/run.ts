@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -303,9 +304,7 @@ function section(label: string, messages: readonly Message[]): string {
 
 function payloadOf(piece: StagePiece): z.infer<typeof chapterPayload> {
   if (piece.payload === null) {
-    throw new Error(
-      "Slopify hit an internal error (a saved research topic is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a saved research topic is empty"));
   }
   return chapterPayload.parse(JSON.parse(piece.payload));
 }

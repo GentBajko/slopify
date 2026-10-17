@@ -2,13 +2,14 @@ import { execFileSync } from "node:child_process";
 import { chmod, lchown, lstat, mkdir, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isMissing, syncDirectory, treeDigest } from "./tree.js";
+import { hasErrnoCode } from "../../kernel/errors.js";
+import { syncDirectory, treeDigest } from "./tree.js";
 
 export async function volumeOperation(args: readonly string[]): Promise<unknown> {
   const [operation, user = "0:0"] = args;
   if (operation === "projects") {
     const present = await lstat("/source/projects").catch((e: unknown) => {
-      if (isMissing(e)) return null;
+      if (hasErrnoCode(e, "ENOENT")) return null;
       throw e;
     });
     if (present === null) return { exists: false };

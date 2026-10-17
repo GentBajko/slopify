@@ -2,9 +2,9 @@ import { execFile } from "node:child_process";
 import { access, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { z } from "zod";
+import { hasErrnoCode } from "../kernel/errors.js";
 import { isStableVersion, updatePackage } from "../updater/model.js";
 import { installArgs, npmCommand } from "../updater/plan.js";
-import { hasCode } from "./paths.js";
 
 export interface HostSetupRunner {
   readonly exec: (
@@ -79,7 +79,7 @@ export async function installHostPackage(options: HostInstallOptions): Promise<{
   try {
     return { entry: await entryAt(directory, version) };
   } catch (error) {
-    if (!hasCode(error, "ENOENT"))
+    if (!hasErrnoCode(error, "ENOENT"))
       throw new Error(
         `The installed host helper in ${directory} is damaged. Delete that folder and run the launcher again. Nothing else was changed.`,
       );

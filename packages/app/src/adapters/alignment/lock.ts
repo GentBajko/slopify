@@ -1,6 +1,7 @@
 import { open, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { hasErrnoCode } from "../../kernel/errors.js";
 
 // Models run one at a time per data directory, including requests from separate app
 // processes. A canceled waiter never removes another request's lock.
@@ -27,7 +28,7 @@ export async function claimWorker(
         await rm(path, { force: true });
       };
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+      if (!hasErrnoCode(error, "EEXIST")) throw error;
     }
     try {
       const owner = Number(await readFile(path, "utf8"));
@@ -42,7 +43,7 @@ export async function claimWorker(
         try {
           process.kill(owner, 0);
         } catch (error) {
-          if (error instanceof Error && "code" in error && error.code === "ESRCH") {
+          if (hasErrnoCode(error, "ESRCH")) {
             await rm(path, { force: true });
             continue;
           }
@@ -50,7 +51,7 @@ export async function claimWorker(
         }
       }
     } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      if (!hasErrnoCode(error, "ENOENT")) throw error;
     }
     await setTimeout(250, undefined, { signal });
   }

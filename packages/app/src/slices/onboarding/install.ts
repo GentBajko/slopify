@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { detectSlots } from "../admission/substitute.js";
 import { nameMax, type Prompt, type PromptKind } from "../library/model.js";
 import { insertPrompt, promptById, promptByName } from "../library/repo.js";
@@ -70,7 +71,7 @@ export function installPack(
       });
       if (!created.ok)
         throw new Error(
-          `Slopify hit an internal error (the ${pack.name} pack's template was refused: ${created.reason}). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
+          internalError(`the ${pack.name} pack's template was refused: ${created.reason}`),
         );
       template = id;
       added = true;

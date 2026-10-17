@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import { type NarrationPeaks, narrationAudio } from "../../slices/narration/peaks.js";
 import { assetPath } from "../../slices/revisions/mutation-assets.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -76,7 +77,7 @@ export function narrationPeakRoutes(
             deps.log.write("warn", "narration.peaks", {
               projectId,
               stage: "audio",
-              detail: error instanceof Error ? error.message : String(error),
+              detail: errorText(error),
             });
             continue;
           }

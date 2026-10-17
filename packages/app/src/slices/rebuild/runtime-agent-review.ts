@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { externalReviewWaitMs } from "../reviews/external-model.js";
@@ -42,9 +43,7 @@ export async function executeAgentReviewRecipe(
   const values =
     piece.input.kind === "local" ? valuesSchema.safeParse(piece.input.values) : undefined;
   if (values === undefined || !values.success)
-    throw new Error(
-      "Slopify hit an internal error (a review step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a review step was set up wrongly"));
   const [stage, itemKey, , prompt, mode, retries] = values.data;
   const projectId = context.work.projectId;
   const known = externalReviewByFingerprint(deps.db, projectId, piece.fingerprint);

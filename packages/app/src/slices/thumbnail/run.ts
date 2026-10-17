@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -73,7 +74,7 @@ export async function runThumbnail(
     // Off is `skipped` and Provide is `provided` at project creation,
     // so the runner never starts this stage for either.
     throw new Error(
-      `Slopify hit an internal error (the thumbnail stage cannot run with its source set to ${source}). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
+      internalError(`the thumbnail stage cannot run with its source set to ${source}`),
     );
   }
   const choice = project.config.images;
@@ -116,9 +117,7 @@ export async function runThumbnail(
 function fromTemplate(project: Project): string {
   const rendered = project.config.rendered.thumbnailPrompt;
   if (rendered === undefined) {
-    throw new Error(
-      "Slopify hit an internal error (the thumbnail prompt was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the thumbnail prompt was never filled in"));
   }
   return rendered;
 }
@@ -184,9 +183,7 @@ function named(choice: ProviderChoice): { provider: string; model: string } {
 function brief(deps: ThumbnailDeps, project: Project): ThumbnailBrief {
   const instruction = project.config.rendered.thumbnailPrompt;
   if (instruction === undefined) {
-    throw new Error(
-      "Slopify hit an internal error (the thumbnail prompt was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the thumbnail prompt was never filled in"));
   }
   return {
     instruction,
@@ -306,9 +303,7 @@ function instructionsText(messages: readonly Message[]): string {
 
 function payloadOf(piece: StagePiece): z.infer<typeof writtenPayload> {
   if (piece.payload === null) {
-    throw new Error(
-      "Slopify hit an internal error (the saved thumbnail prompt is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the saved thumbnail prompt is empty"));
   }
   return writtenPayload.parse(JSON.parse(piece.payload));
 }

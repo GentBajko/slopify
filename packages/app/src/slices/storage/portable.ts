@@ -19,6 +19,7 @@ import { crc32 } from "node:zlib";
 import { strFromU8, strToU8, Unzip, UnzipInflate, zipSync } from "fflate";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { isUnreachablePath } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
@@ -405,7 +406,7 @@ function planStagedExport(deps: PortableDeps): readonly StagedExport[] {
     try {
       stat = lstatSync(path);
     } catch (error) {
-      if (unavailable(error)) continue;
+      if (isUnreachablePath(error)) continue;
       throw error;
     }
     if (
@@ -1017,7 +1018,7 @@ function installedUploadedFonts(paths: Paths): PortableFont[] {
   try {
     names = readdirSync(root);
   } catch (error) {
-    if (unavailable(error)) return [];
+    if (isUnreachablePath(error)) return [];
     throw error;
   }
   return names.toSorted().flatMap((name) => {
@@ -1081,7 +1082,7 @@ function readStoredFont(path: string): Buffer | undefined {
     if (!stat.isFile() || stat.size < 12 || stat.size > fontMaxBytes) return undefined;
     return readFileSync(descriptor);
   } catch (error) {
-    if (unavailable(error)) return undefined;
+    if (isUnreachablePath(error)) return undefined;
     throw error;
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
@@ -1101,14 +1102,6 @@ function writeImportedFile(
   } finally {
     closeSync(descriptor);
   }
-}
-
-function unavailable(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    ["ENOENT", "ENOTDIR", "EACCES", "EPERM", "ELOOP"].includes(String(error.code))
-  );
 }
 
 function planStagedImport(

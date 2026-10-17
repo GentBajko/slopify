@@ -1,5 +1,6 @@
 import { remark } from "remark";
 import remarkGfm from "remark-gfm";
+import { internalError } from "../../kernel/errors.js";
 import { remembered } from "../../kernel/remembered.js";
 
 export interface GlossaryEntry {
@@ -313,9 +314,7 @@ function matchPronunciations(
     if ((after === "'" && before !== "'") || (after === "’" && before !== "‘")) continue;
     const entry = ordered.find((_, index) => match[index + 1] !== undefined);
     if (entry === undefined)
-      throw new Error(
-        "Slopify hit an internal error (a pronunciation glossary term has no pronunciation). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a pronunciation glossary term has no pronunciation"));
     const possessive = possessives ? match[ordered.length + 1] : undefined;
     matches.push({
       start: match.index,
@@ -344,9 +343,7 @@ export function pronunciationSpans(
     for (const [index, word] of words.entries()) {
       const ipa = match.entry.ipa[index];
       if (ipa === undefined)
-        throw new Error(
-          "Slopify hit an internal error (a pronunciation glossary term is missing a word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a pronunciation glossary term is missing a word"));
       const start = match.start + word.index;
       const spoken =
         match.possessive !== undefined && index === words.length - 1 ? withPossessive(ipa) : ipa;

@@ -1,4 +1,4 @@
-import { causedBy } from "../errors.js";
+import { causedBy, errorText } from "../errors.js";
 import type { EmitProject, ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
@@ -155,7 +155,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       deps.log.write("error", "stage.finish", {
         projectId: stage.projectId,
         stage: stage.kind,
-        detail: reasonOf(error),
+        detail: errorText(error),
       });
     }
     emitStage(stage, state, reason, { failureKind: kind });
@@ -170,7 +170,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       deps.log.write("error", "stage.retry", {
         projectId: stage.projectId,
         stage: stage.kind,
-        detail: reasonOf(error),
+        detail: errorText(error),
       });
       return false;
     }
@@ -225,13 +225,13 @@ export function createRunner(deps: RunnerDeps): Runner {
         return;
       }
       const fault = faultOf(error);
-      if (deferred(stage, fault, reasonOf(error))) return;
+      if (deferred(stage, fault, errorText(error))) return;
       deps.log.write("error", "stage.failed", {
         projectId: stage.projectId,
         stage: stage.kind,
         detail: causedBy(error),
       });
-      conclude(stage, "failed", reasonOf(error), fault?.kind);
+      conclude(stage, "failed", errorText(error), fault?.kind);
     }
   }
 
@@ -268,7 +268,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         deps.log.write("error", "stage.execute", {
           projectId: stage.projectId,
           stage: stage.kind,
-          detail: reasonOf(error),
+          detail: errorText(error),
         });
       });
   }
@@ -364,8 +364,4 @@ export function createRunner(deps: RunnerDeps): Runner {
       await settled();
     },
   };
-}
-
-function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

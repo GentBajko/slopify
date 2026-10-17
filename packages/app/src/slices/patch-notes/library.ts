@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { hasErrnoCode } from "../../kernel/errors.js";
 
 // The patch notes the app shows in Settings → Patch notes: Markdown files kept in the
 // repository's docs/patch-notes/ and copied into the build beside the compiled code
@@ -42,7 +43,7 @@ export async function listPatchNotes(dir: string): Promise<readonly PatchNoteSum
   try {
     raw = await readFile(join(dir, "index.json"), "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+    if (hasErrnoCode(error, "ENOENT"))
       throw new PatchNotesMissing(
         "This copy of Slopify has no patch notes: its docs/patch-notes/index.json is missing. Reinstall Slopify (or run npm run build) and reload the page.",
       );
@@ -74,7 +75,7 @@ export async function readPatchNote(dir: string, id: string): Promise<string | u
   try {
     return await readFile(join(dir, `${id}.md`), "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    if (hasErrnoCode(error, "ENOENT")) return undefined;
     throw error;
   }
 }

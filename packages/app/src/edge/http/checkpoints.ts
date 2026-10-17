@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import {
   changeCheckpoints,
   checkpointChangeSchema,
@@ -59,7 +60,7 @@ function buildCheckpointRoutes(deps: AppDeps) {
     } catch (error) {
       deps.log.write("error", "checkpoint.notify", {
         projectId,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
     if (wake) {
@@ -68,7 +69,7 @@ function buildCheckpointRoutes(deps: AppDeps) {
       } catch (error) {
         deps.log.write("error", "checkpoint.wake", {
           projectId,
-          detail: error instanceof Error ? error.message : String(error),
+          detail: errorText(error),
         });
       }
     }

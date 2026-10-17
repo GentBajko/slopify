@@ -2,7 +2,8 @@ import { lstat, mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { privateRead, privateWrite } from "../../host-cli/service.js";
-import { isMissing, syncDirectory } from "./tree.js";
+import { hasErrnoCode } from "../../kernel/errors.js";
+import { syncDirectory } from "./tree.js";
 
 export const identifier = z
   .string()
@@ -110,10 +111,7 @@ export async function privateDirectory(path: string, uid: number): Promise<void>
   for (const name of path.split(sep).filter(Boolean)) {
     current = join(current, name);
     await mkdir(current, { mode: 0o700 }).catch((error: unknown) => {
-      if (
-        !(typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST")
-      )
-        throw error;
+      if (!hasErrnoCode(error, "EEXIST")) throw error;
     });
     const s = await lstat(current);
     if (
@@ -138,7 +136,7 @@ export async function readState<T>(
   uid: number,
 ): Promise<T | null> {
   const s = await lstat(path).catch((error: unknown) => {
-    if (isMissing(error)) return undefined;
+    if (hasErrnoCode(error, "ENOENT")) return undefined;
     throw error;
   });
   if (s === undefined) return null;

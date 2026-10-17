@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 import { lstat, readdir } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { installSchema, readState } from "../edge/docker-install/state.js";
+import { hasErrnoCode } from "../kernel/errors.js";
 import { HostFolderRefused } from "../kernel/ports/host-cli.js";
-import { hasCode } from "./paths.js";
 
 export interface HostFolderDeps {
   /** The Docker install's state folder, `<XDG_DATA_HOME>/slopify/docker`. */
@@ -25,7 +25,7 @@ export function launchXdgOpen(directory: string): Promise<void> {
     child.once("error", (error) => {
       reject(
         new Error(
-          hasCode(error, "ENOENT")
+          hasErrnoCode(error, "ENOENT")
             ? "xdg-open isn't installed on this machine, so the Slopify host helper can't open a file manager. Install xdg-utils (for example sudo pacman -S xdg-utils or sudo apt install xdg-utils), then use Open folder again."
             : `The Slopify host helper could not start xdg-open to open ${directory}. Check that you are signed in to this computer's desktop, then use Open folder again.`,
         ),

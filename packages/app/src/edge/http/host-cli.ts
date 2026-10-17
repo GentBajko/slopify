@@ -5,6 +5,7 @@ import { bodyLimit } from "hono/body-limit";
 import { stream } from "hono/streaming";
 import { z } from "zod";
 import { sniffImage } from "../../adapters/image/bytes.js";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import {
   bridgeLimits,
@@ -192,8 +193,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
           {
             type: "error",
             kind: "unavailable",
-            message:
-              "Slopify hit an internal error (a request to the helper on your computer was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+            message: internalError("a request to the helper on your computer was too large"),
           },
           413,
         ),
@@ -207,8 +207,9 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     if (Buffer.byteLength(text) > bridgeLimits.status)
       throw providerError({
         kind: "unavailable",
-        message:
-          "Slopify hit an internal error (the helper on your computer sent a status report that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+        message: internalError(
+          "the helper on your computer sent a status report that was too large",
+        ),
       });
     return c.json(status);
   });
@@ -221,8 +222,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     if (Buffer.byteLength(JSON.stringify(result)) > bridgeLimits.models)
       throw providerError({
         kind: "unavailable",
-        message:
-          "Slopify hit an internal error (the helper on your computer sent a model list that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+        message: internalError("the helper on your computer sent a model list that was too large"),
       });
     return c.json(result);
   });
@@ -264,13 +264,13 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             );
             if (done || parsed.type === "error")
               throw new Error(
-                "Slopify hit an internal error (the AI tool on your computer sent a reply Slopify could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+                internalError("the AI tool on your computer sent a reply Slopify could not read"),
               );
             const frame = `${JSON.stringify(parsed)}\n`;
             total += Buffer.byteLength(frame);
             if (Buffer.byteLength(frame) > bridgeLimits.frame || total > bridgeLimits.stream)
               throw new Error(
-                "Slopify hit an internal error (the AI tool on your computer sent a reply that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+                internalError("the AI tool on your computer sent a reply that was too large"),
               );
             await output.write(frame);
             signal.throwIfAborted();
@@ -336,7 +336,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });
       if (result.bytes.byteLength > bridgeLimits.image || sniffImage(result.bytes) !== result.mime)
         throw new Error(
-          "Slopify hit an internal error (the image made on your computer was too large or not a valid image). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+          internalError("the image made on your computer was too large or not a valid image"),
         );
       c.header("Content-Type", result.mime);
       c.header("Content-Length", String(result.bytes.byteLength));
@@ -402,8 +402,7 @@ function invalid(c: import("hono").Context<HostEnv>): Response {
     {
       type: "error",
       kind: "unavailable",
-      message:
-        "Slopify hit an internal error (the helper on your computer received a request it could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+      message: internalError("the helper on your computer received a request it could not read"),
     },
     400,
   );

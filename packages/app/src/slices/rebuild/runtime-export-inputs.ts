@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import {
@@ -38,17 +39,13 @@ export function exportSnapshot(
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
   if (view === undefined || row === undefined)
-    throw new Error(
-      "Slopify hit an internal error (the project version being exported is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the project version being exported is missing"));
   const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
   const recipe = plan.recipes.find(
     (one) => one.key === piece.key && one.fingerprint === piece.fingerprint,
   );
   if (recipe === undefined || recipe.deferred || recipe.unresolved)
-    throw new Error(
-      "Slopify hit an internal error (the export no longer matches the project's saved inputs). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the export no longer matches the project's saved inputs"));
   return { view, plan };
 }
 export async function revisionAudio(

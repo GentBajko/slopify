@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { PreviewPicture, PreviewPictures } from "./images.js";
 import type { StylePreviewRenderer } from "./render.js";
@@ -122,7 +123,7 @@ function prune(deps: StylePreviewDeps): void {
       rmSync(join(deps.dir, old.name), { force: true });
   } catch (error) {
     deps.log.write("warn", "style-preview.prune", {
-      detail: error instanceof Error ? error.message : String(error),
+      detail: errorText(error),
     });
   }
 }

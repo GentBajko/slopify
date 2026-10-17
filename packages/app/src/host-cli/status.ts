@@ -6,6 +6,7 @@ import { z } from "zod";
 import { parseAntigravityModels } from "../adapters/llm/antigravity-models.js";
 import { cliLoginError } from "../adapters/llm/cli-login-error.js";
 import { cliCommand } from "../kernel/cli-command.js";
+import { errorText, hasErrnoCode } from "../kernel/errors.js";
 import type { HostCliId, HostCliStatus, HostLlmId } from "../kernel/ports/host-cli.js";
 import {
   type CliProbe,
@@ -29,7 +30,11 @@ export async function resolveHostCommand(
       await access(path, constants.X_OK);
       if ((await stat(path)).isFile()) return path;
     } catch (error) {
-      if (!isCode(error, "ENOENT") && !isCode(error, "ENOTDIR") && !isCode(error, "EACCES"))
+      if (
+        !hasErrnoCode(error, "ENOENT") &&
+        !hasErrnoCode(error, "ENOTDIR") &&
+        !hasErrnoCode(error, "EACCES")
+      )
         throw error;
     }
   }
@@ -106,10 +111,10 @@ export function createHostStatus(deps: HostStatusDeps): (id: HostCliId) => Promi
         command: hostCommandName(id),
         installed: false,
         login: "unknown",
-        issueKind: isCode(error, "ENOENT") ? "missing" : "bridge",
-        issue: isCode(error, "ENOENT")
+        issueKind: hasErrnoCode(error, "ENOENT") ? "missing" : "bridge",
+        issue: hasErrnoCode(error, "ENOENT")
           ? `${hostCommandName(id)} was not found on this machine. Install it and sign in there, then run the launcher again: npx @gentbajko/slopify --docker`
-          : `Slopify could not check for ${hostCommandName(id)} on this machine (${error instanceof Error ? error.message : String(error)}). Fix the problem, then run the launcher again: npx @gentbajko/slopify --docker`,
+          : `Slopify could not check for ${hostCommandName(id)} on this machine (${errorText(error)}). Fix the problem, then run the launcher again: npx @gentbajko/slopify --docker`,
       };
     }
     const readiness = readinessFromProbe(
@@ -174,7 +179,4 @@ export function createHostStatus(deps: HostStatusDeps): (id: HostCliId) => Promi
     }
     return { ...(await entry.value), id };
   };
-}
-function isCode(error: unknown, code: string): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }

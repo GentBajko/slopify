@@ -1,4 +1,5 @@
 import type { Clock } from "../clock.js";
+import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import { redact } from "../log.js";
 import type { StageKind } from "../pipeline.js";
@@ -192,7 +193,7 @@ function classify(
   }
   return providerError({
     kind: "other",
-    message: redact(error instanceof Error ? error.message : String(error)),
+    message: redact(errorText(error)),
   });
 }
 

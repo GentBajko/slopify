@@ -1,11 +1,11 @@
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { DialogueLine, TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import {
   httpFailure,
-  internalError,
   missingKey,
   noAudio,
   providerSaid,

@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { masterFile, masterReport } from "../loudness/loudnorm.js";
@@ -35,9 +36,7 @@ export async function executeVoicesRecipe(
     return "done";
   if (!context.maySubmit(piece.id)) return "held";
   if (piece.key !== "voices:files" || piece.input.kind !== "local")
-    throw new Error(
-      "Slopify hit an internal error (unknown kind of listening-file step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("unknown kind of listening-file step"));
   context.signal.throwIfAborted();
   const { view } = exportSnapshot(deps, context, piece);
   const sections = z

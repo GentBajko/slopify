@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { errorText } from "../../kernel/errors.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import type { ReviewRecord } from "../reviews/model.js";
 import { reviewKey } from "../reviews/model.js";
@@ -62,7 +63,7 @@ export function createReviewRedos(): {
         .catch((error: unknown) => {
           deps.log.write("error", "review.redo", {
             projectId: verdict.projectId,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: errorText(error),
           });
           setRedoState(
             deps.db,

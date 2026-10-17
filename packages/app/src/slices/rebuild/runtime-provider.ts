@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
+import { internalError } from "../../kernel/errors.js";
 import type { LlmImage, Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
@@ -227,9 +228,7 @@ export async function executeProviderRecipe(
     });
     return "done";
   }
-  throw new Error(
-    "Slopify hit an internal error (this step has no provider request to run). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
-  );
+  throw new Error(internalError("this step has no provider request to run"));
 }
 
 // Soften and retry (`soften.ts`): the project's AI model rewords a refused image prompt
@@ -427,9 +426,7 @@ async function publishText(
         : [];
     const title: unknown = titles[Number(piece.key.split(":").at(-1)) - 1];
     if (typeof title !== "string")
-      throw new Error(
-        "Slopify hit an internal error (a research chapter has no title in the research plan). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a research chapter has no title in the research plan"));
     const asset = writeAsset(
       deps,
       context.work.projectId,
