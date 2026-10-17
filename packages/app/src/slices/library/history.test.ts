@@ -4,8 +4,8 @@ import type { Clock } from "../../kernel/clock.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
-import { listVersions, versionsOrCurrent } from "./history.js";
-import { entryById, promptById } from "./repo.js";
+import { listVersions, recordVersion, versionsOrCurrent } from "./history.js";
+import { entryById, insertPrompt, promptById } from "./repo.js";
 import type { LibraryDeps } from "./save.js";
 import {
   createEntry,
@@ -78,6 +78,24 @@ describe("prompt history", () => {
     const [latest, ...rest] = listVersions(library.db, "prompt", prompt.id);
     expect(latest).toMatchObject({ version: 3, body: "ink", restoredFrom: 1 });
     expect(rest.map((one) => one.version)).toEqual([2, 1]);
+  });
+
+  // A version saved before the `Slopify_` prefix was reserved is restored as it was.
+  it("restores a version holding an unknown Slopify_ name", () => {
+    const library = deps();
+    const old = {
+      id: "old",
+      kind: "article" as const,
+      name: "Old",
+      body: "{{Slopify_Wish}}",
+      slots: ["Slopify_Wish"],
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    };
+    insertPrompt(library.db, old);
+    recordVersion(library.db, "prompt", old);
+    updatePrompt(library, "old", { kind: "article", name: "Old", body: "plain" });
+
+    expect(saved(restorePrompt(library, "old", 1)).body).toBe("{{Slopify_Wish}}");
   });
 
   it("refuses to restore a version or a prompt that does not exist", () => {

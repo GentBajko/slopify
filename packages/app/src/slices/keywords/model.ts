@@ -74,3 +74,24 @@ export function costLabel(cost: KeywordCost): string {
       return "Part of one AI call per run: the appearance lookup, with web search.";
   }
 }
+
+// How the editor names a place: the prompt kinds and the two entry categories.
+export const placeLabels: Readonly<Record<KeywordPlace, string>> = {
+  title: "Title",
+  article: "Article",
+  script: "Script",
+  narration: "Narration",
+  intro: "Intro",
+  outro: "Outro",
+  image: "Image",
+  thumbnail: "Thumbnail",
+  description: "Description",
+  shorts: "Shorts",
+  review: "Review",
+};
+
+// "A, B and C".
+export function listOf(words: readonly string[]): string {
+  if (words.length <= 1) return words.join("");
+  return `${words.slice(0, -1).join(", ")} and ${words.at(-1) ?? ""}`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lintEntry, lintPrompt } from "./lint.js";
+import { keywordWarnings, lintEntry, lintPrompt } from "./lint.js";
 import { bodyMax, nameMax } from "./model.js";
 
 function messages(body: string): readonly string[] {
@@ -156,5 +156,49 @@ describe("lintEntry", () => {
     expect(lintEntry({ category: "intro", mode: "text", name: "", body: "Hi." })).toEqual([
       { field: "name", message: "Enter a name." },
     ]);
+  });
+});
+
+describe("keywords Slopify fills", () => {
+  it("refuses an unknown Slopify_ name and says how to rename it", () => {
+    expect(messages("About {{Slopify_Wish}}.")).toEqual([
+      "{{Slopify_Wish}} at line 1, column 7 isn't a keyword Slopify fills: names starting with Slopify_ are Slopify's own. Rename it, e.g. {{Wish}}, or insert a keyword from the Insert bar above the text.",
+    ]);
+  });
+
+  it("lets an unknown name through when the stored prompt already had it", () => {
+    expect(
+      lintPrompt({ kind: "article", name: "D", body: "{{Slopify_Wish}}" }, ["Slopify_Wish"]),
+    ).toEqual([]);
+  });
+
+  it("refuses an unknown name in an entry too", () => {
+    expect(
+      lintEntry({ category: "intro", mode: "text", name: "W", body: "{{Slopify_Wish}}" }),
+    ).toHaveLength(1);
+  });
+
+  it("saves a keyword in the wrong place, and warns about it instead", () => {
+    const draft = { kind: "article" as const, name: "D", body: "{{Slopify_Chapters}}" };
+    expect(lintPrompt(draft)).toEqual([]);
+    expect(keywordWarnings(draft).map((one) => one.message)).toEqual([
+      "{{Slopify_Chapters}} at line 1, column 1 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts and Review.",
+    ]);
+  });
+
+  it("warns about an old name in a picture prompt", () => {
+    expect(
+      keywordWarnings({ kind: "image", name: "P", body: "{{Appearance}}" }).map((one) => one.field),
+    ).toEqual(["body"]);
+  });
+
+  it("warns about a keyword in the wrong entry", () => {
+    expect(
+      keywordWarnings({ category: "outro", mode: "llm", name: "O", body: "{{Slopify_Hook}}" }),
+    ).toHaveLength(1);
+  });
+
+  it("has nothing to say about a prompt without keywords", () => {
+    expect(keywordWarnings({ kind: "image", name: "P", body: "{{topic}}" })).toEqual([]);
   });
 });

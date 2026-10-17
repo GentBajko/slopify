@@ -574,7 +574,7 @@ function validateLibraryRows(
   const promptIds = new Set<string>();
   const promptNames = new Set<string>();
   for (const row of manifest.prompts) {
-    if (row.name !== row.name.trim() || lintPrompt(row).length > 0)
+    if (row.name !== row.name.trim() || lintPrompt(row, detectSlots(row.body).names).length > 0)
       throw new Error("The backup contains an invalid prompt.");
     uniquePortableRow(promptIds, row.id, "prompt id");
     uniquePortableRow(promptNames, `${row.kind}\0${row.name.toLowerCase()}`, "prompt name");
@@ -583,7 +583,7 @@ function validateLibraryRows(
   const entryIds = new Set<string>();
   const entryNames = new Set<string>();
   for (const row of manifest.entries) {
-    if (row.name !== row.name.trim() || lintEntry(row).length > 0)
+    if (row.name !== row.name.trim() || lintEntry(row, detectSlots(row.body).names).length > 0)
       throw new Error("The backup contains an invalid entry.");
     uniquePortableRow(entryIds, row.id, "entry id");
     uniquePortableRow(entryNames, `${row.category}\0${row.name.toLowerCase()}`, "entry name");

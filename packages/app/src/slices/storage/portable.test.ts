@@ -11,7 +11,7 @@ import {
 import { unzipSync, Zip, ZipDeflate, zipSync } from "fflate";
 import { expect, it } from "vitest";
 import { resolveFont } from "../fonts/catalog.js";
-import { listEntries, listPrompts } from "../library/repo.js";
+import { insertPrompt, listEntries, listPrompts } from "../library/repo.js";
 import { createPrompt } from "../library/save.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
@@ -63,6 +63,31 @@ it("round-trips narration prompt wording and human-readable slots", () => {
     expect(listPrompts(target.deps.db)).toEqual([
       expect.objectContaining({ ...prompt, slots: ["Delivery Style"] }),
     ]);
+  } finally {
+    source.close();
+    target.close();
+  }
+});
+
+// A backup made before the `Slopify_` prefix was reserved comes back as it was.
+it("imports a prompt holding an unknown Slopify_ name from an older backup", () => {
+  const source = draftFixture();
+  const target = draftFixture();
+  try {
+    insertPrompt(source.deps.db, {
+      id: "old",
+      kind: "article",
+      name: "Old",
+      body: "About {{Slopify_Wish}}.",
+      slots: ["Slopify_Wish"],
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const archive = exportPortable({
+      ...source.deps,
+      now: () => source.deps.clock.now().toISOString(),
+    });
+    importPortable({ ...target.deps, now: () => target.deps.clock.now().toISOString() }, archive);
+    expect(listPrompts(target.deps.db).map((one) => one.body)).toEqual(["About {{Slopify_Wish}}."]);
   } finally {
     source.close();
     target.close();
