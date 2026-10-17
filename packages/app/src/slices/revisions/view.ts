@@ -1,6 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import { outputPath } from "../storage/layout.js";
+import { narrationJoinPiecesOfProject, narrationJoinsOfProject } from "./manifest-repo.js";
 import type { ProjectRevision, RevisionDeps, RevisionOutputView, RevisionView } from "./model.js";
 import { currentRevisionId, outputsForRevision, piecesForRevision, revisionById } from "./repo.js";
 
@@ -56,4 +57,18 @@ export function resolvedArticleMarkdown(
     : revision.config.sources.article === "off"
       ? ""
       : null;
+}
+
+// The view with the narration joins of every version of the project, for planning: turning
+// softening on looks up the joins a finished word timing was made from
+// (`rebuild/recipe-softening.ts`), which a later version no longer holds.
+export function withEarlierJoins<T extends RevisionView>(
+  deps: Pick<RevisionDeps, "db">,
+  view: T,
+): T {
+  return {
+    ...view,
+    earlierJoins: narrationJoinsOfProject(deps.db, view.revision.projectId),
+    earlierJoinPieces: narrationJoinPiecesOfProject(deps.db, view.revision.projectId),
+  };
 }

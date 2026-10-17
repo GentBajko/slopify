@@ -4,7 +4,7 @@ import type { Catalogue } from "../../catalog/schema.js";
 import { catalogueSchema } from "../../catalog/schema.js";
 import type { RunConfig } from "../admission/model.js";
 import type { ManifestPiece, RevisionDeps, RevisionView } from "../revisions/model.js";
-import { getRevisionView } from "../revisions/view.js";
+import { getRevisionView, withEarlierJoins } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
 import { applyProvidedReviews } from "./provided-review.js";
@@ -92,7 +92,7 @@ export function executionPlan(
     view.revision.id,
     planRevisionWork(
       view.revision,
-      view,
+      withEarlierJoins(deps, view),
       catalogue,
       available,
       {

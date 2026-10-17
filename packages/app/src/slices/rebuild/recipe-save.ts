@@ -219,7 +219,12 @@ function planEdit(
     config: base.revision.config,
     content: base.revision.content,
     manifest,
-    history: { outputs: base.outputs, pieces: base.pieces },
+    history: {
+      outputs: base.outputs,
+      pieces: base.pieces,
+      earlierJoins: base.earlierJoins,
+      earlierJoinPieces: base.earlierJoinPieces,
+    },
     resolved: {
       articleMarkdown: base.articleMarkdown,
       researchNotes: base.revision.config.provided.research ?? null,

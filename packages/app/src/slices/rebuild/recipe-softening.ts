@@ -36,13 +36,13 @@ export function unsoftenedTimelines(
       // project from before an older fingerprint scheme its outputs carry another fingerprint
       // than its pieces.
       const fingerprint = entry.audio[0];
-      const output = past.outputs.find(
+      const output = [...past.outputs, ...(past.earlierJoins ?? [])].find(
         (row) =>
           row.workKey === key &&
           row.fingerprint === fingerprint &&
           (row.state === "ready" || row.state === "outdated"),
       );
-      const piece = past.pieces.find(
+      const piece = [...past.pieces, ...(past.earlierJoinPieces ?? [])].find(
         (row) =>
           row.key === key &&
           row.fingerprint === fingerprint &&

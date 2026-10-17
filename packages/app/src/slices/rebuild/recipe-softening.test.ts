@@ -133,6 +133,31 @@ describe("turning on Soften breaths and Soften S sounds", () => {
       expect(fingerprintOf(after, key), key).toBe(fingerprintOf(before.recipes, key));
   });
 
+  it("finds the earlier joins in the project's other versions once a new version dropped them", () => {
+    const after = plan(softened, before.manifest, before.manifest);
+    const remade = new Set(
+      after
+        .filter((one) => fingerprintOf(before.recipes, one.key) !== one.fingerprint)
+        .map((one) => one.key),
+    );
+    const made = finished(
+      after.filter((one) => remade.has(one.key)),
+      "softened",
+    );
+    // A version saved after the softened joins were made holds only its selected records.
+    const kept: RevisionManifest = {
+      outputs: [
+        ...before.manifest.outputs.filter((row) => !remade.has(row.workKey)),
+        ...made.outputs,
+      ],
+      pieces: [...before.manifest.pieces.filter((row) => !remade.has(row.key)), ...made.pieces],
+    };
+    const earlierJoins = before.manifest.outputs.filter((row) => row.workKey.startsWith("audio:"));
+    const later = plan(softened, kept, { ...kept, earlierJoins });
+    for (const key of ["subtitles:timing", "youtube:description", "subtitles:cues"])
+      expect(fingerprintOf(later, key), key).toBe(fingerprintOf(before.recipes, key));
+  });
+
   it("times the words again when the narration itself changes", () => {
     const after = plan(
       { ...softened, silenceGapSeconds: (narrated.silenceGapSeconds ?? 0) + 1 },

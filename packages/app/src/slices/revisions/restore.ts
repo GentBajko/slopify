@@ -14,7 +14,7 @@ import {
 import { advanceHead, logicalKeys } from "./mutations.js";
 import { cloneManifest, ensureRevisionStages, projectSelected } from "./projection.js";
 import { insertRevision } from "./repo.js";
-import { getRevisionView } from "./view.js";
+import { getRevisionView, withEarlierJoins } from "./view.js";
 export interface RestoreRevisionInput {
   readonly projectId: string;
   readonly baseRevisionId: string;
@@ -38,7 +38,7 @@ export async function restoreRevision(
     const target = getRevisionView(deps, input.projectId, input.targetRevisionId);
     if (target === undefined) return refusal(deps, input.projectId, "no-revision");
     const base = requiredView(deps, input.projectId, input.baseRevisionId);
-    const comparison = planRevision(base, {
+    const comparison = planRevision(withEarlierJoins(deps, base), {
       config: target.revision.config,
       content: target.revision.content,
     });

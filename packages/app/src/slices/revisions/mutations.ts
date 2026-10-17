@@ -44,6 +44,7 @@ import { insertAsset, insertRevision } from "./repo.js";
 import { bindNarrationSources, validateNarrationIntent, validateTemplateIntent } from "./rules.js";
 import { revisionEditSchema } from "./schema.js";
 import { keptSubject } from "./subject.js";
+import { withEarlierJoins } from "./view.js";
 
 export { bindUpload } from "./mutation-assets.js";
 export { restoreRevision } from "./restore.js";
@@ -145,7 +146,12 @@ export async function saveRevision(
         ],
         pieces: [],
       };
-      let plan = planRevision(fresh, finalEdit, preparedManifest, inspected);
+      let plan = planRevision(
+        withEarlierJoins(deps, fresh),
+        finalEdit,
+        preparedManifest,
+        inspected,
+      );
       if (!plan.ok)
         return {
           ok: false,
@@ -169,7 +175,7 @@ export async function saveRevision(
         const timing = plan.recipes.find((row) => row.key === "subtitles:timing");
         if (timing !== undefined) {
           plan = planRevision(
-            fresh,
+            withEarlierJoins(deps, fresh),
             {
               ...finalEdit,
               // From the edit as sent, so the plan decides the kept shorts the same way again.

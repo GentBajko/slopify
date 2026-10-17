@@ -154,6 +154,11 @@ export interface ManifestPiece {
 export interface RevisionManifest {
   readonly outputs: readonly ManifestOutput[];
   readonly pieces: readonly ManifestPiece[];
+  // The narration joins every version of the project made (`narrationJoinsOfProject`): a
+  // version holds only the records it keeps, and turning softening on looks up the joins a
+  // finished word timing was made from (`rebuild/recipe-softening.ts`).
+  readonly earlierJoins?: readonly ManifestOutput[] | undefined;
+  readonly earlierJoinPieces?: readonly ManifestPiece[] | undefined;
 }
 export interface RevisionOutputView extends ManifestOutput {
   readonly recordId: string;
@@ -172,6 +177,8 @@ export interface RevisionView {
   readonly revision: ProjectRevision;
   readonly outputs: readonly RevisionOutputView[];
   readonly pieces: readonly RevisionPieceView[];
+  readonly earlierJoins?: readonly ManifestOutput[] | undefined;
+  readonly earlierJoinPieces?: readonly ManifestPiece[] | undefined;
   readonly current: boolean;
 }
 export interface RevisionSummary {

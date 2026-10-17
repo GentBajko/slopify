@@ -119,6 +119,33 @@ export function insertManifestPiece(
   );
 }
 
+// Every narration join (intro, body, outro) any version of the project recorded.
+export function narrationJoinsOfProject(
+  db: DatabaseSync,
+  projectId: string,
+): readonly RevisionOutputRecord[] {
+  return db
+    .prepare(
+      "SELECT * FROM revision_outputs WHERE project_id=? AND work_key IN ('audio:intro','audio:body:concat','audio:outro') ORDER BY created_at,id",
+    )
+    .all(projectId)
+    .map(toOutput);
+}
+
+// The finished pieces of those joins, for a project whose outputs and pieces carry different
+// fingerprints (made before a fingerprint change).
+export function narrationJoinPiecesOfProject(
+  db: DatabaseSync,
+  projectId: string,
+): readonly RevisionPieceRecord[] {
+  return db
+    .prepare(
+      "SELECT * FROM revision_pieces WHERE project_id=? AND piece_key IN ('audio:intro','audio:body:concat','audio:outro') ORDER BY created_at,id",
+    )
+    .all(projectId)
+    .map(toPiece);
+}
+
 export function outputsForRevision(
   db: DatabaseSync,
   projectId: string,
