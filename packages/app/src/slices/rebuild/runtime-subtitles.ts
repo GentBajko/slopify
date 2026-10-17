@@ -421,14 +421,6 @@ function mismatchChunks(
   }
 }
 
-export function mismatchMessage(
-  snapshot: Pick<ExportSnapshot, "view" | "plan">,
-  segment: "intro" | "body" | "outro",
-  mismatch: SubtitleMismatch,
-): string {
-  return describeMismatch(mismatchChunks(snapshot, segment), segment, mismatch);
-}
-
 // The chunk that holds the words the audio stopped matching, by index; -1 when none does.
 export function mismatchChunk(
   chunks: readonly NarrationChunk[],

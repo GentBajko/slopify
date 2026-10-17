@@ -2,7 +2,6 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import type { CSSProperties } from "react";
 import coffee from "@/assets/buymeacoffee.svg";
 import github from "@/assets/github.svg";
-import logoMark from "@/assets/logo-mark.svg";
 import patreon from "@/assets/patreon.svg";
 import article from "@/assets/stage-article.svg";
 import audio from "@/assets/stage-audio.svg";
@@ -52,18 +51,6 @@ export function StageGlyph({
       data-glyph={kind}
       className={cn("block size-[22px] shrink-0 bg-current", className)}
       style={mask(glyphs[kind])}
-    />
-  );
-}
-
-// The wordmark is live text beside this, never a rasterised lockup.
-export function Mark({ className }: { readonly className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      data-glyph="mark"
-      className={cn("block size-[26px] shrink-0 bg-current", className)}
-      style={mask(logoMark)}
     />
   );
 }

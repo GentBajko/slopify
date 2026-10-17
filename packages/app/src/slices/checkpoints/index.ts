@@ -1,14 +1,4 @@
-export type {
-  CheckpointApprovalInput,
-  CheckpointDecision,
-  CheckpointId,
-  CheckpointRefusal,
-  CheckpointResult,
-  CheckpointRow,
-  CheckpointSetInput,
-  CheckpointStage,
-  CheckpointState,
-} from "./model.js";
+export type { CheckpointRow } from "./model.js";
 export {
   approveCheckpoint,
   checkpointForWork,
@@ -16,10 +6,3 @@ export {
   saveCheckpointSet,
   settleCheckpointClosures,
 } from "./repo.js";
-export {
-  checkpointApprovalSchema,
-  checkpointRowSchema,
-  checkpointSetSchema,
-  checkpointStageSchema,
-  checkpointStateSchema,
-} from "./schema.js";

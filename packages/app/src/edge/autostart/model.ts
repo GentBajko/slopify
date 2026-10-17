@@ -21,10 +21,6 @@ export interface AutostartView {
   readonly offer: boolean;
 }
 
-export interface AutostartBody {
-  readonly enabled: boolean;
-}
-
 // The settings row that remembers the question was answered (on the first-run screen, in
 // Settings or in the terminal), so it is never offered again.
 export const autostartAnsweredKey = "autostart.answered";

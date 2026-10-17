@@ -75,5 +75,4 @@ The editor carries `data-tour` hooks (`prompt-editor`, `prompt-name`, `prompt-bo
 - Autosave: absent; Save is explicit, apart from the photorealistic switch (`packages/web/src/routes/prompt-editor.tsx:108-115`).
 - Version history and Used by: not on this screen; they are on the Prompts tab (`packages/web/src/library/item-detail.tsx:57-58`).
 - Draft persistence across reloads: absent; drafts are React state in the shell (`packages/web/src/lib/form-drafts.tsx:18-19`).
-- `EditorNotice` and `backLink` from `packages/web/src/components/editor-states.tsx:26-44`: not used here; the prompt editor uses `EditorProblem`.
 - Offline and permission-denied states: not rendered.

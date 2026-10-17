@@ -46,7 +46,6 @@ import { revisionEditSchema } from "./schema.js";
 import { keptSubject } from "./subject.js";
 import { withEarlierJoins } from "./view.js";
 
-export { bindUpload } from "./mutation-assets.js";
 export { restoreRevision } from "./restore.js";
 
 export interface SaveRevisionInput {

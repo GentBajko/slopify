@@ -88,10 +88,6 @@ export function reviewedByAgent(settings: Pick<ReviewSettings, "reviewer"> | und
   return settings?.reviewer === "agent";
 }
 
-export function reviewedStages(settings: ReviewSettings | undefined): readonly ReviewStage[] {
-  return reviewStages.filter((stage) => reviewModeOf(settings, stage) !== "off");
-}
-
 // The key a stage's picked Review prompt renders under in `config.rendered`.
 export function reviewPromptKey(stage: ReviewStage): string {
   return `review.${stage}`;
@@ -102,9 +98,6 @@ export function reviewPromptKey(stage: ReviewStage): string {
 export const narrationItemKey = "narration";
 export function reviewKey(itemKey: string): string {
   return `review:${itemKey}`;
-}
-export function reviewedItemKey(key: string): string | undefined {
-  return key.startsWith("review:") ? key.slice("review:".length) : undefined;
 }
 
 // The settings as Play and templates keep them: the retries as typed text, and a stage's

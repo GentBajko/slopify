@@ -6,11 +6,7 @@ import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { Message } from "../../kernel/ports/llm.js";
-import type {
-  StandaloneLlm,
-  StandaloneLlmAnswer,
-  StandaloneLlmCall,
-} from "../../kernel/runner/standalone.js";
+import type { StandaloneLlm, StandaloneLlmCall } from "../../kernel/runner/standalone.js";
 import type { ProviderChoice, RunConfig } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { castMentions } from "../channels/cast-match.js";
@@ -35,7 +31,6 @@ const timeoutMs = 3 * 60_000;
 // Asked through `kernel/runner/standalone.ts`: the stage calls' retries, and the call lands on
 // Home's run cost against the channel, since the project is already done.
 export type EpisodeLlmCall = StandaloneLlmCall;
-export type EpisodeLlmAnswer = StandaloneLlmAnswer;
 
 export interface EpisodeSummaryDeps {
   readonly db: DatabaseSync;

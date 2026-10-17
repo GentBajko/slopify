@@ -1,9 +1,8 @@
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
-import { type AlignmentSpec, englishMismatch, englishSpec } from "./spec.js";
+import { type AlignmentSpec, englishSpec } from "./spec.js";
 import type { SpeechWord } from "./text.js";
 
 export const frameSeconds = 0.02;
-export const mismatch = englishMismatch;
 export interface WindowAlignment {
   readonly words: readonly TimedWord[];
   readonly confidence: number;

@@ -1,10 +1,6 @@
-import type { ReactNode } from "react";
-import { Callout } from "@/components/kit/callout";
-
-// What an editor shows instead of its form: the two-column outline while the list it
-// reads the row from is still in flight, and a sentence with the way back when there is
-// no row to show. Both editors draw them, and `sheet` below is the one panel style the
-// forms use, so the outline cannot drift from the form it stands in for.
+// What an editor shows while the list it reads the row from is still in flight: the
+// two-column outline. `sheet` below is the one panel style the forms use, so the outline
+// cannot drift from the form it stands in for.
 export const sheet = "rounded-media border border-line bg-surface p-4";
 
 export function EditorSkeleton() {
@@ -20,25 +16,3 @@ export function EditorSkeleton() {
     </div>
   );
 }
-
-// `back` is a node rather than a route: the two editors return to two different lists,
-// each on the tab the template belonged to.
-export function EditorNotice({
-  children,
-  back,
-}: {
-  readonly children: string;
-  readonly back: ReactNode;
-}) {
-  return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-3">
-      <Callout tone="danger" title="This can't be opened.">
-        {children}
-      </Callout>
-      {back}
-    </div>
-  );
-}
-
-// The link inside an `EditorNotice`, so both editors phrase the way back the same.
-export const backLink = "inline-block text-small text-accent-ink underline underline-offset-[3px]";

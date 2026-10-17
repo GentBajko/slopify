@@ -41,8 +41,3 @@ const projects: Origin = { to: "/projects", search: {}, label: "Projects" };
 export function cameFrom(): Origin {
   return origin ?? projects;
 }
-
-// For tests: forget the recorded origin.
-export function forgetOrigin(): void {
-  origin = undefined;
-}

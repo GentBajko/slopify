@@ -27,7 +27,6 @@ export const sampleArchives: Readonly<Record<SampleId, string>> = {
   audiobook: bundled("sample-audiobook.tar"),
   podcast: bundled("sample-podcast.tar"),
 };
-export const sampleArchive = sampleArchives.library;
 
 export interface SampleDeps extends BackupDeps {
   readonly log: Log;

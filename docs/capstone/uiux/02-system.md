@@ -111,7 +111,6 @@ The layout kit (`packages/web/src/components/kit/`) is what every screen compose
 
 | Component | File | Contract |
 |---|---|---|
-| PageBar | `kit/page-bar.tsx` | One row per page: back link, lead (lamp), 18 px title, fixed-width (88 px) status slot, meta, actions. Every route uses it. |
 | StatusSlot | `kit/action-bar.tsx` | Always rendered, fixed 32 px line; `role="status"`, or `alert` when the tone is error; long text truncated with the full text in `title`. |
 | ActionBar | `kit/action-bar.tsx` | Sticky bar at the viewport bottom: a StatusSlot at left, the page's primary actions at right. |
 | Drawer | `kit/drawer.tsx` | Non-modal right panel (560 px wide, 440 px narrow, full width on phones) under the header; `role="dialog"`, `aria-modal="false"`; Escape closes unless a modal dialog is open; focus goes to the title unless the caller already focused inside, and returns to the opener; optional pinned footer. Non-modal so the tutorial spotlight keeps working. |

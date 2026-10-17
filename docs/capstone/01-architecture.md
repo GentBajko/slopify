@@ -392,7 +392,6 @@ The shell rail has the destinations Home, Projects, Calendar, Channels, Library 
 | `media.tsx`, `media-controls.tsx`, `media-stub.ts`, `player.tsx` | `MediaFrame`, `MediaGrid`, lightbox, `Player`, `playbackRates`, `playerTime` |
 | `menu.tsx`, `popover.tsx` | Radix menu and popover wrappers |
 | `next-action.tsx` | `NextAction` |
-| `page-bar.tsx` | `PageBar` |
 | `rail.tsx` | `Rail`, `RailLink`, `RailButton` |
 | `reading-view.tsx` | `ReadingView`, `splitSections` |
 | `section-head.tsx` | `SectionHead` |

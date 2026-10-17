@@ -4,7 +4,6 @@ import type { Clock } from "../../kernel/clock.js";
 // Every install has this channel (migration 0032). A template or project whose channel is
 // NULL, or names a channel this install does not have, belongs to it.
 export const defaultChannelId = "00000000-0000-4000-8000-000000000001";
-export const defaultChannelName = "My channel";
 
 export const castKinds = ["character", "creature", "place", "object"] as const;
 export type CastKind = (typeof castKinds)[number];

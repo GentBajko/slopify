@@ -22,7 +22,6 @@ export type SpeakerRole = (typeof speakerRoles)[number];
 // text model rewrite it as a conversation between the speakers (a podcast of an article). With
 // `attribute` and `adapt` the article stays as written and the spoken script is kept beside it.
 export const scriptSources = ["script", "attribute", "adapt"] as const;
-export type ScriptSource = (typeof scriptSources)[number];
 
 export const speakersMax = 10;
 export const speakerNameMax = 40;

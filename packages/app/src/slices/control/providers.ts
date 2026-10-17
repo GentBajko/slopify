@@ -1,6 +1,4 @@
-import { z } from "zod";
 import { checkRuntimeModel } from "../../catalog/runtime-models.js";
-import { thinkingModes } from "../../kernel/ports/llm.js";
 import {
   type ModelInfo,
   type ProviderFamily,
@@ -9,33 +7,7 @@ import {
 import type { ProviderChoice, VoiceChoice } from "../admission/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { Chunking } from "../narration/chunk.js";
-import { chunkModes } from "../narration/chunk.js";
 import type { ProviderStatus, Voice } from "../settings/model.js";
-
-const choice = z
-  .object({
-    provider: z.string().trim().min(1).max(200),
-    model: z.string().trim().min(1).max(200),
-    thinking: z.enum(thinkingModes).optional(),
-  })
-  .strict();
-
-export const providerChangesSchema = z
-  .object({
-    llm: choice.optional(),
-    audio: choice.extend({ voice: z.string().trim().min(1).max(200) }).optional(),
-    images: choice.optional(),
-    chunking: z
-      .object({
-        mode: z.enum(chunkModes),
-        words: z.number().int().min(1).max(10000).optional(),
-        characters: z.number().int().min(1).max(1000000).optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0, "Change at least one provider before saving.");
 
 export interface ProviderChanges {
   readonly chunking?: Chunking | undefined;

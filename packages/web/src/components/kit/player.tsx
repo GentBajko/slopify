@@ -30,7 +30,7 @@ import {
   VolumeControl,
 } from "./media-controls.js";
 
-export { type PlayerChapter, playbackRates, playerTime } from "./media-controls.js";
+export { type PlayerChapter, playerTime } from "./media-controls.js";
 
 // Video plays in Slopify's own player: the poster and a big play key until it starts, then a
 // bar on a gradient with play, time, a lime track (buffered range, chapter marks, a time tip

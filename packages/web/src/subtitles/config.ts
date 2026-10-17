@@ -33,16 +33,6 @@ export function subtitlesFor(
   };
 }
 
-export function sameSubtitles(left: SubtitleConfig, right: SubtitleConfig): boolean {
-  return (
-    left.mode === right.mode &&
-    left.language === right.language &&
-    left.fontId === right.fontId &&
-    left.fontSize === right.fontSize &&
-    (left.position ?? "bottom") === (right.position ?? "bottom")
-  );
-}
-
 export function validSubtitleStyle(value: SubtitleConfig): boolean {
   return (
     value.mode === "off" ||

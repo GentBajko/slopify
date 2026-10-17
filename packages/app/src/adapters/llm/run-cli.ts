@@ -156,7 +156,7 @@ export function nodeRunCli(
   return {
     ...(inputWritten === undefined ? {} : { inputWritten }),
     pid: child.pid,
-    stdout: child.stdout === null ? nothing : bytesOf(child.stdout),
+    stdout: bytesOf(child.stdout),
     stderr: (): string => stderr,
     ended,
     kill: terminate,
@@ -246,15 +246,6 @@ export function stuckCli(binary: string): string {
   return `The ${cliName(binary)} stopped responding and could not be shut down. Close any leftover ${commandOf(binary)} processes or restart your computer, then use Try again.`;
 }
 
-// Unreachable while stdio names `pipe` for fd 1; it is here so the type carries no null
-// and no non-null assertion is needed to read the stream.
-const nothing: AsyncIterable<Uint8Array> = {
-  [Symbol.asyncIterator]: (): AsyncIterator<Uint8Array> => ({
-    next: (): Promise<IteratorResult<Uint8Array>> =>
-      Promise.resolve({ done: true, value: undefined }),
-  }),
-};
-
 const typed = z.object({ type: z.string() });
 
 // A JSONL line off a CLI's stdout. The raw value travels with its `type` because a schema
@@ -288,15 +279,11 @@ export function cliShaped<T>(binary: string, schema: z.ZodType<T>, value: unknow
   return parsed.data;
 }
 
-async function* bytesOf(source: Readable): AsyncGenerator<Uint8Array> {
+// fd 1 is always a pipe with no encoding, so its pieces are bytes; the null check is for the type.
+async function* bytesOf(source: Readable | null): AsyncGenerator<Uint8Array> {
+  if (source === null) return;
   for await (const piece of source) {
-    if (typeof piece === "string") {
-      yield new TextEncoder().encode(piece);
-      continue;
-    }
-    if (piece instanceof Uint8Array) {
-      yield piece;
-    }
+    if (piece instanceof Uint8Array) yield piece;
   }
 }
 

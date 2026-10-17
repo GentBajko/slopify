@@ -28,8 +28,6 @@ import {
 } from "./repo.js";
 import { releaseStagedFile, stagedFileReferenced } from "./staging-refs.js";
 
-export { prepareStagedFile, prepareText } from "./prepare.js";
-
 export interface StorageDeps {
   readonly catalogue?: CatalogueStore | undefined;
   readonly db: DatabaseSync;

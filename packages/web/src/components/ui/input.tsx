@@ -18,19 +18,4 @@ function Input({ className, ...props }: React.ComponentProps<"input">) {
   );
 }
 
-// The same skin over a textarea: the pasted article is the one multi-line field on Play.
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
-  return (
-    <textarea
-      data-slot="textarea"
-      className={cn(
-        "w-full min-w-0 rounded-control border border-line-strong bg-raised px-3 py-2 text-small text-ink",
-        "placeholder:text-ink-3 aria-invalid:border-danger",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export { Input, Textarea };
+export { Input };

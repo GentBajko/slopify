@@ -93,10 +93,6 @@ export function projectLanguage(config: { readonly language?: string | undefined
   return config.language ?? defaultLanguage;
 }
 
-export function isEnglish(config: { readonly language?: string | undefined }): boolean {
-  return projectLanguage(config) === defaultLanguage;
-}
-
 // The line added to every prompt that writes for the audience, when the project is not in
 // English. It is the app's own sentence, added after the user's prompt rather than written
 // into it, so the prompt library stays as the user wrote it; an English project gets nothing,

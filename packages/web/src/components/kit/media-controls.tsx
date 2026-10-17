@@ -33,8 +33,6 @@ export interface PlayerChapter {
   readonly title: string;
 }
 
-export { playbackRates };
-
 // "0:07", "12:40", "2:04:11".
 export function playerTime(seconds: number): string {
   const whole = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;

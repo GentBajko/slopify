@@ -17,9 +17,7 @@ import { RevisionHistory } from "./revision-history.js";
 export {
   type DraftNotice,
   type EditSection,
-  needsNoConsent,
   type RevisionController,
-  startsWithoutReview,
   useRevisionController,
 } from "./revision-controller.js";
 export { RevisionEditPanel } from "./revision-edit-panel.js";

@@ -14,10 +14,6 @@ import type { BrandKit } from "./model.js";
 import { channelById, resolveChannelId } from "./repo.js";
 import { brandDocument, castSnapshot } from "./runs.js";
 
-export function channelChanged(db: DatabaseSync, before: RunConfig, after: RunConfig): boolean {
-  return resolveChannelId(db, before.channelId) !== resolveChannelId(db, after.channelId);
-}
-
 export function rebrandedEdit(db: DatabaseSync, base: RunConfig, edit: RevisionEdit): RevisionEdit {
   const oldId = resolveChannelId(db, base.channelId);
   const newId = resolveChannelId(db, edit.config.channelId);

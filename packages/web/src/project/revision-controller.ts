@@ -22,11 +22,9 @@ import type { DraftNotice, EditSection, RevisionController } from "./revision-co
 import { type RequestMemory, requestFor } from "./revision-requests.js";
 import { useDurableDraft } from "./use-durable-draft.js";
 
-export { needsNoConsent, startsWithoutReview } from "./rebuild-consent.js";
 export type {
   DraftNotice,
   EditSection,
-  RegenerateOptions,
   RevisionController,
 } from "./revision-controller-types.js";
 

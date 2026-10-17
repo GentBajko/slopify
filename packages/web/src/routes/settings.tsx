@@ -39,7 +39,6 @@ import {
 import { UsageBoard } from "./usage";
 
 export {
-  ImportResult,
   portableImportQueryKeys,
   portableMaxUploadBytes,
   refreshPortableImportQueries,
@@ -47,7 +46,6 @@ export {
 export { gapProblem } from "./settings-preferences";
 export {
   type SettingsSection,
-  settingsGroups,
   settingsSectionOf,
   settingsSections,
 } from "./settings-sections";

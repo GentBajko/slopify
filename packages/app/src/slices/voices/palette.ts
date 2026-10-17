@@ -20,9 +20,6 @@ export function speakerColour(index: number): string {
 
 // ASS writes colours blue first: &HAABBGGRR in a style (alpha 00 is opaque) and &HBBGGRR& in
 // an inline override.
-export function assColour(hex: string, alpha = 0): string {
-  return `&H${alpha.toString(16).padStart(2, "0")}${bgr(hex)}`.toUpperCase();
-}
 export function assInlineColour(hex: string): string {
   return `&H${bgr(hex)}&`.toUpperCase();
 }

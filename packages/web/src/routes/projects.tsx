@@ -47,7 +47,6 @@ export {
   projectFilterOf,
   projectSortOf,
 } from "./projects-order";
-export { madeOf, stateOf } from "./projects-row";
 
 export function ProjectsRoute({
   initialFilter = "all",

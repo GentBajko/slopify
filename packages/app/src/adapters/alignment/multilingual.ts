@@ -127,10 +127,6 @@ export const multilingualGates: AlignmentGates = {
   anchorConfidence: 0.75,
 };
 
-export function multilingualLanguages(): readonly string[] {
-  return Object.keys(alphabets);
-}
-
 // The model and language view the aligner uses for a project language. English keeps its own
 // model and every constant it had.
 export function alignmentSpecFor(language: string | undefined): AlignmentSpec {

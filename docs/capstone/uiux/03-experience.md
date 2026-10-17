@@ -33,7 +33,7 @@ Rules every screen applies rather than re-decides. `build` reads this beside `02
 - One sticky 48 px header on every app screen: mark and wordmark at left, then four destinations Projects, Play, Library, Settings. The active item carries a 2 px underline in the running-lamp colour. Library stays lit for `/prompts`, `/entries`, `/templates`, `/schedules` and their editors; Settings stays lit for `/settings` and `/usage` (`packages/web/src/components/shell.tsx`).
 - Right end of the header: a tally lamp with "N running" whenever any project is running (links to Projects), the three support links (GitHub, Patreon, Buy Me a Coffee; labels from 1100 px, icons below, hidden below 640 px), the update button and the Tutorial "?" button.
 - Library is one page bar with its route tabs in three groups (Setups: Templates; Building blocks: Prompts, Intros & outros, PDF themes, Narration aliases; Results: A/B results); each tab keeps its URL and opens with a LibraryToolbar row of filters and its one action (`packages/web/src/routes/library.tsx`). Settings shows one section at a time from a left section list addressed by `?section=` (`packages/web/src/routes/settings.tsx`).
-- Every route starts with a PageBar. Back links ("< Projects", "< Prompts", "< Intros & outros") sit at the left of a detail page's bar, before its title.
+- Every route starts with a PageHeader. Back links ("< Projects", "< Prompts", "< Intros & outros") sit at the left of a detail page's bar, before its title.
 - The marketing page has no app navigation; its header carries the wordmark, a GitHub link, and the donation links.
 
 ## Feedback thresholds
