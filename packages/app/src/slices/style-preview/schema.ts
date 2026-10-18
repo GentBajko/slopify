@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formats } from "../../kernel/pipeline.js";
+import { motionStyles } from "../admission/model.js";
 import { videoEditSchema } from "../admission/schema.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 
@@ -10,6 +11,8 @@ import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 // How long the preview runs: three images of two seconds, so a transition and a chapter
 // card both show, under six seconds of the sample narration.
 export const stylePreviewSeconds = 6;
+// The longest preview: the template studio's 30-second video sample.
+export const stylePreviewSecondsMax = 30;
 export const stylePreviewTextMax = 200;
 // The sample text Play starts with. It, or no text, captions the sample narration with its own
 // words; any other text is spread over the stretches the narration speaks.
@@ -50,6 +53,16 @@ export const stylePreviewRequestSchema = z.object({
       speed: z.number().finite().min(1).max(1.25).optional(),
       // The headline; absent or blank shows the sample's title.
       title: z.string().max(shortTitlePreviewMax).optional(),
+    })
+    .optional(),
+  // How long it runs, in whole seconds; absent is six. The Shorts layout ignores it.
+  seconds: z.number().int().min(stylePreviewSeconds).max(stylePreviewSecondsMax).optional(),
+  // The run's own picture timing and motion; absent is two-second shots with the defaults.
+  timing: z
+    .object({
+      imageSeconds: z.number().finite().min(1).max(120),
+      zoomPercent: z.number().finite().min(0).max(100),
+      motionStyle: z.enum(motionStyles),
     })
     .optional(),
   // Render again even when this exact preview is already saved.

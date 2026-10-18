@@ -12,7 +12,7 @@ import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
 import { bundledSampleAssets, type SampleAssets, sampleNarrationSeconds } from "./narration.js";
 import { stylePreviewSeconds } from "./schema.js";
-import { previewCues, previewWords, type StylePreviewSettings } from "./settings.js";
+import { previewCues, previewShots, previewWords, type StylePreviewSettings } from "./settings.js";
 
 // The preview goes through the same planner and renderer as a real video: `planRender` builds
 // the edit list (motion, transitions, the Look, the chapter card), the captions are the same
@@ -48,7 +48,6 @@ const previewFrame = {
   "9:16": { width: 270, height: 480 },
   "1:1": { width: 360, height: 360 },
 } as const;
-const shotSeconds = stylePreviewSeconds / 3;
 const chapterTitle = "Chapter one";
 
 export interface FfmpegPreviewDeps {
@@ -67,12 +66,18 @@ export function ffmpegStylePreview(deps: FfmpegPreviewDeps): StylePreviewRendere
     try {
       // A real picture is shown for all three shots: the motion, the Look and the captions read
       // on it, and the transition and chapter card still show at the cuts.
-      const images =
+      const stills =
         picture !== undefined
           ? [picture, picture, picture]
           : settings.format === "9:16"
             ? assets.tall
             : assets.wide;
+      // A longer preview shows the stills again in turn.
+      const { shots } = previewShots(settings);
+      const images =
+        settings.short !== undefined
+          ? stills
+          : Array.from({ length: shots }, (_, index) => stills[index % stills.length] ?? "");
       if (settings.short !== undefined)
         await renderShortPreview(deps, settings, settings.short, assets, images, output, signal);
       else await renderPreview(deps, settings, assets, images, output, signal);
@@ -93,6 +98,7 @@ async function renderPreview(
   mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
   const workspace = mkdtempSync(join(deps.dir, "work-"));
   try {
+    const { shotSeconds } = previewShots(settings);
     const cardFont =
       settings.chapterCard === null
         ? undefined
@@ -102,8 +108,8 @@ async function renderPreview(
       gapSeconds: 0,
       edgeSeconds: 0,
       imageSeconds: shotSeconds,
-      zoomPercent: defaultZoomPercent,
-      motionStyle: defaultMotionStyle,
+      zoomPercent: settings.timing?.zoomPercent ?? defaultZoomPercent,
+      motionStyle: settings.timing?.motionStyle ?? defaultMotionStyle,
       images,
       output,
       edit: {
@@ -123,7 +129,7 @@ async function renderPreview(
     const edit: EditList = {
       ...plan.editList,
       ...previewFrame[settings.format],
-      audio: [{ kind: "body", path: assets.narration, seconds: plan.totalSeconds }],
+      audio: narrationFor(assets.narration, plan.totalSeconds),
     };
     const captions = settings.captions;
     if (captions !== null) {
@@ -132,7 +138,7 @@ async function renderPreview(
       copyFileSync(font.path, join(workspace, "fonts", `selected${font.extension}`));
       writeFileSync(
         join(workspace, "subtitles.ass"),
-        serializeAss(previewCues(captions.text), {
+        serializeAss(previewCues(captions.text, plan.totalSeconds), {
           ...subtitleFrame(settings.format),
           fontName: font.assName,
           fontSize: captions.fontSize,
@@ -175,7 +181,7 @@ async function renderShortPreview(
     start: 0,
     end: sampleNarrationSeconds,
     images,
-    imageSeconds: shotSeconds,
+    imageSeconds: stylePreviewSeconds / 3,
     motionStyle: defaultMotionStyle,
     zoomPercent: defaultZoomPercent,
     words: previewWords(short.text),
@@ -189,6 +195,19 @@ async function renderShortPreview(
     log: deps.log,
     onProgress: () => {},
   });
+}
+
+// The six seconds of sample narration back to back under a longer preview, the last cut to
+// what is left.
+function narrationFor(path: string, seconds: number): EditList["audio"] {
+  const pieces: { kind: "body"; path: string; seconds: number }[] = [];
+  for (let at = 0; at < seconds - 0.001; at += sampleNarrationSeconds)
+    pieces.push({
+      kind: "body",
+      path,
+      seconds: Math.round(Math.min(sampleNarrationSeconds, seconds - at) * 1000) / 1000,
+    });
+  return pieces;
 }
 
 function explained(log: Log, error: unknown): StylePreviewError {

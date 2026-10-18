@@ -165,3 +165,62 @@ describe("preview captions", () => {
     expect(previewCues(long).at(-1)?.end).toBeLessThanOrEqual(6);
   });
 });
+
+describe("a longer preview (the template studio's 30 seconds)", () => {
+  it("keeps the six-second preview's hash when six seconds are asked for, or none", () => {
+    expect(hashOf({ ...request, seconds: 6 })).toBe(hashOf(request));
+    expect(normalizeStylePreview(request)).not.toHaveProperty("seconds");
+    expect(normalizeStylePreview(request)).not.toHaveProperty("timing");
+  });
+
+  it("hashes the length and the run's own shots", () => {
+    const long = { ...request, seconds: 30 };
+    expect(hashOf(long)).not.toBe(hashOf(request));
+    const timed = {
+      ...long,
+      timing: { imageSeconds: 7, zoomPercent: 22.5, motionStyle: "pan" as const },
+    };
+    expect(hashOf(timed)).not.toBe(hashOf(long));
+  });
+
+  it("runs as many shots as fill its seconds", () => {
+    expect(previewSeconds(normalizeStylePreview(request))).toBe(6);
+    expect(previewSeconds(normalizeStylePreview({ ...request, seconds: 30 }))).toBe(30);
+    expect(
+      previewSeconds(
+        normalizeStylePreview({
+          ...request,
+          seconds: 30,
+          timing: { imageSeconds: 7, zoomPercent: 20, motionStyle: "zoom" },
+        }),
+      ),
+    ).toBe(28);
+    expect(
+      previewSeconds(
+        normalizeStylePreview({
+          ...request,
+          seconds: 6,
+          timing: { imageSeconds: 15, zoomPercent: 20, motionStyle: "zoom" },
+        }),
+      ),
+    ).toBe(15);
+  });
+
+  it("captions every six seconds again, nothing past the end", () => {
+    const once = previewCues(sampleNarrationText);
+    const thrice = previewCues(sampleNarrationText, 18);
+    expect(thrice.length).toBe(once.length * 3);
+    expect(Math.max(...thrice.map((cue) => cue.end))).toBeLessThanOrEqual(18);
+    expect(previewCues(sampleNarrationText, 6)).toEqual(once);
+  });
+
+  it("ignores the length for the Shorts layout", () => {
+    const short = normalizeStylePreview({
+      ...request,
+      seconds: 30,
+      shorts: { titleOnScreen: false },
+    });
+    expect(short).not.toHaveProperty("seconds");
+    expect(previewSeconds(short)).toBe(6);
+  });
+});

@@ -119,6 +119,34 @@ it.skipIf(bin === undefined)(
   120_000,
 );
 
+it.skipIf(bin === undefined)(
+  "renders the template studio's thirty seconds on the run's own shots, narration all through",
+  async () => {
+    const render = ffmpegStylePreview({
+      ffmpeg: bin ?? "",
+      paths: layout(join(scratch, "data")),
+      log,
+      dir: join(scratch, "long-cache"),
+    });
+    const output = join(scratch, "long.mp4");
+    await render(
+      normalizeStylePreview({
+        format: "16:9",
+        subtitles: { mode: "burn-in", fontId: "default", fontSize: 48, position: "bottom" },
+        seconds: 30,
+        timing: { imageSeconds: 10, zoomPercent: 22.5, motionStyle: "pan" },
+      }),
+      output,
+      AbortSignal.timeout(170_000),
+    );
+    const ms = await probeDurationMs(bin ?? "", output, AbortSignal.timeout(20_000), log);
+    expect(ms).toBeGreaterThan(29_000);
+    expect(ms).toBeLessThan(31_000);
+    expect(loudest(output)).toBeGreaterThan(-30);
+  },
+  180_000,
+);
+
 // The loudest sample of a file's sound, in dB.
 function loudest(file: string): number {
   const run = spawnSync(

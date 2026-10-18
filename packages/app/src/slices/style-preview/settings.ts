@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Format } from "../../kernel/pipeline.js";
+import type { MotionStyle } from "../admission/model.js";
 import { type CaptionCue, captionCues } from "../subtitles/captions.js";
 import type { SubtitleConfig, TimedWord } from "../subtitles/model.js";
 import type { Look, TransitionStyle } from "../video/edit-list.js";
@@ -41,6 +42,17 @@ export interface StylePreviewSettings {
         readonly text: string;
         readonly title: string | null;
         readonly speed: number;
+      }
+    | undefined;
+  // A longer preview (the template studio's 30 seconds) and the run's own shots; both absent
+  // on a six-second preview of two-second shots, so every preview saved before them keeps its
+  // hash.
+  readonly seconds?: number | undefined;
+  readonly timing?:
+    | {
+        readonly imageSeconds: number;
+        readonly zoomPercent: number;
+        readonly motionStyle: MotionStyle;
       }
     | undefined;
 }
@@ -116,7 +128,30 @@ export function normalizeStylePreview(
           },
     chapterCard: edit.chapterCards ? { fontId: subtitles.fontId } : null,
     ...(image === undefined ? {} : { image }),
+    ...(request.seconds === undefined || request.seconds === stylePreviewSeconds
+      ? {}
+      : { seconds: request.seconds }),
+    ...(request.timing === undefined
+      ? {}
+      : {
+          timing: {
+            imageSeconds: Math.round(request.timing.imageSeconds * 10) / 10,
+            zoomPercent: Math.round(request.timing.zoomPercent * 10) / 10,
+            motionStyle: request.timing.motionStyle,
+          },
+        }),
   };
+}
+
+// The shots a preview is cut into: two seconds each by default, else the run's own picture
+// length, as many as fill its seconds (at least one).
+export function previewShots(settings: StylePreviewSettings): {
+  readonly shotSeconds: number;
+  readonly shots: number;
+} {
+  const seconds = settings.seconds ?? stylePreviewSeconds;
+  const shotSeconds = settings.timing?.imageSeconds ?? stylePreviewSeconds / 3;
+  return { shotSeconds, shots: Math.max(1, Math.round(seconds / shotSeconds)) };
 }
 
 // JSON with every object's keys in order, so equal settings always hash alike.
@@ -137,9 +172,9 @@ export function stylePreviewHash(settings: StylePreviewSettings): string {
 
 // How long the rendered preview runs: a Shorts preview at a higher speed is shorter.
 export function previewSeconds(settings: StylePreviewSettings): number {
-  return settings.short === undefined
-    ? stylePreviewSeconds
-    : round(stylePreviewSeconds / settings.short.speed);
+  if (settings.short !== undefined) return round(stylePreviewSeconds / settings.short.speed);
+  const { shotSeconds, shots } = previewShots(settings);
+  return round(shotSeconds * shots);
 }
 
 // ceiling: a pause this long between two words of the sample narration starts a new phrase,
@@ -193,8 +228,19 @@ export function previewWords(
   return timed;
 }
 
-export function previewCues(text: string): readonly CaptionCue[] {
-  return captionCues(previewWords(text));
+// The captions of `seconds` of preview: the six seconds' words again every six seconds, as the
+// sample narration repeats under a longer preview.
+export function previewCues(
+  text: string,
+  seconds: number = stylePreviewSeconds,
+): readonly CaptionCue[] {
+  const once = previewWords(text);
+  const words: TimedWord[] = [];
+  for (let start = 0; start < seconds; start += stylePreviewSeconds)
+    for (const word of once)
+      if (start + word.end <= seconds)
+        words.push({ ...word, start: round(start + word.start), end: round(start + word.end) });
+  return captionCues(words);
 }
 
 function round(value: number): number {
