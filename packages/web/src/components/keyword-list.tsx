@@ -1,4 +1,5 @@
 import { valueMax } from "@app/slices/admission/rules.js";
+import { keywordOf } from "@app/slices/keywords/specs.js";
 import type { ReactElement, ReactNode } from "react";
 import { Field, Input } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
@@ -26,6 +27,13 @@ export function keywordFeeds(keyword: Pick<KeywordItem, "feeds" | "topic" | "not
     ...(keyword.topic ? ["left empty in templates"] : []),
   ].join(" · ");
   return keyword.note === undefined ? line : `${line}. ${keyword.note}`;
+}
+
+// What a read-only keyword with no value of its own says: the topic of each video, a keyword
+// Slopify fills while the run works, or nothing typed yet.
+function blankLabel(keyword: Pick<KeywordItem, "name" | "topic">): string {
+  if (keyword.topic) return "the topic";
+  return keywordOf(keyword.name) === undefined ? "empty" : "filled by Slopify";
 }
 
 // Keywords behave the same everywhere: Play, Edit project, templates and schedules draw this one
@@ -68,7 +76,7 @@ export function KeywordList({
               <>
                 <code className="sl-code">{`{{${keyword.name}}}`}</code>{" "}
                 {keyword.value === "" ? (
-                  <span className="text-ink-3">{keyword.topic ? "the topic" : "empty"}</span>
+                  <span className="text-ink-3">{blankLabel(keyword)}</span>
                 ) : (
                   keyword.value
                 )}
