@@ -116,7 +116,8 @@ const quote = (over: Partial<SampleQuoteView> = {}): SampleQuoteView => ({
   high: 0.12,
   unknown: 0,
   onPlan: false,
-  budget: { budget: 2, spent: 0, left: 2 },
+  usesPlan: false,
+  budget: { budget: 2, spent: 0, left: 2, plans: false },
   fits: true,
   problem: null,
   ...over,
@@ -213,7 +214,7 @@ it("keeps Save on screen but off at today's budget, linking to where it is raise
   const user = userEvent.setup();
   open("video", {
     [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
-      quote({ fits: false, budget: { budget: 2, spent: 1.95, left: 0.05 } }),
+      quote({ fits: false, budget: { budget: 2, spent: 1.95, left: 0.05, plans: false } }),
     ),
   });
   await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
@@ -227,6 +228,24 @@ it("keeps Save on screen but off at today's budget, linking to where it is raise
   expect(
     screen.getByRole("button", { name: "Save without a sample" }).hasAttribute("disabled"),
   ).toBe(false);
+});
+
+it("says a sample on a CLI plan waits until samples may use plans, linking to the switch", async () => {
+  const user = userEvent.setup();
+  open("video", {
+    [`POST /api/template-studio/${templateId}/quote`]: jsonAnswer(
+      quote({ high: 0, onPlan: true, usesPlan: true, fits: false }),
+    ),
+  });
+  await user.click(await screen.findByRole("button", { name: "Square 1:1" }));
+  const priced = await screen.findByRole("button", { name: "Save · plan usage" });
+  expect(priced.getAttribute("aria-disabled") ?? priced.getAttribute("disabled")).not.toBeNull();
+  expect(
+    screen.getByText(/This sample runs on your CLI plan, and samples may not use CLI plans/),
+  ).not.toBeNull();
+  expect(
+    screen.getByRole("link", { name: "Settings → Template studio" }).getAttribute("href"),
+  ).toBe("/settings?section=template-studio");
 });
 
 it("asks to accept steps with no known price before a priced Save", async () => {
@@ -409,6 +428,24 @@ it("plays the loudness before and after, each with its level", async () => {
   ]);
 });
 
+it("says how far the limiter held the level back when it lands short of the target", async () => {
+  open("voice", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      free: {
+        ...view.free,
+        loudness: { ...view.free.loudness, afterLufs: -13.2, targetLufs: -12 },
+      },
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Voice sample" });
+  expect(
+    within(sample).getByText(
+      "After · -13.2 LUFS: held back 1.2 LU from -12.0 so peaks stay under -2.5 dBTP",
+    ),
+  ).not.toBeNull();
+});
+
 it("lists the schedule's next runs with their titles and the cost a month", async () => {
   open("schedule");
   const sample = await screen.findByRole("region", { name: "Schedule sample" });
@@ -416,6 +453,32 @@ it("lists the schedule's next runs with their titles and the cost a month", asyn
   expect(within(table).getByText("History: Salt roads")).not.toBeNull();
   expect(
     within(sample).getByText("About $4.35 a month at most, for about 8.7 runs."),
+  ).not.toBeNull();
+});
+
+it("lists a paused schedule's runs marked paused, and what it costs once resumed", async () => {
+  open("schedule", {
+    [`GET /api/template-studio/${templateId}`]: jsonAnswer({
+      ...view,
+      schedule: {
+        runs: view.schedule.runs.map((run) => ({ ...run, paused: true })),
+        cost: {
+          runs: 0,
+          high: 0,
+          unknown: 0,
+          problem: null,
+          paused: { schedules: 1, runs: 8.7, high: 4.35 },
+        },
+      },
+    }),
+  });
+  const sample = await screen.findByRole("region", { name: "Schedule sample" });
+  const table = within(sample).getByRole("table", { name: "The next runs" });
+  expect(within(table).getByText("Weekdays (paused)")).not.toBeNull();
+  expect(
+    within(sample).getByText(
+      "1 paused schedule uses this template: nothing runs while it is paused. Resumed, about $4.35 a month at most, for about 8.7 runs.",
+    ),
   ).not.toBeNull();
 });
 
@@ -602,6 +665,7 @@ it("asks for the free samples by itself when only the schedule's cost is still t
           unknown: 1,
           problem:
             "The cost of the runs of Weekdays isn't worked out yet: it is, with the free samples.",
+          paused: { schedules: 0, runs: 0, high: 0 },
         },
       },
     }),
@@ -725,4 +789,14 @@ it("shows the samples an imported pack came with", async () => {
   const section = await screen.findByRole("region", { name: "Samples from the pack" });
   expect(within(section).getByRole("img", { name: "The pack's thumbnail" })).not.toBeNull();
   expect(within(section).getByText(/Your own samples replace these/)).not.toBeNull();
+});
+
+it("names each choice row in Video & captions above its buttons", async () => {
+  open("video");
+  const panel = await screen.findByRole("region", { name: "Video & captions settings" });
+  const names = [...panel.querySelectorAll('[data-slot="studio-choice"] .sl-field__label')].map(
+    (label) => label.textContent,
+  );
+  expect(names).toEqual(["Format", "Captions", "Motion"]);
+  expect(within(panel).getByRole("group", { name: "Captions" })).not.toBeNull();
 });

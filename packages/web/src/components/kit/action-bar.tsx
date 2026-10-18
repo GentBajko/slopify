@@ -12,17 +12,20 @@ const tones: Readonly<Record<StatusTone, string>> = {
 
 // A reserved line for transient feedback. It is always rendered at the same height, empty or
 // not, so a message arriving or leaving never moves the controls around it. Long text is cut
-// to one line with the full text on hover and in the accessible name.
+// to one line with the full text on hover and in the accessible name, unless `wrap` asks for
+// every word on screen (a price or a refusal the person must read in full).
 export function StatusSlot({
   children,
   tone = "info",
   className,
   id,
+  wrap = false,
 }: {
   readonly children?: ReactNode;
   readonly tone?: StatusTone;
   readonly className?: string;
   readonly id?: string | undefined;
+  readonly wrap?: boolean;
 }): ReactElement {
   const text = typeof children === "string" ? children : undefined;
   return (
@@ -32,7 +35,8 @@ export function StatusSlot({
       role={tone === "error" ? "alert" : "status"}
       title={text}
       className={cn(
-        "flex min-h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden text-small",
+        "flex min-h-8 min-w-0 flex-1 items-center gap-2 text-small",
+        wrap ? "flex-wrap gap-y-0 py-1" : "overflow-hidden",
         tones[tone],
         className,
       )}
@@ -41,14 +45,16 @@ export function StatusSlot({
         undefined ? (
         children
       ) : (
-        <span className="min-w-0 truncate">{text}</span>
+        <span className={wrap ? "min-w-0" : "min-w-0 truncate"}>{text}</span>
       )}
     </div>
   );
 }
 
 // The primary action of an editing surface never leaves the screen: the bar sticks to the
-// bottom of the viewport and carries the status slot beside the buttons it reports on.
+// bottom of the viewport and carries the status slot beside the buttons it reports on. Placed
+// straight in the page, it sits at the bottom of the window even when the page is short
+// (shell.css makes such a page a column the bar is pushed to the end of).
 export function ActionBar({
   status,
   children,
@@ -62,7 +68,7 @@ export function ActionBar({
     <div
       data-slot="action-bar"
       className={cn(
-        "sticky bottom-0 z-20 -mx-4 mt-6 flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-surface px-4 py-2 pb-[max(8px,env(safe-area-inset-bottom))] max-md:bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))] md:-mx-10 md:px-10",
+        "sticky bottom-0 z-20 -mx-4 mt-6 flex [.sl-page>&]:mt-auto min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-surface px-4 py-2 pb-[max(8px,env(safe-area-inset-bottom))] max-md:bottom-[calc(48px+max(12px,env(safe-area-inset-bottom)))] md:-mx-10 md:px-10",
         className,
       )}
     >

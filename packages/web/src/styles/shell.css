@@ -656,6 +656,20 @@
     padding: 24px 40px 40px;
     min-width: 0;
   }
+  /* A page with an action bar of its own is a column the bar ends: short or long, the bar is
+     on the window's bottom edge, with no gap under it. */
+  .sl-page:has(> [data-slot="action-bar"]) {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0;
+  }
+  /* The Assistant opens beside the page on a wide window, not over it: the page gives up the
+     panel's width, so its action bar and side column stay in reach. */
+  @media (min-width: 1024px) {
+    .sl-app--side-panel .sl-app__main {
+      padding-right: min(440px, 100vw);
+    }
+  }
   .sl-crumb {
     display: flex;
     align-items: center;
@@ -774,6 +788,20 @@
      the settings rather than sitting above them. */
   .sl-workspace.sl-workspace--studio {
     grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 420px);
+  }
+  /* A section's whole name shows ("Reviews & checkpoints"): it wraps to a second line in the
+     narrow rail instead of being cut. Phones keep the one sideways row. */
+  @media (min-width: 768px) {
+    .sl-workspace--studio .sl-workspace__sections .sl-rail__item {
+      height: auto;
+      min-height: 40px;
+      padding-block: 6px;
+    }
+    .sl-workspace--studio .sl-workspace__sections .sl-rail__item > .truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
   }
   @media (max-width: 1180px) {
     .sl-workspace.sl-workspace--studio {

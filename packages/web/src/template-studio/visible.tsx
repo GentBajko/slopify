@@ -2,7 +2,8 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { TemplateSection } from "@app/slices/template-studio/model.js";
 import type { ReactElement, ReactNode } from "react";
 import { Field, Input } from "@/components/kit/field";
-import { Segmented, Switch } from "@/components/kit/switch";
+import { Segmented, type SegmentedOption, Switch } from "@/components/kit/switch";
+import type { HelpId } from "@/help/catalog";
 import { freshShorts } from "@/play/shorts";
 import { TitlePattern } from "./fine-tune";
 
@@ -31,7 +32,7 @@ export function VisibleControls({
       return (
         <Controls>
           <TitlePattern value={form.title} onChange={(title) => edit({ ...form, title })} />
-          <Segmented
+          <Choice
             label="Research"
             tip="play.source.research"
             value={form.sources.research === "off" ? "off" : "generate"}
@@ -46,7 +47,7 @@ export function VisibleControls({
     case "script":
       return (
         <Controls>
-          <Segmented
+          <Choice
             label="Script"
             tip="play.source.article"
             value={form.sources.article === "provide" ? "provide" : "generate"}
@@ -95,7 +96,7 @@ export function VisibleControls({
     case "pictures":
       return (
         <Controls>
-          <Segmented
+          <Choice
             label="Pictures"
             tip="play.source.images"
             value={
@@ -124,7 +125,7 @@ export function VisibleControls({
     case "video":
       return (
         <Controls>
-          <Segmented
+          <Choice
             label="Format"
             tip="play.format"
             value={form.format}
@@ -135,7 +136,7 @@ export function VisibleControls({
             ]}
             onChange={(format) => edit({ ...form, format })}
           />
-          <Segmented
+          <Choice
             label="Captions"
             tip="project.subtitles.mode"
             value={form.subtitles.mode}
@@ -146,7 +147,7 @@ export function VisibleControls({
             ]}
             onChange={(mode) => edit({ ...form, subtitles: { ...form.subtitles, mode } })}
           />
-          <Segmented
+          <Choice
             label="Motion"
             tip="play.motion"
             value={form.motionStyle}
@@ -170,7 +171,7 @@ export function VisibleControls({
     case "thumbnail":
       return (
         <Controls>
-          <Segmented
+          <Choice
             label="Thumbnail"
             tip="play.source.thumbnail"
             value={
@@ -188,7 +189,7 @@ export function VisibleControls({
             ]}
             onChange={(thumbnail) => edit(sources({ thumbnail }))}
           />
-          <Segmented
+          <Choice
             label="Thumbnails per video"
             tip="play.thumbnail-count"
             value={String(form.thumbnailCount ?? 1) as "1" | "3"}
@@ -229,7 +230,7 @@ export function VisibleControls({
     case "document":
       return (
         <Controls>
-          <Segmented
+          <Choice
             label="PDF document"
             tip="play.source.document"
             value={form.sources.document === "generate" ? "generate" : "off"}
@@ -276,6 +277,28 @@ function Controls({ children }: { readonly children: ReactNode }): ReactElement 
   return (
     <div data-slot="studio-controls" className="flex min-w-0 flex-col gap-4">
       {children}
+    </div>
+  );
+}
+
+// A choice row with its name shown above it, the way a field's label is, so a row of presets
+// never stands unlabelled (Format, Captions, Motion read alike as bare buttons).
+function Choice<T extends string>({
+  label,
+  ...rest
+}: {
+  readonly label: string;
+  readonly value: T;
+  readonly options: readonly SegmentedOption<T>[];
+  readonly onChange: (next: T) => void;
+  readonly tip?: HelpId;
+}): ReactElement {
+  return (
+    <div className="sl-field" data-slot="studio-choice">
+      <span className="sl-field__label" aria-hidden="true">
+        {label}
+      </span>
+      <Segmented label={label} {...rest} />
     </div>
   );
 }

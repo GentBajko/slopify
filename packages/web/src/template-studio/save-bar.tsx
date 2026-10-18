@@ -7,9 +7,9 @@ import { ActionBar, StatusSlot, type StatusTone } from "@/components/kit/action-
 import { Button } from "@/components/kit/button";
 import { TextLink } from "@/components/kit/link";
 import { Switch } from "@/components/kit/switch";
-import { usd } from "@/lib/format";
 import { templatesKey } from "@/templates/api";
 import { about, quoteSample, saveInStudio, templateStudioKey } from "./api";
+import { budgetLead, budgetReason } from "./budget-words";
 
 // The studio's one action bar: Save, priced. The primary Save makes the paid sample of what
 // changed at the price on the button; Save without a sample keeps the change and makes only the
@@ -108,7 +108,7 @@ export function SaveBar({
         : shown.problem !== null
           ? "No sample can be made of this setup"
           : !shown.fits
-            ? "Today's sample budget can't cover it"
+            ? budgetReason(shown)
             : unknown > 0 && !acceptUnknown
               ? "Accept the steps with no known price first"
               : undefined;
@@ -132,16 +132,19 @@ export function SaveBar({
     <ActionBar
       status={
         shown !== undefined && !shown.fits && status === undefined ? (
-          <StatusSlot tone="warning">
-            <span className="min-w-0 truncate">
-              {`This sample costs ${about(shown.high)} and ${usd(shown.budget.left)} of today's ${usd(shown.budget.budget)} sample budget is left. Save without a sample, or raise it in `}
+          <StatusSlot tone="warning" wrap>
+            <span className="min-w-0">
+              {budgetLead(shown, "This sample")}
+              <TextLink to="/settings" search={{ section: "template-studio" }}>
+                Settings → Template studio
+              </TextLink>
+              , or press Save without a sample.
             </span>
-            <TextLink to="/settings" search={{ section: "template-studio" }} className="shrink-0">
-              Settings → Template studio
-            </TextLink>
           </StatusSlot>
         ) : (
-          <StatusSlot tone={message?.tone ?? "info"}>{message?.text}</StatusSlot>
+          <StatusSlot tone={message?.tone ?? "info"} wrap>
+            {message?.text}
+          </StatusSlot>
         )
       }
     >

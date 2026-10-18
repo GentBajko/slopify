@@ -289,7 +289,7 @@ function ShellContent() {
   }, [api, openEvents, queryClient, runs]);
 
   return (
-    <div className="sl-app">
+    <div className={cn("sl-app", assistantOpen && "sl-app--side-panel")}>
       {/* The first stop for the Tab key: past the rail, straight to the screen. */}
       <Button
         variant="primary"
