@@ -1,6 +1,6 @@
-import type { SiteSelectors } from "./find.js";
+import { isOn, type SiteSelectors } from "./find.js";
 import { type Forbidden, pressOn } from "./guard.js";
-import type { PostPack, SocialPlatform } from "./types.js";
+import type { PostMedia, PostPack, SocialPlatform } from "./types.js";
 
 // What every site adapter (`sites/*.ts`) offers, and what a fill reports.
 
@@ -51,6 +51,9 @@ export interface Site {
   readonly forbidden: Forbidden;
   // Whether this page is the site's post form, where a waiting post is filled.
   isCompose(location: URL): boolean;
+  // Another address of the post form this post needs (TikTok's Photos tab for pictures), or
+  // null when this page is right.
+  pageFor?(pack: PostPack, location: URL): string | null;
   fill(context: FillContext): Promise<SiteReport>;
   published(doc: Document, location: URL): Published | null;
   // The post's link on a profile page, found by the post's first characters.
@@ -197,4 +200,74 @@ export function absolute(anchor: Element | null, location: URL): string | null {
   } catch {
     return null;
   }
+}
+
+// A plain input's or textarea's value, through the prototype's setter so a framework watching
+// the property sees the change, then the input and change events typing sends.
+export function setTextValue(
+  field: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): boolean {
+  const view = field.ownerDocument.defaultView;
+  const proto =
+    field.tagName === "TEXTAREA"
+      ? (view?.HTMLTextAreaElement.prototype ?? HTMLTextAreaElement.prototype)
+      : (view?.HTMLInputElement.prototype ?? HTMLInputElement.prototype);
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+  field.focus();
+  if (setter === undefined) field.value = value;
+  else setter.call(field, value);
+  field.dispatchEvent(
+    new (view?.InputEvent ?? InputEvent)("input", {
+      bubbles: true,
+      composed: true,
+      inputType: "insertText",
+      data: value,
+    }),
+  );
+  field.dispatchEvent(new (view?.Event ?? Event)("change", { bubbles: true }));
+  return field.value === value;
+}
+
+// The note for the text typed (or not) into the post's box.
+export function typedNote(
+  result: { readonly ok: true } | { readonly ok: false; readonly sentence: string },
+  text: string,
+): Note {
+  return result.ok
+    ? { ok: true, message: "Text filled." }
+    : { ok: false, message: result.sentence, copy: text };
+}
+
+// Switches an AI label on (pressing it only while it is off) and checks it took.
+export async function switchOn(
+  waits: Waits,
+  press: (element: Element) => void,
+  control: Element,
+): Promise<boolean> {
+  if (isOn(control)) return true;
+  press(control);
+  return (await until(waits, () => (isOn(control) ? true : null), 1000)) === true;
+}
+
+// The media of kinds a site takes, with their files.
+export function mediaFiles(
+  pack: PostPack,
+  files: readonly File[],
+  kinds: readonly PostMedia["kind"][],
+): readonly { readonly media: PostMedia; readonly file: File }[] {
+  return pack.media.flatMap((media, index) => {
+    const file = files[index];
+    return file !== undefined && kinds.includes(media.kind) ? [{ media, file }] : [];
+  });
+}
+
+export const videoKinds: readonly PostMedia["kind"][] = ["video", "short"];
+export const pictureKinds: readonly PostMedia["kind"][] = ["thumbnail", "picture", "design"];
+
+// The post's first characters, as a profile page shows them, to match a post there.
+export function startsLike(shown: string, start: string): boolean {
+  const squeeze = (text: string) => text.replace(/\s+/g, " ").trim().toLowerCase();
+  const wanted = squeeze(start);
+  return wanted !== "" && squeeze(shown).includes(wanted);
 }

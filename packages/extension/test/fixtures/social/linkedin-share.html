@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- LinkedIn's share dialog (feed/?shareActive=true) as seen on 2026-10-18, read-only: "Post to
+     Anyone", the Tiptap/ProseMirror text box without an aria-label, Emoji, Media, "Expand
+     content types", the Scheduled clock and Post (disabled until there is text). Class names
+     are hashed on the live page, so none are relied on. The share box's file input, the media
+     editor, the schedule step (template "schedule") and the toasts were not seen and are
+     unverified. -->
+<html>
+  <body>
+    <main id="feed"></main>
+    <div id="dialogs">
+      <div role="dialog" aria-label="Create post modal" id="share">
+        <button aria-label="Dismiss">×</button>
+        <button>Post to Anyone</button>
+        <div class="x8f2 tiptap ProseMirror" contenteditable="true"><p><br /></p></div>
+        <button aria-label="Show Emoji Picker"></button>
+        <button aria-label="Add media">Media</button>
+        <input type="file" accept="image/*,video/*" hidden />
+        <button aria-label="Expand content types"></button>
+        <button aria-label="Schedule post"><svg></svg></button>
+        <button class="share-actions__primary-action" disabled>Post</button>
+      </div>
+    </div>
+    <template id="media-editor">
+      <div role="dialog" id="media-editor"><h2>Editor</h2><button>Back</button><button>Next</button></div>
+    </template>
+    <template id="schedule">
+      <div role="dialog" id="schedule-step">
+        <h2>Schedule post</h2>
+        <label for="share-post__scheduled-date">Date</label>
+        <input id="share-post__scheduled-date" name="artdeco-date" placeholder="mm/dd/yyyy" />
+        <label for="share-post__scheduled-time">Time</label>
+        <select id="share-post__scheduled-time"><option>7:45 PM</option><option>8:00 PM</option><option>8:15 PM</option></select>
+        <button>Back</button>
+        <button>Next</button>
+      </div>
+    </template>
+    <template id="success">
+      <div role="alert" class="artdeco-toast-item">Post successful. <a href="https://www.linkedin.com/feed/update/urn:li:activity:7250000000000000001/">View post</a></div>
+    </template>
+    <template id="profile">
+      <div data-urn="urn:li:activity:111"><span>Earlier news</span></div>
+      <div data-urn="urn:li:activity:7250000000000000002"><span>The fox learns to fly over the cliffs of Cliffside.</span></div>
+    </template>
+  </body>
+</html>

@@ -17,7 +17,7 @@ export interface RichOptions {
   readonly sleep?: (ms: number) => Promise<void>;
   // How long the editor gets to show the text after each way.
   readonly settleMs?: number;
-  readonly copy?: (text: string) => Promise<boolean>;
+  readonly copy?: ((text: string) => Promise<boolean>) | undefined;
 }
 
 // Spaces and line breaks differ between editors (paragraphs, <br>s, non-breaking spaces), so

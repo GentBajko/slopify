@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- TikTok Studio's upload page as seen on 2026-10-18 with a 3-second test video, never posted:
+     the Videos tab's input; once the video is in, the details form (template "details"): the
+     Draft.js Description prefilled with the file name, Show more revealing the AI-generated
+     content switch, When to post's postSchedule radios, Post and Discard. The account-setting
+     prompt "Turn on automatic content checks?" is template "checks". The date and time pickers
+     under Schedule (template "picker") were not seen and are unverified. -->
+<html>
+  <body>
+    <div id="root">
+      <div id="upload-area">
+        <input type="file" accept="video/*" />
+        <button>Select video</button>
+      </div>
+      <div id="details"></div>
+    </div>
+    <div id="modals"></div>
+    <template id="form">
+      <div class="form">
+        <h2>Details</h2>
+        <div class="caption">
+          <div class="DraftEditor-root"><div class="public-DraftEditor-content" contenteditable="true" role="combobox">clip.mp4</div></div>
+          <button>Hashtags</button><button>Mention</button>
+        </div>
+        <h2>Settings</h2>
+        <div class="schedule">
+          <span>When to post</span>
+          <label><input type="radio" name="postSchedule" value="now" checked />Now</label>
+          <label><input type="radio" name="postSchedule" value="schedule" />Schedule</label>
+          <div id="picker-slot"></div>
+        </div>
+        <div><span>Who can see this post</span><select><option>Everyone</option></select></div>
+        <div class="more-toggle"><div role="button">Show more</div></div>
+        <div id="more" hidden></div>
+        <div class="footer">
+          <button data-e2e="post_video_button">Post</button>
+          <button data-e2e="discard_post_button">Discard</button>
+        </div>
+      </div>
+    </template>
+    <template id="advanced">
+      <div><span>Allow users to:</span><label><input type="checkbox" checked />Comment</label></div>
+      <div><span>Disclose post content</span><div role="switch" aria-checked="false"></div></div>
+      <div class="aigc">
+        <div><span>AI-generated content</span><p>Add this label for aigc</p></div>
+        <div role="switch" aria-checked="false" id="aigc-switch"></div>
+      </div>
+    </template>
+    <template id="picker">
+      <div class="scheduled-picker">
+        <input readonly value="21:45" />
+        <input readonly value="2026-10-18" />
+      </div>
+    </template>
+    <template id="checks">
+      <div class="TUXModal" role="dialog">
+        <h2>Turn on automatic content checks?</h2>
+        <p>We'll check your content for copyright issues.</p>
+        <button id="checks-cancel">Cancel</button>
+        <button id="checks-on">Turn on</button>
+      </div>
+    </template>
+    <template id="profile">
+      <div data-e2e="user-post-item"><a href="https://www.tiktok.com/@me/video/7400000000000000001"><img alt="Another video" /></a></div>
+      <div data-e2e="user-post-item"><a href="https://www.tiktok.com/@me/video/7400000000000000002?lang=en"><img alt="The fox learns to fly over the cliffs of Cliffside. #fox" /></a></div>
+    </template>
+  </body>
+</html>
