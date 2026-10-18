@@ -253,6 +253,17 @@ function seed(db: DatabaseSync): void {
     ],
   });
   writeUploadPick(db, "p1", { title: 1, thumbnail: 2 });
+  run(
+    "UPDATE channels SET x_tier='premium', social_accounts=? WHERE id='c2'",
+    JSON.stringify({ x: "@night", bluesky: "night.bsky.social" }),
+  );
+  run(
+    "INSERT INTO social_posts(project_id,platform,item,choice_json,text_edit,text_base,reddit_json,state,posted_at,url,by,updated_at) VALUES ('p1','reddit',0,?,'Mine','Theirs',?,'posted',?,'https://www.reddit.com/r/a/comments/b1/','person',?)",
+    JSON.stringify({ off: true }),
+    JSON.stringify({ subreddit: "a", title: "T", flair: "", kind: "link" }),
+    at,
+    at,
+  );
 }
 
 const rows = (db: DatabaseSync, sql: string) => db.prepare(sql).all();
@@ -307,6 +318,7 @@ describe("backups carry everything added since 2.5.0", () => {
     same("SELECT * FROM plan_limit_readings ORDER BY id");
     same("SELECT * FROM project_trash ORDER BY project_id");
     same("SELECT * FROM standalone_usage ORDER BY id");
+    same("SELECT * FROM social_posts ORDER BY project_id,platform,item");
     same(
       "SELECT key,value FROM settings WHERE key IN ('channel_links','provider.defaults','voices.realPerson','library.photorealisticPrompts','studio.realFootage','channels.importFilter.c2','studio.playlist.c2','studio.autoComment','studio.postingPlan','studio.uploadPick.p1','studio.leadHours') ORDER BY key",
     );
@@ -382,10 +394,16 @@ describe("backups carry everything added since 2.5.0", () => {
       if (entry.name !== "manifest.json" && entry.name !== "data/library.json") return entry;
       const value = JSON.parse(Buffer.from(entry.content).toString()) as {
         databaseVersion?: number;
-        tables?: Record<string, unknown>;
+        tables?: Record<string, Record<string, unknown>[] | undefined>;
       };
       if (entry.name === "manifest.json") value.databaseVersion = 62;
-      else if (value.tables !== undefined) delete value.tables.template_gates;
+      else if (value.tables !== undefined) {
+        delete value.tables.template_gates;
+        // Channels had no accounts on other sites then (0076).
+        value.tables.channels = value.tables.channels?.map(
+          ({ x_tier: _tier, social_accounts: _accounts, ...rest }) => rest,
+        );
+      }
       return { name: entry.name, content: Buffer.from(JSON.stringify(value)) };
     });
     const archive = Buffer.concat(
@@ -404,6 +422,54 @@ describe("backups carry everything added since 2.5.0", () => {
     ).toEqual([
       { template_id: id, version: 1, state: "legacy" },
       { template_id: id, version: 2, state: "legacy" },
+    ]);
+  });
+
+  it("imports a backup from before posting with no posts and free X accounts", async () => {
+    const source = install();
+    seed(source.db);
+    const entries: { name: string; content: Uint8Array }[] = [];
+    await readTar(once(await exported(source)), async (entry, body) => {
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of body.chunks()) chunks.push(chunk);
+      entries.push({ name: entry.name, content: Buffer.concat(chunks) });
+    });
+    // As Slopify 3.x wrote it: schema 74, no social_posts, channels without the new columns.
+    const old = entries.map((entry) => {
+      if (
+        entry.name !== "manifest.json" &&
+        entry.name !== "data/library.json" &&
+        !entry.name.startsWith("data/projects/")
+      )
+        return entry;
+      const value = JSON.parse(Buffer.from(entry.content).toString()) as {
+        databaseVersion?: number;
+        tables?: Record<string, Record<string, unknown>[] | undefined>;
+      };
+      if (entry.name === "manifest.json") value.databaseVersion = 74;
+      else if (value.tables !== undefined) {
+        delete value.tables.social_posts;
+        value.tables.channels = value.tables.channels?.map(
+          ({ x_tier: _tier, social_accounts: _accounts, ...rest }) => rest,
+        );
+      }
+      return { name: entry.name, content: Buffer.from(JSON.stringify(value)) };
+    });
+    const archive = Buffer.concat(
+      old
+        .flatMap((entry) => [
+          tarHeader({ name: entry.name, size: entry.content.byteLength }),
+          entry.content,
+          new Uint8Array(tarPadding(entry.content.byteLength)),
+        ])
+        .concat([tarEnd]),
+    );
+    const target = install();
+    const summary = await importBackup(target, once(archive));
+    expect(summary.projects.imported).toEqual([{ id: "p1", title: "Episode one" }]);
+    expect(rows(target.db, "SELECT count(*) AS n FROM social_posts")).toEqual([{ n: 0 }]);
+    expect(rows(target.db, "SELECT x_tier, social_accounts FROM channels WHERE id='c2'")).toEqual([
+      { x_tier: "free", social_accounts: "{}" },
     ]);
   });
 

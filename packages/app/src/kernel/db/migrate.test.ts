@@ -115,6 +115,7 @@ describe("migrate", () => {
       "schedules",
       "schema_migrations",
       "settings",
+      "social_posts",
       "stage_pieces",
       "staged_files",
       "stages",
@@ -187,6 +188,7 @@ describe("migrate", () => {
       "schedule_runs_schedule",
       "schedule_topics_schedule",
       "schedules_due",
+      "social_posts_waiting",
       "stages_project_identity",
       "standalone_usage_created",
       "template_studio_spend_at",
@@ -265,6 +267,9 @@ describe("migrate", () => {
       { version: 72, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 73, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 74, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 75, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 76, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 77, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -274,7 +279,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 66 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 69 });
   });
 
   it("upgrades a database at 62 through every later migration, the template studio's included", () => {
@@ -286,7 +291,7 @@ describe("migrate", () => {
         .prepare("SELECT version FROM schema_migrations WHERE version > 62 ORDER BY version")
         .all()
         .map((row) => row.version),
-    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74]);
+    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77]);
   });
 
   // Applied by the set of versions a database has, never by its newest: one that took the
@@ -324,10 +329,10 @@ describe("migrate", () => {
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(75, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(78, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 75 is newer than this app knows (74)",
+      "database schema 78 is newer than this app knows (77)",
     );
   });
 
@@ -948,4 +953,63 @@ it("keeps every agent action and run start, and lets the assistant act and chat"
   db.exec("DELETE FROM projects WHERE id='p1'");
   expect(db.prepare("SELECT count(*) AS n FROM project_starts").get()).toEqual({ n: 0 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+});
+
+it("keeps every prompt and channel while adding social posts, channel accounts and post prompts", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 74 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  db.exec(
+    "INSERT INTO prompts (id,kind,name,body,slots,updated_at,deleted_at) VALUES ('a1','article','Saved','B','[]','d',NULL),('a2','script','Gone','B','[]','d','e')",
+  );
+  const promptsBefore = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+  const channelsBefore = db.prepare("SELECT * FROM channels ORDER BY id").all();
+  expect(() =>
+    db.exec(
+      "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('x','post','P','B','[]','d')",
+    ),
+  ).toThrow();
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(promptsBefore);
+  expect(
+    db
+      .prepare("SELECT * FROM channels ORDER BY id")
+      .all()
+      .map((row) => ({
+        ...row,
+        x_tier: undefined,
+        social_accounts: undefined,
+      })),
+  ).toEqual(
+    channelsBefore.map((row) => ({ ...row, x_tier: undefined, social_accounts: undefined })),
+  );
+  expect(db.prepare("SELECT DISTINCT x_tier, social_accounts FROM channels").all()).toEqual(
+    channelsBefore.length === 0 ? [] : [{ x_tier: "free", social_accounts: "{}" }],
+  );
+  db.exec(
+    "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('p1','post','Post','B','[]','d')",
+  );
+  expect(() =>
+    db.exec(
+      "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('p2','post','POST','B','[]','d')",
+    ),
+  ).toThrow();
+  db.exec(
+    "INSERT INTO social_posts (project_id,platform,state,updated_at) VALUES ('p1','x','waiting','t')",
+  );
+  for (const bad of [
+    "INSERT INTO social_posts (project_id,platform,updated_at) VALUES ('p1','myspace','t')",
+    "INSERT INTO social_posts (project_id,platform,state,updated_at) VALUES ('p1','reddit','sent','t')",
+    "INSERT INTO social_posts (project_id,platform,choice_json,updated_at) VALUES ('p1','bluesky','{','t')",
+    "INSERT INTO social_posts (project_id,platform,by,updated_at) VALUES ('p1','tiktok','robot','t')",
+    "INSERT INTO social_posts (project_id,platform,updated_at) VALUES ('nope','x','t')",
+  ])
+    expect(() => db.exec(bad)).toThrow();
+  db.exec("INSERT INTO channels (id,name,created_at,updated_at) VALUES ('c9','Nine','a','a')");
+  expect(() => db.exec("UPDATE channels SET x_tier = 'gold'")).toThrow();
+  expect(() => db.exec("UPDATE channels SET social_accounts = 'nope'")).toThrow();
+  db.exec("DELETE FROM projects WHERE id='p1'");
+  expect(db.prepare("SELECT count(*) AS n FROM social_posts").get()).toEqual({ n: 0 });
 });
