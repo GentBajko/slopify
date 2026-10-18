@@ -2,7 +2,7 @@ import type { ScheduleTopicsEvent } from "../../kernel/events.js";
 import type { StandaloneLlm } from "../../kernel/runner/standalone.js";
 import type { DraftStartDeps } from "../play-drafts/model.js";
 import type { ProjectTemplate } from "../project-templates/model.js";
-import type { ScheduleRun, ScheduleSummary } from "./schema.js";
+import type { ScheduleRun, ScheduleSummary, ScheduleTemplateGate } from "./schema.js";
 
 export type { ScheduleCreate, ScheduleRun, ScheduleSummary, ScheduleUpdate } from "./schema.js";
 
@@ -12,9 +12,14 @@ export type { ScheduleCreate, ScheduleRun, ScheduleSummary, ScheduleUpdate } fro
 export type TopicLlm = StandaloneLlm;
 
 export interface ScheduleDeps extends DraftStartDeps {
-  // The template as it is now: a schedule always runs, previews and checks against the
-  // template's newest version, so editing the template changes its next run.
+  // The template version a schedule runs, previews and checks against. Without the template
+  // studio's gate (tests, older wiring) it is the newest version; `main.ts` answers the newest
+  // version that is legacy, marked ready or carried (`template-studio/schedule-gate.ts`).
   readonly template: (id: string) => ProjectTemplate | undefined;
+  // Why a run of this template doesn't start (no version of it may run), or undefined.
+  readonly notReady?: (templateId: string) => string | undefined;
+  // Which version each schedule's template runs, for the Schedules screen.
+  readonly templateGate?: (templateId: string) => ScheduleTemplateGate | undefined;
   // Absent: topic generation records that no LLM is available instead of asking one.
   readonly topicLlm?: TopicLlm;
   // Told when a generation holds topics for approval.
@@ -40,7 +45,8 @@ export type ScheduleResult<T> =
         | "queue-full"
         | "topic-not-found"
         | "busy"
-        | "invalid-topics";
+        | "invalid-topics"
+        | "not-ready";
       // The plain sentences for a refusal the reason alone can't explain: which topic and
       // keyword, and how to fix it.
       readonly message?: string;

@@ -94,6 +94,8 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
     "topic-not-found":
       "This topic was already approved, turned down or used. Reload the page to see the topics waiting now.",
     busy: "Slopify is already generating topics for this schedule. Wait for it to finish, then try again.",
+    "not-ready":
+      "This schedule's template has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
     "invalid-topics":
       "Some topics name keywords this template does not use. Check each topic under Schedules → Edit and save again.",
   };
@@ -254,6 +256,7 @@ function routes(deps: ScheduleDeps | undefined) {
             status: result.reason === "not-found" ? 404 : 409,
             title: titleOf(result.reason === "not-found" ? 404 : 409),
             detail:
+              (result.reason === "not-ready" ? result.detail : undefined) ??
               detail[result.reason] ??
               (result.detail === undefined
                 ? `This topic couldn't be prepared (${result.reason}). Open Play with the schedule's template to see what the setup needs, then try again.`

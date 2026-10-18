@@ -304,3 +304,47 @@ it("has no search or sort for a short list", async () => {
   await screen.findByRole("list", { name: "Saved schedules" });
   expect(screen.queryByRole("searchbox", { name: "Search schedules by name" })).toBeNull();
 });
+
+it("says which template version the schedule runs, and what to press when none is ready", async () => {
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({
+        schedules: [{ ...summary, templateGate: { head: 1, runs: null, gate: "unchecked" } }],
+      }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/schedules/${scheduleId}`]: jsonAnswer({ schedule: summary, runs: [] }),
+    }),
+  );
+  const detail = await screen.findByRole("region", { name: "Morning stories detail" });
+  expect(
+    within(detail).getByText("Its runs are skipped: no version of its template is marked ready"),
+  ).toBeTruthy();
+  expect(
+    within(detail).getByRole("link", { name: "Open the template's studio" }).getAttribute("href"),
+  ).toBe(`/templates/${templateId}`);
+});
+
+it("shows a legacy template's schedule still running it, and a newer version waiting", async () => {
+  renderRouted(
+    <SchedulesView />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({
+        schedules: [{ ...summary, templateGate: { head: 7, runs: 6, gate: "legacy" } }],
+      }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 7, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/schedules/${scheduleId}`]: jsonAnswer({ schedule: summary, runs: [] }),
+    }),
+  );
+  const detail = await screen.findByRole("region", { name: "Morning stories detail" });
+  expect(
+    within(detail).getByText(
+      "Runs version 6 · Not checked in the studio · version 7 not ready yet",
+    ),
+  ).toBeTruthy();
+  expect(within(detail).queryByText(/Its runs are skipped/)).toBeNull();
+});

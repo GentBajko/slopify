@@ -70,6 +70,9 @@ export async function prepareTopic(
   if (schedule === undefined) return { ok: false, reason: "not-found" };
   const topic = schedule.items.find((item) => item.title === input.title);
   if (topic === undefined) return { ok: false, reason: "not-found" };
+  // Prepared ahead is the schedule's run made early: it waits for a ready version too.
+  const notReady = deps.notReady?.(schedule.templateId);
+  if (notReady !== undefined) return { ok: false, reason: "not-ready", detail: notReady };
   const document = scheduledDocument(deps, schedule, topic);
   if (document === undefined) return { ok: false, reason: "missing-template" };
   const title = scheduledTitle(document);

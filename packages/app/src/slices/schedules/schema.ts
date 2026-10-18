@@ -135,6 +135,15 @@ export const scheduleControlSchema = z
   .object({ id, baseVersion: z.number().int().positive() })
   .strict()
   .readonly();
+export const scheduleTemplateGateSchema = z
+  .object({
+    head: z.number().int().positive(),
+    runs: z.number().int().positive().nullable(),
+    gate: z.enum(["legacy", "ready", "carried", "unchecked"]),
+  })
+  .strict()
+  .readonly();
+export type ScheduleTemplateGate = z.infer<typeof scheduleTemplateGateSchema>;
 export const scheduleSummarySchema = z
   .object({
     id,
@@ -161,6 +170,10 @@ export const scheduleSummarySchema = z
     createdAt: z.string(),
     updatedAt: z.string(),
     deletedAt: z.string().datetime({ offset: true }).nullable(),
+    // Which version of its template the schedule runs: the newest legacy, ready or carried one
+    // (`runs`, null when none is), the template's newest (`head`) and the gate of the one that
+    // runs. Absent from a Slopify before the template studio.
+    templateGate: scheduleTemplateGateSchema.optional(),
   })
   .strict()
   .readonly();

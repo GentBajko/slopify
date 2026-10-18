@@ -4,10 +4,13 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { Rule } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { scheduleGateWords } from "@/template-studio/gate-words";
 import { readSchedule, scheduleAction } from "./api";
 import { TopicGenerationPanel } from "./held-topics";
 import { InlineTopics } from "./inline-topics";
@@ -67,6 +70,9 @@ export function ScheduleDetail({
           : "No topics queued"
         : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`,
     ],
+    ...(schedule.templateGate === undefined
+      ? []
+      : ([["Template", scheduleGateWords(schedule.templateGate).text]] as const)),
     ["Missed runs", schedule.missedPolicy === "skip" ? "Skip" : "Run once on reopening"],
     ["Overlap", "Skip"],
     [
@@ -113,6 +119,25 @@ export function ScheduleDetail({
           </Button>
         ) : null}
       </SectionHead>
+      {live && editable && schedule.templateGate?.runs === null ? (
+        <Callout
+          tone="waiting"
+          className="mt-4"
+          title="Its runs are skipped: no version of its template is marked ready"
+          actions={
+            <ButtonLink
+              variant="primary"
+              size="small"
+              to="/templates/$templateId"
+              params={{ templateId: schedule.templateId }}
+            >
+              Open the template's studio
+            </ButtonLink>
+          }
+        >
+          Look over the samples there and press Mark ready; the next run after that starts.
+        </Callout>
+      ) : null}
       <dl className="m-0 mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-small min-[600px]:grid-cols-2">
         {facts.map(([term, value]) => (
           <div key={term} className="min-w-0">

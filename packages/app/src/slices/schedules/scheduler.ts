@@ -131,7 +131,10 @@ function claim(
       current.topicGeneration.mode !== "off" && current.items.length === 0
         ? noTopicReason(current)
         : null;
-    const skip = occurrence || overlapping || noTopic !== null;
+    // A template with no version marked ready (or saved before the studio) waits: the run is
+    // skipped, nothing is spent and no topic is used.
+    const notReady = noTopic === null ? (deps.notReady?.(current.templateId) ?? null) : null;
+    const skip = occurrence || overlapping || noTopic !== null || notReady !== null;
     const run: ScheduleRun = {
       id: deps.uuid(),
       scheduleId: schedule.id,
@@ -147,7 +150,7 @@ function claim(
           ? "Skipped because the previous run of this schedule was still going."
           : occurrence
             ? "Skipped because Slopify was not running at the scheduled time."
-            : noTopic
+            : (noTopic ?? notReady)
         : null,
     };
     if (!insertRun(deps.db, run)) return [];

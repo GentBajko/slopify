@@ -25,7 +25,13 @@ import {
 import { type TopicRow, templateKeywords, topicRowProblems } from "./topic-list.js";
 
 export function listSchedules(deps: ScheduleDeps): readonly ScheduleSummary[] {
-  return scheduleRows(deps.db);
+  const rows = scheduleRows(deps.db);
+  const gateOf = deps.templateGate;
+  if (gateOf === undefined) return rows;
+  return rows.map((schedule) => {
+    const templateGate = gateOf(schedule.templateId);
+    return templateGate === undefined ? schedule : { ...schedule, templateGate };
+  });
 }
 
 export function listScheduleRuns(

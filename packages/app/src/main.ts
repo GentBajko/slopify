@@ -92,7 +92,6 @@ import { createNotificationSender } from "./slices/notifications/send.js";
 import { createServerNotifier } from "./slices/notifications/server.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
-import { templateById } from "./slices/project-templates/repo.js";
 import { createNarrationRetries } from "./slices/rebuild/narration-retry.js";
 import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
@@ -155,6 +154,11 @@ import { makePaidSample } from "./slices/template-studio/paid.js";
 import { sampleProjects } from "./slices/template-studio/repo.js";
 import { createSampleRunner } from "./slices/template-studio/runner.js";
 import { createUnknownAcks } from "./slices/template-studio/save.js";
+import {
+  notReadySentence,
+  runnableTemplate,
+  templateGate,
+} from "./slices/template-studio/schedule-gate.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
@@ -557,7 +561,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     };
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
-      template: (id) => templateById(runtimeDb, id),
+      // The newest version that may run: legacy, marked ready, or carried by Slopify.
+      template: (id) => runnableTemplate(runtimeDb, id),
+      notReady: (id) => notReadySentence(runtimeDb, id),
+      templateGate: (id) => templateGate(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
