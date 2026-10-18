@@ -4,9 +4,16 @@ import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { Field, Select } from "@/components/kit/field";
-import { instantiateProjectTemplate, templatesQuery } from "@/templates/api";
+import { instantiateProjectTemplate, type TemplateSummary, templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
 import { outputKindOf, outputNoun } from "./output-kind";
+
+// Whether the template's newest version is marked ready (or carried) for its schedules. A
+// template from an older server says nothing about it, and nothing is said.
+function headReady(gate: TemplateSummary["gate"]): boolean {
+  if (gate === undefined) return true;
+  return gate.runs === gate.head && (gate.gate === "ready" || gate.gate === "carried");
+}
 
 // Template first: picking one opens a fresh draft made from it, and what was typed for the
 // topic comes along.
@@ -86,6 +93,7 @@ export function TemplateField({
       ? [
           channelName(channelOfTemplate(current)),
           `version ${String(current.version)}`,
+          headReady(current.gate) ? undefined : "Not checked in the studio",
           "changes here stay in this project",
         ]
           .filter(Boolean)

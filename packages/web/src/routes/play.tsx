@@ -1,11 +1,12 @@
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
 import { useCurrentChannel } from "@/channels/current";
 import { channelOfTemplate } from "@/channels/members-tabs";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { Drawer } from "@/components/kit/drawer";
@@ -56,13 +57,31 @@ import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery 
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { subtitlesFor } from "@/subtitles/config";
 import { templatesQuery } from "@/templates/api";
-import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
+import { useTutorial, useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 import { StylePreview } from "@/video/style-preview";
+
+// Whether this browser asked for More settings last time: Create then opens on the whole form.
+const moreSettingsKey = "slopify.create.more-settings";
+export function createOpensSimple(): boolean {
+  try {
+    return window.localStorage.getItem(moreSettingsKey) !== "1";
+  } catch {
+    return true;
+  }
+}
+function rememberMoreSettings(): void {
+  try {
+    window.localStorage.setItem(moreSettingsKey, "1");
+  } catch {
+    // A private window keeps no preference: Create opens simple again next time.
+  }
+}
 
 export function PlayRoute() {
   const navigate = useNavigate();
   return (
     <PlayForm
+      simpleByDefault={createOpensSimple()}
       onCreated={(projectId) => {
         void navigate({ to: "/projects/$projectId", params: { projectId } });
       }}
@@ -73,8 +92,22 @@ export function PlayRoute() {
 // Play is one path from topic to queue: pick a template, type the topic (and more topics for
 // more videos), press the Play key. Everything else is folded into summary rows, each opening
 // its editor in place; the review, the estimate and the key sit in the right rail.
-export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string) => void }) {
+export function PlayForm({
+  onCreated,
+  simpleByDefault = false,
+}: {
+  readonly onCreated: (projectId: string) => void;
+  // Create as its route opens it: the template, the topic and Start, with More settings for
+  // the whole form below. Without it, the whole form, as Play always was.
+  readonly simpleByDefault?: boolean;
+}) {
   const { api } = useApp();
+  const tutorial = useTutorial();
+  const [simpleChosen, setSimpleChosen] = useState(simpleByDefault);
+  const showMore = (): void => {
+    setSimpleChosen(false);
+    rememberMoreSettings();
+  };
   const tutorialEvent = useTutorialEvent();
 
   const providers = useQuery(providersQuery(api));
@@ -84,6 +117,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const settings = useQuery(settingsQuery(api));
   const channels = useQuery(channelsQuery(api));
   const templates = useQuery(templatesQuery(api));
+  // Create is the template and the topic: with no template saved yet, or while the guided tour
+  // points into it, the whole form is the only way to set a video up.
+  const simple =
+    simpleChosen &&
+    tutorial?.active !== true &&
+    (templates.data === undefined || templates.data.length > 0);
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
 
   const [form, setForm] = usePlayDraft();
@@ -264,6 +303,18 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     if (!reveal) focusSequence.current = null;
     if (!reveal || reveal.sequence === focusSequence.current || !root.current) return;
     const field = reveal.field;
+    // A field Create doesn't show opens the whole form first.
+    if (
+      simple &&
+      reveal.section !== "review" &&
+      !(
+        field !== undefined &&
+        (field === "template" || topics.some((topic) => field === `values.${topic}`))
+      )
+    ) {
+      showMore();
+      return;
+    }
     const variant = field ? /^items\.([^.]+)(\.|$)/.exec(field)?.[1] : undefined;
     if (reveal.section === "review") {
       focusSequence.current = reveal.sequence;
@@ -288,7 +339,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     focusSequence.current = reveal.sequence;
     if (field && focusPlayField(root.current, field)) return;
     heading.current?.focus();
-  }, [session.reveal, open, variantOpen]);
+  }, [session.reveal, open, variantOpen, simple]);
 
   const library = async (to: "/prompts" | "/settings"): Promise<void> => {
     if (!(await session.flush())) return;
@@ -581,22 +632,24 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         }
         asideLabel="Review and start"
       >
-        <OutputPicker
-          form={form}
-          update={update}
-          // Choosing what to make folds away the open rows that work doesn't use; changing a
-          // stage inside a row never folds the row being edited.
-          onPicked={(picked) =>
-            setOpen(
-              (current) =>
-                new Set(
-                  [...current].filter((row) =>
-                    rowShown(row, picked, { problem: false, open: false }),
+        {simple ? null : (
+          <OutputPicker
+            form={form}
+            update={update}
+            // Choosing what to make folds away the open rows that work doesn't use; changing a
+            // stage inside a row never folds the row being edited.
+            onPicked={(picked) =>
+              setOpen(
+                (current) =>
+                  new Set(
+                    [...current].filter((row) =>
+                      rowShown(row, picked, { problem: false, open: false }),
+                    ),
                   ),
-                ),
-            )
-          }
-        />
+              )
+            }
+          />
+        )}
         <div
           data-tour="play-options"
           className="grid min-w-0 grid-cols-1 items-start gap-4 min-[700px]:grid-cols-2"
@@ -606,17 +659,26 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         </div>
         <SeenBefore topics={topics} />
         {templateError ? <Callout tone="danger" title={templateError} /> : null}
-        <MoreVideos
-          topics={topics}
-          keywordNames={fields.map((field) => field.name)}
-          origins={origins}
-          problem={problem}
-          adding={adding}
-          onAdding={setAdding}
-          open={variantOpen}
-          onOpen={setVariantOpen}
-        />
-        <SetupList rows={rows} open={open} onChange={setRow} />
+        {simple ? (
+          <SimpleCreateFoot
+            needing={rows.filter((row) => row.problem !== undefined).length}
+            onMore={showMore}
+          />
+        ) : (
+          <>
+            <MoreVideos
+              topics={topics}
+              keywordNames={fields.map((field) => field.name)}
+              origins={origins}
+              problem={problem}
+              adding={adding}
+              onAdding={setAdding}
+              open={variantOpen}
+              onOpen={setVariantOpen}
+            />
+            <SetupList rows={rows} open={open} onChange={setRow} />
+          </>
+        )}
       </Workspace>
       <Drawer
         open={session.section === "review"}
@@ -632,6 +694,37 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       {visibleRows.map((row) => (
         <RowCommand key={row.id} id={row.id} label={row.label} onOpen={openRow} />
       ))}
+    </div>
+  );
+}
+
+// Under Create's template and topic: More settings, and how many settings need fixing first.
+function SimpleCreateFoot({
+  needing,
+  onMore,
+}: {
+  readonly needing: number;
+  readonly onMore: () => void;
+}): ReactElement {
+  const more = (
+    <Button variant="secondary" size="small" onClick={onMore}>
+      More settings
+    </Button>
+  );
+  return needing > 0 ? (
+    <Callout
+      tone="waiting"
+      title={`${String(needing)} ${needing === 1 ? "setting needs" : "settings need"} you before this can start`}
+      actions={more}
+    >
+      More settings opens the whole form with each one marked.
+    </Callout>
+  ) : (
+    <div className="flex flex-wrap items-center gap-3">
+      {more}
+      <span className="text-small text-ink-2">
+        Everything else comes from the template: the voice, pictures, video and outputs.
+      </span>
     </div>
   );
 }

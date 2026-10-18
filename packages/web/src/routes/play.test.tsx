@@ -22,6 +22,7 @@ const tutorial = vi.hoisted(() => ({
 vi.mock("@/video/style-preview", () => ({ StylePreview: () => null }));
 
 vi.mock("@/tutorial/context", () => ({
+  useTutorial: () => undefined,
   useTutorialEvent: () => tutorial.event,
   useTutorialProgress: tutorial.progress,
 }));

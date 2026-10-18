@@ -30,6 +30,8 @@ export function reviewHarness(
     response,
   ) => response,
   overrides: Readonly<Record<string, Answer>> = {},
+  // Mounts Create as its route does: template, topic and Start, with More settings.
+  form: { readonly simpleByDefault?: boolean } = {},
 ): {
   readonly send: typeof fetch;
   readonly requests: readonly Request[];
@@ -45,7 +47,7 @@ export function reviewHarness(
   let mounted: RenderResult;
   function Capture(): ReactElement {
     captured = usePlaySession();
-    return <PlayForm onCreated={created} />;
+    return <PlayForm onCreated={created} {...form} />;
   }
   const session = (): PlaySession => {
     if (!captured) throw new Error("Session not mounted");
