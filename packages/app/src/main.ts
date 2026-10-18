@@ -92,6 +92,7 @@ import { createNotificationSender } from "./slices/notifications/send.js";
 import { createServerNotifier } from "./slices/notifications/server.js";
 import { seedSamples } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
+import { templateById } from "./slices/project-templates/repo.js";
 import { createNarrationRetries } from "./slices/rebuild/narration-retry.js";
 import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
@@ -566,6 +567,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       // The newest version that may run: legacy, marked ready, or carried by Slopify.
       template: (id) => runnableTemplate(runtimeDb, id),
       notReady: (id) => notReadySentence(runtimeDb, id),
+      templateHead: (id) => templateById(runtimeDb, id),
       templateGate: (id) => templateGate(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {

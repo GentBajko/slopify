@@ -22,7 +22,7 @@ import {
   scheduleUpdateSchema,
   topicStateIdle,
 } from "./schema.js";
-import { type TopicRow, templateKeywords, topicRowProblems } from "./topic-list.js";
+import { scheduleKeywords, type TopicRow, topicRowProblems } from "./topic-list.js";
 
 export function listSchedules(deps: ScheduleDeps): readonly ScheduleSummary[] {
   const rows = scheduleRows(deps.db);
@@ -255,9 +255,8 @@ function checkTopics(
   input: ScheduleCreate,
   kept: readonly TopicRow[],
 ): ScheduleResult<ScheduleSummary> | { readonly ok: true; readonly value: true } {
-  const template = deps.template(input.templateId);
-  if (!template) return { ok: false, reason: "missing-template" };
-  const keywords = templateKeywords(template.document.form);
+  const keywords = scheduleKeywords(deps, input.templateId);
+  if (keywords === undefined) return { ok: false, reason: "missing-template" };
   const named = keywords.length === 0 ? "none" : keywords.map((one) => `“${one}”`).join(", ");
   const problems: string[] = [];
   if (input.topicKeyword !== null && !keywords.includes(input.topicKeyword))

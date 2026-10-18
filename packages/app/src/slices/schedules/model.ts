@@ -18,6 +18,9 @@ export interface ScheduleDeps extends DraftStartDeps {
   readonly template: (id: string) => ProjectTemplate | undefined;
   // Why a run of this template doesn't start (no version of it may run), or undefined.
   readonly notReady?: (templateId: string) => string | undefined;
+  // The template's newest version, which may not be ready yet: a schedule may already name
+  // the keywords it adds. Absent: the version `template` answers.
+  readonly templateHead?: (id: string) => ProjectTemplate | undefined;
   // Which version each schedule's template runs, for the Schedules screen.
   readonly templateGate?: (templateId: string) => ScheduleTemplateGate | undefined;
   // Absent: topic generation records that no LLM is available instead of asking one.

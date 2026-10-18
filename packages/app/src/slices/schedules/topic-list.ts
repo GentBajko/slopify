@@ -231,3 +231,34 @@ export function formatTopicList(rows: readonly TopicRow[], topicKeyword: string 
   );
   return stringify(items, { lineWidth: 0 });
 }
+
+// The keywords a schedule's topics may fill: the version it runs, and the newest one, which a
+// schedule may be set up for before it is marked ready (a keyword the run doesn't use is
+// filled and left unused).
+export function scheduleKeywords(
+  deps: {
+    readonly template: (
+      id: string,
+    ) =>
+      | { readonly document: { readonly form: Parameters<typeof templateKeywords>[0] } }
+      | undefined;
+    readonly templateHead?:
+      | ((
+          id: string,
+        ) =>
+          | { readonly document: { readonly form: Parameters<typeof templateKeywords>[0] } }
+          | undefined)
+      | undefined;
+  },
+  templateId: string,
+): readonly string[] | undefined {
+  const runs = deps.template(templateId);
+  if (runs === undefined) return undefined;
+  const head = deps.templateHead?.(templateId);
+  return [
+    ...new Set([
+      ...templateKeywords(runs.document.form),
+      ...(head === undefined ? [] : templateKeywords(head.document.form)),
+    ]),
+  ];
+}

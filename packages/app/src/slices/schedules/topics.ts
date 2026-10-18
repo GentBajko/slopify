@@ -20,7 +20,7 @@ import {
   topicTransferSchema,
 } from "./schema.js";
 import { newTopics } from "./similar.js";
-import { templateKeywords, topicRowProblems } from "./topic-list.js";
+import { scheduleKeywords, topicRowProblems } from "./topic-list.js";
 
 // A schedule that finds its own topics asks an LLM whenever its queue holds fewer than
 // `keepAtLeast`. Only one generation per schedule runs at a time: a lease on the schedule row
@@ -510,12 +510,10 @@ export function editHeldTopic(
   if (values !== undefined && Object.keys(values).length > 0) {
     const schedule = scheduleById(deps.db, scheduleId);
     if (schedule === undefined) return { ok: false, reason: "not-found" };
-    const template = deps.template(schedule.templateId);
-    if (template === undefined) return { ok: false, reason: "missing-template" };
+    const known = scheduleKeywords(deps, schedule.templateId);
+    if (known === undefined) return { ok: false, reason: "missing-template" };
     const problems = topicRowProblems([{ title: parsed.data, values }], {
-      keywords: templateKeywords(template.document.form).filter(
-        (name) => name !== schedule.topicKeyword,
-      ),
+      keywords: known.filter((name) => name !== schedule.topicKeyword),
       topicKeyword: schedule.topicKeyword,
     });
     if (problems.length > 0)
@@ -580,10 +578,10 @@ export function replaceTopics(
     if (!open.ok) return open;
     const schedule = open.value;
     if (schedule.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
-    const template = deps.template(schedule.templateId);
-    if (!template) return { ok: false, reason: "missing-template" };
+    const keywords = scheduleKeywords(deps, schedule.templateId);
+    if (keywords === undefined) return { ok: false, reason: "missing-template" };
     const problems = topicRowProblems(parsed.data.items, {
-      keywords: templateKeywords(template.document.form),
+      keywords,
       topicKeyword: schedule.topicKeyword,
       kept: schedule.items,
     });

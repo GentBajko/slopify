@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { startFixture } from "../play-drafts/draft.fake.js";
+import { templateById } from "../project-templates/repo.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import { writeGate } from "../template-studio/repo.js";
 import {
@@ -38,6 +39,7 @@ function setup() {
     template: (id) => runnableTemplate(h.deps.db, id),
     notReady: (id) => notReadySentence(h.deps.db, id),
     templateGate: (id) => templateGate(h.deps.db, id),
+    templateHead: (id) => templateById(h.deps.db, id),
   };
   const schedule = () => {
     const made = createSchedule(deps, {
@@ -160,5 +162,34 @@ describe("a schedule's template version", () => {
         "Not started: Lore has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
     });
     expect(h.events).toEqual([]);
+  });
+
+  it("takes a topic keyword the newest version adds before it is marked ready", () => {
+    const { h, deps, templateId, edit } = setup();
+    writeGate(h.deps.db, templateId, { version: 1, state: "ready", carriedFrom: null });
+    // Version 1's title has {{Topic}}; version 2 adds {{Era}}.
+    edit(1, "Second cut: {{Topic}} in {{Era}}");
+    const made = createSchedule(deps, {
+      id: randomUUID(),
+      name: "Eras",
+      templateId,
+      templateVersion: 1,
+      cadence: { kind: "daily", time: "00:01" },
+      timezone: "UTC",
+      items: [{ title: "Bronze", values: {} }],
+      topicKeyword: "Era",
+    });
+    expect(made.ok).toBe(true);
+    const refused = createSchedule(deps, {
+      id: randomUUID(),
+      name: "Nope",
+      templateId,
+      templateVersion: 1,
+      cadence: { kind: "daily", time: "00:01" },
+      timezone: "UTC",
+      items: [],
+      topicKeyword: "Colour",
+    });
+    expect(refused).toMatchObject({ ok: false, reason: "invalid-topics" });
   });
 });
