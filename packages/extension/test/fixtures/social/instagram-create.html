@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- Instagram as seen on 2026-10-18 with a grey test picture (discarded, never shared): the
+     sidebar's Create ("New post") opens the "Create new post" dialog (template "dialog"); its
+     steps are templates: "crop" (Select crop: Original | 1:1 | 4:5 | 16:9, Next), "edit"
+     (Filters | Adjustments, Next) and "caption" (Share, the caption box, Add AI label,
+     Accessibility's alt text, Advanced settings). "Discard post?" is template "discard". The
+     shared message and the profile grid were not seen and are unverified. -->
+<html>
+  <body>
+    <nav>
+      <a href="/" role="link"><svg aria-label="Home"></svg><span>Home</span></a>
+      <a href="#" role="link"><svg aria-label="New post"></svg><span>Create</span></a>
+    </nav>
+    <main id="main"></main>
+    <div id="portal"></div>
+    <template id="dialog">
+      <div role="dialog" aria-label="Create new post">
+        <div id="step">
+          <h1>Create new post</h1>
+          <p>Drag photos and videos here</p>
+          <form enctype="multipart/form-data" method="POST" role="presentation">
+            <input type="file" accept="image/avif,image/jpeg,image/png,image/heic,image/heif,video/mp4,video/quicktime" multiple />
+          </form>
+          <button>Select from computer</button>
+        </div>
+      </div>
+      <div role="button" aria-label="Close" id="close"><svg aria-label="Close"></svg></div>
+    </template>
+    <template id="crop">
+      <div class="header"><div role="button">Back</div><h1>Crop</h1><div role="button">Next</div></div>
+      <img alt="" />
+      <div role="button" id="crop-button"><svg aria-label="Select crop"></svg></div>
+      <div role="button"><svg aria-label="Select zoom"></svg></div>
+      <div role="button"><svg aria-label="Open media gallery"></svg></div>
+      <div id="crop-menu"></div>
+    </template>
+    <template id="crop-choices">
+      <div role="button"><span>Original</span></div>
+      <div role="button"><span>1:1</span></div>
+      <div role="button" class="pick"><span>4:5</span></div>
+      <div role="button"><span>16:9</span></div>
+    </template>
+    <template id="edit">
+      <div class="header"><div role="button">Back</div><h1>Edit</h1><div role="button">Next</div></div>
+      <div role="tablist"><span>Filters</span><span>Adjustments</span></div>
+    </template>
+    <template id="caption">
+      <div class="header"><div role="button">Back</div><h1>Create new post</h1><div role="button" id="share">Share</div></div>
+      <div aria-label="Add a caption..." contenteditable="true" role="textbox"></div>
+      <span>0/2,200</span>
+      <input aria-label="Add location" />
+      <input aria-label="Add collaborators" />
+      <div class="ai">
+        <div><span>Add AI label</span><span>We require you to label certain realistic content that's made with AI.</span></div>
+        <input type="checkbox" role="switch" id="ai-switch" />
+      </div>
+      <div><span>Share to</span><span>Threads</span><input type="checkbox" role="switch" /></div>
+      <div role="button" id="accessibility"><span>Accessibility</span></div>
+      <div id="alt-slot"></div>
+      <div role="button"><span>Advanced settings</span></div>
+    </template>
+    <template id="alts">
+      <input placeholder="Write alt text..." />
+      <input placeholder="Write alt text..." />
+    </template>
+    <template id="discard">
+      <div role="dialog"><h3>Discard post?</h3><p>If you leave, your edits won't be saved.</p><button id="discard-button">Discard</button><button>Cancel</button></div>
+    </template>
+    <template id="shared">
+      <div role="dialog"><h3>Post shared</h3><span>Your post has been shared.</span></div>
+    </template>
+    <template id="profile">
+      <a href="/me/p/AAA111/"><img alt="Photo by Me. A sunset." /></a>
+      <a href="/me/p/BBB222/"><img alt="The fox learns to fly over the cliffs of Cliffside. #fox" /></a>
+    </template>
+  </body>
+</html>

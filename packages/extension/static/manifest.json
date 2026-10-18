@@ -1,20 +1,29 @@
 {
   "manifest_version": 3,
   "name": "Slopify Studio",
-  "version": "1.5.0",
-  "description": "Fills YouTube Studio's upload dialog from your local Slopify. Never publishes.",
+  "version": "2.0.0",
+  "description": "Fills YouTube Studio's upload dialog and your posts on X, LinkedIn, Instagram, TikTok, Reddit and Bluesky from your local Slopify. Never publishes or posts.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["storage", "clipboardWrite", "alarms"],
+  "permissions": ["storage", "clipboardWrite", "alarms", "scripting"],
   "host_permissions": [
     "http://127.0.0.1/*",
     "http://localhost/*",
     "https://www.youtube.com/oembed*"
   ],
+  "optional_host_permissions": [
+    "https://x.com/*",
+    "https://www.linkedin.com/*",
+    "https://www.instagram.com/*",
+    "https://www.tiktok.com/*",
+    "https://www.reddit.com/*",
+    "https://bsky.app/*"
+  ],
+  "optional_permissions": ["notifications"],
   "background": {
     "service_worker": "background.js"
   },
@@ -56,7 +65,15 @@
   "web_accessible_resources": [
     {
       "resources": ["video-frame.html"],
-      "matches": ["https://studio.youtube.com/*"]
+      "matches": [
+        "https://studio.youtube.com/*",
+        "https://x.com/*",
+        "https://www.linkedin.com/*",
+        "https://www.instagram.com/*",
+        "https://www.tiktok.com/*",
+        "https://www.reddit.com/*",
+        "https://bsky.app/*"
+      ]
     }
   ]
 }

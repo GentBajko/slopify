@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- Bluesky's home with the composer closed, as seen on 2026-10-18 (read-only): the nav's
+     "Compose new post" opens the composer, kept in a template here. Inside it: the Tiptap text
+     box, "Add media to post" over a hidden file input, Cancel and "Publish post". Alt text boxes
+     and the published toast were not seen; they are modelled on Bluesky's web app. -->
+<html>
+  <body>
+    <nav>
+      <a href="/">Home</a>
+      <button aria-label="Compose new post">New post</button>
+    </nav>
+    <main id="feed"></main>
+    <div id="portal"></div>
+    <template id="composer">
+      <div data-testid="composePostView" role="dialog" aria-modal="true">
+        <button data-testid="composerDiscardButton">Cancel</button>
+        <button data-testid="composerPublishBtn" aria-label="Publish post">Post</button>
+        <div class="tiptap ProseMirror" contenteditable="true" role="textbox" data-placeholder="What's up?"></div>
+        <button data-testid="openMediaBtn" aria-label="Add media to post"></button>
+        <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4" multiple hidden />
+        <div id="attached"></div>
+        <button data-testid="selectLangBtn" aria-label="Post language selection">English</button>
+      </div>
+    </template>
+    <template id="alt">
+      <textarea aria-label="Alt text"></textarea>
+    </template>
+    <template id="toast">
+      <div role="alert">Your post was published <a href="/profile/me.bsky.social/post/3kxyzabc">View</a></div>
+    </template>
+    <template id="profile">
+      <div data-testid="feedItem-by-me.bsky.social">
+        <p>Something else entirely</p>
+        <a href="/profile/me.bsky.social/post/3kaaaaaa">1h</a>
+      </div>
+      <div data-testid="feedItem-by-me.bsky.social">
+        <p>The fox learns to fly over the cliffs of Cliffside, and more</p>
+        <a href="/profile/me.bsky.social/post/3kbbbbbb?ref=x">2h</a>
+      </div>
+    </template>
+  </body>
+</html>

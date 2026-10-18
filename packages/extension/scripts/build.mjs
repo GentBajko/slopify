@@ -51,6 +51,9 @@ for (const [name, target] of Object.entries(targets)) {
       "export-hook",
       "options",
       "popup",
+      // The posting sites' page script, registered at run time for the sites the person
+      // allowed (`src/social/grant.ts`), never listed in the manifest.
+      "social-content",
       "video-frame",
     ].map((entry) => join(root, "src", `${entry}.ts`)),
     outdir: out,

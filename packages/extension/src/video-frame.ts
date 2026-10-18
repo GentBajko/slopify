@@ -1,4 +1,5 @@
 import { browserApi } from "./browser.js";
+import { siteOrigins } from "./social/matches.js";
 
 // A hidden page of the extension's own, which the Studio page loads in a frame to get the
 // video file. Messages between the worker and the page are JSON, which can't carry a 2 GB
@@ -7,10 +8,16 @@ import { browserApi } from "./browser.js";
 // request, with the pairing token, so Slopify serves it as it serves the thumbnails.
 //
 // It answers only Studio, and only for a file of the waiting upload pack: Slopify refuses any
-// other asset.
+// other asset. The sites the extension posts on use it too, for a post's video: each asks only
+// for its posts' files (`kind: "social"`), which Slopify serves only for a post's own media.
 
 const studio = "https://studio.youtube.com";
 const api = browserApi();
+// Who may ask, and for which kind of file.
+export const frameOrigins: Readonly<Record<string, "studio" | "social">> = {
+  [studio]: "studio",
+  ...Object.fromEntries(siteOrigins.map((origin) => [origin, "social" as const])),
+};
 
 export interface VideoRequest {
   readonly type: "slopify-video";
@@ -19,6 +26,9 @@ export interface VideoRequest {
   readonly asset: string;
   readonly filename: string;
   readonly contentType: string;
+  // A post's file (`/api/social/ext/files`) rather than an upload's; `asset` is then the
+  // post's file name.
+  readonly kind?: "social";
 }
 
 export type VideoAnswer =
@@ -33,8 +43,9 @@ async function load(request: VideoRequest): Promise<File> {
     );
   let response: Response;
   try {
+    const route = request.kind === "social" ? "social" : "studio";
     response = await fetch(
-      `${stored.base}/api/studio/ext/files/${encodeURIComponent(request.projectId)}/${encodeURIComponent(request.asset)}`,
+      `${stored.base}/api/${route}/ext/files/${encodeURIComponent(request.projectId)}/${encodeURIComponent(request.asset)}`,
       { headers: { authorization: `Bearer ${stored.token}` } },
     );
   } catch {
@@ -58,15 +69,19 @@ async function load(request: VideoRequest): Promise<File> {
 }
 
 window.addEventListener("message", (event: MessageEvent) => {
-  if (event.origin !== studio || event.source !== window.parent) return;
+  const from = frameOrigins[event.origin];
+  if (from === undefined || event.source !== window.parent) return;
   const request = event.data as Partial<VideoRequest> | null;
   if (request?.type !== "slopify-video" || typeof request.id !== "string") return;
+  // Studio asks for uploads, the posting sites for posts: never the other way round.
+  if ((request.kind === "social") !== (from === "social")) return;
+  const reply = event.origin;
   const id = request.id;
   void load(request as VideoRequest).then(
     (file) => {
       window.parent.postMessage(
         { type: "slopify-video-file", id, file } satisfies VideoAnswer,
-        studio,
+        reply,
       );
     },
     (error: unknown) => {
@@ -76,11 +91,12 @@ window.addEventListener("message", (event: MessageEvent) => {
           id,
           message: error instanceof Error ? error.message : String(error),
         } satisfies VideoAnswer,
-        studio,
+        reply,
       );
     },
   );
 });
 
-// Ready to take a request.
-window.parent.postMessage({ type: "slopify-video-ready" }, studio);
+// Ready to take a request: said to each allowed origin, and only the parent's receives it.
+for (const origin of Object.keys(frameOrigins))
+  window.parent.postMessage({ type: "slopify-video-ready" }, origin);

@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Reddit's submit page, NOT SEEN on the live site (Claude in Chrome refuses reddit.com): this
+     is modelled on Reddit's web components (shreddit-*, faceplate-*) with the form's fields
+     inside open shadow roots, which the test builds. Every selector it exercises is
+     checked: null in sites/reddit.ts and needs a live check by the person. -->
+<html>
+  <body>
+    <shreddit-app>
+      <div id="tabs"></div>
+      <div id="composer-host"></div>
+      <button id="submit-post-button">Post</button>
+      <button>Save Draft</button>
+    </shreddit-app>
+    <template id="tab-list">
+      <div role="tablist">
+        <button role="tab" aria-selected="true">Text</button>
+        <button role="tab" aria-selected="false">Images &amp; Video</button>
+        <button role="tab" aria-selected="false">Link</button>
+      </div>
+    </template>
+    <template id="fields">
+      <faceplate-textarea-input name="title"><textarea name="title"></textarea></faceplate-textarea-input>
+      <div contenteditable="true" role="textbox" aria-label="Body text"></div>
+      <faceplate-textarea-input name="link"><textarea name="link"></textarea></faceplate-textarea-input>
+      <input type="file" accept="image/*,video/*" multiple />
+      <button id="flair-open">Add flair and tags</button>
+      <div id="flair-list"></div>
+    </template>
+    <template id="flairs">
+      <div role="radio" aria-checked="false">Discussion</div>
+      <div role="radio" aria-checked="false">Lore</div>
+      <button id="flair-apply">Add</button>
+    </template>
+    <template id="profile">
+      <shreddit-post permalink="/r/fantasy/comments/abc123/old_post/" post-title="Old post"></shreddit-post>
+      <shreddit-post permalink="/r/fantasy/comments/def456/the_fox/" post-title="The Fox of Cliffside">The fox learns to fly over the cliffs of Cliffside.</shreddit-post>
+    </template>
+  </body>
+</html>

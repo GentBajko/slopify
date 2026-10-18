@@ -9,6 +9,10 @@
       input { width: 100%; box-sizing: border-box; padding: 6px 8px; font: inherit; }
       button { margin-top: 16px; padding: 6px 14px; font: inherit; cursor: pointer; }
       #status { margin-top: 12px; min-height: 1.5em; }
+      h2 { margin-top: 32px; font-size: 16px; }
+      #sites { list-style: none; padding: 0; }
+      #sites li { margin: 10px 0; }
+      #sites button { margin-top: 0; }
       .error { color: #a40000; }
       .ok { color: #1d6b2d; }
       @media (prefers-color-scheme: dark) {
@@ -33,6 +37,13 @@
       <div><button type="submit">Pair</button></div>
     </form>
     <p id="status" role="status"></p>
+    <h2>Posting</h2>
+    <p>
+      Slopify can also fill your posts on X, LinkedIn, Instagram, TikTok, Reddit and Bluesky. It
+      never presses Post, Share or Schedule: you check each post and press it yourself. It works
+      only on the sites you allow here; the browser asks you for each one.
+    </p>
+    <ul id="sites"></ul>
     <script src="options.js"></script>
   </body>
 </html>

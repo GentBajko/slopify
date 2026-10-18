@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- x.com/compose/post as seen on 2026-10-18 (read-only): the composer dialog with its Draft.js
+     text box, the media input and the toolbar. The schedule dialog, the content disclosure menu
+     and the toasts were not opened; their templates follow X's web app and are unverified. -->
+<html>
+  <body>
+    <div id="layers">
+      <div role="dialog" aria-modal="true" aria-labelledby="modal-header">
+        <button data-testid="app-bar-close" aria-label="Close"></button>
+        <button data-testid="unsentButton">Drafts</button>
+        <div data-testid="tweetTextarea_0RichTextInputContainer">
+          <div class="public-DraftEditor-content" data-testid="tweetTextarea_0" role="textbox" aria-label="Post text" contenteditable="true"></div>
+        </div>
+        <div id="schedule-line"></div>
+        <div role="group" data-testid="toolBar">
+          <input type="file" data-testid="fileInput" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime" multiple />
+          <button data-testid="gifSearchButton" aria-label="Add a GIF"></button>
+          <button data-testid="createPollButton" aria-label="Add poll"></button>
+          <button data-testid="scheduleOption" aria-label="Schedule post"></button>
+          <button data-testid="geoButton" aria-label="Tag location"></button>
+          <button data-testid="contentDisclosureButton" aria-label="Content disclosure"></button>
+        </div>
+        <span>Everyone can reply</span>
+        <button data-testid="tweetButton"><span>Post</span></button>
+      </div>
+    </div>
+    <div id="menus"></div>
+    <div id="toasts"></div>
+    <template id="schedule">
+      <div role="dialog" id="schedule-dialog">
+        <h2>Schedule</h2>
+        <label for="SELECTOR_1">Month</label>
+        <select id="SELECTOR_1"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select>
+        <label for="SELECTOR_2">Day</label>
+        <select id="SELECTOR_2"></select>
+        <label for="SELECTOR_3">Year</label>
+        <select id="SELECTOR_3"><option value="2026">2026</option><option value="2027">2027</option></select>
+        <label for="SELECTOR_4">Hour</label>
+        <select id="SELECTOR_4"></select>
+        <label for="SELECTOR_5">Minute</label>
+        <select id="SELECTOR_5"></select>
+        <label for="SELECTOR_6">AM/PM</label>
+        <select id="SELECTOR_6"><option value="AM">AM</option><option value="PM">PM</option></select>
+        <button data-testid="scheduledConfirmationPrimaryAction">Confirm</button>
+      </div>
+    </template>
+    <template id="disclosure">
+      <div role="menu">
+        <div role="menuitemcheckbox" aria-checked="false">Paid partnership</div>
+        <div role="menuitemcheckbox" aria-checked="false">Made with AI</div>
+        <button>Done</button>
+      </div>
+    </template>
+    <template id="sent">
+      <div data-testid="toast" role="alert">Your post was sent. <a href="/me/status/1850000000000000001">View</a></div>
+    </template>
+    <template id="will-send">
+      <div data-testid="toast" role="alert">Your post will be sent on Tue, Oct 20, 2026 at 8:00 PM</div>
+    </template>
+    <template id="profile">
+      <article data-testid="tweet"><div>An older post</div><a href="/me/status/111"><time>1d</time></a></article>
+      <article data-testid="tweet"><a href="/me">Me</a><div>The fox learns to fly over the cliffs of Cliffside.</div><a href="/me/status/222/analytics">Views</a><a href="/me/status/222"><time>2h</time></a></article>
+    </template>
+  </body>
+</html>
