@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
@@ -7,8 +8,8 @@ import { Field, Input } from "@/components/kit/field";
 import { useToast } from "@/components/kit/toast";
 import { saveTemplateFromProject, templatesKey } from "@/templates/api";
 
-// Save as template: the current revision's setup as a template for a fresh Play draft. Opened
-// from the project's More menu or the command palette.
+// Save as template: the current revision's setup as a template for a fresh Play draft, then its
+// studio. Opened from the project's More menu or the command palette.
 export function SaveProjectTemplate({
   projectId,
   revisionId,
@@ -31,6 +32,7 @@ export function SaveProjectTemplate({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
+  const navigate = useNavigate();
   const active = useRef(false);
   const identity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   useEffect(() => {
@@ -60,8 +62,9 @@ export function SaveProjectTemplate({
       }
       identity.current = null;
       onClose();
-      notify("Template saved.", "success");
+      notify("Template saved. Set it up section by section in its studio.", "success");
       await client.invalidateQueries({ queryKey: templatesKey });
+      await navigate({ to: "/templates/$templateId", params: { templateId: reply.value.id } });
     } catch (cause) {
       setError(
         cause instanceof Error

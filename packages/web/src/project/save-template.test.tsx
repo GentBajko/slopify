@@ -1,16 +1,19 @@
+import { useLocation } from "@tanstack/react-router";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
-import { renderApp, testDeps } from "@/test-app";
+import { renderRouted, testDeps } from "@/test-app";
 import { SaveProjectTemplate } from "./save-template";
 
 // The project page opens the dialog from its More menu; here a plain button stands in.
 function Opener({ projectId, revisionId }: { projectId: string; revisionId: string }) {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
   return (
     <>
+      <output data-testid="path">{location.pathname}</output>
       <button type="button" onClick={() => setOpen(true)}>
         Save as template
       </button>
@@ -42,11 +45,11 @@ it("saves a named current revision without invoking project work", async () => {
       document: freshDraftDocument,
     });
   });
-  renderApp(
+  renderRouted(
     <Opener projectId={projectId} revisionId={revisionId} />,
     testDeps({ [`POST /api/project-templates/from-project/${projectId}`]: save }),
   );
-  const button = screen.getByRole("button", { name: "Save as template" });
+  const button = await screen.findByRole("button", { name: "Save as template" });
   button.focus();
   await user.keyboard("{Enter}");
   const dialog = await screen.findByRole("dialog");
@@ -54,14 +57,19 @@ it("saves a named current revision without invoking project work", async () => {
   await user.clear(input);
   await user.type(input, "Reusable film");
   await user.click(within(dialog).getByRole("button", { name: "Save template" }));
-  await screen.findByText("Template saved.");
+  await screen.findByText("Template saved. Set it up section by section in its studio.");
   expect(save).toHaveBeenCalledOnce();
+  // The new template opens in its studio.
+  expect(await screen.findByTestId("path")).toHaveProperty(
+    "textContent",
+    `/templates/${projectId}`,
+  );
 });
 
 it("keeps the named revision and request identity when a response is lost", async () => {
   const user = userEvent.setup();
   const bodies: unknown[] = [];
-  renderApp(
+  renderRouted(
     <Opener projectId={projectId} revisionId={revisionId} />,
     testDeps({
       [`POST /api/project-templates/from-project/${projectId}`]: async (request) => {
@@ -74,7 +82,7 @@ it("keeps the named revision and request identity when a response is lost", asyn
       },
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Save as template" }));
+  await user.click(await screen.findByRole("button", { name: "Save as template" }));
   await user.click(screen.getByRole("button", { name: "Save template" }));
   await screen.findByRole("alert");
   await user.click(screen.getByRole("button", { name: "Save template" }));

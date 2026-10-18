@@ -110,6 +110,11 @@ function testRouter(ui: ReactNode) {
         path: "templates",
         component: nowhere,
       }),
+      templateStudio: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "templates/$templateId",
+        component: nowhere,
+      }),
       settings: createRoute({
         getParentRoute: () => rootRoute,
         path: "settings",

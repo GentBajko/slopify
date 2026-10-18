@@ -1,4 +1,5 @@
 import type { Entry, EntryCategory, Prompt, PromptKind } from "@app/slices/library/model.js";
+import { type TemplateSection, templateSections } from "@app/slices/template-studio/model.js";
 import {
   createRootRoute,
   createRoute,
@@ -48,6 +49,7 @@ import {
 import { TemplatesRoute } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
 import { WelcomeRoute } from "@/routes/welcome";
+import { TemplateStudioPage } from "@/template-studio/page";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -318,6 +320,26 @@ function TemplatesPage(): import("react").ReactElement {
         return isCurrent();
       }}
     />
+  );
+}
+
+// Library → Templates → Open studio. `?section=` is the section shown; any other value opens
+// the first.
+const templateStudioRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "templates/$templateId",
+  validateSearch: (search: Record<string, unknown>): { section?: TemplateSection } =>
+    templateSections.find((one) => one === search.section) === undefined
+      ? {}
+      : { section: search.section as TemplateSection },
+  component: TemplateStudioRoutePage,
+});
+
+function TemplateStudioRoutePage(): import("react").ReactElement {
+  const { templateId } = templateStudioRoute.useParams();
+  const { section } = templateStudioRoute.useSearch();
+  return (
+    <TemplateStudioPage key={templateId} templateId={templateId} section={section ?? "subject"} />
   );
 }
 
@@ -705,6 +727,7 @@ const routeTree = rootRoute.addChildren({
     narrationAliasesRoute,
     abResultsRoute,
   }),
+  templateStudioRoute,
   schedulesRoute,
   scheduleRoute,
   calendarRoute,

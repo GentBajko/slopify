@@ -57,6 +57,17 @@ export function PlayDraftProvider({ children }: { readonly children: ReactNode }
   const session = useDraftSession();
   return <DraftContext.Provider value={session}>{children}</DraftContext.Provider>;
 }
+// Play's editors over another document than a Play draft: the template studio's Fine-tune
+// binds them to the template it edits (`template-studio/session.tsx`).
+export function PlaySessionProvider({
+  value,
+  children,
+}: {
+  readonly value: PlaySession;
+  readonly children: ReactNode;
+}): ReactElement {
+  return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
+}
 // The same, or null outside the shell (a page rendered on its own in a test).
 export function useOptionalPlaySession(): PlaySession | null {
   return useContext(DraftContext);

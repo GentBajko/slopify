@@ -38,8 +38,8 @@ async function saveAgain(
 }
 
 // Beside the Templates list: the picked template's keywords, with what each feeds. Its name is
-// renamed in place with the pencil on its row; the settings themselves are changed in Play:
-// Use in Play, change the draft, then Save a setup.
+// renamed in place with the pencil on its row; the settings themselves are changed in its
+// studio (Open studio).
 export function TemplateDetail({
   template,
 }: {
@@ -66,9 +66,7 @@ export function TemplateDetail({
         }
       />
       <TemplateKeywords template={template} />
-      <p className="m-0 text-small text-ink-2">
-        To change the settings, press Use in Play, change the draft, then Save a setup.
-      </p>
+      <p className="m-0 text-small text-ink-2">To change the settings, press Open studio.</p>
     </section>
   );
 }

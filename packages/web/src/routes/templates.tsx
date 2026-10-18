@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/kit/empty-state";
 import { Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { RetiredModelRow } from "@/components/retired-models";
@@ -39,9 +40,9 @@ import { useTemplateActions } from "@/templates/use-template-actions";
 import { useTemplatesBulk } from "@/templates/use-templates-bulk";
 import { LibraryToolbar } from "./library.js";
 
-// Library → Templates: saved Play setups, each used in Play as a fresh draft to review. The
-// rows carry the Library's row actions in view (Edit, Duplicate, Use in Play, History,
-// Delete) and a pencil to rename in place; the picked row's keywords sit beside the list.
+// Library → Templates: saved Play setups, each set up in its studio (Open studio) and used in
+// Play as a fresh draft to review. The rows carry the Library's row actions in view (Open
+// studio, Use in Play; Duplicate, History, Delete behind More) and a pencil to rename in place; the picked row's keywords sit beside the list.
 // Save a setup opens a drawer.
 export function TemplatesRoute({
   onApplied,
@@ -281,14 +282,15 @@ export function TemplatesRoute({
                         <LibraryRowActions
                           name={template.name}
                           edit={
-                            <Button
-                              variant="quiet"
+                            <ButtonLink
+                              to="/templates/$templateId"
+                              params={{ templateId: template.id }}
+                              variant="secondary"
                               size="small"
-                              aria-label={`Edit ${template.name}`}
-                              onClick={() => setPicked(template.id)}
+                              aria-label={`Open the studio of ${template.name}`}
                             >
-                              Edit
-                            </Button>
+                              Open studio
+                            </ButtonLink>
                           }
                           duplicate={
                             <Button

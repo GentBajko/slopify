@@ -337,12 +337,15 @@ it("shows the Library row actions on the row itself and offers Save a setup in t
   );
   const actions = await screen.findByRole("group", { name: `Actions for ${template.name}` });
   expect(
-    [...actions.querySelectorAll("button")].map((one) => one.getAttribute("aria-label")),
+    [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
   ).toEqual([
-    `Edit ${template.name}`,
+    `Open the studio of ${template.name}`,
     `Use ${template.name} in Play`,
     `More actions for ${template.name}`,
   ]);
+  expect(
+    within(actions).getByRole("link", { name: `Open the studio of ${template.name}` }),
+  ).toHaveProperty("pathname", `/templates/${templateId}`);
 
   const save = registry.list().find((command) => command.title === "Save a setup as a template");
   expect(save?.group).toBe("Library");
@@ -384,7 +387,7 @@ it("shows a template's keywords with what each feeds, the topic saved empty", as
       [`GET /api/project-templates/${templateId}`]: jsonAnswer({ ...template, document }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Edit ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: template.name }));
   const list = await screen.findByRole("list", { name: "Keywords" });
   const rows = within(list).getAllByRole("listitem");
   expect(rows[0]?.textContent).toContain("{{Topic}}");
@@ -393,7 +396,7 @@ it("shows a template's keywords with what each feeds, the topic saved empty", as
   expect(rows[1]?.textContent).toContain("Feeds Article");
 });
 
-it("opens a template beside the list from Edit or a press on its row, and renames it with the pencil", async () => {
+it("opens a template beside the list from a press on its row, and renames it with the pencil", async () => {
   const user = userEvent.setup();
   const sent: unknown[] = [];
   renderRouted(
@@ -416,7 +419,7 @@ it("opens a template beside the list from Edit or a press on its row, and rename
       },
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Edit ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: template.name }));
   expect(
     await screen.findByRole("region", { name: `Keywords of ${template.name}` }),
   ).not.toBeNull();
@@ -557,7 +560,7 @@ it("keeps the picked template in the URL and shows its version with the exact ti
       "GET /api/project-templates": jsonAnswer({ templates: [template, older] }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Edit ${older.name}` }));
+  await user.click(await screen.findByRole("button", { name: older.name }));
   await waitFor(() => expect(path).toContain(older.id));
   const detail = await screen.findByRole("region", { name: `Keywords of ${older.name}` });
   const stamp = detail.querySelector("time");

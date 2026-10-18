@@ -764,6 +764,25 @@
       min-width: 0;
     }
   }
+  /* Library → Templates → Open studio: the sections, a section's settings and its sample. The
+     sample needs room for a video, so its column is the widest rail; below 1180px it follows
+     the settings rather than sitting above them. */
+  .sl-workspace.sl-workspace--studio {
+    grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 420px);
+  }
+  @media (max-width: 1180px) {
+    .sl-workspace.sl-workspace--studio {
+      grid-template-columns: 180px minmax(0, 1fr);
+    }
+    .sl-workspace--studio .sl-workspace__aside {
+      order: 1;
+    }
+  }
+  @media (max-width: 767px) {
+    .sl-workspace.sl-workspace--studio {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   /* Help → Tutorials: the wiki's groups beside the page, scrolling on their own so the list
      stays in reach however long the page is. */
   .sl-workspace.sl-workspace--tutorials {
