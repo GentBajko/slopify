@@ -134,6 +134,9 @@ export interface BackupImportSummary {
   readonly schedules: ItemCounts & { readonly paused: number };
   readonly voices: ItemCounts;
   readonly drafts: ItemCounts;
+  // Absent in summaries recorded before designs travelled.
+  readonly designs?: ItemCounts | undefined;
+  readonly designTemplates?: ItemCounts | undefined;
   readonly settings: { readonly added: number; readonly kept: number };
   readonly fonts: number;
   readonly usage: { readonly events: number; readonly alreadyImported: boolean };
@@ -961,7 +964,7 @@ function commit(
       }
 
       // After the projects, so a design keeps its link to one that came in with it.
-      mergeDesigns(db, scratch, (table, row) => {
+      const merged = mergeDesigns(db, scratch, (table, row) => {
         insertRow(db, table, row);
       });
 
@@ -981,6 +984,8 @@ function commit(
         schedules,
         voices: { added: voicesAdded, renamed: 0, skipped: voicesSkipped },
         drafts,
+        designs: { ...merged.designs, renamed: 0 },
+        designTemplates: { ...merged.templates, renamed: 0 },
         settings: { added: settingsAdded, kept: settingsKept },
         fonts,
         usage: { events, alreadyImported },

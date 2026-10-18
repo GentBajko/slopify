@@ -183,7 +183,9 @@ it("round-trips designs with every version of their picture, and design template
   expect(Buffer.from(archive).toString("latin1")).toContain(`files/images/${sha(second)}`);
 
   const target = install();
-  await importBackup(target, once(archive));
+  const summary = await importBackup(target, once(archive));
+  expect(summary.designs).toEqual({ added: 1, renamed: 0, skipped: 0 });
+  expect(summary.designTemplates).toEqual({ added: 1, renamed: 0, skipped: 0 });
   const same = (sql: string) => expect(rows(target.db, sql)).toEqual(rows(source.db, sql));
   same("SELECT * FROM designs ORDER BY id");
   same("SELECT * FROM design_steps WHERE id <> 's3' ORDER BY id");
@@ -199,7 +201,9 @@ it("round-trips designs with every version of their picture, and design template
 
   // Imported twice: nothing is added again, and nothing here is changed.
   target.db.exec("UPDATE designs SET name='Renamed here' WHERE id='d1'");
-  await importBackup(target, once(archive));
+  const again = await importBackup(target, once(archive));
+  expect(again.designs).toEqual({ added: 0, renamed: 0, skipped: 1 });
+  expect(again.designTemplates).toEqual({ added: 0, renamed: 0, skipped: 1 });
   expect(rows(target.db, "SELECT count(*) AS n FROM designs")).toEqual([{ n: 2 }]);
   expect(rows(target.db, "SELECT count(*) AS n FROM design_steps")).toEqual([{ n: 3 }]);
   expect(rows(target.db, "SELECT name FROM designs WHERE id='d1'")).toEqual([

@@ -403,6 +403,8 @@ describe("export everything and import a backup", () => {
     schedules: { added: 1, renamed: 0, skipped: 0, paused: 1 },
     voices: { added: 0, renamed: 0, skipped: 0 },
     drafts: { added: 0, renamed: 0, skipped: 0 },
+    designs: { added: 3, renamed: 0, skipped: 1 },
+    designTemplates: { added: 0, renamed: 0, skipped: 0 },
     settings: { added: 1, kept: 1 },
     fonts: 0,
     usage: { events: 12, alreadyImported: false },
@@ -484,6 +486,8 @@ describe("export everything and import a backup", () => {
       "1 schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.",
     );
     expect(lines).toContain("Usage: 12 recorded event(s) added to the totals.");
+    expect(lines).toContain("Designs: 3 added, 1 already here.");
+    expect(lines.some((line) => line?.startsWith("Design templates"))).toBe(false);
     expect(lines).toContain("Skipped “Old run”: It is already in this install.");
   });
 

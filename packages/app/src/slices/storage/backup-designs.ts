@@ -75,8 +75,9 @@ export function mergeDesigns(
   const designs = { added: 0, skipped: 0 };
   for (const row of rowsOf(scratch, "SELECT * FROM designs ORDER BY rowid")) {
     const id = String(row.id);
+    // A template's hidden sample is not one of the person's designs, so it isn't counted.
     if (has("SELECT 1 FROM designs WHERE id=?", id)) {
-      designs.skipped += 1;
+      if (row.sample_of === null) designs.skipped += 1;
       continue;
     }
     insert("designs", { ...row, project_id: sameProject(db, scratch, row.project_id) });
