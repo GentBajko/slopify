@@ -1,5 +1,5 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -302,5 +302,155 @@ describe("provider model discovery", () => {
     await user.selectOptions(screen.getByLabelText("Model"), "new-provider");
     expect(screen.queryByRole("option", { name: "Old provider model" })).toBeNull();
     expect(screen.getByTestId("selection").textContent).toBe("new-provider");
+  });
+});
+
+describe("model standings in the picker", () => {
+  const view = (standing: string, over: Record<string, unknown> = {}) => ({
+    standing,
+    checkedAt: null,
+    sentence: null,
+    source: null,
+    ...over,
+  });
+  const models = [
+    { id: "w", name: "Works" },
+    { id: "n", name: "Nope" },
+    { id: "k", name: "Known" },
+  ];
+  const answer = (standings: Record<string, unknown> | undefined) =>
+    jsonAnswer({ models, allowsCustom: false, ...(standings === undefined ? {} : { standings }) });
+
+  it("shows only working models by default, and Show all reveals the rest", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" />,
+      testDeps({
+        "GET /api/providers/gemini/models": answer({
+          w: view("works"),
+          n: view("no-access"),
+          k: view("known"),
+        }),
+      }),
+    );
+    await screen.findByRole("option", { name: "Works · ✓ works" });
+    expect(screen.queryByRole("option", { name: /^Known/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /^Nope/ })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show all models for Model" }));
+    expect(screen.getByRole("option", { name: "Known · ? not checked" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Nope · ✕ not on your plan" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("option", { name: "Nope · ✕ not on your plan" })
+        .compareDocumentPosition(screen.getByRole("option", { name: "Known · ? not checked" })) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it("keeps a chosen model that is not on the plan visible and selected, with the provider's words", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" initialModel="n" />,
+      testDeps({
+        "GET /api/providers/gemini/models": answer({
+          w: view("works"),
+          n: view("no-access", { sentence: "Not on your plan." }),
+          k: view("known"),
+        }),
+      }),
+    );
+    await screen.findByRole("option", { name: "Nope · ✕ not on your plan" });
+    expect((screen.getByLabelText("Model") as HTMLSelectElement).value).toBe("n");
+    expect(screen.getByText("Not on your plan.")).toBeTruthy();
+    expect(screen.getByTestId("selection").textContent).toBe("n");
+  });
+
+  it("is never empty before any check, and offers Check models", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" />,
+      testDeps({
+        "GET /api/providers/gemini/models": answer({
+          w: view("known"),
+          n: view("known"),
+          k: view("known"),
+        }),
+      }),
+    );
+    await screen.findByRole("option", { name: "Works · ? not checked" });
+    expect(within(screen.getByLabelText("Model")).getAllByRole("option")).toHaveLength(4);
+    expect(screen.getByText("Not checked yet.")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Show all models for Model" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "Check models" })).toBeTruthy();
+  });
+
+  it("lists everything as before when the server sends no standings", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" />,
+      testDeps({ "GET /api/providers/gemini/models": answer(undefined) }),
+    );
+    await screen.findByRole("option", { name: "Works" });
+    expect(screen.getByRole("option", { name: "Known" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Check/ })).toBeNull();
+  });
+
+  it("checks the chosen model after the price is confirmed", async () => {
+    const sent: unknown[] = [];
+    renderApp(
+      <Subject initialProvider="gemini" initialModel="w" />,
+      testDeps({
+        "GET /api/providers/gemini/models": answer({
+          w: view("works", { checkedAt: new Date().toISOString(), source: "check" }),
+        }),
+        "GET /api/providers/gemini/models/check/estimate": jsonAnswer({
+          provider: "gemini",
+          count: 1,
+          totalDollars: 0.0004,
+          unpriced: 0,
+          planAccounts: [],
+          text: "less than a cent",
+          skipped: [],
+        }),
+        "POST /api/providers/gemini/models/check": async (request) => {
+          sent.push(await request.json());
+          return jsonAnswer(
+            {
+              provider: "gemini",
+              count: 1,
+              totalDollars: 0.0004,
+              unpriced: 0,
+              planAccounts: [],
+              text: "less than a cent",
+              skipped: [],
+            },
+            202,
+          )(request);
+        },
+      }),
+    );
+    await screen.findByText("✓ works · checked just now");
+    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    await screen.findByText(
+      "Each model gets one small request, so this costs less than a cent at list price.",
+    );
+    expect(sent).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Check models" }));
+    await waitFor(() => expect(sent).toEqual([{ models: ["w"], confirmedDollars: 0.0004 }]));
+    await screen.findByText("Checking 1 model in the background.");
+  });
+
+  it("says why a check could not start", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" initialModel="w" />,
+      testDeps({
+        "GET /api/providers/gemini/models": answer({ w: view("works") }),
+        "GET /api/providers/gemini/models/check/estimate": problemAnswer(
+          "Antigravity CLI is not set up, so its models can't be checked. Set it up in Settings → Providers, then choose Check models in Settings → Models.",
+        ),
+      }),
+    );
+    await screen.findByRole("option", { name: "Works · ✓ works" });
+    await userEvent.click(screen.getByRole("button", { name: "Check" }));
+    await screen.findByText(/is not set up, so its models can't be checked/);
   });
 });
