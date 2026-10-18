@@ -11,7 +11,7 @@ import { templateById } from "../project-templates/repo.js";
 import { scheduleRows } from "../schedules/repo.js";
 import type { ScheduleSummary } from "../schedules/schema.js";
 import type { ProviderStatus } from "../settings/model.js";
-import { readJsonSetting } from "../settings/repo.js";
+import { listVoices, readJsonSetting } from "../settings/repo.js";
 import { type FreeCheckInput, freeChecks, type ScheduleFit } from "./checks.js";
 import type { FreeSamples } from "./free.js";
 import { gateOf, runnableVersion } from "./gate.js";
@@ -232,6 +232,7 @@ export async function getStudioChecks(
           ]),
         ),
         schedules: schedules.map(fitOf),
+        voices: listVoices(deps.db),
         monthlyCost: cost,
         notificationUrl: readNotificationUrl(deps.db) !== null,
         agentSeenAt: lastAgentConnection(deps.db),

@@ -7,6 +7,7 @@ import { sectionLabel, type TemplateSection } from "./model.js";
 export const freeCheckIds = [
   "keywords",
   "providers",
+  "voice",
   "release-slots",
   "monthly-cost",
   "answerers",
@@ -39,6 +40,9 @@ export interface FreeCheckInput {
     readonly unknown: number;
     readonly problem?: string | null;
   } | null;
+  // The voices saved in Settings → Voices, which Play's voice list offers. Absent: only that a
+  // voice is chosen is checked.
+  readonly voices?: readonly { readonly provider: string; readonly voiceId: string }[];
   readonly notificationUrl: boolean;
   // When an agent last reached Slopify through MCP, and now: "someone answers" holds for a week.
   readonly agentSeenAt: string | null;
@@ -65,6 +69,7 @@ export function freeChecks(input: FreeCheckInput): readonly Check[] {
   return [
     keywordsCheck(input),
     providersCheck(input),
+    voiceCheck(input),
     releaseSlotsCheck(input),
     monthlyCostCheck(input),
     answerersCheck(input),
@@ -198,6 +203,47 @@ function providersCheck(input: FreeCheckInput): Check {
     sentence: `${name} (the ${missing.what}) isn't set up on this computer: no key is stored or its program wasn't found.`,
     fix: { label: "Set it up in Settings → Providers", href: "/settings?section=providers" },
   };
+}
+
+// The narration's voice (and each speaker's) is chosen and is one of the voices this computer
+// keeps in Settings → Voices: an imported pack's voice may be someone else's.
+function voiceCheck(input: FreeCheckInput): Check {
+  const { form } = input.document;
+  const voiced = form.sources.audio === "generate";
+  const fix = { label: "Choose a voice in Voice", href: studioHref(input.templateId, "voice") };
+  if (!voiced) return { id: "voice", ok: true, sentence: "The narration isn't voiced by Slopify." };
+  const picks = [
+    { who: "The narration's", provider: form.audio.provider, voice: form.audio.voice },
+    ...(form.voices?.speakers ?? []).map((speaker) => ({
+      who: `${speaker.name.trim() === "" ? "A speaker" : speaker.name}'s`,
+      provider: speaker.voice.provider,
+      voice: speaker.voice.voice,
+    })),
+  ];
+  if (form.audio.voice.trim() === "" && form.voices === undefined)
+    return {
+      id: "voice",
+      ok: false,
+      sentence: "No voice is chosen for the narration, so the run can't start.",
+      fix,
+    };
+  const known = input.voices;
+  const unknown =
+    known === undefined
+      ? undefined
+      : picks.find(
+          (pick) =>
+            pick.voice.trim() !== "" &&
+            !known.some((one) => one.provider === pick.provider && one.voiceId === pick.voice),
+        );
+  if (unknown !== undefined)
+    return {
+      id: "voice",
+      ok: false,
+      sentence: `${unknown.who} voice (ID ${unknown.voice}) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.`,
+      fix,
+    };
+  return { id: "voice", ok: true, sentence: "The narration's voice is one of your voices." };
 }
 
 function releaseSlotsCheck(input: FreeCheckInput): Check {

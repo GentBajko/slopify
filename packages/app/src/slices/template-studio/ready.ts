@@ -44,6 +44,7 @@ export type ReadyResult =
 const checkLabel: Readonly<Record<FreeCheckId, string>> = {
   keywords: "Keywords",
   providers: "Providers",
+  voice: "Voice",
   "release-slots": "Release slots",
   "monthly-cost": "Monthly cost",
   answerers: "Checkpoints answered",

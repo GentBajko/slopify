@@ -4,6 +4,7 @@ import { draftFixture } from "../play-drafts/draft.fake.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import type { ProviderStatus } from "../settings/model.js";
+import { insertVoice } from "../settings/repo.js";
 import type { FreeSamples, FreeSamplesView } from "./free.js";
 import { gateOf } from "./gate.js";
 import { markReady, readyProblems } from "./ready.js";
@@ -63,6 +64,13 @@ function setup(options: { readonly free?: FreeSamplesView; readonly ready?: bool
     free: freeOf(options.free ?? allMade),
     prices: createPriceCache(),
   };
+  // The voice Play's list offers: one saved in Settings → Voices.
+  insertVoice(h.deps.db, {
+    id: "voice-1",
+    provider: "openai-tts",
+    name: "Alloy",
+    voiceId: "alloy",
+  });
   const id = randomUUID();
   const created = createTemplate(h.deps, { id, name: "Show", document });
   if (!created.ok) throw new Error(created.reason);
@@ -94,7 +102,7 @@ describe("markReady", () => {
         "SELECT checks_json AS checks, marked_at AS at FROM template_gates WHERE template_id=?",
       )
       .get(id) as { checks: string; at: string };
-    expect(JSON.parse(row.checks)).toHaveLength(5);
+    expect(JSON.parse(row.checks)).toHaveLength(6);
     expect(row.at).toBe(h.deps.clock.now().toISOString());
   });
 

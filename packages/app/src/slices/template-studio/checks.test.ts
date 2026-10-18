@@ -45,6 +45,7 @@ describe("freeChecks", () => {
     expect(freeChecks(input).map((one) => [one.id, one.ok])).toEqual([
       ["keywords", true],
       ["providers", true],
+      ["voice", true],
       ["release-slots", true],
       ["monthly-cost", true],
       ["answerers", true],
@@ -244,6 +245,73 @@ describe("freeChecks", () => {
         sentence: "The monthly cost isn't known: 2 steps have no price in the model list.",
         fix: { href: "/templates/t1?section=schedule" },
       });
+    });
+  });
+
+  describe("voice", () => {
+    const mine = [{ provider: "elevenlabs", voiceId: "v" }];
+
+    it("passes when the narration's voice is one of your voices", () => {
+      expect(check({ voices: mine }, "voice")).toEqual({
+        id: "voice",
+        ok: true,
+        sentence: "The narration's voice is one of your voices.",
+      });
+    });
+
+    it("asks for a voice when none is chosen", () => {
+      const none = {
+        ...document,
+        form: { ...document.form, audio: { ...document.form.audio, voice: "" } },
+      };
+      expect(check({ document: none, voices: mine }, "voice")).toEqual({
+        id: "voice",
+        ok: false,
+        sentence: "No voice is chosen for the narration, so the run can't start.",
+        fix: { label: "Choose a voice in Voice", href: "/templates/t1?section=voice" },
+      });
+    });
+
+    it("names a voice that isn't in Settings → Voices, such as one an imported pack brought", () => {
+      expect(check({ voices: [{ provider: "elevenlabs", voiceId: "other" }] }, "voice")).toEqual({
+        id: "voice",
+        ok: false,
+        sentence:
+          "The narration's voice (ID v) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.",
+        fix: { label: "Choose a voice in Voice", href: "/templates/t1?section=voice" },
+      });
+    });
+
+    it("checks each speaker's voice too, and nothing when the narration isn't voiced", () => {
+      const speakers = {
+        ...document,
+        form: {
+          ...document.form,
+          voices: {
+            format: "audiobook" as const,
+            speakers: [
+              {
+                id: "s1",
+                name: "Ada",
+                role: "narrator" as const,
+                voice: { provider: "elevenlabs", model: "m", voice: "gone" },
+              },
+            ],
+          },
+        },
+      } as unknown as PlayDraftDocument;
+      expect(check({ document: speakers, voices: mine }, "voice")?.sentence).toBe(
+        "Ada's voice (ID gone) isn't one of your voices in Settings → Voices. Add it there under that ID, or choose one of yours.",
+      );
+      const silent = {
+        ...document,
+        form: {
+          ...document.form,
+          sources: { ...document.form.sources, audio: "off" as const },
+          audio: { ...document.form.audio, voice: "" },
+        },
+      };
+      expect(check({ document: silent, voices: [] }, "voice")?.ok).toBe(true);
     });
   });
 
