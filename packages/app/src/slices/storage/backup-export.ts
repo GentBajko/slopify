@@ -9,6 +9,7 @@ import { hasErrnoCode } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
 import { projectMarker } from "./arrange.js";
+import { exportDesigns } from "./backup-designs.js";
 import {
   type BackupManifest,
   type BackupRow,
@@ -374,6 +375,7 @@ function librarySnapshot(deps: BackupDeps): {
   put("episode_memories", rowsOf(db, "SELECT * FROM episode_memories ORDER BY rowid"));
   put("channel_videos", rowsOf(db, "SELECT * FROM channel_videos ORDER BY rowid"));
   put("standalone_usage", rowsOf(db, "SELECT * FROM standalone_usage ORDER BY rowid"));
+  exportDesigns(db, put);
   // Every picture, not only the cast's: a project's config names the pictures it was started
   // with by hash, and a Rebuild reads them from here.
   const images = db

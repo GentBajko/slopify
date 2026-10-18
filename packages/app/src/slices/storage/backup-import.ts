@@ -25,6 +25,7 @@ import { projectTemplateSchema } from "../project-templates/schema.js";
 import { revisionById } from "../revisions/repo.js";
 import { runsForSchedule, scheduleRows } from "../schedules/repo.js";
 import { allTelemetryEvents } from "../telemetry/repo.js";
+import { mergeDesigns } from "./backup-designs.js";
 import { type BackupDeps, projectRows, rowsOf } from "./backup-export.js";
 import {
   type BackupManifest,
@@ -499,6 +500,10 @@ function loadScratch(
       // broken fails there, and the upgrade's own message would talk about downgrading.
       throw damaged("some of its records point at records it doesn't hold.");
     }
+    // A design only links to a project; one whose project didn't travel stays, unlinked.
+    scratch.exec(
+      "UPDATE designs SET project_id=NULL WHERE project_id NOT IN (SELECT id FROM projects)",
+    );
     if (scratch.prepare("PRAGMA foreign_key_check").all().length > 0)
       throw damaged("some of its records point at records it doesn't hold.");
     return scratch;
@@ -954,6 +959,11 @@ function commit(
         move(folder, projectDir(paths, listed.id));
         imported.push({ id: listed.id, title: listed.title });
       }
+
+      // After the projects, so a design keeps its link to one that came in with it.
+      mergeDesigns(db, scratch, (table, row) => {
+        insertRow(db, table, row);
+      });
 
       const summary: BackupImportSummary = {
         backup: {

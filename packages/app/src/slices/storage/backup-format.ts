@@ -110,6 +110,12 @@ export const libraryTables = [
   // Since 3.0.0: what topic generation, episode summaries and cast pictures cost, which
   // belongs to a schedule or channel rather than a project.
   "standalone_usage",
+  // Since 4.0.0: designs with every version of their picture, and design templates.
+  "designs",
+  "design_steps",
+  "design_templates",
+  "design_template_revisions",
+  "design_template_samples",
 ] as const;
 export type LibraryTable = (typeof libraryTables)[number];
 
