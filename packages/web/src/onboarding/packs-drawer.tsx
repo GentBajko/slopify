@@ -52,7 +52,7 @@ export function PacksDrawer({
         Prompts, a suggested voice and a template for one kind of channel.
         <InfoTip id="welcome.packs" />
       </p>
-      <List label="Starter packs" className="[&_.sl-row__meta]:whitespace-normal">
+      <List label="Starter packs" className="sl-list--wrap-meta">
         {(view.data?.packs ?? []).map((pack) => (
           <ListRow
             key={pack.id}

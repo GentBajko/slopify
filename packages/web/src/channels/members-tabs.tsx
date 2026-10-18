@@ -59,7 +59,7 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
         </EmptyState>
       ) : null}
       {own.length > 0 ? (
-        <List label="Channel templates" className="[&_.sl-row__actions]:flex-wrap">
+        <List label="Channel templates" className="sl-list--wrap-actions">
           {own.map((template) => (
             <ListRow
               key={template.id}

@@ -675,7 +675,7 @@ function Steps({
             Select all
           </label>
         </div>
-        <List label="Upload steps" className="[&_.sl-row__actions]:flex-wrap">
+        <List label="Upload steps" className="sl-list--wrap-actions">
           {steps.map((step) => {
             const { value, actions } = contentOf(step);
             return (

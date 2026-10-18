@@ -122,7 +122,7 @@ export function ChannelsRoute(): ReactElement {
       {channels.data?.length ? (
         <ListDetail
           list={
-            <List label="Channels" className="[&_.sl-row__actions]:flex-wrap">
+            <List label="Channels" className="sl-list--wrap-actions">
               {channels.data.map((channel) => (
                 <ListRow
                   key={channel.id}

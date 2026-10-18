@@ -138,3 +138,21 @@ describe("the kit's action rules", () => {
     expect(openingTags("<abbr title='x'>", "a")).toEqual([]);
   });
 });
+
+describe("Tailwind arbitrary variants", () => {
+  // Tailwind reads "_" in an arbitrary variant as a space, so [&_.sl-row__actions] selects
+  // ".sl-row  actions" and styles nothing. A kit class (shell.css) says it instead.
+  it("never name a kit class with a double underscore inside one", () => {
+    const broken = sources(src)
+      .map((path) => ({
+        file: relative(src, path).split(sep).join("/"),
+        text: readFileSync(path, "utf8"),
+      }))
+      .flatMap((one) =>
+        [...one.text.matchAll(/\[&[^\]\s"]*?[^\\]__[^\]\s"]*\]/gu)].map(
+          (match) => `${one.file}: ${match[0]}`,
+        ),
+      );
+    expect(broken).toEqual([]);
+  });
+});

@@ -298,7 +298,7 @@ export function WelcomeRoute(): ReactElement {
 
       <StepPanel id="style" active={step === "style"}>
         <SectionHead title="Pick a style" info="welcome.pack" />
-        <List label="Styles" className="mb-3 [&_.sl-row__meta]:whitespace-normal">
+        <List label="Styles" className="mb-3 sl-list--wrap-meta">
           {[
             {
               id: "",
@@ -409,7 +409,7 @@ export function WelcomeRoute(): ReactElement {
         )}
 
         <SectionHead title="While you wait: the samples" info="welcome.samples" />
-        <List label="Samples" className="mb-6 [&_.sl-row__meta]:whitespace-normal">
+        <List label="Samples" className="mb-6 sl-list--wrap-meta">
           {samples.map((one) => {
             const projectId = data?.samples[one.id] ?? null;
             return (
@@ -466,7 +466,7 @@ function VoiceChoice({
 }): ReactElement {
   if (voice.ready)
     return (
-      <List label="Narration voice" className="mb-6 [&_.sl-row__title]:whitespace-normal">
+      <List label="Narration voice" className="mb-6 sl-list--wrap-title">
         <ListRow
           lead={<Lamp tone="done" />}
           title={voice.text}

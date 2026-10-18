@@ -789,6 +789,16 @@
   .sl-workspace.sl-workspace--studio {
     grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 420px);
   }
+  /* Lists whose rows show more than one line: buttons that wrap under a narrow row, a meta
+     line or a title read in full. (Tailwind's [&_.sl-row__…] can't say it: "_" there is a
+     space.) */
+  .sl-list--wrap-actions .sl-row__actions {
+    flex-wrap: wrap;
+  }
+  .sl-list--wrap-meta .sl-row__meta,
+  .sl-list--wrap-title .sl-row__title {
+    white-space: normal;
+  }
   /* A section's whole name shows ("Reviews & checkpoints"): it wraps to a second line in the
      narrow rail instead of being cut. Phones keep the one sideways row. */
   @media (min-width: 768px) {

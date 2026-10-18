@@ -253,7 +253,7 @@ export function TopicGenerationPanel({
                   }
                 />
               ) : null}
-              <List label="Topics waiting" className="mt-2 [&_.sl-row__actions]:flex-wrap">
+              <List label="Topics waiting" className="mt-2 sl-list--wrap-actions">
                 {rows.map((topic) => (
                   <HeldTopicRow
                     key={topic.id}

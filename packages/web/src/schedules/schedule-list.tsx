@@ -62,7 +62,7 @@ export function ScheduleList({
         </EmptyState>
       ) : null}
       {live.length > 0 ? (
-        <List label="Saved schedules" className="[&_.sl-row__actions]:flex-wrap">
+        <List label="Saved schedules" className="sl-list--wrap-actions">
           {live.map((schedule) => (
             <Fragment key={schedule.id}>
               <ScheduleRow
