@@ -5,6 +5,7 @@ import type { Hono } from "hono";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
+import type { AssistantTurnTokens } from "../../slices/assistant/access.js";
 import { createRebuildDeps } from "../../slices/rebuild/service.fake.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { revisionFixture } from "../../slices/revisions/revision.fake.js";
@@ -18,6 +19,7 @@ export function mcpFixture(
   options: {
     readonly rebuild?: boolean;
     readonly measureAudio?: (path: string, signal?: AbortSignal) => Promise<number>;
+    readonly assistantTurns?: AssistantTurnTokens;
   } = {},
 ): {
   readonly app: Hono;
@@ -46,6 +48,7 @@ export function mcpFixture(
     host: "127.0.0.1",
     ...(options.rebuild === true ? { rebuild: createRebuildDeps(h.deps).deps } : {}),
     ...(options.measureAudio === undefined ? {} : { measureAudio: options.measureAudio }),
+    ...(options.assistantTurns === undefined ? {} : { assistantTurns: options.assistantTurns }),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }
@@ -53,11 +56,12 @@ export function mcpFixture(
 export async function connectAgent(
   app: Hono,
   headers: Readonly<Record<string, string>> = {},
+  path = "/mcp",
 ): Promise<Client> {
   const client = new Client({ name: "test-agent", version: "1" });
   await client.connect(
     // @ts-expect-error SDK 1.32.1 types sessionId as string | undefined, which Transport's optional sessionId rejects under exactOptionalPropertyTypes
-    new StreamableHTTPClientTransport(new URL("http://127.0.0.1:6969/mcp"), {
+    new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:6969${path}`), {
       fetch: async (url, init) => app.request(String(url), init),
       requestInit: { headers: { ...headers } },
     }),

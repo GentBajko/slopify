@@ -104,6 +104,21 @@ describe("review admission", () => {
   });
 });
 
+describe("the promise check's admission", () => {
+  it("runs only while the article is written by a model, with any text reviewer", () => {
+    const reviews = {
+      provider: "openrouter",
+      model: "m",
+      stages: { promise: { mode: "flag" as const } },
+    };
+    expect(activeReviewStages({ sources, reviews })).toEqual(["promise"]);
+    expect(reviewFields({ sources, reviews })).toEqual([]);
+    const provided = { sources: { ...sources, article: "provide" as const }, reviews };
+    expect(activeReviewStages(provided)).toEqual([]);
+    expect(reviewFields(provided)).toEqual([]);
+  });
+});
+
 describe("the external agent reviewer", () => {
   it("needs no reviewer model and may review pictures", () => {
     expect(

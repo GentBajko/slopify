@@ -306,6 +306,31 @@ describe("cost planning", () => {
     expect(rows[0]?.detail).toContain("through MCP");
     expect(rows[0]?.high ?? 0).toBe(0);
   });
+
+  it("prices the promise check as one text call on the reviewer's model, only for a written article", () => {
+    const promise = {
+      provider: "codex",
+      model: "test",
+      stages: { promise: { mode: "redo" } },
+    } satisfies RunDraft["reviews"];
+    const written = {
+      ...draft,
+      sources: { ...draft.sources, article: "generate" },
+      llm: { provider: "codex", model: "test" },
+      articlePrompt: "x",
+      reviews: promise,
+    } satisfies RunDraft;
+    const rows = estimateRun(written, {}, 1500, catalogue).rows.filter(
+      (one) => one.stage === "Reviews",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.detail).toContain("One review per item");
+    expect(
+      estimateRun({ ...draft, reviews: promise }, {}, 1500, catalogue).rows.filter(
+        (one) => one.stage === "Reviews",
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("the keywords Slopify fills", () => {

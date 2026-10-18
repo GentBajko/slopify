@@ -10,11 +10,14 @@ import {
   PlusIcon,
   SearchIcon,
   SettingsIcon,
+  SparklesIcon,
   UsersIcon,
 } from "lucide-react";
 import { type ReactElement, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { AssistantPanel } from "@/assistant/panel";
+import { AssistantScreenProvider } from "@/assistant/screen";
 import { AutostartReminder } from "@/autostart/autostart-reminder";
 import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider } from "@/channels/current";
@@ -200,7 +203,9 @@ export function Shell() {
         <TutorialProvider>
           <CommandPaletteProvider>
             <CurrentChannelProvider>
-              <ShellContent />
+              <AssistantScreenProvider>
+                <ShellContent />
+              </AssistantScreenProvider>
             </CurrentChannelProvider>
           </CommandPaletteProvider>
         </TutorialProvider>
@@ -237,6 +242,7 @@ function ShellContent() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const runs = useRunNotifications();
   const palette = useCommandPalette();
+  const [assistantOpen, setAssistantOpen] = useState(false);
   useInstallKind();
 
   useEffect(() => {
@@ -307,6 +313,15 @@ function ShellContent() {
             <kbd>K</kbd>
           </span>
         </button>
+        <Button
+          variant="quiet"
+          className="w-full justify-start"
+          aria-expanded={assistantOpen}
+          onClick={() => setAssistantOpen((shown) => !shown)}
+        >
+          <SparklesIcon {...iconProps} />
+          Assistant
+        </Button>
         <nav aria-label="Main navigation" className="sl-rail">
           {destinations.map((destination) => (
             <Link
@@ -397,6 +412,13 @@ function ShellContent() {
               )}
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-2 [&_button]:min-h-8 [&_button]:min-w-8">
+              <IconButton
+                label="Assistant"
+                aria-expanded={assistantOpen}
+                onClick={() => setAssistantOpen((shown) => !shown)}
+              >
+                <SparklesIcon {...iconProps} />
+              </IconButton>
               <SupportMenu />
               <UpdateWidget reload={() => window.location.reload()} />
               <TutorialsLink />
@@ -426,6 +448,7 @@ function ShellContent() {
           ))}
       </nav>
 
+      <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AppearanceSkin />
       <FirstRunNotice />
       <AutostartReminder />

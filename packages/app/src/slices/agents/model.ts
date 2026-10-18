@@ -1,10 +1,14 @@
 import { z } from "zod";
 
-// Agents: an AI agent (Claude Code, Codex, ...) driving Slopify through its MCP endpoint.
-// Browser-safe: Settings → Connections → Agents (MCP) builds its setup lines from these.
+// Agents: an AI agent (Claude Code, Codex, ...) driving Slopify through its MCP endpoint, and
+// the in-app assistant, which drives it the same way from Slopify's own chat. Browser-safe:
+// Settings → Connections → Agents (MCP) builds its setup lines from these.
 
-export const actors = ["person", "agent"] as const;
+export const actors = ["person", "agent", "assistant"] as const;
 export type Actor = (typeof actors)[number];
+// Who an MCP call recorded in `agent_actions` came from.
+export const agentActors = ["agent", "assistant"] as const;
+export type AgentActor = (typeof agentActors)[number];
 
 export const mcpPath = "/mcp";
 

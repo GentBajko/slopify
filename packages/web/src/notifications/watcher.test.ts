@@ -601,14 +601,14 @@ describe("run sounds", () => {
 });
 
 describe("agent notices", () => {
-  function agentHarness() {
+  function agentHarness(startedBy: "agent" | "assistant" = "agent") {
     const shown: ShownNotice[] = [];
     const reviews: ShownReviewNotice[] = [];
     const starts: ShownStartNotice[] = [];
     const watcher = createRunWatcher({
       enabled: () => true,
       seed: () => Promise.resolve([]),
-      subject: () => Promise.resolve({ title: "Lighthouse", makesVideo: true, startedBy: "agent" }),
+      subject: () => Promise.resolve({ title: "Lighthouse", makesVideo: true, startedBy }),
       claim: () => Promise.resolve(true),
       show: (notice) => {
         shown.push(notice);
@@ -632,6 +632,17 @@ describe("agent notices", () => {
     expect(starts).toEqual([{ projectId: "p1", title: "Lighthouse", byAgent: true }]);
     expect(shown.map((notice) => notice.text.headline)).toEqual([
       "Video ready: Lighthouse · started by agent",
+    ]);
+  });
+
+  it("says a run was started by the in-app assistant", async () => {
+    const { watcher, shown, starts } = agentHarness("assistant");
+    watcher.observe({ projectId: "p1", state: "running" });
+    watcher.observe({ projectId: "p1", state: "done" });
+    await watcher.settled();
+    expect(starts).toEqual([{ projectId: "p1", title: "Lighthouse", byAssistant: true }]);
+    expect(shown.map((notice) => notice.text.headline)).toEqual([
+      "Video ready: Lighthouse · started by assistant",
     ]);
   });
 

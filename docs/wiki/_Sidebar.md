@@ -49,6 +49,7 @@
 - [Schedules](Schedules)
 - [Calendar](Calendar)
 - [Notifications](Notifications)
+- [Assistant](Assistant)
 - [Agents (MCP)](Agents-MCP)
 - [Backups](Backups)
 

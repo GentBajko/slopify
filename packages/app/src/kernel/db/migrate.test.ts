@@ -40,7 +40,11 @@ describe("migrate", () => {
     expect(names(db, "table")).toEqual([
       "ab_results",
       "agent_actions",
+      "assistant_asks",
+      "assistant_messages",
+      "assistant_sessions",
       "attempts",
+      "autopilot_snoozes",
       "backup_imports",
       "batches",
       "cast_images",
@@ -113,6 +117,7 @@ describe("migrate", () => {
       "studio_reports",
       "telemetry_events",
       "told_failures",
+      "topic_scores",
       "video_stats",
       "voices",
       "youtube_description_edits",
@@ -122,6 +127,8 @@ describe("migrate", () => {
       "agent_actions_once",
       "agent_actions_project",
       "agent_actions_time",
+      "assistant_asks_session",
+      "assistant_messages_session",
       "cast_images_member",
       "cast_members_channel",
       "cast_members_order",
@@ -232,6 +239,10 @@ describe("migrate", () => {
       { version: 61, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 62, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 63, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 65, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 66, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 67, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 68, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -241,16 +252,16 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 56 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 60 });
   });
 
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(64, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(69, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 64 is newer than this app knows (63)",
+      "database schema 69 is newer than this app knows (68)",
     );
   });
 
@@ -707,4 +718,121 @@ it("keeps every external review and lets Cancel close one as canceled", () => {
   expect(db.prepare("SELECT state FROM external_reviews WHERE id='er3'").get()).toEqual({
     state: "canceled",
   });
+});
+
+it("keeps every review verdict and external review and lets the promise check and the assistant use them", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 62 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  const verdict = db.prepare(
+    `INSERT INTO review_verdicts (id,project_id,revision_id,item_key,stage,item_fingerprint,review_fingerprint,passed,reasons,outcome,attempt,action,action_at,action_by,redo_state,redo_error,answered_by,created_at)
+     VALUES (?,'p1','r1',?,?,'f',?,?,'[]',?,1,?,?,?,NULL,NULL,'model','a')`,
+  );
+  verdict.run("v1", "article", "article", "rf1", 1, "passed", null, null, null);
+  verdict.run("v2", "image:one", "images", "rf2", 0, "flagged", "overruled", "b", "agent");
+  expect(() =>
+    verdict.run("v3", "promise", "promise", "rf3", 1, "passed", null, null, null),
+  ).toThrow();
+  const external = db.prepare(
+    `INSERT INTO external_reviews (id,project_id,revision_id,work_id,piece_id,work_key,item_key,stage,item_fingerprint,review_fingerprint,material,state,waiting_since,deadline_at,verdict,answered_by,answered_at)
+     VALUES (?,'p1','r1','w1','pc1',?,?,?,'f',?,'{}',?,'a','b',?,?,?)`,
+  );
+  external.run("er1", "image:one", "image:one", "images", "rf1", "waiting", null, null, null);
+  external.run("er2", "article", "article", "article", "rf2", "canceled", null, null, null);
+  external.run(
+    "er3",
+    "article",
+    "article",
+    "article",
+    "rf3",
+    "answered",
+    '{"passed":true,"reasons":[]}',
+    "agent",
+    "c",
+  );
+  const verdictsBefore = db.prepare("SELECT * FROM review_verdicts ORDER BY id").all();
+  const externalBefore = db.prepare("SELECT * FROM external_reviews ORDER BY id").all();
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT * FROM review_verdicts ORDER BY id").all()).toEqual(verdictsBefore);
+  expect(db.prepare("SELECT * FROM external_reviews ORDER BY id").all()).toEqual(externalBefore);
+  verdict.run("v3", "promise", "promise", "rf3", 0, "flagged", "redone", "c", "assistant");
+  external.run("er4", "promise", "promise", "promise", "rf4", "answered", "{}", "assistant", "d");
+  expect(() =>
+    verdict.run("v4", "promise", "poster", "rf4", 1, "passed", null, null, null),
+  ).toThrow();
+  expect(() =>
+    external.run("er5", "x", "x", "promise", "rf5", "answered", "{}", "robot", "d"),
+  ).toThrow();
+  expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+  expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  expect(names(db, "index")).toEqual(
+    expect.arrayContaining([
+      "review_verdicts_item",
+      "review_verdicts_redo",
+      "external_reviews_waiting",
+    ]),
+  );
+  db.exec("DELETE FROM projects WHERE id='p1'");
+  expect(db.prepare("SELECT count(*) AS n FROM review_verdicts").get()).toEqual({ n: 0 });
+  expect(db.prepare("SELECT count(*) AS n FROM external_reviews").get()).toEqual({ n: 0 });
+});
+
+it("keeps every agent action and run start, and lets the assistant act and chat", () => {
+  const db = openDb(":memory:");
+  migrate(db, clock, { through: 65 });
+  db.exec("INSERT INTO projects VALUES ('p1','One','16:9','{}','a','a')");
+  db.exec(
+    "INSERT INTO agent_actions (id,project_id,schedule_id,tool,title,revision_id,created_at,idempotency_key) VALUES ('a1','p1',NULL,'save_revision','Saved','r1','b','k1')",
+  );
+  db.exec("INSERT INTO project_starts VALUES ('p1','agent','c')");
+  expect(() => db.exec("INSERT INTO project_starts VALUES ('p1','assistant','d')")).toThrow();
+
+  migrate(db, clock);
+
+  expect(db.prepare("SELECT id, tool, actor, idempotency_key FROM agent_actions").all()).toEqual([
+    { id: "a1", tool: "save_revision", actor: "agent", idempotency_key: "k1" },
+  ]);
+  expect(db.prepare("SELECT * FROM project_starts").all()).toEqual([
+    { project_id: "p1", actor: "agent", started_at: "c" },
+  ]);
+  db.exec(
+    "INSERT INTO agent_actions (id,project_id,tool,title,created_at,actor) VALUES ('a2','p1','start_draft','Started','e','assistant')",
+  );
+  expect(() =>
+    db.exec(
+      "INSERT INTO agent_actions (id,project_id,tool,title,created_at,actor) VALUES ('a3','p1','x','X','e','robot')",
+    ),
+  ).toThrow();
+  db.exec("UPDATE project_starts SET actor='assistant' WHERE project_id='p1'");
+  expect(() => db.exec("UPDATE project_starts SET actor='robot'")).toThrow();
+  db.exec("INSERT INTO assistant_sessions VALUES ('s1','claude-code','f','f')");
+  db.exec(
+    `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m1','s1','t1','person','Hi','{}','g')`,
+  );
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m2','s1','t1','robot','Hi','{}','g')`,
+    ),
+  ).toThrow();
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_messages (id,session_id,turn_id,role,text,meta,created_at) VALUES ('m3','s1','t1','tool','Hi','not json','g')`,
+    ),
+  ).toThrow();
+  db.exec(
+    `INSERT INTO assistant_asks (id,session_id,tool,args_hash,text,state,created_at,decided_at) VALUES ('q1','s1','start_draft','h','Start it?','asked','g',NULL)`,
+  );
+  expect(() =>
+    db.exec(
+      `INSERT INTO assistant_asks (id,session_id,tool,args_hash,text,state,created_at,decided_at) VALUES ('q2','s1','x','h','?','maybe','g',NULL)`,
+    ),
+  ).toThrow();
+  db.exec("DELETE FROM assistant_sessions WHERE id='s1'");
+  expect(db.prepare("SELECT count(*) AS n FROM assistant_messages").get()).toEqual({ n: 0 });
+  expect(db.prepare("SELECT count(*) AS n FROM assistant_asks").get()).toEqual({ n: 0 });
+  db.exec("DELETE FROM projects WHERE id='p1'");
+  expect(db.prepare("SELECT count(*) AS n FROM project_starts").get()).toEqual({ n: 0 });
+  expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
 });

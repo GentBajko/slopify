@@ -38,7 +38,7 @@ export function reviewRoutes(deps: AppDeps) {
   const decided = (c: Context, verdict: ReviewRecord) =>
     problem(c, {
       status: 409,
-      detail: `This verdict was already decided: the item was ${verdict.action === "overruled" ? "kept as it is" : "sent to be made again"}${verdict.actionBy === "agent" ? " by an agent" : ""}, so nothing changed. Reload the project page (or call needs_attention) to see what waits now.`,
+      detail: `This verdict was already decided: the item was ${verdict.action === "overruled" ? "kept as it is" : "sent to be made again"}${verdict.actionBy === "agent" ? " by an agent" : verdict.actionBy === "assistant" ? " by the assistant" : ""}, so nothing changed. Reload the project page (or call needs_attention) to see what waits now.`,
       extensions: { reason: "decided" },
     });
   const notify = (projectId: string) => {

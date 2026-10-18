@@ -22,9 +22,11 @@ import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
+import { assistantMcpPath, assistantMcpRoutes } from "../mcp/assistant.js";
 import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
-import { agentBindings } from "./actor.js";
+import { agentBindings, assistantBindings } from "./actor.js";
+import { assistantRoutes } from "./assistant.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { autostartRoutes } from "./autostart.js";
@@ -116,6 +118,14 @@ export interface AppDeps {
   // Whether listings and free checks run by themselves (a key saved, a picker opened). Off in
   // tests, so a route never reaches the network on its own.
   readonly autoModelChecks?: boolean | undefined;
+  // The autopilot's hourly check (`slices/autopilot/signals.ts`); absent reads as not run yet.
+  readonly autopilot?:
+    | {
+        readonly latest: () =>
+          | import("../../slices/autopilot/signals.js").AutopilotProbes
+          | undefined;
+      }
+    | undefined;
   // The network for Settings → Providers' Test and Check all. Handed in so a test never
   // reaches a real provider.
   readonly fetch?: typeof globalThis.fetch;
@@ -149,6 +159,11 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
+  // The in-app assistant's chat and turns (`slices/assistant/turn.ts`); absent, the panel says
+  // it is unavailable and `/mcp/assistant` opens for nobody.
+  readonly assistant?: import("../../slices/assistant/turn.js").Assistant | undefined;
+  // The running turns' tokens when no assistant is wired (a test's own).
+  readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
@@ -245,6 +260,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/providers", providerRoutes(deps))
       .route("/model-checks", modelCheckRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
+      .route("/assistant", assistantRoutes(deps))
   );
 }
 
@@ -330,6 +346,26 @@ export function createApp(deps: AppDeps): Hono {
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);
 
+  const mcpDeps = {
+    db: deps.db,
+    paths: deps.paths,
+    ids: deps.ids,
+    clock: deps.clock,
+    log: deps.log,
+    version: deps.version,
+    host: deps.host,
+    ...(deps.measureAudio === undefined ? {} : { measureAudio: deps.measureAudio }),
+  };
+  // The in-app assistant reaches it the same way, as the assistant, with its turn's token.
+  // Mounted first: `/mcp` must never answer for it.
+  app.route(
+    assistantMcpPath,
+    assistantMcpRoutes({
+      ...mcpDeps,
+      turns: deps.assistant?.tokens ?? deps.assistantTurns,
+      api: async (request) => app.request(request, undefined, assistantBindings),
+    }),
+  );
   // Agents reach the same API in-process, as the agent (`actor.ts`): every tool validates,
   // refuses and answers exactly like the page's own request.
   app.route(

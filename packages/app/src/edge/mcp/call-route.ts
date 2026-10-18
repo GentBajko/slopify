@@ -5,6 +5,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { causedBy } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { AgentActor } from "../../slices/agents/model.js";
 import { recordAgentAction } from "../../slices/agents/repo.js";
 import { revisionIdOf, subjectsOf } from "./attribution.js";
 import { fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
@@ -17,6 +18,16 @@ export interface RouteCallDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Pick<Log, "write">;
+  // Who the calls are recorded as; absent is an external agent.
+  readonly actor?: AgentActor | undefined;
+  // The in-app assistant's "ask first": a refusal to answer instead of calling the route, or
+  // undefined to go on. Checked before the confirm step, so confirmed: true alone never passes.
+  readonly gate?:
+    | ((
+        tool: RouteTool,
+        args: Readonly<Record<string, unknown>>,
+      ) => Promise<CallToolResult | undefined>)
+    | undefined;
 }
 
 const problemSchema = z
@@ -54,6 +65,8 @@ export async function callRoute(
   // Defense in depth: pathParam already keeps dots and slashes out, but should that rule ever
   // loosen, a URL that resolves off the tool's own route still never reaches another one.
   if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
+  const stopped = await deps.gate?.(tool, args);
+  if (stopped !== undefined) return stopped;
   if (tool.confirm !== undefined && args.confirmed !== true)
     return refusal(
       `${(await confirmText(deps, tool, args)) ?? tool.confirm} The web page asks for a second press here: call ${tool.name} again with confirmed: true to go ahead.`,
@@ -85,6 +98,7 @@ export async function callRoute(
           title: tool.title,
           revisionId: revisionIdOf(value),
           createdAt: deps.clock.now().toISOString(),
+          actor: deps.actor ?? "agent",
         },
         key.success ? key.data.idempotencyKey : undefined,
       );
@@ -94,7 +108,7 @@ export async function callRoute(
 
 // The consequence with this call's numbers, as the page states it; undefined when they can't
 // be read, and the tool's fixed sentence is said instead.
-async function confirmText(
+export async function confirmText(
   deps: RouteCallDeps,
   tool: RouteTool,
   args: Readonly<Record<string, unknown>>,

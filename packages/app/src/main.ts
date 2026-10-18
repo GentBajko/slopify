@@ -12,7 +12,10 @@ import { alignSubtitlesWith } from "./adapters/alignment/index.js";
 import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
+import { createSearchInterest } from "./adapters/interest/search-interest.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { assistantSelfUrl, wireAssistant } from "./assistant-wiring.js";
+import { startAutopilot } from "./autopilot-timers.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createAutostart } from "./edge/autostart/index.js";
@@ -566,6 +569,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       ...draftDeps,
       template: (id) => templateById(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
+      // Asked only for schedules set to rank topics by public search interest.
+      interest: createSearchInterest({ fetch: globalThis.fetch, version, now: () => clock.now() }),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
         notifier.observeTopics(event);
@@ -651,7 +656,35 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       } catch (error) {
         log.write("warn", "studio.extension", { detail: causedBy(error) });
       }
+    const autopilot = startAutopilot({
+      db: updateDb,
+      clock,
+      log,
+      dataDir: paths.dataDir,
+      template: (id) => templateById(updateDb, id),
+      catalogue: () => catalogue.read(),
+      fetch: globalThis.fetch,
+      send: sendNotification,
+      hostCli,
+      readLogin: readHostLogin,
+    });
+    // The assistant panel's chat: turns on this computer's Claude Code or Codex, reaching this
+    // server's own `/mcp/assistant`. In the Docker copy it says why it isn't there.
+    const assistant = wireAssistant({
+      db: updateDb,
+      ids,
+      clock,
+      log,
+      emit: hub.emitGlobal,
+      spawn: nodeRunCli,
+      probe: nodeCliProbe,
+      readLogin: readHostLogin,
+      selfUrl: () => assistantSelfUrl(config.host, listeningPort),
+      container: hostCli !== undefined,
+    });
     const app = createApp({
+      assistant,
+      autopilot,
       autostart,
       rebuild,
       drafts: draftDeps,
@@ -876,6 +909,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(arrangeTimer);
         clearInterval(modelTimer);
         modelChecks.stop();
+        autopilot.stop();
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         const topicDrain = scheduleRunner.stop();
@@ -896,6 +930,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await scheduleDrain;
           await topicDrain;
           await backupDrain;
+          // An assistant turn left running would keep spending the person's plan.
+          await assistant.stopAll();
           await runner.abortAll();
           await episodes?.settled();
         } finally {

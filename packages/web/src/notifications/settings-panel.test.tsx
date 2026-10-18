@@ -78,4 +78,27 @@ describe("Settings → Notifications save boundary", () => {
       expect(sent).toEqual({ url: "https://ntfy.sh/new" });
     });
   });
+
+  it("turns the weekly report on, off by default", async () => {
+    const user = userEvent.setup();
+    const put: unknown[] = [];
+    renderApp(
+      <NotificationSettings />,
+      testDeps({
+        "GET /api/settings/notifications": jsonAnswer({ url: "https://ntfy.sh/slopify-runs" }),
+        "GET /api/home/autopilot/weekly": jsonAnswer({ enabled: false }),
+        "PUT /api/home/autopilot/weekly": async (request) => {
+          const body = (await request.json()) as { enabled: boolean };
+          put.push(body);
+          return jsonAnswer(body)(request);
+        },
+      }),
+    );
+    const toggle = await screen.findByRole("switch", { name: "Weekly report" });
+    await waitFor(() => expect(toggle.hasAttribute("disabled")).toBe(false));
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await user.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+    expect(put).toEqual([{ enabled: true }]);
+  });
 });

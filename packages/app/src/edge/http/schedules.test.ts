@@ -161,3 +161,63 @@ it("approves, rejects and restores several held topics through the HTTP contract
     h.close();
   }
 });
+
+it("ranks topics on request, and answers each topic's score beside the queue and the held list", async () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    const document = {
+      ...h.document,
+      form: { ...h.document.form, title: "Lore: {{Topic}}", values: { Topic: "" } },
+    };
+    expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
+    const deps = { ...h.deps, template: (id: string) => templateById(h.deps.db, id) };
+    const app = new Hono().route("/api/schedules", scheduleRoutes(deps));
+    const create = async (topicScoring?: string) => {
+      const id = randomUUID();
+      await app.request("/api/schedules", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id,
+          name: "Nightly lore",
+          templateId,
+          templateVersion: 1,
+          cadence: { kind: "daily", time: "09:00" },
+          timezone: "UTC",
+          items: [{ title: "Hypatia", values: {} }],
+          topicKeyword: "Topic",
+          ...(topicScoring === undefined ? {} : { topicScoring }),
+        }),
+      });
+      return id;
+    };
+    const off = await create();
+    const refused = await app.request(`/api/schedules/${off}/topics/score`, { method: "POST" });
+    expect(refused.status).toBe(409);
+    expect(((await refused.json()) as { detail: string }).detail).toContain(
+      "Edit → Topic generation → Rank topics",
+    );
+    expect(await (await app.request(`/api/schedules/${off}`)).json()).toMatchObject({ scores: {} });
+    const ranked = await create("library");
+    const scored = await app.request(`/api/schedules/${ranked}/topics/score`, { method: "POST" });
+    expect(scored.status).toBe(200);
+    const detail = (await (await app.request(`/api/schedules/${ranked}`)).json()) as {
+      schedule: { topicScoring: string };
+      scores: Record<string, { score: number; reasons: string[] }>;
+    };
+    expect(detail.schedule.topicScoring).toBe("library");
+    expect(detail.scores).toEqual({
+      hypatia: { score: 100, reasons: ["Library: new; nothing like it made or queued"] },
+    });
+    expect(await (await app.request(`/api/schedules/${ranked}/topics/held`)).json()).toEqual({
+      topics: [],
+      scores: {},
+    });
+    expect(
+      (await app.request(`/api/schedules/${randomUUID()}/topics/score`, { method: "POST" })).status,
+    ).toBe(404);
+  } finally {
+    h.close();
+  }
+});

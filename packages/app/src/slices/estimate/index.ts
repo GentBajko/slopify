@@ -445,7 +445,9 @@ export function estimateRun(
           ? articleChars + promptChars
           : stage === "narration"
             ? Math.round(articleChars * 2.1)
-            : 1500;
+            : stage === "promise"
+              ? articleChars + 1500
+              : 1500;
       for (let index = 0; index < items; index++)
         requests.push({
           kind: "llm",

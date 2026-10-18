@@ -1,7 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { actors } from "../agents/model.js";
-import { type ExternalReview, externalReviewStates } from "./external-model.js";
+import { type ExternalReview, externalAnswerers, externalReviewStates } from "./external-model.js";
 import { reviewStages } from "./model.js";
 
 const materialSchema = z.object({
@@ -30,7 +29,7 @@ const rowSchema = z.object({
   waiting_since: z.string(),
   deadline_at: z.string(),
   verdict: z.string().nullable(),
-  answered_by: z.enum(actors).nullable(),
+  answered_by: z.enum(externalAnswerers).nullable(),
   answered_at: z.string().nullable(),
 });
 

@@ -76,11 +76,20 @@ export function externalReviewRoutes(deps: AppDeps) {
       async (c) => {
         const { id: projectId, reviewId } = c.req.valid("param");
         const answer = c.req.valid("json");
+        const by = actorOf(c);
+        // The in-app assistant has no review tool; this holds even if one were called.
+        if (by === "assistant")
+          return problem(c, {
+            status: 403,
+            detail:
+              "The assistant can't answer this review: it waits for the agent you connected in Settings → Connections → Agents (MCP). Answer it from that agent, or it passes on its own 2 hours after it began waiting.",
+            extensions: { reason: "assistant" },
+          });
         const result = answerExternalReview(deps.db, {
           projectId,
           id: reviewId,
           verdict: { passed: answer.verdict === "pass", reasons: answer.reasons },
-          by: actorOf(c),
+          by,
           at: deps.clock.now().toISOString(),
         });
         if (!result.ok)

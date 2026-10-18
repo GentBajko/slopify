@@ -92,6 +92,11 @@ export const scheduleReleaseSchema = z
   .readonly();
 export type ScheduleRelease = z.infer<typeof scheduleReleaseSchema>;
 const releases = z.array(scheduleReleaseSchema).max(7).readonly();
+// How generated topics are ranked (`score.ts`): not at all, by what the library already
+// covers, or also by public search interest (topic titles go to Google, DuckDuckGo and
+// Wikipedia). Off is what every schedule saved before it has.
+export const topicScorings = ["off", "library", "search"] as const;
+export type TopicScoring = (typeof topicScorings)[number];
 // Enough for a year of daily runs, pasted as one list.
 export const queueMax = 500;
 export const scheduleCreateSchema = z
@@ -119,6 +124,9 @@ export const scheduleCreateSchema = z
     brief: z.string().trim().max(briefMax).nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
     releases: releases.default([]),
+    // Absent: off for a new schedule, unchanged on a save, so a caller that doesn't know it
+    // never turns it off.
+    topicScoring: z.enum(topicScorings).optional(),
   })
   .strict()
   .readonly();
@@ -152,6 +160,7 @@ export const scheduleSummarySchema = z
     brief: z.string().nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
     releases: releases.default([]),
+    topicScoring: z.enum(topicScorings).default("off"),
     // The generation's own state: how many topics wait for approval, whether an LLM is being
     // asked now, and the last failure's plain reason (cleared by the next success).
     topics: topicState.default(topicStateIdle),

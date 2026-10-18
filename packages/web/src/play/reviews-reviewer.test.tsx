@@ -36,3 +36,44 @@ it("offers the external agent as the reviewer and keeps the model pickers, disab
   expect(screen.queryByText(/need Claude Code or Codex/)).toBeNull();
   expect(screen.getByLabelText("Reviewer model").closest("fieldset[disabled]")).not.toBeNull();
 });
+
+it("lists the promise check right after the article and greys it, with the reason, for a provided article", () => {
+  renderApp(
+    <ReviewSettings
+      value={emptyReviews}
+      providers={[]}
+      prompts={[]}
+      makes={(stage) => stage !== "article" && stage !== "promise"}
+      problem={() => undefined}
+      onChange={() => undefined}
+    />,
+    testDeps({}),
+  );
+  const rows = screen.getAllByRole("rowheader").map((cell) => cell.textContent);
+  expect(rows.slice(0, 2)).toEqual(["Article", "Promise check (before narration)"]);
+  const picker = screen.getByLabelText("Promise check (before narration) review");
+  expect((picker as HTMLSelectElement).disabled).toBe(true);
+  expect(
+    screen.getByText("Needs an article a model writes: set Article to Generate to use it."),
+  ).toBeTruthy();
+});
+
+it("offers the promise check while a model writes the article", () => {
+  const seen: ReviewSettingsForm[] = [];
+  renderApp(
+    <ReviewSettings
+      value={emptyReviews}
+      providers={[]}
+      prompts={[]}
+      makes={() => true}
+      problem={() => undefined}
+      onChange={(next) => seen.push(next)}
+    />,
+    testDeps({}),
+  );
+  fireEvent.change(screen.getByLabelText("Promise check (before narration) review"), {
+    target: { value: "redo" },
+  });
+  expect(seen.at(-1)?.stages.promise).toEqual({ mode: "redo", prompt: "" });
+  expect(screen.queryByText(/Needs an article a model writes/)).toBeNull();
+});

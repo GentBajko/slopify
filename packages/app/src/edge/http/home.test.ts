@@ -56,12 +56,84 @@ function harness() {
      ('r1','p1','codex','{"after":[{"kind":"weekly","usedPercent":12,"resetsAt":null}]}','2026-09-22T10:00:00.000Z'),
      ('r2','p1','codex','{"before":[{"kind":"five_hour","usedPercent":30,"resetsAt":null},{"kind":"weekly","usedPercent":41,"resetsAt":"2026-09-29T00:00:00.000Z"}]}','2026-09-23T10:00:00.000Z')`,
   );
-  const deps = { db, clock } as unknown as AppDeps;
+  const probes = {
+    checkedAt: "2026-09-27T09:00:00.000Z",
+    clis: new Map(),
+    openRouter: null,
+    disk: { freeBytes: 1024 ** 3, totalBytes: 100 * 1024 ** 3 },
+  };
+  const deps = { db, clock, autopilot: { latest: () => probes } } as unknown as AppDeps;
   const app = new Hono()
     .route("/api/home", homeRoutes(deps))
     .route("/api/projects", uploadedRoutes(deps));
   return { app, db };
 }
+
+describe("Home's autopilot", () => {
+  it("answers the forecast, the warnings from the last check and the last seven days", async () => {
+    const { app } = harness();
+    const response = await app.request("/api/home/autopilot");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      forecast: { readyCount: 0, daysAhead: null, runsDryAt: null, perSchedule: [] },
+      checkedAt: "2026-09-27T09:00:00.000Z",
+      weekly: { since: "2026-09-20T10:00:00.000Z", until: "2026-09-27T10:00:00.000Z", finished: 2 },
+      weeklyNotify: false,
+    });
+    expect(body.warnings).toEqual([
+      expect.objectContaining({ key: "disk-low", severity: "problem" }),
+    ]);
+    const narrowed = await (await app.request(`/api/home/autopilot?channelId=${other}`)).json();
+    expect(narrowed).toMatchObject({ weekly: { finished: 1 } });
+  });
+
+  it("hides a warning for a week, and refuses a request with no warning named", async () => {
+    const { app } = harness();
+    const hidden = await app.request("/api/home/autopilot/snooze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: "disk-low" }),
+    });
+    expect(hidden.status).toBe(200);
+    expect(await hidden.json()).toEqual({ key: "disk-low", until: "2026-10-04T10:00:00.000Z" });
+    expect(await (await app.request("/api/home/autopilot")).json()).toMatchObject({ warnings: [] });
+    const refused = await app.request("/api/home/autopilot/snooze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(refused.status).toBe(400);
+  });
+
+  it("turns the weekly report on and off", async () => {
+    const { app } = harness();
+    const on = await app.request("/api/home/autopilot/weekly", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(await on.json()).toEqual({ enabled: true });
+    expect(await (await app.request("/api/home/autopilot/weekly")).json()).toEqual({
+      enabled: true,
+    });
+    expect(await (await app.request("/api/home/autopilot")).json()).toMatchObject({
+      weeklyNotify: true,
+    });
+  });
+
+  it("answers before the first check has run, with nothing it couldn't check", async () => {
+    const { db } = harness();
+    const app = new Hono().route(
+      "/api/home",
+      homeRoutes({ db, clock: fixedClock("2026-09-27T10:00:00.000Z") } as unknown as AppDeps),
+    );
+    expect(await (await app.request("/api/home/autopilot")).json()).toMatchObject({
+      checkedAt: null,
+      warnings: [],
+    });
+  });
+});
 
 describe("GET /api/home/week", () => {
   it("sums the week's videos, spend and API equivalent, and reads each plan's last standing", async () => {

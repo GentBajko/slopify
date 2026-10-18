@@ -183,6 +183,30 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
         },
       ],
     }),
+    "GET /api/home/autopilot": jsonAnswer({
+      forecast: {
+        readyCount: 0,
+        daysAhead: null,
+        coveredUntil: null,
+        runsDryAt: null,
+        coveredBeyondWindow: false,
+        perSchedule: [],
+      },
+      warnings: [],
+      checkedAt: null,
+      weekly: {
+        since: "a",
+        until: "b",
+        finished: 0,
+        failed: [],
+        failedMore: 0,
+        cost: 0,
+        unpriced: 0,
+        apiEquivalent: null,
+        plans: [],
+      },
+      weeklyNotify: false,
+    }),
     ...extra,
   });
 }

@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import { fillLateKeywords, mentionsLateKeyword } from "../keywords/fill.js";
@@ -72,7 +73,7 @@ export async function lateValuesOf(
       deps.log.write("warn", "keywords.duration", {
         projectId: context.work.projectId,
         stage: context.work.kind,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
   return { releaseDate, duration };
