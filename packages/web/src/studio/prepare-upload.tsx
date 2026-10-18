@@ -28,6 +28,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { Select } from "@/components/kit/field";
+import { Fold } from "@/components/kit/fold";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { FileLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
@@ -228,13 +229,13 @@ export function PrepareUploadDrawer({
               href={studioUploadUrl}
               target="_blank"
               rel="noopener noreferrer"
-              variant="secondary"
+              variant="primary"
             >
               Open YouTube Studio
             </FileLink>
           ) : null}
           <Button
-            variant="primary"
+            variant={paired === false ? "secondary" : "primary"}
             disabled={item === undefined || fill.isPending || paired !== true}
             disabledReason={
               paired === false
@@ -268,9 +269,11 @@ export function PrepareUploadDrawer({
               <div className="flex flex-col gap-3">
                 <p className="m-0">
                   Without it, the steps below are the upload pack: copy each into Studio's upload
-                  dialog. To have Studio filled in for you, install the extension:
+                  dialog. To have Studio filled in for you, install the extension.
                 </p>
-                <ExtensionInstall />
+                <Fold summary="Install the extension">
+                  <ExtensionInstall />
+                </Fold>
               </div>
             </Callout>
           ) : null}

@@ -281,6 +281,10 @@ describe("Prepare upload", () => {
     await user.click(screen.getByRole("button", { name: "Prepare upload" }));
     const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
     await within(drawer).findByText("The Slopify Studio extension isn't paired.");
+    // The checklist comes first: how to install the extension is folded under the notice.
+    const fold = within(drawer).getByText("Install the extension").closest("details");
+    expect(fold?.open).toBe(false);
+    await user.click(within(drawer).getByText("Install the extension"));
     const steps = within(drawer).getByRole("list", { name: "Install steps" });
     expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
     expect(
@@ -292,9 +296,10 @@ describe("Prepare upload", () => {
     ).toBe("http://slopify.test/api/studio/extension/firefox.zip");
     // The copy steps stay: they are the upload pack without the extension.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
-    expect(
-      within(drawer).getByRole("link", { name: "Open YouTube Studio" }).getAttribute("href"),
-    ).toBe("https://www.youtube.com/upload");
+    const studio = within(drawer).getByRole("link", { name: "Open YouTube Studio" });
+    expect(studio.getAttribute("href")).toBe("https://www.youtube.com/upload");
+    // Without the extension, opening Studio to paste the steps is the thing to do next.
+    expect(studio.className).toContain("sl-btn--primary");
     const fill = within(drawer).getByRole("button", { name: "Fill in YouTube Studio" });
     expect(fill.getAttribute("aria-disabled") ?? fill.getAttribute("disabled")).not.toBeNull();
     await user.click(fill);
