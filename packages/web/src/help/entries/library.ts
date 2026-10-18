@@ -30,7 +30,7 @@ export const libraryHelp = {
   },
   "library.prompt.body.article": {
     title: "Article prompt",
-    body: "The instruction the text model gets to write the video's article, which becomes the narration. Each {{keyword}} becomes a field on Play. One call on the project's LLM, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
+    body: "The instruction the text model gets to write the video's article, which becomes the narration. Each {{keyword}} of your own becomes a field on Play. One call on the project's LLM, plus up to 3 more when the answer runs out of room; research notes go first when research ran. The answer's sources and pronunciation sections are never narrated.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.image": {
@@ -50,7 +50,7 @@ export const libraryHelp = {
   },
   "library.prompt.body.description": {
     title: "YouTube Description prompt",
-    body: "Tells the text model how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One call per video. Each {{keyword}} becomes a field on Play. A project that picks none uses the Built-in wording.",
+    body: "Tells the text model how to write the video's YouTube description, chapters, hashtags and tags from the timestamped transcript. One call per video. Each {{keyword}} of your own becomes a field on Play. A project that picks none uses the Built-in wording.",
     tutorial: { page: "Prompts", anchor: "write-a-new-prompt" },
   },
   "library.prompt.body.shorts": {
@@ -130,7 +130,7 @@ export const libraryHelp = {
   },
   "library.slots": {
     title: "Detected slots",
-    body: "Every {{keyword}} in the body, listed as you type. Each becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
+    body: "Your own {{keywords}} in the body, listed as you type; the keywords Slopify fills are listed apart. Each of yours becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
     tutorial: { page: "Prompts", anchor: "keywords-slots" },
   },
   "library.slots.filled": {
@@ -181,7 +181,7 @@ export const libraryHelp = {
   },
   "library.entry.body": {
     title: "Entry body",
-    body: "In Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each {{keyword}} becomes a field on Play. It is narrated as its own audio file with the run's voice, one voice request each.",
+    body: "In Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each {{keyword}} of your own becomes a field on Play. It is narrated as its own audio file with the run's voice, one voice request each.",
     tutorial: { page: "Intros-and-Outros", anchor: "write-an-intro-or-outro" },
   },
   // ── Narration aliases ────────────────────────────────────────────────────────────────
