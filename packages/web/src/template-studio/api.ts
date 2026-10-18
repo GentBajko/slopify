@@ -171,6 +171,8 @@ export function changeTopic(
     readonly topic: string;
     readonly acknowledgedHigh: number;
     readonly acknowledgedUnknown: boolean;
+    // Kept for a retry of the very same change, so a lost answer never remakes the sample.
+    readonly mutationId: string;
   },
 ) {
   return api

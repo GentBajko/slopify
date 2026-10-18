@@ -1,11 +1,13 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { templateById } from "../project-templates/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import { budgetWords } from "./budget.js";
-import { enqueueJob } from "./jobs.js";
+import { enqueueJob, queuedJob, runningJob } from "./jobs.js";
 import type { SampleJobKind, TemplateSection } from "./model.js";
 import { quoteSample, type SampleQuote } from "./quote.js";
-import { sampleOf, setSampleVersion, upsertSample } from "./repo.js";
+import { sampleOf, sampleVersions, setSampleVersion, upsertSample } from "./repo.js";
 import { exceedsAcknowledged, type SaveDeps, type SaveResult } from "./save.js";
 import { withDependents } from "./sections.js";
 import { defaultSampleTopic, templateSchedules } from "./service.js";
@@ -25,6 +27,8 @@ export const topicSchema = z
     // A topic typed by the person, "next-queued" (the next topic a schedule of this template
     // has queued) or "fixed" (back to the topic every template's sample starts on).
     topic: z.string().trim().min(1).max(300),
+    // The same id sent again (a retry after a lost answer) answers what it did the first time.
+    mutationId: z.uuid().optional(),
     ...price,
   })
   .strict()
@@ -95,6 +99,10 @@ async function change(
   });
   if (!quoted.ok) return quoted;
   const quote = quoted.value;
+  const value = { topic: next.topic, topicSource: next.source, fullScript: next.fullScript, quote };
+  // A second press (a double click) of what the sample is already made, or being made, of:
+  // nothing more is made or spent.
+  if (alreadyMade(deps, id, template.version, next)) return { ok: true, value };
   if (quote.problem !== null)
     return { ok: false, reason: "invalid-input", message: quote.problem, quote };
   if (exceedsAcknowledged(quote.high, ack.acknowledgedHigh))
@@ -146,14 +154,45 @@ async function change(
       requestedAt: at,
     });
   });
-  return {
-    ok: true,
-    value: { topic: next.topic, topicSource: next.source, fullScript: next.fullScript, quote },
-  };
+  return { ok: true, value };
+}
+
+function alreadyMade(
+  deps: Pick<SaveDeps, "db">,
+  id: string,
+  version: number,
+  next: {
+    readonly topic: string;
+    readonly source: "fixed" | "queued";
+    readonly fullScript: boolean;
+  },
+): boolean {
+  const record = sampleOf(deps.db, id);
+  if (
+    record === undefined ||
+    record.topic !== next.topic ||
+    record.topicSource !== next.source ||
+    record.fullScript !== next.fullScript
+  )
+    return false;
+  const job = queuedJob(deps.db, id) ?? runningJob(deps.db);
+  if (
+    job !== undefined &&
+    job.templateId === id &&
+    job.templateVersion === version &&
+    job.kind !== "free"
+  )
+    return true;
+  const state = sampleVersions(deps.db, id).find((one) => one.templateVersion === version)?.state;
+  return state === "queued" || state === "making" || state === "done";
 }
 
 // PUT /:id/topic: a new topic remakes every section's sample.
-export async function setSampleTopic(deps: SaveDeps, id: string, raw: unknown) {
+export async function setSampleTopic(
+  deps: SaveDeps,
+  id: string,
+  raw: unknown,
+): Promise<SaveResult | { readonly ok: true; readonly value: TopicChange }> {
   const parsed = topicSchema.safeParse(raw);
   if (!parsed.success)
     return {
@@ -161,19 +200,72 @@ export async function setSampleTopic(deps: SaveDeps, id: string, raw: unknown) {
       reason: "invalid-input" as const,
       message: "Type a topic of 1 to 300 characters for the sample, then press Use topic.",
     };
-  const named = topicOf(deps, id, parsed.data.topic);
+  const { mutationId, ...ask } = parsed.data;
+  const hash = createHash("sha256").update(JSON.stringify(ask)).digest("hex");
+  const key = `${topicMutationKey}${id}`;
+  const last = readJsonSetting(deps.db, key, topicMutationSchema, null);
+  if (mutationId !== undefined && last?.mutationId === mutationId) {
+    if (last.hash !== hash)
+      return {
+        ok: false as const,
+        reason: "conflict" as const,
+        message:
+          "This topic change was already sent with another topic or price. Reload the studio to see the sample's topic, then change it again.",
+      };
+    const replayed = await quoteSample(deps, id, {
+      topic: last.topic,
+      fullScript: last.fullScript,
+      sections: "all",
+    });
+    if (!replayed.ok) return replayed;
+    return {
+      ok: true as const,
+      value: {
+        topic: last.topic,
+        topicSource: last.topicSource,
+        fullScript: last.fullScript,
+        quote: replayed.value,
+      },
+    };
+  }
+  const named = topicOf(deps, id, ask.topic);
   if (!named.ok)
     return { ok: false as const, reason: "invalid-input" as const, message: named.message };
   const record = sampleOf(deps.db, id);
-  return change(
+  const result = await change(
     deps,
     id,
     { topic: named.topic, source: named.source, fullScript: record?.fullScript ?? false },
     "all",
-    parsed.data,
+    ask,
     "topic",
   );
+  if (result.ok && mutationId !== undefined)
+    writeSetting(
+      deps.db,
+      key,
+      JSON.stringify({
+        mutationId,
+        hash,
+        topic: named.topic,
+        topicSource: named.source,
+        fullScript: record?.fullScript ?? false,
+      }),
+    );
+  return result;
 }
+
+// The last topic change of each template that named a mutation id, to answer its retry.
+const topicMutationKey = "templateStudio.topicMutation.";
+const topicMutationSchema = z
+  .object({
+    mutationId: z.string(),
+    hash: z.string(),
+    topic: z.string(),
+    topicSource: z.enum(["fixed", "queued"]),
+    fullScript: z.boolean(),
+  })
+  .nullable();
 
 // POST /:id/full-script: the whole script, or back to the outline and first chapter, remakes
 // the script and what is made from it.

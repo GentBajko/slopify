@@ -42,6 +42,57 @@ function harness() {
 }
 
 describe("setSampleTopic", () => {
+  it("answers the same topic change sent again (a retry) without remaking the sample", async () => {
+    const { deps, paid, id, price } = harness();
+    const high = await price({ topic: "Salt roads", sections: "all" });
+    const mutationId = randomUUID();
+    const ask = { topic: "Salt roads", acknowledgedHigh: high, mutationId };
+    expect((await setSampleTopic(deps, id, ask)).ok).toBe(true);
+    const job = queuedJob(deps.db, id);
+    if (job === undefined) throw new Error("no job");
+    await makePaidSample(paid, job, new AbortController().signal);
+    deps.db.prepare("DELETE FROM template_sample_jobs").run();
+    const made = sampleOf(deps.db, id)?.projectId;
+    expect(await setSampleTopic(deps, id, ask)).toMatchObject({
+      ok: true,
+      value: { topic: "Salt roads" },
+    });
+    expect(queuedJob(deps.db, id)).toBeUndefined();
+    expect(sampleOf(deps.db, id)?.projectId).toBe(made);
+    // The same id with another topic is refused, changing nothing.
+    expect(await setSampleTopic(deps, id, { ...ask, topic: "Iron bridges" })).toMatchObject({
+      ok: false,
+      reason: "conflict",
+    });
+    expect(sampleOf(deps.db, id)?.topic).toBe("Salt roads");
+  });
+
+  it("makes nothing again for a topic its sample is already made or being made about", async () => {
+    const { deps, id, price } = harness();
+    const high = await price({ topic: "Salt roads", sections: "all" });
+    expect(
+      (await setSampleTopic(deps, id, { topic: "Salt roads", acknowledgedHigh: high })).ok,
+    ).toBe(true);
+    const first = queuedJob(deps.db, id);
+    // A second press (a double click) while it is queued: the same job, nothing more.
+    expect(
+      await setSampleTopic(deps, id, { topic: "Salt roads", acknowledgedHigh: high }),
+    ).toMatchObject({ ok: true, value: { topic: "Salt roads" } });
+    expect(queuedJob(deps.db, id)).toEqual(first);
+    deps.db.prepare("DELETE FROM template_sample_jobs").run();
+    deps.db.prepare("UPDATE template_sample_versions SET state='done'").run();
+    expect(
+      (await setSampleTopic(deps, id, { topic: "Salt roads", acknowledgedHigh: high })).ok,
+    ).toBe(true);
+    expect(queuedJob(deps.db, id)).toBeUndefined();
+    // One that failed is made again.
+    deps.db.prepare("UPDATE template_sample_versions SET state='failed'").run();
+    expect(
+      (await setSampleTopic(deps, id, { topic: "Salt roads", acknowledgedHigh: high })).ok,
+    ).toBe(true);
+    expect(queuedJob(deps.db, id)).toMatchObject({ kind: "topic" });
+  });
+
   it("keeps a template's topic for its first sample and queues it at the price shown", async () => {
     const { deps, id, price } = harness();
     const high = await price({ topic: "Salt roads", sections: "all" });

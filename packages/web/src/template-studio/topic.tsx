@@ -1,6 +1,6 @@
 import type { StudioView } from "@app/slices/template-studio/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
@@ -42,6 +42,7 @@ function TopicDrawer({
   const [acceptUnknown, setAcceptUnknown] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const attempt = useRef<{ readonly key: string; readonly id: string } | undefined>(undefined);
   useEffect(() => {
     const timer = setTimeout(() => setAsked(typed.trim()), 400);
     return () => clearTimeout(timer);
@@ -71,10 +72,13 @@ function TopicDrawer({
     setSaving(true);
     setProblem(null);
     try {
+      const ask = { topic, acknowledgedHigh: quote.data.high, acknowledgedUnknown: acceptUnknown };
+      const key = JSON.stringify(ask);
+      // Press Use topic again after a lost answer: the same change, answered once.
+      if (attempt.current?.key !== key) attempt.current = { key, id: crypto.randomUUID() };
       const reply = await changeTopic(api, view.template.id, {
-        topic,
-        acknowledgedHigh: quote.data.high,
-        acknowledgedUnknown: acceptUnknown,
+        ...ask,
+        mutationId: attempt.current.id,
       });
       if (!reply.ok) {
         setProblem(`The topic wasn't changed: ${reply.message}`);
@@ -85,6 +89,7 @@ function TopicDrawer({
           );
         return;
       }
+      attempt.current = undefined;
       await client.invalidateQueries({ queryKey: templateStudioKey(view.template.id) });
       onClose();
     } catch (error) {
