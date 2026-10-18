@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { ProjectTemplate, TemplateSummary } from "./model.js";
 import { projectTemplateSchema } from "./schema.js";
+import { withoutSampleStandIns } from "./stand-ins.js";
 
 // A template in the trash (`deleted_at` set, Settings → Trash) is invisible to every read here.
 const select = `SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND t.deleted_at IS NULL`;
@@ -27,7 +28,11 @@ export function templateById(
     .get(...(version === undefined ? [id] : [id, version]));
   if (row === undefined) return undefined;
   if (typeof row.document !== "string") throw new Error("Template document is missing");
-  return projectTemplateSchema.parse({ ...row, document: JSON.parse(row.document) });
+  const template = projectTemplateSchema.parse({ ...row, document: JSON.parse(row.document) });
+  // A template made from a sample before stand-ins were cleared reads as one that asks for the
+  // person's own providers.
+  const form = withoutSampleStandIns(template.document.form);
+  return { ...template, document: { ...template.document, form } };
 }
 export function templateSummaries(db: DatabaseSync): readonly TemplateSummary[] {
   return db

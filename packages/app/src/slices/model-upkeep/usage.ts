@@ -9,7 +9,7 @@ import type { PlayDraftForm } from "../play-drafts/schema.js";
 import { documentOf } from "../play-drafts/service.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
-import { isUncataloguedProvider } from "../settings/model.js";
+import { isSampleStandIn, isUncataloguedProvider } from "../settings/model.js";
 import { runnableTemplate } from "../template-studio/schedule-gate.js";
 import type { ModelChoice, RetiredUsage, UsageKind, UsageSlot } from "./model.js";
 import { usageSlots } from "./model.js";
@@ -47,7 +47,8 @@ export function configChoices(config: RunConfig): Partial<Record<UsageSlot, Mode
 }
 
 // Whether a choice names a catalogued model that is no longer offered. Command-line tools
-// list their own models and are checked by the health check instead.
+// list their own models and are checked by the health check instead; the samples' stand-ins
+// were never catalogued.
 export function retiredStatus(
   catalogue: Catalogue,
   slot: UsageSlot,
@@ -56,7 +57,8 @@ export function retiredStatus(
   if (
     choice.provider === "" ||
     choice.model.trim() === "" ||
-    isUncataloguedProvider(choice.provider)
+    isUncataloguedProvider(choice.provider) ||
+    isSampleStandIn(choice.provider)
   )
     return null;
   const row = catalogue[familyOf(slot)].find(
