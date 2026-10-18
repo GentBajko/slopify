@@ -164,13 +164,18 @@ export function affectedSections(
     const section = sectionOfField(path);
     if (section !== null) changed.add(section);
   }
+  return withDependents([...changed]);
+}
+
+// The sections given and every section whose sample is made from them, in pipeline order.
+export function withDependents(sections: readonly TemplateSection[]): readonly TemplateSection[] {
   const affected = new Set<TemplateSection>();
   const visit = (section: TemplateSection): void => {
     if (affected.has(section)) return;
     affected.add(section);
     for (const next of dependents[section]) visit(next);
   };
-  for (const section of changed) visit(section);
+  for (const section of sections) visit(section);
   return templateSections.filter((section) => affected.has(section));
 }
 

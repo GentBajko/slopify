@@ -214,6 +214,40 @@ it("cuts a section's prompt into who wrote each part, and refuses an unknown sec
   );
 });
 
+it("prices and changes the sample topic and the full script, with the new quote on a refusal", async () => {
+  const h = paidStudio();
+  const topicQuote = sampleQuoteSchema.parse(
+    await (await h.post("/quote", { topic: "Salt roads" })).json(),
+  );
+  expect(topicQuote.first).toBe(true);
+  expect((await h.post("/quote", { topic: "next-queued" })).status).toBe(400);
+  expect((await h.post("/quote", {})).status).toBe(400);
+  const put = (body: unknown) =>
+    h.app.request(`/api/template-studio/${h.id}/topic`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const refused = await put({ topic: "Salt roads", acknowledgedHigh: 0 });
+  expect(refused.status).toBe(409);
+  expect(await refused.json()).toMatchObject({
+    reason: "cost-changed",
+    quote: { high: topicQuote.high },
+  });
+  const changed = await put({ topic: "Salt roads", acknowledgedHigh: topicQuote.high });
+  expect(changed.status).toBe(200);
+  expect(await changed.json()).toMatchObject({ topic: "Salt roads", topicSource: "fixed" });
+  const fullQuote = sampleQuoteSchema.parse(
+    await (await h.post("/quote", { fullScript: true })).json(),
+  );
+  const full = await h.post("/full-script", {
+    fullScript: true,
+    acknowledgedHigh: fullQuote.high,
+  });
+  expect(full.status).toBe(200);
+  expect(await full.json()).toMatchObject({ fullScript: true, topic: "Salt roads" });
+});
+
 it("reads and sets the studio's daily budget, refusing one out of range", async () => {
   const h = studio();
   const read = await h.app.request("/api/template-studio/settings");

@@ -121,6 +121,21 @@ export async function quoteSave(
   templateId: string,
   document: PlayDraftDocument,
 ): Promise<StudioResult<SampleQuote>> {
+  return quoteSample(deps, templateId, { document });
+}
+
+// What a sample costs: of a Save (`document`, the sections it outdates), of a new topic (every
+// section) or of the full script switched (the script and what follows it).
+export async function quoteSample(
+  deps: QuoteDeps,
+  templateId: string,
+  ask: {
+    readonly document?: PlayDraftDocument | undefined;
+    readonly topic?: string | undefined;
+    readonly fullScript?: boolean | undefined;
+    readonly sections?: readonly TemplateSection[] | "all" | undefined;
+  },
+): Promise<StudioResult<SampleQuote>> {
   const template = templateById(deps.db, templateId);
   if (template === undefined)
     return {
@@ -129,17 +144,21 @@ export async function quoteSave(
       message:
         "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
     };
+  const document = ask.document ?? template.document;
   const sample = sampleOf(deps.db, templateId);
-  const fullScript = sample?.fullScript ?? false;
+  const fullScript = ask.fullScript ?? sample?.fullScript ?? false;
   const scoped = sampleDocument(document, {
-    topic: sample?.topic ?? defaultSampleTopic(deps.db),
+    topic: ask.topic ?? sample?.topic ?? defaultSampleTopic(deps.db),
     fullScript,
   });
   const budget = budgetRoom(deps.db, deps.clock.now(), deps.timeZone);
-  const first = sample === undefined || !projectExists(deps.db, sample.projectId);
+  const first =
+    ask.sections === "all" || sample === undefined || !projectExists(deps.db, sample.projectId);
   const sections = first
     ? ([] as TemplateSection[])
-    : affectedSections(template.document, document).filter((section) => section !== "schedule");
+    : Array.isArray(ask.sections)
+      ? ask.sections
+      : affectedSections(template.document, document).filter((section) => section !== "schedule");
   const resolved = await resolveSampleRun(deps.review, scoped, fullScript);
   if (!resolved.ok)
     return {

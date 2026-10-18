@@ -28,7 +28,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "POST /api/template-studio/:id/quote",
     title: "Price a template Save's sample",
     description:
-      "Prices the sample a Save of this template document would make, before anything is spent: the sections it outdates, each step's cost, the total high estimate, how many steps have no price, and whether it fits today's sample budget. Changes nothing. Pass its high as acknowledgedHigh to save_template_studio.",
+      'Prices a sample before anything is spent. Send one of: document (what a Save of this template document would make), topic (a new sample topic, "next-queued" or "fixed": every section) or fullScript (the whole script switched on or off: the script and what follows). It answers the sections it outdates, each step\'s cost, the total high estimate, how many steps have no price, and whether it fits today\'s sample budget. Changes nothing. Pass its high as acknowledgedHigh to save_template_studio.',
     unrecorded: true,
   },
   {
@@ -44,6 +44,20 @@ export const templateStudioTools: readonly RouteTool[] = [
     title: "Make a template's paid sample again",
     description:
       "Queues the paid sample of the template's current version again, which spends money: after it waited (a higher price, steps with no price, today's budget) or failed. Pass the version and the price get_template_studio shows for it as acknowledgedHigh, and acknowledgedUnknown: true to accept steps with no price. A sample that would cost more still waits.",
+  },
+  {
+    name: "set_sample_topic",
+    route: "PUT /api/template-studio/:id/topic",
+    title: "Change a template's sample topic",
+    description:
+      'Changes the topic the template\'s samples are made about and remakes every section\'s paid sample, which spends money: a typed topic, "next-queued" for the next topic one of its schedules has queued, or "fixed" for the topic every sample starts on. Pass the price as acknowledgedHigh (and acknowledgedUnknown: true to accept steps with no price); a higher price, an unaccepted unknown one or one past today\'s budget is refused with the new quote and nothing changes.',
+  },
+  {
+    name: "set_sample_full_script",
+    route: "POST /api/template-studio/:id/full-script",
+    title: "Write a template sample's full script",
+    description:
+      "Switches the template's sample between the whole script (fullScript: true) and the outline and first chapter (false), and remakes the script and what is made from it, which spends money. Pass the price as acknowledgedHigh; it is refused with the new quote at a higher price, unaccepted unknown prices or past today's budget.",
   },
   {
     name: "get_template_studio_settings",

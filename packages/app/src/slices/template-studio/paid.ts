@@ -165,6 +165,21 @@ export async function makePaidSample(
   if (projectId !== undefined) {
     // Work the last sample started finishes first: it is never stopped from here.
     await settled(deps, projectId, signal);
+  }
+  if (projectId !== undefined && job.kind === "topic") {
+    // A new topic is a new video: the sample starts again on a project of its own, so no
+    // step keeps the old topic as its subject.
+    if (!deleteProject(deps.rebuild, projectId).ok) {
+      mark({
+        state: "failed",
+        heldReason:
+          "The new topic needs a new sample project, and the old one's files couldn't be removed. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
+      });
+      return;
+    }
+    projectId = undefined;
+  }
+  if (projectId !== undefined) {
     const base = getRevisionView(deps.rebuild, projectId, currentRevisionId(db, projectId) ?? "");
     if (base === undefined) projectId = undefined;
     else {
