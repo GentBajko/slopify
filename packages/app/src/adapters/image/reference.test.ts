@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { referenceNote, referencePictures, withReferences } from "./reference.js";
+import {
+  attachedPictures,
+  editNote,
+  editPictures,
+  promptFor,
+  referenceNote,
+  referencePictures,
+  withEditInstruction,
+  withReferences,
+} from "./reference.js";
 
 const picture = (n: number) => ({ bytes: new Uint8Array([n]), mime: "image/png" as const });
 const establishing = picture(1);
@@ -60,5 +69,52 @@ describe("reference pictures", () => {
     expect(withReferences("Brief", { cast }, 0)).toBe(
       "Cleopatra appears in this image (last queen of Egypt).\nAlexandria appears in this image.\nCompose a new image from this brief:\n\nBrief",
     );
+  });
+});
+
+describe("edit pictures", () => {
+  const source = picture(9);
+
+  it("attach the picture to change first, then the cast, and never the establishing image", () => {
+    expect(
+      editPictures({ edit: { source }, cast }).map((row) => [row.image.bytes[0], row.member]),
+    ).toEqual([
+      [9, undefined],
+      [2, "Cleopatra"],
+      [3, "Cleopatra"],
+      [4, "Alexandria"],
+    ]);
+    expect(
+      attachedPictures({ edit: { source }, reference: establishing }).map((row) => row.image),
+    ).toEqual([source]);
+  });
+
+  it("say the instruction changes the first picture and keeps the rest", () => {
+    expect(withEditInstruction("Darker sky", { edit: { source } })).toBe(
+      `${editNote}\n\nDarker sky`,
+    );
+    expect(withEditInstruction("Put Cleopatra on a stage", { edit: { source }, cast }, 2)).toBe(
+      [
+        editNote,
+        "Image 2 shows Cleopatra (last queen of Egypt): draw Cleopatra to look exactly like this.",
+        "Alexandria appears in this image.",
+        "",
+        "Put Cleopatra on a stage",
+      ].join("\n"),
+    );
+  });
+
+  it("leave a request without an edit exactly as it was", () => {
+    for (const req of [
+      {},
+      { reference: establishing },
+      { reference: establishing, cast },
+      { cast },
+    ])
+      for (const limit of [0, 1, Number.POSITIVE_INFINITY]) {
+        expect(attachedPictures(req)).toEqual(referencePictures(req));
+        expect(promptFor("Brief", req, limit)).toBe(withReferences("Brief", req, limit));
+      }
+    expect(promptFor("Darker", { edit: { source } })).toBe(`${editNote}\n\nDarker`);
   });
 });

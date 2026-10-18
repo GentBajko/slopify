@@ -64,3 +64,61 @@ export function withReferences(
 function describe(description: string): string {
   return description.trim() === "" ? "" : ` (${description.trim()})`;
 }
+
+// What an edit model is told about the first attached picture: it is the canvas to change,
+// the opposite of a reference.
+export const editNote =
+  "Change the first attached image as follows. Keep everything the instruction does not mention exactly as it is: people, faces, composition and framing.";
+
+// The pictures an edit request attaches: the picture to change, then each cast member's
+// pictures. An edit never sends an establishing image.
+export function editPictures(
+  req: Pick<ImageRequest, "edit" | "cast">,
+): readonly ReferencePicture[] {
+  return [
+    ...(req.edit === undefined ? [] : [{ image: req.edit.source }]),
+    ...(req.cast ?? []).flatMap((member) =>
+      member.images.map((image) => ({ image, member: member.name })),
+    ),
+  ];
+}
+
+// The prompt an edit request sends with the first `limit` of `editPictures(req)` attached.
+export function withEditInstruction(
+  instruction: string,
+  req: Pick<ImageRequest, "edit" | "cast">,
+  limit = Number.POSITIVE_INFINITY,
+): string {
+  const sent = editPictures(req).slice(0, limit);
+  const lines = [editNote];
+  for (const [index, picture] of sent.entries()) {
+    const member = req.cast?.find((row) => row.name === picture.member);
+    if (member !== undefined)
+      lines.push(
+        `Image ${String(index + 1)} shows ${member.name}${describe(member.description)}: draw ${member.name} to look exactly like this.`,
+      );
+  }
+  const shown = new Set(sent.flatMap((picture) => picture.member ?? []));
+  for (const member of req.cast ?? [])
+    if (!shown.has(member.name))
+      lines.push(`${member.name} appears in this image${describe(member.description)}.`);
+  return `${lines.join("\n")}\n\n${instruction}`;
+}
+
+// What an adapter attaches and says: an edit's pictures and instruction, or, for every other
+// request, exactly what it always attached and said.
+export function attachedPictures(
+  req: Pick<ImageRequest, "reference" | "cast" | "edit">,
+): readonly ReferencePicture[] {
+  return req.edit === undefined ? referencePictures(req) : editPictures(req);
+}
+
+export function promptFor(
+  prompt: string,
+  req: Pick<ImageRequest, "reference" | "cast" | "edit">,
+  limit = Number.POSITIVE_INFINITY,
+): string {
+  return req.edit === undefined
+    ? withReferences(prompt, req, limit)
+    : withEditInstruction(prompt, req, limit);
+}

@@ -18,8 +18,16 @@ export interface ImageRequest {
   // establishing image. A provider that takes one input image sends only the first and names
   // the rest in the prompt (`adapters/image/reference.ts`).
   readonly cast?: readonly CastReference[] | undefined;
+  // A picture to change rather than draw from (a design's edit step): sent as the first input
+  // image, with the prompt as the change to make. Only a model that takes an input image is
+  // ever sent one; a request without it is exactly the request it always was.
+  readonly edit?: ImageEdit | undefined;
   // A line saying how far a long image job has got, for the stage's live panel.
   readonly onProgress?: ((text: string) => void) | undefined;
+}
+
+export interface ImageEdit {
+  readonly source: GeneratedImage;
 }
 
 export interface CastReference {
