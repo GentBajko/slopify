@@ -19,13 +19,19 @@ import {
 
 export type TopicScore = TopicScores[string];
 
-// A schedule's topic scores, by title; empty while ranking is off or they haven't loaded.
+// A schedule's topic scores, by title; empty while ranking is off (scores kept from before it
+// was turned off say nothing now) or they haven't loaded.
 export function useTopicScores(scheduleId: string): (title: string) => TopicScore | undefined {
   const { api } = useApp();
   const details = useQuery(scheduleDetailQuery(api, scheduleId));
-  const scores = details.data?.scores ?? {};
+  const ranks = (details.data?.schedule.topicScoring ?? "off") !== "off";
+  const scores = ranks ? (details.data?.scores ?? {}) : {};
   return (title) => scores[topicKey(title)];
 }
+
+// Which topics Rescore reorders, said where Rescore is.
+export const rescoreRule =
+  "Rescore orders new topics by score; your own and moved topics keep their place.";
 
 // "82", with why it scored so behind a press, the way a review's reasons open.
 export function TopicScoreChip({
@@ -41,6 +47,7 @@ export function TopicScoreChip({
       <Badge
         tone={score.score >= 70 ? "info" : "neutral"}
         title={`Score ${String(score.score)} of 100`}
+        className="min-w-[4.75rem] justify-center tabular-nums"
       >
         {`Score ${String(score.score)}`}
       </Badge>

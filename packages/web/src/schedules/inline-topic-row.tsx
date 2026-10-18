@@ -21,6 +21,7 @@ export function InlineTopicRow({
   onInsertBelow,
   onDuplicate,
   score,
+  scored = false,
 }: {
   readonly rowKey: string;
   readonly index: number;
@@ -34,18 +35,28 @@ export function InlineTopicRow({
   readonly onRemove: () => void;
   readonly onInsertBelow: () => void;
   readonly onDuplicate: () => void;
-  // While the schedule ranks topics.
+  // While the schedule ranks topics: `scored` keeps the chip's place on a row not scored yet,
+  // so every title starts at the same line.
   readonly score?: TopicScore | undefined;
+  readonly scored?: boolean;
 }): ReactElement {
   const [value, setValue] = useState(title);
   useEffect(() => setValue(title), [title]);
   return (
     <ListRow
+      // The title field takes the row's free width, so a long topic reads whole.
+      className="sl-row--wide-title"
       lead={
-        <span className="flex items-center gap-2">
+        <span className="flex shrink-0 items-center gap-2">
           <RowCheck selection={selection} value={rowKey} label={title} />
           <span className="w-7 text-right text-small text-ink-3 tabular-nums">{index + 1}</span>
-          <TopicScoreChip title={title} score={score} />
+          {scored ? (
+            <span className="flex w-[6.5rem] shrink-0 items-center">
+              <TopicScoreChip title={title} score={score} />
+            </span>
+          ) : (
+            <TopicScoreChip title={title} score={score} />
+          )}
         </span>
       }
       title={
@@ -55,7 +66,7 @@ export function InlineTopicRow({
           aria-keyshortcuts={moveKeys}
           maxLength={200}
           value={value}
-          className="min-w-[12rem]"
+          className="w-full min-w-[12rem]"
           onChange={(event) => setValue(event.target.value)}
           onBlur={() => onRename(value)}
           onKeyDown={(event) => {

@@ -116,7 +116,7 @@ export const planningHelp = {
   },
   "planning.schedule.rank-topics": {
     title: "Rank topics",
-    body: "Orders generated topics best first, with a 0-100 score on each. By what the library covers: a topic far from anything made or queued scores higher, and nothing leaves this computer. Also by public search interest: adds Google or DuckDuckGo suggestions and Wikipedia views, so each new topic's title is sent to them. Topics you add or move keep their places. Never uses channel analytics. Default: Off.",
+    body: "Scores every queued topic 0-100 and orders the topics Slopify generates best first; Rescore scores them again. By what the library covers: a topic far from anything made or queued scores higher, and nothing leaves this computer. Also by public search interest: adds Google or DuckDuckGo suggestions and Wikipedia views, so each new topic's title is sent to them. Topics you add or move keep their places. Never uses channel analytics. Default: Off.",
     tutorial: { page: "Schedules", anchor: "rank-topics" },
   },
   "planning.schedule.keep-count": {
