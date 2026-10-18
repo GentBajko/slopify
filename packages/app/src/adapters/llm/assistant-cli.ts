@@ -3,9 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
+import type {
+  AssistantCliTurn,
+  AssistantStreamEvent,
+  RunAssistantCli,
+} from "../../kernel/ports/assistant-cli.js";
 import { cliName } from "../explain.js";
 import { cliLoginError } from "./cli-login-error.js";
-import { hardenedCodexBase } from "./codex.js";
+import { codexBinary, hardenedCodexBase } from "./codex.js";
+import type { CliEnded, CliRun, RunCli } from "./run-cli.js";
+import { cliInput, endedWithout, stopCliRun, stuckCli } from "./run-cli.js";
+import { lines } from "./sse-lines.js";
 
 // The in-app assistant's CLI turn: Claude Code or Codex with no tool of its own (no shell, no
 // files, no web), none of the person's settings, hooks, plugins, skills, memory or MCP
@@ -145,17 +153,6 @@ export function assistantWorkspace(
     throw error;
   }
 }
-
-export type AssistantStreamEvent =
-  | { readonly type: "partial"; readonly text: string }
-  // A finished piece of the answer.
-  | { readonly type: "text"; readonly text: string }
-  // A Slopify tool it called, without the server prefix.
-  | { readonly type: "tool"; readonly name: string }
-  // A tool from outside Slopify offered or used: the turn stops at once.
-  | { readonly type: "foreign"; readonly name: string }
-  | { readonly type: "done" }
-  | { readonly type: "failed"; readonly message: string };
 
 const typed = z.object({ type: z.string() }).loose();
 const claudeInit = z
@@ -326,4 +323,55 @@ export function assistantStream(
     }
     return [];
   }
+}
+
+// The turn itself: a private workspace, the CLI started in it with the prompt on stdin, its
+// stream read into the chat's events, and everything stopped and removed at the end.
+export function assistantCliRunner(
+  run: RunCli,
+  sourceEnv: Readonly<NodeJS.ProcessEnv> = process.env,
+): RunAssistantCli {
+  return async function* turn(request: AssistantCliTurn): AsyncGenerator<AssistantStreamEvent> {
+    const space = assistantWorkspace(request.url, request.token, sourceEnv);
+    let child: CliRun | undefined;
+    let ended: CliEnded | undefined;
+    try {
+      child = run(
+        request.binary,
+        request.cli === "claude-code"
+          ? claudeAssistantArgs({ mcpConfig: space.config, system: request.system })
+          : codexAssistantArgs({
+              directory: space.directory,
+              url: request.url,
+              system: request.system,
+            }),
+        request.signal,
+        { cwd: space.directory, env: space.env, stdin: cliInput(request.prompt) },
+      );
+      const read = assistantStream(request.cli);
+      for await (const line of lines(child.stdout, request.signal))
+        for (const event of read(line)) {
+          yield event;
+          if (event.type === "done" || event.type === "failed" || event.type === "foreign") return;
+        }
+    } finally {
+      // Also when the reader stops early (Stop, the time limit): a CLI left running would
+      // keep spending the person's plan.
+      try {
+        if (child !== undefined) ended = await stopCliRun(child);
+      } finally {
+        space.remove();
+      }
+    }
+    if (request.signal.aborted || child === undefined) return;
+    // The stream ended with neither an answer nor a failure.
+    const binary = request.cli === "claude-code" ? "claude" : codexBinary;
+    const said = child.stderr();
+    yield {
+      type: "failed",
+      message:
+        cliLoginError(request.cli, said)?.message ??
+        (ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, said)),
+    };
+  };
 }

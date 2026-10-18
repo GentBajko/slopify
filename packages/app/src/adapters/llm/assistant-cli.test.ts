@@ -1,6 +1,10 @@
-import { readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import {
+  assistantCliRunner,
   assistantStream,
   assistantWorkspace,
   claudeAssistantArgs,
@@ -8,6 +12,8 @@ import {
   codexAssistantArgs,
 } from "./assistant-cli.js";
 import { hardenedCodexBase } from "./codex.js";
+import { nodeRunCli } from "./run-cli.js";
+import { alive, exitsWith, reapStandIns } from "./stand-in-cli.fake.js";
 
 function fixture(name: string): readonly string[] {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8").split("\n");
@@ -205,5 +211,99 @@ describe("assistantStream", () => {
   it("skips lines it can't read", () => {
     expect(assistantStream("codex")("{half")).toEqual([]);
     expect(assistantStream("claude-code")("")).toEqual([]);
+  });
+});
+
+describe("assistantCliRunner", () => {
+  const dir = mkdtempSync(join(tmpdir(), "slopify-assistant-cli-"));
+  const track = reapStandIns();
+  const script = (name: string, body: string): string => {
+    const path = join(dir, name);
+    writeFileSync(path, `${exitsWith(process.pid)}${body}`, { mode: 0o700 });
+    return path;
+  };
+  // The stand-in takes the runner's environment, folder and stdin; its arguments are recorded.
+  function runner(path: string, seen: { args?: readonly string[]; cwd?: string | undefined } = {}) {
+    return assistantCliRunner(
+      (_binary, args, signal, options) => {
+        seen.args = args;
+        seen.cwd = options?.cwd;
+        const run = nodeRunCli(process.execPath, [path], signal, options);
+        track(run.pid);
+        return run;
+      },
+      { HOME: "/nowhere" },
+    );
+  }
+  const turn = (signal: AbortSignal) => ({
+    cli: "claude-code" as const,
+    binary: "claude",
+    url: "http://127.0.0.1:1/mcp/assistant",
+    token: "turn-token-123",
+    system: "SYSTEM",
+    prompt: "Which templates do I have?",
+    signal,
+  });
+
+  it("hands the CLI the token in its environment and the prompt on stdin, then reads its answer", async () => {
+    const path = script(
+      "answer.mjs",
+      `let input = "";
+process.stdin.on("data", (piece) => { input += piece; });
+process.stdin.on("end", () => {
+  const said = JSON.stringify(process.env.SLOPIFY_ASSISTANT_TOKEN + " | " + input);
+  console.log(JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text: JSON.parse(said) }] } }));
+  console.log(JSON.stringify({ type: "result", subtype: "success", is_error: false }));
+});`,
+    );
+    const seen: { args?: readonly string[]; cwd?: string | undefined } = {};
+    const events = [];
+    for await (const event of runner(path, seen)(turn(new AbortController().signal)))
+      events.push(event);
+    expect(events).toEqual([
+      { type: "text", text: "turn-token-123 | Which templates do I have?" },
+      { type: "done" },
+    ]);
+    expect(seen.args?.join(" ")).not.toContain("turn-token-123");
+    expect(seen.cwd).toMatch(/slopify-assistant-/);
+    expect(() => statSync(seen.cwd ?? "")).toThrow();
+  });
+
+  it("stops the CLI and removes its folder when the turn is stopped", async () => {
+    const path = script(
+      "hang.mjs",
+      `console.log(JSON.stringify({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: "Working" } } }));
+setInterval(() => {}, 1000);`,
+    );
+    const seen: { cwd?: string | undefined } = {};
+    const stop = new AbortController();
+    const events = [];
+    let pid: number | undefined;
+    const run = assistantCliRunner((_binary, _args, signal, options) => {
+      seen.cwd = options?.cwd;
+      const child = nodeRunCli(process.execPath, [path], signal, options);
+      pid = child.pid;
+      track(child.pid);
+      return child;
+    }, {});
+    try {
+      for await (const event of run(turn(stop.signal))) {
+        events.push(event);
+        stop.abort();
+      }
+    } catch {
+      // The abort ends the read.
+    }
+    expect(events).toEqual([{ type: "partial", text: "Working" }]);
+    await delay(100);
+    expect(alive(pid)).toBe(false);
+    expect(() => statSync(seen.cwd ?? "")).toThrow();
+  });
+
+  it("says what failed when the CLI ends without an answer", async () => {
+    const path = script("quit.mjs", `process.stderr.write("boom"); process.exit(3);`);
+    const events = [];
+    for await (const event of runner(path)(turn(new AbortController().signal))) events.push(event);
+    expect(events).toEqual([{ type: "failed", message: expect.stringContaining("exit code 3") }]);
   });
 });
