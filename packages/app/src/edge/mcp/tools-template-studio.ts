@@ -17,6 +17,14 @@ export const templateStudioTools: readonly RouteTool[] = [
       "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, release slots, a known monthly cost, someone to answer each checkpoint.",
   },
   {
+    name: "quote_template_save",
+    route: "POST /api/template-studio/:id/quote",
+    title: "Price a template Save's sample",
+    description:
+      "Prices the sample a Save of this template document would make, before anything is spent: the sections it outdates, each step's cost, the total high estimate, how many steps have no price, and whether it fits today's sample budget. Changes nothing. Pass its high as acknowledgedHigh to save_template_studio.",
+    unrecorded: true,
+  },
+  {
     name: "make_template_free_samples",
     route: "POST /api/template-studio/:id/free-samples",
     title: "Make a template's free samples",

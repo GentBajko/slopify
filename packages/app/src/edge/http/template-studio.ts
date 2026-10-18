@@ -2,12 +2,15 @@ import { statSync } from "node:fs";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import type { DraftReviewDeps } from "../../slices/play-drafts/model.js";
+import { playDraftDocumentSchema } from "../../slices/play-drafts/schema.js";
 import { templateById } from "../../slices/project-templates/repo.js";
 import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { createFreeSamples, type FreeSamples } from "../../slices/template-studio/free.js";
 import { enqueueJob } from "../../slices/template-studio/jobs.js";
 import type { StudioResult } from "../../slices/template-studio/model.js";
+import { quoteSave } from "../../slices/template-studio/quote.js";
 import {
   createPriceCache,
   createReadinessCache,
@@ -38,6 +41,9 @@ export interface TemplateStudioService {
   readonly documentFile?: (
     hash: string,
   ) => { readonly path: string; readonly bytes: number } | undefined;
+  // Play's review, which prices a sample; without it (and without `drafts`) no sample is
+  // priced or made.
+  readonly review?: DraftReviewDeps | undefined;
 }
 
 export function refusedStudio(
@@ -53,6 +59,11 @@ export function refusedStudio(
     extensions: { reason: result.reason },
   });
 }
+
+const documentBody = z.object({ document: playDraftDocumentSchema }).strict();
+
+const unpriced =
+  "This Slopify can't price or make paid samples because Play's review isn't available here. Restart Slopify; if it happens again, use Download diagnostics in Settings and report it.";
 
 const missingTemplate =
   "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
@@ -93,6 +104,7 @@ export function studioDeps(
 export function templateStudioRoutes(deps: AppDeps) {
   const studio = service(deps);
   const read = studioDeps(deps, studio);
+  const review = studio.review ?? deps.drafts;
   const gone = (c: Context, detail: string) =>
     problem(c, { status: 404, title: titleOf(404), detail });
   const media = (
@@ -119,6 +131,22 @@ export function templateStudioRoutes(deps: AppDeps) {
         const result = await getStudioChecks(read, c.req.valid("param").id);
         return result.ok ? c.json(result.value) : refusedStudio(c, result);
       })
+      // What a Save's sample would cost, before anything is spent. Prices only; nothing changes.
+      .post(
+        "/:id/quote",
+        zValidator("param", param, onInvalid),
+        zValidator("json", documentBody, onInvalid),
+        async (c) => {
+          if (review === undefined)
+            return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+          const result = await quoteSave(
+            { db: deps.db, clock: deps.clock, review },
+            c.req.valid("param").id,
+            c.req.valid("json").document,
+          );
+          return result.ok ? c.json(result.value) : refusedStudio(c, result);
+        },
+      )
       // Make samples: the free ones (video, loudness, PDF, the schedule's cost) for the current
       // version, queued behind any other template's and made in the background.
       .post("/:id/free-samples", zValidator("param", param, onInvalid), (c) => {

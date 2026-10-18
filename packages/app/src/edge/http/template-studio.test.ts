@@ -8,8 +8,13 @@ import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { createFreeSamples } from "../../slices/template-studio/free.js";
 import { queuedJob } from "../../slices/template-studio/jobs.js";
-import { studioChecksSchema, studioViewSchema } from "../../slices/template-studio/schema.js";
+import {
+  sampleQuoteSchema,
+  studioChecksSchema,
+  studioViewSchema,
+} from "../../slices/template-studio/schema.js";
 import { createPriceCache } from "../../slices/template-studio/service.js";
+import { paidDocument, reviewOver } from "../../slices/template-studio/studio.fake.js";
 import { mcpFixture } from "../mcp/mcp.fake.js";
 import type { TemplateStudioService } from "./template-studio.js";
 
@@ -63,6 +68,49 @@ it("answers a template's checks on their own, and a 404 for one that doesn't exi
   const gone = await h.app.request(`/api/template-studio/${randomUUID()}/checks`);
   expect(gone.status).toBe(404);
   expect(await gone.json()).toMatchObject({ reason: "not-found", detail: missing });
+});
+
+it("prices a Save's sample without changing anything, and says why it can't when Play's review is missing", async () => {
+  const h = mcpFixture({
+    templateStudio: (deps) => ({
+      free: createFreeSamples({ loudnessDefault: () => defaultLoudness }),
+      prices: createPriceCache(),
+      wake: () => undefined,
+      review: reviewOver(deps),
+    }),
+  });
+  open.push(h);
+  const document = paidDocument(reviewOver(h.deps));
+  const id = randomUUID();
+  const created = createTemplate({ ...h.deps, uuid: randomUUID }, { id, name: "Show", document });
+  if (!created.ok) throw new Error(created.reason);
+  const reply = await h.app.request(`/api/template-studio/${id}/quote`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document }),
+  });
+  expect(reply.status).toBe(200);
+  const quote = sampleQuoteSchema.parse(await reply.json());
+  expect(quote).toMatchObject({ version: 1, first: true, problem: null });
+  expect(quote.high).toBeGreaterThan(0);
+  expect(h.deps.db.prepare("SELECT count(*) AS n FROM template_samples").get()).toEqual({ n: 0 });
+  const bad = await h.app.request(`/api/template-studio/${id}/quote`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document: { nope: true } }),
+  });
+  expect(bad.status).toBe(400);
+
+  const bare = studio();
+  const refused = await bare.app.request(`/api/template-studio/${bare.id}/quote`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document }),
+  });
+  expect(refused.status).toBe(503);
+  expect(await refused.json()).toMatchObject({
+    detail: expect.stringContaining("can't price or make paid samples"),
+  });
 });
 
 it("queues the free samples of the current version and wakes the sample loop", async () => {

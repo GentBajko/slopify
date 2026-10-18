@@ -23,7 +23,8 @@ export interface SampleScope {
 
 // The template's setup as its sample runs it. Every keyword the title names and the template
 // leaves empty is the topic; a title without one is the topic itself. A section the user
-// provides at run time has no sample, so it is off here, with no file to attach.
+// provides at run time has no sample, so it is off here, with no file to attach; text the
+// template holds is kept.
 export function sampleDocument(template: PlayDraftDocument, scope: SampleScope): PlayDraftDocument {
   const { form } = template;
   const topic = scope.topic.trim();
@@ -32,9 +33,15 @@ export function sampleDocument(template: PlayDraftDocument, scope: SampleScope):
   for (const [name, value] of Object.entries(form.values)) values[name] = value;
   for (const name of names) if ((values[name] ?? "").trim() === "") values[name] = topic;
   const off = <T extends string>(source: T): T | "off" => (source === "provide" ? "off" : source);
+  // Text the template itself holds (pasted research or article) is the same in every run, so
+  // the sample uses it; a file is added to each video in Play, so there is none here.
+  const kept = (source: (typeof form.sources)["research"], text: string) =>
+    source === "provide" && text.trim() !== "" ? source : off(source);
+  const research = kept(form.sources.research, form.provided.research);
+  const article = kept(form.sources.article, form.provided.article);
   const sources = {
-    research: off(form.sources.research),
-    article: off(form.sources.article),
+    research,
+    article,
     audio: off(form.sources.audio),
     images: off(form.sources.images),
     thumbnail: off(form.sources.thumbnail),
@@ -71,8 +78,8 @@ export function sampleDocument(template: PlayDraftDocument, scope: SampleScope):
         ? {}
         : { ambientBed: { ...form.ambientBed, source: "none" as const } }),
       provided: {
-        research: "",
-        article: "",
+        research: research === "provide" ? form.provided.research : "",
+        article: article === "provide" ? form.provided.article : "",
         audio: null,
         thumbnail: null,
         images: [],

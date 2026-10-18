@@ -18,7 +18,9 @@ export function mcpFixture(
   options: {
     readonly rebuild?: boolean;
     readonly measureAudio?: (path: string, signal?: AbortSignal) => Promise<number>;
-    readonly templateStudio?: import("../http/template-studio.js").TemplateStudioService;
+    readonly templateStudio?:
+      | import("../http/template-studio.js").TemplateStudioService
+      | ((deps: RevisionDeps) => import("../http/template-studio.js").TemplateStudioService);
   } = {},
 ): {
   readonly app: Hono;
@@ -47,7 +49,14 @@ export function mcpFixture(
     host: "127.0.0.1",
     ...(options.rebuild === true ? { rebuild: createRebuildDeps(h.deps).deps } : {}),
     ...(options.measureAudio === undefined ? {} : { measureAudio: options.measureAudio }),
-    ...(options.templateStudio === undefined ? {} : { templateStudio: options.templateStudio }),
+    ...(options.templateStudio === undefined
+      ? {}
+      : {
+          templateStudio:
+            typeof options.templateStudio === "function"
+              ? options.templateStudio(h.deps)
+              : options.templateStudio,
+        }),
   });
   return { app, deps: h.deps, projectId: h.projectId, ticks, close: h.close };
 }

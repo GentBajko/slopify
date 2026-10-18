@@ -130,6 +130,24 @@ describe("sampleDocument", () => {
     expect(sample.variants).toEqual([]);
   });
 
+  it("keeps research or an article the template itself holds as text", () => {
+    const pasted = sampleDocument(
+      {
+        ...template,
+        form: {
+          ...template.form,
+          sources: { ...template.form.sources, article: "provide", research: "provide" },
+          provided: { ...template.form.provided, article: "A pasted article.", research: " " },
+        },
+      },
+      { topic: "Salt roads", fullScript: false },
+    );
+    expect(pasted.form.sources.article).toBe("provide");
+    expect(pasted.form.provided.article).toBe("A pasted article.");
+    expect(pasted.form.sources.research).toBe("off");
+    expect(pasted.form.provided.research).toBe("");
+  });
+
   it("is still a document Play reads", () => {
     expect(playDraftDocumentSchema.safeParse(sample).success).toBe(true);
   });

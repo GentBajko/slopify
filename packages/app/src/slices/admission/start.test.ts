@@ -8,13 +8,13 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { defaultDocumentTheme } from "../document/model.js";
 import { saveNarrationAliases } from "../narration/aliases-library.js";
+import { currentPronunciationRules } from "../narration/pronunciation.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { stageUpload } from "../storage/staging.js";
 import type { RunDraft } from "./model.js";
 import { stagesOf } from "./repo.js";
-import { defaultDocumentTheme } from "../document/model.js";
-import { currentPronunciationRules } from "../narration/pronunciation.js";
 import { configOf, initialState, startRun } from "./start.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
@@ -547,7 +547,9 @@ describe("configOf", () => {
       titlePattern: "History: {{Topic}}",
       document: { theme: defaultDocumentTheme },
       rendered: { article: "Write." },
-      narrationAliases: [{ written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false }],
+      narrationAliases: [
+        { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false },
+      ],
       pronunciationRules: currentPronunciationRules,
       sample: { fullScript: false },
     });

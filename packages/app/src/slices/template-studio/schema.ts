@@ -122,3 +122,38 @@ export const studioChecksSchema = z
   .strict()
   .readonly();
 export type StudioChecks = z.infer<typeof studioChecksSchema>;
+
+const quoteRowSchema = z
+  .object({
+    stage: z.string(),
+    low: z.number().nullable(),
+    high: z.number().nullable(),
+    detail: z.string(),
+    onPlan: z.boolean().optional(),
+    apiLow: z.number().nullable().optional(),
+    apiHigh: z.number().nullable().optional(),
+  })
+  .strict()
+  .readonly();
+
+// POST /api/template-studio/:id/quote: what a Save's sample costs, before anything is spent.
+export const sampleQuoteSchema = z
+  .object({
+    version: z.number().int().positive(),
+    first: z.boolean(),
+    sections: z.array(z.enum(templateSections)).readonly(),
+    rows: z.array(quoteRowSchema).readonly(),
+    low: z.number(),
+    high: z.number(),
+    unknown: z.number().int().nonnegative(),
+    onPlan: z.boolean(),
+    budget: z
+      .object({ budget: z.number(), spent: z.number(), left: z.number() })
+      .strict()
+      .readonly(),
+    fits: z.boolean(),
+    problem: z.string().nullable(),
+  })
+  .strict()
+  .readonly();
+export type SampleQuoteView = z.infer<typeof sampleQuoteSchema>;
