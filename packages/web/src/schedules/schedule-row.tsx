@@ -2,8 +2,9 @@ import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { ButtonLink } from "@/components/kit/link";
 import { ListRow } from "@/components/kit/list-row";
-import { Status } from "@/components/kit/status";
+import { Badge, Status } from "@/components/kit/status";
 import { scheduleStatusLook } from "@/lib/state-words";
 import { scheduleAction } from "./api";
 import { formatScheduleDate } from "./time";
@@ -62,6 +63,12 @@ export function ScheduleRow({
       meta={
         <>
           <ScheduleStatus schedule={schedule} />
+          {schedule.templateKind === "design" ? (
+            <>
+              {" "}
+              <Badge tone="info">Designed piece</Badge>
+            </>
+          ) : null}
           {` · ${cadenceOf(schedule)} · ${
             schedule.deletedAt !== null
               ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
@@ -76,20 +83,34 @@ export function ScheduleRow({
       actions={
         live ? (
           <>
-            <Button
-              variant="quiet"
-              size="small"
-              aria-label={`Edit ${schedule.name}`}
-              disabled={pending || !editable}
-              disabledReason={
-                editable
-                  ? "Finish or cancel the open form first"
-                  : "Only a live schedule can change"
-              }
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
+            {schedule.templateKind === "design" ? (
+              // A design schedule's rows and dates are kept with its design template.
+              <ButtonLink
+                variant="quiet"
+                size="small"
+                to="/design-templates/$templateId"
+                params={{ templateId: schedule.templateId }}
+                hash="schedule"
+                aria-label={`Edit ${schedule.name}`}
+              >
+                Edit
+              </ButtonLink>
+            ) : (
+              <Button
+                variant="quiet"
+                size="small"
+                aria-label={`Edit ${schedule.name}`}
+                disabled={pending || !editable}
+                disabledReason={
+                  editable
+                    ? "Finish or cancel the open form first"
+                    : "Only a live schedule can change"
+                }
+                onClick={onEdit}
+              >
+                Edit
+              </Button>
+            )}
             {schedule.status === "paused" ? (
               <Button
                 variant="quiet"
