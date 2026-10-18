@@ -107,7 +107,6 @@ export const studioViewSchema = z
       .strict()
       .readonly(),
     sections: z.array(sectionStatusSchema).readonly(),
-    checks: z.array(checkSchema).readonly(),
     free: freeSamplesSchema,
     schedule: scheduleSampleSchema,
     reviews: z.array(pathStepSchema).readonly(),
@@ -115,3 +114,11 @@ export const studioViewSchema = z
   .strict()
   .readonly();
 export type StudioView = z.infer<typeof studioViewSchema>;
+
+// GET /api/template-studio/:id/checks: read apart from the studio, since the providers'
+// readiness they need takes seconds to look up.
+export const studioChecksSchema = z
+  .object({ version: z.number().int().positive(), checks: z.array(checkSchema).readonly() })
+  .strict()
+  .readonly();
+export type StudioChecks = z.infer<typeof studioChecksSchema>;

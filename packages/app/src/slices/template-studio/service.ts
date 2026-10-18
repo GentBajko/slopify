@@ -17,7 +17,7 @@ import { fallbackSampleTopic, type StudioResult } from "./model.js";
 import { gatesOf, sampleOf } from "./repo.js";
 import { reviewsPath } from "./reviews-path.js";
 import { monthlyCost, type RunPrice, upcomingRuns } from "./schedule-sample.js";
-import type { StudioView } from "./schema.js";
+import type { StudioChecks, StudioView } from "./schema.js";
 import { baseStatuses, madeStatuses } from "./status.js";
 
 export interface StudioDeps {
@@ -109,48 +109,45 @@ function bodiesOf(db: DatabaseSync, document: FreeCheckInput["document"]): reado
   ];
 }
 
+// The providers' readiness probes CLIs, which takes seconds: every caller in the window
+// shares one lookup, and a failed one is never kept.
+export function createReadinessCache(
+  load: () => Promise<readonly ProviderStatus[]>,
+  now: () => number = Date.now,
+  ttlMs = 30_000,
+): () => Promise<readonly ProviderStatus[]> {
+  let held: { readonly at: number; readonly value: Promise<readonly ProviderStatus[]> } | undefined;
+  return () => {
+    const at = now();
+    if (held !== undefined && at - held.at < ttlMs) return held.value;
+    const value = load();
+    const entry = { at, value };
+    held = entry;
+    value.catch(() => {
+      if (held === entry) held = undefined;
+    });
+    return value;
+  };
+}
+
+const missingTemplate =
+  "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.";
+
+// The studio page's content, answered without waiting for the providers' readiness: the
+// checks that need it are read on their own (`getStudioChecks`).
 export async function getStudio(deps: StudioDeps, id: string): Promise<StudioResult<StudioView>> {
   const template = templateById(deps.db, id);
-  if (template === undefined)
-    return {
-      ok: false,
-      reason: "not-found",
-      message:
-        "This template no longer exists; it may have been deleted. Go to Library → Templates to see your templates.",
-    };
-  const statuses = await deps.providerStatuses();
+  if (template === undefined) return { ok: false, reason: "not-found", message: missingTemplate };
   const gates = gatesOf(deps.db, id);
   const sample = sampleOf(deps.db, id);
   const schedules = templateSchedules(deps.db, id);
   const now = deps.clock.now();
-  const prices = new Map(
-    schedules.flatMap((schedule) => {
-      const price = deps.prices.get(priceKey(schedule, template));
-      return price === undefined ? [] : [[schedule.id, price] as const];
-    }),
-  );
-  const cost = monthlyCost(schedules, prices, now);
+  const cost = monthlyCost(schedules, pricesOf(deps, schedules, template), now);
   const running = runningJob(deps.db);
   const queued = queuedJob(deps.db, id);
   const free = deps.free.view(id, template.document, {
     running: running?.templateId === id && running.templateVersion === template.version,
     queued: queued !== undefined,
-  });
-  const checks = freeChecks({
-    templateId: id,
-    document: template.document,
-    bodies: bodiesOf(deps.db, template.document),
-    providers: new Map(
-      statuses.map((status) => [
-        status.id,
-        { name: status.displayName, ready: readinessIsUsable(status.readiness) },
-      ]),
-    ),
-    schedules: schedules.map(fitOf),
-    monthlyCost: cost,
-    notificationUrl: readNotificationUrl(deps.db) !== null,
-    agentSeenAt: lastAgentConnection(deps.db),
-    now,
   });
   return {
     ok: true,
@@ -164,10 +161,58 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
         fullScript: sample?.fullScript ?? false,
       },
       sections: baseStatuses(template.document, madeStatuses(free, schedules.length, cost)),
-      checks,
       free,
       schedule: { runs: upcomingRuns(schedules, template.document, now), cost },
       reviews: reviewsPath(template.document),
+    },
+  };
+}
+
+function pricesOf(
+  deps: StudioDeps,
+  schedules: readonly ScheduleSummary[],
+  template: { readonly id: string; readonly version: number },
+): ReadonlyMap<string, RunPrice> {
+  return new Map(
+    schedules.flatMap((schedule) => {
+      const price = deps.prices.get(priceKey(schedule, template));
+      return price === undefined ? [] : [[schedule.id, price] as const];
+    }),
+  );
+}
+
+// The free checks a template passes before Mark ready. The providers' readiness is the slow
+// part, so the page asks for these on their own.
+export async function getStudioChecks(
+  deps: StudioDeps,
+  id: string,
+): Promise<StudioResult<StudioChecks>> {
+  const template = templateById(deps.db, id);
+  if (template === undefined) return { ok: false, reason: "not-found", message: missingTemplate };
+  const statuses = await deps.providerStatuses();
+  const schedules = templateSchedules(deps.db, id);
+  const now = deps.clock.now();
+  const cost = monthlyCost(schedules, pricesOf(deps, schedules, template), now);
+  return {
+    ok: true,
+    value: {
+      version: template.version,
+      checks: freeChecks({
+        templateId: id,
+        document: template.document,
+        bodies: bodiesOf(deps.db, template.document),
+        providers: new Map(
+          statuses.map((status) => [
+            status.id,
+            { name: status.displayName, ready: readinessIsUsable(status.readiness) },
+          ]),
+        ),
+        schedules: schedules.map(fitOf),
+        monthlyCost: cost,
+        notificationUrl: readNotificationUrl(deps.db) !== null,
+        agentSeenAt: lastAgentConnection(deps.db),
+        now,
+      }),
     },
   };
 }

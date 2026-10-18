@@ -10,7 +10,9 @@ import { enqueueJob } from "../../slices/template-studio/jobs.js";
 import type { StudioResult } from "../../slices/template-studio/model.js";
 import {
   createPriceCache,
+  createReadinessCache,
   getStudio,
+  getStudioChecks,
   type PriceCache,
   type StudioDeps,
 } from "../../slices/template-studio/service.js";
@@ -76,13 +78,15 @@ export function studioDeps(
     clock: deps.clock,
     free: studio.free,
     prices: studio.prices,
-    providerStatuses: () =>
+    // Probing the CLIs takes seconds: the studio's checks share one lookup for half a minute.
+    providerStatuses: createReadinessCache(() =>
       providerStatuses({
         db: deps.db,
         probe: deps.probe,
         hostCliStatus: deps.hostCliStatus,
         host: deps.speechHost,
       }),
+    ),
   };
 }
 
@@ -108,6 +112,11 @@ export function templateStudioRoutes(deps: AppDeps) {
     new Hono()
       .get("/:id", zValidator("param", param, onInvalid), async (c) => {
         const result = await getStudio(read, c.req.valid("param").id);
+        return result.ok ? c.json(result.value) : refusedStudio(c, result);
+      })
+      // The free checks, apart from the studio: they wait on the providers' readiness.
+      .get("/:id/checks", zValidator("param", param, onInvalid), async (c) => {
+        const result = await getStudioChecks(read, c.req.valid("param").id);
         return result.ok ? c.json(result.value) : refusedStudio(c, result);
       })
       // Make samples: the free ones (video, loudness, PDF, the schedule's cost) for the current

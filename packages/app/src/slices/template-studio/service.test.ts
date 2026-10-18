@@ -6,7 +6,13 @@ import { createTemplate, updateTemplate } from "../project-templates/service.js"
 import type { ProviderStatus } from "../settings/model.js";
 import { writeSetting } from "../settings/repo.js";
 import { createFreeSamples } from "./free.js";
-import { createPriceCache, getStudio, type StudioDeps } from "./service.js";
+import {
+  createPriceCache,
+  createReadinessCache,
+  getStudio,
+  getStudioChecks,
+  type StudioDeps,
+} from "./service.js";
 
 const open: (() => void)[] = [];
 afterEach(() => {
@@ -68,7 +74,33 @@ describe("getStudio", () => {
     expect(result.value.free.video.sentence).toContain("started without ffmpeg");
     expect(result.value.schedule).toEqual({ runs: [], cost: null });
     expect(result.value.reviews).toEqual([]);
-    expect(result.value.checks.find((check) => check.id === "providers")?.ok).toBe(false);
+    const checks = await getStudioChecks(deps, id);
+    expect(checks.ok && checks.value.checks.find((check) => check.id === "providers")?.ok).toBe(
+      false,
+    );
+  });
+
+  it("answers at once while the providers' readiness is still being looked up", async () => {
+    const { deps, id } = studio();
+    let asked = 0;
+    const slow: StudioDeps = {
+      ...deps,
+      providerStatuses: () => {
+        asked += 1;
+        return new Promise(() => undefined);
+      },
+    };
+    const result = await getStudio(slow, id);
+    expect(result.ok).toBe(true);
+    expect(asked).toBe(0);
+  });
+
+  it("refuses the checks of a template that doesn't exist", async () => {
+    const { deps } = studio();
+    expect(await getStudioChecks(deps, randomUUID())).toMatchObject({
+      ok: false,
+      reason: "not-found",
+    });
   });
 
   it("reads the legacy gate a template saved before the studio has, and keeps it runnable after an unchecked edit", async () => {
@@ -146,9 +178,48 @@ describe("getStudio", () => {
       name: "Show",
       document,
     });
-    const result = await getStudio(deps, id);
+    const result = await getStudioChecks(deps, id);
     expect(result.ok && result.value.checks.find((check) => check.id === "providers")?.ok).toBe(
       true,
     );
+  });
+});
+
+describe("createReadinessCache", () => {
+  it("looks the providers up once for every caller in the window, and again after it", async () => {
+    let at = 0;
+    let loads = 0;
+    const cache = createReadinessCache(
+      async () => {
+        loads += 1;
+        return [];
+      },
+      () => at,
+      30_000,
+    );
+    await Promise.all([cache(), cache(), cache()]);
+    expect(loads).toBe(1);
+    at = 29_000;
+    await cache();
+    expect(loads).toBe(1);
+    at = 31_000;
+    await cache();
+    expect(loads).toBe(2);
+  });
+
+  it("never keeps a failed lookup: the next caller asks again", async () => {
+    let loads = 0;
+    const cache = createReadinessCache(
+      async () => {
+        loads += 1;
+        if (loads === 1) throw new Error("probe failed");
+        return [];
+      },
+      () => 0,
+      30_000,
+    );
+    await expect(cache()).rejects.toThrow("probe failed");
+    await expect(cache()).resolves.toEqual([]);
+    expect(loads).toBe(2);
   });
 });

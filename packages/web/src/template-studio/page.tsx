@@ -195,7 +195,7 @@ function Studio({
         aside={
           <div className={cn("flex flex-col gap-6", hidden("sample"))}>
             <SamplePanel view={view} section={current} making={making} onMake={() => void make()} />
-            <ChecksList checks={view.checks} />
+            <ChecksList templateId={view.template.id} />
           </div>
         }
       >

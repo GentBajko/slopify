@@ -8,7 +8,7 @@ import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { createFreeSamples } from "../../slices/template-studio/free.js";
 import { queuedJob } from "../../slices/template-studio/jobs.js";
-import { studioViewSchema } from "../../slices/template-studio/schema.js";
+import { studioChecksSchema, studioViewSchema } from "../../slices/template-studio/schema.js";
 import { createPriceCache } from "../../slices/template-studio/service.js";
 import { mcpFixture } from "../mcp/mcp.fake.js";
 import type { TemplateStudioService } from "./template-studio.js";
@@ -51,6 +51,18 @@ it("answers a template's studio, and a plain 404 for one that doesn't exist", as
   expect(gone.status).toBe(404);
   expect(await gone.json()).toMatchObject({ reason: "not-found", detail: missing });
   expect((await h.app.request("/api/template-studio/not-a-uuid")).status).toBe(400);
+});
+
+it("answers a template's checks on their own, and a 404 for one that doesn't exist", async () => {
+  const h = studio();
+  const reply = await h.app.request(`/api/template-studio/${h.id}/checks`);
+  expect(reply.status).toBe(200);
+  const body = studioChecksSchema.parse(await reply.json());
+  expect(body.version).toBe(1);
+  expect(body.checks.map((check) => check.id)).toContain("providers");
+  const gone = await h.app.request(`/api/template-studio/${randomUUID()}/checks`);
+  expect(gone.status).toBe(404);
+  expect(await gone.json()).toMatchObject({ reason: "not-found", detail: missing });
 });
 
 it("queues the free samples of the current version and wakes the sample loop", async () => {

@@ -88,6 +88,9 @@ const view: StudioView = {
       detail: "The run waits here until you approve it.",
     },
   ],
+};
+const checks = {
+  version: 3,
   checks: [
     { id: "keywords", ok: true, sentence: "Every keyword has a value or is filled per video." },
     {
@@ -100,6 +103,7 @@ const view: StudioView = {
 };
 const routes = {
   [`GET /api/template-studio/${templateId}`]: jsonAnswer(view),
+  [`GET /api/template-studio/${templateId}/checks`]: jsonAnswer(checks),
   "GET /api/providers": jsonAnswer({
     providers: [
       {
@@ -171,10 +175,37 @@ it("says what the script is made with, and Change opens Fine-tune", async () => 
   );
 });
 
+it("shows the studio at once while its checks are still being looked up", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/checks`]: () => new Promise<Response>(() => undefined),
+  });
+  expect(
+    await screen.findByRole("heading", { name: "Weekly documentary", level: 1 }),
+  ).not.toBeNull();
+  const pending = screen.getByRole("region", { name: "Checks" });
+  expect(within(pending).getByRole("status", { name: "Checking the template" })).not.toBeNull();
+});
+
+it("says why the checks didn't load, and keeps the rest of the studio", async () => {
+  open("subject", {
+    [`GET /api/template-studio/${templateId}/checks`]: problemAnswer(
+      "Slopify couldn't look up your providers.",
+      500,
+    ),
+  });
+  const region = await screen.findByRole("region", { name: "Checks" });
+  expect(
+    await within(region).findByText(
+      /The checks didn't load: Slopify couldn't look up your providers\./,
+    ),
+  ).not.toBeNull();
+  expect(screen.getByRole("heading", { name: "Weekly documentary", level: 1 })).not.toBeNull();
+});
+
 it("lists the free checks, each failing one with its fix as a link", async () => {
   open();
   const checks = await screen.findByRole("region", { name: "Checks" });
-  expect(within(checks).getByText("1 to fix")).not.toBeNull();
+  expect(await within(checks).findByText("1 to fix")).not.toBeNull();
   expect(
     within(checks).getByRole("link", { name: "Choose one in Voice" }).getAttribute("href"),
   ).toBe(`/templates/${templateId}?section=voice`);
