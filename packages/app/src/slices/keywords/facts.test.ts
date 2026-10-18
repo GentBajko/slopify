@@ -192,3 +192,18 @@ describe("keywordFactsFor", () => {
     expect(keywordFactsFor(h, { title: "T" }, clock.now()).brand).toBeUndefined();
   });
 });
+
+describe("keywordFactsFor on a refresh", () => {
+  it("sees only the episodes made before the project, and plans after it", () => {
+    const h = harness();
+    const first = startRun(h.storage, draft("The Bridge | Legends"), {}).project;
+    const own = startRun(h.storage, draft("The Gate | Legends"), {}).project;
+    const after = startRun(h.storage, draft("The Queen | Legends"), {}).project;
+    setRelease(h.db, after.id, 0, "2026-10-08T18:00:00.000Z", null, clock.now());
+    const facts = keywordFactsFor(h, { title: own.title }, clock.now(), own.id);
+    expect(facts.episode).toBe(2);
+    expect(facts.previousVideo).toEqual({ title: first.title });
+    expect(facts.coveredBefore).toEqual([first.title]);
+    expect(facts.nextVideo).toEqual({ title: after.title });
+  });
+});

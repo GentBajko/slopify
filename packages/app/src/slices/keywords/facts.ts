@@ -40,21 +40,34 @@ export function keywordFactsFor(
   const channelId = resolveChannelId(db, draft.channelId);
   const channel = channelById(db, channelId);
   const channels = projectChannels(db);
-  const own = listProjects(db).filter(
-    (project) => project.id !== projectId && (channels.get(project.id) ?? channelId) === channelId,
+  const projects = listProjects(db);
+  // A refresh sees the channel as it was before this project, never the episodes made after it.
+  const made = projects.find((project) => project.id === projectId)?.createdAt;
+  const own = projects.filter(
+    (project) =>
+      project.id !== projectId &&
+      (made === undefined || project.createdAt < made) &&
+      (channels.get(project.id) ?? channelId) === channelId,
   );
   const series = seriesOf(draft);
   const sameSeries = own.filter((project) => seriesOf(project.config) === series);
+  const later = projects.filter(
+    (project) =>
+      project.id !== projectId &&
+      seriesOf(project.config) === series &&
+      (channels.get(project.id) ?? channelId) === channelId,
+  );
   const previous = sameSeries[0];
   const previousVideo =
     previous === undefined ? undefined : videoOf(db, previous.id, null)?.videoId;
-  const later = allReleases(db).find(
+  const upcoming = allReleases(db).find(
     (release) =>
       release.short === 0 &&
       Date.parse(release.at) > now.getTime() &&
-      sameSeries.some((project) => project.id === release.projectId),
+      later.some((project) => project.id === release.projectId),
   );
-  const next = later === undefined ? undefined : own.find((one) => one.id === later.projectId);
+  const next =
+    upcoming === undefined ? undefined : later.find((one) => one.id === upcoming.projectId);
   const links = readChannelLinksFor(db, channelId);
   const cast = castOfChannel(db, channelId);
   const brand = draft.useBrandKit === false ? undefined : channel?.brand;
