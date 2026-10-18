@@ -13,7 +13,13 @@ import {
 import { detectSlots, filledKeywords, render } from "../admission/substitute.js";
 import { imagesPerVideoMax } from "../images/scale.js";
 import type { KeywordPlace } from "../keywords/model.js";
-import { keywordUsesOf, type PlacedBody, placedProblems, usesFacts } from "../keywords/rules.js";
+import {
+  keywordUsesOf,
+  type PlacedBody,
+  placedProblems,
+  textEntryProblems,
+  usesFacts,
+} from "../keywords/rules.js";
 import { loudnessFields } from "../loudness/model.js";
 import { pauseFields } from "../narration/pauses-model.js";
 import { reviewPromptKey } from "../reviews/model.js";
@@ -129,6 +135,16 @@ export function validateRecipeInputs(
         fields.push({ field: `values.${key}`, message: "Enter a value for this keyword." });
   }
   fields.push(...placedProblems(keywordBodies(config, content), config.values));
+  for (const category of ["intro", "outro"] as const) {
+    const raw = content.promptTemplates[category] ?? config.rendered[category];
+    if (config.sources.audio === "generate" && config[category]?.mode === "text" && raw != null)
+      fields.push(
+        ...textEntryProblems(raw, category).map((problem) => ({
+          field: `rendered.${category}`,
+          message: problem.message,
+        })),
+      );
+  }
   return fields;
 }
 

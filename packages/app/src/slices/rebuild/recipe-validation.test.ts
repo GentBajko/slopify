@@ -79,4 +79,18 @@ describe("keywords in a saved version", () => {
       ["rendered.review.article", "review"],
     ]);
   });
+
+  it("refuses the release date in a Text outro", () => {
+    expect(
+      validateRecipeInputs(
+        {
+          ...config,
+          sources: { ...config.sources, audio: "generate" },
+          audio: { provider: "v", model: "m", voice: "x" },
+          outro: { name: "Bye", mode: "text" },
+        },
+        { ...content, promptTemplates: { outro: "Next on {{Slopify_Release_Date}}" } },
+      ).map((row) => row.field),
+    ).toContain("rendered.outro");
+  });
 });

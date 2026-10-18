@@ -216,3 +216,20 @@ export function placedProblems(
     }
   return problems;
 }
+
+// A Text-mode intro or outro is narrated as written, and the release date is only filled into a
+// request as it is sent to the AI model (`rebuild/runtime-keywords.ts`), so a Text entry can't
+// say it.
+export function textEntryProblems(
+  body: string,
+  category: "intro" | "outro",
+): readonly { readonly field: string; readonly message: string }[] {
+  return detectSlots(body).names.includes("Slopify_Release_Date")
+    ? [
+        {
+          field: category,
+          message: `{{Slopify_Release_Date}} can't be used in a Text ${category}: Text is narrated as written, and the release date is only filled in when a step asks the AI model. Set this ${category}'s Mode to LLM in Library → Intros & Outros, or remove the keyword.`,
+        },
+      ]
+    : [];
+}

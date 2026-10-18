@@ -5,6 +5,7 @@ import {
   placedProblems,
   placeOfKey,
   positionOf,
+  textEntryProblems,
   upgradeLegacy,
   usesLegacy,
 } from "./rules.js";
@@ -211,5 +212,18 @@ describe("placedProblems", () => {
         {},
       ),
     ).toHaveLength(1);
+  });
+});
+
+describe("textEntryProblems", () => {
+  it("refuses the release date in a Text intro, and says how to fix it", () => {
+    expect(textEntryProblems("Out {{Slopify_Release_Date}}.", "intro")).toEqual([
+      {
+        field: "intro",
+        message:
+          "{{Slopify_Release_Date}} can't be used in a Text intro: Text is narrated as written, and the release date is only filled in when a step asks the AI model. Set this intro's Mode to LLM in Library → Intros & Outros, or remove the keyword.",
+      },
+    ]);
+    expect(textEntryProblems("Thanks, {{Slopify_Channel}}.", "outro")).toEqual([]);
   });
 });

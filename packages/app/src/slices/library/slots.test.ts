@@ -430,4 +430,20 @@ describe("pickTemplates and the keywords Slopify fills", () => {
     );
     expect(picked.missing.map((one) => one.field)).toEqual(["intro"]);
   });
+
+  it("refuses the release date in a Text intro, which is narrated as written", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "article", name: "Essay", body: "Write." });
+    createEntry(deps, {
+      category: "intro",
+      mode: "text",
+      name: "Hi",
+      body: "Out {{Slopify_Release_Date}}.",
+    });
+    const picked = pickTemplates(
+      deps.db,
+      draft({ articlePrompt: "Essay", intro: { name: "Hi", mode: "text" } }),
+    );
+    expect(picked.missing.map((one) => one.field)).toEqual(["intro"]);
+  });
 });

@@ -328,3 +328,50 @@ it("makes an image an agent failed again in redo mode, asks the agent again, the
   expect(images.calls()).toBe(3);
   expect(reviewer.calls()).toBe(0);
 });
+
+it("fills the release date into a review an agent answers, leaving its line out without one", async () => {
+  const h = await paidServiceFixture();
+  const registry: Registry = {
+    image: () => fakeImage(),
+    tts: () => fakeTts({ bytesFor: () => [tone()] }),
+    llm: () => fakeLlm({ reply: () => ['{"verdict":"pass","reasons":[]}'] }),
+    list: async () => [],
+  };
+  const service = createRebuildDeps({ ...h.deps, clock: systemClock }, h.catalogue);
+  const runner = wireRunner({
+    ...service.deps,
+    ffmpeg: resolveFfmpeg({}, ffmpegStatic),
+    hub: createHub({ ...h.deps, acceptEvent: (event) => currentProjectEvent(h.deps.db, event) }),
+    registry,
+    audioPreviews: createAudioPreviewStore(),
+    telemetry: { ...h.deps, appVersion: "test" },
+    flusher: { soon: () => undefined, stop: () => undefined },
+  });
+  const deps = { ...service.deps, runner };
+  const base = current(deps, h.projectId);
+  await save(deps, h.projectId, {
+    config: {
+      ...base.revision.config,
+      reviews: {
+        provider: "",
+        model: "",
+        reviewer: "agent",
+        retries: 1,
+        stages: { images: { mode: "flag", prompt: "Pictures" } },
+      },
+    },
+    content: {
+      ...base.revision.content,
+      promptTemplates: {
+        ...base.revision.content.promptTemplates,
+        "review.images": "Check the pictures.\nThey go out {{Slopify_Release_Date}}.",
+      },
+    },
+  });
+  await start(deps, h.projectId, Object.keys(current(deps, h.projectId).revision.fingerprints));
+  await settleUntil(runner, () => waitingExternalReviews(deps.db, h.projectId).length === 2);
+  const material = JSON.stringify(waitingExternalReviews(deps.db, h.projectId)[0]?.material);
+  expect(material).toContain("Check the pictures.");
+  expect(material).not.toContain("Slopify_Release_Date");
+  expect(material).not.toContain("They go out");
+});

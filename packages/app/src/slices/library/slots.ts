@@ -19,6 +19,7 @@ import {
   keywordUsesOf,
   type PlacedBody,
   placedProblems,
+  textEntryProblems,
 } from "../keywords/rules.js";
 import { reviewPromptKey } from "../reviews/model.js";
 import { activeReviewStages } from "../reviews/rules.js";
@@ -94,6 +95,8 @@ export function pickTemplates(
   push(text, "outro", outro);
   if (intro !== undefined) placed.push({ field: "intro", place: "intro", body: intro.body });
   if (outro !== undefined) placed.push({ field: "outro", place: "outro", body: outro.body });
+  for (const entry of [intro, outro])
+    if (entry?.mode === "text") missing.push(...textEntryProblems(entry.body, entry.category));
   // None picked is the built-in prompt, which asks for no keyword.
   if (usesYoutubeDescription(draft))
     body("description", draft.descriptionPrompt, "descriptionPrompt", text, "description");

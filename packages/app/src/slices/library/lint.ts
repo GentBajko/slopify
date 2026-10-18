@@ -6,7 +6,7 @@ import type { FieldError } from "../admission/rules.js";
 import type { SlotLintError } from "../admission/substitute.js";
 import { detectSlots } from "../admission/substitute.js";
 import type { KeywordPlace } from "../keywords/model.js";
-import { keywordProblems, positionOf } from "../keywords/rules.js";
+import { keywordProblems, positionOf, textEntryProblems } from "../keywords/rules.js";
 import type { EntryDraft, PromptDraft } from "./model.js";
 import { bodyMax, nameMax } from "./model.js";
 
@@ -29,9 +29,17 @@ export function lintEntry(
 // What the editor warns about without refusing the save: a keyword where it can't be filled
 // (Play refuses that run) and an old keyword name.
 export function keywordWarnings(draft: PromptDraft | EntryDraft): readonly FieldError[] {
-  return keywordProblems(draft.body, placeOf(draft))
-    .filter((problem) => problem.kind !== "unknown")
-    .map((problem) => ({ field: "body", message: problem.message }));
+  return [
+    ...keywordProblems(draft.body, placeOf(draft))
+      .filter((problem) => problem.kind !== "unknown")
+      .map((problem) => ({ field: "body", message: problem.message })),
+    ...("category" in draft && draft.mode === "text"
+      ? textEntryProblems(draft.body, draft.category).map((problem) => ({
+          field: "body",
+          message: problem.message,
+        }))
+      : []),
+  ];
 }
 
 function placeOf(draft: PromptDraft | EntryDraft): KeywordPlace {

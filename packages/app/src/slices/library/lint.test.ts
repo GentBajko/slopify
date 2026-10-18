@@ -201,4 +201,10 @@ describe("keywords Slopify fills", () => {
   it("has nothing to say about a prompt without keywords", () => {
     expect(keywordWarnings({ kind: "image", name: "P", body: "{{topic}}" })).toEqual([]);
   });
+
+  it("warns about the release date in a Text entry only", () => {
+    const body = "Out {{Slopify_Release_Date}}.";
+    expect(keywordWarnings({ category: "intro", mode: "text", name: "I", body })).toHaveLength(1);
+    expect(keywordWarnings({ category: "intro", mode: "llm", name: "I", body })).toEqual([]);
+  });
 });
