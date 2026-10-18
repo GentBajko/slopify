@@ -7,6 +7,7 @@ import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { localInput } from "@/lib/format";
 import { keys } from "@/queries";
 
 // The pieces of Calendar → Releases: a release time and its state, its editor, and a free time
@@ -21,13 +22,6 @@ export const day = new Intl.DateTimeFormat(undefined, {
 });
 const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
 export const when = (iso: string) => `${day.format(new Date(iso))}, ${clock.format(new Date(iso))}`;
-
-// "2026-10-04T20:00" in this browser's zone, for a datetime-local input.
-function localInput(iso: string): string {
-  const at = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${String(at.getFullYear())}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
 
 function look(item: CalendarItem): { readonly tone: BadgeTone; readonly word: string } {
   switch (item.state) {

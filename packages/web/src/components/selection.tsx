@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/kit/button";
+import { plural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Bulk selection for a collection (docs/ux-audit-2026-10.md, Lists and collections): visible
@@ -209,6 +210,4 @@ export function SelectionBar<K extends string>({
 }
 
 // "Restored 3 items." / "Removed 1 topic." for a bulk action's toast or status line.
-export function counted(count: number, singular: string, plural: string): string {
-  return `${String(count)} ${count === 1 ? singular : plural}`;
-}
+export { plural as counted };

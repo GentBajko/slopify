@@ -15,7 +15,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
-import { usd } from "@/lib/format";
+import { usd, wholeNumber } from "@/lib/format";
 import { runCostQuery } from "@/queries";
 import { limitNames, limitWaitLine } from "./limit-wait.js";
 import { accountLine, shareLabel, shareLine, shareValue, windowName } from "./plan-share.js";
@@ -59,8 +59,8 @@ export function RunCostSummary({
   if (cost === undefined || !ended.has(status) || (cost.calls === 0 && cost.byStage.length === 0))
     return null;
   const parts = [
-    `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${money(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
-    ...(cost.apiEquivalent === null ? [] : [`~${money(cost.apiEquivalent)} via API`]),
+    `${status === "done" || status === "partial" ? "This run cost" : "Spent so far"} ${usd(cost.cost)}${cost.unpriced > 0 ? " plus unpriced calls" : ""}`,
+    ...(cost.apiEquivalent === null ? [] : [`~${usd(cost.apiEquivalent)} via API`]),
     ...(cost.run === null ? [] : [`${workDuration(cost.run.workingMs)} of work`]),
   ];
   return (
@@ -145,7 +145,7 @@ const modelColumns: readonly Column<ModelCost>[] = [
   { id: "cost", header: "Cost", numeric: true, cell: lineCost },
   { id: "api", header: "Via API", numeric: true, cell: apiCost },
   { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
-  { id: "calls", header: "Calls", numeric: true, cell: (row) => whole.format(row.calls) },
+  { id: "calls", header: "Calls", numeric: true, cell: (row) => wholeNumber.format(row.calls) },
 ];
 
 function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
@@ -164,11 +164,11 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
       <section aria-label="Run cost summary" className="flex flex-col gap-3">
         <Stats>
           <Stat
-            value={money(cost.cost)}
+            value={usd(cost.cost)}
             label={cost.unpriced > 0 ? "known cost, paid to providers" : "paid to providers"}
           />
           {cost.apiEquivalent === null ? null : (
-            <Stat value={`~${money(cost.apiEquivalent)}`} label="same work via API" />
+            <Stat value={`~${usd(cost.apiEquivalent)}`} label="same work via API" />
           )}
           {meters.map(({ plan, window }) => {
             const name = `${windowName(window.kind)} ${plan.name} limit`;
@@ -258,7 +258,7 @@ export function planLine(cost: Pick<RunCost, "apiEquivalent" | "apiUnpriced">): 
     return "CLI calls: $0 on your plan · no API price is listed for their models.";
   const unpriced =
     cost.apiUnpriced > 0 ? ` (plus ${count(cost.apiUnpriced, "call")} with no API price)` : "";
-  return `CLI calls: $0 on your plan · ~${money(api)} via API${unpriced}.`;
+  return `CLI calls: $0 on your plan · ~${usd(api)} via API${unpriced}.`;
 }
 
 // Each window's share of the run and the account's own reading beside it, or a plain word
@@ -278,14 +278,14 @@ function lineCost(row: StageCost | ModelCost): string {
   return row.unpriced > 0
     ? row.unpriced === row.calls
       ? "Unknown"
-      : `${money(row.cost)} + unknown`
-    : money(row.cost);
+      : `${usd(row.cost)} + unknown`
+    : usd(row.cost);
 }
 
 function apiCost(row: StageCost | ModelCost): string {
   if (row.apiEquivalent === null) return "—";
   if (row.apiUnpriced > 0 && row.apiEquivalent === 0) return "No API price";
-  return `~${money(row.apiEquivalent)}`;
+  return `~${usd(row.apiEquivalent)}`;
 }
 
 function modelName(row: ModelCost): string {
@@ -303,11 +303,10 @@ export function usage(totals: UsageTotals): string {
     );
   if (totals.characters > 0) parts.push(`${compact(totals.characters)} characters`);
   if (totals.images > 0) parts.push(count(totals.images, "image"));
-  if (totals.seconds > 0) parts.push(`${whole.format(totals.seconds)} s of video`);
+  if (totals.seconds > 0) parts.push(`${wholeNumber.format(totals.seconds)} s of video`);
   return parts.join(" · ");
 }
 
-const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 const shortNumber = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -315,14 +314,12 @@ const shortNumber = new Intl.NumberFormat(undefined, {
 });
 
 function compact(value: number): string {
-  return value < 10_000 ? whole.format(value) : shortNumber.format(value);
+  return value < 10_000 ? wholeNumber.format(value) : shortNumber.format(value);
 }
 
 function count(value: number, noun: string): string {
-  return `${whole.format(value)} ${noun}${value === 1 ? "" : "s"}`;
+  return `${wholeNumber.format(value)} ${noun}${value === 1 ? "" : "s"}`;
 }
-
-export const money = usd;
 
 // "1:03:27": a clock that visibly counts, for a run in progress.
 export function stopwatch(ms: number): string {

@@ -1,23 +1,22 @@
 import type { PlanUse, PlanWindowUse } from "@app/slices/run-cost/panel.js";
+import { wholeNumber } from "@/lib/format";
 
 // How the Run cost tab and the run rail word a run's share of a CLI plan's windows. A plan's
 // readings are account-wide, so the run's own share and all use on the account are said apart,
 // and a share that cannot be told from other use is said to be shared rather than guessed.
-
-const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 export function windowName(kind: PlanWindowUse["kind"]): string {
   return kind === "five_hour" ? "5-hour" : kind === "weekly" ? "weekly" : "current";
 }
 
 function points(value: number): string {
-  return value < 1 ? "under 1%" : `${percent.format(value)}%`;
+  return value < 1 ? "under 1%" : `${wholeNumber.format(value)}%`;
 }
 
 // The big number: "5%", "~5%" (split by tokens), "at least 5%", "up to 45%", or "Shared".
 export function shareValue(window: PlanWindowUse): string {
   if (window.usedPercent === null) return "Shared";
-  const used = window.usedPercent < 1 ? "<1%" : `${percent.format(window.usedPercent)}%`;
+  const used = window.usedPercent < 1 ? "<1%" : `${wholeNumber.format(window.usedPercent)}%`;
   switch (window.basis) {
     case "measured":
       return used;
@@ -63,11 +62,11 @@ export function shareLine(plan: Pick<PlanUse, "name">, window: PlanWindowUse): s
 export function accountLine(plan: Pick<PlanUse, "name">, window: PlanWindowUse): string {
   const reset = window.rolledOver ? ", with a reset in between" : "";
   const resets = window.resetsAt === null ? "" : ` · resets ${day(window.resetsAt)}`;
-  return `${plan.name} ${windowName(window.kind)}: ${percent.format(window.fromPercent)}% → ${percent.format(window.nowPercent)}% while this ran${reset} (all use on this account)${resets}.`;
+  return `${plan.name} ${windowName(window.kind)}: ${wholeNumber.format(window.fromPercent)}% → ${wholeNumber.format(window.nowPercent)}% while this ran${reset} (all use on this account)${resets}.`;
 }
 
 function count(calls: number): string {
-  return calls === 1 ? "1 call" : `${percent.format(calls)} calls`;
+  return calls === 1 ? "1 call" : `${wholeNumber.format(calls)} calls`;
 }
 
 function day(iso: string): string {

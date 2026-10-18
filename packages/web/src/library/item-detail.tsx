@@ -5,6 +5,7 @@ import { Button } from "@/components/kit/button";
 import { Code } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { plural } from "@/lib/format";
 import { DiffColumns } from "./diff-view";
 import { useLibraryHistory, useLibraryUsedBy, versionMeta } from "./history-drawer";
 import { exactTime } from "./time";
@@ -190,10 +191,6 @@ export function usedByCounts(usedBy: UsedBy): string {
     plural(usedBy.schedules.length, "schedule"),
     plural(usedBy.projects.length, "project"),
   ].join(", ");
-}
-
-export function plural(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 // "1 Sep 2026": the day a row was last saved, for its meta line.

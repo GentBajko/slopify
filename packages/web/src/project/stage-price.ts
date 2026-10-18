@@ -17,8 +17,6 @@ export interface Price {
 
 const localStages: readonly StageKind[] = ["video", "document"];
 
-export const money = usd;
-
 // `count` pictures of this stage made again.
 export function imagePrice(
   cost: RunCost | undefined,
@@ -32,7 +30,7 @@ export function imagePrice(
   // Rounded up to the cent shown, so the amount accepted is the amount read.
   const shown = Math.ceil((row.cost / row.images) * count * 100) / 100;
   return {
-    text: `About ${money(shown)}, from what this project's pictures have cost so far.`,
+    text: `About ${usd(shown)}, from what this project's pictures have cost so far.`,
     approvedUpTo: shown,
   };
 }
@@ -43,7 +41,7 @@ export function rerunPrice(cost: RunCost | undefined, stage: StageKind): string 
   if (row === undefined || row.calls === 0 || row.unpriced > 0) return undefined;
   if (row.cost === 0 && row.apiEquivalent !== null)
     return "$0 on your CLI plan; it uses some of the plan's limits.";
-  return `Earlier runs of this step in this project cost ${money(row.cost)} in all.`;
+  return `Earlier runs of this step in this project cost ${usd(row.cost)} in all.`;
 }
 
 export function useRunCost(projectId: string | undefined): RunCost | undefined {

@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { localInput } from "@/lib/format";
 import { keys } from "@/queries";
 
 // The project page's Release block (Video section): when the long video and each short go
@@ -21,13 +22,6 @@ const when = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
 });
-
-// "2026-10-04T20:00" in this browser's zone, for a datetime-local input.
-function localInput(iso: string): string {
-  const at = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${String(at.getFullYear())}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
 
 export function ReleaseTimes({ projectId }: { readonly projectId: string }): ReactElement | null {
   const { api } = useApp();

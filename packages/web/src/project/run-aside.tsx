@@ -16,10 +16,11 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { usd, wholeNumber } from "@/lib/format";
 import { retryingWord } from "@/lib/state-words";
 import { stageWords } from "./next-action.js";
 import { accountLine, shareShort, shareValue, windowName } from "./plan-share.js";
-import { money, workDuration } from "./run-cost.js";
+import { workDuration } from "./run-cost.js";
 import { finalOutput, summaryOf } from "./summary.js";
 
 // The right rail under the next action: the run's steps with their times and one detail
@@ -149,8 +150,6 @@ export function RunSteps({ steps }: { readonly steps: readonly Step[] }): ReactE
   );
 }
 
-const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-
 // "$3.37 spent · ~$9.10 via API", then each plan's share: "Codex: 14% of your weekly limit".
 export function CostSoFar({
   cost,
@@ -174,9 +173,9 @@ export function CostSoFar({
         )}
       </SectionHead>
       <p className="m-0 text-small text-ink-2">
-        <strong className="text-ink">{money(cost.cost)}</strong>
+        <strong className="text-ink">{usd(cost.cost)}</strong>
         {cost.unpriced > 0 ? " known, spent" : " spent"}
-        {cost.apiEquivalent === null ? null : ` · ~${money(cost.apiEquivalent)} via API`}
+        {cost.apiEquivalent === null ? null : ` · ~${usd(cost.apiEquivalent)} via API`}
         {/* The run's working time once it has stopped; while it runs the clock above counts. */}
         {cost.run === null || cost.run.running
           ? null
@@ -191,7 +190,7 @@ export function CostSoFar({
             <Meter
               value={(window.usedPercent ?? 0) / 100}
               label={`Share of the ${name} this run used`}
-              valueText={`${used} of your ${name}; the account is at ${percent.format(window.nowPercent)}%`}
+              valueText={`${used} of your ${name}; the account is at ${wholeNumber.format(window.nowPercent)}%`}
               tone={window.nowPercent >= 80 ? "waiting" : "accent"}
             />
             <p className="m-0 text-small text-ink-3">{accountLine(plan, window)}</p>

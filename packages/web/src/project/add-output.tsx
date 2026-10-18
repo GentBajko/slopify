@@ -13,10 +13,10 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Dialog } from "@/components/kit/dialog";
 import { Fact, Facts } from "@/components/kit/facts";
+import { usd } from "@/lib/format";
 import { keys } from "@/queries";
 import { type AddedOutputPreview, addProjectOutput, previewAddedOutput } from "./output-api.js";
 import type { EditSection, RevisionController } from "./revision-controller.js";
-import { money } from "./stage-price.js";
 
 // Add another output: the same project's brief, sources and accepted text made into one more
 // kind of result. The dialog says what is reused as it is, what is made, how the text is used
@@ -217,8 +217,8 @@ export function AddOutputDialog({
 export function costWords(estimate: CostEstimate): string {
   const range =
     estimate.low === estimate.high
-      ? money(estimate.high)
-      : `${money(estimate.low)}–${money(estimate.high)}`;
+      ? usd(estimate.high)
+      : `${usd(estimate.low)}–${usd(estimate.high)}`;
   if (estimate.unknown > 0)
     return estimate.high === 0
       ? `Unknown: ${String(estimate.unknown)} ${estimate.unknown === 1 ? "step has" : "steps have"} no price yet. The remake review shows the rest before anything is charged.`

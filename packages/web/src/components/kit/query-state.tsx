@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { shortTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "./button.js";
 import { Callout } from "./callout.js";
@@ -19,7 +20,6 @@ export interface QueryLike<T> {
 }
 
 const defaultFix = "Check that Slopify is still running, then press Retry.";
-const clock = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
 function sentence(message: string): string {
   const trimmed = message.trim();
@@ -133,7 +133,7 @@ export function StaleNote({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <p role="status" className="m-0 min-w-0 text-small text-ink-2">
-        {`Showing ${what} as of ${clock.format(new Date(updatedAt))}. The latest refresh failed: ${sentence(error.message)} ${defaultFix}`}
+        {`Showing ${what} as of ${shortTime.format(new Date(updatedAt))}. The latest refresh failed: ${sentence(error.message)} ${defaultFix}`}
       </p>
       <RetryButton onRetry={onRetry} retrying={retrying} size="small" />
     </div>

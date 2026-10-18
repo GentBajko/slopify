@@ -8,6 +8,7 @@ import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
+import { fullDay, shortTime } from "@/lib/format";
 import { PrepareUpload } from "@/studio/prepare-upload";
 import { type CalendarProject, projectLook } from "./attention";
 import { PrepareRun } from "./day-cell";
@@ -16,8 +17,6 @@ import { type Day, runTitle } from "./plan";
 // Calendar's list view: every planned day as a list, each topic with the same moves dragging
 // gives (earlier, later, another day, another schedule) as buttons.
 
-const fullDay = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
-const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 const when = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
   day: "numeric",
@@ -120,7 +119,7 @@ export function ListView({
                   title={title}
                   meta={
                     <>
-                      {time.format(new Date(run.at))} ·{" "}
+                      {shortTime.format(new Date(run.at))} ·{" "}
                       <TextLink
                         to="/calendar"
                         search={{ tab: "schedules", schedule: run.scheduleId }}

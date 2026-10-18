@@ -11,8 +11,6 @@ import { narrationAliasesQuery } from "@/queries";
 import { spokenText } from "./article-task";
 import type { PlayFormState } from "./state";
 
-const money = { format: usd };
-
 // The first sentences of the text, cut at a sentence end that fits one audition.
 export function samplePassage(text: string, limit = 280): string {
   const flat = text.replace(/\s+/g, " ").trim();
@@ -66,7 +64,7 @@ export function VoiceSample({ form }: { readonly form: PlayFormState }): ReactEl
       ? undefined
       : estimate.unknown > 0
         ? "price unknown"
-        : `about ${money.format(estimate.high)}`;
+        : `about ${usd(estimate.high)}`;
   return (
     <Fold className="col-span-full" summary={<>Try a sample of your text</>}>
       <div className="flex flex-col gap-3 pt-2 pb-3">
