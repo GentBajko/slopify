@@ -108,8 +108,16 @@ export async function makeBakeoff(deps: Deps, job: SampleJob, signal: AbortSigna
           : undefined;
     if (waiting !== undefined) {
       for (const one of prepared) {
-        removeHiddenProject(deps.rebuild, one.projectId);
-        setClone(db, row.id, one.clone.slot, { state: "queued", projectId: null });
+        // A copy that stays keeps its row, so it stays hidden and Discard removes it later.
+        if (removeHiddenProject(deps.rebuild, one.projectId).ok)
+          setClone(db, row.id, one.clone.slot, { state: "queued", projectId: null });
+        else
+          setClone(db, row.id, one.clone.slot, {
+            state: "failed",
+            failure:
+              "This model's copy couldn't be removed while the bake-off waited, because its files are busy or in use. Press Discard in the bake-off once nothing uses Slopify's files, then Compare again.",
+            finishedAt: at(),
+          });
       }
       stop("held", waiting);
       return;

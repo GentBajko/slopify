@@ -291,6 +291,34 @@ describe("makeBakeoff", () => {
     expect(deps.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 1 });
   });
 
+  it("keeps a copy it couldn't remove while waiting hidden and failed, never a visible project", async () => {
+    const { deps, paid, id, pricey, sample, job } = await harness();
+    await sample();
+    const started = await startBakeoff({ ...deps, uuid: randomUUID }, id, {
+      ...scriptOn(pricey),
+      acknowledgedHigh: 50,
+      acknowledgedUnknown: true,
+    });
+    if (!started.ok) throw new Error(started.message);
+    deps.db.prepare("UPDATE template_bakeoffs SET ack_high=0").run();
+    deps.db.prepare("UPDATE template_bakeoff_clones SET quoted_high=0").run();
+    const sampleId = sampleOf(deps.db, id)?.projectId;
+    // The copy is busy, so it cannot be removed now.
+    const busy = {
+      ...paid,
+      rebuild: { ...paid.rebuild, hasInflight: (one: string) => one !== sampleId },
+    };
+    await makeBakeoff(busy, job(), signal);
+    const [copy] = clonesOf(deps.db, bakeoffOf(deps.db, id)?.id ?? "");
+    expect(copy).toMatchObject({
+      state: "failed",
+      failure: expect.stringContaining("couldn't be removed"),
+    });
+    expect(copy?.projectId).not.toBeNull();
+    expect(isTemplateSample(deps.db, copy?.projectId ?? "")).toBe(true);
+    expect(listProjects(deps.db)).toEqual([]);
+  });
+
   it("waits on today's budget, spending nothing", async () => {
     const { deps, paid, id, other, sample, job, ticks } = await harness();
     await sample();
