@@ -94,14 +94,14 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/settings",
     title: "Read the template studio's settings",
     description:
-      "The most the studio's samples may spend in one day (dailyBudget, US dollars) and what they spent today and have left.",
+      "The most the studio's samples may spend in one day (dailyBudget, US dollars), whether they may run steps on a CLI plan (samplesUsePlans; off by default, such a sample waits), and what they spent today and have left.",
   },
   {
     name: "update_template_studio_settings",
     route: "PUT /api/template-studio/settings",
     title: "Change the template studio's daily budget",
     description:
-      "Sets the most the studio's samples may spend in one day, in US dollars (0 to 1000). A sample that would go over it waits until the next day or a higher budget.",
+      "Sets the most the studio's samples may spend in one day, in US dollars (0 to 1000), and optionally samplesUsePlans: whether they may run steps on a Claude Code or Codex plan, which the dollar budget can't limit. A sample that would go over the budget, or needs a plan while plans are off, waits.",
   },
   {
     name: "quote_samples_for_all",

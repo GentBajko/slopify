@@ -6,7 +6,11 @@ import { TemplateStudioSettings } from "./settings-panel";
 
 afterEach(cleanup);
 
-const settings = jsonAnswer({ dailyBudget: 2, today: { budget: 2, spent: 0, left: 2 } });
+const settings = jsonAnswer({
+  dailyBudget: 2,
+  samplesUsePlans: false,
+  today: { budget: 2, spent: 0, left: 2, plans: false },
+});
 const item = (name: string, high: number, fits: boolean) => ({
   templateId: `${name}-id`,
   name,
@@ -94,4 +98,39 @@ it("shows the refusal's own sentence when the total went up", async () => {
     await screen.findByRole("button", { name: "Make samples for all · about $0.40" }),
   );
   expect((await screen.findByRole("alert")).textContent).toContain("more than the $0.40 you saw");
+});
+
+it("lets samples use CLI plans only once switched on, saying what each state limits", async () => {
+  let sent: unknown;
+  const put = vi.fn(async (request: Request) => {
+    sent = await request.json();
+    return jsonAnswer({
+      dailyBudget: 2,
+      samplesUsePlans: true,
+      today: { budget: 2, spent: 0, left: 2, plans: true },
+    })(request);
+  });
+  const user = userEvent.setup();
+  renderRouted(
+    <TemplateStudioSettings />,
+    testDeps({
+      "GET /api/template-studio/settings": settings,
+      "PUT /api/template-studio/settings": put,
+      "POST /api/template-studio/samples-for-all/quote": jsonAnswer({
+        items: [],
+        total: 0,
+        fitting: 0,
+        sentence: "Every template's sample is made for its newest version. Nothing to make.",
+      }),
+    }),
+  );
+  const toggle = await screen.findByRole("switch", { name: "Samples may use my CLI plans" });
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(
+    screen.getByText(/Off: no sample runs a step on your Claude Code or Codex plan/),
+  ).toBeTruthy();
+  await user.click(toggle);
+  await waitFor(() => expect(put).toHaveBeenCalledOnce());
+  expect(sent).toEqual({ dailyBudget: 2, samplesUsePlans: true });
+  expect(await screen.findByText(/the budget above doesn't limit it/)).toBeTruthy();
 });

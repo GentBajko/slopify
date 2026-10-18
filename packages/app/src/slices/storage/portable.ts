@@ -57,6 +57,7 @@ import {
   studioProjectPlaylistsKey,
   studioRealFootageKey,
 } from "../studio/settings.js";
+import { dailyBudgetKey, dailyBudgetMax, samplesUsePlansKey } from "../template-studio/budget.js";
 import { notTemplateSample } from "../template-studio/repo.js";
 import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
@@ -519,6 +520,8 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
     else if (key === dailySampleBudgetKey) dailySampleBudgetSchema.parse(parsed);
+    else if (key === dailyBudgetKey) z.number().finite().min(0).max(dailyBudgetMax).parse(parsed);
+    else if (key === samplesUsePlansKey) z.boolean().parse(parsed);
     else if (
       key === realPersonVoicesKey ||
       key === photorealisticPromptsKey ||

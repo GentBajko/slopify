@@ -6,6 +6,7 @@ import { createTemplate } from "../project-templates/service.js";
 import { writeSetting } from "../settings/repo.js";
 import {
   budgetRoom,
+  budgetWords,
   fitsBudget,
   localMidnight,
   readStudioSettings,
@@ -118,13 +119,16 @@ describe("spentToday with bake-off copies and removed projects", () => {
 describe("the daily budget", () => {
   it("is $2.00 until the person sets another, and survives a bad stored value", () => {
     const { db } = harness();
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2 });
-    expect(writeStudioSettings(db, { dailyBudget: 0.555 })).toEqual({ dailyBudget: 0.56 });
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 0.56 });
+    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
+    expect(writeStudioSettings(db, { dailyBudget: 0.555 })).toEqual({
+      dailyBudget: 0.56,
+      samplesUsePlans: false,
+    });
+    expect(readStudioSettings(db)).toEqual({ dailyBudget: 0.56, samplesUsePlans: false });
     writeSetting(db, "templateStudio.dailyBudget", "{oops");
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2 });
+    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
     writeSetting(db, "templateStudio.dailyBudget", "-4");
-    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2 });
+    expect(readStudioSettings(db)).toEqual({ dailyBudget: 2, samplesUsePlans: false });
   });
 
   it("says what is left today, and whether a sample fits it", () => {
@@ -141,6 +145,37 @@ describe("the daily budget", () => {
       false,
     );
     expect(fitsBudget(budgetRoom(db, new Date("2026-10-18T10:00:00.000Z"), "UTC"), 0)).toBe(true);
+  });
+
+  it("lets samples use CLI plans only once the person turns it on, whatever the budget", () => {
+    const { db } = harness();
+    const now = new Date("2026-10-18T10:00:00.000Z");
+    writeStudioSettings(db, { dailyBudget: 0 });
+    const off = budgetRoom(db, now, "UTC");
+    expect(off.plans).toBe(false);
+    // A $0 budget: nothing that spends dollars or plan usage.
+    expect(fitsBudget(off, 0, true)).toBe(false);
+    expect(fitsBudget(off, 0, false)).toBe(true);
+    expect(budgetWords(off, { high: 0, usesPlan: true }, "This sample")).toBe(
+      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio",
+    );
+    writeStudioSettings(db, { dailyBudget: 5 });
+    expect(fitsBudget(budgetRoom(db, now, "UTC"), 0, true)).toBe(false);
+    // Switching it on keeps the budget; the budget limits dollars only.
+    expect(writeStudioSettings(db, { dailyBudget: 0, samplesUsePlans: true })).toEqual({
+      dailyBudget: 0,
+      samplesUsePlans: true,
+    });
+    expect(writeStudioSettings(db, { dailyBudget: 0 })).toEqual({
+      dailyBudget: 0,
+      samplesUsePlans: true,
+    });
+    const on = budgetRoom(db, now, "UTC");
+    expect(fitsBudget(on, 0, true)).toBe(true);
+    expect(fitsBudget(on, 0.2, true)).toBe(false);
+    expect(budgetWords(on, { high: 0.2, usesPlan: true }, "This sample")).toBe(
+      "This sample costs about $0.20 and $0.00 of today's $0.00 sample budget is left. Raise the budget in Settings → Template studio",
+    );
   });
 
   it("finds today's start in the person's time zone", () => {

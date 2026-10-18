@@ -29,6 +29,8 @@ export interface SampleQuote {
   readonly unknown: number;
   // Every priced row runs on a CLI plan: the Save costs plan usage, no money.
   readonly onPlan: boolean;
+  // Some step runs on a CLI plan, which samples may use only when the person allows it.
+  readonly usesPlan: boolean;
   readonly budget: BudgetRoom;
   readonly fits: boolean;
   // Why no sample can be made of this setup (Play's review refused it), or null.
@@ -113,13 +115,14 @@ const sectionOfRow: Readonly<Record<string, TemplateSection>> = {
 
 export function totals(
   rows: readonly CostRow[],
-): Pick<SampleQuote, "low" | "high" | "unknown" | "onPlan"> {
+): Pick<SampleQuote, "low" | "high" | "unknown" | "onPlan" | "usesPlan"> {
   const priced = rows.filter((row) => row.high !== null && row.high > 0);
   return {
     low: rows.reduce((sum, row) => sum + (row.low ?? 0), 0),
     high: rows.reduce((sum, row) => sum + (row.high ?? 0), 0),
     unknown: rows.filter((row) => row.high === null).length,
     onPlan: rows.some((row) => row.onPlan === true) && priced.every((row) => row.onPlan === true),
+    usesPlan: rows.some((row) => row.onPlan === true),
   };
 }
 
@@ -179,6 +182,7 @@ export async function quoteSample(
         high: 0,
         unknown: 0,
         onPlan: false,
+        usesPlan: false,
         budget,
         fits: false,
         problem: resolved.problem,
@@ -208,7 +212,7 @@ export async function quoteSample(
       rows,
       ...sum,
       budget,
-      fits: fitsBudget(budget, sum.high),
+      fits: fitsBudget(budget, sum.high, sum.usesPlan),
       problem: null,
     },
   };

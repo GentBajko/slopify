@@ -5,7 +5,7 @@ import { internalError } from "../../kernel/errors.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { startRun } from "../admission/start.js";
-import { estimateRun } from "../estimate/index.js";
+import { type CostEstimate, estimateRun } from "../estimate/index.js";
 import type { DraftStartDeps } from "../play-drafts/model.js";
 import { checkDraftReadiness } from "../play-drafts/readiness.js";
 import { templateById } from "../project-templates/repo.js";
@@ -13,7 +13,7 @@ import { previewRebuild, type RebuildDeps, startRebuild } from "../rebuild/servi
 import { saveRevision } from "../revisions/mutations.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
-import { budgetRoom, fitsBudget } from "./budget.js";
+import { budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { sampleEdit } from "./edit.js";
 import { removeHiddenProject } from "./hidden.js";
 import type { SampleJob } from "./jobs.js";
@@ -49,15 +49,15 @@ export function holdReason(
     readonly now: Date;
   },
   job: SampleJob,
-  cost: { readonly high: number; readonly unknown: number },
+  cost: { readonly high: number; readonly unknown: number; readonly usesPlan: boolean },
 ): string | undefined {
   if (exceedsAcknowledged(cost.high, job.ackHigh))
     return `Waiting: this sample now costs about ${money(cost.high)}, more than the ${money(job.ackHigh)} you saw. Press Make sample (${money(cost.high)}) to make it.`;
   if (cost.unknown > 0 && !deps.acks.accepted(job.templateId, job.templateVersion))
     return `Waiting: ${String(cost.unknown)} ${cost.unknown === 1 ? "step of this sample has" : "steps of this sample have"} no known price. Press Make sample to accept that and make it.`;
   const room = budgetRoom(deps.db, deps.now, deps.timeZone);
-  if (!fitsBudget(room, cost.high))
-    return `Waiting: this sample costs about ${money(cost.high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left. Press Make sample tomorrow, or raise the budget in Settings → Template studio.`;
+  if (!fitsBudget(room, cost.high, cost.usesPlan))
+    return `Waiting: ${budgetWords(room, cost, "this sample")}, or press Make sample tomorrow.`;
   return undefined;
 }
 
@@ -155,7 +155,11 @@ export async function makePaidSample(
     return;
   }
   const { run, words } = resolved;
-  const hold = (cost: { readonly high: number; readonly unknown: number }) =>
+  const hold = (cost: {
+    readonly high: number;
+    readonly unknown: number;
+    readonly usesPlan: boolean;
+  }) =>
     holdReason(
       { db, now: deps.start.clock.now(), acks: deps.acks, timeZone: deps.timeZone },
       job,
@@ -322,14 +326,15 @@ export async function makePaidSample(
 function covered(
   db: DatabaseSync,
   job: SampleJob,
-  costs: { readonly high: number; readonly unknown: number },
-): { readonly high: number; readonly unknown: number } {
+  costs: CostEstimate,
+): { readonly high: number; readonly unknown: number; readonly usesPlan: boolean } {
+  const usesPlan = costs.rows.some((row) => row.onPlan === true);
   const quoted = sampleVersions(db, job.templateId).find(
     (version) => version.templateVersion === job.templateVersion,
   )?.quotedHigh;
   return quoted === null || quoted === undefined
-    ? costs
-    : { high: Math.max(costs.high, quoted), unknown: 0 };
+    ? { high: costs.high, unknown: costs.unknown, usesPlan }
+    : { high: Math.max(costs.high, quoted), unknown: 0, usesPlan };
 }
 
 async function finish(

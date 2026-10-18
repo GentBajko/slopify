@@ -16,7 +16,7 @@ import {
   setBakeoff,
   setClone,
 } from "./bakeoff-repo.js";
-import { budgetRoom, fitsBudget } from "./budget.js";
+import { budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { sampleEdit } from "./edit.js";
 import { removeHiddenProject } from "./hidden.js";
 import type { SampleJob } from "./jobs.js";
@@ -45,6 +45,7 @@ interface Prepared {
   readonly previewId: string;
   readonly high: number;
   readonly unknown: number;
+  readonly usesPlan: boolean;
   readonly provided: readonly string[];
 }
 
@@ -96,13 +97,14 @@ export async function makeBakeoff(deps: Deps, job: SampleJob, signal: AbortSigna
       0,
     );
     const unknown = prepared.reduce((sum, one) => sum + one.unknown, 0);
+    const usesPlan = prepared.some((one) => one.usesPlan);
     const room = budgetRoom(db, deps.start.clock.now(), deps.timeZone);
     const waiting = exceedsAcknowledged(high, row.ackHigh)
       ? `Waiting: comparing now costs about ${money(high)}, more than the ${money(row.ackHigh)} you saw. Press Compare again to accept the new price.`
       : unknown > 0 && !row.ackUnknown
         ? `Waiting: ${String(unknown)} ${unknown === 1 ? "step has" : "steps have"} no known price. Press Compare again to accept that.`
-        : !fitsBudget(room, high)
-          ? `Waiting: comparing costs about ${money(high)} and ${money(room.left)} of today's ${money(room.budget)} sample budget is left. Compare tomorrow, or raise the budget in Settings → Template studio.`
+        : !fitsBudget(room, high, usesPlan)
+          ? `Waiting: ${budgetWords(room, { high, usesPlan }, "comparing")}, or compare tomorrow.`
           : undefined;
     if (waiting !== undefined) {
       for (const one of prepared) {
@@ -250,6 +252,7 @@ async function prepare(
     previewId: preview.value.id,
     high: preview.value.costs.high,
     unknown: preview.value.costs.unknown,
+    usesPlan: preview.value.costs.rows.some((one) => one.onPlan === true),
     provided: preview.value.providedReuseRequired,
   };
 }

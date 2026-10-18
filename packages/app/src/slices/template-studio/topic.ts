@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { templateById } from "../project-templates/repo.js";
+import { budgetWords } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { SampleJobKind, TemplateSection } from "./model.js";
 import { quoteSample, type SampleQuote } from "./quote.js";
@@ -114,7 +115,7 @@ async function change(
     return {
       ok: false,
       reason: "over-budget",
-      message: `This costs about ${money(quote.high)} and ${money(quote.budget.left)} of today's ${money(quote.budget.budget)} sample budget is left. Raise the budget in Settings → Template studio, or try again tomorrow.`,
+      message: `${budgetWords(quote.budget, quote, "This")}, or try again tomorrow.`,
       quote,
     };
   const at = deps.clock.now().toISOString();

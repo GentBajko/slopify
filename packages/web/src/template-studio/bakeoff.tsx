@@ -27,6 +27,7 @@ import {
   startBakeoff,
   templateStudioKey,
 } from "./api";
+import { budgetLead, budgetReason } from "./budget-words";
 
 // Compare models: one section's sample made again on one or two other models, side by side
 // with the one in use, by what each made, cost and took. "Use this model" puts the model into
@@ -363,7 +364,7 @@ function CompareDrawer({
         : quote.data?.problem !== null && quote.data?.problem !== undefined
           ? "No sample can be made with this model"
           : quote.data?.fits === false
-            ? "Today's sample budget can't cover it"
+            ? budgetReason(quote.data)
             : unknown > 0 && !acceptUnknown
               ? "Accept the steps with no known price first"
               : undefined;
@@ -480,7 +481,7 @@ function CompareDrawer({
         </p>
         {quote.data?.fits === false ? (
           <p className="m-0 text-body text-waiting">
-            {`This costs ${about(quote.data.high)} and ${usd(quote.data.budget.left)} of today's sample budget is left. Compare tomorrow, or raise it in `}
+            {budgetLead(quote.data, "Comparing")}
             <TextLink to="/settings" search={{ section: "template-studio" }}>
               Settings → Template studio
             </TextLink>

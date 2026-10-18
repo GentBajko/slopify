@@ -163,7 +163,12 @@ export const settingsHelp = {
   },
   "settings.template-studio.budget": {
     title: "Daily sample budget",
-    body: "The most a template's paid samples may spend in one day, in US dollars, counted from midnight on this computer. A sample that would go over it waits in the studio and says so; press Make sample once there is room again, or raise the budget. Calls on a CLI plan count as $0. Default: $2.00, from $0 to $1,000.",
+    body: "The most a template's samples, Compare models and Make samples for all may spend in one day, in US dollars, counted from midnight on this computer. At $0.00 no sample spends money. A sample that would go over it waits in the studio and says so; press Make sample once there is room again, or raise the budget. Steps on a CLI plan have no dollar price: Samples may use my CLI plans decides those. Default: $2.00, from $0 to $1,000.",
+    tutorial: { page: "Settings-Reference", anchor: "template-studio" },
+  },
+  "settings.template-studio.plans": {
+    title: "Samples may use my CLI plans",
+    body: "Whether a template's samples, Compare models and Make samples for all may run steps on your Claude Code or Codex plan. Off, a sample with such a step waits in the studio and says so, whatever the daily budget; nothing on your plan is used. On, those steps run and use your plan's allowance, which the daily budget doesn't limit because it has no dollar price. Default: off.",
     tutorial: { page: "Settings-Reference", anchor: "template-studio" },
   },
   "settings.loudness": {

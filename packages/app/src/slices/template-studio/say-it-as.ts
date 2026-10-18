@@ -18,7 +18,7 @@ import type { DraftReviewDeps } from "../play-drafts/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
-import { budgetRoom, fitsBudget } from "./budget.js";
+import { type BudgetRoom, budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { StudioRefusal, StudioResult } from "./model.js";
 import { sampleOf, setSampleVersion } from "./repo.js";
@@ -195,8 +195,9 @@ export interface SayItAsQuote {
   readonly lines: number;
   readonly high: number;
   readonly unknown: number;
+  readonly usesPlan: boolean;
   readonly fits: boolean;
-  readonly budget: { readonly budget: number; readonly spent: number; readonly left: number };
+  readonly budget: BudgetRoom;
   readonly problem: string | null;
 }
 
@@ -218,14 +219,22 @@ export function quoteSayItAs(
   if (audio.useNarrationAliases !== true)
     return {
       ok: true,
-      value: { lines: 0, high: 0, unknown: 0, fits: true, budget, problem: aliasesOff },
+      value: {
+        lines: 0,
+        high: 0,
+        unknown: 0,
+        usesPlan: false,
+        fits: true,
+        budget,
+        problem: aliasesOff,
+      },
     };
   const script = sampleTexts(deps, templateId)?.script;
   const lines = script === undefined ? [] : linesWith(script, ask.written);
   if (lines.length === 0)
     return {
       ok: true,
-      value: { lines: 0, high: 0, unknown: 0, fits: true, budget, problem: null },
+      value: { lines: 0, high: 0, unknown: 0, usesPlan: false, fits: true, budget, problem: null },
     };
   const pattern = wordPattern(ask.written.trim());
   const estimate = estimateRequests(
@@ -244,7 +253,12 @@ export function quoteSayItAs(
       lines: lines.length,
       high: estimate.high,
       unknown: estimate.unknown,
-      fits: fitsBudget(budget, estimate.high),
+      usesPlan: estimate.rows.some((row) => row.onPlan === true),
+      fits: fitsBudget(
+        budget,
+        estimate.high,
+        estimate.rows.some((row) => row.onPlan === true),
+      ),
       budget,
       problem: null,
     },
@@ -310,7 +324,7 @@ export async function sayItAs(
     return {
       ok: false,
       reason: "over-budget",
-      message: `Voicing these lines again costs about ${money(quote.high)} and ${money(quote.budget.left)} of today's ${money(quote.budget.budget)} sample budget is left. Raise the budget in Settings → Template studio, or try again tomorrow.`,
+      message: `${budgetWords(quote.budget, quote, "Voicing these lines again")}, or try again tomorrow.`,
       quote,
     };
   const head = templateById(deps.db, templateId);

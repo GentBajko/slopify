@@ -6,6 +6,7 @@ import { playDraftDocumentSchema } from "../play-drafts/schema.js";
 import type { ProjectTemplate } from "../project-templates/model.js";
 import { templateById } from "../project-templates/repo.js";
 import { updateTemplate } from "../project-templates/service.js";
+import { budgetWords } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { StudioRefusal } from "./model.js";
 import { type QuoteDeps, quoteSave, type SampleQuote } from "./quote.js";
@@ -162,7 +163,7 @@ export async function saveStudio(deps: SaveDeps, id: string, raw: unknown): Prom
       return {
         ok: false,
         reason: "over-budget",
-        message: `This sample costs about ${money(quote.high)} and ${money(quote.budget.left)} of today's ${money(quote.budget.budget)} sample budget is left. Press Save without a sample, or raise the budget in Settings → Template studio.`,
+        message: `${budgetWords(quote.budget, quote, "This sample")}, or press Save without a sample.`,
         quote,
       };
   }

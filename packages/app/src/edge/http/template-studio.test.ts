@@ -253,7 +253,11 @@ it("prices and changes the sample topic and the full script, with the new quote 
 it("reads and sets the studio's daily budget, refusing one out of range", async () => {
   const h = studio();
   const read = await h.app.request("/api/template-studio/settings");
-  expect(await read.json()).toEqual({ dailyBudget: 2, today: { budget: 2, spent: 0, left: 2 } });
+  expect(await read.json()).toEqual({
+    dailyBudget: 2,
+    samplesUsePlans: false,
+    today: { budget: 2, spent: 0, left: 2, plans: false },
+  });
   const put = (body: unknown) =>
     h.app.request("/api/template-studio/settings", {
       method: "PUT",
@@ -261,6 +265,11 @@ it("reads and sets the studio's daily budget, refusing one out of range", async 
       body: JSON.stringify(body),
     });
   expect(await (await put({ dailyBudget: 0.5 })).json()).toMatchObject({ dailyBudget: 0.5 });
+  expect(await (await put({ dailyBudget: 0, samplesUsePlans: true })).json()).toMatchObject({
+    dailyBudget: 0,
+    samplesUsePlans: true,
+    today: { plans: true },
+  });
   expect((await put({ dailyBudget: -1 })).status).toBe(400);
   expect((await put({ dailyBudget: 5000 })).status).toBe(400);
 });

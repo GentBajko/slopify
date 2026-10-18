@@ -29,7 +29,14 @@ interface Pending {
   readonly reject: (error: Error) => void;
 }
 
-function setup(options: { perImage?: number | null; budget?: number; doc?: DesignDocument } = {}) {
+function setup(
+  options: {
+    perImage?: number | null;
+    budget?: number;
+    plans?: boolean;
+    doc?: DesignDocument;
+  } = {},
+) {
   h = designHarness();
   const calls: Pending[] = [];
   const catalogue = priced(options.perImage === undefined ? 0.04 : options.perImage);
@@ -54,6 +61,7 @@ function setup(options: { perImage?: number | null; budget?: number; doc?: Desig
     runner,
     catalogue: () => catalogue,
     budget: () => options.budget ?? 1,
+    plans: () => options.plans ?? false,
     timeZone: () => "UTC",
   });
   const made = createTemplate(service, {
@@ -180,6 +188,24 @@ describe("a design template's sample", () => {
     );
     await tick();
     expect(calls).toHaveLength(0);
+  });
+
+  it("holds a sample whose picture runs on a CLI plan until samples may use plans", async () => {
+    const onPlan = (doc: DesignDocument): DesignDocument => ({
+      ...doc,
+      picture: { ...doc.picture, provider: "codex-image", model: "gpt-image" },
+    });
+    const off = setup();
+    const held = off.save(onPlan(prompt("A neon stage")), 0);
+    expect(held?.state).toBe("held");
+    expect(held?.heldReason).toBe(
+      "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Make sample to make it anyway.",
+    );
+    await tick();
+    expect(off.calls).toHaveLength(0);
+    h.cleanup();
+    const on = setup({ plans: true });
+    expect(on.save(onPlan(prompt("A neon stage")), 0)?.state).not.toBe("held");
   });
 
   it("never stops a picture being made: a newer Save waits, and replaces one still waiting", async () => {

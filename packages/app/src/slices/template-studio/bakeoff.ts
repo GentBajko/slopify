@@ -21,7 +21,7 @@ import {
   deleteBakeoffRow,
   insertBakeoff,
 } from "./bakeoff-repo.js";
-import { type BudgetRoom, budgetRoom, fitsBudget } from "./budget.js";
+import { type BudgetRoom, budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { removeHiddenProject } from "./hidden.js";
 import { enqueueJob, queuedJob, runningJob } from "./jobs.js";
 import { type StudioRefusal, type StudioResult, sectionLabel } from "./model.js";
@@ -127,10 +127,13 @@ export interface BakeoffQuote {
     readonly high: number;
     readonly unknown: number;
     readonly onPlan: boolean;
+    readonly usesPlan: boolean;
     readonly problem: string | null;
   })[];
   readonly high: number;
   readonly unknown: number;
+  // Some copy runs a step on a CLI plan.
+  readonly usesPlan: boolean;
   readonly budget: BudgetRoom;
   readonly fits: boolean;
   // Why this bake-off can't be made as asked, or null.
@@ -224,10 +227,12 @@ export async function quoteBakeoff(
       high: quoted.value.high,
       unknown: quoted.value.unknown,
       onPlan: quoted.value.onPlan,
+      usesPlan: quoted.value.usesPlan,
       problem: quoted.value.problem,
     });
   }
   const high = models.reduce((sum, one) => sum + one.high, 0);
+  const usesPlan = models.some((one) => one.usesPlan);
   const budget = budgetRoom(deps.db, deps.clock.now(), deps.timeZone);
   return {
     ok: true,
@@ -238,8 +243,9 @@ export async function quoteBakeoff(
       models,
       high,
       unknown: models.reduce((sum, one) => sum + one.unknown, 0),
+      usesPlan,
       budget,
-      fits: fitsBudget(budget, high),
+      fits: fitsBudget(budget, high, usesPlan),
       problem: models.find((one) => one.problem !== null)?.problem ?? null,
     },
   };
@@ -295,7 +301,7 @@ export async function startBakeoff(
     return {
       ...refuse(
         "over-budget",
-        `Comparing costs about ${money(quote.high)} and ${money(quote.budget.left)} of today's ${money(quote.budget.budget)} sample budget is left. Compare tomorrow, or raise the budget in Settings → Template studio.`,
+        `${budgetWords(quote.budget, quote, "Comparing")}, or compare tomorrow.`,
       ),
       quote,
     };

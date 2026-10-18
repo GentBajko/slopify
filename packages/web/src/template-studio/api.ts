@@ -214,7 +214,13 @@ export function anatomyQuery(
 export const studioSettingsSchema = z
   .object({
     dailyBudget: z.number(),
-    today: z.object({ budget: z.number(), spent: z.number(), left: z.number() }),
+    samplesUsePlans: z.boolean(),
+    today: z.object({
+      budget: z.number(),
+      spent: z.number(),
+      left: z.number(),
+      plans: z.boolean(),
+    }),
   })
   .loose();
 export type StudioSettingsView = z.infer<typeof studioSettingsSchema>;
@@ -228,11 +234,11 @@ export async function readStudioSettings(api: Api): Promise<StudioSettingsView> 
 
 export async function writeStudioSettings(
   api: Api,
-  dailyBudget: number,
+  settings: { readonly dailyBudget: number; readonly samplesUsePlans?: boolean },
 ): Promise<StudioSettingsView> {
   const response = await api.fetch(
     `${api.origin}/api/template-studio/settings`,
-    post("PUT", { dailyBudget }),
+    post("PUT", settings),
   );
   if (!response.ok) throw await failure(response);
   return understood(studioSettingsSchema, await response.json());
@@ -510,7 +516,15 @@ export const bakeoffQuoteSchema = z
     ),
     high: z.number(),
     unknown: z.number(),
-    budget: z.object({ budget: z.number(), spent: z.number(), left: z.number() }).loose(),
+    usesPlan: z.boolean().optional(),
+    budget: z
+      .object({
+        budget: z.number(),
+        spent: z.number(),
+        left: z.number(),
+        plans: z.boolean().optional(),
+      })
+      .loose(),
     fits: z.boolean(),
     problem: z.string().nullable(),
   })

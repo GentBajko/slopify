@@ -151,9 +151,50 @@ describe("saveStudio", () => {
     const result = await saveStudio(deps, id, input({ acknowledgedHigh: quote.high }));
     expect(result).toMatchObject({ ok: false, reason: "over-budget" });
     expect(!result.ok && result.message).toContain(
-      "Press Save without a sample, or raise the budget in Settings → Template studio.",
+      "Raise the budget in Settings → Template studio, or press Save without a sample.",
     );
     expect(queuedJob(deps.db, id)).toBeUndefined();
+  });
+
+  it("holds a sample on a CLI plan until the person lets samples use plans, whatever the budget", async () => {
+    const { deps: base, id, changed, input } = harness();
+    // Claude Code lists its own models; the fixture's catalogue has none of them.
+    const deps: SaveDeps = {
+      ...base,
+      review: {
+        ...base.review,
+        modelsFor: async (provider, family) =>
+          provider === "claude-code"
+            ? [{ id: "sonnet", name: "Sonnet" }]
+            : base.review.modelsFor(provider, family),
+      },
+    };
+    const onPlan: PlayDraftDocument = {
+      ...changed,
+      form: { ...changed.form, llm: { provider: "claude-code", model: "sonnet" } },
+    };
+    writeStudioSettings(deps.db, { dailyBudget: 0 });
+    const held = await quoteSave(deps, id, onPlan);
+    if (!held.ok) throw new Error(held.message);
+    expect(held.value.problem).toBeNull();
+    expect(held.value).toMatchObject({ usesPlan: true, fits: false });
+    const refused = await saveStudio(
+      deps,
+      id,
+      input({ document: onPlan, acknowledgedHigh: held.value.high, acknowledgedUnknown: true }),
+    );
+    expect(refused).toMatchObject({ ok: false, reason: "over-budget" });
+    expect(!refused.ok && refused.message).toBe(
+      "This sample runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Save without a sample.",
+    );
+    expect(queuedJob(deps.db, id)).toBeUndefined();
+    // Allowed, a sample whose only cost is plan usage starts at a $0 budget.
+    writeStudioSettings(deps.db, { dailyBudget: 0, samplesUsePlans: true });
+    const allowed = await quoteSave(deps, id, onPlan);
+    if (!allowed.ok) throw new Error(allowed.message);
+    expect(allowed.value.budget.plans).toBe(true);
+    expect(allowed.value.usesPlan).toBe(true);
+    expect(allowed.value.fits).toBe(allowed.value.high === 0);
   });
 
   it("says why no sample can be made when Play's review refuses the setup", async () => {

@@ -38,6 +38,9 @@ export interface SampleView {
 
 export interface DesignSampleDeps extends TemplateMakeDeps {
   readonly budget: () => number;
+  // Whether samples may run on a CLI plan (Settings → Template studio → Samples may use my CLI
+  // plans); a Save's own sample of a picture on a plan waits while they may not.
+  readonly plans: () => boolean;
   readonly timeZone: () => string;
 }
 
@@ -209,13 +212,15 @@ export function createDesignSamples(deps: DesignSampleDeps): DesignSamples {
       const spent = sampleSpentToday(db, now(), deps.timeZone());
       const budget = deps.budget();
       const held =
-        quote.unknown > 0
-          ? "Waiting: the price of this sample's picture isn't known, so Slopify didn't make it. Press Make sample to make it anyway."
-          : quote.high > holdSlack(input.acknowledgedHigh)
-            ? `Waiting: this sample now costs about ${money(quote.high)}, more than the ${money(input.acknowledgedHigh)} you saw. Press Make sample (${money(quote.high)}) to make it.`
-            : spent + quote.high > budget + 0.005
-              ? budgetSentence(spent + quote.high, budget)
-              : null;
+        quote.rows.some((one) => one.onPlan === true) && !deps.plans()
+          ? "Waiting: this sample's picture runs on your CLI plan, and samples may not use CLI plans. Turn on Samples may use my CLI plans in Settings → Template studio, or press Make sample to make it anyway."
+          : quote.unknown > 0
+            ? "Waiting: the price of this sample's picture isn't known, so Slopify didn't make it. Press Make sample to make it anyway."
+            : quote.high > holdSlack(input.acknowledgedHigh)
+              ? `Waiting: this sample now costs about ${money(quote.high)}, more than the ${money(input.acknowledgedHigh)} you saw. Press Make sample (${money(quote.high)}) to make it.`
+              : spent + quote.high > budget + 0.005
+                ? budgetSentence(spent + quote.high, budget)
+                : null;
       return { ok: true, value: queue(input.templateId, input.version, quote.high, held) };
     },
     request: (templateId, version, acknowledgedHigh) => {

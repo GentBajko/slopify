@@ -7,6 +7,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { Field, Input } from "@/components/kit/field";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { about, changeTopic, quoteSample, templateStudioKey } from "./api";
+import { budgetReason } from "./budget-words";
 
 type Choice = "typed" | "next-queued" | "fixed";
 
@@ -61,7 +62,7 @@ function TopicDrawer({
         : quote.data.problem !== null
           ? "No sample can be made of this setup"
           : !quote.data.fits
-            ? "Today's sample budget can't cover it"
+            ? budgetReason(quote.data)
             : unknown > 0 && !acceptUnknown
               ? "Accept the steps with no known price first"
               : undefined;

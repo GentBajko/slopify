@@ -2,7 +2,7 @@ import { setImmediate as yieldTurn } from "node:timers/promises";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { templateById, templateSummaries } from "../project-templates/repo.js";
-import { budgetRoom } from "./budget.js";
+import { type BudgetRoom, budgetRoom, budgetWords, fitsBudget } from "./budget.js";
 import { enqueueJob } from "./jobs.js";
 import type { StudioRefusal, TemplateSection } from "./model.js";
 import { quoteSample } from "./quote.js";
@@ -21,7 +21,10 @@ export interface ForAllItem {
   readonly version: number;
   readonly high: number;
   readonly unknown: number;
-  // It fits what is left of today's budget after the ones before it.
+  // Some step runs on a CLI plan.
+  readonly usesPlan: boolean;
+  // It fits what is left of today's budget after the ones before it, and may use a CLI plan
+  // when it needs one.
   readonly fits: boolean;
   // Why no sample can be made of it (Play's review refused its setup), or null.
   readonly problem: string | null;
@@ -32,7 +35,7 @@ export interface ForAllQuote {
   // The high estimate of every item that can be made.
   readonly total: number;
   readonly fitting: number;
-  readonly budget: { readonly budget: number; readonly spent: number; readonly left: number };
+  readonly budget: BudgetRoom;
   readonly sentence: string;
 }
 
@@ -69,8 +72,8 @@ export async function quoteSamplesForAll(deps: SaveDeps): Promise<ForAllQuote> {
     await yieldTurn();
     const quoted = await quoteSample(deps, template.id, { sections });
     if (!quoted.ok) continue;
-    const { high, unknown, problem } = quoted.value;
-    const fits = problem === null && used + high <= room.left + 1e-9;
+    const { high, unknown, problem, usesPlan } = quoted.value;
+    const fits = problem === null && fitsBudget(room, used + high, usesPlan);
     if (fits) used += high;
     items.push({
       templateId: template.id,
@@ -78,6 +81,7 @@ export async function quoteSamplesForAll(deps: SaveDeps): Promise<ForAllQuote> {
       version: quoted.value.version,
       high: problem === null ? high : 0,
       unknown: problem === null ? unknown : 0,
+      usesPlan: problem === null && usesPlan,
       fits,
       problem,
     });
@@ -90,17 +94,27 @@ export async function quoteSamplesForAll(deps: SaveDeps): Promise<ForAllQuote> {
     total,
     fitting,
     budget: room,
-    sentence: sentenceOf(makeable.length, fitting, total),
+    sentence: sentenceOf(makeable, room),
   };
 }
 
-function sentenceOf(count: number, fitting: number, total: number): string {
+function sentenceOf(makeable: readonly ForAllItem[], room: BudgetRoom): string {
+  const count = makeable.length;
   if (count === 0)
     return "Every template's sample is made for its newest version. Nothing to make.";
+  const total = makeable.reduce((sum, item) => sum + item.high, 0);
+  const fitting = makeable.filter((item) => item.fits).length;
   const head = `${String(count)} ${count === 1 ? "template needs" : "templates need"} a sample: about ${money(total)} in all.`;
   if (fitting === count) return head;
   const waiting = count - fitting;
-  return `${head} ${String(fitting)} of them ${fitting === 1 ? "fits" : "fit"} today's budget; the other ${String(waiting)} wait for tomorrow or a higher budget in Settings → Template studio.`;
+  const onPlan = makeable.filter((item) => !item.fits && item.usesPlan && !room.plans).length;
+  const why =
+    onPlan === waiting
+      ? ": they run on your CLI plan, and samples may not use CLI plans (turn on Samples may use my CLI plans in Settings → Template studio)"
+      : onPlan > 0
+        ? `: ${String(onPlan)} run on your CLI plan, which samples may not use (Samples may use my CLI plans in Settings → Template studio), and the rest wait for tomorrow or a higher budget`
+        : " for tomorrow or a higher budget in Settings → Template studio";
+  return `${head} ${String(fitting)} of them ${fitting === 1 ? "fits" : "fit"} today's budget; the other ${String(waiting)} wait${why}.`;
 }
 
 export const samplesForAllSchema = z
@@ -166,7 +180,9 @@ export async function makeSamplesForAll(deps: SaveDeps, raw: unknown): Promise<F
           quotedHigh: item.high,
           heldReason: unpriced
             ? `Waiting: ${String(item.unknown)} ${item.unknown === 1 ? "step of this sample has" : "steps of this sample have"} no known price. Press Make sample to accept that and make it.`
-            : budgetHeld,
+            : item.usesPlan && !quote.budget.plans
+              ? `Waiting: ${budgetWords(quote.budget, item, "this sample")}, then press Make sample.`
+              : budgetHeld,
         });
         held.push(item.templateId);
         continue;

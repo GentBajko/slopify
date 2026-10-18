@@ -166,6 +166,7 @@ import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { makeBakeoff } from "./slices/template-studio/bakeoff-make.js";
+import { readStudioSettings } from "./slices/template-studio/budget.js";
 import { createDocumentSamples } from "./slices/template-studio/document-sample.js";
 import { createFreeSamples } from "./slices/template-studio/free.js";
 import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
@@ -837,6 +838,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       runner: designRunner,
       catalogue: () => catalogue.read(),
       budget: () => dailySampleBudget(runtimeDb, log),
+      plans: () => readStudioSettings(runtimeDb).samplesUsePlans,
       timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
     designSamples.recover();

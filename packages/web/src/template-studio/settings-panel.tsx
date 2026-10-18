@@ -3,6 +3,7 @@ import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { Switch } from "@/components/kit/switch";
 import { usd } from "@/lib/format";
 import {
   about,
@@ -14,8 +15,9 @@ import {
   writeStudioSettings,
 } from "./api";
 
-// Settings → Template studio: the most the studio's samples may spend in one day. A sample that
-// would go over it waits, saying so, until the next day or a higher budget.
+// Settings → Template studio: the most the studio's samples may spend in one day, in dollars,
+// and whether they may run on a CLI plan at all. A sample that would go over either waits,
+// saying so, until the next day, a higher budget or plans allowed.
 export function TemplateStudioSettings(): ReactElement {
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +36,8 @@ function BudgetField(): ReactElement {
   });
   const [typed, setTyped] = useState<string | undefined>();
   const save = useMutation({
-    mutationFn: (budget: number) => writeStudioSettings(api, budget),
+    mutationFn: (settings: { readonly dailyBudget: number; readonly samplesUsePlans?: boolean }) =>
+      writeStudioSettings(api, settings),
     onSuccess: (next) => {
       client.setQueryData(studioSettingsKey, next);
       setTyped(undefined);
@@ -56,37 +59,57 @@ function BudgetField(): ReactElement {
       ? "Enter an amount between $0.00 and $1,000.00."
       : undefined;
   return (
-    <Field
-      label="Daily sample budget"
-      tip="settings.template-studio.budget"
-      help={`The most the studio's paid samples may spend in one day, in US dollars. Spent today: ${usd(data.today.spent)}; left: ${usd(data.today.left)}. A CLI plan's calls count as $0.`}
-      error={problem ?? (save.error ? `The budget wasn't saved: ${save.error.message}` : undefined)}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-small text-ink-2">$</span>
-        <Input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={1000}
-          step={0.5}
-          className="w-[112px] tabular-nums"
-          value={value}
-          aria-invalid={problem !== undefined}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-        <Button
-          variant="primary"
-          disabled={problem !== undefined || save.isPending || typed === undefined}
-          disabledReason={
-            save.isPending ? "Saving" : typed === undefined ? "Nothing changed" : (problem ?? "")
+    <>
+      <Field
+        label="Daily sample budget"
+        tip="settings.template-studio.budget"
+        help={`The most the studio's samples may spend in one day, in US dollars; at $0.00 no sample spends money. Spent today: ${usd(data.today.spent)}; left: ${usd(data.today.left)}.`}
+        error={
+          problem ?? (save.error ? `The budget wasn't saved: ${save.error.message}` : undefined)
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-small text-ink-2">$</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={1000}
+            step={0.5}
+            className="w-[112px] tabular-nums"
+            value={value}
+            aria-invalid={problem !== undefined}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+          <Button
+            variant="primary"
+            disabled={problem !== undefined || save.isPending || typed === undefined}
+            disabledReason={
+              save.isPending ? "Saving" : typed === undefined ? "Nothing changed" : (problem ?? "")
+            }
+            onClick={() => save.mutate({ dailyBudget: amount })}
+          >
+            Save
+          </Button>
+        </div>
+      </Field>
+      <div className="flex flex-col gap-1">
+        <Switch
+          label="Samples may use my CLI plans"
+          tip="settings.template-studio.plans"
+          checked={data.samplesUsePlans}
+          disabled={save.isPending}
+          onChange={(samplesUsePlans) =>
+            save.mutate({ dailyBudget: data.dailyBudget, samplesUsePlans })
           }
-          onClick={() => save.mutate(amount)}
-        >
-          Save
-        </Button>
+        />
+        <p className="m-0 text-small text-ink-2">
+          {data.samplesUsePlans
+            ? "On: samples may run steps on your Claude Code or Codex plan. That usage has no dollar price, so the budget above doesn't limit it."
+            : "Off: no sample runs a step on your Claude Code or Codex plan; such a sample waits until you turn this on."}
+        </p>
       </div>
-    </Field>
+    </>
   );
 }
 
@@ -137,7 +160,7 @@ function SamplesForAll(): ReactElement {
       : data.items.length === 0
         ? "Every template's sample is made for its newest version"
         : data.fitting === 0
-          ? "Today's sample budget is used up: raise it above, or press this tomorrow"
+          ? "No sample fits today's budget or plan setting: change them above, or press this tomorrow"
           : make.isPending
             ? "Asking for the samples"
             : undefined;

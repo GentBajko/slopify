@@ -127,7 +127,7 @@ describe("Compare models", () => {
     expect(go.getAttribute("aria-disabled") ?? go.getAttribute("disabled")).not.toBeNull();
     expect(
       within(dialog).getByText(
-        /This costs about \$3\.00 and \$2\.00 of today's sample budget is left/,
+        /Comparing costs about \$3\.00 and \$2\.00 of today's \$2\.00 sample budget is left/,
       ),
     ).not.toBeNull();
     expect(within(dialog).getByRole("link", { name: "Settings → Template studio" })).not.toBeNull();

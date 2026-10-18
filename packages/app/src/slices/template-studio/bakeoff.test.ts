@@ -169,7 +169,7 @@ describe("startBakeoff", () => {
     expect(broke).toMatchObject({
       ok: false,
       reason: "over-budget",
-      message: expect.stringContaining("raise the budget in Settings → Template studio"),
+      message: expect.stringContaining("Raise the budget in Settings → Template studio"),
     });
     expect(queuedJob(deps.db, id)).toBeUndefined();
     writeStudioSettings(deps.db, { dailyBudget: 2 });
