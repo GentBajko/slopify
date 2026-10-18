@@ -1,3 +1,8 @@
+import {
+  scheduleCreateSchema,
+  scheduleSaveBodySchema,
+  scheduleVersionBodySchema,
+} from "../../slices/schedules/schema.js";
 import { formBody, type RouteTool } from "./route-tool.js";
 
 export const scheduleTools: readonly RouteTool[] = [
@@ -10,6 +15,7 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "create_schedule",
     route: "POST /api/schedules",
+    body: scheduleCreateSchema,
     title: "Create a schedule",
     description: `${formBody("the schedule editor")} Duplicate on a schedule is this with get_schedule's settings, a new id, a new name ending "(copy)" and items: [], then pause_schedule on the copy. A design schedule (one designed piece per row, made ahead of the row's date) is {templateKind: "design", templateId: the design template's id, templateVersion: its headVersion, cadence: {kind: "by-date", time: "HH:MM"}, items: [{title, values: {every field, the date field as YYYY-MM-DD}}]}; it has no topic generation or release days, and makes only from a version marked ready.`,
   },
@@ -23,24 +29,28 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "update_schedule",
     route: "PUT /api/schedules/:id",
+    body: scheduleSaveBodySchema,
     title: "Save a schedule",
     description: `${formBody("the schedule editor")} Its release lines set when each run's videos are released. topicScoring ranks generated topics: "off" (the default), "library" (by what the library already covers) or "search" (also by public search interest: sends topic titles to Google, DuckDuckGo and Wikipedia); left out, a save keeps it.`,
   },
   {
     name: "pause_schedule",
     route: "POST /api/schedules/:id/pause",
+    body: scheduleVersionBodySchema,
     title: "Pause a schedule",
     description: "No run starts from it until resume_schedule.",
   },
   {
     name: "resume_schedule",
     route: "POST /api/schedules/:id/resume",
+    body: scheduleVersionBodySchema,
     title: "Resume a schedule",
     description: "Runs start from it again at its times.",
   },
   {
     name: "cancel_schedule",
     route: "POST /api/schedules/:id/cancel",
+    body: scheduleVersionBodySchema,
     title: "Cancel a schedule",
     description: "Cancel schedule, as the schedule's page does.",
     confirm: "Stops future scheduled runs. Existing projects and run history are kept.",
@@ -48,6 +58,7 @@ export const scheduleTools: readonly RouteTool[] = [
   {
     name: "delete_schedule",
     route: "DELETE /api/schedules/:id",
+    body: scheduleVersionBodySchema,
     title: "Delete a schedule",
     description: "Moves the schedule to the trash.",
     confirm:

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkpointChangeSchema } from "../../slices/checkpoints/change.js";
 import { oldVersionsConsequence } from "../../slices/storage/consequences.js";
 import { control, type RouteTool } from "./route-tool.js";
 import { listWithStateWords, projectWithStateWords } from "./state-shapes.js";
@@ -183,6 +184,7 @@ const decisions: readonly RouteTool[] = [
   {
     name: "change_checkpoints",
     route: "PATCH /api/projects/:id/checkpoints",
+    body: checkpointChangeSchema,
     title: "Change checkpoints",
     description:
       'Sets the stages that stop for approval, like the Checkpoints tab. Body: {revisionId, stages: ["audio" | "images" | "video"]}.',

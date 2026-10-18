@@ -15,8 +15,9 @@ import {
   queueMax,
   scheduleCreateSchema,
   scheduleRunSchema,
+  scheduleSaveBodySchema,
   scheduleSummarySchema,
-  scheduleUpdateSchema,
+  scheduleVersionBodySchema,
   topicMoveSchema,
   topicQueueSchema,
   topicTransferSchema,
@@ -152,7 +153,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .put(
         "/:id",
         zValidator("param", id, onInvalid),
-        zValidator("json", scheduleUpdateSchema.unwrap().omit({ id: true }), onInvalid),
+        zValidator("json", scheduleSaveBodySchema, onInvalid),
         (c) => {
           const result = updateSchedule(service(), {
             ...c.req.valid("json"),
@@ -164,11 +165,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .post(
         "/:id/pause",
         zValidator("param", id, onInvalid),
-        zValidator(
-          "json",
-          z.object({ baseVersion: z.number().int().positive() }).strict(),
-          onInvalid,
-        ),
+        zValidator("json", scheduleVersionBodySchema, onInvalid),
         (c) => {
           const result = pauseSchedule(service(), {
             ...c.req.valid("json"),
@@ -180,11 +177,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .post(
         "/:id/resume",
         zValidator("param", id, onInvalid),
-        zValidator(
-          "json",
-          z.object({ baseVersion: z.number().int().positive() }).strict(),
-          onInvalid,
-        ),
+        zValidator("json", scheduleVersionBodySchema, onInvalid),
         (c) => {
           const result = resumeSchedule(service(), {
             ...c.req.valid("json"),
@@ -196,11 +189,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .post(
         "/:id/cancel",
         zValidator("param", id, onInvalid),
-        zValidator(
-          "json",
-          z.object({ baseVersion: z.number().int().positive() }).strict(),
-          onInvalid,
-        ),
+        zValidator("json", scheduleVersionBodySchema, onInvalid),
         (c) => {
           const result = cancelSchedule(service(), {
             ...c.req.valid("json"),
@@ -212,11 +201,7 @@ function routes(deps: ScheduleDeps | undefined) {
       .delete(
         "/:id",
         zValidator("param", id, onInvalid),
-        zValidator(
-          "json",
-          z.object({ baseVersion: z.number().int().positive() }).strict(),
-          onInvalid,
-        ),
+        zValidator("json", scheduleVersionBodySchema, onInvalid),
         (c) => {
           const result = deleteSchedule(service(), {
             ...c.req.valid("json"),

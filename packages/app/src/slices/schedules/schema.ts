@@ -146,6 +146,12 @@ export const scheduleUpdateSchema = scheduleCreateSchema
   .extend({ baseVersion: z.number().int().positive(), mutationId: id })
   .strict()
   .readonly();
+// The bodies the schedule routes take: a save names its schedule in the path, and pause,
+// resume, cancel and delete carry only the version they were read at.
+export const scheduleSaveBodySchema = scheduleUpdateSchema.unwrap().omit({ id: true });
+export const scheduleVersionBodySchema = z
+  .object({ baseVersion: z.number().int().positive() })
+  .strict();
 export const scheduleDeleteSchema = z
   .object({ id, baseVersion: z.number().int().positive() })
   .strict()

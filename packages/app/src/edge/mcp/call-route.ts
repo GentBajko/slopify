@@ -8,7 +8,7 @@ import type { Log } from "../../kernel/log.js";
 import type { AgentActor } from "../../slices/agents/model.js";
 import { recordAgentAction } from "../../slices/agents/repo.js";
 import { revisionIdOf, subjectsOf } from "./attribution.js";
-import { fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
+import { bodyIssues, fileArg, paramsOf, pathParam, type RouteTool, routeOf } from "./route-tool.js";
 
 export interface RouteCallDeps {
   // The API, called in-process as the agent (`http/actor.ts`).
@@ -65,6 +65,10 @@ export async function callRoute(
   // Defense in depth: pathParam already keeps dots and slashes out, but should that rule ever
   // loosen, a URL that resolves off the tool's own route still never reaches another one.
   if (url.pathname !== filled) return strayPath(tool, paramsOf(path).join(", "));
+  // A body the route would refuse is answered with its reasons now, so the in-app assistant
+  // never asks the person to allow a call that can't succeed.
+  const issues = bodyIssues(tool, args.body);
+  if (issues !== undefined) return refusal(problemText(tool, { title: "", errors: [...issues] }));
   const stopped = await deps.gate?.(tool, args);
   if (stopped !== undefined) return stopped;
   if (tool.confirm !== undefined && args.confirmed !== true)

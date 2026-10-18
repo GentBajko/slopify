@@ -10,6 +10,7 @@ import {
   isGated,
 } from "../../slices/assistant/gate.js";
 import { createTurnTokens } from "../../slices/assistant/tokens.js";
+import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { assistantBindings } from "../http/actor.js";
 import { assistantRouteTools, runAllowedCall } from "./assistant.js";
@@ -48,9 +49,9 @@ function access(deps: RevisionDeps, costs = new Map<string, readonly PricedWork[
   return turn;
 }
 
-function fixture() {
+function fixture(options: { readonly schedules?: boolean } = {}) {
   const tokens = createTurnTokens();
-  const h = mcpFixture({ assistantTurns: tokens });
+  const h = mcpFixture({ ...options, assistantTurns: tokens });
   open.push(h);
   const turn = access(h.deps);
   const token = tokens.mint(turn);
@@ -453,6 +454,62 @@ describe("/mcp/assistant", () => {
       arguments: { id, confirmed: true },
     });
     expect(textOf(again)).toContain("Waiting for the person");
+    await client.close();
+  });
+
+  it("answers a paid call its route would refuse with the route's reasons, without asking", async () => {
+    const { h, connect } = fixture({ schedules: true });
+    const client = await connect();
+    const listed = await client.listTools();
+    const create = listed.tools.find((tool) => tool.name === "create_schedule");
+    // The body's real fields are offered, so a model sends days as numbers, not text.
+    expect(JSON.stringify(create?.inputSchema)).toContain('"cadence"');
+    expect(JSON.stringify(create?.inputSchema)).toContain('"days"');
+    const templateId = "00000000-0000-4000-8000-0000000000a1";
+    const drafts = draftFixture();
+    const { document } = drafts;
+    drafts.close();
+    const saved = await client.callTool({
+      name: "create_template",
+      arguments: { body: { id: templateId, name: "Nightly", document } },
+    });
+    expect(saved.isError).toBeFalsy();
+    const body = {
+      name: "Nightly",
+      templateId,
+      templateVersion: 1,
+      cadence: { kind: "weekly", time: "20:00", days: "1,3" },
+      timezone: "UTC",
+    };
+    const wrong = await client.callTool({ name: "create_schedule", arguments: { body } });
+    expect(wrong.isError).toBe(true);
+    expect(textOf(wrong)).toContain("create_schedule was refused: its arguments don't match");
+    expect(textOf(wrong)).toContain("id: ");
+    expect(textOf(wrong)).toContain("cadence.days: ");
+    expect(textOf(wrong)).not.toContain("Waiting for the person");
+    expect(asksOf(h.deps.db, "s1", h.deps.clock.now())).toEqual([]);
+    const right = {
+      ...body,
+      id: "00000000-0000-4000-8000-0000000000b1",
+      cadence: { kind: "weekly", time: "20:00", days: [1, 3] },
+    };
+    const asked = await client.callTool({ name: "create_schedule", arguments: { body: right } });
+    expect(textOf(asked)).toContain("Waiting for the person");
+    const [ask] = asksOf(h.deps.db, "s1", h.deps.clock.now());
+    expect(decideAsk(h.deps.db, ask?.id ?? "", "allow", h.deps.clock.now()).ok).toBe(true);
+    const deps = {
+      ...h.deps,
+      api: async (request: Request) => h.app.request(request, undefined, assistantBindings),
+    };
+    const made = await runAllowedCall(deps, {
+      sessionId: "s1",
+      tool: "create_schedule",
+      args: { body: right },
+    });
+    expect(made).toMatchObject({ ok: true });
+    expect(
+      h.deps.db.prepare("SELECT count(*) AS n FROM schedules WHERE id=?").get(right.id),
+    ).toEqual({ n: 1 });
     await client.close();
   });
 

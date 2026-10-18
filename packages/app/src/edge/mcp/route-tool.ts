@@ -31,6 +31,10 @@ export interface RouteTool {
   // What the agent is shown instead of the route's own answer: state words added, or a
   // credential left out.
   readonly shape?: (value: unknown) => unknown;
+  // The JSON body schema the route itself validates with (the one its zValidator takes). The
+  // tool then lists the body's real fields and types, and a body the route would refuse is
+  // answered with the route's reasons before any ask step or confirm.
+  readonly body?: z.ZodType;
 }
 
 // The base and key every project change carries, so a stale caller is refused instead of
@@ -91,13 +95,39 @@ export function inputShape(
     ...(method === "GET"
       ? {}
       : tool.upload === undefined
-        ? {
-            body: z
-              .record(z.string(), z.unknown())
-              .optional()
-              .describe("The JSON body the description names."),
-          }
+        ? { body: bodyArg(tool) }
         : { file: fileArg }),
     ...(confirmed === undefined ? {} : { confirmed: z.boolean().optional().describe(confirmed) }),
   };
+}
+
+// The body argument: any JSON object, so a wrong one reaches the route's own check (and its
+// wording) instead of the MCP client's; with the route's schema, its JSON Schema is listed too.
+function bodyArg(tool: RouteTool): z.ZodType {
+  const loose = z.record(z.string(), z.unknown()).optional();
+  if (tool.body === undefined) return loose.describe("The JSON body the description names.");
+  const { $schema: _draft, ...listed } = z.toJSONSchema(tool.body, {
+    io: "input",
+    unrepresentable: "any",
+  });
+  return loose.meta({
+    ...listed,
+    description: "The JSON body, exactly these fields with these types.",
+  });
+}
+
+// The route's own reasons for refusing this body, as its validator states them; undefined when
+// the route would take it (or the tool names no schema).
+export function bodyIssues(
+  tool: RouteTool,
+  body: unknown,
+): readonly { readonly path: string; readonly message: string }[] | undefined {
+  if (tool.body === undefined) return undefined;
+  const parsed = tool.body.safeParse(body);
+  return parsed.success
+    ? undefined
+    : parsed.error.issues.map((issue) => ({
+        path: issue.path.map(String).join("."),
+        message: issue.message,
+      }));
 }

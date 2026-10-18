@@ -1,3 +1,9 @@
+import { studioSettingsSchema } from "../../slices/template-studio/budget.js";
+import { samplesForAllSchema } from "../../slices/template-studio/for-all.js";
+import { markReadySchema } from "../../slices/template-studio/ready.js";
+import { makeSampleSchema, saveStudioSchema } from "../../slices/template-studio/save.js";
+import { sayItAsSchema } from "../../slices/template-studio/say-it-as.js";
+import { fullScriptSchema, topicSchema } from "../../slices/template-studio/topic.js";
 import type { RouteTool } from "./route-tool.js";
 
 // The template studio (Library → Templates → Open studio). Not the YouTube Studio tools.
@@ -19,6 +25,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "mark_template_ready",
     route: "POST /api/template-studio/:id/ready",
+    body: markReadySchema,
     title: "Mark a template ready for its schedules",
     description:
       "Marks the template's newest version (pass it as version) ready, so its schedules run it from their next run on. Refused, marking nothing, while a check fails or a section's sample isn't current, with each thing to fix (problems). A version already ready is answered again. Until a template's first Mark ready its schedules run its newest version; from then on a schedule runs only a version marked ready, saved before the studio, or carried over from one by Slopify, and each version saved later waits until it is marked ready.",
@@ -43,6 +50,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "save_template_studio",
     route: "POST /api/template-studio/:id/save",
+    body: saveStudioSchema,
     title: "Save a template in its studio",
     description:
       'Saves the template document as its next version. With sample "make" it also makes the paid sample of what changed, which spends money: price it first with quote_template_save and pass that quote\'s high as acknowledgedHigh (and acknowledgedUnknown: true when the quote counts steps with no price). A higher price, an unaccepted unknown one or a sample past today\'s budget is refused with the new quote and nothing is saved. With sample "skip" only the free samples are made. Send the same mutationId to retry the very same Save.',
@@ -50,6 +58,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "make_template_sample",
     route: "POST /api/template-studio/:id/samples/make",
+    body: makeSampleSchema,
     title: "Make a template's paid sample again",
     description:
       "Queues the paid sample of the template's current version again, which spends money: after it waited (a higher price, steps with no price, today's budget) or failed. Pass the version and the price get_template_studio shows for it as acknowledgedHigh, and acknowledgedUnknown: true to accept steps with no price. A sample that would cost more still waits.",
@@ -57,6 +66,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "set_sample_topic",
     route: "PUT /api/template-studio/:id/topic",
+    body: topicSchema,
     title: "Change a template's sample topic",
     description:
       'Changes the topic the template\'s samples are made about and remakes every section\'s paid sample, which spends money: a typed topic, "next-queued" for the next topic one of its schedules has queued, or "fixed" for the topic every sample starts on. Pass the price as acknowledgedHigh (and acknowledgedUnknown: true to accept steps with no price); a higher price, an unaccepted unknown one or one past today\'s budget is refused with the new quote and nothing changes.',
@@ -64,6 +74,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "set_sample_full_script",
     route: "POST /api/template-studio/:id/full-script",
+    body: fullScriptSchema,
     title: "Write a template sample's full script",
     description:
       "Switches the template's sample between the whole script (fullScript: true) and the outline and first chapter (false), and remakes the script and what is made from it, which spends money. Pass the price as acknowledgedHigh; it is refused with the new quote at a higher price, unaccepted unknown prices or past today's budget.",
@@ -86,6 +97,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "say_it_as",
     route: "POST /api/template-studio/:id/say-it-as",
+    body: sayItAsSchema,
     title: "Say a word another way",
     description:
       "Writes a Library → Narration aliases row (written said as spoken, whole word, any case; it replaces one for the same word) and voices again only the template sample's lines that say it, which spends money: price it first with quote_say_it_as and pass its high as acknowledgedHigh. The alias applies to every project started after it. Refused, writing nothing, at a higher price, with unaccepted unknown prices, past today's budget, or when the template's voice doesn't use aliases.",
@@ -100,6 +112,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "update_template_studio_settings",
     route: "PUT /api/template-studio/settings",
+    body: studioSettingsSchema,
     title: "Change the template studio's daily budgets",
     description:
       "Sets any of: dailyBudget, the most the studio's samples may spend in one day, in US dollars (0 to 1000); designDailyBudget, the same for designed pieces' template samples (0 to 1000); samplesUsePlans, whether either may run steps on a Claude Code or Codex plan, which the dollar budgets can't limit. A field left out keeps what it was. A sample that would go over its budget, or needs a plan while plans are off, waits.",
@@ -115,6 +128,7 @@ export const templateStudioTools: readonly RouteTool[] = [
   {
     name: "make_samples_for_all",
     route: "POST /api/template-studio/samples-for-all",
+    body: samplesForAllSchema,
     title: "Make the samples of every template",
     description:
       "Makes the paid sample of every template that needs one, which spends money: price them first with quote_samples_for_all and pass its total as acknowledgedTotal (and acknowledgedUnknown: true to accept steps with no price). The ones that fit today's budget are queued; the rest wait, saying so, until tomorrow or a higher budget. A higher total is refused with the new quote and nothing is queued.",
