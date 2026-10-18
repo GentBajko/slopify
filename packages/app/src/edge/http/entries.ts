@@ -20,6 +20,8 @@ const entryBody = z.object({
   name: z.string(),
   body: z.string(),
 });
+// Duplicate names the entry it copies, whose old keyword names the copy may keep.
+const entryCreateBody = entryBody.extend({ copyOf: z.string().min(1).max(100).optional() });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
@@ -28,8 +30,9 @@ export function entryRoutes(deps: AppDeps) {
 
   return new Hono()
     .get("/", (c) => c.json({ entries: listEntries(deps.db) }))
-    .post("/", zValidator("json", entryBody, onInvalid), (c) => {
-      const result = createEntry(library, c.req.valid("json"));
+    .post("/", zValidator("json", entryCreateBody, onInvalid), (c) => {
+      const { copyOf, ...draft } = c.req.valid("json");
+      const result = createEntry(library, draft, copyOf);
       return result.ok ? c.json(result.value, 201) : refused(c, result, "entry");
     })
     .put(

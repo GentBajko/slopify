@@ -104,6 +104,7 @@ export function EntriesRoute({
           api,
           { category: entry.category, mode: entry.mode, name, body: entry.body },
           undefined,
+          entry.id,
         ),
       ),
     remove: (entry) => removeEntry(api, entry.id),

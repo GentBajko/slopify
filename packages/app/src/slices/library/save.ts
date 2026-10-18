@@ -39,8 +39,17 @@ export type SaveFailure =
 
 export type SaveResult<T> = { readonly ok: true; readonly value: T } | SaveFailure;
 
-export function createPrompt(deps: LibraryDeps, draft: PromptDraft): SaveResult<Prompt> {
-  const fields = lintPrompt(draft);
+// Duplicate names the prompt it copies (`copyOf`): a copy of one saved before the `Slopify_`
+// prefix was reserved keeps the names that one already has, as an edit of it would.
+export function createPrompt(
+  deps: LibraryDeps,
+  draft: PromptDraft,
+  copyOf?: string,
+): SaveResult<Prompt> {
+  const fields = lintPrompt(
+    draft,
+    copyOf === undefined ? [] : (promptById(deps.db, copyOf)?.slots ?? []),
+  );
   if (fields.length > 0) {
     return { ok: false, reason: "invalid", fields };
   }
@@ -116,8 +125,15 @@ export function removePrompt(deps: LibraryDeps, id: string): SaveResult<null> {
     : { ok: false, reason: "not-found" };
 }
 
-export function createEntry(deps: LibraryDeps, draft: EntryDraft): SaveResult<Entry> {
-  const fields = lintEntry(draft);
+export function createEntry(
+  deps: LibraryDeps,
+  draft: EntryDraft,
+  copyOf?: string,
+): SaveResult<Entry> {
+  const fields = lintEntry(
+    draft,
+    copyOf === undefined ? [] : (entryById(deps.db, copyOf)?.slots ?? []),
+  );
   if (fields.length > 0) {
     return { ok: false, reason: "invalid", fields };
   }

@@ -117,7 +117,9 @@ describe("selecting prompts", () => {
     await user.click(await box("Dossier"));
     await user.click(screen.getByRole("button", { name: /Duplicate selected/u }));
     expect(await screen.findByText("Duplicated as “Dossier copy”.")).not.toBeNull();
-    expect(seen.bodies).toEqual([{ kind: "article", name: "Dossier copy", body: dossier.body }]);
+    expect(seen.bodies).toEqual([
+      { kind: "article", name: "Dossier copy", body: dossier.body, copyOf: dossier.id },
+    ]);
   });
 
   it("exports the selected prompts as a library file", async () => {

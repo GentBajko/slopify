@@ -5,7 +5,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import { listVersions, recordVersion, versionsOrCurrent } from "./history.js";
-import { entryById, insertPrompt, promptById } from "./repo.js";
+import { entryById, insertEntry, insertPrompt, promptById } from "./repo.js";
 import type { LibraryDeps } from "./save.js";
 import {
   createEntry,
@@ -78,6 +78,43 @@ describe("prompt history", () => {
     const [latest, ...rest] = listVersions(library.db, "prompt", prompt.id);
     expect(latest).toMatchObject({ version: 3, body: "ink", restoredFrom: 1 });
     expect(rest.map((one) => one.version)).toEqual([2, 1]);
+  });
+
+  // Duplicate copies a prompt saved before the `Slopify_` prefix was reserved as it is, and
+  // only names the copied prompt already has are let through.
+  it("duplicates a prompt or entry holding an unknown Slopify_ name", () => {
+    const library = deps();
+    insertPrompt(library.db, {
+      id: "old",
+      kind: "article",
+      name: "Old",
+      body: "{{Slopify_Wish}}",
+      slots: ["Slopify_Wish"],
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const draft = { kind: "article" as const, name: "Old (copy)", body: "{{Slopify_Wish}}" };
+    expect(createPrompt(library, draft)).toMatchObject({ ok: false, reason: "invalid" });
+    expect(saved(createPrompt(library, draft, "old")).body).toBe("{{Slopify_Wish}}");
+    expect(
+      createPrompt(library, { ...draft, name: "Other", body: "{{Slopify_Other}}" }, "old"),
+    ).toMatchObject({ ok: false, reason: "invalid" });
+    insertEntry(library.db, {
+      id: "intro",
+      category: "intro",
+      mode: "llm",
+      name: "Intro",
+      body: "{{Slopify_Wish}}",
+      slots: ["Slopify_Wish"],
+      updatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const entry = {
+      category: "intro" as const,
+      mode: "llm" as const,
+      name: "Intro (copy)",
+      body: "{{Slopify_Wish}}",
+    };
+    expect(createEntry(library, entry)).toMatchObject({ ok: false, reason: "invalid" });
+    expect(saved(createEntry(library, entry, "intro")).body).toBe("{{Slopify_Wish}}");
   });
 
   // A version saved before the `Slopify_` prefix was reserved is restored as it was.

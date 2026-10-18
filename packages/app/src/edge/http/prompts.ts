@@ -33,6 +33,9 @@ const promptBody = z.object({
   body: z.string(),
 });
 
+// Duplicate names the prompt it copies, whose old keyword names the copy may keep.
+const promptCreateBody = promptBody.extend({ copyOf: z.string().min(1).max(100).optional() });
+
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
 export function promptRoutes(deps: AppDeps) {
@@ -43,8 +46,9 @@ export function promptRoutes(deps: AppDeps) {
       // Every kind in one list: 04 Prompts filters by tab, and Duplicate needs the body it
       // is copying.
       .get("/", (c) => c.json({ prompts: withPhotorealistic(deps.db, listPrompts(deps.db)) }))
-      .post("/", zValidator("json", promptBody, onInvalid), (c) => {
-        const result = createPrompt(library, c.req.valid("json"));
+      .post("/", zValidator("json", promptCreateBody, onInvalid), (c) => {
+        const { copyOf, ...draft } = c.req.valid("json");
+        const result = createPrompt(library, draft, copyOf);
         return result.ok ? c.json(result.value, 201) : refused(c, result, "prompt");
       })
       .put(

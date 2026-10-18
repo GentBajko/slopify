@@ -94,7 +94,9 @@ export function PromptsRoute({
     groupOf: (prompt) => prompt.kind,
     nameMax,
     duplicate: async (prompt, name) =>
-      refusalOf(await savePrompt(api, { kind: prompt.kind, name, body: prompt.body }, undefined)),
+      refusalOf(
+        await savePrompt(api, { kind: prompt.kind, name, body: prompt.body }, undefined, prompt.id),
+      ),
     remove: (prompt) => removePrompt(api, prompt.id),
     trash: "prompt",
     selection,

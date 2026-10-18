@@ -881,11 +881,15 @@ export async function savePrompt(
   api: Api,
   draft: PromptDraft,
   id: string | undefined,
+  // Duplicate: the prompt it copies.
+  copyOf?: string,
 ): Promise<SaveResult<Prompt>> {
   const json = { kind: draft.kind, name: draft.name, body: draft.body };
   return saved<Prompt>(
     id === undefined
-      ? await api.client.prompts.$post({ json })
+      ? await api.client.prompts.$post({
+          json: copyOf === undefined ? json : { ...json, copyOf },
+        })
       : await api.client.prompts[":id"].$put({ param: { id }, json }),
   );
 }
@@ -1052,11 +1056,15 @@ export async function saveEntry(
   api: Api,
   draft: EntryDraft,
   id: string | undefined,
+  // Duplicate: the entry it copies.
+  copyOf?: string,
 ): Promise<SaveResult<Entry>> {
   const json = { category: draft.category, mode: draft.mode, name: draft.name, body: draft.body };
   return saved<Entry>(
     id === undefined
-      ? await api.client.entries.$post({ json })
+      ? await api.client.entries.$post({
+          json: copyOf === undefined ? json : { ...json, copyOf },
+        })
       : await api.client.entries[":id"].$put({ param: { id }, json }),
   );
 }
