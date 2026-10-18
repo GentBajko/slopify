@@ -5,6 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
+import { removePackSamples } from "../template-studio/pack-samples.js";
 import { carryGateOnto, notTemplateSample, sampleOf } from "../template-studio/repo.js";
 import {
   deleteDesignNow,
@@ -296,7 +297,10 @@ export function deleteNow(deps: TrashDeps, kind: TrashKind, id: string): TrashRe
       const changed = deps.db
         .prepare("DELETE FROM project_templates WHERE id = ? AND deleted_at IS NOT NULL")
         .run(id).changes;
-      return Number(changed) === 0 ? { ok: false, reason: "not-found" } : { ok: true, value: null };
+      if (Number(changed) === 0) return { ok: false, reason: "not-found" };
+      // The samples an imported pack came with go with it.
+      removePackSamples(deps.paths, id);
+      return { ok: true, value: null };
     }
     case "schedule": {
       // Gone from the trash; the row stays as the history Schedules lists under Deleted.

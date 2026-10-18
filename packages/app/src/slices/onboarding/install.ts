@@ -96,8 +96,8 @@ export function installPack(
   });
 }
 
-function placePrompt(
-  deps: PackInstallDeps,
+export function placePrompt(
+  deps: Pick<PackInstallDeps, "db" | "ids">,
   kind: PromptKind,
   name: string,
   body: string,
@@ -146,7 +146,7 @@ function placeVoice(
   return { id, voiceId: pack.voice.voiceId, added: true };
 }
 
-function freeTemplateName(deps: PackInstallDeps, name: string): string {
+export function freeTemplateName(deps: Pick<PackInstallDeps, "db">, name: string): string {
   const taken = new Set(templateSummaries(deps.db).map((row) => row.name.toLowerCase()));
   for (let n = 1; ; n += 1) {
     const candidate = n === 1 ? name : `${name} (${String(n)})`;

@@ -26,6 +26,9 @@ import {
   type StudioResult,
   templateSections,
 } from "../../slices/template-studio/model.js";
+import { exportPack, packLimits } from "../../slices/template-studio/pack.js";
+import { importPack } from "../../slices/template-studio/pack-import.js";
+import { packSampleFileOf, packSamples } from "../../slices/template-studio/pack-samples.js";
 import { quoteSample, quoteSave } from "../../slices/template-studio/quote.js";
 import { markReady, markReadySchema } from "../../slices/template-studio/ready.js";
 import {
@@ -60,6 +63,7 @@ import {
 } from "../../slices/template-studio/topic.js";
 import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
+import { readMultipart } from "./multipart.js";
 import { onInvalid, problem } from "./problem.js";
 
 // Library → Templates → Open studio. Not `/api/studio`, which is the YouTube Studio pack.
@@ -226,6 +230,40 @@ export function templateStudioRoutes(deps: AppDeps) {
         for (const templateId of [...result.value.queued, ...result.value.held])
           deps.hub.emitGlobal({ type: "template.sample", templateId });
         return c.json(result.value, 202);
+      })
+      // Import pack: a pack someone exported becomes a new, unchecked template. Read whole
+      // (a pack is at most 30 MB), checked, then written in one go.
+      .post("/packs/import", async (c) => {
+        if (review === undefined) return problem(c, { status: 503, detail: unpriced });
+        let tooLarge = false;
+        const bytes = await readMultipart(c.req.raw, async (content) => {
+          const chunks: Uint8Array[] = [];
+          let size = 0;
+          for await (const chunk of content) {
+            size += chunk.byteLength;
+            if (size > packLimits.uploadBytes) {
+              tooLarge = true;
+              continue;
+            }
+            chunks.push(chunk);
+          }
+          return Buffer.concat(chunks, Math.min(size, packLimits.uploadBytes));
+        });
+        if (tooLarge)
+          return problem(c, {
+            status: 413,
+            title: "Content Too Large",
+            detail: `This pack is larger than ${String(packLimits.uploadBytes / 1024 / 1024)} MB, more than a template pack ever is. Export it again from the template's studio, or ask whoever made it to.`,
+          });
+        if (bytes === undefined || bytes.byteLength === 0)
+          return problem(c, {
+            status: 400,
+            detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+          });
+        const result = importPack(review, new Uint8Array(bytes));
+        if (!result.ok) return refusedStudio(c, result);
+        deps.hub.emitGlobal({ type: "template.sample", templateId: result.value.templateId });
+        return c.json(result.value, 201);
       })
       .get("/:id", zValidator("param", param, onInvalid), async (c) => {
         const result = await getStudio(read, c.req.valid("param").id);
@@ -470,6 +508,59 @@ export function templateStudioRoutes(deps: AppDeps) {
             hash === undefined
               ? "Level the volume is off for this template, so there is no levelled narration. Turn it on in Voice, then press Save."
               : notMade,
+          );
+        },
+      )
+      // Export pack: the version marked ready as a zip to share. A file download, like the
+      // project's files: agents read templates with get_template_studio instead.
+      .get("/:id/pack", zValidator("param", param, onInvalid), async (c) => {
+        const result = await exportPack(
+          {
+            db: deps.db,
+            paths: deps.paths,
+            log: deps.log,
+            clock: deps.clock,
+            version: deps.version,
+          },
+          c.req.valid("param").id,
+        );
+        if (!result.ok) return refusedStudio(c, result);
+        return c.body(new Uint8Array(result.value.bytes), 200, {
+          "content-type": "application/zip",
+          "content-length": String(result.value.bytes.byteLength),
+          "content-disposition": `attachment; filename="${result.value.filename}"`,
+          "x-content-type-options": "nosniff",
+        });
+      })
+      // The samples an imported pack came with, shown in the studio until it makes its own.
+      .get("/:id/pack-samples", zValidator("param", param, onInvalid), (c) => {
+        const id = c.req.valid("param").id;
+        if (templateById(deps.db, id) === undefined) return gone(c, missingTemplate);
+        return c.json({
+          samples: packSamples(deps.paths, id).map((sample) => ({
+            role: sample.role,
+            name: sample.name,
+            url: `/api/template-studio/${id}/pack-samples/${sample.file}`,
+          })),
+        });
+      })
+      .get(
+        "/:id/pack-samples/:file",
+        zValidator(
+          "param",
+          param.extend({
+            file: z.string().regex(/^[a-z0-9-]{1,40}\.(png|jpg|jpeg|webp|mp3|m4a|wav)$/),
+          }),
+          onInvalid,
+        ),
+        (c) => {
+          const { id, file } = c.req.valid("param");
+          const found = packSampleFileOf(deps.paths, id, file);
+          return media(
+            c,
+            found,
+            found?.type ?? "application/octet-stream",
+            "This template has no such sample from a pack. Open its studio to see the samples it has.",
           );
         },
       )

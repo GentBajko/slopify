@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { unzipSync } from "fflate";
 import { afterEach, expect, it } from "vitest";
 import { defaultLoudness } from "../../slices/loudness/model.js";
 import { draftFixture } from "../../slices/play-drafts/draft.fake.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { createFreeSamples } from "../../slices/template-studio/free.js";
 import { queuedJob } from "../../slices/template-studio/jobs.js";
+import { writeGate } from "../../slices/template-studio/repo.js";
 import {
   anatomyViewSchema,
   sampleQuoteSchema,
@@ -443,4 +445,65 @@ it("lists the names to check, prices a Say it as, and refuses one that would cha
   expect(
     (await h.post("/say-it-as", { written: "", spoken: "x", acknowledgedHigh: 0 })).status,
   ).toBe(400);
+});
+
+it("exports the ready version as a pack and imports it as a new, unchecked template", async () => {
+  const h = paidStudio();
+  const notReady = await h.app.request(`/api/template-studio/${h.id}/pack`);
+  expect(notReady.status).toBe(409);
+  expect(await notReady.json()).toMatchObject({
+    reason: "not-ready",
+    detail: expect.stringContaining("Press Mark ready in the studio, then Export pack."),
+  });
+  writeGate(h.deps.db, h.id, { version: 1, state: "ready", carriedFrom: null });
+  const pack = await h.app.request(`/api/template-studio/${h.id}/pack`);
+  expect(pack.status).toBe(200);
+  expect(pack.headers.get("content-type")).toBe("application/zip");
+  expect(pack.headers.get("content-disposition")).toBe(
+    'attachment; filename="show.slopify-pack.zip"',
+  );
+  const bytes = new Uint8Array(await pack.arrayBuffer());
+  expect(Object.keys(unzipSync(bytes))).toEqual(["manifest.json"]);
+
+  const form = new FormData();
+  form.append("file", new File([bytes], "show.slopify-pack.zip", { type: "application/zip" }));
+  const imported = await h.app.request("/api/template-studio/packs/import", {
+    method: "POST",
+    body: form,
+  });
+  expect(imported.status).toBe(201);
+  const body = (await imported.json()) as { templateId: string; name: string };
+  expect(body.name).toBe("Show (2)");
+  const studioOf = await h.app.request(`/api/template-studio/${body.templateId}`);
+  expect(studioViewSchema.parse(await studioOf.json()).gate).toBe("unchecked");
+  const samples = await h.app.request(`/api/template-studio/${body.templateId}/pack-samples`);
+  expect(await samples.json()).toEqual({ samples: [] });
+  const none = await h.app.request(
+    `/api/template-studio/${body.templateId}/pack-samples/thumbnail-1.png`,
+  );
+  expect(none.status).toBe(404);
+});
+
+it("refuses an import that isn't a pack, and one with no file, saying what to choose", async () => {
+  const h = paidStudio();
+  const form = new FormData();
+  form.append("file", new File([new TextEncoder().encode("hello")], "notes.txt"));
+  const refused = await h.app.request("/api/template-studio/packs/import", {
+    method: "POST",
+    body: form,
+  });
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({
+    reason: "invalid-input",
+    detail: expect.stringContaining("Choose the .zip that Export pack"),
+  });
+  const empty = await h.app.request("/api/template-studio/packs/import", {
+    method: "POST",
+    body: new FormData(),
+  });
+  expect(empty.status).toBe(400);
+  expect(await empty.json()).toMatchObject({
+    detail: "No pack arrived with the upload. Choose the pack's .zip file again.",
+  });
+  expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_templates").get()).toEqual({ n: 1 });
 });

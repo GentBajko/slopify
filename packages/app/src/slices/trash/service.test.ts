@@ -18,6 +18,7 @@ import { createEntry, createPrompt, removeEntry, removePrompt } from "../library
 import { templateById, templateSummaries } from "../project-templates/repo.js";
 import { dueSchedules, scheduleById } from "../schedules/repo.js";
 import { projectDir } from "../storage/layout.js";
+import { packSamplesDir, writePackSamples } from "../template-studio/pack-samples.js";
 import { gatesOf, sampleProjects, writeGate } from "../template-studio/repo.js";
 import type { TrashDeps } from "./model.js";
 import {
@@ -206,6 +207,18 @@ describe("prompts and intro/outro entries in the trash", () => {
 });
 
 describe("templates in the trash", () => {
+  it("take the samples an imported pack came with when removed for good", () => {
+    const h = harness();
+    template(h, T1, "Weekly show");
+    writePackSamples(h.paths, T1, [
+      { file: "thumbnail-1.png", role: "thumbnail", name: "t.png", body: new Uint8Array([1]) },
+    ]);
+    h.db.prepare("UPDATE project_templates SET deleted_at=? WHERE id=?").run(now(h), T1);
+    expect(existsSync(packSamplesDir(h.paths, T1))).toBe(true);
+    expect(deleteNow(h, "template", T1)).toEqual({ ok: true, value: null });
+    expect(existsSync(packSamplesDir(h.paths, T1))).toBe(false);
+  });
+
   it("leave the lists and come back renamed as a new version when the name is taken", () => {
     const h = harness();
     template(h, T1, "Weekly show");

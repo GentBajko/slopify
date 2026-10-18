@@ -255,11 +255,17 @@ describe("/mcp/assistant", () => {
       "quote_samples_for_all",
       // Made on this computer at no cost.
       "make_template_free_samples",
+      "get_template_pack_samples",
     ];
     // Every template studio tool is classified here, so a new one has to be decided on.
-    expect(templateStudioTools.map((tool) => tool.name).toSorted()).toEqual(
-      [...asks, ...free].toSorted(),
-    );
+    expect(
+      templateStudioTools
+        .map((tool) => tool.name)
+        .filter((name) => name !== "import_template_pack")
+        .toSorted(),
+    ).toEqual([...asks, ...free].toSorted());
+    // A pack is a file from disk, so the assistant never gets the import.
+    expect(assistantRouteTools.map((tool) => tool.name)).not.toContain("import_template_pack");
     for (const name of asks) expect([name, gated(name)]).toEqual([name, true]);
     for (const name of free) expect([name, gated(name)]).toEqual([name, false]);
   });

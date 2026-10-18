@@ -14,7 +14,7 @@ export const templateStudioTools: readonly RouteTool[] = [
     route: "GET /api/template-studio/:id/checks",
     title: "Read a template's checks",
     description:
-      "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, release slots, a known monthly cost, someone to answer each checkpoint.",
+      "The free checks the template's current version passes before Mark ready, each failing one with what is wrong and where it is fixed: keywords filled, providers set up, a voice that is one of yours (Settings → Voices), release slots, a known monthly cost, someone to answer each checkpoint.",
   },
   {
     name: "mark_template_ready",
@@ -125,5 +125,20 @@ export const templateStudioTools: readonly RouteTool[] = [
     title: "Make a template's free samples",
     description:
       "Queues the samples made on this computer at no cost for the template's current version: the 30-second video, the loudness before and after, the PDF, and the schedules' cost a month. Read them back with get_template_studio.",
+  },
+  {
+    name: "import_template_pack",
+    route: "POST /api/template-studio/packs/import",
+    title: "Import a template pack",
+    description:
+      "Makes a new template from a template pack (the .zip a template studio's Export pack made, at most 30 MB): its prompts and intros join the Library (a name taken by other text comes in as \"<name> (2)\" and the template names that one), its voice is used as it is, and it is unchecked, so no schedule runs it until it is marked ready. A pack holding anything that looks like a key, a file a pack never has or a newer format is refused, writing nothing. Answers templateId, the name it got, how many Library items it added and which were renamed, whether Settings → Voices has its voice (voiceKnown; when false, get_template_checks' voice check says what to do) and how many samples it brought.",
+    upload: "multipart",
+  },
+  {
+    name: "get_template_pack_samples",
+    route: "GET /api/template-studio/:id/pack-samples",
+    title: "List the samples a template's pack brought",
+    description:
+      "The samples an imported pack came with (role: thumbnail, picture or narration; name; url), shown in the studio until the template makes its own. Empty for a template that didn't come from a pack.",
   },
 ];

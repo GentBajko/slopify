@@ -6,7 +6,7 @@ import type { TemplateDeps, TemplateResult } from "./model.js";
 import { templateDocument } from "./one-off.js";
 
 export function templateSetup(
-  deps: TemplateDeps,
+  deps: Pick<TemplateDeps, "db">,
   input: PlayDraftDocument,
 ): TemplateResult<PlayDraftDocument> {
   const prompts: LibrarySnapshot["prompts"][number][] = [];
