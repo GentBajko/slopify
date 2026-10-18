@@ -4,12 +4,13 @@ import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
 import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button } from "@/components/kit/button";
-import { TextLink } from "@/components/kit/link";
+import { FileLink, TextLink } from "@/components/kit/link";
 import { Player } from "@/components/kit/player";
 import { SectionHead } from "@/components/kit/section-head";
 import { DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
 import { Steps } from "@/components/kit/steps";
+import { cn } from "@/lib/utils";
 import { stateTone, stateWord } from "./section-rail";
 
 type Section = StudioView["sections"][number];
@@ -111,14 +112,26 @@ function SampleBody({
       );
     }
     case "document":
+      // A phone's browser shows no PDF inline, so the file opens on its own too.
       return view.free.document.url === null ? null : (
-        <Frame>
-          <iframe
-            title={`${view.template.name}: PDF sample`}
-            src={`${at(view.free.document.url)}#page=1&view=FitH`}
-            className="block h-[520px] w-full border-0 bg-surface"
-          />
-        </Frame>
+        <div className="flex flex-col gap-2">
+          <Frame className="max-md:hidden">
+            <iframe
+              title={`${view.template.name}: PDF sample`}
+              src={`${at(view.free.document.url)}#page=1&view=FitH`}
+              className="block h-[520px] w-full border-0 bg-surface"
+            />
+          </Frame>
+          <FileLink
+            href={at(view.free.document.url)}
+            target="_blank"
+            rel="noreferrer"
+            size="small"
+            className="self-start"
+          >
+            Open the PDF sample
+          </FileLink>
+        </div>
       );
     case "schedule":
       return <ScheduleSample view={view} />;
@@ -179,6 +192,16 @@ function ScheduleSample({ view }: { readonly view: StudioView }): ReactElement {
   );
 }
 
-function Frame({ children }: { readonly children: ReactNode }): ReactElement {
-  return <div className="overflow-hidden rounded-media border border-line">{children}</div>;
+function Frame({
+  children,
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string;
+}): ReactElement {
+  return (
+    <div className={cn("overflow-hidden rounded-media border border-line", className)}>
+      {children}
+    </div>
+  );
 }
