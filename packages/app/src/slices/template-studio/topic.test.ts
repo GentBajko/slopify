@@ -80,6 +80,38 @@ describe("setSampleTopic", () => {
     expect(title).toEqual({ title: "History: Salt roads" });
   });
 
+  it("keeps the old sample when the new topic's sample waits instead of starting", async () => {
+    const { deps, paid, id, price } = harness();
+    await makePaidSample(
+      paid,
+      { templateId: id, templateVersion: 1, ackHigh: 5, kind: "save", requestedAt: "a" },
+      new AbortController().signal,
+    );
+    const old = sampleOf(deps.db, id)?.projectId ?? "";
+    const high = await price({ topic: "Salt roads", sections: "all" });
+    expect(
+      (await setSampleTopic(deps, id, { topic: "Salt roads", acknowledgedHigh: high })).ok,
+    ).toBe(true);
+    // Today's budget runs out between the request and the loop reaching it.
+    writeStudioSettings(deps.db, { dailyBudget: 0 });
+    await makePaidSample(
+      paid,
+      { templateId: id, templateVersion: 1, ackHigh: high, kind: "topic", requestedAt: "b" },
+      new AbortController().signal,
+    );
+    expect(projectExists(deps.db, old)).toBe(true);
+    expect(sampleOf(deps.db, id)?.projectId).toBe(old);
+    // A held change loses nothing: once the budget allows, the same job starts the new one.
+    writeStudioSettings(deps.db, { dailyBudget: 50 });
+    await makePaidSample(
+      paid,
+      { templateId: id, templateVersion: 1, ackHigh: high, kind: "topic", requestedAt: "c" },
+      new AbortController().signal,
+    );
+    expect(sampleOf(deps.db, id)?.projectId).not.toBe(old);
+    expect(projectExists(deps.db, old)).toBe(false);
+  });
+
   it("takes the next topic a schedule has queued, and says what to do when none has", async () => {
     const { deps, id } = harness();
     const none = await setSampleTopic(deps, id, { topic: "next-queued", acknowledgedHigh: 5 });

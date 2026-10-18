@@ -166,17 +166,17 @@ export async function makePaidSample(
     // Work the last sample started finishes first: it is never stopped from here.
     await settled(deps, projectId, signal);
   }
+  // The sample project a new one replaces. It is removed only once the new one actually
+  // starts: a change that waits or can't start keeps the old sample as it was.
+  let replaced: { readonly projectId: string; readonly sentence: string } | undefined;
   if (projectId !== undefined && job.kind === "topic") {
     // A new topic is a new video: the sample starts again on a project of its own, so no
     // step keeps the old topic as its subject.
-    if (!deleteProject(deps.rebuild, projectId).ok) {
-      mark({
-        state: "failed",
-        heldReason:
-          "The new topic needs a new sample project, and the old one's files couldn't be removed. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
-      });
-      return;
-    }
+    replaced = {
+      projectId,
+      sentence:
+        "The new topic needs a new sample project, and the old one's files couldn't be removed. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
+    };
     projectId = undefined;
   }
   if (projectId !== undefined) {
@@ -192,15 +192,11 @@ export async function makePaidSample(
       if (!saved.ok && saved.reason === "invalid-edit") {
         // A change the project's editor can't make (a different format, a step switched on
         // that a revision can't add): the sample starts again on a project of its own.
-        const removed = deleteProject(deps.rebuild, projectId);
-        if (!removed.ok) {
-          mark({
-            state: "failed",
-            heldReason:
-              "The sample needs a new project, and the old one's files couldn't be removed. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
-          });
-          return;
-        }
+        replaced = {
+          projectId,
+          sentence:
+            "The sample needs a new project, and the old one's files couldn't be removed. Press Make sample again; if it fails again, use Download diagnostics in Settings and report it.",
+        };
         projectId = undefined;
       } else if (!saved.ok) {
         mark({ state: "failed", heldReason: refused(saved.reason, saved.fields) });
@@ -274,6 +270,10 @@ export async function makePaidSample(
       state: "failed",
       heldReason: `The sample can't start: ${[...new Set(missing.map((field) => field.message))].join(" ")}`,
     });
+    return;
+  }
+  if (replaced !== undefined && !deleteProject(deps.rebuild, replaced.projectId).ok) {
+    mark({ state: "failed", heldReason: replaced.sentence });
     return;
   }
   // The sample's row is written before its project, under the id the project will get, so
