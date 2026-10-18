@@ -866,6 +866,43 @@ it("turns a site on in the Upload pack with its defaults, and saves it with the 
   );
 });
 
+it("prices a post prompt on Save: its Posts line on the button, plan usage on a CLI model", async () => {
+  const user = userEvent.setup();
+  let cli = false;
+  const postsRow = { stage: "Posts", low: 0.01, high: 0.03, detail: "One LLM call per site." };
+  open("upload", {
+    "GET /api/prompts": jsonAnswer({ prompts: [] }),
+    [`POST /api/template-studio/${templateId}/quote`]: async (request: Request) => {
+      const { document: sent } = (await request.json()) as { document: typeof document };
+      const prompted = Object.values(sent.form.social ?? {}).some((one) => one?.text === "prompt");
+      return jsonAnswer(
+        !prompted
+          ? quote({ high: 0, low: 0, rows: [] })
+          : cli
+            ? quote({
+                rows: [{ ...postsRow, low: 0, high: 0, onPlan: true }],
+                low: 0,
+                high: 0,
+                onPlan: true,
+                usesPlan: true,
+              })
+            : quote({ rows: [postsRow], low: 0.01, high: 0.03 }),
+      )(request);
+    },
+  });
+  const postTo = (await screen.findAllByRole("group", { name: "Post to" }))[0];
+  if (postTo === undefined) throw new Error("The Upload pack has a Post to row.");
+  await user.click(within(postTo).getByRole("checkbox", { name: "X" }));
+  const x = (await screen.findAllByRole("region", { name: "X post" }))[0];
+  if (x === undefined) throw new Error("X's settings show once it is on.");
+  await user.selectOptions(within(x).getByLabelText("X text"), "prompt");
+  expect(await screen.findByRole("button", { name: "Save · about $0.03" })).not.toBeNull();
+  // The template's model is a CLI one now (priced again as the post changes).
+  cli = true;
+  await user.click(within(postTo).getByRole("checkbox", { name: "LinkedIn" }));
+  expect(await screen.findByRole("button", { name: "Save · plan usage" })).not.toBeNull();
+});
+
 it("shows the sample's posts as each site shows them", async () => {
   open("upload", {
     [`GET /api/template-studio/${templateId}`]: jsonAnswer({

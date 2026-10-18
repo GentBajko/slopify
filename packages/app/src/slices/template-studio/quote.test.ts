@@ -93,6 +93,63 @@ describe("quoteSave", () => {
     expect(voiced.value.rows.map((row) => row.stage)).toContain("Narration");
   });
 
+  it("prices a post prompt as the Posts line when a site's text turns to one", async () => {
+    const { h, deps, id, document } = harness();
+    giveSample(h, id);
+    const prompted = await quoteSave(deps, id, {
+      ...document,
+      form: {
+        ...document.form,
+        social: { x: { text: "prompt", media: {}, hashtags: 2, link: false } },
+      },
+    });
+    if (!prompted.ok) throw new Error(prompted.message);
+    expect(prompted.value.sections).toContain("upload");
+    const posts = prompted.value.rows.find((row) => row.stage === "Posts");
+    expect(posts?.high ?? 0).toBeGreaterThan(0);
+    expect(posts?.onPlan).toBeFalsy();
+    expect(prompted.value.high).toBeGreaterThan(0);
+    // A free text source costs nothing.
+    const free = await quoteSave(deps, id, {
+      ...document,
+      form: {
+        ...document.form,
+        social: { x: { text: "summary", media: {}, hashtags: 2, link: false } },
+      },
+    });
+    if (!free.ok) throw new Error(free.message);
+    expect(free.value.rows.map((row) => row.stage)).not.toContain("Posts");
+  });
+
+  it("shows a post prompt on a CLI model as plan usage", async () => {
+    const { h, deps: base, id, document } = harness();
+    giveSample(h, id);
+    const deps = {
+      ...base,
+      review: {
+        ...base.review,
+        modelsFor: async (provider: string, family: Parameters<typeof base.review.modelsFor>[1]) =>
+          provider === "claude-code"
+            ? [{ id: "sonnet", name: "Sonnet" }]
+            : base.review.modelsFor(provider as never, family),
+      },
+    };
+    const quote = await quoteSave(deps, id, {
+      ...document,
+      form: {
+        ...document.form,
+        llm: { provider: "claude-code", model: "sonnet" },
+        social: { linkedin: { text: "prompt", media: {}, hashtags: 3, link: false } },
+      },
+    });
+    if (!quote.ok) throw new Error(quote.message);
+    expect(quote.value.problem, quote.value.problem ?? "").toBeNull();
+    const posts = quote.value.rows.find((row) => row.stage === "Posts");
+    expect(posts?.onPlan).toBe(true);
+    expect(posts?.high).toBe(0);
+    expect(quote.value.usesPlan).toBe(true);
+  });
+
   it("says it doesn't fit when today's budget is spent", async () => {
     const { h, deps, id, document } = harness();
     writeStudioSettings(h.deps.db, { dailyBudget: 0 });
