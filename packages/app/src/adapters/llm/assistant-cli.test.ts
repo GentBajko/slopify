@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
   assistantCliRunner,
   assistantStream,
@@ -216,6 +216,7 @@ describe("assistantStream", () => {
 
 describe("assistantCliRunner", () => {
   const dir = mkdtempSync(join(tmpdir(), "slopify-assistant-cli-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
   const track = reapStandIns();
   const script = (name: string, body: string): string => {
     const path = join(dir, name);

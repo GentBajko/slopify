@@ -8,6 +8,8 @@ import { assistantCliNames } from "@app/slices/assistant/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleStopIcon, SendIcon, WrenchIcon } from "lucide-react";
 import { type KeyboardEvent, type ReactElement, useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
@@ -15,6 +17,7 @@ import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Select, Textarea } from "@/components/kit/field";
 import { ButtonLink } from "@/components/kit/link";
+import { LoadingBlock } from "@/components/kit/query-state";
 import { Lamp } from "@/components/kit/status";
 import { subscribeAssistant } from "@/events";
 import { cn } from "@/lib/utils";
@@ -118,7 +121,11 @@ function Line({
         </li>
       );
     case "assistant":
-      return <li className="mr-4 whitespace-pre-wrap">{message.text}</li>;
+      return (
+        <li className={answerClass}>
+          <Markdown remarkPlugins={[remarkGfm]}>{message.text}</Markdown>
+        </li>
+      );
     case "tool":
       return (
         <li className="flex items-center gap-2 text-label text-ink-3">
@@ -152,6 +159,10 @@ function Line({
       );
   }
 }
+
+// The model answers in Markdown; lists and emphasis are drawn small, in the chat's own type.
+const answerClass =
+  "mr-4 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:m-0 [&_p+p]:mt-2 [&_code]:font-mono [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5";
 
 function runsOn(view: AssistantView | undefined): string {
   if (view?.cli === null || view?.cli === undefined)
@@ -344,7 +355,11 @@ export function AssistantPanel({
           </Callout>
         ) : null}
         <ol className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Chat" aria-live="polite">
-          {session === null || session.messages.length === 0 ? (
+          {view.isPending ? (
+            <li>
+              <LoadingBlock label="Opening the chat…" rows={2} rowClassName="h-10" />
+            </li>
+          ) : session === null || session.messages.length === 0 ? (
             <li className="text-ink-3">
               Ask how something in Slopify works, or ask it to do something on this screen. It asks
               you first before anything that costs money or removes something.

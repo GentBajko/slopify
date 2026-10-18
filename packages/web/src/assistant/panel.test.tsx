@@ -194,6 +194,7 @@ describe("AssistantPanel", () => {
         available({
           id: "s1",
           messages: [
+            message("m0", "assistant", "You have **two** templates:\n\n- Weekly\n- Daily"),
             message("m1", "ask", "Delete a channel.", { askId: "k1" }),
             message(
               "m2",
@@ -218,6 +219,8 @@ describe("AssistantPanel", () => {
       ),
     });
     expect(await screen.findByText("Not allowed")).toBeTruthy();
+    expect(screen.getByText("two").tagName).toBe("STRONG");
+    expect(screen.getByText("Weekly").tagName).toBe("LI");
     expect(screen.queryByRole("button", { name: "Allow" })).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain("claude auth login");
   });
