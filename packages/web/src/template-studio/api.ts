@@ -20,14 +20,23 @@ import { usd } from "@/lib/format";
 // free checks (`/api/template-studio`, not the YouTube Studio pack's `/api/studio`).
 export const templateStudioKey = (id: string) => ["template-studio", id] as const;
 
+// No such project template: the id may name a design template, which the page opens instead,
+// so it is said at once rather than asked again.
+export class StudioNotFound extends Error {}
+
 export async function readTemplateStudio(api: Api, id: string): Promise<StudioView> {
   const response = await api.fetch(`${api.origin}/api/template-studio/${encodeURIComponent(id)}`);
+  if (response.status === 404) throw new StudioNotFound((await failure(response)).message);
   if (!response.ok) throw await failure(response);
   return understood(studioViewSchema, await response.json());
 }
 
 export function templateStudioQuery(api: Api, id: string): UseQueryOptions<StudioView> {
-  return { queryKey: templateStudioKey(id), queryFn: () => readTemplateStudio(api, id) };
+  return {
+    queryKey: templateStudioKey(id),
+    queryFn: () => readTemplateStudio(api, id),
+    retry: (count, error) => !(error instanceof StudioNotFound) && count < 3,
+  };
 }
 
 // The free checks, read apart from the studio: they wait on the providers' readiness, which

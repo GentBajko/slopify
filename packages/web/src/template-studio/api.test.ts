@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Api } from "@/api";
-import { about, makeSamplesForAll, markTemplateReady, saveInStudio } from "./api";
+import {
+  about,
+  makeSamplesForAll,
+  markTemplateReady,
+  readTemplateStudio,
+  StudioNotFound,
+  saveInStudio,
+  templateStudioQuery,
+} from "./api";
 
 // The studio's API file on its own: how a price is said, and how a refusal reads through the
 // shared `refusalFrom`, with the studio's own extensions (a new quote, the problems to fix).
@@ -96,5 +104,18 @@ describe("studio refusals", () => {
         1,
       ),
     ).rejects.toThrow("This template is gone.");
+  });
+});
+
+describe("templateStudioQuery", () => {
+  it("doesn't ask again for a template that doesn't exist, so a design template's id opens at once", async () => {
+    const api = apiAnswering(404, { title: "Not Found", status: 404, detail: "No such template." });
+    const query = templateStudioQuery(api, "t");
+    const error = await readTemplateStudio(api, "t").catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(StudioNotFound);
+    const retry = query.retry as (count: number, error: Error) => boolean;
+    expect(retry(0, error as Error)).toBe(false);
+    expect(retry(0, new Error("Slopify isn't answering."))).toBe(true);
+    expect(retry(3, new Error("Slopify isn't answering."))).toBe(false);
   });
 });
