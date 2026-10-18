@@ -2,7 +2,7 @@ import type { Clock } from "../clock.js";
 import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
-import type { GeneratedImage } from "../ports/image.js";
+import type { CastReference, GeneratedImage, ImageEdit } from "../ports/image.js";
 import type { Message, ThinkingMode, Usage } from "../ports/llm.js";
 import { isProviderError } from "../ports/model.js";
 import type { PlanLimitReading } from "../ports/plan-limits.js";
@@ -12,7 +12,7 @@ import type { AttemptStore } from "./attempt-repo.js";
 import type { ProviderUse, StandaloneMeter, StandaloneUse } from "./meter.js";
 
 // Provider calls that belong to no project: a schedule's topic generation, a channel's episode
-// summary and cast pictures. They go through the same attempt wrapper and retry policy as a
+// summary and cast pictures, a design's picture edits and artwork. They go through the same attempt wrapper and retry policy as a
 // stage's calls, with nothing recorded as attempts, since there is no stage to show them on.
 // What each successful call used is metered against its schedule or channel.
 
@@ -89,6 +89,9 @@ export interface StandaloneImageCall extends StandaloneUse {
   readonly model: string;
   readonly prompt: string;
   readonly aspect: Format;
+  // A design's picture to change and the cast members drawn into it.
+  readonly edit?: ImageEdit | undefined;
+  readonly cast?: readonly CastReference[] | undefined;
 }
 
 export async function standaloneImage(
@@ -105,6 +108,8 @@ export async function standaloneImage(
         model: call.model,
         prompt: call.prompt,
         aspect: call.aspect,
+        ...(call.edit === undefined ? {} : { edit: call.edit }),
+        ...(call.cast === undefined ? {} : { cast: call.cast }),
         signal,
       }),
     { kind: "image", ...(port.timeoutMs === undefined ? {} : { timeoutMs: port.timeoutMs }) },

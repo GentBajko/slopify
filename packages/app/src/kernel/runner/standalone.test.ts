@@ -190,4 +190,70 @@ describe("a provider call outside any project", () => {
       }),
     ]);
   });
+
+  it("sends a design's picture to edit and its cast, and meters it on the design", async () => {
+    const clock = manualClock();
+    const metered: StandaloneMeteredCall[] = [];
+    const asked: unknown[] = [];
+    const source = { bytes: new Uint8Array([9]), mime: "image/png" as const };
+    const cast = [{ name: "Ada", description: "", images: [source] }];
+    const image = {
+      id: "fal",
+      models: () => Promise.resolve([]),
+      generate: async (request: Parameters<ImagePort["generate"]>[0]) => {
+        asked.push({ edit: request.edit, cast: request.cast, prompt: request.prompt });
+        return { bytes: new Uint8Array([1]), mime: "image/png" as const };
+      },
+    } as unknown as ImagePort;
+    await clock.settle(
+      standaloneImage(
+        { registry: registry({ image }), clock, log, meter: { record: (c) => metered.push(c) } },
+        {
+          owner: { kind: "design", id: "d1" },
+          purpose: "picture-edit",
+          provider: "fal",
+          model: "fal-ai/flux-2",
+          prompt: "Darker sky",
+          aspect: "1:1",
+          edit: { source },
+          cast,
+        },
+      ),
+    );
+    expect(asked).toEqual([{ edit: { source }, cast, prompt: "Darker sky" }]);
+    expect(metered).toEqual([
+      expect.objectContaining({
+        owner: { kind: "design", id: "d1" },
+        purpose: "picture-edit",
+        images: 1,
+      }),
+    ]);
+  });
+
+  it("leaves edit and cast off a plain picture's request", async () => {
+    const clock = manualClock();
+    const asked: object[] = [];
+    const image = {
+      id: "fal",
+      models: () => Promise.resolve([]),
+      generate: async (request: object) => {
+        asked.push(request);
+        return { bytes: new Uint8Array([1]), mime: "image/png" as const };
+      },
+    } as unknown as ImagePort;
+    await clock.settle(
+      standaloneImage(
+        { registry: registry({ image }), clock, log },
+        {
+          owner: { kind: "design", id: "d1" },
+          purpose: "design-art",
+          provider: "fal",
+          model: "m",
+          prompt: "A stage",
+          aspect: "16:9",
+        },
+      ),
+    );
+    expect(Object.keys(asked[0] ?? {}).sort()).toEqual(["aspect", "model", "prompt", "signal"]);
+  });
 });
