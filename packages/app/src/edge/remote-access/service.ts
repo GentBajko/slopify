@@ -44,6 +44,8 @@ export interface RemoteAccessService {
   stop(): Promise<void>;
   // The Host a request through Slopify's own serve handler carries (name[:port]), or undefined.
   remoteHost(): string | undefined;
+  // The Tailscale login let in over the tailnet: the account remote access was turned on under.
+  owner(): string | undefined;
 }
 
 // ceiling: a view is a few CLI calls; an open Settings tab and agents reading it together
@@ -78,6 +80,8 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     return { machine, serve };
   };
   const ready = (value: Ready | Problem): value is Ready => !("state" in value);
+  const ownerOf = (machine: Machine) =>
+    machine.owner === undefined ? {} : { owner: machine.owner };
 
   // Removes the handler Slopify added, only while it is still exactly that.
   const removeOurs = async (now: Ready): Promise<Problem | undefined> => {
@@ -127,8 +131,13 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
     if (!mine) {
       const on = await deps.run(tailscaleCommands.serveOn(want.httpsPort, target));
       if (on.code !== 0) return fromProblem(serveRefusedProblem(on, deps.platform));
-      record({ dnsName, httpsPort: want.httpsPort, target });
-    }
+      record({ dnsName, httpsPort: want.httpsPort, target, ...ownerOf(now.machine) });
+    } else if (
+      before !== undefined &&
+      before.owner === undefined &&
+      now.machine.owner !== undefined
+    )
+      record({ ...before, owner: now.machine.owner });
     const after = await diagnose();
     if (!ready(after)) return fromProblem(after);
     const check = portUse(after.serve, dnsName, want.httpsPort);
@@ -242,6 +251,7 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
         if (problem !== undefined)
           deps.log.write("warn", "remote-access.stop", { detail: problem.summary });
       }),
+    owner: () => store.applied()?.owner,
     remoteHost: () => {
       const ours = store.applied();
       return ours === undefined

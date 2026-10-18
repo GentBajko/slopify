@@ -62,6 +62,7 @@ import { promptRoutes } from "./prompts.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { remoteAccessRoutes } from "./remote-access.js";
+import { remoteGuard } from "./remote-guard.js";
 import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
@@ -311,6 +312,8 @@ export function createApp(deps: AppDeps): Hono {
           "Slopify doesn't answer the public internet: this request came through Tailscale Funnel. On the computer Slopify runs on, run tailscale funnel status to see which port has Funnel, turn it off with tailscale funnel --https=<that port> off, and open Slopify on your other devices through Settings → General → Remote access instead.",
       });
     })
+    // Over remote access: only the account that turned it on, and no host setup.
+    .use("*", remoteGuard(deps.remoteAccess))
     .use("*", async (c, next) => {
       // A provisional candidate must not trigger the stale-tab Reload dialog.
       if (!deps.updater?.locked()) c.header("X-Slopify-Version", deps.version);

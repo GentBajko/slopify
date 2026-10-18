@@ -13,6 +13,8 @@ import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
 import { idParam } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
+import { hostOnlySentence } from "./remote-guard.js";
+import { viaProxy } from "./same-page.js";
 
 // The assistant panel's chat. The person's own: an agent or the assistant itself is refused
 // here, so nothing but a press in the page answers an ask.
@@ -112,6 +114,14 @@ export function assistantRoutes(
       zValidator("param", idParam, onInvalid),
       zValidator("json", answerBody, onInvalid),
       (c) => {
+        // An Allow starts paid or removing work: it is pressed on this computer, or on the
+        // person's own device through remote access, never by another account (`remote-guard.ts`).
+        if (c.req.valid("json").answer === "allow" && viaProxy(c.req.raw.headers))
+          return problem(c, {
+            status: 403,
+            detail: hostOnlySentence("The assistant's Allow is pressed"),
+            extensions: { reason: "host-only" },
+          });
         const service = wired(c);
         if (service instanceof Response) return service;
         const answered = service.answer(

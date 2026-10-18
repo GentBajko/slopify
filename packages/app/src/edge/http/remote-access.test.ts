@@ -184,3 +184,72 @@ describe("requests through Tailscale", () => {
     expect(health.status).toBe(200);
   });
 });
+
+describe("over the tailnet", () => {
+  it("lets in only the Tailscale account remote access was turned on under", async () => {
+    const { h, put } = fixture();
+    expect((await put({ enabled: true })).status).toBe(200);
+    const health = (login: string | undefined) =>
+      h.app.request("/api/health", {
+        headers: {
+          ...viaTailscale(),
+          ...(login === undefined ? {} : { "tailscale-user-login": login }),
+        },
+      });
+    expect((await health("ann@example.com")).status).toBe(200);
+    const other = await health("eve@example.com");
+    expect(other.status).toBe(403);
+    expect(await other.text()).toContain("only the Tailscale account that turned remote access on");
+    const page = await h.app.request("/", {
+      headers: { ...viaTailscale(), "tailscale-user-login": "eve@example.com" },
+    });
+    expect(page.status).toBe(403);
+    expect((await h.app.request("/api/health")).status).toBe(200);
+  });
+
+  it("refuses host setup, keys, imports, updates and destructive storage from another device", async () => {
+    const { h, put } = fixture();
+    await put({ enabled: true });
+    const json = { "content-type": "application/json" };
+    const writes: [string, string, unknown][] = [
+      ["PUT", "/api/providers/openrouter/key", { key: "sk-or-v1-x" }],
+      ["DELETE", "/api/providers/openrouter/key", undefined],
+      ["PUT", "/api/providers/claude-code/path", { path: "/tmp/evil" }],
+      ["PUT", "/api/storage/import", undefined],
+      ["POST", "/api/storage/cleanup", undefined],
+      ["POST", "/api/storage/old-versions/delete", undefined],
+      ["POST", `/api/storage/projects/${h.projectId}/old-versions/delete`, undefined],
+      ["POST", `/api/storage/projects/${h.projectId}/keep-outputs`, undefined],
+      ["POST", "/api/storage/files/move", { target: "/tmp/x" }],
+      ["PUT", "/api/backups", {}],
+      ["POST", "/api/update", undefined],
+      ["DELETE", "/api/update", undefined],
+      ["POST", "/api/update/activate", undefined],
+      ["PUT", "/api/settings/autostart", { enabled: true }],
+      ["POST", "/api/assistant/asks/a1", { answer: "allow" }],
+    ];
+    for (const [method, path, body] of writes) {
+      const response = await h.app.request(path, {
+        method,
+        headers: { ...json, ...viaTailscale() },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      expect(response.status, `${method} ${path}`).toBe(403);
+      expect(await response.text(), `${method} ${path}`).toContain(
+        "only on the computer Slopify runs on",
+      );
+    }
+    const local = await h.app.request("/api/providers/claude-code/path", {
+      method: "PUT",
+      headers: json,
+      body: JSON.stringify({ path: "" }),
+    });
+    expect(await local.text()).not.toContain("only on the computer Slopify runs on");
+    const denied = await h.app.request("/api/assistant/asks/a1", {
+      method: "POST",
+      headers: { ...json, ...viaTailscale() },
+      body: JSON.stringify({ answer: "deny" }),
+    });
+    expect(await denied.text()).not.toContain("only on the computer Slopify runs on");
+  });
+});
