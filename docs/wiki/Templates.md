@@ -2,6 +2,8 @@
 
 A template is a saved Play setup: prompts, voice, images, style, outputs, reviews and checkpoints, under a name. Pick it on Play, type a topic, and the video is set up the way you like it. Schedules run templates too, so a template is also the recipe every scheduled video follows.
 
+Set a template up section by section, with a live sample beside every setting, in its [Template studio](Template-Studio): **Open studio** on its row.
+
 **Where to find it:** **Library → Templates**. You also pick templates at the top of **Play**, save them from Play's right rail or a project's **More** menu, and move them between channels on a channel's **Templates** tab.
 
 ## What a template keeps
@@ -139,6 +141,7 @@ Adding a pack twice changes nothing, and a pack never replaces a prompt or templ
 
 ## Related pages
 
+- [Template studio](Template-Studio)
 - [Play overview](Play-Overview)
 - [Schedules](Schedules)
 - [Channels](Channels)

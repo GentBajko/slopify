@@ -46,6 +46,7 @@
 
 **Automation**
 - [Templates](Templates)
+- [Template studio](Template-Studio)
 - [Schedules](Schedules)
 - [Calendar](Calendar)
 - [Notifications](Notifications)

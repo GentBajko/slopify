@@ -169,7 +169,7 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 
 ## When you edit the template
 
-A schedule always uses its template as it is now: save a change to the template and the next run, the Calendar and topic generation use it. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
+A schedule runs the newest version of its template that was marked ready in the [Template studio](Template-Studio#mark-ready), or one saved before the studio existed. Save a change and the schedule keeps running the version marked ready until you look the new one over and press **Mark ready**; it is never stopped or switched to an unchecked version by itself. A template with no version marked ready doesn't start its runs, and each says so with what to press. If the change adds a keyword the schedule has no value for, fill it in under the schedule's topics or every-run values.
 
 ## Tips
 
