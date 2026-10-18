@@ -103,3 +103,26 @@ it("makes the paid sample of a Save after its free ones, and never for a free-on
   await make({ ...job, kind: "free" }, new AbortController().signal);
   expect(order).toEqual(["free", "paid save", "free"]);
 });
+
+it("makes only the bake-off for a bake-off job: no free samples, no paid sample, no prices", async () => {
+  const { h, id } = setup();
+  addSchedule(h, id);
+  const prices = createPriceCache();
+  const made: string[] = [];
+  const free = createFreeSamples({ loudnessDefault: () => defaultLoudness });
+  const make = sampleMaker({
+    db: h.deps.db,
+    free: { ...free, make: async () => void made.push("free") },
+    prices,
+    review: h.deps,
+    changed: () => undefined,
+    paid: async () => void made.push("paid"),
+    bakeoff: async () => void made.push("bakeoff"),
+  });
+  await make(
+    { templateId: id, templateVersion: 1, ackHigh: 1, kind: "bakeoff", requestedAt: "a" },
+    new AbortController().signal,
+  );
+  expect(made).toEqual(["bakeoff"]);
+  expect(prices.get(`${id}`)).toBeUndefined();
+});
