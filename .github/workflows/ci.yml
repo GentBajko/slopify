@@ -5,6 +5,9 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # The Catalogue workflow starts it on its pull request's branch: a push made with
+  # GITHUB_TOKEN starts no workflow, but a dispatch does.
+  workflow_dispatch:
 
 jobs:
   check:

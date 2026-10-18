@@ -9,6 +9,8 @@ on:
   workflow_dispatch:
 
 permissions:
+  # actions: write starts CI on the proposal's branch (see the last step).
+  actions: write
   contents: write
   pull-requests: write
 
@@ -52,3 +54,6 @@ jobs:
           body="Proposed by the daily Catalogue workflow from OpenRouter's public model metadata. Check the new models, retirements and prices, then merge. Installed copies pick the change up at their next daily check."
           gh pr create --base main --head chore/catalogue-daily --title "$SUMMARY" --body "$body" \
             || gh pr edit chore/catalogue-daily --title "$SUMMARY" --body "$body"
+          # A push made with GITHUB_TOKEN starts no workflow, so the pull request would show no
+          # checks; a dispatch is the one event that token may start. No other secret needed.
+          gh workflow run ci.yml --ref chore/catalogue-daily
