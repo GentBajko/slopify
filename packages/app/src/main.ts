@@ -518,6 +518,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       log,
       registry,
       catalogue: () => catalogue.read(),
+      lifecycle: catalogue.lifecycle,
       fetch: globalThis.fetch,
       statuses: rebuild.providers,
     });

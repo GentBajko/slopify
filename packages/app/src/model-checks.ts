@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { keyProbes } from "./adapters/key-probes.js";
+import { emptyLifecycle, type Lifecycle, retirementOf } from "./catalog/lifecycle.js";
 import type { Catalogue } from "./catalog/schema.js";
 import type { Clock } from "./kernel/clock.js";
 import type { Log } from "./kernel/log.js";
@@ -143,6 +144,7 @@ export interface ChecksWiring {
   readonly log: Log;
   readonly registry: Registry;
   readonly catalogue: () => Catalogue;
+  readonly lifecycle?: (() => Lifecycle) | undefined;
   readonly fetch: typeof globalThis.fetch;
   readonly statuses: () => Promise<readonly ProviderStatus[]>;
 }
@@ -173,6 +175,8 @@ export function wireModelChecks(deps: ChecksWiring): {
     catalogue: deps.catalogue,
     listing,
     providerModels: modelsFor,
+    retiring: (model) =>
+      retirementOf(deps.lifecycle?.() ?? emptyLifecycle, deps.catalogue(), model),
     check: modelChecker({
       registry: deps.registry,
       clock: deps.clock,

@@ -131,7 +131,9 @@ export function providerRoutes(deps: AppDeps) {
         c.header("Cache-Control", "no-store");
         return c.json({
           usages:
-            deps.catalogue === undefined ? [] : retiredModelUsage(deps.db, deps.catalogue.read()),
+            deps.catalogue === undefined
+              ? []
+              : retiredModelUsage(deps.db, deps.catalogue.read(), deps.catalogue.lifecycle?.()),
         });
       })
       .post("/catalogue/retired/switch", zValidator("json", switchBody, onInvalid), async (c) => {
@@ -149,7 +151,9 @@ export function providerRoutes(deps: AppDeps) {
       .post("/catalogue/retired/switch-all", async (c) => {
         if (deps.catalogue === undefined)
           return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
-        return c.json(await switchAllRetired(upkeep(), deps.catalogue.read()));
+        return c.json(
+          await switchAllRetired(upkeep(), deps.catalogue.read(), deps.catalogue.lifecycle?.()),
+        );
       })
       .get("/catalogue", (c) =>
         c.json(

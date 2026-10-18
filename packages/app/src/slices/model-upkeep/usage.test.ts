@@ -113,6 +113,30 @@ describe("retired model usage", () => {
     expect(suggestReplacement(catalogue, "llm", { provider: "nobody", model: "x" })).toBeNull();
   });
 
+  it("prefers the replacement models-lifecycle.yaml names, while it is live", () => {
+    const named = catalogue.llm.find(
+      (row) => row.provider === "openrouter" && !row.deprecated && row.id !== replacement?.id,
+    );
+    if (named === undefined) throw new Error("the bundled list has one OpenRouter model only");
+    const lifecycle = (to: string) => ({
+      schemaVersion: 1 as const,
+      models: [
+        {
+          family: "llm" as const,
+          provider: "openrouter",
+          id: retiredId,
+          retiresOn: "2026-11-30",
+          replacement: to,
+        },
+      ],
+    });
+    const choice = { provider: "openrouter", model: retiredId };
+    expect(suggestReplacement(catalogue, "llm", choice, lifecycle(named.id))?.id).toBe(named.id);
+    expect(suggestReplacement(catalogue, "llm", choice, lifecycle("gone/model"))?.id).toBe(
+      replacement?.id,
+    );
+  });
+
   it("finds templates, schedules, drafts and projects with steps to run, and nothing else", () => {
     const templateId = randomUUID();
     made(

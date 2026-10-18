@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { lifecycleSource } from "./lifecycle.js";
 import {
   catalogueSource,
   createCatalogueStore,
@@ -103,7 +104,7 @@ tts: []
     });
     expect(store.syncDue?.(Date.parse("2026-10-01T00:00:00.000Z"))).toBe(true);
     const status = await store.sync?.();
-    expect(requested).toEqual([catalogueSource, openRouterModelsSource]);
+    expect(requested).toEqual([catalogueSource, openRouterModelsSource, lifecycleSource]);
     expect(status?.warning).toBeNull();
     expect(status?.changes.added.map((row) => row.id)).toEqual(["google/gemini-3.2-pro"]);
     expect(status?.changes.retired.map((row) => row.id)).toEqual(["google/gemini-3.1-pro-preview"]);
@@ -139,5 +140,35 @@ tts: []
     writeFileSync(store.status().path, "llm: [broken");
     expect((await store.sync?.())?.warning).toMatch(/models.yaml file is missing or has a mistake/);
     expect(readFileSync(store.status().path, "utf8")).toBe("llm: [broken");
+  });
+  it("keeps the retirement list current, falling back to the last copy, then the shipped one", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-models-lifecycle-"));
+    const listed =
+      'schemaVersion: 1\nmodels:\n  - {family: llm, provider: openrouter, id: x, retiresOn: "2026-11-30"}\n';
+    let lifecycleAnswer: Response = new Response(listed);
+    const store = createCatalogueStore({
+      dataDir,
+      bundled,
+      fetch: async (input) =>
+        String(input) === lifecycleSource
+          ? lifecycleAnswer
+          : String(input) === openRouterModelsSource
+            ? Response.json({ data: [] })
+            : new Response(bundled),
+    });
+    expect(store.lifecycle?.()).toEqual({ schemaVersion: 1, models: [] });
+    await store.sync?.();
+    expect(store.lifecycle?.().models.map((row) => row.id)).toEqual(["x"]);
+    lifecycleAnswer = new Response("schemaVersion: 9", { status: 200 });
+    await store.sync?.();
+    expect(store.lifecycle?.().models.map((row) => row.id)).toEqual(["x"]);
+    lifecycleAnswer = new Response("down", { status: 503 });
+    expect((await store.sync?.())?.warning).toBeNull();
+    // A restart reads the downloaded copy.
+    const again = createCatalogueStore({ dataDir, bundled, fetch: globalThis.fetch });
+    expect(again.lifecycle?.().models.map((row) => row.id)).toEqual(["x"]);
+    writeFileSync(join(dataDir, "models-lifecycle.yaml"), "models: [broken");
+    const damaged = createCatalogueStore({ dataDir, bundled, fetch: globalThis.fetch });
+    expect(damaged.lifecycle?.()).toEqual({ schemaVersion: 1, models: [] });
   });
 });

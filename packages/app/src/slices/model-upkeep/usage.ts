@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { type Lifecycle, lifecycleReplacement } from "../../catalog/lifecycle.js";
 import { type Catalogue, isVideoModel } from "../../catalog/schema.js";
 import type { RunConfig } from "../admission/model.js";
 import { listProjects, stagesOf } from "../admission/repo.js";
@@ -68,13 +69,21 @@ export function retiredStatus(
   return row.enabled ? null : "unlisted";
 }
 
-// The closest active model from the same provider and list: the one sharing the longest
-// start of its ID (a newer version of the same line), the catalogue's order breaking ties.
+// The replacement models-lifecycle.yaml names, when it is live; else the closest active model
+// from the same provider and list: the one sharing the longest start of its ID (a newer
+// version of the same line), the catalogue's order breaking ties.
 export function suggestReplacement(
   catalogue: Catalogue,
   slot: UsageSlot,
   choice: ModelChoice,
+  lifecycle?: Lifecycle,
 ): { readonly id: string; readonly name: string } | null {
+  const named = lifecycleReplacement(lifecycle, catalogue, {
+    family: familyOf(slot),
+    provider: choice.provider,
+    model: choice.model,
+  });
+  if (named !== undefined && named.id !== choice.model) return named;
   let best: { readonly id: string; readonly name: string; readonly score: number } | null = null;
   for (const row of catalogue[familyOf(slot)]) {
     if (
@@ -102,6 +111,7 @@ function usagesOf(
   base: Pick<RetiredUsage, "kind" | "id" | "name">,
   choices: Partial<Record<UsageSlot, ModelChoice>>,
   blocked: string | null,
+  lifecycle: Lifecycle | undefined,
 ): RetiredUsage[] {
   const found: RetiredUsage[] = [];
   for (const slot of usageSlots) {
@@ -109,7 +119,7 @@ function usagesOf(
     if (choice === undefined) continue;
     const why = retiredStatus(catalogue, slot, choice);
     if (why === null) continue;
-    const replacement = suggestReplacement(catalogue, slot, choice);
+    const replacement = suggestReplacement(catalogue, slot, choice, lifecycle);
     found.push({
       ...base,
       key: `${base.kind}:${base.id}:${slot}`,
@@ -224,13 +234,18 @@ export function choiceSites(db: DatabaseSync): readonly ChoiceSite[] {
 
 // Every template, schedule, draft and unfinished project that still picks a retired or
 // unlisted model, with the suggested replacement. Nothing is changed here.
-export function retiredModelUsage(db: DatabaseSync, catalogue: Catalogue): readonly RetiredUsage[] {
+export function retiredModelUsage(
+  db: DatabaseSync,
+  catalogue: Catalogue,
+  lifecycle?: Lifecycle,
+): readonly RetiredUsage[] {
   return choiceSites(db).flatMap((site) =>
     usagesOf(
       catalogue,
       { kind: site.kind, id: site.id, name: site.name },
       site.choices,
       site.blocked,
+      lifecycle,
     ),
   );
 }
