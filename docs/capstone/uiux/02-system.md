@@ -25,69 +25,77 @@ The implemented design system is defined by the web token sheet, shared UI primi
 
 | Role | Face | Weight | Size / line | Notes |
 |---|---|---|---|---|
-| Body, values, table text | Barlow | 400 / 500 | 14 px / 1.45 | fixed rem scale, ratio 1.2 |
-| Small body, hints | Barlow | 400 | 13 px / 1.45 | |
-| Engraved labels (control names, section headers, state words) | Barlow Condensed | 600 / 700 | 12 px, tracking 0.09 em, uppercase | 11 px never used for text |
-| Row titles, field values emphasised | Barlow | 600 | 14-16 px | |
-| Page title | Barlow | 700 | 18 px, tracking -0.01 em | |
+| Body, values, table text | Barlow | 400 / 500 | 15 px / 22 px (`--text-body`) | the type scale is `--text-display` 44, `-title-1` 30, `-title-2` 20, `-title-3` 16, `-counter` 32, `-body` 15, `-small` 13, `-label` 12, `-reading` 18, `-code` 13 (`packages/web/src/styles/index.css:54-75`) |
+| Small body, hints | Barlow | 400 | 13 px / 19 px (`--text-small`) | |
+| Kickers (control names, section headers, state words) | Barlow Condensed | 600 / 700 | 12 px / 16 px (`--text-label`), uppercase, `.sl-kicker` | 11 px never used for text |
+| Row titles, field values emphasised | Barlow | 600 | 16 px (`--text-title-3`) | |
+| Page title | Barlow Condensed | 700 | 30 px / 34 px (`--text-title-1`, `.sl-title-1`); `--text-title-2` 20 px for sheet and section titles | |
 | Wordmark | Barlow | 800 | 20 px beside a 26 px mark, tracking -0.02 em | mark sits 3 px below the text baseline so the goo reads as a descender |
 | Landing headline | Barlow | 800 | 32 px desktop, 24 px mobile, tracking -0.02 em | at most two lines |
-| Counters (tally board) | Barlow | 700, `font-variant-numeric: tabular-nums` | 32 px | |
+| Counters (tally board) | Barlow Condensed | 700, `font-variant-numeric: tabular-nums` | 32 px / 34 px (`--text-counter`, `.sl-stat__value`) | |
 
-Reason no listed default could satisfy: Barlow's California-signage lineage matches the control-room world and ships a condensed sibling for labels plus tabular figures, so the project needs neither a display face nor a monospace. Prose measure on the project page and the landing: 65-75 ch. Emphasis inside a heading is bold of the same family. No serif, no monospace.
+Reason no listed default could satisfy: Barlow's California-signage lineage matches the control-room world and ships a condensed sibling for labels plus tabular figures, so the project needs no separate display face. Code and file paths use JetBrains Mono (`--font-mono`). Prose measure on the project page and the landing: 65-75 ch. Emphasis inside a heading is bold of the same family. No serif.
 
 ## Color
 
 Strategy: Restrained; the accent and the lamp colours are the only chroma on any screen.
 
+Token names are the design system's (`docs/design-system.md`), set in `packages/web/src/styles/index.css` (`@theme static`; the light values are written twice, in the media query and under `data-theme`, and `styles/tokens.test.ts` keeps them identical). The 2.x names (`bg`, `panel`, `panel2`, `line2`, `ink3` as a label colour on `panel`, `red`, `amber`, `done`, `lamp-*`, `run-text`, `accent-edge`) no longer exist.
+
 Dark theme (default from the use scene):
 
 | Token | Value | Use | Contrast |
 |---|---|---|---|
-| `--bg` | #141416 | page | |
-| `--panel` | #1B1B1F | rails, sheets, dialogs | |
-| `--panel2` | #202026 | controls, inputs | |
-| `--line` / `--line2` | #2A2A30 / #35353D | dividers / control borders | |
-| `--ink` | #E6E3DC | primary text | 13.4:1 on panel |
-| `--ink2` | #9A978F | secondary text | 5.9:1 on panel |
-| `--ink3` | #8A887F | labels, placeholders | 4.8:1 on panel, 4.6:1 on controls |
-| `--accent` | #9BCB4F | the locked accent: Play key fill, running lamp, active underline, focus ring, mark | 9.0:1 on panel as text |
-| `--accent-ink` | #17200B | text on accent fills | 8.9:1 on accent |
-| `--accent-edge` | #6D9333 | Play key base shadow | |
-| `--done` | #6F9A3A | done lamp and state word | 4.9:1 on controls |
-| `--red` | #E86960 | failed lamp, state word, error text | 5.1:1 on controls |
-| `--amber` | #E2A247 | canceled lamp and state word | 7.3:1 on controls |
-| pending lamp | #2C2C33 with a #3A3A42 ring | unlit | non-text |
+| `--color-ground` | #121214 | page | |
+| `--color-surface` | #19191c | rails, sheets, dialogs | |
+| `--color-raised` | #212125 | controls, inputs, hovered rows | |
+| `--color-sunken` / `--color-screen` | #0d0d0f / #08080a | wells / media and player screens | |
+| `--color-line` / `--color-line-strong` | #2a2a30 / #6c6c76 | dividers / control borders | strong line 3.4:1 on surface |
+| `--color-ink` | #ece9e2 | primary text | 14.5:1 on surface |
+| `--color-ink-2` | #a9a69e | secondary text | 7.2:1 on surface |
+| `--color-ink-3` | #8e8c84 | labels, placeholders | 5.2:1 on surface, 4.8:1 on raised |
+| `--color-accent` | #a6d45c | the locked accent: Play key fill, running and done lamp, active underline, mark | 10.2:1 on surface |
+| `--color-on-accent` | #15200a | text on accent fills | 9.8:1 on accent |
+| `--color-accent-strong` | #86b33c | Play key base shadow (`--shadow-key`), pressed fill | |
+| `--color-accent-ink` | #b6e070 | accent-coloured text | 11.6:1 on surface |
+| `--color-waiting` | #e8a84c | waiting and canceled lamp and state word | 8.5:1 on surface |
+| `--color-danger` | #f08073 | failed lamp, state word, error text | 6.7:1 on surface |
+| `--color-info` | #86b7f2 | info lamp and callout | 8.4:1 on surface |
+| `--color-focus` | accent | focus ring | |
+| `*-tint` | the colour at 12% alpha | callout and lamp halos | non-text |
+| `--color-speaker-1` to `-6` | six fixed hues | speaker chips | non-text |
+| pending lamp | `--color-line-strong` | unlit | non-text |
 
-Light theme:
+Light theme (same token names):
 
 | Token | Value | Use | Contrast |
 |---|---|---|---|
-| `--bg` | #F4F2EC | page | |
-| `--panel` | #FBFAF7 | rails, sheets, dialogs | |
-| `--panel2` | #ECEAE3 | controls, inputs | |
-| `--line` / `--line2` | #DAD8D0 / #C9C7BE | dividers / control borders | |
-| `--ink` | #1C1C1E | primary text | 16.3:1 on panel |
-| `--ink2` | #5C5B56 | secondary text | 6.5:1 on panel |
-| `--ink3` | #6B6A64 | labels, placeholders | 5.2:1 on panel, 4.5:1 on controls |
-| `--accent` | #9BCB4F | fills only: Play key, mark; never text | fill with `--accent-ink` 8.9:1 |
-| `--lamp-run` / `--focus` | #5F8A2B | running lamp, active underline, focus ring, segmented-switch marker | 3.4:1 on controls (non-text floor 3:1) |
-| `--run-text` | #3F6B1C | RUNNING state word | 5.2:1 on controls |
-| `--done` | #55673F | done lamp and state word | 5.1:1 on controls (measured in; the 4.7 this row claimed understated it) |
-| `--red` | #B8332C | failed | 4.9:1 on controls |
-| `--amber` | #8F5E12 | canceled | 4.6:1 on controls |
-| pending lamp | #DEDCD4 with a #C9C7BE ring | unlit | non-text |
+| `--color-ground` | #f2f0ea | page | |
+| `--color-surface` | #fbfaf6 | rails, sheets, dialogs | |
+| `--color-raised` | #ffffff | controls, inputs | |
+| `--color-sunken` / `--color-screen` | #e8e6df / #141416 | wells / media and player screens (stays dark) | |
+| `--color-line` / `--color-line-strong` | #dcd9d0 / #827f76 | dividers / control borders | strong line 3.8:1 on surface |
+| `--color-ink` | #1b1b1d | primary text | 16.5:1 on surface |
+| `--color-ink-2` | #51504b | secondary text | 7.7:1 on surface |
+| `--color-ink-3` | #62615b | labels, placeholders | 5.9:1 on surface |
+| `--color-accent` | #4d7a1c | fills, lamps, underline, focus ring (a dark green in this theme) | 4.9:1 on surface |
+| `--color-on-accent` | #ffffff | text on accent fills | 5.1:1 on accent |
+| `--color-accent-strong` / `--color-accent-ink` | #3c6214 | pressed fill and key shadow / accent-coloured text | 6.8:1 on surface |
+| `--color-waiting` | #8a560c | waiting and canceled | 5.9:1 on surface |
+| `--color-danger` | #b3322a | failed | 5.9:1 on surface |
+| `--color-info` | #1f5da3 | info | 6.4:1 on surface |
+| pending lamp | `--color-line-strong` | unlit | non-text |
 
-Rules: no pure #000 or #FFF; secondary text on the accent fill is tinted from the hue, never grey; lamps are always paired with the state word; floors 4.5:1 body and placeholder, 3:1 large text and UI indicators, on both themes. Semantic states standardised once: hover = `--panel2` lift plus `--line2` border; focus = 2 px `--focus` ring with 2 px offset; selected = `--panel2` with a 2 px inset bottom line in `--lamp-run`; disabled = 45% opacity, no pointer; error = `--red` border plus message below; warning = `--amber`; success = `--done`; info = `--ink2`.
+Rules: no pure #000 (the light theme's `--color-raised` is the one #fff surface); lamps are always paired with the state word; floors 4.5:1 body and placeholder, 3:1 large text and UI indicators, on both themes. Semantic states standardised once: hover = `--color-raised` lift; focus = 2 px `--color-focus` outline with 2 px offset (`packages/web/src/styles/index.css:257-258`); selected = the accent underline or tinted row; disabled = reduced opacity with a stated reason; error = `--color-danger` border plus message below; warning = `--color-waiting`; success = `--color-accent`; info = `--color-info`.
 
 Theme switching: `prefers-color-scheme` by default, overridden by the Settings control (System / Dark / Light), persisted locally.
 
 ## Spacing and shape
 
-- 4 px base grid; rail padding 14 px 16 px; sheet padding 18 px; gap between rails 0 (they share borders), between sheet fields 14 px.
+- 8 px grid (`--space-1` 4 px to `--space-8` 64 px, `packages/web/src/styles/index.css:93-105`); rail padding 14 px 16 px; sheet padding 18 px; gap between rails 0 (they share borders), between sheet fields 14 px.
 - Frame: a 232 px left rail (`--rail-width`), a fluid page centred beyond `--content-max` (1680 px), and on phones a top bar and a bottom bar (`packages/web/src/styles/index.css:106-109`, `packages/web/src/styles/shell.css:512-589`). With the Assistant panel open the page narrows beside it. A `PageHeader` carries each page title; status slots reserve 32 px; action bars are at least 56 px.
-- Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, popovers, toasts and the Play key; nothing else. No pill shapes.
-- Lists are kit List/ListRow rows divided by hairlines, never a card inside a card. Elevation uses the one `--shadow-pop` token: dialogs, popovers, toasts and the drawer; sticky action bars sit on the page background without a shadow.
+- Radius lock: three tokens, `--radius-control` 6 px (controls, inputs, rails, sheets, dialogs, popovers, toasts and the Play key), `--radius-media` 10 px (media frames and tiles) and `--radius-pill` 999 px (chips and badges only); nothing else (`packages/web/src/styles/index.css:78-80`).
+- Lists are kit List/ListRow rows divided by hairlines, never a card inside a card. Elevation uses `--shadow-pop` (popovers, toasts and the drawer) and `--shadow-dialog` (dialogs), plus `--shadow-key` for the Play key; sticky action bars sit on the page background without a shadow.
 - Sticky layers: header at the top (z 40), action bars at the viewport bottom (z 20, safe-area padded), the drawer fixed under the header on the right (z 30), toasts top-right under the header (z 60).
 - More space above a section header (24 px) than below it (10 px).
 
@@ -105,9 +113,9 @@ Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. Th
 
 ## Component library
 
-Since 3.0 the token names, the `sl-*` component classes and the kit components are those of `docs/design-system.md`; the 2.x token names used in the sections above (`--panel`, `--lamp-run`, `--line2`, `--red`) are renamed there, and `ui/button.tsx` is gone in favour of `kit/button`. Read this chapter for the intent and that document for the current names.
+Since 3.0 the token names, the `sl-*` component classes and the kit components are those of `docs/design-system.md`, and `ui/button.tsx` is gone in favour of `kit/button`. Read this chapter for the intent and that document for the current names.
 
-shadcn/ui restyled to the tokens above, never in default state, on Radix primitives (`packages/web/src/components/ui/`): Dialog for every confirmation, Select for pickers, Toggle Group for segmented switches and kind filters, Dropdown Menu for row and page overflow menus, Popover (`packages/web/src/components/ui/popover.tsx`, `--panel`, radius 6, portalled) for help text, located folder paths, error details, the drafts list and the batch queue. `stack` records the exact packages and versions. The control-room aesthetic has no official package; it is built with plain CSS on top of those primitives and labelled as such.
+shadcn/ui restyled to the tokens above, never in default state, on Radix primitives (`packages/web/src/components/ui/`): Dialog for every confirmation, Select for pickers, Toggle Group for segmented switches and kind filters, Dropdown Menu for row and page overflow menus, Popover (`packages/web/src/components/ui/popover.tsx`, `--color-surface`, `--radius-control`, portalled) for help text, located folder paths, error details, the drafts list and the batch queue. `stack` records the exact packages and versions. The control-room aesthetic has no official package; it is built with plain CSS on top of those primitives and labelled as such.
 
 The layout kit (`packages/web/src/components/kit/`) is what every screen composes from:
 
@@ -142,7 +150,7 @@ The build-time checklist from capstone's design method, binding on `build`:
 Project-specific additions:
 
 - Lamps never convey state alone; the state word is always rendered beside them.
-- The accent is text only on the dark theme; on light it is a fill with `--accent-ink` text, and `--run-text` carries the running word.
+- Accent-coloured text is `--color-accent-ink` on both themes; text on an accent fill is `--color-on-accent`.
 - Stage glyphs come from `packages/web/src/assets/` verbatim; they are not redrawn.
 - The wordmark is live text in Barlow 800 beside the mark, never a rasterised lockup.
 
