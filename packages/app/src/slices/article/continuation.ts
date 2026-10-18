@@ -1,13 +1,7 @@
-import type { LlmEvent, Message } from "../../kernel/ports/llm.js";
-import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
-import type { AttemptResult } from "../../kernel/runner/work.js";
-import type { ProviderChoice } from "../admission/model.js";
-import type { Tokens } from "../telemetry/model.js";
-import { noTokens, plusUsage } from "../telemetry/model.js";
+import type { Message } from "../../kernel/ports/llm.js";
 
-// The one message the article is written from, the streamed call that writes it, and the
-// continuations that finish it when the model runs into its own output limit. Every call
-// goes through the wrapped `providers.llm`, so nothing here counts attempts or waits.
+// The one message the article is written from, and the continuations that finish it when the
+// model runs into its own output limit (`rebuild/runtime-article.ts` sends them).
 
 // What the message is composed from: the rendered article prompt, and the research notes
 // when research ran.
@@ -16,26 +10,8 @@ export interface ArticleBrief {
   readonly notes?: string | undefined;
 }
 
-export interface SentMessages {
-  readonly label: string;
-  readonly messages: readonly Message[];
-}
-
-export interface WrittenArticle {
-  readonly markdown: string;
-  // The exact messages sent, in the order they were sent, for the project to store.
-  readonly sent: readonly SentMessages[];
-  // The article and its continuations are one unit, so their usage is
-  // summed here and counted once by the stage.
-  readonly tokens: Tokens;
-}
-
 // At most 3 continuations; still unfinished after the third is a failed attempt.
 export const continuationLimit = 3;
-
-// The provider's own word for "I stopped because I ran out of room", which is what every
-// adapter maps its finish reason to (`kernel/ports/llm.ts`).
-const truncatedReason = "length";
 
 // A fixed 'Research notes' header followed by the notes, then the rendered article prompt;
 // without research, the rendered prompt alone. One user message, and no parameters of the app's
@@ -69,79 +45,4 @@ export function continuationMessages(base: readonly Message[], soFar: string): r
       ].join("\n"),
     },
   ];
-}
-
-export async function writeArticle(
-  providers: StageProviders,
-  choice: ProviderChoice,
-  brief: ArticleBrief,
-  onDelta: (text: string) => void,
-): Promise<AttemptResult<WrittenArticle>> {
-  const base = articleMessages(brief);
-  const sent: SentMessages[] = [{ label: "Article", messages: base }];
-  const stream = (event: LlmEvent): void => {
-    if (event.type === "delta") {
-      onDelta(event.text);
-    }
-  };
-
-  let result = await providers.llm(
-    {
-      provider: choice.provider,
-      model: choice.model,
-      ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
-      messages: base,
-      check: written,
-    },
-    stream,
-  );
-  if (!result.ok) return result;
-  let answer = result.value;
-  const pieces = [answer.text];
-  let tokens = plusUsage(noTokens, answer.usage);
-
-  for (let n = 1; truncated(answer) && n <= continuationLimit; n += 1) {
-    const messages = continuationMessages(base, pieces.join(""));
-    sent.push({ label: `Continuation ${String(n)}`, messages });
-    result = await providers.llm(
-      {
-        provider: choice.provider,
-        model: choice.model,
-        ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
-        messages,
-        // The last continuation allowed is the one that has to end the article: a fourth
-        // truncation is a failed attempt, which is the wrapper's to retry. The
-        // loop therefore never sees a truncated answer with its budget spent.
-        check: n === continuationLimit ? finished : written,
-      },
-      stream,
-    );
-    if (!result.ok) return result;
-    answer = result.value;
-    pieces.push(answer.text);
-    tokens = plusUsage(tokens, answer.usage);
-  }
-
-  return { ok: true, value: { markdown: pieces.join(""), sent, tokens } };
-}
-
-function truncated(answer: LlmAnswer): boolean {
-  return answer.finishReason === truncatedReason;
-}
-
-// Empty response → failed attempt.
-function written(answer: LlmAnswer): string | undefined {
-  return answer.text.trim() === ""
-    ? "The AI model returned an empty article. Try again; if it keeps happening, choose a different model in Edit project → Providers."
-    : undefined;
-}
-
-function finished(answer: LlmAnswer): string | undefined {
-  const empty = written(answer);
-  if (empty !== undefined) {
-    return empty;
-  }
-  return truncated(answer)
-    ? `The article was still unfinished after ${String(continuationLimit)} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`
-    : undefined;
 }

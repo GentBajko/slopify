@@ -154,8 +154,7 @@ export function deleteImage(deps: RerunDeps, projectId: string, outputId: string
     return { ok: false, reason: "last-image" };
   }
   return apply(deps, projectId, { kind: "image-deleted" }, loaded, () => {
-    // `slices/images/run.ts` counts an image as landed only when its row and its file both
-    // survive, so a delete removes both - and the piece that planned it, or the next run
+    // An image counts as landed only when its row and its file both survive, so a delete removes both - and the piece that planned it, or the next run
     // of the stage would read the plan and make the image again.
     deleteOutput(deps.db, image.id);
     dropImagePiece(deps, loaded.stages, image.path);
@@ -298,8 +297,8 @@ export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readon
 }
 
 // A regenerated image is replaced in place at the same index, so the piece keeps the prompt
-// and the index it was planned with and only stops naming a file: `slices/images/run.ts`
-// then sees one image of its plan still to make, and the file it named can be removed.
+// and the index it was planned with and only stops naming a file: the images stage then
+// sees one image of its plan still to make, and the file it named can be removed.
 function forgetImageFile(deps: RerunDeps, stages: readonly Stage[], path: string): void {
   for (const piece of imagePieces(deps, stages, path)) {
     if (piece.payload === null) {

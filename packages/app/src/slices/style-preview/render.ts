@@ -17,10 +17,10 @@ import { previewCues, previewWords, type StylePreviewSettings } from "./settings
 
 // The preview goes through the same planner and renderer as a real video: `planRender` builds
 // the edit list (motion, transitions, the Look, the chapter card), the captions are the same
-// ASS script `prepareSubtitles` writes, and `renderSlideshow` encodes it clip by clip. The
-// Shorts layout goes through `renderShort`, as a short-mode video and every cut short do. Only
-// the inputs are the bundled sample's: three of its images and six seconds of its narration
-// with the word timing (`narration.ts`); no provider is ever called.
+// ASS script the captions step writes (`rebuild/runtime-subtitles.ts`), and `renderSlideshow`
+// encodes it clip by clip. The Shorts layout goes through `renderShort`, as a short-mode video
+// and every cut short do. Only the inputs are the bundled sample's: three of its images and six
+// seconds of its narration with the word timing (`narration.ts`); no provider is ever called.
 
 // `picture` is a still to draw every shot from instead of the sample stills.
 export type StylePreviewRenderer = (
