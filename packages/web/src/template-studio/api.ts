@@ -333,3 +333,74 @@ export async function markTemplateReady(
   }
   throw await failure(response);
 }
+
+// Voice → Say it as: the names the sample's script says, and saying one another way.
+export const pronunciationsSchema = z
+  .object({
+    names: z.array(
+      z
+        .object({
+          term: z.string(),
+          ipa: z.array(z.string()),
+          line: z.string().nullable(),
+          spokenAs: z.string().nullable(),
+        })
+        .loose(),
+    ),
+    aliasesOn: z.boolean(),
+    voice: z.object({ provider: z.string(), model: z.string(), voice: z.string() }).nullable(),
+    problem: z.string().nullable(),
+  })
+  .loose();
+export type PronunciationsView = z.infer<typeof pronunciationsSchema>;
+
+export function pronunciationsQuery(
+  api: Api,
+  id: string,
+  revision: string | null,
+): UseQueryOptions<PronunciationsView> {
+  return {
+    queryKey: [...templateStudioKey(id), "pronunciations", revision ?? ""],
+    queryFn: async () => {
+      const response = await api.fetch(`${base(api, id)}/pronunciations`);
+      if (!response.ok) throw await failure(response);
+      return understood(pronunciationsSchema, await response.json());
+    },
+  };
+}
+
+export const sayItAsQuoteSchema = z
+  .object({
+    lines: z.number(),
+    high: z.number(),
+    unknown: z.number(),
+    fits: z.boolean(),
+    problem: z.string().nullable(),
+  })
+  .loose();
+export type SayItAsQuoteView = z.infer<typeof sayItAsQuoteSchema>;
+
+export async function quoteSayItAs(
+  api: Api,
+  id: string,
+  ask: { readonly written: string; readonly spoken: string },
+): Promise<SayItAsQuoteView> {
+  const response = await api.fetch(`${base(api, id)}/say-it-as/quote`, post("POST", ask));
+  if (!response.ok) throw await failure(response);
+  return understood(sayItAsQuoteSchema, await response.json());
+}
+
+export function saveSayItAs(
+  api: Api,
+  id: string,
+  input: {
+    readonly written: string;
+    readonly spoken: string;
+    readonly acknowledgedHigh: number;
+    readonly acknowledgedUnknown: boolean;
+  },
+) {
+  return api
+    .fetch(`${base(api, id)}/say-it-as`, post("POST", input))
+    .then((r) => answered(r, z.object({ queued: z.boolean() }).loose()));
+}

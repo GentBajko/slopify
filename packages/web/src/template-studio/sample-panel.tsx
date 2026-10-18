@@ -18,6 +18,7 @@ import {
   PaidBody,
   paidSections,
 } from "./paid-sample";
+import { SayItAs } from "./say-it-as";
 import { stateTone, stateWord } from "./section-rail";
 
 type Section = StudioView["sections"][number];
@@ -103,6 +104,9 @@ export function SamplePanel({
         <FullScriptSwitch view={view} onDone={setProblem} />
       ) : null}
       <PaidBody view={view} section={section.id} />
+      {section.id === "voice" && section.state !== "off" && section.state !== "provided" ? (
+        <SayItAs templateId={view.template.id} revisionId={view.paid.revisionId} />
+      ) : null}
       <SampleBody view={view} section={section.id} />
       {paid ? <EarlierSamples view={view} /> : null}
     </section>
