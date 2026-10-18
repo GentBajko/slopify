@@ -90,5 +90,5 @@ A project's "Designs (N)…" menu item opens the `Designs` drawer: a list of the
 - Undoing a version: absent; every version is kept and the next edit continues from the current one (`packages/web/src/designs/design-picture.tsx:156`).
 - Deleting with a confirmation dialog: absent; Delete on a tile or row acts at once (`packages/web/src/designs/designs-route.tsx:139-147`, `packages/web/src/designs/designs-route.tsx:220-228`).
 - Adding the design to a project's video: absent; "Keep in project" only links it (`packages/web/src/designs/design-panels.tsx:163`).
-- A rail item lit for Designs: absent (`packages/web/src/components/shell.tsx:103-117`).
+- A separate rail item for Designs: absent; Designs lives under Library, which stays lit (`packages/web/src/components/shell.tsx:117-125`).
 - Marking a design template ready without its own current sample: absent (`packages/web/src/designs/editor/template-editor.tsx:165-167`).
