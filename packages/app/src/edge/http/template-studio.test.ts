@@ -384,3 +384,33 @@ it("answers Mark ready again for a version already ready", async () => {
   expect(reply.status).toBe(200);
   expect(await reply.json()).toEqual({ version: 1, gate: "ready", replayed: true });
 });
+
+it("prices the samples of every template, and queues them at the total shown", async () => {
+  let woken = 0;
+  const h = paidStudio(() => {
+    woken += 1;
+  });
+  const post = (path: string, body?: unknown) =>
+    h.app.request(`/api/template-studio${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  const reply = await post("/samples-for-all/quote");
+  expect(reply.status).toBe(200);
+  const quote = (await reply.json()) as { total: number; items: { templateId: string }[] };
+  expect(quote.items.map((item) => item.templateId)).toEqual([h.id]);
+  const higher = await post("/samples-for-all", { acknowledgedTotal: 0 });
+  expect(higher.status).toBe(409);
+  expect(await higher.json()).toMatchObject({
+    reason: "cost-changed",
+    quote: { total: quote.total },
+  });
+  expect(queuedJob(h.deps.db, h.id)).toBeUndefined();
+  const made = await post("/samples-for-all", { acknowledgedTotal: quote.total });
+  expect(made.status).toBe(202);
+  expect(await made.json()).toMatchObject({ queued: [h.id], held: [] });
+  expect(queuedJob(h.deps.db, h.id)).toMatchObject({ kind: "save" });
+  expect(woken).toBe(1);
+  expect((await post("/samples-for-all", { acknowledgedTotal: -1 })).status).toBe(400);
+});

@@ -14,6 +14,11 @@ import {
   studioSettingsSchema,
   writeStudioSettings,
 } from "../../slices/template-studio/budget.js";
+import {
+  makeSamplesForAll,
+  quoteSamplesForAll,
+  samplesForAllSchema,
+} from "../../slices/template-studio/for-all.js";
 import { createFreeSamples, type FreeSamples } from "../../slices/template-studio/free.js";
 import { enqueueJob } from "../../slices/template-studio/jobs.js";
 import {
@@ -199,6 +204,26 @@ export function templateStudioRoutes(deps: AppDeps) {
           ...readStudioSettings(deps.db),
           today: budgetRoom(deps.db, deps.clock.now()),
         });
+      })
+      // Settings → Template studio → Make samples for all: the total first, then each sample
+      // that fits today's budget queued at its price, the rest waiting on the budget.
+      .post("/samples-for-all/quote", async (c) => {
+        if (review === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+        return c.json(await quoteSamplesForAll({ db: deps.db, clock: deps.clock, review, acks }));
+      })
+      .post("/samples-for-all", zValidator("json", samplesForAllSchema, onInvalid), async (c) => {
+        if (review === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: unpriced });
+        const result = await makeSamplesForAll(
+          { db: deps.db, clock: deps.clock, review, acks },
+          c.req.valid("json"),
+        );
+        if (!result.ok) return refusedWithQuote(c, result);
+        studio.wake();
+        for (const templateId of [...result.value.queued, ...result.value.held])
+          deps.hub.emitGlobal({ type: "template.sample", templateId });
+        return c.json(result.value, 202);
       })
       .get("/:id", zValidator("param", param, onInvalid), async (c) => {
         const result = await getStudio(read, c.req.valid("param").id);

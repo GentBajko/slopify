@@ -112,6 +112,7 @@ it("asks for confirmed: true on every tool whose page confirms first", () => {
     "remove_voice",
     "move_files_folder",
     "mark_template_ready",
+    "make_samples_for_all",
   ])
     expect(confirmed.has(name), name).toBe(true);
   // The pages remove these in one press, so the tools don't ask either.
@@ -135,6 +136,7 @@ it("leaves the POST tools that only look, price or test unrecorded as an agent's
       "preview_added_output",
       "preview_channel_videos",
       "preview_rebuild",
+      "quote_samples_for_all",
       "quote_template_save",
       "quote_voice_sample",
       "review_draft",

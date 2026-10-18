@@ -82,6 +82,22 @@ export const templateStudioTools: readonly RouteTool[] = [
       "Sets the most the studio's samples may spend in one day, in US dollars (0 to 1000). A sample that would go over it waits until the next day or a higher budget.",
   },
   {
+    name: "quote_samples_for_all",
+    route: "POST /api/template-studio/samples-for-all/quote",
+    title: "Price the samples of every template",
+    description:
+      "Prices the paid sample of every template whose newest version has none (or changed since its last one), before anything is spent: each template's high estimate, whether it fits what is left of today's sample budget (spent in name order), the total and a sentence saying how many fit. Changes nothing. Pass its total as acknowledgedTotal to make_samples_for_all.",
+    unrecorded: true,
+  },
+  {
+    name: "make_samples_for_all",
+    route: "POST /api/template-studio/samples-for-all",
+    title: "Make the samples of every template",
+    description:
+      "Makes the paid sample of every template that needs one, which spends money: price them first with quote_samples_for_all and pass its total as acknowledgedTotal (and acknowledgedUnknown: true to accept steps with no price). The ones that fit today's budget are queued; the rest wait, saying so, until tomorrow or a higher budget. A higher total is refused with the new quote and nothing is queued.",
+    confirm: "This spends money on the samples of every template that needs one.",
+  },
+  {
     name: "make_template_free_samples",
     route: "POST /api/template-studio/:id/free-samples",
     title: "Make a template's free samples",
