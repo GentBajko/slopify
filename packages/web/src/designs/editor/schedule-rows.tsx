@@ -201,7 +201,8 @@ export function ScheduleRows({
           </Button>
         )}
       </SectionHead>
-      <div className="min-w-0 overflow-x-auto">
+      {/* Relative, so the hidden column names scroll with the table instead of widening the page. */}
+      <div className="relative min-w-0 overflow-x-auto">
         <DataTable
           caption="The schedule's rows"
           columns={columns}

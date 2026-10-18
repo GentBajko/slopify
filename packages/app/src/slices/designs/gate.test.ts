@@ -80,7 +80,7 @@ describe("the checks that read this computer", () => {
     expect(byId(checks, "provider")).toMatchObject({
       ok: false,
       sentence: "fal.ai has no API key. Add one in Settings → Providers.",
-      fix: { label: "Open Providers", href: "/settings/providers" },
+      fix: { label: "Open Providers", href: "/settings?section=providers" },
     });
   });
 

@@ -21,6 +21,14 @@ function aspectOf(format: DesignFormat): "landscape" | "portrait" | "square" {
   return width > height * 1.15 ? "landscape" : height > width * 1.15 ? "portrait" : "square";
 }
 
+// Kept to half the window's height, so the settings stay in reach when the sample sits above
+// them on a narrow window.
+const sampleWidth = {
+  landscape: "max-w-[calc(50vh*1.7778)]",
+  portrait: "max-w-[calc(50vh*0.5625)]",
+  square: "max-w-[50vh]",
+} as const;
+
 export function SamplePanel({ template }: { readonly template: TemplateView }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -76,7 +84,7 @@ export function SamplePanel({ template }: { readonly template: TemplateView }): 
                     ? "Making the sample's artwork…"
                     : "No sample for this version",
             })}
-        className="[&_img]:object-contain"
+        className={`mx-auto w-full [&_img]:object-contain ${sampleWidth[aspectOf(picture)]}`}
       />
       {sample?.state === "held" || sample?.state === "failed" || sample === null ? (
         <Callout

@@ -197,7 +197,7 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
                   {failing.map((check) => (
                     <li key={check.id}>
                       {check.sentence}{" "}
-                      {check.fix === null ? null : (
+                      {check.fix === null ? null : check.fix.href.includes("#") ? (
                         <Button
                           variant="quiet"
                           size="small"
@@ -205,6 +205,10 @@ function TemplateEditor({ template }: { readonly template: TemplateView }): Reac
                         >
                           {`Open ${designSections.find((one) => one.id === sectionOf(check.fix?.href.split("#")[1] ?? ""))?.label ?? check.fix.label}`}
                         </Button>
+                      ) : (
+                        <a className="sl-link" href={check.fix.href}>
+                          {check.fix.label}
+                        </a>
                       )}
                     </li>
                   ))}
