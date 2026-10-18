@@ -191,7 +191,7 @@ export function createRemoteAccessService(deps: RemoteAccessDeps): RemoteAccessS
   const onView = (dnsName: string, httpsPort: number): RemoteAccessView =>
     base(
       "on",
-      "On: open this address on any device signed in to your tailnet. Only your tailnet can reach it; it is never on the public internet.",
+      "On: any device in your tailnet can open this address, never the public internet. It works while Slopify runs: Slopify removes it when it stops and adds it back when it starts.",
       { address: addressOf(dnsName, httpsPort) },
     );
 

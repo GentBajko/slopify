@@ -63,6 +63,11 @@ export const settingsSections = [
     meta: "How Slopify looks and how it starts on this computer.",
   },
   {
+    id: "remote-access",
+    label: "Remote access",
+    meta: "Open Slopify on your phone or laptop through Tailscale, only inside your tailnet.",
+  },
+  {
     id: "about",
     label: "About",
     meta: "Free and open source, running on your machine with your own keys.",
@@ -101,7 +106,7 @@ export const settingsGroups: readonly SettingsGroup[] = [
   { id: "notifications", label: "Notifications", sections: ["notifications"] },
   { id: "publishing", label: "Publishing", sections: ["channel-links", "studio"] },
   { id: "storage", label: "Backup & storage", sections: ["storage", "trash"] },
-  { id: "general", label: "General", sections: ["general"] },
+  { id: "general", label: "General", sections: ["general", "remote-access"] },
   { id: "about", label: "About", sections: ["about", "usage", "patch-notes"] },
 ];
 

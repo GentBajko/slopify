@@ -15,6 +15,11 @@ export const settingsHelp = {
     body: "Slopify starts in the background when you log in to this computer, without opening a browser tab; open it from your bookmark. It uses your account's own start-up list, so no administrator password is needed, and turning it off removes exactly what it added. Default: off. In Docker, Slopify starts whenever Docker does, so this only shows Docker's own setting.",
     tutorial: { page: "Start-at-Login", anchor: "turn-it-on" },
   },
+  "settings.remote-access": {
+    title: "Open on my other devices (Tailscale)",
+    body: "Tailscale on this computer serves Slopify's page at an https address only devices in your tailnet can open. It uses Serve, never Funnel, so it is never on the public internet: Slopify has no login and holds your keys. Slopify removes the address when it stops and adds it back when it starts, and changes only the serve setting it added. Agents still connect only here. Default: off.",
+    tutorial: { page: "Remote-Access", anchor: "turn-it-on" },
+  },
 
   // Providers
   "settings.providers.api-key": {
