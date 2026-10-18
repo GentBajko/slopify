@@ -167,3 +167,22 @@ it("draws again from the prompt it already wrote when the image failed", async (
     await t.close();
   }
 });
+
+it("keeps every counter when the project itself is deleted", async () => {
+  const t = await thumbnailRun("prompt_by_llm");
+  try {
+    await t.run();
+    const before = allTelemetryEvents(t.h.deps.db);
+    expect(before.length).toBeGreaterThan(0);
+    t.h.deps.db.exec("PRAGMA foreign_keys = ON");
+    t.h.deps.db.prepare("DELETE FROM projects WHERE id = ?").run(t.h.projectId);
+    expect(
+      t.h.deps.db
+        .prepare("SELECT count(*) AS n FROM revision_outputs WHERE project_id = ?")
+        .get(t.h.projectId),
+    ).toEqual({ n: 0 });
+    expect(allTelemetryEvents(t.h.deps.db)).toEqual(before);
+  } finally {
+    await t.close();
+  }
+});
