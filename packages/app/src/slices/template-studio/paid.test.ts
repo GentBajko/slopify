@@ -145,6 +145,34 @@ describe("a template's first paid sample", () => {
     });
   });
 
+  it("continues the failed run when Make sample is pressed again, instead of saving a new revision over it", async () => {
+    const { h, deps, id, job, ticks } = harness({
+      fail: "The AI model did not read all of the research notes.",
+    });
+    await makePaidSample(deps, job(), signal);
+    const sample = sampleOf(h.deps.db, id);
+    if (sample === undefined) throw new Error("no sample");
+    const failedAt = currentRevisionId(h.deps.db, sample.projectId);
+    expect(sampleVersions(h.deps.db, id)[0]?.state).toBe("failed");
+    // Make sample again, on the same version: the failed run goes on (Continue the run), on the
+    // revision it failed on. A new revision saved over the failed run left the steps after the
+    // failed one admitted on the old revision, where nothing ever ran them, and the sample
+    // stayed "making" for good. Make sample queues the version first, as the studio's button does.
+    setSampleVersion(h.deps.db, id, 1, {
+      state: "queued",
+      quotedHigh: 0.3,
+      heldReason: null,
+      at: "2026-09-12T00:00:01.000Z",
+    });
+    await makePaidSample(deps, job(), signal);
+    expect(currentRevisionId(h.deps.db, sample.projectId)).toBe(failedAt);
+    expect(ticks.filter((tick) => tick === sample.projectId).length).toBeGreaterThan(1);
+    expect(sampleVersions(h.deps.db, id)[0]).toMatchObject({
+      state: "failed",
+      heldReason: "The AI model did not read all of the research notes.",
+    });
+  });
+
   it("makes nothing for a version that no longer exists", async () => {
     const { h, deps, id, job, ticks } = harness();
     await makePaidSample(deps, job({ templateVersion: 9 }), signal);
@@ -413,5 +441,20 @@ describe("sampleBusy", () => {
       )
       .run(projectId, projectId);
     expect(sampleBusy(h.deps.db, projectId)).toBe(true);
+  });
+
+  it("is free once every step is finished, though a placeholder for work never needed is left waiting", async () => {
+    const { h, deps, id, job } = harness();
+    await makePaidSample(deps, job(), signal);
+    const projectId = sampleOf(h.deps.db, id)?.projectId ?? "";
+    // A run admits placeholders (narration:describe:future, shorts:future…) for work it can
+    // only name once earlier steps answer; one nothing turned out to need stays pending on a
+    // finished step, and the sample sat "making" for good waiting on it.
+    h.deps.db
+      .prepare(
+        "UPDATE revision_work SET state='pending' WHERE id=(SELECT min(id) FROM revision_work WHERE project_id=?)",
+      )
+      .run(projectId);
+    expect(sampleBusy(h.deps.db, projectId)).toBe(false);
   });
 });

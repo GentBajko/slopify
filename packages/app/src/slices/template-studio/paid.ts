@@ -64,7 +64,9 @@ export function holdReason(
 }
 
 // Whether the sample project still has work going: a stage running or waiting, or work admitted
-// and not yet finished while nothing failed, was canceled or paused.
+// and not yet finished while nothing failed, was canceled or paused. A step still waiting counts
+// only while its stage is unfinished: a run's placeholder for work it turned out not to need
+// (no figure to describe, say) stays pending on a finished stage, and nothing will ever run it.
 export function sampleBusy(db: DatabaseSync, projectId: string): boolean {
   const state = derive(stagesOf(db, projectId), projectPaused(db, projectId));
   if (state === "running") return true;
@@ -72,7 +74,9 @@ export function sampleBusy(db: DatabaseSync, projectId: string): boolean {
   return (
     db
       .prepare(
-        "SELECT 1 FROM revision_work WHERE project_id=? AND dispatch_state='allowed' AND state IN ('pending','running') LIMIT 1",
+        `SELECT 1 FROM revision_work w WHERE w.project_id=? AND w.dispatch_state='allowed'
+           AND (w.state='running' OR (w.state='pending' AND EXISTS (SELECT 1 FROM stages s
+             WHERE s.id=w.stage_id AND s.state NOT IN ('done','provided','skipped')))) LIMIT 1`,
       )
       .get(projectId) !== undefined
   );
@@ -210,12 +214,17 @@ export async function makePaidSample(
       (one) => one.templateVersion === job.templateVersion,
     );
     const stopped = stoppedByRestart(db, projectId);
+    // Make sample pressed again after this version's run failed: the run goes on from the
+    // failed step, as Continue the run does on a project. A revision saved over it instead left
+    // the steps after the failed one admitted on the old revision, where nothing ran them.
+    // Make sample has queued the version again by then, so the project's own state says so.
+    const failedHere = derive(stagesOf(db, projectId), projectPaused(db, projectId)) === "failed";
     if (
       head !== undefined &&
       version?.revisionId === head &&
-      (version.state === "making" || stopped)
+      (version.state === "making" || stopped || failedHere)
     ) {
-      if (stopped) {
+      if (stopped || failedHere) {
         const usesPlan = totals(
           estimateRun(run.draft, run.rendered, words, deps.start.catalogue).rows,
         ).usesPlan;
@@ -233,7 +242,9 @@ export async function makePaidSample(
         if (!resumed.ok) {
           mark({
             state: "failed",
-            heldReason: `The sample stopped when Slopify quit, and couldn't go on: ${refused(resumed.reason, resumed.fields)}`,
+            heldReason: stopped
+              ? `The sample stopped when Slopify quit, and couldn't go on: ${refused(resumed.reason, resumed.fields)}`
+              : `The sample's failed step couldn't be tried again: ${refused(resumed.reason, resumed.fields)}`,
           });
           return;
         }
