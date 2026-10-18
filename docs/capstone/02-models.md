@@ -4484,6 +4484,7 @@ Helpers over the same facts: `parkedOnAgent` and `runningNow` (running, or parke
 | `held-topics` | A schedule's held topics |
 | `late-upload` | A video marked Late · upload now (report only) |
 | `extension-failure` | A failed finishing touch of the Studio extension (report only) |
+| `template-not-ready` | An active schedule whose gated template has no version it may run (report only) |
 
 `attentionKinds` (`packages/app/src/slices/agents/attention.ts:22`); `needsAttention` reads each source on its own and leaves out Kept as is projects, a prepared project's schedule Before Video hold and checkpoints not reached yet. A row it can't read is skipped and logged, and a source that fails is left out and logged (`packages/app/src/slices/agents/attention.ts:66`, `packages/app/src/slices/agents/attention-work.ts:11`).
 

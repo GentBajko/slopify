@@ -482,3 +482,31 @@ it("leaves out every entry of a template studio's hidden sample project", () => 
     "held-topics",
   ]);
 });
+
+it("reports an active schedule whose template has no version it may run, for the person to fix", () => {
+  const f = everything();
+  const sentence =
+    "Not started: Harbor template has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.";
+  const entries = needsAttention(
+    { ...f.h.deps, log: quiet, notReady: (id) => (id === templateId ? sentence : undefined) },
+    now,
+  );
+  expect(entries.filter((entry) => entry.kind === "template-not-ready")).toEqual([
+    {
+      kind: "template-not-ready",
+      since: now.toISOString(),
+      projectId: null,
+      title: "Harbor tales",
+      stage: null,
+      itemKey: null,
+      reason: `${sentence} Marking a version ready is the person's: report it.`,
+      autoRetryInFlight: false,
+      agentCanAct: false,
+      ids: { id: scheduleId, templateId },
+      tools: ["get_schedule", "get_template_checks"],
+    },
+  ]);
+  f.h.deps.db.prepare("UPDATE schedules SET status='paused' WHERE id=?").run(scheduleId);
+  const paused = needsAttention({ ...f.h.deps, log: quiet, notReady: () => sentence }, now);
+  expect(paused.some((entry) => entry.kind === "template-not-ready")).toBe(false);
+});

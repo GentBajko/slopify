@@ -92,6 +92,31 @@ describe("warningsOf", () => {
     expect(keys({ disk: null })).toEqual([]);
   });
 
+  it("warns that an active schedule skips its runs while its template has no version it may run", () => {
+    const schedule = {
+      id: "s1",
+      name: "Canals",
+      paused: false,
+      queued: 5,
+      generation: "queue" as const,
+      topicsError: null,
+      notReadyTemplate: "Waterways",
+    };
+    const warnings = warningsOf(
+      { ...quiet, schedules: [schedule, { ...schedule, id: "s2", paused: true }] },
+      new Map(),
+      now,
+    );
+    expect(warnings).toEqual([
+      {
+        key: "template-not-ready:s1",
+        severity: "problem",
+        text: "“Canals” skips its runs because its template “Waterways” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+        fix: { kind: "templates", label: "Open Templates" },
+      },
+    ]);
+  });
+
   it("warns about a queue nearly empty with nothing to refill it, and topic finding that fails", () => {
     const schedule = {
       id: "s1",
@@ -100,6 +125,7 @@ describe("warningsOf", () => {
       queued: 2,
       generation: "off" as const,
       topicsError: null,
+      notReadyTemplate: null,
     };
     const warnings = warningsOf(
       {

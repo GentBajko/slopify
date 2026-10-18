@@ -4,8 +4,8 @@ import { z } from "zod";
 import { snoozeDays } from "../../slices/autopilot/model.js";
 import { setWeeklyNotify, snoozeWarning, weeklyNotifyOf } from "../../slices/autopilot/repo.js";
 import { autopilotView } from "../../slices/autopilot/signals.js";
-import { templateById } from "../../slices/project-templates/repo.js";
 import { weekSummary } from "../../slices/run-cost/week.js";
+import { notReadySentence, runnableTemplate } from "../../slices/template-studio/schedule-gate.js";
 import { markUploaded, setAside } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { idParam, idString } from "./ids.js";
@@ -34,7 +34,9 @@ export function homeRoutes(deps: Pick<AppDeps, "db" | "clock" | "catalogue" | "a
             {
               db: deps.db,
               clock: deps.clock,
-              template: (id) => templateById(deps.db, id),
+              // What the schedules actually run (`template-studio/schedule-gate.ts`).
+              template: (id) => runnableTemplate(deps.db, id),
+              notReady: (id) => notReadySentence(deps.db, id),
               ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
             },
             deps.autopilot?.latest(),

@@ -40,6 +40,7 @@ export interface AutopilotDeps {
   readonly clock: Clock;
   readonly log: Pick<Log, "write">;
   readonly template: ScheduleDeps["template"];
+  readonly notReady?: (templateId: string) => string | undefined;
   readonly catalogue?: (() => Catalogue) | undefined;
   // Asks a CLI whether it is signed in; never starts a run.
   readonly cliLogin?: ((id: HostLlmId, signal: AbortSignal) => Promise<CliLogin>) | undefined;
@@ -166,7 +167,7 @@ export function createAutopilotHealth(deps: AutopilotDeps): {
 // Home's autopilot block for every channel, or one: the forecast and warnings from the
 // database now and the probes' last answers, and the last seven days.
 export function autopilotView(
-  deps: Pick<AutopilotDeps, "db" | "clock" | "template" | "catalogue">,
+  deps: Pick<AutopilotDeps, "db" | "clock" | "template" | "notReady" | "catalogue">,
   probes: AutopilotProbes | undefined,
   channelId?: string,
 ): AutopilotView {
@@ -189,8 +190,11 @@ export function autopilotView(
           (channelId === undefined || (channels.get(one.id) ?? defaultChannelId) === channelId),
       ).length
     : 0;
+  // A run its template has no version for is skipped: it fills no slot.
   const runs = ahead.ok
-    ? ahead.value.runs.filter((run) => makesVideos(run) && inChannel(run.templateId))
+    ? ahead.value.runs.filter(
+        (run) => makesVideos(run) && inChannel(run.templateId) && run.notReady !== true,
+      )
     : [];
   const forecast = bufferForecast({
     now,
@@ -229,6 +233,10 @@ export function autopilotView(
       queued: one.items.length,
       generation: one.topicGeneration.mode,
       topicsError: one.topics.error,
+      notReadyTemplate:
+        deps.notReady?.(one.templateId) === undefined
+          ? null
+          : (deps.template(one.templateId)?.name ?? "this schedule's template"),
     })),
     retired:
       catalogue === undefined

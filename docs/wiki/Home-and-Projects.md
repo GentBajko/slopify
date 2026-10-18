@@ -81,7 +81,7 @@ The schedule runs due in the next 7 days, with the template and topic each will 
 
 ### Autopilot
 
-At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · the queue runs dry on Oct 30". Each run a schedule will make in the next 60 days is a slot; a run made ahead (Prepare) fills its own slot, and each finished video not uploaded yet fills the next empty one. The days count to the first slot nothing fills ("60+" when all of them are filled). **Runs dry** is the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither.
+At the top of **Coming up**, one line says how far ahead you are: "9 days of content ready · the queue runs dry on Oct 30". Each run a schedule will make in the next 60 days is a slot; a run made ahead (Prepare) fills its own slot, and each finished video not uploaded yet fills the next empty one. The days count to the first slot nothing fills ("60+" when all of them are filled). **Runs dry** is the first run that will have no topic: the run after a queue's last topic when the schedule doesn't find its own, the first run past the approved topics when new ones wait for approval, and never for a schedule that finds topics by itself unless finding them fails. Paused schedules count for neither, and neither do runs a schedule skips because its template has no version marked ready.
 
 Below it, warnings name what may stop the schedules before it does, each with the button that opens the fix and **Hide** (hidden for 7 days, or until it changes):
 
@@ -94,6 +94,7 @@ Below it, warnings name what may stop the schedules before it does, each with th
 | A schedule that doesn't find topics has 1 or 2 left | The schedule |
 | A schedule's topic generation keeps failing | The schedule |
 | A scheduled template or schedule uses a model that is retiring or gone | Templates, or the schedule |
+| A schedule skips its runs because its template has no version marked ready | Templates (Open studio, then Mark ready) |
 
 Sign-ins, the OpenRouter key and the disk are checked hourly, the first time 30 seconds after Slopify starts; Home shows the last check and never waits for one. Only the CLIs a scheduled template uses are asked, and asking never starts a run. **Last 7 days**, folded, lists what was made, each failed step with a link to its project, and what it cost. Settings → Notifications → **Weekly report** sends the same to your phone each Monday (see [Notifications](Notifications#weekly-report)).
 

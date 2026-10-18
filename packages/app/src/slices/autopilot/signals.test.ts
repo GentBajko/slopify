@@ -184,6 +184,21 @@ describe("autopilotView", () => {
     expect(after.warnings).toEqual(before.warnings);
   });
 
+  it("counts no run of a schedule whose template has no version it may run, and warns about it", () => {
+    const f = fixture(2);
+    const before = autopilotView(f.deps, undefined);
+    expect(before.forecast.daysAhead).not.toBeNull();
+    const view = autopilotView(
+      { ...f.deps, notReady: () => "Not started: Lighthouses has no version marked ready." },
+      undefined,
+    );
+    expect(view.forecast.daysAhead).toBeNull();
+    expect(view.warnings.map((one) => one.key)).toContain(`template-not-ready:${f.scheduleId}`);
+    expect(view.warnings.find((one) => one.key.startsWith("template-not-ready"))?.text).toBe(
+      "“Nightly histories” skips its runs because its template “Lighthouses” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.",
+    );
+  });
+
   it("says nothing of a paused schedule's queue", () => {
     const f = fixture(1);
     expect(pauseSchedule(f.scheduleDeps, { id: f.scheduleId, baseVersion: 1 }).ok).toBe(true);

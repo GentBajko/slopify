@@ -34,6 +34,9 @@ export interface AutopilotSignals {
     readonly queued: number;
     readonly generation: "off" | "queue" | "hold";
     readonly topicsError: string | null;
+    // The template's name when the schedule's runs are skipped because its template has no
+    // version it may run (`template-studio/schedule-gate.ts`); null otherwise.
+    readonly notReadyTemplate: string | null;
   }[];
   readonly retired: readonly {
     readonly kind: "template" | "schedule";
@@ -99,6 +102,13 @@ export function warningsOf(
     });
   for (const schedule of signals.schedules) {
     if (schedule.paused) continue;
+    if (schedule.notReadyTemplate !== null)
+      found.push({
+        key: `template-not-ready:${schedule.id}`,
+        severity: "problem",
+        text: `“${schedule.name}” skips its runs because its template “${schedule.notReadyTemplate}” has no version marked ready. Open it in Library → Templates → Open studio and press Mark ready.`,
+        fix: { kind: "templates", label: "Open Templates" },
+      });
     if (schedule.topicsError !== null && schedule.generation !== "off")
       found.push({
         key: `topics-failing:${schedule.id}`,

@@ -47,7 +47,7 @@ export function registerAttention(server: McpServer, deps: McpDeps): void {
     {
       title: "What needs attention",
       description:
-        "Everything waiting for someone, oldest first: external reviews waiting for a verdict, flagged review verdicts, review checkpoints waiting for approval, failed steps, paused runs, runs a restart stopped, held topics, videos marked Late · upload now and the extension's failed finishing touches. Each entry has its kind, the project (or schedule), stage and item, the reason or error text, autoRetryInFlight (skip it while true), agentCanAct (report it when false), the fixing tools' ids and the tools to use.",
+        "Everything waiting for someone, oldest first: external reviews waiting for a verdict, flagged review verdicts, review checkpoints waiting for approval, failed steps, paused runs, runs a restart stopped, held topics, videos marked Late · upload now, the extension's failed finishing touches and schedules that skip their runs because their template has no version marked ready. Each entry has its kind, the project (or schedule), stage and item, the reason or error text, autoRetryInFlight (skip it while true), agentCanAct (report it when false), the fixing tools' ids and the tools to use.",
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     () =>

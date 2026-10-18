@@ -9,6 +9,7 @@ import { waitingExternalReviewRows } from "../reviews/external-waiting.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
 import { templateSampleProjects } from "../template-studio/repo.js";
 import { setAsideProjects } from "../uploads/repo.js";
+import { templatesNotReady } from "./attention-templates.js";
 import {
   extensionFailures,
   failedSteps,
@@ -30,6 +31,7 @@ export const attentionKinds = [
   "held-topics",
   "late-upload",
   "extension-failure",
+  "template-not-ready",
 ] as const;
 export type AttentionKind = (typeof attentionKinds)[number];
 
@@ -37,7 +39,7 @@ export type AttentionKind = (typeof attentionKinds)[number];
 export interface AttentionEntry {
   readonly kind: AttentionKind;
   readonly since: string;
-  // Null for a schedule's held topics.
+  // Null for a schedule's held topics and a template not ready.
   readonly projectId: string | null;
   // The project's title, or the schedule's name.
   readonly title: string;
@@ -58,6 +60,9 @@ export interface AttentionDeps {
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly log: Pick<Log, "write">;
+  // Why a template's schedules skip their runs (`template-studio/schedule-gate.ts`); read from
+  // the database when absent.
+  readonly notReady?: ((templateId: string) => string | undefined) | undefined;
 }
 
 const projectOf = z.object({ project_id: z.string() });
@@ -91,6 +96,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     ["held topics", () => heldTopics(db, skip)],
     ["late uploads", () => lateUploads(deps, now)],
     ["extension failures", () => extensionFailures(db, skip)],
+    ["templates not ready", () => templatesNotReady(db, now, skip, deps.notReady)],
   ];
   const aside = setAsideProjects(db);
   const samples = templateSampleProjects(db);
