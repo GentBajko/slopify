@@ -4,9 +4,10 @@ import { readJsonSetting, writeSetting } from "../settings/repo.js";
 
 // Settings → Template studio: the most the studio's samples may spend in one day, in dollars,
 // and whether they may use a CLI plan at all. Plan usage has no dollar price, so the budget
-// can't hold it back: samples that run on a CLI plan wait until the person turns that on. With
-// both at their defaults ($0 and plans off) no sample spends anything. A sample that would go
-// over either waits, saying so, until the next day, a higher budget or plans allowed.
+// can't hold it back: samples that run on a CLI plan wait until the person turns that on. By
+// default ($2 a day, plans off) samples spend at most $2 a day and never a plan; at $0 nothing
+// spends money. A sample that would go over either waits, saying so, until the next day, a
+// higher budget or plans allowed.
 
 export const dailyBudgetKey = "templateStudio.dailyBudget";
 export const samplesUsePlansKey = "templateStudio.samplesUsePlans";
