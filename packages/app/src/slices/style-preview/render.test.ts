@@ -147,6 +147,40 @@ it.skipIf(bin === undefined)(
   180_000,
 );
 
+it.skipIf(bin === undefined)(
+  "renders with this computer's render settings, on the processor when the card fails",
+  async () => {
+    const lines: string[] = [];
+    const asked: string[] = [];
+    const render = ffmpegStylePreview({
+      ffmpeg: bin ?? "",
+      paths: layout(join(scratch, "data")),
+      log: { write: (_level, event, fields) => void lines.push(`${event} ${fields?.detail}`) },
+      dir: join(scratch, "machine-cache"),
+      machine: async () => {
+        asked.push("machine");
+        return {
+          encode: { kind: "nvenc", bin: join(scratch, "no-such-ffmpeg"), clipSpeed: "fast" },
+          priority: "background",
+        };
+      },
+    });
+    const output = join(scratch, "machine.mp4");
+    await render(
+      normalizeStylePreview({
+        format: "16:9",
+        subtitles: { mode: "off", fontId: "default", fontSize: 48, position: "bottom" },
+      }),
+      output,
+      AbortSignal.timeout(110_000),
+    );
+    expect(asked).toEqual(["machine"]);
+    expect(lines.some((line) => line.startsWith("video.encoder"))).toBe(true);
+    expect(statSync(output).size).toBeGreaterThan(1000);
+  },
+  120_000,
+);
+
 // The loudest sample of a file's sound, in dB.
 function loudest(file: string): number {
   const run = spawnSync(

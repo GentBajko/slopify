@@ -9,6 +9,7 @@ import { renderShort } from "../shorts/render.js";
 import { serializeAss } from "../subtitles/captions.js";
 import { subtitleFrame } from "../subtitles/layout.js";
 import type { EditList } from "../video/edit-list.js";
+import type { RenderMachine } from "../video/encoding.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
 import { bundledSampleAssets, type SampleAssets, sampleNarrationSeconds } from "./narration.js";
@@ -59,6 +60,9 @@ export interface FfmpegPreviewDeps {
   readonly dir: string;
   // The sample's narration and images; the bundled ones unless a test gives others.
   readonly assets?: SampleAssets | undefined;
+  // Settings → Production defaults → Rendering, read as each preview starts, so a preview is
+  // encoded and prioritised as this computer's videos are; absent is x264 at normal priority.
+  readonly machine?: (() => Promise<RenderMachine | undefined>) | undefined;
 }
 
 export function ffmpegStylePreview(deps: FfmpegPreviewDeps): StylePreviewRenderer {
@@ -79,9 +83,19 @@ export function ffmpegStylePreview(deps: FfmpegPreviewDeps): StylePreviewRendere
         settings.short !== undefined
           ? stills
           : Array.from({ length: shots }, (_, index) => stills[index % stills.length] ?? "");
+      const machine = await deps.machine?.();
       if (settings.short !== undefined)
-        await renderShortPreview(deps, settings, settings.short, assets, images, output, signal);
-      else await renderPreview(deps, settings, assets, images, output, signal);
+        await renderShortPreview(
+          deps,
+          settings,
+          settings.short,
+          assets,
+          images,
+          output,
+          signal,
+          machine,
+        );
+      else await renderPreview(deps, settings, assets, images, output, signal, machine);
     } catch (error) {
       throw explained(deps.log, error);
     }
@@ -95,6 +109,7 @@ async function renderPreview(
   images: readonly string[],
   output: string,
   signal: AbortSignal,
+  machine: RenderMachine | undefined,
 ): Promise<void> {
   mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
   const workspace = mkdtempSync(join(deps.dir, "work-"));
@@ -158,6 +173,7 @@ async function renderPreview(
       signal,
       log: deps.log,
       onProgress: () => {},
+      machine,
     });
   } finally {
     rmSync(workspace, { recursive: true, force: true });
@@ -174,6 +190,7 @@ async function renderShortPreview(
   images: readonly string[],
   output: string,
   signal: AbortSignal,
+  machine: RenderMachine | undefined,
 ): Promise<void> {
   mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
   await renderShort({
@@ -195,6 +212,7 @@ async function renderShortPreview(
     signal,
     log: deps.log,
     onProgress: () => {},
+    machine,
   });
 }
 

@@ -730,3 +730,13 @@ function failure(
       : `ffmpeg ${ended}: ${errors.join(" / ")}`;
   return `The audio/video export failed (${said}). Try again; if it fails again, make sure your disk has free space (see Settings → Backup & storage), then use Download diagnostics in Settings and report it.`;
 }
+
+// `runFfmpeg` at Settings → Production defaults → Render priority, read as each call starts: for
+// the work outside a video's render that still runs ffmpeg on this computer (a design's drawing,
+// a post's picture, Template Studio's free samples). A priority the caller set itself is kept.
+export function runFfmpegAt(
+  priority: () => RenderPriority,
+  run: (call: RenderRun) => Promise<void> = runFfmpeg,
+): (call: RenderRun) => Promise<void> {
+  return (call) => run({ ...call, priority: call.priority ?? priority() });
+}

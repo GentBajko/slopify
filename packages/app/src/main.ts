@@ -189,7 +189,7 @@ import {
   noNvenc,
   renderMachine,
 } from "./slices/video/encoding.js";
-import { probeDurationMs, runFfmpeg } from "./slices/video/ffmpeg.js";
+import { probeDurationMs, runFfmpegAt } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -376,6 +376,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       exec: ffmpegOutput,
       log,
     });
+    // Settings → Production defaults → Render priority for the ffmpeg work outside a project's
+    // render (Template Studio's samples, designs' drawing, posts' pictures), read as each starts.
+    const renderPriority = () => readSettings({ db: runtimeDb, log }).renderPriority;
+    const runFfmpeg = runFfmpegAt(renderPriority);
     log.write("info", "boot", {
       detail:
         reconciled === undefined
@@ -675,7 +679,16 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     // background (`slices/template-studio/runner.ts`).
     const stylePreviews = createStylePreviews({
       dir: stylePreviewDir(paths.dataDir),
-      render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
+      render: ffmpegStylePreview({
+        ffmpeg,
+        paths,
+        log,
+        dir: stylePreviewDir(paths.dataDir),
+        // Encoded and prioritised as this computer's videos are (`slices/video/encoding.ts`).
+        machine: async () =>
+          (await renderMachine({ settings: readSettings({ db: runtimeDb, log }), nvenc, log }))
+            .machine,
+      }),
       pictures: previewPictures({ db, paths }),
       log,
     });
@@ -685,6 +698,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       dir: join(studioCache, "loudness"),
       source: bundledSampleAssets().narration,
       log,
+      priority: renderPriority,
     });
     const documentSamples = createDocumentSamples({ dir: join(studioCache, "document") });
     const freeSamples = createFreeSamples({

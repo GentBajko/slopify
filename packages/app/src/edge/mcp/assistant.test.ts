@@ -241,6 +241,20 @@ describe("/mcp/assistant", () => {
     await client.close();
   });
 
+  it("reads and changes this computer's render settings freely", () => {
+    const tool = (name: string) => {
+      const found = assistantRouteTools.find((one) => one.name === name);
+      if (found === undefined) throw new Error(`the assistant has no ${name}`);
+      return { name, method: routeOf(found).method, confirm: found.confirm };
+    };
+    // Settings → Production defaults → Rendering: the encoder check runs a tiny local test
+    // encode, and the settings change how this computer renders, never what is billed or sent.
+    expect(tool("get_video_encoders").method).toBe("GET");
+    expect(isGated(tool("get_video_encoders"))).toBe(false);
+    expect(assistantFreeTools).toContain("update_settings");
+    expect(isGated(tool("update_settings"))).toBe(false);
+  });
+
   it("asks before every paid or removing design step, and reads and prices designs freely", () => {
     const gated = (name: string): boolean => {
       const tool = designTools.find((one) => one.name === name);

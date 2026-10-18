@@ -11,6 +11,7 @@ import {
   videoTruePeak,
 } from "../loudness/model.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
+import type { RenderPriority } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 
 // Voice's loudness before and after: Slopify's sample narration as it came, and the same
@@ -69,6 +70,8 @@ export function createLoudnessSamples(deps: {
   readonly dir: string;
   readonly source: string;
   readonly log: Log;
+  // Settings → Production defaults → Render priority, read as each sample starts; absent is normal.
+  readonly priority?: (() => RenderPriority) | undefined;
 }): LoudnessSamples {
   const pathOf = (hash: string, extension: "mp3" | "json"): string =>
     join(deps.dir, `${hash}.${extension}`);
@@ -99,7 +102,8 @@ export function createLoudnessSamples(deps: {
       if (file(hash) !== undefined) return;
       mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
       const work = join(deps.dir, `${hash}.${randomUUID()}`);
-      const run = { bin: deps.ffmpeg, log: deps.log, signal };
+      const priority = deps.priority?.();
+      const run = { bin: deps.ffmpeg, log: deps.log, signal, priority };
       try {
         const levelled = await levelFile(run, deps.source, `${work}.wav`, goal, {
           sampleRate: 48_000,
@@ -125,6 +129,7 @@ export function createLoudnessSamples(deps: {
           ],
           signal,
           log: deps.log,
+          priority,
           onProgress: () => undefined,
         });
         writeFileSync(
