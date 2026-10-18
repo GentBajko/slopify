@@ -11,6 +11,11 @@ import { readSettings, saveSettings } from "./playback.js";
 import { writeSetting } from "./repo.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
+const renderDefaults = {
+  videoEncoder: "cpu",
+  clipEncodeSpeed: "thorough",
+  renderPriority: "background",
+} as const;
 
 interface Harness {
   readonly deps: PlaybackDeps;
@@ -37,6 +42,7 @@ describe("readSettings", () => {
       appearance: "system",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 
@@ -47,6 +53,7 @@ describe("readSettings", () => {
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(readSettings(deps)).toEqual({
@@ -54,6 +61,7 @@ describe("readSettings", () => {
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 
@@ -90,6 +98,7 @@ describe("readSettings", () => {
       appearance: "light",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
     writeSetting(deps.db, "appearance", "{");
 
@@ -98,6 +107,7 @@ describe("readSettings", () => {
       appearance: "system",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 });
@@ -112,6 +122,7 @@ describe("saveSettings", () => {
         appearance: "light",
         loudness: defaultLoudness,
         subtitleModel: "fp32",
+        ...renderDefaults,
       }),
     ).toEqual({
       ok: true,
@@ -120,6 +131,7 @@ describe("saveSettings", () => {
         appearance: "light",
         loudness: defaultLoudness,
         subtitleModel: "fp32",
+        ...renderDefaults,
       },
     });
   });
@@ -131,12 +143,14 @@ describe("saveSettings", () => {
       appearance: "light",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
     saveSettings(deps, {
       silenceGapSeconds: 1,
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(readSettings(deps)).toEqual({
@@ -144,8 +158,9 @@ describe("saveSettings", () => {
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
-    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 4 });
+    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 7 });
   });
 
   it("refuses a negative gap", () => {
@@ -156,6 +171,7 @@ describe("saveSettings", () => {
       appearance: "system",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(result).toEqual({
@@ -173,6 +189,7 @@ describe("saveSettings", () => {
         appearance: "system",
         loudness: defaultLoudness,
         subtitleModel: "fp32",
+        ...renderDefaults,
       }).ok,
     ).toBe(false);
   });
@@ -186,6 +203,7 @@ describe("saveSettings", () => {
         appearance: "system",
         loudness: defaultLoudness,
         subtitleModel: "fp32",
+        ...renderDefaults,
       }).ok,
     ).toBe(false);
   });
@@ -199,6 +217,7 @@ describe("saveSettings", () => {
       appearance: "sepia",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(result).toEqual({
@@ -216,6 +235,7 @@ describe("saveSettings", () => {
       appearance: "sepia",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(result.ok ? [] : result.fields.map((field) => field.field)).toEqual([
@@ -232,6 +252,7 @@ describe("saveSettings", () => {
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
 
     expect(readSettings(deps)).toEqual({
@@ -239,6 +260,7 @@ describe("saveSettings", () => {
       appearance: "system",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 });
@@ -286,6 +308,67 @@ describe("the subtitle timing model", () => {
 
     expect(readSettings(deps).subtitleModel).toBe("fp32");
     expect(lines).toEqual([`warn settings.invalid ${storedWarning("subtitleModel")}`]);
+  });
+});
+
+describe("the render settings", () => {
+  // The processor, thorough clips, and renders behind the computer's other programs.
+  it("encodes on the processor, thoroughly, in the background on a fresh install", () => {
+    expect(readSettings(harness().deps)).toMatchObject(renderDefaults);
+  });
+
+  it("keeps each choice that was saved", () => {
+    const { deps } = harness();
+    const chosen = {
+      videoEncoder: "nvidia",
+      clipEncodeSpeed: "fast",
+      renderPriority: "normal",
+    } as const;
+    expect(saveSettings(deps, { ...readSettings(deps), ...chosen }).ok).toBe(true);
+    expect(readSettings(deps)).toMatchObject(chosen);
+  });
+
+  it("refuses values this build does not have, naming where to choose", () => {
+    const { deps } = harness();
+
+    const result = saveSettings(deps, {
+      ...readSettings(deps),
+      // @ts-expect-error a client from another build can still send it.
+      videoEncoder: "amd",
+      // @ts-expect-error a client from another build can still send it.
+      clipEncodeSpeed: "ludicrous",
+      // @ts-expect-error a client from another build can still send it.
+      renderPriority: "realtime",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      fields: [
+        {
+          field: "videoEncoder",
+          message:
+            "Choose Processor (x264) or NVIDIA graphics card (NVENC) in Settings → Production defaults → Video encoder.",
+        },
+        {
+          field: "clipEncodeSpeed",
+          message: "Choose Thorough or Fast in Settings → Production defaults → Clip encoding.",
+        },
+        {
+          field: "renderPriority",
+          message:
+            "Choose Normal or Background in Settings → Production defaults → Render priority.",
+        },
+      ],
+    });
+    expect(readSettings(deps)).toMatchObject(renderDefaults);
+  });
+
+  it("falls back to the default and warns when a stored choice is unknown", () => {
+    const { deps, lines } = harness();
+    writeSetting(deps.db, "videoEncoder", JSON.stringify("amd"));
+
+    expect(readSettings(deps).videoEncoder).toBe("cpu");
+    expect(lines).toEqual([`warn settings.invalid ${storedWarning("videoEncoder")}`]);
   });
 });
 

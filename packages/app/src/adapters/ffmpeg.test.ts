@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { afterEach, describe, expect, it } from "vitest";
-import { prepareFfmpeg } from "./ffmpeg.js";
+import { ffmpegOutput, prepareFfmpeg } from "./ffmpeg.js";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -117,5 +117,20 @@ describe("prepareFfmpeg", () => {
     if (typeof ffmpegStatic !== "string") throw new Error("ffmpeg unavailable");
     copyFileSync(ffmpegStatic, custom);
     expect(await prepareFfmpeg({ ...deps, env: { SLOPIFY_FFMPEG: custom } })).toBe(custom);
+  });
+});
+
+describe("ffmpegOutput", () => {
+  it("answers what the program printed", async () => {
+    expect(await ffmpegOutput(String(ffmpegStatic), ["-hide_banner", "-encoders"])).toMatch(
+      /libx264/,
+    );
+  });
+
+  it("names the program and its complaint when it fails", async () => {
+    await expect(ffmpegOutput(String(ffmpegStatic), ["-no-such-option"])).rejects.toThrow(
+      /no-such-option/,
+    );
+    await expect(ffmpegOutput("/nonexistent/ffmpeg", ["-version"])).rejects.toThrow(/ENOENT/);
   });
 });

@@ -12,7 +12,7 @@ Every section of Settings, what each control does and its default. Sections with
 | Connections | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
 | Connections | [Models](#models) | Model catalogue, retired models | [Models](Models) |
 | Connections | [Agents (MCP)](#agents-mcp) | The MCP address and setup lines for Claude Code and Codex, the last connection, what agents did | [Agents-MCP](Agents-MCP) |
-| Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs | This page |
+| Production defaults | [Production defaults](#production-defaults) | Silence gap, volume levelling for new runs, the caption timing model, how this computer renders | This page |
 | Notifications | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
 | Publishing | [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
 | Publishing | [YouTube Studio](#youtube-studio) | Playlists per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
@@ -116,7 +116,7 @@ There is nothing to turn on: the address works whenever Slopify runs. See [Agent
 
 ## Production defaults
 
-"How new runs pace the narration and level the volume, and which model times English captions."
+"How new runs pace the narration and level the volume, which model times English captions, and how this computer renders."
 
 ### Silence between segments
 
@@ -143,6 +143,22 @@ The volume fields show only while the switch is on. A project keeps what it star
 | **Subtitle timing model** | The speech model that times English captions on this computer. The same model in three sizes: **Most accurate (378 MB, recommended)**, **Balanced (189 MB)** and **Smallest (95 MB, less accurate)**. Bigger hears the narration more accurately and, on most computers, also runs faster. | Most accurate |
 
 The chosen model downloads once, the first time captions are timed (or when Slopify starts, unless `SLOPIFY_NO_MODEL_PREFETCH` is set), and is kept in `<data folder>/models/english-subtitles/`. A model already downloaded stays there when you switch, so switching back costs nothing. Smallest can mishear a line and stop a run with "Subtitles stopped matching the audio" where the narration is fine. Changing the model never marks finished subtitles outdated, and a timing that is already running finishes with the model it started with; the next one uses the new choice. It is a setting of this computer, not of a project. Other languages use their own model and are not affected. Changes save as you make them.
+
+### Rendering
+
+How this computer encodes videos and shorts. Like the subtitle timing model, these belong to the computer, not a project: no project copies them, and changing them never marks anything outdated, because they change how a video is made, not what it is. A render reads them once as it starts; one already running finishes as it began. Changes save as you make them.
+
+| Control | What it does | Default / range |
+|---|---|---|
+| **Video encoder** | What turns the frames into the finished file. **Processor (x264)** is the one every computer has. **NVIDIA graphics card (NVENC)** encodes on the card at its highest-quality settings (preset p7, tune hq, constant quality) and leaves the processor for the rest of the render. It is listed only when Slopify finds an ffmpeg with NVENC (its own, else the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) that passes a tiny test encode; otherwise the line under it says "No NVIDIA encoder found on this computer." | Processor (x264) |
+| **Clip encoding** | How hard the processor works on each image's clip before the captions are burned in over them. **Thorough** is x264's medium preset; **Fast** is its veryfast preset at the same quality setting (CRF 16). Only the clips under burned-in captions change; the burned-in encode that makes the finished picture is the same. Has no effect with the NVIDIA encoder. | Thorough |
+| **Render priority** | **Background (your other programs come first)** runs every ffmpeg of a video, short or audio export, its volume mastering included, below normal priority (nice 10 on Linux and macOS, below-normal on Windows): your browser, games and other programs take the processor first and the render gets what is left. **Normal** competes with them as an equal. The finished video is the same either way. | Background |
+
+What they cost and give, measured on two minutes of a real project with captions burned in (32-core processor, RTX 5080): **Fast** halved the clips' processor time and cut the whole render's by 30% (10 to 17% less waiting), for a slightly softer picture (0.9 VMAF less) at the same file size. **NVIDIA** cut the render's processor time by 80% and its waiting by a quarter (the zoom and pan on each image still runs on the processor), at about the same file size, but with a visibly softer picture than x264 (about 2.5 VMAF less): pick it when keeping the computer free matters more than the last bit of sharpness. **Background** makes no difference to the file at all.
+
+If the NVIDIA encoder is chosen but stops working (a driver update, the card busy elsewhere), the render is made on the processor instead, never failed, and the video's section on the project page says: "This video was encoded on the processor because the NVIDIA graphics card encoder didn't work (…). Check the NVIDIA driver, or choose Processor (x264) in Settings → Production defaults → Video encoder." Slopify checks for the card once per start; restart Slopify after installing a driver or an ffmpeg with NVENC.
+
+Agents read and change these with `get_settings` and `update_settings`, and check the card with `get_video_encoders`.
 
 ## Notifications
 

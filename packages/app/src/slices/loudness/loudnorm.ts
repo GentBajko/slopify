@@ -1,6 +1,7 @@
 import { renameSync } from "node:fs";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
+import type { RenderPriority } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { LoudnessGoal, MasterReport } from "./model.js";
 
@@ -29,6 +30,8 @@ export interface FfmpegRun {
   readonly bin: string;
   readonly log: Log;
   readonly signal: AbortSignal;
+  // Settings → Production defaults → Render priority; absent is normal.
+  readonly priority?: RenderPriority | undefined;
 }
 
 // ceiling: below -70 LUFS (the filter's absolute gate) or under 0.4 s (one measuring block)
@@ -132,6 +135,7 @@ export async function measure(
     args: measureArgs(input, goal, chain),
     signal: run.signal,
     log: run.log,
+    priority: run.priority,
     onProgress: (): void => {},
     onStderr: (text) => {
       stderr += text;
@@ -191,6 +195,7 @@ export async function normalizeFile(
     ],
     signal: run.signal,
     log: run.log,
+    priority: run.priority,
     onProgress: (): void => {},
   });
   return measured;

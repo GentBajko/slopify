@@ -129,6 +129,9 @@ export interface AppDeps {
   readonly audioPreviews?: AudioPreviewStore;
   // Edit project's and Play's rendered style preview; absent answers that it is unavailable.
   readonly stylePreviews?: import("../../slices/style-preview/service.js").StylePreviews;
+  // Settings → Production defaults → Video encoder: whether this computer's NVIDIA encoder
+  // works (`slices/video/encoding.ts`); absent answers that there is none.
+  readonly nvenc?: () => Promise<import("../../slices/video/encoding.js").NvencStatus>;
   // Settings → Notifications' test button. Handed in so a test never reaches the network.
   readonly sendNotification?: import("../../slices/notifications/send.js").SendNotification;
   readonly db: DatabaseSync;

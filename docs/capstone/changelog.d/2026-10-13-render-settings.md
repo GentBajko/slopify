@@ -1,0 +1,18 @@
+# Render settings
+
+- **Three render settings for this computer** in Settings → Production defaults → Rendering. They belong to the computer, not a project, are read once as each render starts, and never mark anything outdated: they change how a video is made, not what it is. Agents read and change them with `get_settings` / `update_settings` and check the card with the new `get_video_encoders`.
+- **Video encoder: Processor (x264) or NVIDIA graphics card (NVENC).** The NVIDIA choice is offered only when Slopify finds an ffmpeg with `h264_nvenc` (its bundled one, else `ffmpeg` on the `PATH` or `/usr/bin/ffmpeg`) that also passes a one-frame test encode with the render's own settings; the answer is remembered until Slopify restarts (`GET /api/settings/encoders`). With it, every x264 encode of a video and of a short runs on the card instead: preset p7, tune hq, constant quality (`-rc vbr -cq N -b:v 0`), keyframe interval 250, so the clips still join by copying. The filters (zoompan, the Look, the captions) stay on the processor. If the card was chosen but does not work, or an NVENC render fails, the render is made on the processor instead, never failed, a warning is logged and the video's section on the project page says what happened and where to change it.
+- **Clip encoding: Thorough or Fast.** Fast encodes the clips under burned-in captions with x264's veryfast preset at the same CRF 16; the burned-in encode is unchanged.
+- **Render priority: Normal or Background (the default).** Background sets every ffmpeg a video, short or audio export starts, its volume mastering included, to below-normal priority (nice 10 on Linux and macOS, below-normal on Windows) right after it starts, so other programs come first.
+
+**Measured** on 10:00–12:00 of a real 2 h 33 min project (8 shots, a chapter card, crossfades, captions burned in, 1920×1080 at 30 fps), rendered by `renderSlideshow` itself on a 32-core processor with an RTX 5080, nothing else running. CPU time is every ffmpeg's user + system time. Quality is against the same render made at x264 CRF 10, preset slow (VMAF with libvmaf; SSIM and PSNR on all planes):
+
+| Setting | Wall | CPU time | File | VMAF (1% low) | SSIM | PSNR |
+|---|---|---|---|---|---|---|
+| Processor, Thorough (as before) | 30.2 s | 662 s | 55.0 MB | 95.41 (89.8) | 0.9787 | 41.02 dB |
+| Processor, Fast | 27.5 s | 463 s | 55.4 MB | 94.54 (88.2) | 0.9756 | 40.31 dB |
+| NVIDIA (NVENC) | 23.4 s | 126 s | 56.5 MB | 92.92 (85.0) | 0.9723 | 39.00 dB |
+
+- **Fast** halves the clips' processor time (375 s to 181 s; the burned-in encode is unchanged at about 280 s), so the whole render takes 30% less CPU and 9 to 17% less time, for 0.9 VMAF less at the same size.
+- **NVENC** takes 81% less CPU; the render is only a quarter faster because zoompan on the 4× still, which stays on the processor, is now what it waits for. Its `-cq` values: **20** for the clips under captions (matches CRF 16's quality: 98.1–98.4 VMAF against 98.2 on the same material) and **28.5** for the finished picture, chosen to land at x264's size. **At that size NVENC scores about 2.5 VMAF below x264, not within 0.5.** No NVENC option closed the gap: a second full-resolution pass (`-multipass fullres`), more B-frames with lookahead, and temporal AQ all scored within 0.1 of plain p7, and spatial AQ scored lower, so the shipped settings have no multipass. Even at cq 24, a file 1.8 times x264's, NVENC reached 94.9. Encoding x264's own clips with NVENC gave the same 93.1, so the loss is in NVENC's re-encode of the captioned picture, not in its clips.
+- **Render priority** changes nothing in the file: the Background and Normal renders were byte-identical.

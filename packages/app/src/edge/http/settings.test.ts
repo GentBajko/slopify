@@ -11,17 +11,23 @@ import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import { defaultLoudness } from "../../slices/loudness/model.js";
 import { createHub } from "../events/hub.js";
+import type { AppDeps } from "./app.js";
 import { createApp } from "./app.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
+const renderDefaults = {
+  videoEncoder: "cpu",
+  clipEncodeSpeed: "thorough",
+  renderPriority: "background",
+} as const;
 
 interface Harness {
   readonly app: ReturnType<typeof createApp>;
   readonly db: DatabaseSync;
 }
 
-function harness(): Harness {
+function harness(extra: Partial<AppDeps> = {}): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-settings-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -50,6 +56,7 @@ function harness(): Harness {
     webDist: join(paths.dataDir, "missing"),
     flushSoon: (): void => {},
     probe: () => Promise.resolve({ ran: false, stdout: "" }),
+    ...extra,
   });
   return { app, db };
 }
@@ -79,6 +86,7 @@ describe("GET /api/settings", () => {
       appearance: "system",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 });
@@ -98,12 +106,14 @@ describe("PUT /api/settings", () => {
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
     expect(await (await app.request("/api/settings")).json()).toEqual({
       silenceGapSeconds: 5,
       appearance: "dark",
       loudness: defaultLoudness,
       subtitleModel: "fp32",
+      ...renderDefaults,
     });
   });
 
@@ -124,6 +134,34 @@ describe("PUT /api/settings", () => {
       silenceGapSeconds: 4,
       subtitleModel: "fp16",
     });
+  });
+
+  it("saves the render settings, and keeps them when a client leaves them out", async () => {
+    const { app } = harness();
+    const chosen = { videoEncoder: "nvidia", clipEncodeSpeed: "fast", renderPriority: "normal" };
+
+    const response = await json(app, "/api/settings", "PUT", {
+      silenceGapSeconds: 3,
+      appearance: "system",
+      ...chosen,
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject(chosen);
+
+    await json(app, "/api/settings", "PUT", { silenceGapSeconds: 4, appearance: "system" });
+    expect(await (await app.request("/api/settings")).json()).toMatchObject(chosen);
+  });
+
+  it("refuses a video encoder this build does not have", async () => {
+    const { app } = harness();
+
+    const response = await json(app, "/api/settings", "PUT", {
+      silenceGapSeconds: 3,
+      appearance: "system",
+      videoEncoder: "amd",
+    });
+
+    expect(response.status).toBe(400);
   });
 
   it("refuses a subtitle timing model this build does not have", async () => {
@@ -311,6 +349,33 @@ describe("POST /api/settings/voices", () => {
     });
 
     expect(response.status).toBe(400);
+  });
+});
+
+describe("GET /api/settings/encoders", () => {
+  // The settings page offers the NVIDIA choice only where it works.
+  it("says whether this computer's NVIDIA encoder works", async () => {
+    const { app } = harness({
+      nvenc: async () => ({ available: true, bin: "/usr/bin/ffmpeg" }),
+    });
+    const response = await app.request("/api/settings/encoders");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ nvidia: { available: true } });
+  });
+
+  it("explains when there is none", async () => {
+    const { app } = harness({
+      nvenc: async () => ({
+        available: false,
+        reason: "No NVIDIA encoder found on this computer.",
+      }),
+    });
+    expect(await (await app.request("/api/settings/encoders")).json()).toEqual({
+      nvidia: { available: false, reason: "No NVIDIA encoder found on this computer." },
+    });
+    expect(await (await harness().app.request("/api/settings/encoders")).json()).toEqual({
+      nvidia: { available: false, reason: "No NVIDIA encoder found on this computer." },
+    });
   });
 });
 

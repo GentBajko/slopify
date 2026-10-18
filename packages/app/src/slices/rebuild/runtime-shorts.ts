@@ -38,7 +38,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { usesVoices } from "../voices/model.js";
 import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
 import { shortsPickKey } from "./recipe-shorts.js";
-import type { ExportExecutionDeps } from "./runtime-export.js";
+import { type ExportExecutionDeps, exportMachine, warningsOf } from "./runtime-export.js";
 import { figureShots } from "./runtime-export-edit.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { imageCall } from "./runtime-image.js";
@@ -371,8 +371,11 @@ async function render(
   const prepared: PreparedOutput[] = [];
   const seconds = (clip.end - clip.start) / speed;
   try {
+    const machine = await exportMachine(deps, context.work.projectId);
     const master = await renderShort({
       bin: deps.ffmpeg,
+      machine: machine.machine,
+      notice: machine.notice,
       master: masterGoal(config, "video"),
       timeline,
       start: clip.start,
@@ -413,6 +416,7 @@ async function render(
       preparedResult(deps, context, piece, "short_video", asset, durationMs, {
         short: clip.number,
         sentences: [clip.first, clip.last],
+        ...warningsOf(machine.notices),
         ...(master === undefined ? {} : { master }),
       }),
     );

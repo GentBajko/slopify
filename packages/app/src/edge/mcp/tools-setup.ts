@@ -61,14 +61,21 @@ const settings: readonly RouteTool[] = [
     route: "GET /api/settings",
     title: "Read production defaults",
     description:
-      "Settings → Production defaults: silence gap, appearance, loudness and the English subtitle timing model.",
+      "Settings → Production defaults: silence gap, appearance, loudness, the English subtitle timing model and the render settings (video encoder, clip encoding, render priority).",
   },
   {
     name: "update_settings",
     route: "PUT /api/settings",
     title: "Save production defaults",
     description:
-      "Body: {silenceGapSeconds, appearance: system | light | dark, loudness?: {enabled, videoLufs, audioFilesLufs}, subtitleModel?: fp32 | fp16 | int8}. subtitleModel is this computer's English caption-timing model (fp32 378 MB most accurate, the default; fp16 189 MB; int8 95 MB, less accurate); it never marks subtitles outdated.",
+      "Body: {silenceGapSeconds, appearance: system | light | dark, loudness?: {enabled, videoLufs, audioFilesLufs}, subtitleModel?: fp32 | fp16 | int8, videoEncoder?: cpu | nvidia, clipEncodeSpeed?: thorough | fast, renderPriority?: normal | background}. subtitleModel is this computer's English caption-timing model (fp32 378 MB most accurate, the default; fp16 189 MB; int8 95 MB, less accurate). videoEncoder nvidia encodes on the NVIDIA card (check get_video_encoders first; a render falls back to the processor when it does not work); clipEncodeSpeed fast encodes the clips under burned-in captions with x264 veryfast; renderPriority background runs renders below normal priority. None of these marks anything outdated.",
+  },
+  {
+    name: "get_video_encoders",
+    route: "GET /api/settings/encoders",
+    title: "Check the NVIDIA encoder",
+    description:
+      "Settings → Production defaults → Video encoder: whether this computer's NVIDIA encoder (NVENC) works, and why not when it does not. The first check runs a tiny test encode.",
   },
   {
     name: "get_default_channel_links",

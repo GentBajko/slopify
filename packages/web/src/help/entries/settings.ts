@@ -151,6 +151,21 @@ export const settingsHelp = {
     body: "The speech model that times English captions on this computer. Most accurate (378 MB) hears the narration best and on most computers runs faster too; Smallest (95 MB) can mishear a line and stop the run. The chosen model downloads once, on first use; switching back reuses one already downloaded. Changing it never marks subtitles outdated. Default: Most accurate.",
     tutorial: { page: "Settings-Reference", anchor: "subtitle-timing-model" },
   },
+  "settings.video-encoder": {
+    title: "Video encoder",
+    body: "What turns the frames into the finished file on this computer. Processor (x264) works everywhere. NVIDIA graphics card (NVENC) is offered only when its encoder passes a test encode: about 80% less processor time, same file size, slightly softer picture. If the card fails, the processor makes the video and the project page says so. Never marks anything outdated. Default: Processor.",
+    tutorial: { page: "Settings-Reference", anchor: "rendering" },
+  },
+  "settings.clip-encoding": {
+    title: "Clip encoding",
+    body: "How hard the processor works on each image's clip before the captions are burned in. Thorough is x264's medium preset; Fast is veryfast at the same quality setting: half the processor time for those clips, a slightly softer picture. Only matters with burned-in captions on the processor. Never marks anything outdated. Default: Thorough.",
+    tutorial: { page: "Settings-Reference", anchor: "rendering" },
+  },
+  "settings.render-priority": {
+    title: "Render priority",
+    body: "Background runs every ffmpeg of a video, short or audio export below normal priority, so your other programs come first and the render takes the processor time they leave; on an idle computer it is as fast. Normal competes with them as an equal. The finished video is the same either way. Default: Background.",
+    tutorial: { page: "Settings-Reference", anchor: "rendering" },
+  },
   "settings.appearance": {
     title: "Appearance",
     body: "Light or dark colours for Slopify on this computer. System follows your operating system's setting and changes with it. Default: System. It changes at once and does not affect your videos.",

@@ -15,6 +15,7 @@ import {
   progressMsOf,
   resolveFfmpeg,
   runFfmpeg,
+  segmentArgs,
   slideshowClips,
 } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
@@ -439,6 +440,44 @@ describe("joinArgs", () => {
   it("never builds a shell string, so a filename with a space stays one argument", () => {
     const args = joinArgs(plan(), "/p/my video; rm -rf ~.mp4", "/w/l");
     expect(args.at(-1)).toBe("/p/my video; rm -rf ~.mp4");
+  });
+});
+
+describe("the chosen encoder", () => {
+  const nvenc = { kind: "nvenc", bin: "/usr/bin/ffmpeg", clipSpeed: "thorough" } as const;
+  const fast = { kind: "x264", clipSpeed: "fast" } as const;
+  const after = (args: readonly string[], flag: string): string | undefined =>
+    args[args.indexOf(flag) + 1];
+  const shot = { kind: "shot", shot: 0, from: 0, count: 150, start: 0 } as const;
+
+  it("encodes a clip with NVENC, at the intermediate quality under burned-in captions", () => {
+    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", true, "cards.ass", nvenc);
+    expect(after(clip, "-c:v")).toBe("h264_nvenc");
+    expect(after(clip, "-cq")).toBe("20");
+    expect(clip).not.toContain("-crf");
+    expect(after(segmentArgs(plan(), shot, "/w/c1.mp4", false, "cards.ass", nvenc), "-cq")).toBe(
+      "28.5",
+    );
+  });
+
+  it("encodes an intermediate clip with x264 veryfast when clip encoding is Fast", () => {
+    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", true, "cards.ass", fast);
+    expect(after(clip, "-preset")).toBe("veryfast");
+    expect(after(clip, "-crf")).toBe("16");
+    expect(segmentArgs(plan(), shot, "/w/c1.mp4", false, "cards.ass", fast)).toEqual(
+      segmentArgs(plan(), shot, "/w/c1.mp4", false),
+    );
+  });
+
+  it("burns captions in with NVENC at the final quality, and still copies when nothing is burned", () => {
+    const burned = joinArgs(plan(), "/p/video.mp4", "/w/l", true, [], "/w/sound.m4a", nvenc);
+    expect(after(burned, "-c:v")).toBe("h264_nvenc");
+    expect(after(burned, "-cq")).toBe("28.5");
+    const copied = joinArgs(plan(), "/p/video.mp4", "/w/l", false, [], "/w/sound.m4a", nvenc);
+    expect(after(copied, "-c:v")).toBe("copy");
+    const part = burnPartArgs(plan(), "/w/p1.ffconcat", "/w/p1.mp4", 0, [], nvenc);
+    expect(after(part, "-c:v")).toBe("h264_nvenc");
+    expect(after(part, "-cq")).toBe("28.5");
   });
 });
 

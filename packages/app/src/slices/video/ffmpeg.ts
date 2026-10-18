@@ -3,7 +3,14 @@ import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import { bedChains, bedInputs } from "./ambient-mix.js";
 import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
-import { gradeFilter, lookChain, lookEncoding, placed } from "./look.js";
+import {
+  codecArgs,
+  defaultEncode,
+  type RenderPriority,
+  setRenderPriority,
+  type VideoEncode,
+} from "./encoding.js";
+import { gradeFilter, lookChain, placed } from "./look.js";
 import { decimal, zoomRange } from "./plan.js";
 import { type Segment, segments, transitionHalves } from "./transitions.js";
 
@@ -131,11 +138,6 @@ function clipKey(
   );
 }
 
-// Clips that are joined by copying get the final encode's settings. Clips that will be
-// decoded again under burned-in captions are kept closer to the source, so the second
-// encode is not a visible second generation.
-const intermediateCrf = "16";
-
 // A whole shot as one clip.
 export function clipArgs(
   frame: Pick<EditList, "width" | "height" | "fps">,
@@ -160,6 +162,8 @@ export function segmentArgs(
   intermediate = false,
   // The clip's own chapter-card script, beside it in the working folder (`cards.ts`).
   cardsFile = "cards.ass",
+  // Settings → Production defaults → Rendering (`encoding.ts`).
+  encode: VideoEncode = defaultEncode,
 ): string[] {
   const inputs: string[] = [];
   const chains: string[] = [];
@@ -199,9 +203,7 @@ export function segmentArgs(
     ...(segment.kind === "shot" && segment.from === 0 && look === undefined
       ? []
       : ["-frames:v", String(segment.count)]),
-    ...videoCodec,
-    ...lookEncoding(edit.look),
-    ...(intermediate ? ["-crf", intermediateCrf] : []),
+    ...codecArgs(encode, intermediate ? "intermediate" : "final", edit.look),
     "-an",
     output,
   ];
@@ -394,6 +396,7 @@ export function joinArgs(
   burnSubtitles = false,
   portraits: readonly PortraitOverlay[] = [],
   sound?: string,
+  encode: VideoEncode = defaultEncode,
 ): string[] {
   const mix = sound === undefined ? audioMix(edit, 1) : { inputs: ["-i", sound], chains: [] };
   const inputs: string[] = ["-f", "concat", "-i", list, ...mix.inputs];
@@ -407,7 +410,7 @@ export function joinArgs(
     "-map",
     burnSubtitles ? "[v]" : "0:v",
     ...(audio ? ["-map", sound === undefined ? "[a]" : "1:a"] : []),
-    ...(burnSubtitles ? [...videoCodec, ...lookEncoding(edit.look)] : ["-c:v", "copy"]),
+    ...(burnSubtitles ? codecArgs(encode, "final", edit.look) : ["-c:v", "copy"]),
     ...(audio ? ["-c:a", sound === undefined ? "aac" : "copy"] : ["-an"]),
     "-movflags",
     "+faststart",
@@ -424,6 +427,7 @@ export function burnPartArgs(
   output: string,
   start: number,
   portraits: readonly PortraitOverlay[] = [],
+  encode: VideoEncode = defaultEncode,
 ): string[] {
   const inputs: string[] = ["-f", "concat", "-i", list];
   const shifted =
@@ -443,8 +447,7 @@ export function burnPartArgs(
     chains.join(";"),
     "-map",
     "[v]",
-    ...videoCodec,
-    ...lookEncoding(edit.look),
+    ...codecArgs(encode, "final", edit.look),
     "-an",
     output,
   ];
@@ -488,7 +491,6 @@ const progressArgs = [
   "-nostats",
   "-y",
 ] as const;
-const videoCodec = ["-c:v", "libx264", "-pix_fmt", "yuv420p"] as const;
 
 const centredX = "iw/2-(iw/zoom/2)";
 const centredY = "ih/2-(ih/zoom/2)";
@@ -562,6 +564,8 @@ export interface RenderRun {
   // Everything written to stderr, as it arrives, for a caller that reads what a filter printed
   // there (the loudness measurement's JSON, `loudness/loudnorm.ts`).
   readonly onStderr?: ((text: string) => void) | undefined;
+  // Settings → Production defaults → Render priority; absent is normal.
+  readonly priority?: RenderPriority | undefined;
 }
 
 // ceiling: the last 20 lines of stderr are kept. The renderer's error is shown verbatim,
@@ -583,6 +587,9 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
       windowsHide: true,
       ...(run.cwd === undefined ? {} : { cwd: run.cwd }),
     });
+    // Before ffmpeg starts its threads, which inherit the priority.
+    if (child.pid !== undefined && run.priority !== undefined)
+      setRenderPriority(child.pid, run.priority, run.log);
     const errors: string[] = [];
     let pending = "";
 

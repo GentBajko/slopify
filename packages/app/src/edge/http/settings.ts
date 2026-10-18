@@ -25,6 +25,12 @@ import {
   voiceNameMax,
   voices,
 } from "../../slices/settings/voices.js";
+import {
+  clipEncodeSpeeds,
+  noNvenc,
+  renderPriorities,
+  videoEncoders,
+} from "../../slices/video/encoding.js";
 import { readChannelLinks, writeChannelLinks } from "../../slices/youtube/edits-repo.js";
 import {
   channelLinkNameMax,
@@ -69,6 +75,10 @@ const playbackBody = z.object({
     .optional(),
   // Absent keeps what is saved, as with loudness.
   subtitleModel: z.enum(englishSubtitleModels).optional(),
+  // Absent keeps what is saved, as with loudness.
+  videoEncoder: z.enum(videoEncoders).optional(),
+  clipEncodeSpeed: z.enum(clipEncodeSpeeds).optional(),
+  renderPriority: z.enum(renderPriorities).optional(),
 });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -88,6 +98,9 @@ export function settingsRoutes(deps: AppDeps) {
           ...body,
           loudness: body.loudness ?? saved.loudness,
           subtitleModel: body.subtitleModel ?? saved.subtitleModel,
+          videoEncoder: body.videoEncoder ?? saved.videoEncoder,
+          clipEncodeSpeed: body.clipEncodeSpeed ?? saved.clipEncodeSpeed,
+          renderPriority: body.renderPriority ?? saved.renderPriority,
         });
         if (!result.ok) {
           return problem(c, {
@@ -98,6 +111,19 @@ export function settingsRoutes(deps: AppDeps) {
           });
         }
         return c.json(result.settings);
+      })
+      // Settings → Production defaults → Video encoder offers the NVIDIA card only where its
+      // encoder works; the first ask runs a test encode, later ones answer from memory.
+      .get("/encoders", async (c) => {
+        const status =
+          deps.nvenc === undefined
+            ? { available: false as const, reason: noNvenc }
+            : await deps.nvenc();
+        return c.json({
+          nvidia: status.available
+            ? { available: true as const }
+            : { available: false as const, reason: status.reason },
+        });
       })
       // The named links `{{Name}}` placeholders in YouTube descriptions fill from
       // (`slices/youtube/placeholders.ts`).
