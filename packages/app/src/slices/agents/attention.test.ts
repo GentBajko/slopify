@@ -464,3 +464,21 @@ it("lists the other waiting reviews when one can't be read back, and logs that o
     },
   ]);
 });
+
+// A template's studio sample is made on a hidden project: its failures and checkpoints show in
+// the studio, never here.
+it("leaves out every entry of a template studio's hidden sample project", () => {
+  const f = everything();
+  const { db } = f.h.deps;
+  const before = needsAttention({ ...f.h.deps, log: quiet }, now).map((entry) => entry.kind);
+  expect(before).toContain("failed-step");
+  db.prepare(
+    "INSERT INTO project_templates(id,head_version,creation_hash,created_at) VALUES (?,1,'h','t')",
+  ).run(templateId);
+  db.prepare(
+    "INSERT INTO template_samples(template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,'p1','The history of the lighthouse','fixed',0,'t')",
+  ).run(templateId);
+  expect(needsAttention({ ...f.h.deps, log: quiet }, now).map((entry) => entry.kind)).toEqual([
+    "held-topics",
+  ]);
+});

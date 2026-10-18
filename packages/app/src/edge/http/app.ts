@@ -20,6 +20,7 @@ import type { RebuildDeps } from "../../slices/rebuild/service.js";
 import type { ScheduleDeps } from "../../slices/schedules/model.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
+import { sampleOwner } from "../../slices/template-studio/repo.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { mcpRoutes } from "../mcp/http.js";
@@ -306,6 +307,19 @@ export function createApp(deps: AppDeps): Hono {
         detail:
           "This is the sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top of the sample's page, then edit and rebuild the copy.",
         extensions: { reason: "sample-read-only" },
+      });
+    })
+    // A template's studio sample is changed only through its studio (`slices/template-studio`),
+    // whose runner reaches the project's slices directly: no project route may change it.
+    .use("/api/projects/:id/*", async (c, next) => {
+      if (["GET", "HEAD", "OPTIONS"].includes(c.req.method)) return next();
+      const owner = sampleOwner(deps.db, c.req.param("id"));
+      if (owner === undefined) return next();
+      return problem(c, {
+        status: 409,
+        title: titleOf(409),
+        detail: `This is the studio sample of ${owner.name}. Change the template in its studio instead: Library → Templates → ${owner.name} → Open studio.`,
+        extensions: { reason: "template-sample" },
       });
     })
     .use("/api/*", startRecorder(deps))

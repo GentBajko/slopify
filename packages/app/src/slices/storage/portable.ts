@@ -55,6 +55,7 @@ import {
   studioProjectPlaylistsKey,
   studioRealFootageKey,
 } from "../studio/settings.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
@@ -1185,7 +1186,7 @@ export function storageUsage(
   const totals = storageBytes(deps.paths);
   const byProject = deps.db
     .prepare(
-      `SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`,
+      `SELECT id,title FROM projects WHERE ${liveProject()} AND ${notTemplateSample()} ORDER BY created_at DESC, id DESC`,
     )
     .all()
     .flatMap((row) => {

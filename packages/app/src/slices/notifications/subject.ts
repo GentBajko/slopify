@@ -4,6 +4,7 @@ import { projectById, stagesOf } from "../admission/repo.js";
 import { stepFailedWhileWaiting } from "../admission/state-words.js";
 import { lastStarter } from "../agents/repo.js";
 import { projectHolds } from "../reviews/holds.js";
+import { isTemplateSample } from "../template-studio/repo.js";
 import { uploadedAndSettled } from "../uploads/repo.js";
 import { settledStatus } from "../uploads/rules.js";
 import { atItsDay, failuresOf, type NoticeSubject } from "./rules.js";
@@ -15,7 +16,7 @@ export function noticeSubject(
   projectId: string,
 ): Omit<NoticeSubject, "reason"> | undefined {
   const project = projectById(db, projectId);
-  if (project === undefined) return undefined;
+  if (project === undefined || isTemplateSample(db, projectId)) return undefined;
   const stages = stagesOf(db, projectId);
   const settled = uploadedAndSettled(db, projectId);
   const holds = projectHolds(db, { projectId, standings: new Map([[projectId, stages]]), settled });

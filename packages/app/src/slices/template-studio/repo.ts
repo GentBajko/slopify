@@ -9,6 +9,21 @@ export function notTemplateSample(alias = "projects", column = "id"): string {
   return `NOT EXISTS (SELECT 1 FROM template_samples WHERE template_samples.project_id = ${alias}.${column})`;
 }
 
+export function isTemplateSample(db: DatabaseSync, projectId: string): boolean {
+  return (
+    db.prepare("SELECT 1 FROM template_samples WHERE project_id=?").get(projectId) !== undefined
+  );
+}
+
+export function templateSampleProjects(db: DatabaseSync): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare("SELECT project_id FROM template_samples")
+      .all()
+      .map((row) => String(row.project_id)),
+  );
+}
+
 // The template whose sample a project is, with its current name; undefined for any other project.
 export function sampleOwner(
   db: DatabaseSync,

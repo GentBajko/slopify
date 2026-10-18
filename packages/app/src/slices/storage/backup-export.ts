@@ -7,6 +7,7 @@ import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { projectMarker } from "./arrange.js";
 import {
   type BackupManifest,
@@ -94,7 +95,7 @@ export function busyProjects(deps: Pick<BackupDeps, "db" | "hasInflight">): Busy
          OR EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=p.id AND w.state='running')
          OR EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=p.id AND q.state='queued')
          AS busy
-       FROM projects p ORDER BY p.created_at, p.id`,
+       FROM projects p WHERE ${notTemplateSample("p")} ORDER BY p.created_at, p.id`,
     )
     .all()
     .flatMap((row) => {
@@ -122,7 +123,7 @@ export function planBackup(deps: BackupDeps): BackupPlan {
       },
     } satisfies UsagePart,
     projects: deps.db
-      .prepare("SELECT id,title FROM projects ORDER BY created_at,id")
+      .prepare(`SELECT id,title FROM projects WHERE ${notTemplateSample()} ORDER BY created_at,id`)
       .all()
       .map((row) => projectSnapshot(deps, String(row.id), String(row.title))),
   }));

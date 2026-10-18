@@ -5,6 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import {
   type Restored,
   type TrashDeps,
@@ -37,6 +38,7 @@ const row = z.object({
 const trashedRows = `
   SELECT 'project' AS kind, p.id, p.title AS name, NULL AS detail, t.deleted_at
     FROM project_trash t JOIN projects p ON p.id = t.project_id
+    WHERE ${notTemplateSample("p")}
   UNION ALL SELECT 'prompt', id, name, kind, deleted_at FROM prompts WHERE deleted_at IS NOT NULL
   UNION ALL SELECT 'entry', id, name, category, deleted_at FROM entries WHERE deleted_at IS NOT NULL
   UNION ALL SELECT 'template', t.id, r.name, NULL, t.deleted_at

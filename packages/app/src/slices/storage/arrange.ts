@@ -12,6 +12,7 @@ import { basename, dirname, extname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { pickedShortsOf } from "../shorts/clips.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { backupsFolderName, projectDir, renderCacheFolder } from "./layout.js";
 import type { ProjectPlaces } from "./places.js";
 
@@ -66,7 +67,8 @@ export function arrangeKeys(db: DatabaseSync): ReadonlyMap<string, string> {
         (SELECT count(*)||':'||COALESCE(max(a.id),'') FROM project_assets a WHERE a.project_id=p.id) AS assets,
         (SELECT count(*)||':'||COALESCE(max(o.id),'') FROM outputs o WHERE o.project_id=p.id) AS legacy,
         (SELECT count(*)||':'||COALESCE(max(r.id),'') FROM revision_outputs r WHERE r.project_id=p.id AND r.selected=1 AND r.revision_id=h.revision_id) AS current
-       FROM projects p LEFT JOIN project_heads h ON h.project_id=p.id`,
+       FROM projects p LEFT JOIN project_heads h ON h.project_id=p.id
+       WHERE ${notTemplateSample("p")}`,
     )
     .all())
     keys.set(

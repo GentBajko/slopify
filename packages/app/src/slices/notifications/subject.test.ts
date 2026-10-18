@@ -337,3 +337,18 @@ describe("failures told across a restart", () => {
     expect(told(run.db)).toEqual([]);
   });
 });
+
+// A template's studio sample runs on a hidden project; how it went shows in the studio, and no
+// notification is sent for it.
+it("has nothing to say about a template studio's hidden sample project", () => {
+  const f = prepared();
+  const { db } = f.h.deps;
+  expect(noticeSubject(db, "p1")).toBeDefined();
+  db.prepare(
+    "INSERT INTO project_templates(id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','t')",
+  ).run();
+  db.prepare(
+    "INSERT INTO template_samples(template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','p1','The history of the lighthouse','fixed',0,'t')",
+  ).run();
+  expect(noticeSubject(db, "p1")).toBeUndefined();
+});

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { bookSchema } from "../voices/model.js";
 import type { ListingConfig, ProjectHead } from "./model.js";
 import { formats } from "./model.js";
@@ -39,7 +40,9 @@ const headSelect = `SELECT projects.id, projects.title, projects.format, project
 
 export function listProjectHeads(db: DatabaseSync): ProjectHead[] {
   return db
-    .prepare(`${headSelect} WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`)
+    .prepare(
+      `${headSelect} WHERE ${liveProject()} AND ${notTemplateSample()} ORDER BY created_at DESC, id DESC`,
+    )
     .all()
     .map((raw) => {
       const row = headRow.parse(raw);

@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { failureId, stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { admittedInItsState, parkedOnReview } from "./admitted-work.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { formats, stageSources } from "./model.js";
@@ -106,7 +107,9 @@ export function projectExists(db: DatabaseSync, id: string): boolean {
 // Newest first.
 export function listProjects(db: DatabaseSync): Project[] {
   return db
-    .prepare(`${projectSelect} WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`)
+    .prepare(
+      `${projectSelect} WHERE ${liveProject()} AND ${notTemplateSample()} ORDER BY created_at DESC, id DESC`,
+    )
     .all()
     .map((row) => toProject(projectRow.parse(row)));
 }

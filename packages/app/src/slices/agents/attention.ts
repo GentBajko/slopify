@@ -7,6 +7,7 @@ import { liveProject } from "../admission/repo.js";
 import { externalReviewOf } from "../reviews/external-rows.js";
 import { waitingExternalReviewRows } from "../reviews/external-waiting.js";
 import { type ProjectHolds, projectHolds } from "../reviews/holds.js";
+import { templateSampleProjects } from "../template-studio/repo.js";
 import { setAsideProjects } from "../uploads/repo.js";
 import {
   extensionFailures,
@@ -92,6 +93,7 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
     ["extension failures", () => extensionFailures(db, skip)],
   ];
   const aside = setAsideProjects(db);
+  const samples = templateSampleProjects(db);
   return sources
     .flatMap(([source, entries]) => {
       try {
@@ -103,7 +105,10 @@ export function needsAttention(deps: AttentionDeps, now: Date): readonly Attenti
         return [];
       }
     })
-    .filter((entry) => entry.projectId === null || !aside.has(entry.projectId))
+    .filter(
+      (entry) =>
+        entry.projectId === null || (!aside.has(entry.projectId) && !samples.has(entry.projectId)),
+    )
     .toSorted((a, b) => a.since.localeCompare(b.since));
 }
 
