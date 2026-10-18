@@ -14,6 +14,7 @@ const fromDigest: readonly KeywordPlace[] = [
   "description",
   "shorts",
   "review",
+  "post",
 ];
 const atStart = "When the run starts; later changes don't change this project.";
 const digestAvailable =
@@ -123,7 +124,7 @@ export const keywordSpecs: readonly KeywordSpec[] = [
     fills: "The finished video's length.",
     example: "42 min 10 s",
     available: "Once the narration is finished.",
-    places: ["description", "shorts", "review"],
+    places: ["description", "shorts", "review", "post"],
     cost: "free",
     batch: 2,
   },

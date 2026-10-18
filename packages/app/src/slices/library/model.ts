@@ -19,6 +19,8 @@ export const promptKinds = [
   "review",
   // Speaker turns for a multi-voice run (`slices/voices/script.ts`), in place of an article.
   "script",
+  // A post for another site: X, LinkedIn, Instagram, TikTok, Reddit or Bluesky (`slices/social`).
+  "post",
 ] as const;
 export type PromptKind = (typeof promptKinds)[number];
 

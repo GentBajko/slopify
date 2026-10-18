@@ -93,6 +93,10 @@ function slotsIn(value: Json, ref: LibraryRef): readonly Slot[] {
       return Object.values(record(record(value.reviews)?.stages) ?? {}).flatMap((stage) =>
         field(record(stage), "prompt"),
       );
+    case "post":
+      return Object.values(record(value.social) ?? {}).flatMap((one) =>
+        field(record(one), "prompt"),
+      );
     case "image":
       return [
         ...(Array.isArray(value.imagePrompts) ? value.imagePrompts : []).flatMap((one) =>

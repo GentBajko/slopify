@@ -17,6 +17,8 @@ export const keywordPlaces = [
   "description",
   "shorts",
   "review",
+  // A Library prompt that writes a post for another site (`slices/social`).
+  "post",
 ] as const;
 export type KeywordPlace = (typeof keywordPlaces)[number];
 
@@ -88,6 +90,7 @@ export const placeLabels: Readonly<Record<KeywordPlace, string>> = {
   description: "Description",
   shorts: "Shorts",
   review: "Review",
+  post: "Post",
 };
 
 // "A, B and C".

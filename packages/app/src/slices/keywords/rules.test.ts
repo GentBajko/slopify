@@ -48,7 +48,7 @@ describe("keywordProblems", () => {
         name: "Slopify_Chapters",
         at: 7,
         message:
-          "{{Slopify_Chapters}} at line 2, column 3 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts and Review.",
+          "{{Slopify_Chapters}} at line 2, column 3 can't be used in an Article prompt: it exists once the article is written, so never in the Article or Script prompt. Remove it; it works in Narration, Intro, Outro, Image, Thumbnail, Description, Shorts, Review and Post.",
       },
     ]);
   });
@@ -179,7 +179,7 @@ describe("placedProblems", () => {
       {
         field: "articlePrompt",
         message:
-          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts and Review. Change the prompt in Library, or pick another one.",
+          "{{Slopify_Hook}} at line 1, column 1 can't be used in an Article prompt: it is written from the article, which doesn't exist yet when this prompt runs. Remove it; it works in Image, Thumbnail, Description, Shorts, Review and Post. Change the prompt in Library, or pick another one.",
       },
     ]);
   });
