@@ -3,6 +3,7 @@ import type { DesignDocument } from "@app/slices/designs/schema.js";
 import type { ReactElement } from "react";
 import { Field, Input, Textarea } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { formatName, toggleFormat } from "./document";
 
 // Which formats a piece is drawn in, where each crops the one artwork (its focus), and a
@@ -25,8 +26,14 @@ export function FormatsFields({
     });
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <fieldset className="m-0 grid min-w-0 grid-cols-2 gap-x-4 gap-y-2 border-0 p-0 sm:grid-cols-3">
-        <legend className="sl-field__label mb-1">Formats</legend>
+      <fieldset
+        className="m-0 grid min-w-0 grid-cols-2 gap-x-4 gap-y-2 border-0 p-0 sm:grid-cols-3"
+        {...helpScope}
+      >
+        <legend className="sl-field__label mb-1 flex items-center gap-1">
+          Formats
+          <InfoTip id="library.design.formats" className="-my-1" />
+        </legend>
         {designFormats.map((format) => (
           <label key={format} className="flex min-h-8 items-center gap-2 text-small">
             <input
@@ -42,7 +49,7 @@ export function FormatsFields({
       </fieldset>
       {doc.brochure === undefined ? null : (
         <div className="grid min-w-0 gap-3">
-          <Field label="Brochure title">
+          <Field label="Brochure title" tip="library.design.brochure">
             <Input
               value={doc.brochure.title}
               maxLength={200}
@@ -53,7 +60,11 @@ export function FormatsFields({
               }
             />
           </Field>
-          <Field label="Brochure pages" help="Markdown; fields such as {{Event}} are filled in.">
+          <Field
+            label="Brochure pages"
+            help="Markdown; fields such as {{Event}} are filled in."
+            tip="library.design.brochure"
+          >
             <Textarea
               rows={6}
               value={doc.brochure.body}
@@ -67,7 +78,11 @@ export function FormatsFields({
         </div>
       )}
       <Fold summary="Fine-tune crops · where each format centres the picture">
-        <div className="grid min-w-0 gap-3">
+        <div className="grid min-w-0 gap-3" {...helpScope}>
+          <p className="m-0 flex items-center gap-1 text-small text-ink-2">
+            Across and Down move each crop; the middle is the picture's centre.
+            <InfoTip id="library.design.focus" className="-my-1" />
+          </p>
           {doc.formats.map((one) => (
             <div key={one.format} className="grid min-w-0 grid-cols-[8rem_minmax(0,1fr)] gap-2">
               <span className="text-small font-semibold">{formatName(one.format)}</span>

@@ -273,7 +273,11 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
             {tab === "edit" ? (
               <div className="flex min-w-0 flex-col gap-3">
                 {needsArtwork && doc !== undefined ? (
-                  <Field label="Describe the artwork" help="No words: Slopify adds the text.">
+                  <Field
+                    label="Describe the artwork"
+                    help="No words: Slopify adds the text."
+                    tip="library.design.artwork"
+                  >
                     <Textarea
                       rows={4}
                       value={doc.picture.prompt}
@@ -285,7 +289,11 @@ function DesignEditor({ design }: { readonly design: DesignView }): ReactElement
                     />
                   </Field>
                 ) : (
-                  <Field label="What to change" help="Everything you don't mention stays as it is.">
+                  <Field
+                    label="What to change"
+                    help="Everything you don't mention stays as it is."
+                    tip="library.design.change"
+                  >
                     <Textarea
                       rows={4}
                       maxLength={4000}

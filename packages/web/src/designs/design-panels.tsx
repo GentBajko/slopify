@@ -57,6 +57,7 @@ export function TextPanel({
     <div className="flex min-w-0 flex-col gap-4">
       <Switch
         label="Let the AI draw the text"
+        tip="library.design.ai-text"
         checked={doc.picture.aiText}
         onChange={(aiText) => onDoc({ ...doc, picture: { ...doc.picture, aiText } })}
       />
@@ -73,6 +74,7 @@ export function TextPanel({
       />
       <ValueFields
         label="Fields"
+        tip="library.design.values"
         fields={fields}
         values={values}
         dateField={doc.schedule?.dateField}
@@ -156,7 +158,11 @@ export function FormatsPanel({
           </div>
         </>
       )}
-      <Field label="Keep in project" help="Linked only: nothing is added to the project's video.">
+      <Field
+        label="Keep in project"
+        help="Linked only: nothing is added to the project's video."
+        tip="library.design.project"
+      >
         <Select
           value={design.projectId ?? ""}
           onChange={(event) => onProject(event.target.value === "" ? null : event.target.value)}

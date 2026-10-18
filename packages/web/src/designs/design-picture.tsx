@@ -58,6 +58,7 @@ export function DesignPicture({
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
         <Segmented
           label="Show"
+          tip="library.design.show"
           value={shown === parent && parent !== undefined ? "before" : "after"}
           options={[
             { value: "before", label: "Before", disabled: parent?.sha256 == null },

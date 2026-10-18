@@ -6,7 +6,8 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button, IconButton } from "@/components/kit/button";
-import { Input } from "@/components/kit/field";
+import { Field, Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { type Column, DataTable } from "@/components/kit/stats";
 import { Status } from "@/components/kit/status";
@@ -18,6 +19,7 @@ import {
   schedulesQuery,
   updateSchedule,
 } from "@/schedules/api";
+import { centsToDollars, dollarsToCents } from "@/schedules/form-checks";
 import type { TemplateView } from "../api";
 
 // A design template's schedule: one row per piece, each with its fields and its date. Slopify
@@ -25,6 +27,8 @@ import type { TemplateView } from "../api";
 // ready, and takes the row off the table. The rows are the schedule's own, saved here.
 
 type Row = Readonly<Record<string, string>> & { readonly _key: string };
+
+const spendWrong = "Enter the spend ceiling in US dollars, such as 1 or 0.50, or leave it empty.";
 
 function rowsOf(schedule: ScheduleSummary | undefined): Row[] {
   return (schedule?.items ?? []).map((item, index) => ({
@@ -64,14 +68,26 @@ export function ScheduleRows({
       one.status !== "canceled",
   );
   const [rows, setRows] = useState<Row[] | null>(null);
+  // The spend ceiling as typed; null until changed, so the saved one shows once it loads.
+  const [spend, setSpend] = useState<string | null>(null);
+  const [spendProblem, setSpendProblem] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const shown = rows ?? rowsOf(schedule);
+  const spendShown = spend ?? centsToDollars(schedule?.spendLimitCents);
   const fields = designFields(saved);
   const dateField = saved.schedule?.dateField;
   const save = useMutation({
     mutationFn: async () => {
       if (dateField === undefined)
         throw new Error("Choose which field holds each date, then save the template.");
+      // The same ceiling a project schedule has, per piece: a piece priced over it, or with
+      // no known price, isn't made (`schedules/design-run.ts`).
+      const limit = dollarsToCents(spendShown);
+      if (limit === undefined) {
+        setSpendProblem(spendWrong);
+        return undefined;
+      }
+      setSpendProblem(null);
       const items = shown.map(({ _key, ...values }) => ({
         title: titleOf(values, fields, dateField),
         values,
@@ -85,7 +101,7 @@ export function ScheduleRows({
         timezone: schedule?.timezone ?? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
         missedPolicy: "skip" as const,
         overlapPolicy: "skip" as const,
-        spendLimitCents: schedule?.spendLimitCents ?? null,
+        spendLimitCents: limit,
         items,
         topicKeyword: null,
         values: {},
@@ -102,11 +118,13 @@ export function ScheduleRows({
           });
     },
     onSuccess: async (result) => {
+      if (result === undefined) return;
       if (!result.ok) {
         setMessage(result.message);
         return;
       }
       setRows(null);
+      setSpend(null);
       setMessage(
         result.value.nextRunAt === null
           ? "Saved. No row has a date still to come."
@@ -164,15 +182,17 @@ export function ScheduleRows({
     ? "Save the template first: the rows follow its saved fields."
     : dateField === undefined
       ? "Choose which field holds each date above, then save the template."
-      : rows === null
-        ? "Change a row first."
+      : rows === null && spend === null
+        ? "Change a row or the spend ceiling first."
         : undefined;
   return (
-    <div data-setting="rows" className="flex min-w-0 flex-col gap-3">
+    // One scope: the table's cells are explained by the Rows heading's info button.
+    <div data-setting="rows" className="flex min-w-0 flex-col gap-3" {...helpScope}>
       <SectionHead
         as="h3"
         size="small"
         title="Rows"
+        info="library.design.rows"
         meta={
           schedule === undefined
             ? "No schedule yet: add a row for each event and save."
@@ -211,6 +231,24 @@ export function ScheduleRows({
           empty="No rows yet."
         />
       </div>
+      <Field
+        label="Spend ceiling per piece (US$, optional)"
+        tip="library.design.spend"
+        tipLabel="Spend ceiling"
+        help="In dollars, such as 1 or 0.50. Empty means no ceiling."
+        error={spendProblem ?? undefined}
+        className="max-w-[16rem]"
+      >
+        <Input
+          inputMode="decimal"
+          value={spendShown}
+          onChange={(event) => {
+            setSpend(event.target.value);
+            setSpendProblem(null);
+          }}
+          placeholder="1.00"
+        />
+      </Field>
       <div className="flex flex-wrap items-center gap-2">
         <Button
           size="small"
@@ -238,7 +276,7 @@ export function ScheduleRows({
             save.mutate();
           }}
         >
-          {schedule === undefined ? "Start the schedule" : "Save rows"}
+          {schedule === undefined ? "Start the schedule" : "Save schedule"}
         </Button>
         <p role="status" className="m-0 min-w-0 text-small text-ink-2">
           {message ??

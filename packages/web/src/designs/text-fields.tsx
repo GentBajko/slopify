@@ -13,7 +13,9 @@ import { useApp } from "@/app-context";
 import { Button, IconButton } from "@/components/kit/button";
 import { Field, Input, Select } from "@/components/kit/field";
 import { Fold } from "@/components/kit/fold";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
+import type { HelpId } from "@/help/catalog";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { nextBlockId } from "./document";
 
@@ -63,7 +65,7 @@ export function TextLayoutFields({
   ];
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Field label="Where the text sits">
+      <Field label="Where the text sits" tip="library.design.text-position">
         <Segmented
           label="Where the text sits"
           value={text.preset}
@@ -71,7 +73,7 @@ export function TextLayoutFields({
           onChange={(preset) => onChange({ ...text, preset })}
         />
       </Field>
-      <Field label="Behind the text">
+      <Field label="Behind the text" tip="library.design.scrim">
         <Segmented
           label="Behind the text"
           value={text.scrim}
@@ -79,8 +81,15 @@ export function TextLayoutFields({
           onChange={(scrim) => onChange({ ...text, scrim })}
         />
       </Field>
-      <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0" disabled={disabled}>
-        <legend className="sl-field__label mb-1">Lines</legend>
+      <fieldset
+        className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0"
+        disabled={disabled}
+        {...helpScope}
+      >
+        <legend className="sl-field__label mb-1 flex items-center gap-1">
+          Lines
+          <InfoTip id="library.design.lines" className="-my-1" />
+        </legend>
         {text.blocks.map((block, index) => (
           <div key={block.id} className="flex min-w-0 items-center gap-2">
             <Input
@@ -135,14 +144,14 @@ export function TextLayoutFields({
                 key={block.id}
                 className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
               >
-                <Field label={`Line ${String(index + 1)} size`}>
+                <Field label={`Line ${String(index + 1)} size`} tip="library.design.line-style">
                   <Select
                     value={block.role}
                     options={blockRoles.map((role) => ({ value: role, label: roleLabels[role] }))}
                     onChange={(event) => setBlock(index, { role: event.target.value as BlockRole })}
                   />
                 </Field>
-                <Field label={`Line ${String(index + 1)} font`}>
+                <Field label={`Line ${String(index + 1)} font`} tip="library.design.line-style">
                   <Select
                     value={block.fontId}
                     options={
@@ -153,7 +162,7 @@ export function TextLayoutFields({
                     onChange={(event) => setBlock(index, { fontId: event.target.value })}
                   />
                 </Field>
-                <Field label={`Line ${String(index + 1)} colour`}>
+                <Field label={`Line ${String(index + 1)} colour`} tip="library.design.line-style">
                   <Input
                     type="color"
                     value={block.color}
@@ -180,19 +189,22 @@ export function ValueFields({
   dateField,
   onChange,
   label,
+  tip,
 }: {
   readonly fields: readonly string[];
   readonly values: Readonly<Record<string, string>>;
   readonly dateField?: string | undefined;
   readonly onChange: (next: Readonly<Record<string, string>>) => void;
   readonly label: string;
+  // The info button beside each field: what the values are for here.
+  readonly tip: HelpId;
 }): ReactElement | null {
   if (fields.length === 0) return null;
   return (
     <fieldset className="m-0 grid min-w-0 grid-cols-1 gap-3 border-0 p-0 sm:grid-cols-2">
       <legend className="sl-field__label mb-1">{label}</legend>
       {fields.map((name) => (
-        <Field key={name} label={name}>
+        <Field key={name} label={name} tip={tip} tipLabel={`${label}: ${name}`}>
           <Input
             type={name === dateField ? "date" : "text"}
             value={values[name] ?? ""}

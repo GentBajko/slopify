@@ -37,10 +37,10 @@ export function PictureSection({
   const picture = doc.picture;
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Field label="Template name">
+      <Field label="Template name" tip="library.design.template-name">
         <Input value={name} maxLength={200} onChange={(event) => onName(event.target.value)} />
       </Field>
-      <Field label="Artwork">
+      <Field label="Artwork" tip="library.design.source">
         <Segmented
           label="Artwork"
           value={picture.source}
@@ -56,6 +56,7 @@ export function PictureSection({
           <Field
             label="Describe the artwork"
             help="Fields such as {{Event}} are filled for each piece. No words: Slopify adds the text."
+            tip="library.design.artwork"
           >
             <Textarea
               rows={4}
@@ -75,6 +76,8 @@ export function PictureSection({
       ) : (
         <Field
           label="The picture every piece uses"
+          tip="library.design.source"
+          tipLabel="the picture every piece uses"
           help={picture.sha256 === undefined ? "None yet." : "Saved with the template."}
           error={problem ?? undefined}
         >
@@ -114,6 +117,7 @@ export function TextSection({ doc, onChange }: SectionProps): ReactElement {
       />
       <ValueFields
         label="Sample values"
+        tip="library.design.sample-values"
         fields={fields}
         values={doc.samples}
         dateField={doc.schedule?.dateField}
@@ -123,6 +127,7 @@ export function TextSection({ doc, onChange }: SectionProps): ReactElement {
         <div className="flex flex-col gap-3">
           <Switch
             label="Let the AI draw the text"
+            tip="library.design.ai-text"
             checked={doc.picture.aiText}
             onChange={(aiText) => onChange({ ...doc, picture: { ...doc.picture, aiText } })}
           />
@@ -143,7 +148,7 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
   const { schedule: _off, ...withoutSchedule } = doc;
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
-      <Field label="Each piece's date is in">
+      <Field label="Each piece's date is in" tip="library.design.date-field">
         <Select
           value={schedule?.dateField ?? ""}
           onChange={(event) =>
@@ -166,7 +171,7 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
           ]}
         />
       </Field>
-      <Field label="Days ahead">
+      <Field label="Days ahead" tip="library.design.days-ahead">
         <Input
           type="number"
           min={0}
@@ -189,7 +194,7 @@ export function ScheduleSettings({ doc, onChange }: SectionProps): ReactElement 
           }
         />
       </Field>
-      <Field label="At">
+      <Field label="At" tip="library.design.time" tipLabel="the time a piece is made">
         <Input
           type="time"
           disabled={schedule === undefined}

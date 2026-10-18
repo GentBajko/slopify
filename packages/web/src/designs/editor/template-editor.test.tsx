@@ -250,7 +250,69 @@ describe("the design template editor", () => {
         cadence: { kind: "by-date", time: "09:00" },
         topicGeneration: { mode: "off" },
         items: [{ title: "Late Set", values: { Event: "Late Set", Date: "2026-11-14" } }],
+        spendLimitCents: null,
       }),
+    );
+  });
+
+  it("saves a spend ceiling per piece with the schedule, and says what a wrong one needs", async () => {
+    const user = userEvent.setup();
+    let saved: Record<string, unknown> | undefined;
+    const doc: DesignDocument = {
+      ...blankTemplate(),
+      schedule: { dateField: "Date", daysBefore: 7, time: "09:00" },
+    };
+    const existing = {
+      id: "44444444-4444-4444-8444-444444444444",
+      name: "Gig poster",
+      templateKind: "design",
+      templateId: "t1",
+      templateVersion: 2,
+      cadence: { kind: "by-date", time: "09:00" },
+      timezone: "UTC",
+      missedPolicy: "skip",
+      overlapPolicy: "skip",
+      spendLimitCents: 400,
+      items: [{ title: "Late Set", values: { Event: "Late Set", Date: "2026-11-14" } }],
+      topicKeyword: null,
+      values: {},
+      brief: null,
+      topicGeneration: { mode: "off", keepAtLeast: 10, llm: null },
+      topics: { held: 0, generatingSince: null, generatedAt: null, failedAt: null, error: null },
+      status: "active",
+      version: 3,
+      nextRunAt: "2026-11-07T09:00:00.000Z",
+      createdAt: at,
+      updatedAt: at,
+      deletedAt: null,
+    };
+    renderRouted(
+      <DesignTemplateRoute templateId="t1" />,
+      deps(template({ readyVersion: 2 }, doc), {
+        "GET /api/schedules": jsonAnswer({ schedules: [existing] }),
+        "PUT /api/schedules/44444444-4444-4444-8444-444444444444": async (request) => {
+          saved = (await request.json()) as Record<string, unknown>;
+          return jsonAnswer({ ...existing, spendLimitCents: 150, version: 4 })(request);
+        },
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Schedule" }));
+    const ceiling = await screen.findByLabelText("Spend ceiling per piece (US$, optional)");
+    await waitFor(() => expect((ceiling as HTMLInputElement).value).toBe("4"));
+    await user.clear(ceiling);
+    await user.type(ceiling, "about two");
+    await user.click(screen.getByRole("button", { name: "Save schedule" }));
+    expect(
+      await screen.findByText(
+        "Enter the spend ceiling in US dollars, such as 1 or 0.50, or leave it empty.",
+      ),
+    ).not.toBeNull();
+    expect(saved).toBeUndefined();
+    await user.clear(ceiling);
+    await user.type(ceiling, "1.50");
+    await user.click(screen.getByRole("button", { name: "Save schedule" }));
+    await waitFor(() =>
+      expect(saved).toMatchObject({ spendLimitCents: 150, baseVersion: 3, templateKind: "design" }),
     );
   });
 });
