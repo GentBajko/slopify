@@ -55,39 +55,8 @@ export function startRun(
 ): StartedRun {
   const id = deps.ids.next();
   const at = deps.clock.now().toISOString();
-  const shared =
-    usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
-      ? collectSharedGlossary(deps).entries
-      : [];
-  // Library → Aliases as they are now: later edits there never change this project.
-  const aliases =
-    draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
-      ? listNarrationAliases(deps.db)
-      : [];
-  // The title may name keywords too ("History: {{Topic}}"), filled like a prompt's, so a
-  // template or Play keeps the pattern and each project gets its own title.
-  const title = render(draft.title, draft.values).trim() || draft.title;
-  // The channel's related earlier episodes as they are now (`slices/episodes`): later edits
-  // there never change this project. A draft never brings its own.
-  const { earlierEpisodes: _carried, ...fresh } = draft;
-  const earlier = earlierEpisodesFor(deps.db, draft, title);
-  const config: RunConfig = {
-    ...fresh,
-    title,
-    ...(title !== draft.title && detectSlots(draft.title).names.length > 0
-      ? { titlePattern: draft.title }
-      : {}),
-    // A new project always names its document theme: a config without one reads as the
-    // DiceMaster of older projects (see documentThemeOf), which no new project should get.
-    ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
-      ? { document: { theme: defaultDocumentTheme } }
-      : {}),
-    rendered,
-    ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
-    ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
-    pronunciationRules: currentPronunciationRules,
-    ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
-  };
+  const config = configOf(deps, draft, rendered);
+  const { title } = config;
   const project: Project = {
     id,
     title,
@@ -153,6 +122,50 @@ export function startRun(
   }
 
   return { project, stages };
+}
+
+// The config a run starts with: the draft as filled, with what Slopify copies in when it starts
+// (the shared glossary, Library → Aliases, the pronunciation rules, the channel's earlier
+// episodes) as they are now. The template studio saves its sample's next revision from it.
+export function configOf(
+  deps: Pick<StorageDeps, "db" | "paths">,
+  draft: RunDraft,
+  rendered: Readonly<Record<string, string>>,
+): RunConfig {
+  const shared =
+    usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
+      ? collectSharedGlossary(deps).entries
+      : [];
+  // Library → Aliases as they are now: later edits there never change this project.
+  const aliases =
+    draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
+      ? listNarrationAliases(deps.db)
+      : [];
+  // The title may name keywords too ("History: {{Topic}}"), filled like a prompt's, so a
+  // template or Play keeps the pattern and each project gets its own title.
+  const title = render(draft.title, draft.values).trim() || draft.title;
+  // The channel's related earlier episodes as they are now (`slices/episodes`): later edits
+  // there never change this project. A draft never brings its own.
+  const { earlierEpisodes: _carried, ...fresh } = draft;
+  const earlier = earlierEpisodesFor(deps.db, draft, title);
+  const config: RunConfig = {
+    ...fresh,
+    title,
+    ...(title !== draft.title && detectSlots(draft.title).names.length > 0
+      ? { titlePattern: draft.title }
+      : {}),
+    // A new project always names its document theme: a config without one reads as the
+    // DiceMaster of older projects (see documentThemeOf), which no new project should get.
+    ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
+      ? { document: { theme: defaultDocumentTheme } }
+      : {}),
+    rendered,
+    ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
+    ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
+    pronunciationRules: currentPronunciationRules,
+    ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
+  };
+  return config;
 }
 
 function attachProvided(

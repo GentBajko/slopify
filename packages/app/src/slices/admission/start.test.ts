@@ -13,7 +13,9 @@ import type { StorageDeps } from "../storage/staging.js";
 import { stageUpload } from "../storage/staging.js";
 import type { RunDraft } from "./model.js";
 import { stagesOf } from "./repo.js";
-import { initialState, startRun } from "./start.js";
+import { defaultDocumentTheme } from "../document/model.js";
+import { currentPronunciationRules } from "../narration/pronunciation.js";
+import { configOf, initialState, startRun } from "./start.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -517,5 +519,37 @@ describe("startRun with the ambient bed's own file", () => {
     );
     expect(project.config.ambientBed).toEqual({ source: "rain", ...bed });
     expect(existsSync(join(storage.paths.staging, file))).toBe(true);
+  });
+});
+
+// The config a run starts with, worked out by `configOf`: the template studio rebuilds its
+// sample from the same function, so the two can never drift apart.
+describe("configOf", () => {
+  it("is exactly the config startRun stores, title pattern, theme, aliases and rules included", async () => {
+    const storage = deps();
+    saveNarrationAliases(storage, [
+      { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false },
+    ]);
+    const image = await upload(storage, "images", "one");
+    const run = draft({
+      title: "History: {{Topic}}",
+      values: { Topic: "Salt roads" },
+      sources: { ...draft().sources, audio: "generate", document: "generate" },
+      audio: { provider: "voice", model: "tts", voice: "v1", useNarrationAliases: true },
+      provided: { article: "Dr. Grey.", images: [image] },
+      sample: { fullScript: false },
+    });
+    const expected = configOf(storage, run, { article: "Write." });
+    const started = startRun(storage, run, { article: "Write." }, true).project.config;
+    expect(started).toEqual(expected);
+    expect(started).toMatchObject({
+      title: "History: Salt roads",
+      titlePattern: "History: {{Topic}}",
+      document: { theme: defaultDocumentTheme },
+      rendered: { article: "Write." },
+      narrationAliases: [{ written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false }],
+      pronunciationRules: currentPronunciationRules,
+      sample: { fullScript: false },
+    });
   });
 });
