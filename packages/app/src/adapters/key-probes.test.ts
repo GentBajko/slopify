@@ -56,3 +56,64 @@ describe("key test calls", () => {
     expect(keyProbes.cartesia?.model).toBeUndefined();
   });
 });
+
+describe("live model lists", () => {
+  const list = (id: string) => {
+    const found = keyProbes[id]?.list;
+    if (found === undefined) throw new Error(`${id} has no live list`);
+    return found;
+  };
+
+  it("lists the providers that offer a models endpoint, and not the others", () => {
+    expect(
+      Object.entries(keyProbes)
+        .filter(([, probe]) => probe.list !== undefined)
+        .map(([id]) => id)
+        .sort(),
+    ).toEqual([
+      "elevenlabs",
+      "google-image",
+      "google-tts",
+      "openai-image",
+      "openai-tts",
+      "openrouter",
+    ]);
+  });
+
+  it("reads OpenAI's and OpenRouter's data[].id", () => {
+    expect(list("openai-tts").url(undefined)).toBe("https://api.openai.com/v1/models");
+    expect(list("openai-image").read('{"data":[{"id":"gpt-image-1"},{"id":"tts-1"},{}]}')).toEqual({
+      ids: ["gpt-image-1", "tts-1"],
+    });
+    expect(list("openrouter").read('{"data":[{"id":"x/y"}]}')).toEqual({ ids: ["x/y"] });
+  });
+
+  it("pages through Google's list without the models/ prefix", () => {
+    const google = list("google-image");
+    expect(google.url(undefined)).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+    );
+    expect(google.url("tok en")).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&pageToken=tok%20en",
+    );
+    expect(
+      google.read(
+        '{"models":[{"name":"models/imagen-4"},{"name":"models/gemini-tts"}],"nextPageToken":"n2"}',
+      ),
+    ).toEqual({ ids: ["imagen-4", "gemini-tts"], next: "n2" });
+  });
+
+  it("reads ElevenLabs' array of model_id", () => {
+    expect(
+      list("elevenlabs").read('[{"model_id":"eleven_v3"},{"model_id":"eleven_flash_v2_5"}]'),
+    ).toEqual({
+      ids: ["eleven_v3", "eleven_flash_v2_5"],
+    });
+  });
+
+  it("answers undefined for a list it can't read", () => {
+    expect(list("openai-tts").read("<html>")).toBeUndefined();
+    expect(list("google-tts").read('{"models":"nope"}')).toBeUndefined();
+    expect(list("elevenlabs").read('{"detail":"x"}')).toBeUndefined();
+  });
+});

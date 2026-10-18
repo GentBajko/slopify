@@ -1,5 +1,6 @@
 import type { KeyTestDeps } from "./key-test.js";
 import type { ProviderId } from "./model.js";
+import { probeRead } from "./probe-read.js";
 import { keyOf } from "./repo.js";
 
 // Health check → "Model reachable": whether each model chosen for a keyed provider answers for
@@ -25,21 +26,13 @@ export async function modelReach(
   const read = (url: string) => {
     const known = reads.get(url);
     if (known !== undefined) return known;
-    const started = (async () => {
-      try {
-        const response = await deps.fetch(url, {
-          headers: probe.headers(key),
-          signal: AbortSignal.timeout(15_000),
-          redirect: "error",
-        });
-        // A list is read whole; a single model's page only for its status.
-        const body = probe.model?.lists === undefined ? "" : await response.text();
-        if (probe.model?.lists === undefined) await response.body?.cancel().catch(() => {});
-        return { status: response.status, body };
-      } catch {
-        return undefined;
-      }
-    })();
+    // A list is read whole; a single model's page only for its status.
+    const started = probeRead(
+      deps.fetch,
+      url,
+      probe.headers(key),
+      probe.model?.lists !== undefined,
+    );
     reads.set(url, started);
     return started;
   };
