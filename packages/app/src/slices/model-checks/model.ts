@@ -65,9 +65,10 @@ export interface ModelStandingView {
   readonly retiring?: Retiring | undefined;
 }
 
-// What one check costs: dollars at list price, or a CLI plan's own allowance.
+// What one check costs: dollars at list price (null: the model list names no price), or a
+// CLI plan's own allowance.
 export interface CheckCost {
-  readonly dollars: number;
+  readonly dollars: number | null;
   readonly planUsage: boolean;
 }
 
