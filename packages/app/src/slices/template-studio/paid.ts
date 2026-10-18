@@ -133,13 +133,26 @@ function outcome(db: DatabaseSync, projectId: string): { readonly failed: string
     const reason = stages.find((stage) => stage.state === "failed")?.failureReason;
     return {
       failed:
-        reason ??
+        (reason === undefined || reason === null ? undefined : studioWords(reason)) ??
         "A step of the sample failed without saying why. Press Make sample to try again; if it fails again, use Download diagnostics in Settings and report it.",
     };
   }
   if (state === "canceled" || state === "paused")
     return { failed: "The sample stopped before it finished. Press Make sample to make it again." };
   return { failed: null };
+}
+
+// A step's sentence names a project's Try again (on its stage); the studio's button for it is
+// Make sample.
+function studioWords(reason: string): string {
+  return reason.replace(
+    /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][a-z]+)?/g,
+    (_, verb: string | undefined, at: number) => {
+      const opens =
+        verb === undefined ? /(^|[.;:!?]\s+)$/.test(reason.slice(0, at)) : /^[UP]/.test(verb);
+      return `${opens ? "Press" : "press"} Make sample to try again`;
+    },
+  );
 }
 
 const refusedSentence: Readonly<Record<string, string>> = {
