@@ -25,6 +25,7 @@ import type { HelpId } from "@/help/catalog";
 import {
   bodyProblems,
   draftProblems,
+  draftWarnings,
   firstProblem,
   nameProblems,
   slotNames,
@@ -137,6 +138,7 @@ export function PromptEditorRoute({
   // characters to see; the upgrade is a second list.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
+  const warnings = draft.body.trim() === "" ? [] : draftWarnings(draft);
   useTutorialProgress({
     promptNamed: draft.name.trim() !== "" && named.length === 0,
     promptBodyReady: draft.body.trim() !== "" && lint.length === 0,
@@ -326,7 +328,18 @@ export function PromptEditorRoute({
         </div>
 
         <div data-tour="prompt-slots" className={editorAside}>
-          <DetectedSlots slots={slots} body={draft.body} lint={lint} lintId={lintId} />
+          <DetectedSlots
+            slots={slots}
+            body={draft.body}
+            lint={lint}
+            lintId={lintId}
+            warnings={warnings}
+            place={draft.kind}
+            bodyId={bodyId}
+            onChange={(next) => {
+              edit({ ...draft, body: next }, "body");
+            }}
+          />
         </div>
       </div>
 

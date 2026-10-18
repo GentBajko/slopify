@@ -108,7 +108,7 @@ export function KeywordInsertBar({
   return (
     <div className="mb-1 flex min-w-0 items-center gap-2" {...helpScope}>
       <span className="sl-field__label shrink-0">Insert</span>
-      <InfoTip id={keywordTips[place]} label="Keywords Slopify fills" className="-my-1" />
+      <InfoTip id={keywordTips[place]} className="-my-1" />
       <div
         ref={row}
         role="toolbar"

@@ -209,6 +209,8 @@ export function RevisionPrompts({
             <RawPromptField
               id={`${formId}-raw-${key}`}
               name={name}
+              promptKey={key}
+              script={usesScriptPrompt(edit.config)}
               value={raw ?? ""}
               onChange={(text) => onChange(setPrompt(edit, key, text))}
             />

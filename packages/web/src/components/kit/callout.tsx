@@ -1,5 +1,5 @@
 import { AlertTriangleIcon, InfoIcon, PauseCircleIcon } from "lucide-react";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useId } from "react";
 import { cn } from "@/lib/utils";
 
 // A notice in the flow of a section, on its status tint: what happened, why, and the one thing
@@ -26,14 +26,18 @@ export function Callout({
   readonly actions?: ReactNode;
   readonly className?: string;
 }): ReactElement {
+  const titleId = useId();
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
+      aria-labelledby={titleId}
       data-tone={tone}
       className={cn("sl-callout", tone !== "info" && `sl-callout--${tone}`, className)}
     >
       {icons[tone]}
-      <span className="sl-callout__title">{title}</span>
+      <span id={titleId} className="sl-callout__title">
+        {title}
+      </span>
       {children === undefined ? null : <div className="sl-callout__body">{children}</div>}
       {actions === undefined ? null : <div className="sl-callout__actions">{actions}</div>}
     </div>

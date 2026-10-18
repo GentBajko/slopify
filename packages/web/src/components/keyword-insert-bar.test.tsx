@@ -41,7 +41,9 @@ describe("the Insert bar", () => {
       .map((button) => button.getAttribute("data-keyword"));
     expect(names).toEqual(keywordsFor("article").map((spec) => spec.name));
     expect(names).not.toContain("Slopify_Summary");
-    expect(screen.getByRole("button", { name: "About Keywords Slopify fills" })).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "About Keywords Slopify fills in Article prompts" }),
+    ).not.toBeNull();
   });
 
   it("inserts at the caret and leaves the caret after the keyword, focus in the text", async () => {

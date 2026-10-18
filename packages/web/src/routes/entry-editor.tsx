@@ -20,6 +20,7 @@ import { SlotBody } from "@/components/slot-body";
 import {
   bodyProblems,
   draftProblems,
+  draftWarnings,
   firstProblem,
   nameProblems,
   slotNames,
@@ -118,6 +119,7 @@ export function EntryEditorRoute({
   // sentence beside Save, not a red mark on a field nobody has typed in yet.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
+  const warnings = draft.body.trim() === "" ? [] : draftWarnings(draft);
 
   if (entries.error !== null) {
     return <Notice category={draft.category}>{entries.error.message}</Notice>;
@@ -256,6 +258,12 @@ export function EntryEditorRoute({
             lint={lint}
             lintId={lintId}
             noSlots={noSlotsHint(draft.mode)}
+            warnings={warnings}
+            place={draft.category}
+            bodyId={bodyId}
+            onChange={(next) => {
+              edit({ ...draft, body: next }, "body");
+            }}
           />
         </div>
       </div>

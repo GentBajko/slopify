@@ -133,6 +133,11 @@ export const libraryHelp = {
     body: "Every {{keyword}} in the body, listed as you type. Each becomes one field on Play, typed once and filled into every prompt that names it. Names are case-sensitive, so {{Topic}} and {{topic}} are two fields. A keyword the project title also names is typed per video and saved empty in templates.",
     tutorial: { page: "Prompts", anchor: "keywords-slots" },
   },
+  "library.slots.filled": {
+    title: "Keywords Slopify fills",
+    body: "The keywords in the text that Slopify fills itself, such as {{Slopify_Title}}: they never become fields on Play. Using one turns on what fills it, free or part of one AI call per run. One where it can't be filled is warned about below; Save still works, but Play refuses the run until you move or remove it.",
+    tutorial: { page: "Keywords-Slopify-Fills", anchor: "how-they-work" },
+  },
   "library.used-by": {
     title: "Used by",
     body: "The templates, schedules and projects that name this item, matched by name within its kind. For a project it says how many of its revisions used it and whether the current one does. Projects keep their own text, so editing here changes only runs started later.",

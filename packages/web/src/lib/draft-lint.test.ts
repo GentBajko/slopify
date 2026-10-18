@@ -8,6 +8,7 @@ import {
   firstProblem,
   keywordSlots,
   nameProblems,
+  oldNamesIn,
   slotNames,
 } from "./draft-lint.js";
 
@@ -194,7 +195,7 @@ describe("bodyPieces", () => {
 });
 
 describe("draftWarnings", () => {
-  it("warns about a keyword where it can't be filled and an old name, without refusing", () => {
+  it("warns about a keyword where it can't be filled, without refusing the save", () => {
     const misplaced = draft({ body: "Recap {{Slopify_Summary}}." });
     expect(draftProblems(misplaced, [])).toEqual([]);
     expect(draftWarnings(misplaced).map((one) => one.message)).toEqual([
@@ -202,10 +203,17 @@ describe("draftWarnings", () => {
         "{{Slopify_Summary}} at line 1, column 7 can't be used in an Article prompt",
       ),
     ]);
-    expect(
-      draftWarnings(draft({ kind: "image", body: "{{Scene}}" })).map((one) => one.message),
-    ).toEqual([expect.stringContaining("is the old name of {{Slopify_Scene}}")]);
     expect(draftWarnings(draft({}))).toEqual([]);
+  });
+
+  // Update to new names says those, with what each rename does.
+  it("leaves the old names to the update banner", () => {
+    expect(draftWarnings(draft({ kind: "image", body: "{{Scene}} {{Appearance}}" }))).toEqual([]);
+    expect(oldNamesIn("{{Scene}} {{Appearance}} {{Scene}}", "image")).toEqual([
+      "Scene",
+      "Appearance",
+    ]);
+    expect(oldNamesIn("{{Scene}}", "article")).toEqual([]);
   });
 });
 

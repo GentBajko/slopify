@@ -69,10 +69,25 @@ export function draftProblems(
   return [...lint, ...refused];
 }
 
-// What Save lets through but Play would refuse or the editor offers to update: a keyword where
-// it can't be filled, and an old keyword name.
+// What Save lets through but Play would refuse: a keyword where it can't be filled. The server's
+// warnings name the old keyword names too; Update to new names says those, with what each
+// rename does, so they are not said twice.
 export function draftWarnings(draft: PromptDraft | EntryDraft): readonly FieldError[] {
-  return keywordWarnings(draft);
+  const place = "kind" in draft ? draft.kind : draft.category;
+  const old = new Set(
+    keywordProblems(draft.body, place)
+      .filter((problem) => problem.kind === "legacy")
+      .map((problem) => problem.message),
+  );
+  return keywordWarnings(draft).filter((warning) => !old.has(warning.message));
+}
+
+// The old names a body uses where they still are keywords (the picture prompts), in order.
+export function oldNamesIn(body: string, place: KeywordPlace): readonly string[] {
+  const names = keywordProblems(body, place)
+    .filter((problem) => problem.kind === "legacy")
+    .map((problem) => problem.name);
+  return [...new Set(names)];
 }
 
 // The detected slots parted: the person's own fields, and the keywords Slopify fills (old
