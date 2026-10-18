@@ -31,9 +31,13 @@ export interface FreeCheckInput {
   // Whether each provider this computer has is ready: a key stored, a CLI found.
   readonly providers: ReadonlyMap<string, { readonly name: string; readonly ready: boolean }>;
   readonly schedules: readonly ScheduleFit[];
-  // The schedules' cost per month at the high estimate, with the steps no price is known for.
-  // Null when no schedule runs this template.
-  readonly monthlyCost: { readonly high: number; readonly unknown: number } | null;
+  // The schedules' cost per month at the high estimate, with the steps no price is known for
+  // and, when a run couldn't be priced at all, why. Null when no schedule runs this template.
+  readonly monthlyCost: {
+    readonly high: number;
+    readonly unknown: number;
+    readonly problem?: string | null;
+  } | null;
   readonly notificationUrl: boolean;
   // When an agent last reached Slopify through MCP, and now: "someone answers" holds for a week.
   readonly agentSeenAt: string | null;
@@ -250,7 +254,9 @@ function monthlyCostCheck(input: FreeCheckInput): Check {
   return {
     id: "monthly-cost",
     ok: false,
-    sentence: `The monthly cost isn't known: ${String(input.monthlyCost.unknown)} ${input.monthlyCost.unknown === 1 ? "step has" : "steps have"} no price in the model list.`,
+    sentence:
+      input.monthlyCost.problem ??
+      `The monthly cost isn't known: ${String(input.monthlyCost.unknown)} ${input.monthlyCost.unknown === 1 ? "step has" : "steps have"} no price in the model list.`,
     fix: { label: "See which in Schedule", href: studioHref(input.templateId, "schedule") },
   };
 }

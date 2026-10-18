@@ -20,11 +20,13 @@ export { resolveReviewInputs } from "./review-inputs.js";
 export async function resolvePlayReview(
   deps: DraftReviewDeps,
   view: DraftView,
+  options: { readonly unsaved?: boolean } = {},
 ): Promise<DraftResult<ResolvedPlayReview>> {
+  const unsaved = options.unsaved === true;
   const parsed = draftViewSchema.safeParse(view);
   if (!parsed.success)
     return { ok: false, reason: "invalid-edit", currentVersion: null, fields: [] };
-  const before = resolveReviewInputs(deps, parsed.data, null);
+  const before = resolveReviewInputs(deps, parsed.data, null, unsaved);
   if (!before.ok) return before;
   let font: ResolvedFont | null = null;
   const subtitles = before.value.runs[0]?.draft.subtitles;
@@ -41,7 +43,7 @@ export async function resolvePlayReview(
       ]);
     }
   }
-  const after = resolveReviewInputs(deps, parsed.data, font);
+  const after = resolveReviewInputs(deps, parsed.data, font, unsaved);
   if (!after.ok) return after;
   const fields = [];
   for (const choice of choices(after.value.runs)) {
@@ -68,7 +70,7 @@ export async function resolvePlayReview(
   // without the font: `before` had none yet, and a Before Video checkpoint covers the render
   // that burns the captions in, so comparing it with `after` always differed and refused every
   // such review.
-  const unchanged = resolveReviewInputs(deps, parsed.data, null);
+  const unchanged = resolveReviewInputs(deps, parsed.data, null, unsaved);
   if (!unchanged.ok) return unchanged;
   return reviewBinding(before.value) === reviewBinding(unchanged.value)
     ? after

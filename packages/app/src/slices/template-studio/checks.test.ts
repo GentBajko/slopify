@@ -217,6 +217,15 @@ describe("freeChecks", () => {
       );
     });
 
+    it("says why a schedule's run couldn't be priced", () => {
+      expect(
+        check(
+          { monthlyCost: { high: 0, unknown: 1, problem: "Daily's runs couldn't be priced: x." } },
+          "monthly-cost",
+        )?.sentence,
+      ).toBe("Daily's runs couldn't be priced: x.");
+    });
+
     it("fails when a step has no price", () => {
       expect(check({ monthlyCost: { high: 3, unknown: 2 } }, "monthly-cost")).toMatchObject({
         ok: false,

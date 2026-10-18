@@ -4,7 +4,7 @@ import { projectPaused, stagesOf } from "../admission/repo.js";
 import { render } from "../admission/substitute.js";
 import { changeCheckpoints } from "../checkpoints/change.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
-import type { PlayDraftDocument } from "../play-drafts/model.js";
+import type { DraftDeps, PlayDraftDocument } from "../play-drafts/model.js";
 import { reviewDraft } from "../play-drafts/review.js";
 import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
@@ -29,7 +29,7 @@ type Topic = ScheduleSummary["items"][number];
 // other titles change only what the keywords hold); `scheduledTitle` is the filled title. A
 // topic with no keyword to fill is the title itself.
 export function scheduledDocument(
-  deps: ScheduleDeps,
+  deps: DraftDeps & Pick<ScheduleDeps, "template">,
   schedule: ScheduleSummary,
   topic: Topic | undefined,
 ): PlayDraftDocument | undefined {

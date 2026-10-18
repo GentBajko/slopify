@@ -49,8 +49,13 @@ export function resolveReviewInputs(
   deps: DraftReviewDeps,
   view: DraftView,
   font: ResolvedFont | null,
+  // A view no draft row holds (the template studio prices a schedule's run on one): it is its
+  // own latest version and has no uploads.
+  unsaved = false,
 ): DraftResult<ResolvedPlayReview> {
-  const fresh = readDraft(deps, view.draft.id);
+  const fresh: DraftResult<DraftView> = unsaved
+    ? { ok: true, value: view }
+    : readDraft(deps, view.draft.id);
   if (!fresh.ok) return fresh;
   if (
     fresh.value.draft.version !== view.draft.version ||
