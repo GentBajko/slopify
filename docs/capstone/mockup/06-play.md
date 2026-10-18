@@ -29,13 +29,13 @@ content_hash: fb14e2c26cf1
 
 ## Pronunciation preference
 
-Scoped verification: `6eeac3f`, 2026-09-25. Generated Audio exposes **Use Pronunciation Glossary**, a labelled checkbox with the example `Arda: /ˈɑɹdə/`. It explains that supplied IPA is applied without rewriting ordinary narration or making an extra LLM call. Fresh drafts enable it; restored drafts/templates with an absent value remain off. It is independent of Narration Preparation, active for Inworld TTS-2 and Flash, and retained but inactive for other providers or Audio Off/Provide. Provider switches, autosave/reload and template application preserve the choice (`packages/web/src/play/pronunciation-glossary.tsx:3`, `packages/web/src/play/media-rails.tsx:88`, `packages/web/src/play/draft-state.ts:25`).
+Scoped verification: `6eeac3f`, 2026-09-25. Generated Audio exposes **Use Pronunciation Glossary**, a labelled checkbox with the example `Arda: /ˈɑɹdə/`. It explains that supplied IPA is applied without rewriting ordinary narration or making an extra LLM call. Fresh drafts enable it; restored drafts/templates with an absent value remain off. It is independent of Narration Preparation, active for Inworld TTS-2 and Flash, and retained but inactive for other providers or Audio Off/Provide. Provider switches, autosave/reload and template application preserve the choice (`packages/web/src/play/pronunciation-glossary.tsx:5`, `packages/web/src/play/media-rails.tsx:201-209`, `packages/web/src/play/draft-state.ts:36`).
 
 Configure an editable local draft, review the resolved setup/costs, then explicitly start one run or queue keyword variants. Play creates new projects; editing a project's retained revisions remains on the project page.
 
 ## Layout
 
-The existing application navigation sits above New run, draft save state, Drafts and New draft. Four directly reachable sections follow: Content, Outputs, Style and Review. Desktop uses a flexible editor plus a360px sticky preview/summary column inside a1320px maximum width. Rows/dividers group related choices; the page uses existing matte surfaces, Barlow type and green actions (`packages/web/src/routes/play.tsx:235`, `packages/web/src/play/section-navigation.tsx:3`).
+The existing application navigation sits above New run, draft save state, Drafts and New draft. The Template select and topic fields follow, then one summary row per setup group, each opening its editor in place; Review opens as a drawer. Desktop uses a flexible editor plus a 400px sticky Review and start rail (340px below 1180px). Rows/dividers group related choices; the page uses existing matte surfaces, Barlow type and green actions (`packages/web/src/routes/play.tsx:607`, `packages/web/src/routes/play.tsx:621-634`, `packages/web/src/play/setup-list.tsx:22`).
 
 ## Elements
 
@@ -67,15 +67,15 @@ Project title, generated article prompt or supplied article text, View/Create pr
 
 ## Outputs
 
-Audio, Images, Thumbnail and Export have applicable Generate/Provide/Off choices. Audio includes provider/model/voice, intro/outro and Advanced Whole/Paragraph/Every N words/Every N characters controls. Image prompts have individual counts; supplied files retain names and order with Remove/Reattach actions. Export explains MP4, silent MP4, combined WAV or individual outputs. Active thumbnail generation can expose its own providers (`packages/web/src/play/outputs-section.tsx:9`, `packages/web/src/play/media-rails.tsx`).
+Audio, Images, Thumbnail and Export have applicable Generate/Provide/Off choices. Audio includes provider/model/voice, intro/outro and Advanced Whole/Paragraph/Every N words/Every N characters controls. Image prompts have individual counts; supplied files retain names and order with Remove/Reattach actions. Export explains MP4, silent MP4, combined WAV or individual outputs. Active thumbnail generation can expose its own providers (`packages/web/src/play/outputs-section.tsx:20-217`, `packages/web/src/play/media-rails.tsx`).
 
 Narration Preparation appears under generated Audio, defaulting to Off. Selecting a saved prompt reveals View/Create and shared-keyword links, explains the extra LLM call per logical group/entry and shows an actionable Inworld TTS-2 compatibility error. Shared text-generation controls remain reachable for a supplied article. Hidden choices persist but are inactive with Audio Off/Provide. Review includes the frozen prompt, LLM cost and unknown steering-character overhead (`packages/web/src/play/narration-preparation.tsx`, `content-section.tsx`, `review-summary.tsx`).
 
 ## Style
 
-Shaped16:9/9:16 selectors, subtitles Off/files/burn-in, font selection/upload, raw size input plus slider, five illustrated vertical positions and editable sample text. One renderer-based preview shows selected font/size/position against the first ready supplied image or neutral background. Files-mode captions explain player-controlled styling. No preview generation or alignment-model download is triggered here (`packages/web/src/play/style-section.tsx`, `packages/web/src/play/output-preview.tsx:23`, `packages/web/src/subtitles/controls.tsx`).
+Shaped16:9/9:16 selectors, subtitles Off/files/burn-in, font selection/upload, raw size input plus slider, five illustrated vertical positions and editable sample text. One renderer-based preview shows selected font/size/position against the first ready supplied image or neutral background. Files-mode captions explain player-controlled styling. No preview generation or alignment-model download is triggered here (`packages/web/src/play/style-section.tsx`, `packages/web/src/video/style-preview.tsx:56`, `packages/web/src/subtitles/controls.tsx`).
 
-Failed/interrupted font uploads retain a visible filename/error when Audio or subtitles are Off. Keep current font explicitly clears the unfinished selection; it does not change saved style. Following either a server error or a client setup/upload warning reaches the corrective control (`packages/web/src/subtitles/controls.tsx:252`, `packages/web/src/play/review-state.ts:243`).
+Failed/interrupted font uploads retain a visible filename/error when Audio or subtitles are Off. Keep current font explicitly clears the unfinished selection; it does not change saved style. Following either a server error or a client setup/upload warning reaches the corrective control (`packages/web/src/subtitles/controls.tsx:290-299`, `packages/web/src/play/review-state.ts:243`).
 
 ## Review
 
@@ -89,7 +89,7 @@ Completed owned uploads survive restart. Interrupted/missing files expose Reatta
 
 ## Narrow layout and keyboard
 
-Below1100px the page has one column. Style places its sole expanded preview before controls; other sections have an in-flow Preview disclosure before controls. The additional read-only This run summary follows the active section/action. At390px navigation wraps into two rows and controls wrap without horizontal scrolling; narrow controls are at least44px high. The action area reserves layout/safe-area space. Desktop controls are at least40px. Ctrl/Cmd+Enter opens Review only; explicit navigation/error links set focus, autosave does not (`packages/web/src/routes/play.tsx:235`, `packages/web/src/play/output-preview.tsx:8`).
+Below 900px the page has one column and the Review and start rail, with the style preview, follows the form. Below 768px every button, non-checkbox input, select and summary is at least 44px high. Ctrl/Cmd+Enter opens Review only; explicit navigation/error links set focus, autosave does not (`packages/web/src/styles/shell.css:1080-1086`, `packages/web/src/routes/play.tsx:571-578`, `packages/web/src/routes/play.tsx:608`).
 
 ## Tutorial and destinations
 
@@ -102,4 +102,4 @@ draft, apply a snapshot into a fresh draft, or delete a template. Apply returns 
 keywords and choices ready for Review; it never starts a run. Provided media is called out for
 reattachment.
 
-Schedules is a separate implemented screen that consumes saved template revisions; editing Play itself does not choose a recurrence (`packages/web/src/routes/schedules.tsx:133`).
+Schedules is the Calendar's Schedules tab (the old /schedules address redirects there); it consumes saved template revisions, and editing Play itself does not choose a recurrence (`packages/web/src/router.tsx:282-297`, `packages/web/src/schedules/schedule-list.tsx`).

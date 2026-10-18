@@ -17,9 +17,9 @@ paths_covered:
 
 ## Mode & job
 
-Read mode. The in-app reader for the GitHub wiki's pages, which ship inside the build (`docs/wiki/` copied to `dist/tutorials/`), so they read offline and describe the running version (`packages/app/src/slices/tutorials/library.ts:7-10`, `packages/app/src/slices/tutorials/library.ts:45-52`). Route `/help/tutorials/$page` with `?q=` (the words a search result was opened with, trimmed and cut to 200 characters) and the section in the hash (`packages/web/src/router.tsx:369-388`). `/help` and `/help/tutorials` redirect to page `Home` (`packages/web/src/router.tsx:390-403`). The same surface answers every info button: `InfoTip` popovers carry the short help text and, when the entry names a tutorial section, a "Learn more" link into this reader (`packages/web/src/components/kit/info-tip.tsx:9-13`, `packages/web/src/help/entry.ts:1-17`).
+Read mode. The in-app reader for the GitHub wiki's pages, which ship inside the build (`docs/wiki/` copied to `dist/tutorials/`), so they read offline and describe the running version (`packages/app/src/slices/tutorials/library.ts:7-10`, `packages/app/src/slices/tutorials/library.ts:45-52`). Route `/help/tutorials/$page` with `?q=` (the words a search result was opened with, trimmed and cut to 200 characters) and the section in the hash (`packages/web/src/router.tsx:548-567`). `/help` and `/help/tutorials` redirect to page `Home` (`packages/web/src/router.tsx:569-582`). The same surface answers every info button: `InfoTip` popovers carry the short help text and, when the entry names a tutorial section, a "Learn more" link into this reader (`packages/web/src/components/kit/info-tip.tsx:9-13`, `packages/web/src/help/entry.ts:1-17`).
 
-Data: three endpoints under `/api/tutorials` — the index (home, groups from `_Sidebar.md`, every page, footer from `_Footer.md`), `/search?q=`, and `/:page` returning `text/markdown` (`packages/app/src/edge/http/tutorials.ts:19-63`, `packages/app/src/edge/http/app.ts:220`). The book is read once per process and kept (`packages/app/src/edge/http/tutorials.ts:23-31`). All three web queries have `staleTime: Infinity`; the search query is disabled for a blank query (`packages/web/src/tutorials/api.ts:10-40`). The current wiki holds 49 pages under 10 sidebar groups (`docs/wiki/`, `docs/wiki/_Sidebar.md`).
+Data: three endpoints under `/api/tutorials` — the index (home, groups from `_Sidebar.md`, every page, footer from `_Footer.md`), `/search?q=`, and `/:page` returning `text/markdown` (`packages/app/src/edge/http/tutorials.ts:17-58`, `packages/app/src/edge/http/app.ts:281`). The book is read once per process and kept (`packages/app/src/edge/http/tutorials.ts:19-26`). All three web queries have `staleTime: Infinity`; the search query is disabled for a blank query (`packages/web/src/tutorials/api.ts:10-40`). The current wiki holds 49 pages under 10 sidebar groups (`docs/wiki/`, `docs/wiki/_Sidebar.md`).
 
 ## Composition
 
@@ -27,8 +27,8 @@ Data: three endpoints under `/api/tutorials` — the index (home, groups from `_
 
 | Entry | Where | Control | Source |
 |---|---|---|---|
-| Tutorials book link | Sidebar foot at ≥768px, between `UpdateWidget` and `TutorialLauncher`; phone top bar below 768px | Kit `ButtonLink` `variant="icon"`, `BookOpenIcon`, label and `data-tip` "Tutorials", opens page `Home` | `packages/web/src/components/shell.tsx:128-142`, `packages/web/src/components/shell.tsx:436-442`, `packages/web/src/components/shell.tsx:487-489` |
-| Palette: "Open tutorials" | Ctrl+K, group "Go to" | Opens page `Home`; keywords help, guide, wiki, docs, how | `packages/web/src/components/shell.tsx:261-269` |
+| Tutorials book link | Sidebar foot at ≥768px, between `UpdateWidget` and `TutorialLauncher`; phone top bar below 768px | Kit `ButtonLink` `variant="icon"`, `BookOpenIcon`, label and `data-tip` "Tutorials", opens page `Home` | `packages/web/src/components/shell.tsx:163-176`, `packages/web/src/components/shell.tsx:394-396`, `packages/web/src/components/shell.tsx:438-440` |
+| Palette: "Open tutorials" | Ctrl+K, group "Go to" | Opens page `Home`; keywords help, guide, wiki, docs, how | `packages/web/src/components/shell-commands.tsx:104-112` |
 | Palette: "Open tutorial: <title>" | Ctrl+K, group "Tutorials", only once something is typed | One command per page | `packages/web/src/tutorials/commands.tsx:8-35` |
 | Info button "Learn more" | Every `InfoTip` whose catalogue entry has a `tutorial` ref | Router `Link` wrapped in `PopoverClose`, `ArrowRightIcon`; a plain `<a>` when no router is mounted | `packages/web/src/components/kit/info-tip.tsx:49`, `packages/web/src/components/kit/info-tip.tsx:55-84` |
 
@@ -40,7 +40,7 @@ Data: three endpoints under `/api/tutorials` — the index (home, groups from `_
 
 **Left column (`TutorialsNav`).** A `nav` "Tutorials" (`packages/web/src/routes/tutorials.tsx:181-250`):
 
-1. Search box: `type="search"`, `sl-input pl-9` with a `SearchIcon`, sr-only label and placeholder "Search all tutorials" (`packages/web/src/routes/tutorials.tsx:205-230`). Typing debounces 200ms before querying (`packages/web/src/routes/tutorials.tsx:196-201`). Enter opens the first hit (`packages/web/src/routes/tutorials.tsx:221-227`). `/` focuses it via `useSearchShortcut(input, "the tutorials")`, which registers "Search the tutorials" in the palette (`packages/web/src/routes/tutorials.tsx:195`, `packages/web/src/components/kit/command-palette.tsx:132-150`).
+1. Search box: `type="search"`, `sl-input pl-9` with a `SearchIcon`, sr-only label and placeholder "Search all tutorials" (`packages/web/src/routes/tutorials.tsx:212-236`). Typing debounces 200ms before querying (`packages/web/src/routes/tutorials.tsx:204-207`). Enter opens the first hit (`packages/web/src/routes/tutorials.tsx:228-234`). `/` focuses it via `useSearchShortcut(input, "the tutorials")`, which registers "Search the tutorials" in the palette (`packages/web/src/routes/tutorials.tsx:202`, `packages/web/src/components/kit/command-palette.tsx:132-150`).
 2. With no query: the home link, then per group an `sl-kicker` group title over its page links (`packages/web/src/routes/tutorials.tsx:236-246`). Links are `sl-tutorials-nav__link` (13px, `ink-2`, hover `raised`); the current page has `aria-current="page"`, `accent-tint` background, weight 600 (`packages/web/src/routes/tutorials.tsx:252-271`, `packages/web/src/styles/shell.css:696-715`).
 3. With a query: `SearchResults` replaces the page list — a count line ("1 section" / "N sections") and a list "Search results" of `sl-tutorials-hit` links, each the section heading (or the page title for text above the first heading) in semibold ink, the page title under it in `text-label ink-3`, and a snippet in `text-small ink-2` (`packages/web/src/routes/tutorials.tsx:273-323`). A hit opens its page with `?q=<query>` and its anchor as hash (`packages/web/src/routes/tutorials.tsx:132-139`, `packages/web/src/routes/tutorials.tsx:303-309`).
 
@@ -50,7 +50,7 @@ Search ranking (server): up to 8 words; a section matches when every word is in 
 
 - A "Contents" TOC (`sl-toc`) of the top two heading levels, nested; the current entry follows scroll via `IntersectionObserver` and gets `accent-tint` (`packages/web/src/components/kit/reading-view.tsx:263-279`, `packages/web/src/components/kit/reading-view.tsx:355-374`, `packages/web/src/styles/kit.css:1357-1378`).
 - A tools row: search input "Search the tutorial", a live match count, Previous/Next match icon buttons, and quiet "Copy all" (`packages/web/src/components/kit/reading-view.tsx:376-431`). Enter steps forward, Shift+Enter back (`packages/web/src/components/kit/reading-view.tsx:396-400`).
-- Each section: `h2`/`h3` with a quiet small "Copy section" button, then GFM Markdown via `react-markdown` + `remark-gfm`; hits are wrapped in `mark.sl-hit` (`waiting-tint`, 1px `waiting` outline; 2px on the stepped-to hit) (`packages/web/src/components/kit/reading-view.tsx:317-345`, `packages/web/src/styles/kit.css:1379-1384`, `packages/web/src/styles/shell.css:406-408`). Links in the body are `accent-ink` (`packages/web/src/styles/shell.css:403-405`).
+- Each section: `h2`/`h3` with a quiet small "Copy section" button, then GFM Markdown via `react-markdown` + `remark-gfm`; hits are wrapped in `mark.sl-hit` (`waiting-tint`, 1px `waiting` outline; 2px on the stepped-to hit) (`packages/web/src/components/kit/reading-view.tsx:317-345`, `packages/web/src/styles/kit.css:1446-1451`, `packages/web/src/styles/shell.css:483-486`). Links in the body are `accent-ink` (`packages/web/src/styles/shell.css:480-482`).
 - Under the page, when `_Footer.md` is non-empty: a `border-t` small `ink-3` paragraph with Markdown links reduced to their text (`packages/web/src/routes/tutorials.tsx:169-173`).
 
 **Links.** Wiki-style `](Page)`, `](Page#anchor)` and `](#anchor)` are rewritten to `/help/tutorials/<Page>#<anchor>` only when the page exists in this version; others are left unchanged (`packages/web/src/tutorials/links.ts:12-28`). A plain left click on an in-app tutorial link navigates inside the app; an `http(s)` link opens a new tab with `noopener,noreferrer`; modified clicks pass through (`packages/web/src/routes/tutorials.tsx:85-105`).
@@ -64,9 +64,9 @@ Search ranking (server): up to 8 words; a section matches when every word is in 
 | Index loading | `tutorialsQuery` pending | Left column: small `ink-3` "Loading the tutorials…"; title falls back to the page id with spaces (`packages/web/src/routes/tutorials.tsx:233-234`, `packages/web/src/routes/tutorials.tsx:62`) |
 | Page loading | page Markdown empty/pending | `ReadingView` children: "Loading the tutorial…"; in-page search disabled, no TOC (`packages/web/src/routes/tutorials.tsx:167`, `packages/web/src/components/kit/reading-view.tsx:252`, `packages/web/src/components/kit/reading-view.tsx:390`) |
 | Page error | page query errors (404 for an unknown page, 500 when the tutorials are missing) | Kit `Callout` tone danger "This tutorial did not load", body `<message> Press Try again, or pick another page on the left.`, secondary "Try again" refetches (`packages/web/src/routes/tutorials.tsx:143-154`) |
-| Unknown page | id fails the pattern or is absent | 404 detail "There is no tutorial called <id> in this version of Slopify. Pick one from the list on Help → Tutorials, or search there." (`packages/app/src/edge/http/tutorials.ts:48-61`, `packages/app/src/slices/tutorials/anchors.ts:6`) |
+| Unknown page | id fails the pattern or is absent | 404 detail "There is no tutorial called <id> in this version of Slopify. Pick one from the list on Help → Tutorials, or search there." (`packages/app/src/edge/http/tutorials.ts:43-55`, `packages/app/src/slices/tutorials/anchors.ts:6`) |
 | Tutorials missing | no `docs/wiki` folder, or no `Home.md` | 500 with "This copy of Slopify has no tutorials…" / "…has damaged tutorials: docs/wiki/Home.md is missing. Reinstall Slopify (or run npm run build) and reload the page." (`packages/app/src/slices/tutorials/library.ts:83-104`) |
-| Searching | query set, no data yet | "Searching…" (`packages/web/src/routes/tutorials.tsx:288`) |
+| Searching | query set, no data yet | "Searching…" (`packages/web/src/routes/tutorials.tsx:295`) |
 | No hits | zero hits | `role="status"` `No tutorial mentions "<query>". Try fewer or other words.` (`packages/web/src/routes/tutorials.tsx:289-294`) |
 | Search error | search query errors | `role="alert"` `text-danger` `The search didn't run: <message> Change the words or reload the page.` (`packages/web/src/routes/tutorials.tsx:282-287`) |
 | Opened from a hit | `?q=` present | Words marked in the page until the in-page search changes (`packages/web/src/routes/tutorials.tsx:51-55`) |
@@ -76,7 +76,7 @@ Search ranking (server): up to 8 words; a section matches when every word is in 
 ## Motion
 
 - No transitions of its own; anchor jumps use `scrollIntoView({ block: "start" })` and hit stepping `block: "center"` without smooth behaviour (`packages/web/src/routes/tutorials.tsx:79-80`, `packages/web/src/components/kit/reading-view.tsx:303`).
-- Copy toasts enter with the shared `enter` animation (200ms), off under reduced motion (`packages/web/src/styles/shell.css:165-172`).
+- Copy toasts enter with the shared `enter` animation (200ms), off under reduced motion (`packages/web/src/styles/shell.css:187-194`).
 
 ## Copy
 
@@ -92,6 +92,6 @@ Search ranking (server): up to 8 words; a section matches when every word is in 
 - Fetching the online wiki: absent; only the bundled copy is read (`packages/app/src/slices/tutorials/library.ts:45-52`).
 - Search history, recent pages and bookmarks: absent (`packages/web/src/routes/tutorials.tsx:181-201`).
 - Previous/next page navigation at the foot of a page: absent (`packages/web/src/routes/tutorials.tsx:158-174`).
-- Images: the bundled wiki pages carry none, and no route serves wiki assets (`docs/wiki/`, `packages/app/src/edge/http/tutorials.ts:32-63`).
+- Images: the bundled wiki pages carry none, and no route serves wiki assets (`docs/wiki/`, `packages/app/src/edge/http/tutorials.ts:17-58`).
 - Retry on a failed search: absent; the error line only (`packages/web/src/routes/tutorials.tsx:282-287`).
 - Hover-to-open info tips: absent by design; a press opens them (`packages/web/src/components/kit/info-tip.tsx:9-10`).

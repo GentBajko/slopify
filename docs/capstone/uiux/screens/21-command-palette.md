@@ -24,16 +24,16 @@ Operate mode, app-wide overlay. Ctrl+K (Cmd+K on a Mac) opens a search-or-run pa
 
 | Opener | Where | Source |
 |---|---|---|
-| `sl-searchbtn` "Search or run a command" with `SearchIcon` and `Ctrl` `K` key caps | Sidebar, under the wordmark (≥768px) | `packages/web/src/components/shell.tsx:376-383`, `packages/web/src/styles/shell.css:533-554` |
-| Kit `IconButton` "Search or run a command" | Phone top bar (<768px) | `packages/web/src/components/shell.tsx:456-458` |
-| Ctrl/Cmd+K (no Alt) | Anywhere; toggles open/closed, even from a text field | `packages/web/src/components/kit/command-palette.tsx:374-378` |
+| `sl-searchbtn` "Search or run a command" with `SearchIcon` and `Ctrl` `K` key caps | Sidebar, under the wordmark (≥768px) | `packages/web/src/components/shell.tsx:323-331`, `packages/web/src/styles/shell.css:616-638` |
+| Kit `IconButton` "Search or run a command" | Phone top bar (<768px) | `packages/web/src/components/shell.tsx:412-414` |
+| Ctrl/Cmd+K (no Alt) | Anywhere; toggles open/closed, even from a text field | `packages/web/src/components/kit/command-palette.tsx:423-427` |
 
-**Palette.** A Radix `Dialog` portal: `sl-overlay` scrim (fixed, `z-70`, `--color-scrim`) and content `sl-overlay-content sl-palette sl-enter`, fixed 72px from the top, centred, `min(640px, 100% − 32px)` wide, `radius-media`, `raised` background, `shadow-dialog`, 1px `line` border; sr-only title "Command palette" (`packages/web/src/components/kit/command-palette.tsx:497-514`, `packages/web/src/styles/shell.css:149-176`, `packages/web/src/styles/kit.css:1256-1263`). Inside (`packages/web/src/components/kit/command-palette.tsx:579-648`):
+**Palette.** A Radix `Dialog` portal: `sl-overlay` scrim (fixed, `z-70`, `--color-scrim`) and content `sl-overlay-content sl-palette sl-enter`, fixed 72px from the top, centred, `min(640px, 100% − 32px)` wide, `radius-media`, `raised` background, `shadow-dialog`, 1px `line` border; sr-only title "Command palette" (`packages/web/src/components/kit/command-palette.tsx:549-565`, `packages/web/src/styles/shell.css:172-194`, `packages/web/src/styles/kit.css:1323-1330`). Inside (`packages/web/src/components/kit/command-palette.tsx:636-706`):
 
-1. Input row `sl-palette__input`: 52px tall, 17px text, bottom rule; `SearchIcon` 18px, autofocused `role="combobox"` input with placeholder and label "Search or run a command", `Esc` key cap on the right (`packages/web/src/styles/kit.css:1264-1273`, `packages/web/src/styles/shell.css:177-195`).
-2. `role="listbox"` "Commands", scrolling up to `min(420px, 100vh − 240px)` (`packages/web/src/styles/shell.css:196-200`). Per group a `role="group"` with an `sl-kicker` heading; each option is a 40px row: optional icon (16px `ink-2`), truncated title, `sl-palette__meta` context (13px `ink-3`, pushed right), and `ShortcutKeys` caps; the active option has `accent-tint` (`packages/web/src/styles/kit.css:1274-1293`, `packages/web/src/styles/shell.css:201-213`).
+1. Input row `sl-palette__input`: 52px tall, 17px text, bottom rule; `SearchIcon` 18px, autofocused `role="combobox"` input with placeholder and label "Search or run a command", `Esc` key cap on the right (`packages/web/src/styles/kit.css:1331-1340`, `packages/web/src/styles/shell.css:199-217`).
+2. `role="listbox"` "Commands", scrolling up to `min(420px, 100vh − 240px)` (`packages/web/src/styles/shell.css:218-222`). Per group a `role="group"` with an `sl-kicker` heading; each option is a 40px row: optional icon (16px `ink-2`), truncated title, `sl-palette__meta` context (13px `ink-3`, pushed right), and `ShortcutKeys` caps; the active option has `accent-tint` (`packages/web/src/styles/kit.css:1341-1360`, `packages/web/src/styles/shell.css:223-235`).
 
-Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active command and closes; mouse move sets the active row, click runs it (`packages/web/src/components/kit/command-palette.tsx:560-577`, `packages/web/src/components/kit/command-palette.tsx:628-631`). The active option scrolls into view (`packages/web/src/components/kit/command-palette.tsx:545-549`).
+Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active command and closes; mouse move sets the active row, click runs it (`packages/web/src/components/kit/command-palette.tsx:617-634`, `packages/web/src/components/kit/command-palette.tsx:685-688`). The active option scrolls into view (`packages/web/src/components/kit/command-palette.tsx:598-602`).
 
 **Matching and order** (`packages/web/src/components/kit/command-palette.tsx:162-270`):
 
@@ -47,8 +47,8 @@ Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active comman
 
 | Keys | Command | Registered in |
 |---|---|---|
-| Ctrl+K | Open/close the palette (fixed) | `components/kit/command-palette.tsx:374-378` |
-| Esc | Close a dialog, a drawer or the palette (listed, handled by Radix) | `components/kit/command-palette.tsx:471` |
+| Ctrl+K | Open/close the palette (fixed) | `components/kit/command-palette.tsx:519` |
+| Esc | Close a dialog, a drawer or the palette (listed, handled by Radix) | `components/kit/command-palette.tsx:520` |
 | `?` | Show keyboard shortcuts | `components/kit/command-palette.tsx:358-369` |
 | `C` | Create → `/play` | `components/shell-commands.tsx` |
 | G then H / P / C / S / L / K / , | Open home / projects / calendar / schedules / library / channels / settings | `components/shell.tsx:189-260` |
@@ -58,7 +58,7 @@ Keys inside: ArrowDown/ArrowUp wrap, Home/End jump, Enter runs the active comman
 | Ctrl+Enter | Review the whole setup (Play) | `routes/play.tsx:483-489` |
 | Ctrl+S | Save (library editors) | `components/editor-actions.tsx:40-45` |
 
-Binding rules: a sequence is two plain keys pressed within 1500ms; letters without Ctrl are ignored while focus is in a text field, select, textarea or contenteditable, but Ctrl chords still fire; nothing fires while the palette or any open dialog/alertdialog is up; when two commands share a key, the one with a context wins, then the latest registered (`packages/web/src/components/kit/command-palette.tsx:315-343`, `packages/web/src/components/kit/command-palette.tsx:379-418`). Buttons that do the same thing carry `aria-keyshortcuts` from `ariaKeyShortcuts` (Ctrl chords as `Control+X Meta+X`; sequences get none) (`packages/web/src/components/kit/command-palette.tsx:297-306`, `packages/web/src/components/shell.tsx:413`).
+Binding rules: a sequence is two plain keys pressed within 1500ms; letters without Ctrl are ignored while focus is in a text field, select, textarea or contenteditable, but Ctrl chords still fire; nothing fires while the palette or any open dialog/alertdialog is up; when two commands share a key, the one with a context wins, then the latest registered (`packages/web/src/components/kit/command-palette.tsx:323-378`, `packages/web/src/components/kit/command-palette.tsx:380-470`). Buttons that do the same thing carry `aria-keyshortcuts` from `ariaKeyShortcuts` (Ctrl chords as `Control+X Meta+X`; sequences get none) (`packages/web/src/components/kit/command-palette.tsx:346-356`, `packages/web/src/components/shell.tsx:369`).
 
 **Shortcuts sheet.** Kit `Dialog` "Keyboard shortcuts", description "Ctrl works as Cmd on a Mac. Keys without Ctrl wait while you type in a field. A screen's own shortcuts are listed while it is open." Body: a two-column `dl` (`text-small`), Ctrl+K and Esc first, then every registered command with a shortcut, one row per key combination, sorted by group then title; keys render as `sl-kbd` caps with "then" between sequence keys (`packages/web/src/components/kit/command-palette.tsx:433-495`, `packages/web/src/styles/kit.css:1294-1305`).
 
@@ -66,9 +66,9 @@ Binding rules: a sequence is two plain keys pressed within 1500ms; letters witho
 
 | Group | Commands | Source |
 |---|---|---|
-| Go to | Open home, Open projects, Open calendar, Open schedules (`/calendar?tab=schedules`), Open library (`/prompts`), Open settings, Open channels, Open tutorials, Open usage and costs (`/settings?section=usage`), Show patch notes | `packages/web/src/components/shell.tsx:183-280`, `packages/web/src/patch-notes/popup.tsx:86-94` |
-| Create | Create (`/play`); New schedule and Add to calendar (search-only, hidden where the target screen registers its own) | `packages/web/src/components/shell.tsx:222-229`, `packages/web/src/components/global-commands.tsx:15-69` |
-| Channel | Show all channels; Switch to <name> per channel | `packages/web/src/components/shell.tsx:214-220`, `packages/web/src/components/shell.tsx:282-300` |
+| Go to | Open home, Open projects, Open calendar, Open schedules (`/calendar?tab=schedules`), Open library (`/prompts`), Open settings, Open channels, Open tutorials, Open usage and costs (`/settings?section=usage`), Show patch notes | `packages/web/src/components/shell-commands.tsx:27-123`, `packages/web/src/patch-notes/popup.tsx:86-94` |
+| Create | Create (`/play`); New schedule and Add to calendar (search-only, hidden where the target screen registers its own) | `packages/web/src/components/shell-commands.tsx:65-72`, `packages/web/src/components/global-commands.tsx:15-69` |
+| Channel | Show all channels; Switch to <name> per channel | `packages/web/src/components/shell-commands.tsx:58-64`, `packages/web/src/components/shell-commands.tsx:125-147` |
 | Projects | Open <title>; Regenerate an image in <title> (numbered: "Regenerate image N in <title>", only when the project's images are not off) — search-only, one set per project except the one open | `packages/web/src/components/global-commands.tsx:71-126` |
 | Library and plans | Open template <name> (`/templates?item=<id>`, the template shown beside the list), Edit prompt <name>, Edit intro/outro <name>, Edit PDF theme <name>, Open schedule <name>, Open channel <name> — search-only, the lists read the first time the palette opens | `packages/web/src/components/entity-commands.tsx` |
 | Tutorials | Open tutorial: <title>, search-only, one per wiki page | `packages/web/src/tutorials/commands.tsx:8-35` |
@@ -80,16 +80,16 @@ A command that finishes on another screen leaves an intent (`schedules.new`, `ca
 
 | Screen | Group | Commands | Source |
 |---|---|---|---|
-| Home | Needs you / Ready to upload | <next-action label> or "Open the held run"; Mark uploaded — each with the project title as context | `packages/web/src/home/needs-you.tsx:156-160`, `packages/web/src/home/ready.tsx:50-54` |
+| Home | Needs you / Ready to upload | <next-action label> or "Open the held run"; Mark uploaded — each with the project title as context | `packages/web/src/home/waiting-item.tsx:104-114`, `packages/web/src/home/ready.tsx:64-71` |
 | Projects | Projects | Show projects that need you, Show videos ready to upload, Show failed projects | `packages/web/src/routes/projects.tsx:147-165` |
 | Project | This project | Next action (Shift+N), Pause/Continue the run, Prepare upload, Edit project settings, Choose what to remake, Save as template, Cancel the run, Remake <group> / Remake everything outdated, Make my own copy, Open the project folder, Copy description (Shift+D), Copy tags, Copy pinned comment, Regenerate the thumbnail / thumbnail N, Regenerate an image / on-screen card (numbered, search-only) | `packages/web/src/routes/project.tsx:193-310`, `packages/web/src/project/body-video.tsx:55-59`, `packages/web/src/project/body-youtube.tsx:139-166`, `packages/web/src/project/body-thumbnail.tsx:153-157`, `packages/web/src/project/regenerate-by-number.tsx:54-73` |
 | Play | Play | <start label> (context = title or "New project"), Add a topic for another video, Save as template, Review the whole setup (Ctrl+Enter), Pick a template, Change <row> per setup row | `packages/web/src/routes/play.tsx:456-495`, `packages/web/src/routes/play.tsx:604-612` |
 | Calendar | Calendar | Add to calendar, Show the schedules, Show the calendar as weeks, Show the calendar as a list, Queue all suggested topics (per schedule) | `packages/web/src/routes/calendar.tsx:216-243`, `packages/web/src/calendar/suggestions.tsx:102-106` |
-| Schedules tab | Schedules | New schedule; Pause/Resume schedule (context = schedule name) | `packages/web/src/schedules/view.tsx:143-146`, `packages/web/src/schedules/view.tsx:650-664` |
+| Schedules tab | Schedules | New schedule; Pause/Resume schedule (context = schedule name) | `packages/web/src/schedules/view.tsx:177-182`, `packages/web/src/schedules/schedule-detail.tsx:195-215` |
 | Channels / Channel | Channels / Channel | New channel; Add to cast (context = channel name) | `packages/web/src/routes/channels.tsx:76`, `packages/web/src/routes/channel.tsx:76-80` |
 | Library (all its routes) | Library | New prompt, New intro or outro, New PDF theme, Open prompts, Open intros and outros, Open templates, Open PDF themes; Save a setup as a template on Templates | `packages/web/src/routes/library.tsx:45-106`, `packages/web/src/routes/templates.tsx:212-215` |
 | Library editors | This editor | Save (Ctrl+S) | `packages/web/src/components/editor-actions.tsx:40-45` |
-| Settings | Settings | Check all providers, Back up now, Download diagnostics, Export everything (context "Backup & storage"), Check for new models (context "Models") | `packages/web/src/routes/settings.tsx:211-241`, `packages/web/src/routes/settings.tsx:471-475`, `packages/web/src/components/catalogue.tsx:112-116` |
+| Settings | Settings | Check all providers, Back up now, Download diagnostics, Export everything (context "Backup & storage"), Check for new models (context "Models") | `packages/web/src/routes/settings.tsx:92-128`, `packages/web/src/routes/settings-export.tsx:186-195`, `packages/web/src/components/catalogue.tsx:114-124` |
 
 The dev-only design gallery registers two "Design gallery" commands (`packages/web/src/routes/design.tsx:135-146`); excluded here.
 
@@ -97,24 +97,24 @@ The dev-only design gallery registers two "Design gallery" commands (`packages/w
 
 | State | Trigger | Render |
 |---|---|---|
-| Closed | default | Nothing rendered; shortcuts listen on `window` (`packages/web/src/components/kit/command-palette.tsx:419-420`) |
+| Closed | default | Nothing rendered; shortcuts listen on `window` (`packages/web/src/components/kit/command-palette.tsx:467-469`) |
 | Open, empty query | palette opened | Every non-search-only command, context-bearing first (`packages/web/src/components/kit/command-palette.tsx:246`, `packages/web/src/components/kit/command-palette.tsx:264-266`) |
-| No commands | registry empty | `sl-palette__empty` "No commands here yet." (`packages/web/src/components/kit/command-palette.tsx:605-608`, `packages/web/src/styles/shell.css:214-219`) |
-| No match | query matches nothing | `Nothing matches "<query>". Try fewer letters or another word.` (`packages/web/src/components/kit/command-palette.tsx:609`) |
+| No commands | registry empty | `sl-palette__empty` "No commands here yet." (`packages/web/src/components/kit/command-palette.tsx:663-666`, `packages/web/src/styles/shell.css:236-241`) |
+| No match | query matches nothing | `Nothing matches "<query>". Try fewer letters or another word.` (`packages/web/src/components/kit/command-palette.tsx:666`) |
 | Run | Enter or click | Palette closes, then the command runs (`packages/web/src/components/kit/command-palette.tsx:551-558`) |
 | Reopen | Ctrl+K again | Query and active row reset; `PaletteBody` remounts with the dialog (`packages/web/src/components/kit/command-palette.tsx:525-526`) |
-| Sheet open | `?` outside a field | Kit `Dialog`; the palette's key bindings are suspended while it is open (`packages/web/src/components/kit/command-palette.tsx:326-328`, `packages/web/src/components/kit/command-palette.tsx:379`) |
+| Sheet open | `?` outside a field | Kit `Dialog`; the palette's key bindings are suspended while it is open (`packages/web/src/components/kit/command-palette.tsx:376-378`, `packages/web/src/components/kit/command-palette.tsx:428`) |
 
 ## Motion
 
-- Palette content enters with `sl-enter` (`enter`: fade and 4px rise, 200ms ease-out), none under reduced motion (`packages/web/src/styles/shell.css:165-172`, `packages/web/src/styles/index.css:205-206`).
+- Palette content enters with `sl-enter` (`enter`: fade and 4px rise, 200ms ease-out), none under reduced motion (`packages/web/src/styles/shell.css:187-194`, `packages/web/src/styles/index.css:206-212`).
 - The shortcuts sheet uses the kit `Dialog`'s entrance (`packages/web/src/components/kit/dialog.tsx:13-50`).
-- The active option has no transition; it changes background immediately (`packages/web/src/styles/kit.css:1286-1288`).
+- The active option has no transition; it changes background immediately (`packages/web/src/styles/kit.css:1353-1355`).
 
 ## Copy
 
-- "Search or run a command", "Command palette", "Commands", "Esc" (`packages/web/src/components/kit/command-palette.tsx:508`, `packages/web/src/components/kit/command-palette.tsx:591-604`).
-- Empty lines: "No commands here yet.", `Nothing matches "<query>". Try fewer letters or another word.` (`packages/web/src/components/kit/command-palette.tsx:607-609`).
+- "Search or run a command", "Command palette", "Commands", "Esc" (`packages/web/src/components/kit/command-palette.tsx:557`, `packages/web/src/components/kit/command-palette.tsx:643-661`).
+- Empty lines: "No commands here yet.", `Nothing matches "<query>". Try fewer letters or another word.` (`packages/web/src/components/kit/command-palette.tsx:664-666`).
 - Sheet: "Keyboard shortcuts", its description, "Search or run a command", "Close a dialog, a drawer or the palette", "then" between sequence keys (`packages/web/src/components/kit/command-palette.tsx:440`, `packages/web/src/components/kit/command-palette.tsx:469-478`).
 - Command titles are named for their result, verb first ("Open settings", "Approve and render") (`packages/web/src/components/kit/command-palette.tsx:30`).
 
@@ -125,4 +125,4 @@ The dev-only design gallery registers two "Design gallery" commands (`packages/w
 - Nested pages or argument prompts inside the palette: absent; the only argument is a number typed with a `numbered` command (`packages/web/src/components/kit/command-palette.tsx:46-48`).
 - Searching tutorial text from the palette: absent; only page titles ("Open tutorial: …") are listed; full-text search lives on Help → Tutorials (`packages/web/src/tutorials/commands.tsx:22-33`).
 - Icons on registered commands: the `icon` field exists but no registration in the app passes one (`packages/web/src/components/kit/command-palette.tsx:41`).
-- Shortcut hints for sequences in `aria-keyshortcuts`: none (`packages/web/src/components/kit/command-palette.tsx:297-302`).
+- Shortcut hints for sequences in `aria-keyshortcuts`: none (`packages/web/src/components/kit/command-palette.tsx:346-356`).

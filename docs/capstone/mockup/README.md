@@ -29,11 +29,11 @@ surfaces:
 
 ## Product brief
 
-- **Purpose:** turn a prompt and keyword values into a narrated slideshow, silent video, WAV or article using local orchestration and the user's provider access (`packages/site/public/index.html:84`, `packages/web/src/play/review-summary.tsx:205`).
-- **Audience:** people producing repeatable article-led media who want to configure, review, revise and download runs from a local browser interface (`packages/web/src/routes/play.tsx:235`, `packages/web/src/routes/project.tsx:1`).
-- **Positioning:** “Your keys, your machine, free”; the package is MIT-licensed, installed with npx or globally with npm, and the global install launches as `slopify` (`packages/site/public/index.html:89`, `packages/site/public/index.html:94`, `packages/app/package.json:5`).
+- **Purpose:** turn a prompt and keyword values into a narrated slideshow, silent video, WAV or article using local orchestration and the user's provider access (`packages/site/public/index.html:92`-`:95`, `packages/web/src/play/review-summary.tsx:252`).
+- **Audience:** people producing repeatable article-led media who want to configure, review, revise and download runs from a local browser interface (`packages/web/src/routes/play.tsx:80`, `packages/web/src/routes/project.tsx:77`).
+- **Positioning:** “Your keys, your machine, free”; the package is Apache-2.0-licensed, installed with npx or globally with npm, and the global install launches as `slopify` (`packages/site/public/index.html:93`, `packages/site/public/index.html:94`, `packages/app/package.json:5`).
 - **Success measures:** the product surfaces per-install Usage and public aggregate creation counters; no numeric release target is encoded in the product surfaces (`packages/site/public/index.html:170`, `packages/web/src/routes/usage.tsx:1`).
-- **Commercial model:** the software has no paid application tier. Users bring provider keys or authenticated local CLIs and bear those provider costs; Review shows known estimates and unpriced charges (`packages/site/public/index.html:89`, `packages/web/src/play/review-section.tsx:11`).
+- **Commercial model:** the software has no paid application tier. Users bring provider keys or authenticated local CLIs and bear those provider costs; Review shows known estimates and unpriced charges (`packages/site/public/index.html:591`, `packages/web/src/play/review-section.tsx:11`).
 - **Constraints:** Node 26 or newer; local SQLite/data-directory ownership; scheduled work runs only while Slopify is open; provider readiness and current catalogue choices are checked again at Start (`packages/app/package.json:13`, `packages/app/src/main.ts:96`, `packages/app/src/main.ts:303`, `packages/app/src/slices/play-drafts/start.ts:92`).
 - **Non-goals:** no hosted account/project sync, payment ledger or machine wake-up scheduler is represented by the current routes (`packages/app/src/kernel/config/index.ts:20`, `packages/app/src/slices/schedules/scheduler.ts:25`).
 

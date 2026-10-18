@@ -32,7 +32,7 @@ absorbed_from:
 | Library: 04 prompts, 09 intros and outros, templates and Template Studio, designs; Calendar schedules | Operate | 4 / 3 / 6 |
 | 05 prompt editor, intro/outro editor | Operate | 4 / 3 / 6 |
 
-The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent, inside one fixed 232 px left rail (a top bar and bottom bar on phones) and a page that fills the width up to a 1680 px content maximum on every route (`packages/web/src/styles/index.css:106-109`, `packages/web/src/components/shell.tsx`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
+The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent, inside one fixed 232 px left rail (a top bar and bottom bar on phones) and a page that fills the width up to a 1680 px content maximum on every route (`packages/web/src/styles/index.css:106-109`, `packages/web/src/components/shell.tsx`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:9-104`, `packages/site/public/styles.css:349-414`). Play uses separate 1180 px and 899 px composition breakpoints (`packages/web/src/styles/shell.css:1062-1086`).
 
 ## Brand facts
 
@@ -59,7 +59,7 @@ The edit bay (matte console hardware); the control room (tally lamps and engrave
 
 **THESIS.** A video pipeline presented as a broadcast control room: every run is a rundown, every stage a lamp, and nothing is hidden. It refuses the category default of cards, sidebars, gradients, and "magic": the tool disappears into the task and the humour stays in the mark and the copy.
 
-**OWN-WORLD.** Off-black matte surfaces in dark, off-white paper-board surfaces in light; engraved-label typography (Barlow Condensed, uppercase, tracked) beside plain Barlow values; tally lamps as the status language (unlit pending, pulsing slime running, steady dim green done, red failed, amber canceled); horizontal rails and rundown sheets instead of cards; one saturated fill per screen, the Play key or the active lamp; the mark's slime green as the only accent. Recognizable with all content removed by the rail rhythm, the lamp dots, and the small tracked labels.
+**OWN-WORLD.** Off-black matte surfaces in dark, off-white paper-board surfaces in light; engraved-label typography (Barlow Condensed, uppercase, tracked) beside plain Barlow values; tally lamps as the status language (unlit pending, pulsing slime running, steady dim accent done, `--color-danger` failed, `--color-waiting` waiting or canceled); horizontal rails and rundown sheets instead of cards; one saturated fill per screen, the Play key or the active lamp; the mark's slime green as the only accent. Recognizable with all content removed by the rail rhythm, the lamp dots, and the small tracked labels.
 
 **STORY.** Configure Content, Outputs and Style, open Review, then explicitly Start. Saved drafts let the operator return without reconstructing the setup. The project page carries the running stages and their lamps in one rundown strip.
 

@@ -122,7 +122,7 @@ Start rebuild is the only action here that admits work. Blocked work, missing re
 
 ### Host folder location
 
-Scoped source `a472d51`, 2026-09-25. Open folder beside current or historical downloads retains native file-manager opening. In managed Docker, it instead reveals a readonly, selectable **Saved folder path** and explains that a remote browser must use the host machine to open it. The field selects its full value on focus. Downloads remain available, and the page never claims a desktop window opened inside Docker. Missing host configuration or unavailable output produces an inline error without starting work (`packages/web/src/project/open-folder.tsx:14`, `packages/app/src/edge/http/folder-location.ts:13`).
+Scoped source `a472d51`, 2026-09-25. Open folder beside current or historical downloads retains native file-manager opening. In managed Docker, it instead reveals a readonly, selectable **Saved folder path** and explains that a remote browser must use the host machine to open it. The field selects its full value on focus. Downloads remain available, and the page never claims a desktop window opened inside Docker. Missing host configuration or unavailable output produces an inline error without starting work (`packages/web/src/project/open-folder.tsx:40`, `packages/app/src/edge/http/folder-location.ts:12`).
 
 History lists revision title, creation time and current marker. Selecting a revision exposes its retained outputs, earlier results, physical narration parts and retained text parts. Available files have Download and Open folder; image/thumbnail archives have Download all images. Media previews are bounded, and text uses wrapped retained content or a file download.
 

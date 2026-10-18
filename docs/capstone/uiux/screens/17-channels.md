@@ -15,7 +15,7 @@ paths_covered:
 ## Mode & job
 Operate surface in two routes. `/channels` lists every channel beside a summary of the picked one, with New, Rename and Delete (`packages/web/src/routes/channels.tsx:27-30`, `packages/web/src/router.tsx:114-118`). `/channels/$channelId?tab=` is one channel's page: six tabs (Brand, Cast, Templates, Schedules, Episodes, Existing videos) under the page header (`packages/web/src/routes/channel.tsx:20-36`, `packages/web/src/routes/channel.tsx:42-45`). `?tab=` is validated by `channelTabOf`, where an unknown value reads as `brand`; switching tabs navigates with `replace: true`, and the page remounts keyed by `channelId` (`packages/web/src/routes/channel.tsx:38-40`, `packages/web/src/router.tsx:124-150`).
 
-Ways in: the rail's Channels item (users icon, also in the phone bottom bar) (`packages/web/src/components/shell.tsx:95-102`); Ctrl+K "Open channels" with shortcut G K (`packages/web/src/components/shell.tsx:196-203`, `packages/web/src/lib/shortcuts.ts:13`); Settings → Channel links' "Open the default channel's links" button (`packages/web/src/youtube/channel-links.tsx:83-97`); tutorial step "24. Set up a channel", which targets `data-tour="channels"` (`packages/web/src/tutorial/model.ts:105`, `packages/web/src/routes/channels.tsx:84`).
+Ways in: the rail's Channels item (users icon, also in the phone bottom bar) (`packages/web/src/components/shell.tsx:103-110`); Ctrl+K "Open channels" with shortcut G K (`packages/web/src/components/shell-commands.tsx:40-47`, `packages/web/src/lib/shortcuts.ts:13`); Settings → Channel links' "Open the default channel's links" button (`packages/web/src/youtube/channel-links.tsx:100-116`); tutorial step "24. Set up a channel", which targets `data-tour="channels"` (`packages/web/src/tutorial/model.ts:105`, `packages/web/src/routes/channels.tsx:85`).
 
 The rail's `ChannelPicker` ("Channel" select: "All channels" plus one option per channel, kept in `localStorage` key `slopify.channel`) filters Home, the calendar and Projects. It is not a control on these routes (`packages/web/src/channels/current.tsx:17-21`, `packages/web/src/channels/current.tsx:89-119`).
 
@@ -27,9 +27,9 @@ The rail's `ChannelPicker` ("Channel" select: "All channels" plus one option per
 | Page header | Title "Channels"; meta "A channel keeps its brand kit, cast, series brief, templates and schedules together." with InfoTip `planning.channels`; primary "New channel" (plus icon) (`packages/web/src/routes/channels.tsx:85-98`) | `PageHeader` (`packages/web/src/components/kit/layout.tsx:9`), `Button`, `InfoTip` |
 | Status line | Load error, delete error or "Loading channels…" (`packages/web/src/routes/channels.tsx:100-108`) | `StatusSlot` (`packages/web/src/components/kit/action-bar.tsx:16`) |
 | Empty state | Zero channels: "No channels yet" with a primary "New channel" (`packages/web/src/routes/channels.tsx:109-120`) | `EmptyState` (`packages/web/src/components/kit/empty-state.tsx:6`) |
-| List / detail | `ListDetail`: a 280-380px list column beside the detail; below 768px one column (`packages/web/src/routes/channels.tsx:122-176`, `packages/web/src/styles/shell.css:719-724`, `packages/web/src/styles/shell.css:934-984`) | `ListDetail` (`packages/web/src/components/kit/layout.tsx:98`) |
+| List / detail | `ListDetail`: a 280-380px list column beside the detail; below 768px one column (`packages/web/src/routes/channels.tsx:123-177`, `packages/web/src/styles/shell.css:868-877`, `packages/web/src/styles/shell.css:1146-1151`) | `ListDetail` (`packages/web/src/components/kit/layout.tsx:125-139`) |
 | Channel rows | `List label="Channels"` of `ListRow`s. Selecting a row picks it for the detail. Title is the name. Meta is `Default · ` (default only) + `N template(s) · N in the cast`. Actions: TextLink "Open" to `/channels/$channelId`, quiet small "Rename", and quiet small "Delete" on non-default channels only (`packages/web/src/routes/channels.tsx:124-173`) | `List`, `ListRow` (`packages/web/src/components/kit/list-row.tsx:13-77`), `TextLink` |
-| Detail: `ChannelGlance` | `SectionHead` "About <name>" (meta "The default channel" when default) with ButtonLink "Open channel"; `Stats` Templates / In the cast; h3 "Series brief" with the brief or its placeholder; h3 "Brand kit" `dl` listing Intro, Outro, Document theme and End screen text, each "None"/"Default" when unset. The picked row shows here, else the first (`packages/web/src/routes/channels.tsx:39-41`, `packages/web/src/routes/channels.tsx:241-281`) | `SectionHead`, `Stats`, `Stat` (`packages/web/src/components/kit/stats.tsx:5-33`), `ButtonLink` |
+| Detail: `ChannelGlance` | `SectionHead` "About <name>" (meta "The default channel" when default) with ButtonLink "Open channel"; `Stats` Templates / In the cast; h3 "Series brief" with the brief or its placeholder; h3 "Brand kit" `dl` listing Intro, Outro, Document theme and End screen text, each "None"/"Default" when unset. The picked row shows here, else the first (`packages/web/src/routes/channels.tsx:40-42`, `packages/web/src/routes/channels.tsx:240-279`) | `SectionHead`, `Stats`, `Stat` (`packages/web/src/components/kit/stats.tsx:5-33`), `ButtonLink` |
 | Name dialog | Title "New channel" or `Rename <name>`. One `Field` "Channel name" (tip `planning.channel.name`, max 200, required). Footer: StatusSlot, "Cancel", primary "Create channel" / "Rename channel" (`packages/web/src/routes/channels.tsx:178-221`) | `Dialog` (`packages/web/src/components/kit/dialog.tsx:13`), `Field`, `Input` |
 | Delete confirm | `Delete <name>?`, "Keep it" / "Delete channel" (`packages/web/src/routes/channels.tsx:222-236`) | `ConfirmDialog` (`packages/web/src/components/kit/dialog.tsx:60`) |
 
@@ -48,7 +48,7 @@ Ctrl+K "Add to cast" (group Channel, context the channel name, keywords characte
 ### Brand tab
 Above the form, `AiDisclosureSettingField` is a separate section (max-w-3xl, bottom rule). It holds a `Select` "YouTube AI disclosure" with the options Automatic / Always Yes / Always No, help "Mark voices in Settings → Voices and Image prompts in Library → Prompts.", and tip `planning.channel.ai-disclosure`. Picking an option saves immediately and toasts `YouTube AI disclosure set to <label>.` (`packages/web/src/channels/ai-disclosure.tsx:19-67`, `packages/app/src/slices/studio/disclosure.ts:29-36`).
 
-`BrandTab` is a `form aria-label="Brand kit"`, remounted per channel version, in one max-w-3xl column (`packages/web/src/routes/channel.tsx:135`, `packages/web/src/channels/brand-tab.tsx:109-117`):
+`BrandTab` is a `form aria-label="Brand kit"`, remounted per channel version, in one max-w-3xl column (`packages/web/src/routes/channel.tsx:167`, `packages/web/src/channels/brand-tab.tsx:117-124`):
 
 | Group | Fields | Source |
 |---|---|---|
@@ -59,13 +59,13 @@ Above the form, `AiDisclosureSettingField` is a separate section (max-w-3xl, bot
 | Chapter cards and end screen (3 columns) | "Title font"; "Title colour"; "End screen text" (placeholder "Subscribe for more", help "Shown over the last 5 seconds.") | `packages/web/src/channels/brand-tab.tsx:175-204` |
 | Intro, outro and document (3 columns) | "Intro" and "Outro" from Library entries of that category; "Document theme" from built-in plus saved themes | `packages/web/src/channels/brand-tab.tsx:101-108`, `packages/web/src/channels/brand-tab.tsx:205-230` |
 | Ambient sound | `AmbientBedControls` with inherit label "Not set", built-in beds only, no "None"; Level (dB), Fade in, Tail fields appear once a bed is picked | `packages/web/src/channels/ambient-bed-kit.tsx:12-34`, `packages/web/src/video/ambient-bed-controls.tsx:72-111` |
-| Channel links | `ChannelLinksEditor`: `SectionHead` "Channel links" (meta "Write a link's name in braces in a description, such as {{Patreon}}."); rows of Name (placeholder "Patreon") + Address (`type="url"`, placeholder "https://") + quiet "Remove" (trash icon), 220px / fluid / auto from `md`; "Add link" button | `packages/web/src/channels/brand-tab.tsx:232-234`, `packages/web/src/youtube/channel-links.tsx:15-78` |
+| Channel links | `ChannelLinksEditor`: `SectionHead` "Channel links" (meta "Write a link's name in braces in a description, such as {{Patreon}}."); rows of Name (placeholder "Patreon") + Address (`type="url"`, placeholder "https://") + quiet "Remove" (trash icon), 220px / fluid / auto from `md`; "Add link" button | `packages/web/src/channels/brand-tab.tsx:246`, `packages/web/src/youtube/channel-links.tsx:14-96` |
 | Sticky action bar | StatusSlot ("Saving…" / error) and primary "Save channel" | `packages/web/src/channels/brand-tab.tsx:236-253`, `packages/web/src/components/kit/action-bar.tsx:52-75` |
 
 Every `Choice` select opens with "Not set". A saved value missing from the library shows as `<value> (no longer in the library)` (`packages/web/src/channels/brand-tab.tsx:258-286`). `Colour` is a text `Input` (placeholder "#FFFFFF", max 7) beside a 24px swatch that fills only for a valid `#RRGGBB` (`packages/web/src/channels/brand-tab.tsx:288-322`). Save sends only non-blank trimmed kit fields, the bed when one is picked, and links only when any exist or were edited. It toasts "Channel saved." and invalidates the channel list and every project's link placeholders (`packages/web/src/channels/brand-tab.tsx:64-95`). The default channel without saved links shows the older Settings list until its Brand tab saves (`packages/web/src/channels/brand-tab.tsx:55-62`).
 
 ### Cast tab
-`CastTab` is a two-column grid from 1024px (fluid gallery, 440px editor aside), one column below (`packages/web/src/channels/cast-tab.tsx:68`).
+`CastTab` is a two-column grid from 1024px (fluid gallery, 440px editor aside), one column below (`packages/web/src/channels/cast-tab.tsx:90`).
 - Lead line: "When a video's title or an image's brief names a member, its pictures go with that image as references, so it looks the same in every video." (`packages/web/src/channels/cast-tab.tsx:70-73`).
 - Gallery: a `MediaGrid label="Cast"` of `MediaFrame`s. Each shows the member's first ready picture, the name, and meta `<Kind>[ · Host] · N picture(s)`. A member with no ready picture carries a waiting `Badge` "No picture". Visible secondary small "Edit" (`aria-pressed` when selected) and "Delete" sit on each frame. The selected frame has a 2px accent outline (`packages/web/src/channels/cast-tab.tsx:86-136`, `packages/web/src/components/kit/media.tsx:19`, `packages/web/src/components/kit/media.tsx:102`).
 - Clicking a picture opens the `Lightbox` with caption `<Kind> · <description or "No description yet">` and a small `Edit <name>` action (`packages/web/src/channels/cast-tab.tsx:55-64`, `packages/web/src/channels/cast-tab.tsx:138-157`, `packages/web/src/components/kit/media.tsx:145`).
@@ -95,7 +95,7 @@ Every `Choice` select opens with "Not set". A saved value missing from the libra
 ### Schedules tab
 Read-only.
 - Lead: "A schedule belongs to the channel of the template it runs. Create and change schedules in Calendar → Schedules.", linking to `/calendar?tab=schedules` (`packages/web/src/channels/members-tabs.tsx:120-126`).
-- `List label="Channel schedules"`: rows show the name with meta: `Status` lamp (Active=running, Paused=waiting, Completed=done, Canceled=off) · `Next run <date>` or "No next run" · `N queued`. Deleted schedules are excluded. Rows have no actions (`packages/web/src/channels/members-tabs.tsx:91-102`, `packages/web/src/channels/members-tabs.tsx:110-157`).
+- `List label="Channel schedules"`: rows show the name with meta: `Status` lamp (Active=running, Paused=waiting, Completed=done, Canceled=off) · `Next run <date>` or "No next run" · `N queued`. Deleted schedules are excluded. Rows have no actions (`packages/web/src/channels/members-tabs.tsx:95-106`, `packages/web/src/channels/members-tabs.tsx:107-151`).
 
 ### Episodes tab
 - `Switch` "Episode memory" (tip `planning.channel.episode-memory`) saves on toggle, with the help text "Finished episodes leave a short summary that new related episodes are written with." (`packages/web/src/channels/episodes-tab.tsx:46-56`).
@@ -105,7 +105,7 @@ Read-only.
 ### Existing videos tab
 - Lead: "Topic suggestions and duplicate checks skip these titles, as they skip the videos made here." (`packages/web/src/channels/videos-tab.tsx:89-91`).
 - "Paste titles" textarea (5 rows, help "One title per line."). The row below holds primary "Add titles", "Import a YouTube Studio CSV…" (hidden `.csv` input) with InfoTip `planning.channel.videos-csv`, and quiet "Remove all", disabled when the list is empty (`packages/web/src/channels/videos-tab.tsx:92-140`).
-- `CsvPreview` after a CSV is read. h3 "Titles in the CSV" has meta `N of N title(s) ticked`, primary `Add N ticked title(s)` and quiet "Cancel". Below: a "Keep only titles containing…" filter, prefilled by the server's suggestion, which re-ticks titles by case-insensitive substring; small "Tick all" / "Untick all"; one checkbox row per title (`packages/web/src/channels/videos-tab.tsx:30-35`, `packages/web/src/channels/videos-tab.tsx:66-72`, `packages/web/src/channels/videos-tab.tsx:214-294`).
+- `CsvPreview` after a CSV is read. h3 "Titles in the CSV" has meta `N of N title(s) ticked`, primary `Add N ticked title(s)` and quiet "Cancel". Below: a "Keep only titles containing…" filter, prefilled by the server's suggestion, which re-ticks titles by case-insensitive substring; small "Tick all" / "Untick all"; one checkbox row per title (`packages/web/src/channels/videos-tab.tsx:36`, `packages/web/src/channels/videos-tab.tsx:162-181`, `packages/web/src/channels/videos-csv-preview.tsx:37-122`).
 - `List label="Existing videos"`: one row per title with a quiet small "Remove" (`packages/web/src/channels/videos-tab.tsx:177-197`).
 
 ## States
@@ -126,7 +126,7 @@ Read-only.
 | Picture generating | any cast image `generating` | Frame shows "Making the picture…"; the channel query polls every 3 s until none is generating; StatusSlot "The picture is being made; it appears here when it is ready." (`packages/web/src/channels/api.ts:51-56`, `packages/web/src/channels/cast-editor.tsx:285`, `packages/web/src/channels/cast-editor.tsx:413-414`) |
 | Picture failed | image `failed` | "Failed" badge, error text, fix-it buttons (`packages/web/src/channels/cast-editor.tsx:288-315`) |
 | Upload / generate / delete picture error | mutation rejects | StatusSlot error under the pictures section; "Uploading…" while uploading (`packages/web/src/channels/cast-editor.tsx:409-416`) |
-| Delete cast member | Delete pressed | `ConfirmDialog` with the consequence "New videos stop using its pictures. Videos already made keep the pictures they were started with.", buttons "Keep it" / "Delete from cast". A failure shows in the consequence or, after close, in a StatusSlot under the gallery (`packages/web/src/channels/cast-tab.tsx:158-160`, `packages/web/src/channels/cast-tab.tsx:178-192`) |
+| Delete cast member | Delete pressed | `ConfirmDialog` with the consequence "New videos stop using its pictures. Videos already made keep the pictures they were started with.", buttons "Keep it" / "Delete from cast". A failure shows in the consequence or, after close, in a StatusSlot under the gallery (`packages/web/src/channels/cast-tab.tsx:225-236`, `packages/web/src/channels/cast-tab.tsx:205-207`, `packages/web/src/channels/cast-tab.tsx:163-166`) |
 | No templates | none in channel | `EmptyState` "No templates in this channel", "Pick this channel on Play, then save the setup as a template, or move one here from another channel." (`packages/web/src/channels/members-tabs.tsx:53-58`) |
 | Template move pending / failed | move running / rejects | Every Move-to select is disabled while pending; the error shows in a StatusSlot above the list (`packages/web/src/channels/members-tabs.tsx:50-52`, `packages/web/src/channels/members-tabs.tsx:72`) |
 | No schedules | none for the channel's templates | `EmptyState` "No schedules run this channel's templates", "Make one in Calendar → Schedules from one of this channel's templates." (`packages/web/src/channels/members-tabs.tsx:130-134`) |
@@ -143,7 +143,7 @@ Read-only.
 
 ## Motion
 - Dialogs, confirm dialogs and the lightbox use the kit's shared entrances. Neither route adds motion of its own (`packages/web/src/components/kit/dialog.tsx:13-108`, `packages/web/src/components/kit/media.tsx:145`).
-- The generating picture fill is a static striped gradient, not animated (`packages/web/src/styles/kit.css:557-568`).
+- The generating picture fill is a static striped gradient, not animated (`packages/web/src/styles/kit.css:605-615`).
 - The Schedules tab's Active `Status` lamp uses the kit's running pulse (`packages/web/src/channels/members-tabs.tsx:97-102`, `packages/web/src/components/kit/status.tsx:27`).
 - Toasts ("Channel saved.", AI disclosure) use the kit toast entrance (`packages/web/src/components/kit/toast.tsx:44`).
 
@@ -157,9 +157,9 @@ Read-only.
 
 ## Not in play
 - Search, sort and filtering of the channel list: absent (`packages/web/src/routes/channels.tsx:122-176`).
-- Creating or editing schedules from the channel page: absent; the Schedules tab links to the calendar (`packages/web/src/channels/members-tabs.tsx:104-159`).
+- Creating or editing schedules from the channel page: absent; the Schedules tab links to the calendar (`packages/web/src/channels/members-tabs.tsx:109-115`).
 - Creating templates here: absent; the Templates tab links to Library → Templates and Play (`packages/web/src/channels/members-tabs.tsx:42-49`).
-- Unsaved-changes guard on the Brand form: absent; leaving the tab keeps the form mounted, but leaving the route drops the draft (`packages/web/src/routes/channel.tsx:133-136`).
+- Unsaved-changes guard on the Brand form: absent; leaving the tab keeps the form mounted, but leaving the route drops the draft (`packages/web/src/routes/channel.tsx:164-167`).
 - Uploaded ("My own file") ambient beds on a channel: not offered; built-in beds only (`packages/web/src/channels/ambient-bed-kit.tsx:12-13`, `packages/web/src/channels/ambient-bed-kit.tsx:48`).
 - Reordering cast members, links or existing videos: absent.
 - Undo on any delete: absent; each delete is behind a `ConfirmDialog`, except single existing-video "Remove", link "Remove" (unsaved until Save channel) and picture "Delete", which act immediately (`packages/web/src/channels/videos-tab.tsx:184-192`, `packages/web/src/youtube/channel-links.tsx:56-65`, `packages/web/src/channels/cast-editor.tsx:293-302`).

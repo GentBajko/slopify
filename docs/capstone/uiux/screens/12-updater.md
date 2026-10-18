@@ -13,13 +13,13 @@ paths_covered:
 
 ## Mode & job
 
-App-wide Operate control for checking npm for a newer Slopify, installing it, waiting for running work, cancelling a waiting update and bringing the tab back after the server restarts (`packages/web/src/updates/widget.tsx:9-75`, `packages/web/src/updates/use-update.ts:29-177`). A second, separate surface, `VersionPrompt`, tells a tab that the server it talks to was replaced underneath it (`packages/web/src/components/version-prompt.tsx:6-32`). Both are mounted by the Shell on every route (`packages/web/src/components/shell.tsx:436-441`, `shell.tsx:487`, `shell.tsx:520-524`).
+App-wide Operate control for checking npm for a newer Slopify, installing it, waiting for running work, cancelling a waiting update and bringing the tab back after the server restarts (`packages/web/src/updates/widget.tsx:9-75`, `packages/web/src/updates/use-update.ts:29-177`). A second, separate surface, `VersionPrompt`, tells a tab that the server it talks to was replaced underneath it (`packages/web/src/components/version-prompt.tsx:6-32`). Both are mounted by the Shell on every route (`packages/web/src/components/shell.tsx:394`, `shell.tsx:438`, `shell.tsx:472-476).
 
 ## Composition
 
 **Update widget.** One kit `IconButton` (variant `icon`), `size-8`, holding a 16px lucide `RefreshCw` glyph (`widget.tsx:48-62`). An 8px `bg-accent` dot sits at its top-right when an update is available and nothing is installing or waiting (`widget.tsx:63-68`). The button's `aria-label` and `title` are the full sentence (the kit sets `title` from `label` when no `tip` is given) (`widget.tsx:45-49`, `packages/web/src/components/kit/button.tsx:54-76`). A visually hidden live region repeats the sentence as `role="status"`, or `role="alert"` when there is an error (`widget.tsx:70-72`).
 
-Placement: at ≥768px it sits in the sidebar foot row after "Free. Your keys, your machine.", followed by the Tutorials book link and the tutorial launcher; below 768px it sits in the phone top bar with the same two neighbours (`shell.tsx:304`, `shell.tsx:431-441`, `shell.tsx:474-489`). Settings → About points at it: "Updates: the circular-arrows button at the foot of the sidebar (at the top on a phone)." (`packages/web/src/routes/settings-about.tsx:53-54`).
+Placement: at ≥768px it sits in the sidebar foot row after "Free. Your keys, your machine.", followed by the Tutorials book link and the tutorial launcher; below 768px it sits in the phone top bar with the same two neighbours (`shell.tsx:389-397`, `shell.tsx:435-440`). Settings → About points at it: "Updates: the circular-arrows button at the foot of the sidebar (at the top on a phone)." (`packages/web/src/routes/settings-about.tsx:53-54`).
 
 **Version prompt.** A kit `Dialog`, `dismissible={false}`, title "Slopify was updated", description "This tab was loaded before the update. Version <v> is running now; reload to catch up.", with one autofocused primary "Reload" button (`version-prompt.tsx:14-31`). It opens when `X-Slopify-Version` on any response differs from the first version the tab saw (`packages/web/src/version.ts:1-49`, `version.ts:53-60`).
 
@@ -54,4 +54,4 @@ The sentence is `Slopify updates: <versions>. <action>` where versions is "Your 
 
 ## Not in play
 
-No popover, progress bar, release-notes viewer or changelog link on the widget; patch notes and the What's new tour are separate Shell overlays (`shell.tsx:518-519`). No automatic install on discovery. No dismiss or "later" on the version prompt. The widget never installs while the server reports a block; with running work the server answers `waiting` and the install happens after that work finishes (`widget.tsx:77-83`).
+No popover, progress bar, release-notes viewer or changelog link on the widget; patch notes and the What's new tour are separate Shell overlays (`shell.tsx:470-471`). No automatic install on discovery. No dismiss or "later" on the version prompt. The widget never installs while the server reports a block; with running work the server answers `waiting` and the install happens after that work finishes (`widget.tsx:77-83`).

@@ -17,7 +17,7 @@ Persuade surface: two static pages served by Cloudflare from `packages/site/publ
 
 ## Composition
 
-**Shared chrome.** A skip link to `#main` (`packages/site/public/index.html:46`), then a masthead: wordmark (mark + "Slopify", links to `/`) and a "Project and support" nav with GitHub, Patreon, Buy Me a Coffee and "How I run a channel" (`packages/site/public/index.html:49-83`). On `channel.html` the last link carries `aria-current="page"` (`packages/site/public/channel.html:26-43`). The footer (`class="free"`) repeats "Free. Runs on your machine with your own keys." and the donate links (`packages/site/public/index.html:605-640`, `packages/site/public/channel.html:165-178`).
+**Shared chrome.** A skip link to `#main` (`packages/site/public/index.html:46`), then a masthead: wordmark (mark + "Slopify", links to `/`) and a "Project and support" nav with GitHub, Patreon, Buy Me a Coffee and "How I run a channel" (`packages/site/public/index.html:49-83`). On `channel.html` the last link carries `aria-current="page"` (`packages/site/public/channel.html:26-43`). The footer (`class="free"`) repeats "Free. Runs on your machine with your own keys." and the donate links (`packages/site/public/index.html:589-611`, `packages/site/public/channel.html:165-178`).
 
 **Landing page, top to bottom** (`packages/site/public/index.html`):
 
@@ -32,7 +32,7 @@ Persuade surface: two static pages served by Cloudflare from `packages/site/publ
 | New in 3.0 | Inside `template data-release="3.0"`: note line and seven groups: Checked, Scheduled, Published, Counted, Faster, Heard, Settled in | `index.html:377-437` |
 | How to use | `ol.rundown` of six rows, each a done lamp, engraved label and text: Node (Windows/macOS/Linux picks with Copy keys), Run it, Docker (launcher command + `details` "Docker details" with the direct `docker run` command and Copy), Keys, Prompts, Play | `index.html:440-539` |
 | All options | `details` whose summary is `h3` "All options": note line and a four-column table (flag, variable, default, does) for `--port`, `--host`, `--data-dir`, `--no-open`, `SLOPIFY_FFMPEG` | `index.html:541-602` |
-| Footer | Free line, anonymous-stats note, "Support the project", GitHub/Patreon/Buy Me a Coffee, "How I run a channel with it" | `index.html:605-640` |
+| Footer | Free line, anonymous-stats note, "Support the project", GitHub/Patreon/Buy Me a Coffee, "How I run a channel with it" | `index.html:589-611` |
 
 **Channel page** (`packages/site/public/channel.html`): `article.reading` with `h1`, lede, an "On this page" TOC of six anchors, then sections One template, A schedule, Checking the work, Uploading, What it costs, Still by hand, closing with a `reading-note` linking the home page and GitHub (`channel.html:46-162`). Three sections carry `template data-release="3.0"` paragraphs (series brief and held suggestions on the Calendar; reviewer model and cast; Prepare upload) (`channel.html:97-105`, `channel.html:113-124`, `channel.html:132-138`). Two HTML comments mark content left unset: the channel's name/URL and a quoted per-video cost (`channel.html:48-49`, `channel.html:141-142`).
 
@@ -46,7 +46,7 @@ Persuade surface: two static pages served by Cloudflare from `packages/site/publ
 |---|---|---|---|
 | Tally loading | Markup ships `data-loading` on `.tally` | Each row's `dt`/`dd` become empty `--raised` bars (90×10, 140×22); foot reads "Off" with no lamp | `styles.css:700-721`, `index.html:214`, `index.html:258-260` |
 | Tally live | `GET {collector}/aggregates` answers an `aggregates` object | Numbers formatted per counter (grouped integers; audio as hours to one decimal; tokens with K/M/B/T suffixes); lamp `run`, word "Live", note "updates every 5 seconds"; `data-loading` removed on first answer | `main.js:31-58`, `main.js:82-113` |
-| Tally off | Fetch fails, times out (5 s), non-OK, or malformed body | Every counter shows "—"; no lamp, word "Off", note "live stats unavailable" | `main.js:14-16`, `main.js:63-86` |
+| Tally off | Fetch fails, times out (5 s), non-OK, or malformed body | Every counter shows "—"; no lamp, word "Off", note "live stats unavailable" | `main.js:13`, `main.js:63-86` |
 | Polling | Only when `[data-tally]` exists (home page) | Every 5 s; collector is `http://127.0.0.1:8787` on loopback origins, else `https://collector.slopify.stream` | `main.js:7-13`, `main.js:136-143`, `main.js:249-251` |
 | Copy success | Clipboard write resolves | Label becomes "Copied", `data-copied` swaps copy glyph for check glyph, status region reads "Copied: <command>"; reverts after 2 s | `main.js:145-172`, `styles.css:653-660` |
 | Copy blocked | Clipboard write rejects or no clipboard API | Status region reads "Copying is blocked in this browser. Select the command instead."; button unchanged | `main.js:152-160`, `main.js:254-258` |
@@ -55,7 +55,7 @@ Persuade surface: two static pages served by Cloudflare from `packages/site/publ
 | 3.0 content | `nextReleasePublished = true` | Every `template[data-release]` is replaced by its content on both pages | `main.js:223-230`, `main.js:248` |
 | Video unsupported | Browser cannot play mp4 | Fallback paragraph points at the description | `index.html:282-285` |
 
-The site has no authenticated, offline or error page state; a failed collector is the only runtime failure it models (`main.js:60-78`).
+The site has no authenticated, offline or error page state; a failed collector is the only runtime failure it models (`main.js:60-77`).
 
 ## Motion
 
@@ -72,13 +72,13 @@ Register: short, first-person-free product lines with one wry aside. Key strings
 - Lede: "A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free." (`index.html:92-95`); aside "Start contributing to the internet’s enshittification today!" (`index.html:96`).
 - Install hints: "Runs the latest version. Nothing to install first."; "Then type `slopify` to launch."; Docker "Linux only. Runs in the background, restarts with Docker and saves project files in ~/Slopify/Projects." (`index.html:138`, `index.html:173`, `index.html:208`).
 - Showcase caption: "Reusable prompts. Your outputs. A finished project, ready to download." (`index.html:290-292`).
-- 3.0 note: "Fewer manual steps per published video: approve the topics, look over the finished video, press Publish in YouTube Studio." (`index.html:380`).
-- Docker details state "Keep the localhost binding: Slopify has no login." (`index.html:508-520`).
-- Footer: "Anonymous usage stats power the counters above; nothing you write ever leaves your machine." (`index.html:608-611`).
+- 3.0 to 3.4 note, in the inert `<template data-release="3.0">` that `nextReleasePublished` puts on the page once that release is out: "Approve the topics, look over the video, press Schedule in YouTube Studio." (`index.html:374-378`).
+- Docker details state "Keep the localhost binding: Slopify has no login." (`index.html:495`).
+- Footer: "Anonymous usage stats power the counters above; nothing you write ever leaves your machine." (`index.html:590-595`).
 - Channel page lede frames the page as how "a lore channel runs on it, including the parts that are still done by hand"; the Uploading section opens "Slopify never publishes." (`channel.html:50-54`, `channel.html:128`).
 
 Labels are engraved small caps (`class="engraved"`) for tally terms, feature group titles, rundown labels and table headers (`index.html:221-249`, `index.html:325-429`).
 
 ## Not in play
 
-No sign-in, account, pricing or checkout; no newsletter or form of any kind. No client framework, router or build step (`main.js:1-2`). No per-install analytics on this page beyond reading the collector's aggregates (`main.js:63-78`). No link into a running app instance; "Run it" names `http://127.0.0.1:6969` as text (`index.html:489`). No YouTube upload claim: both pages state the person presses Publish in YouTube Studio (`index.html:380`, `channel.html:156`). The app's `components/kit` and its tokens are not used here.
+No sign-in, account, pricing or checkout; no newsletter or form of any kind. No client framework, router or build step (`main.js:1-2`). No per-install analytics on this page beyond reading the collector's aggregates (`main.js:63-78`). No link into a running app instance; "Run it" names `http://127.0.0.1:6969` as text (`index.html:473`). No YouTube upload claim: the home page says the person presses Schedule in YouTube Studio and the channel page that pressing Publish there stays with the person (`index.html:378`, `channel.html:156`). The app's `components/kit` and its tokens are not used here.

@@ -13,7 +13,7 @@ paths_covered:
 ## Mode & job
 An edit surface at `/narration-aliases`, the Library's "Aliases" tab: one ordered list of words the narrator says differently from how they are written ("Dr." as "Doctor"), edited in place and saved as a whole (`packages/web/src/routes/narration-aliases.tsx:25-28`, `packages/web/src/routes/library.tsx:14-20`). Only what the voice and Narration Preparation receive changes; the article, transcript and captions keep the written form (`packages/app/src/kernel/ports/narration-aliases.ts:1-6`).
 
-- The route is a child of the pathless Library layout, so it renders under the "Library" `PageHeader` and the `TabLinks` row (`packages/web/src/router.tsx:98-102`, `packages/web/src/router.tsx:304-308`, `packages/web/src/routes/library.tsx:22-34`).
+- The route is a child of the pathless Library layout, so it renders under the "Library" `PageHeader` and the `TabLinks` row (`packages/web/src/router.tsx:172-178`, `packages/web/src/router.tsx:483-488`, `packages/web/src/routes/library.tsx:15-34`).
 - The rail's Library item lights for `/narration-aliases` (`packages/web/src/components/shell.tsx:104-117`).
 - No Ctrl+K command opens this tab or adds an alias; the Library commands cover prompts, entries, templates and document themes only (`packages/web/src/routes/library.tsx:39-108`).
 - The list is used through the "Use narration aliases" checkbox (`NarrationAliasesToggle`, InfoTip `play.narration-aliases`) on Play's audio controls and in Edit project (`packages/web/src/play/narration-aliases.tsx:4-40`, `packages/web/src/play/media-rails.tsx:206-211`, `packages/web/src/project/revision-providers.tsx:293`). A project copies the list when it starts; in Edit project turning the box on copies the list, and a note under it reads `<n> alias(es) copied from Library → Narration aliases.` or "No aliases are copied yet. Add some in Library → Narration aliases." beside a quiet "Update from Library" button ("Copying…" while busy) (`packages/web/src/project/revision-providers.tsx:94-145`).
@@ -56,22 +56,18 @@ Server checks, reported as row sentences (`packages/app/src/slices/narration/ali
 | Saving | mutation pending | Save disabled, label "Saving…" (`packages/web/src/routes/narration-aliases.tsx:153-165`) |
 | Refused | server returns field problems | Row errors placed by the `aliases.<index>` in each field; status slot `Not saved: <all messages>` in error tone (`role="alert"`) (`packages/web/src/routes/narration-aliases.tsx:50-62`, `packages/web/src/components/kit/action-bar.tsx:32`) |
 | Saved | server accepts | Rows re-keyed from the saved list; status slot in success tone: "Saved. New projects use these aliases; a project you already started keeps its copy until you refresh it in Edit project."; the aliases query is invalidated (`packages/web/src/routes/narration-aliases.tsx:64-70`) |
-| Save failed | request rejects | Status slot `Couldn't save the aliases: <message>` in error tone (`packages/web/src/routes/narration-aliases.tsx:72-73`) |
+| Save failed | request rejects | Status slot `Couldn't save the aliases: <message> Your changes are still on screen; press Save aliases to try again.` in error tone (`packages/web/src/routes/narration-aliases.tsx:80-111`) |
 
 ## Motion
 None of its own: no enter, reorder or save animation is defined in `packages/web/src/routes/narration-aliases.tsx`. The status slot keeps a fixed height, so a message arriving or leaving never moves the bar's controls (`packages/web/src/components/kit/action-bar.tsx:13-15`, `packages/web/src/components/kit/action-bar.tsx:35`).
 
 ## Copy
-- Tab and headings: "Aliases", "How they are used", "No aliases yet" (`packages/web/src/routes/library.tsx:19`, `packages/web/src/routes/narration-aliases.tsx:116-131`).
+- Tab and headings: "Narration aliases", "How they are used", "No aliases yet" (`packages/web/src/routes/library.tsx:29`, `packages/web/src/routes/narration-aliases.tsx:254-293`).
 - Buttons: "Add alias", "Save aliases" / "Saving…", `Remove alias <n>` (`packages/web/src/routes/narration-aliases.tsx:97-227`).
 - Field labels and placeholders: "Written" ("Dr."), "Say it as" ("Doctor"), "Whole word", "Match case" (`packages/web/src/routes/narration-aliases.tsx:236-275`).
 - Help bodies state the limits (up to 1000 aliases, 200 and 500 characters), that spaces in a written form match any spacing, that the leftmost then longer match wins, and that an alias wins over a Pronunciation Glossary entry (`packages/web/src/help/entries/library.ts:120-144`).
 
 ## Not in play
-- Reordering rows: absent; position is the order rows were added (`packages/web/src/routes/narration-aliases.tsx:80-84`).
-- Search or filtering: absent (`packages/web/src/routes/narration-aliases.tsx:113-128`).
+- Reordering rows: absent; position is the order rows were added (`packages/web/src/routes/narration-aliases.tsx:116-124`).
 - A preview or "listen" of an alias: absent.
-- Client-side validation before Save: absent beyond input `maxLength`; every rule is checked by the server (`packages/web/src/routes/narration-aliases.tsx:242`, `packages/web/src/routes/narration-aliases.tsx:254`).
-- Unsaved-changes guard on leaving and a dirty indicator: absent; Save is enabled whenever the list is loaded and no save is pending (`packages/web/src/routes/narration-aliases.tsx:153`).
-- Confirm on row remove and undo: absent; a removed row is gone from the editor at once and from storage on the next Save (`packages/web/src/routes/narration-aliases.tsx:85-89`).
-- Import or export of the list: absent.
+- Client-side validation before Save: absent beyond input `maxLength`; every rule is checked by the server (`packages/web/src/routes/narration-alias-rows.tsx:102`, `packages/web/src/routes/narration-alias-rows.tsx:114`).

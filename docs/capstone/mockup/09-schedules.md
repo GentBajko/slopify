@@ -45,7 +45,7 @@ Saved schedules
 └──────────────────────────────────────────────────────────────┘
 ```
 
-The creation form precedes a vertical list of schedule cards. Each card keeps controls and expandable occurrence history with the saved schedule identity (`packages/web/src/routes/schedules.tsx:112`, `packages/web/src/routes/schedules.tsx:213`).
+A list of schedules sits beside a detail pane, which shows the picked schedule with its run history or, when opened, the creation form. Each row keeps its controls with the saved schedule identity (`packages/web/src/schedules/view.tsx:262-335`, `packages/web/src/schedules/schedule-row.tsx:34-155`, `packages/web/src/schedules/schedule-detail.tsx:146-153`).
 
 ## Elements
 
@@ -62,7 +62,7 @@ The creation form precedes a vertical list of schedule cards. Each card keeps co
 | History | Expands retained occurrence status, timestamps, project links and failure reason |
 | Delete | Removes a completed or canceled schedule from the displayed list |
 
-The form validates the selected template, weekly day selection and nonnegative integer cent ceiling before sending its create request (`packages/web/src/routes/schedules.tsx:165`).
+The form validates the selected template, weekly day selection and spend ceiling (typed in US dollars, stored as cents) before sending its create request (`packages/web/src/schedules/form.tsx:176-194`, `:222-226`).
 
 ## States
 
@@ -74,4 +74,4 @@ The form validates the selected template, weekly day selection and nonnegative i
 - **Loading/error/saved:** the screen shows local query status, an inline error, or “Schedule saved” status.
 - **History running/succeeded/failed/skipped:** each occurrence shows its admission result; succeeded means project admission succeeded, and linked projects may still be generating.
 
-The list refreshes every 30 seconds, while the local server checks due schedules every 15 seconds and once at startup (`packages/web/src/schedules/api.ts:47`, `packages/app/src/main.ts:303`).
+The list refreshes every 30 seconds, while the local server checks due schedules every 15 seconds and once at startup (`packages/web/src/schedules/api.ts:64`, `packages/app/src/main.ts:981-983`, `:998`).
