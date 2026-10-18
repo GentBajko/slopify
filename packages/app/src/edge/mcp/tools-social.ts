@@ -16,7 +16,7 @@ export const socialTools: readonly RouteTool[] = [
     route: "PUT /api/social/packs/:projectId/:platform/choice",
     title: "Change what a post carries",
     description:
-      "The project's own settings for one site (platform: x, linkedin, instagram, tiktok, reddit or bluesky): its text source, media, hashtags and link; {off: true} to not post there; null to go back to the template's. A post prompt is turned on only in Edit project. Body: {choice}.",
+      "The project's own settings for one site (platform: x, linkedin, instagram, tiktok, reddit or bluesky): its text source, media, hashtags and link; {off: true} to not post there; null to go back to the template's. A post prompt (text \"prompt\") is a paid step picked only in the template (Template Studio → Upload pack) or on Play, where Save shows its cost. Body: {choice}.",
     body: choiceBody,
   },
   {

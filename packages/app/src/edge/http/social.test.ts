@@ -111,13 +111,15 @@ describe("the page's routes", () => {
     expect(back.packs.map((pack) => pack.platform)).toEqual(["x", "bluesky"]);
   });
 
-  it("leaves turning on a post prompt to Edit project, where Save shows its cost", async () => {
+  it("leaves turning on a post prompt to the template, where Save shows its cost", async () => {
     const { send } = harness({ social: { x: defaultChoices.x } });
     const response = await send("PUT", "/social/packs/p1/x/choice", {
       choice: { ...defaultChoices.x, text: "prompt" },
     });
     expect(response.status).toBe(409);
-    expect(await detail(response)).toMatch(/paid step, so it is set in Edit project → Upload pack/);
+    expect(await detail(response)).toBe(
+      "A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Prepare upload → X → Settings.",
+    );
   });
 
   it("refuses a change from another page, and a body it doesn't take", async () => {
@@ -145,9 +147,11 @@ describe("the page's routes", () => {
     expect(edited.packs[0]).toMatchObject({ text: "Mine.", edited: true });
     const reset = await packsOf(await send("DELETE", "/social/packs/p1/x/text"));
     expect(reset.packs[0]?.edited).toBe(false);
-    expect(
-      (await send("PUT", "/social/packs/p1/tiktok/text", { text: "a", base: "b" })).status,
-    ).toBe(404);
+    const notThere = await send("PUT", "/social/packs/p1/tiktok/text", { text: "a", base: "b" });
+    expect(notThere.status).toBe(404);
+    expect(await detail(notThere)).toBe(
+      "This project doesn't post to TikTok. A project's sites come from its template: turn TikTok on under Post to in Template Studio → Upload pack (Library → Templates → Open studio), or on Play under Outputs, for the projects it makes next.",
+    );
   });
 
   it("sets Reddit's own fields, only on the Reddit post", async () => {

@@ -25,10 +25,16 @@ export type Refused = {
   readonly sentence: string;
 };
 
+// Edit project has no posting editor: a project's sites come from its template (or Play).
+export function notPostingSentence(platform: SocialPlatform): string {
+  const site = platformLabels[platform];
+  return `This project doesn't post to ${site}. A project's sites come from its template: turn ${site} on under Post to in Template Studio → Upload pack (Library → Templates → Open studio), or on Play under Outputs, for the projects it makes next.`;
+}
+
 const notPosting = (platform: SocialPlatform): Refused => ({
   ok: false,
   status: 404,
-  sentence: `This project doesn't post to ${platformLabels[platform]}. Turn ${platformLabels[platform]} on in the post's settings under Prepare upload, or in Edit project → Upload pack.`,
+  sentence: notPostingSentence(platform),
 });
 
 // The release time a waiting post fills at, read from its pack.

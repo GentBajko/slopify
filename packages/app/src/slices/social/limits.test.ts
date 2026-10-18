@@ -117,3 +117,20 @@ describe("fillUrl", () => {
     );
   });
 });
+
+describe("the posting sentences", () => {
+  // Edit project has no posting editor: a sentence must name a place that exists.
+  it("never send the person to an Edit project → Upload pack that isn't there", () => {
+    const files = [
+      "./service.ts",
+      "./media.ts",
+      "./post-prompt.ts",
+      "../../edge/http/social.ts",
+      "../../edge/mcp/tools-social.ts",
+    ];
+    for (const file of files) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      expect(source, file).not.toMatch(/Edit project → Upload pack|turned on only in Edit project/);
+    }
+  });
+});

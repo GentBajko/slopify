@@ -60,7 +60,9 @@ describe("fillPost and reportPost", () => {
     const one = project();
     const refused = fillPost(one, "p1", "reddit", now);
     expect(refused).toMatchObject({ ok: false, status: 404 });
-    expect(refused.ok ? "" : refused.sentence).toMatch(/doesn't post to Reddit\. Turn Reddit on/);
+    expect(refused.ok ? "" : refused.sentence).toMatch(
+      /doesn't post to Reddit\. A project's sites come from its template: turn Reddit on under Post to in Template Studio → Upload pack/,
+    );
   });
 
   it("refuses a report about a project that is gone", () => {

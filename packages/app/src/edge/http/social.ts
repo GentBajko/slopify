@@ -8,7 +8,7 @@ import { sendFailureText } from "../../slices/notifications/send.js";
 import { readNotificationUrl } from "../../slices/notifications/settings.js";
 import { waitsForRelease } from "../../slices/social/due.js";
 import { postingExtension, writeExtensionSites } from "../../slices/social/extension.js";
-import type { SocialPacksResponse } from "../../slices/social/model.js";
+import { platformLabels, type SocialPacksResponse } from "../../slices/social/model.js";
 import { postReadyNotice } from "../../slices/social/notice.js";
 import { packFor, postPacks } from "../../slices/social/pack.js";
 import { readPost, writeChoice, writeReddit, writeTextEdit } from "../../slices/social/repo.js";
@@ -27,6 +27,7 @@ import {
   fillPost,
   linksToFind,
   nextPost,
+  notPostingSentence,
   type Refused,
   reportPost,
   setPostLink,
@@ -109,8 +110,7 @@ export function socialRoutes(deps: AppDeps) {
     packFor(deps, projectId, platform, deps.clock.now()) === undefined
       ? problem(c, {
           status: 404,
-          detail:
-            "This project doesn't post there. Turn the site on in the post's settings under Prepare upload, or in Edit project → Upload pack.",
+          detail: notPostingSentence(platform),
         })
       : undefined;
   // A post filled at its release time tells the Notification URL, when one is set. Never
@@ -153,8 +153,7 @@ export function socialRoutes(deps: AppDeps) {
           )
             return problem(c, {
               status: 409,
-              detail:
-                "A post written by a post prompt is a paid step, so it is set in Edit project → Upload pack, where Save shows its cost. Pick another text source here, or turn it on there.",
+              detail: `A post written by a post prompt is a paid step, so it is picked in the template, in Template Studio → Upload pack, where Save shows its cost. For this project, pick a free text source in Prepare upload → ${platformLabels[platform]} → Settings.`,
             });
           writeChoice(deps.db, { projectId, platform }, choice, deps.clock.now());
           changed(projectId);
