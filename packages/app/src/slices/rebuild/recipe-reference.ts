@@ -8,7 +8,7 @@ import {
   recipe,
   selectedAsset,
 } from "./recipe-model.js";
-import { renderedPrompt } from "./recipe-text.js";
+import { promptOf } from "./recipe-text.js";
 
 // The establishing image (`RunDraft.reference`): one step of the Images stage, made before
 // every other image of the run and never part of the video. Made from its library prompt, whose
@@ -56,8 +56,9 @@ export function referenceRecipe(
       [],
       { unresolved: content.provided.reference === undefined },
     );
-  const written = renderedPrompt(context, referencePromptKey);
-  const prompt = withLooks(written, appearance);
+  const filled = promptOf(context, referencePromptKey);
+  const written = filled.text;
+  const prompt = filled.waits.length > 0 ? null : withLooks(written, appearance);
   if (prompt === null) {
     const wait = lookWait(written, appearance);
     return recipe(
@@ -75,9 +76,10 @@ export function referenceRecipe(
           config.images?.model ?? null,
           config.format,
           ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
+          ...filled.waits.map((one) => one.fingerprint),
         ],
       },
-      wait.dependsOn,
+      [...wait.dependsOn, ...filled.waits.map((one) => one.key)],
     );
   }
   return recipe(

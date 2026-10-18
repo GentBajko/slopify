@@ -189,6 +189,8 @@ export interface RecipeContext {
   readonly pinnedChapters?: FingerprintValue | undefined;
   readonly resolved: ResolvedRevisionInputs;
   readonly catalogue?: Catalogue | undefined;
+  // The steps keywords are filled from (`recipe-keywords.ts`), set once the text steps are planned.
+  readonly keywords?: import("./recipe-keywords.js").KeywordState | undefined;
 }
 
 export function recipe(

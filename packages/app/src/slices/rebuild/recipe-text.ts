@@ -27,6 +27,13 @@ import { usesVoices } from "../voices/model.js";
 import { scriptMessages } from "../voices/script.js";
 import { describedText, describeFuture, describing } from "./recipe-describe.js";
 import {
+  articleMarkdownOf,
+  chaptersProducer,
+  type FilledPrompt,
+  filledPrompt,
+  type KeywordState,
+} from "./recipe-keywords.js";
+import {
   type RecipeContext,
   type RecipeInput,
   type ResolvedWorkRecipe,
@@ -39,6 +46,10 @@ export function renderedPrompt(context: RecipeContext, key: string): string {
   return raw === undefined || raw === null
     ? (context.config.rendered[key] ?? "")
     : render(raw, context.config.values);
+}
+// The prompt rendered with the person's values, then with the keywords Slopify fills.
+export function promptOf(context: RecipeContext, key: string): FilledPrompt {
+  return filledPrompt(context, key, renderedPrompt(context, key));
 }
 export function llmInput(
   context: RecipeContext,
@@ -98,6 +109,8 @@ export interface ScriptText {
 type TextRecipe = { readonly recipe: ResolvedWorkRecipe; readonly text: string | null };
 export interface TextRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
+  // What the keywords in the later steps' prompts are filled from.
+  readonly keywords: KeywordState;
   readonly articleText: string | null;
   // The article text the pictures are drawn from: the article, or the one they were drawn
   // from before it was edited by hand.
@@ -120,7 +133,7 @@ export interface TextRecipes {
 export function textRecipes(context: RecipeContext): TextRecipes {
   const { config, content, resolved } = context;
   const recipes: ResolvedWorkRecipe[] = [];
-  const brief = { articlePrompt: renderedPrompt(context, "article"), values: config.values };
+  const brief = { articlePrompt: promptOf(context, "article").text, values: config.values };
   let research: ResolvedWorkRecipe | undefined;
   if (config.sources.research === "generate") {
     const planner = recipe(
@@ -242,6 +255,9 @@ export function textRecipes(context: RecipeContext): TextRecipes {
           research === undefined ? [] : [research.key],
         );
   recipes.push(article);
+  // What the keywords in the later prompts are filled from.
+  const keywords: KeywordState = { producers: [chaptersProducer(articleMarkdown, article)] };
+  const keyed: RecipeContext = { ...context, keywords };
   if (
     resolved.articleContinuation !== undefined &&
     config.sources.article === "generate" &&
@@ -326,12 +342,21 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
     if (choice === undefined || config.sources.audio !== "generate") continue;
-    const prompt = renderedPrompt(context, category);
+    const filled = promptOf(keyed, category);
+    const prompt = filled.text;
+    const waiting = filled.waits.length > 0;
     const key = `entry:${category}:text` as const;
     const input: RecipeInput =
       choice.mode === "text"
-        ? { kind: "local", version: 1, operation: "entry-text", values: prompt }
-        : pictureText === null
+        ? waiting
+          ? {
+              kind: "deferred",
+              version: 1,
+              operation: key,
+              template: [prompt, ...filled.waits.map((one) => one.fingerprint)],
+            }
+          : { kind: "local", version: 1, operation: "entry-text", values: prompt }
+        : pictureText === null || waiting
           ? {
               kind: "deferred",
               version: 1,
@@ -342,6 +367,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
                   withLanguage(segmentMessages(prompt, config, ""), config.language),
                 ),
                 article.fingerprint,
+                ...filled.waits.map((one) => one.fingerprint),
               ],
             }
           : llmInput(
@@ -353,18 +379,19 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       key,
       "article",
       input,
-      choice.mode === "llm" ? [article.key] : [],
+      choice.mode === "llm" ? [...new Set([article.key, ...filled.dependsOn])] : filled.dependsOn,
     );
     recipes.push(value);
     entries[category] = {
       recipe: value,
-      text: choice.mode === "text" ? prompt : matchingText(context, value, "text"),
+      text:
+        choice.mode === "text" ? (waiting ? null : prompt) : matchingText(context, value, "text"),
     };
   }
   if (config.sources.thumbnail === "prompt_by_llm") {
-    const prompt = renderedPrompt(context, "thumbnailPrompt");
+    const filled = promptOf(keyed, "thumbnailPrompt");
     const messages = thumbnailMessages({
-      instruction: prompt,
+      instruction: filled.text,
       title: subjectOf(config),
       values: config.values,
       format: config.format,
@@ -375,20 +402,25 @@ export function textRecipes(context: RecipeContext): TextRecipes {
         context,
         "thumbnail:prompt",
         "thumbnail",
-        pictureText === null
+        pictureText === null || filled.waits.length > 0
           ? {
               kind: "deferred",
               version: 1,
               operation: "thumbnail-prompt",
-              template: [llmInputFingerprint(context, messages), article.fingerprint],
+              template: [
+                llmInputFingerprint(context, messages),
+                article.fingerprint,
+                ...filled.waits.map((one) => one.fingerprint),
+              ],
             }
           : llmInput(context, messages),
-        [article.key],
+        [...new Set([article.key, ...filled.dependsOn])],
       ),
     );
   }
   return {
     recipes,
+    keywords,
     articleText,
     pictureText,
     narrationText,
@@ -430,12 +462,6 @@ export function matchingText(
   return selectedText(context, value.key, field);
 }
 
-function articleMarkdownOf(context: RecipeContext): string | null {
-  const { config, content, resolved } = context;
-  return config.sources.article !== "generate" || content.articleEdited === true
-    ? (content.articleMarkdown ?? config.provided.article ?? "")
-    : resolved.articleMarkdown;
-}
 function glossaryOf(
   context: RecipeContext,
   endMatter: { readonly glossary: string } | null,

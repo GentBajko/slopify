@@ -24,7 +24,7 @@ import {
   selectedReference,
 } from "./recipe-model.js";
 import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
-import { llmInput, renderedPrompt } from "./recipe-text.js";
+import { llmInput, promptOf } from "./recipe-text.js";
 
 // The Shorts step unfolds as its answers land, the way research's chapters unfold from the
 // plan. `shorts:pick` reads the word timing, so it waits for `subtitles:timing` and runs
@@ -56,6 +56,7 @@ export function shortsRecipes(
   const shorts = config.shorts;
   const timing = exports.find((value) => value.key === "subtitles:timing");
   if (!usesShorts(config) || shorts === undefined || timing === undefined) return [];
+  const prompt = shorts.prompt?.trim() ? promptOf(context, "shorts") : undefined;
   const pickFor = (timingIdentity: FingerprintValue): ResolvedWorkRecipe =>
     recipe(
       context,
@@ -72,7 +73,7 @@ export function shortsRecipes(
           config.llm?.thinking ?? null,
           // Blank means the built-in prompt; the step fills it in, so a new built-in wording
           // ships as a new operation version rather than a silent change here.
-          shorts.prompt?.trim() ? renderedPrompt(context, "shorts") : "",
+          prompt?.text ?? "",
           shorts.count,
           shorts.minSeconds,
           shorts.maxSeconds,
@@ -101,7 +102,7 @@ export function shortsRecipes(
               ]),
         ],
       },
-      [timing.key],
+      [timing.key, ...(prompt?.dependsOn ?? [])],
       // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
       { kind: "provider" },
     );
@@ -127,7 +128,7 @@ export function shortsRecipes(
   // A shorts image prompt may name `{{Scene}}` like the video's: the prompts call already writes
   // each image's moment from what the clip says, so that line is left out here.
   const style = shorts.imagePrompt?.trim()
-    ? withoutScene(renderedPrompt(context, "shortsImage"))
+    ? withoutScene(promptOf(context, "shortsImage").text)
     : defaultShortsImagePrompt;
   if (picked === undefined)
     return [

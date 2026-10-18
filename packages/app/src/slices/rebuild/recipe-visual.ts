@@ -9,6 +9,7 @@ import { usesAmbientBed } from "../video/ambient-bed.js";
 import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
 import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
+import { type FilledPrompt, fillPrompt } from "./recipe-keywords.js";
 import { type MasterPlan, noMaster } from "./recipe-loudness.js";
 import {
   type RecipeContext,
@@ -37,6 +38,8 @@ export function visualRecipes(
   scenes?: ImageScenes,
   // How the subject and characters look, for prompts with `{{Appearance}}`.
   appearance?: ImageAppearance,
+  // The keywords Slopify fills in an image prompt (`recipe-keywords.ts`).
+  fill: (text: string) => FilledPrompt = unfilled,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -62,21 +65,27 @@ export function visualRecipes(
           at,
           reference,
           appearance,
+          fill,
         ),
       );
       continue;
     }
     // With Scenes from the article off, a prompt's `{{Scene}}` line is left out.
-    const written =
+    const base =
       raw === undefined || raw === null
         ? image.prompt === null || image.prompt === undefined
           ? image.prompt
           : withoutScene(image.prompt)
         : render(withoutScene(raw), config.values);
+    const keyed =
+      base === null || base === undefined || image.source !== "generate" ? undefined : fill(base);
+    const written = keyed?.text ?? base;
     const prompt =
-      written === null || written === undefined || image.source !== "generate"
+      written === null || written === undefined || keyed === undefined
         ? written
-        : withLooks(written, appearance);
+        : keyed.waits.length > 0
+          ? null
+          : withLooks(written, appearance);
     // Waiting for the looks: the same wait an image with a scene has, on the lookup instead.
     if (prompt === null && written !== null && written !== undefined) {
       const wait = lookWait(written, appearance);
@@ -97,9 +106,14 @@ export function visualRecipes(
               config.format,
               ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
               ...(reference === undefined ? [] : [reference.input.fingerprint]),
+              ...(keyed?.waits ?? []).map((one) => one.fingerprint),
             ],
           },
-          [...wait.dependsOn, ...(reference === undefined ? [] : [reference.key])],
+          [
+            ...wait.dependsOn,
+            ...(reference === undefined ? [] : [reference.key]),
+            ...(keyed?.waits ?? []).map((one) => one.key),
+          ],
         ),
       );
       continue;
@@ -120,7 +134,10 @@ export function visualRecipes(
               ...(reference === undefined ? {} : { reference: reference.input }),
               ...castField(castFor(config, prompt)),
             },
-        image.source === "provide" || reference === undefined ? [] : [reference.key],
+        [
+          ...(image.source === "provide" || reference === undefined ? [] : [reference.key]),
+          ...(keyed?.dependsOn ?? []),
+        ],
         { unresolved: image.source === "provide" ? image.assetId === null : !prompt?.trim() },
       ),
     );
@@ -219,12 +236,14 @@ function sceneImage(
   at: number,
   reference: ImageReference | undefined,
   appearance: ImageAppearance | undefined,
+  fill: (text: string) => FilledPrompt,
 ): ResolvedWorkRecipe {
   const scene = scenes.scenes?.[at];
+  const keyed = fill(render(body, config.values));
   const prompt =
-    scene === undefined
+    scene === undefined || keyed.waits.length > 0
       ? undefined
-      : (withLooks(withScene(render(body, config.values), scene), appearance, scene) ?? undefined);
+      : (withLooks(withScene(keyed.text, scene), appearance, scene) ?? undefined);
   const wait = lookWait(body, appearance);
   return recipe(
     { content },
@@ -244,6 +263,7 @@ function sceneImage(
             ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
             ...(reference === undefined ? [] : [reference.input.fingerprint]),
             ...wait.template,
+            ...keyed.waits.map((one) => one.fingerprint),
           ],
         }
       : {
@@ -255,8 +275,17 @@ function sceneImage(
           ...(reference === undefined ? {} : { reference: reference.input }),
           ...castField(castFor(config, prompt)),
         },
-    [scenes.recipe.key, ...wait.dependsOn, ...(reference === undefined ? [] : [reference.key])],
+    [
+      scenes.recipe.key,
+      ...wait.dependsOn,
+      ...(reference === undefined ? [] : [reference.key]),
+      ...keyed.dependsOn,
+    ],
   );
+}
+
+function unfilled(text: string): FilledPrompt {
+  return { text, waits: [], dependsOn: [] };
 }
 
 // What the ambient bed adds to the render's fingerprint: its settings and, for the user's own
@@ -306,10 +335,19 @@ export function thumbnailRecipes(
       ),
     ];
   const promptRecipe = textRecipes.find((value) => value.key === "thumbnail:prompt");
-  const written =
+  // A prompt the AI wrote is sent as it wrote it; a Library prompt has its keywords filled.
+  const keyed =
     config.sources.thumbnail === "prompt_by_llm" && promptRecipe !== undefined
-      ? matchingText(context, promptRecipe, "prompt")
-      : renderedPrompt(context, "thumbnailPrompt");
+      ? undefined
+      : fillPrompt(context, renderedPrompt(context, "thumbnailPrompt"), "thumbnail");
+  const written =
+    keyed === undefined
+      ? promptRecipe === undefined
+        ? null
+        : matchingText(context, promptRecipe, "prompt")
+      : keyed.waits.length > 0
+        ? null
+        : keyed.text;
   const sceneFor = (variant: number): string | undefined => scenes?.scenes?.[variant - 1];
   const withScenes = scenes !== undefined;
   const variants = Array.from({ length: thumbnailCountOf(config) }, (_, index) => index + 1);
@@ -364,6 +402,7 @@ export function thumbnailRecipes(
               ...(variant === 1 ? [] : [["thumbnail-variant", variant]]),
               ...(withScenes ? [["thumbnail-scene", scenes.recipe.fingerprint]] : []),
               ...wait.template,
+              ...(keyed?.waits ?? []).map((one) => one.fingerprint),
             ],
           }
         : {
@@ -381,6 +420,7 @@ export function thumbnailRecipes(
         ...(reference === undefined ? [] : [reference.key]),
         ...(withScenes ? [scenes.recipe.key] : []),
         ...wait.dependsOn,
+        ...(keyed?.dependsOn ?? []),
       ],
     );
   });

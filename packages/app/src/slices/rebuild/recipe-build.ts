@@ -4,6 +4,7 @@ import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
 import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
+import { fillPrompt } from "./recipe-keywords.js";
 import { linePlan } from "./recipe-lines.js";
 import { masterPlan } from "./recipe-loudness.js";
 import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
@@ -61,8 +62,10 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
 
 const descriptionKey = "youtube:description";
 
-function buildEach(context: RecipeContext): readonly ResolvedWorkRecipe[] {
-  const text = textRecipes(context);
+function buildEach(plain: RecipeContext): readonly ResolvedWorkRecipe[] {
+  const text = textRecipes(plain);
+  // Every later step fills its prompts' keywords from what the text steps write.
+  const context: RecipeContext = { ...plain, keywords: text.keywords };
   const audio = audioRecipes(context, text);
   const exports = exportRecipes(context, audio, () => unsoftenedTimelines(context, text));
   const captions = exports.find((value) => value.key === "subtitles:files");
@@ -113,6 +116,7 @@ function buildEach(context: RecipeContext): readonly ResolvedWorkRecipe[] {
         withLines(masterPlan(context, audio.levels, "video"), linePlan(context, timing)),
         scenes,
         appearance,
+        (text) => fillPrompt(context, text, "image"),
       ),
     ),
     ...(scenes === undefined ? [] : [scenes.recipe]),

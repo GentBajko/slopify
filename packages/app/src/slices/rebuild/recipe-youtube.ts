@@ -6,7 +6,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
-import { renderedPrompt } from "./recipe-text.js";
+import { promptOf } from "./recipe-text.js";
 
 // The YouTube description is written from the word timing, so it waits for
 // `subtitles:timing` and nothing else: it runs beside the render, and a change to the
@@ -20,6 +20,7 @@ export function youtubeRecipes(
   const { config } = context;
   const timing = exports.find((value) => value.key === "subtitles:timing");
   if (!usesYoutubeDescription(config) || timing === undefined) return [];
+  const prompt = config.descriptionPrompt?.trim() ? promptOf(context, "description") : undefined;
   return [
     recipe(
       context,
@@ -36,13 +37,13 @@ export function youtubeRecipes(
           config.llm?.thinking ?? null,
           // Blank means the built-in prompt; the step fills it in, so a new built-in wording
           // ships as a new operation version rather than a silent change here.
-          config.descriptionPrompt?.trim() ? renderedPrompt(context, "description") : "",
+          prompt?.text ?? "",
           subjectOf(config),
           // The project language, only when it is not English, so English keeps its fingerprint.
           ...(config.language === undefined || config.language === "en" ? [] : [config.language]),
         ],
       },
-      [timing.key],
+      [timing.key, ...(prompt?.dependsOn ?? [])],
       // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
       { kind: "provider" },
     ),

@@ -14,7 +14,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
-import { renderedPrompt } from "./recipe-text.js";
+import { promptOf } from "./recipe-text.js";
 
 interface ReviewedItem {
   readonly stage: ReviewStage;
@@ -44,10 +44,13 @@ export function withReviews(
     const inputs = item.inputs.map((input) => [input.key, resourceIdentity(context, input)]);
     // Blank means the stage's built-in prompt; the step fills it in, so a new built-in
     // wording ships as a new operation version rather than a silent change here.
-    const prompt = settings.stages[item.stage]?.prompt?.trim()
-      ? renderedPrompt(context, reviewPromptKey(item.stage))
-      : "";
-    const dependsOn = item.inputs.map((input) => input.key);
+    const filled = settings.stages[item.stage]?.prompt?.trim()
+      ? promptOf(context, reviewPromptKey(item.stage))
+      : undefined;
+    const prompt = filled?.text ?? "";
+    const dependsOn = [
+      ...new Set([...item.inputs.map((input) => input.key), ...(filled?.dependsOn ?? [])]),
+    ];
     // An external agent answers through MCP: no provider, no charge, nothing to be ready.
     if (byAgent)
       return recipe(

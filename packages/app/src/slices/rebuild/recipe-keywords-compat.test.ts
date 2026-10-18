@@ -67,7 +67,7 @@ const full: RunConfig = {
 
 const fullContent: RevisionContent = {
   ...content,
-  articleMarkdown: null,
+  articleMarkdown: undefined,
   imageOrder: ["harbor", "hill"],
   imageDefinitions: {
     harbor: { source: "generate", assetId: null, prompt: null, templateKey: "imagePrompts.0" },
