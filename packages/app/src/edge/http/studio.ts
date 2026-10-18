@@ -51,7 +51,6 @@ import {
 import {
   autoCommentKey,
   bearerToken,
-  isExtensionOrigin,
   pairStudioExtension,
   readChannelPlaylists,
   readStudioPlaylists,
@@ -62,7 +61,6 @@ import {
   studioPairing,
   studioPlaylistsMax,
   studioPlaylistsProblem,
-  studioRequestAllowed,
 } from "../../slices/studio/settings.js";
 import { abResults, abVariantSchema, saveAbResult } from "../../slices/studio/stats.js";
 import {
@@ -83,6 +81,7 @@ import {
 } from "../../slices/studio/videos.js";
 import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
+import { extensionAuth } from "./extension-auth.js";
 import { idString } from "./ids.js";
 import { onInvalid, problem } from "./problem.js";
 import { fromSlopifyPage } from "./same-page.js";
@@ -195,26 +194,7 @@ export function studioRoutes(deps: AppDeps) {
         "For your safety, YouTube Studio settings can only be changed from the Slopify page itself. Open Slopify and try again there.",
     });
   };
-  // The CORS headers for the extension: its own origin, echoed only when it is allowed.
-  const allowOrigin = (c: Context, pairing: boolean): void => {
-    const origin = c.req.header("origin");
-    const paired = studioPairing(deps.db).origin;
-    c.header("Vary", "Origin");
-    if (!isExtensionOrigin(origin)) return;
-    if (origin === paired || pairing) {
-      c.header("Access-Control-Allow-Origin", origin);
-      c.header("Access-Control-Allow-Headers", "authorization, content-type");
-      c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      c.header("Access-Control-Max-Age", "600");
-    }
-  };
-  const refused = (c: Context): Response =>
-    problem(c, {
-      status: 401,
-      title: "Unauthorized",
-      detail:
-        "The Slopify Studio extension isn't paired with this Slopify. Copy the pairing token from Slopify's Settings → YouTube Studio into the extension's options and press Pair.",
-    });
+  const { allowOrigin, refused, allowed: extAllowed } = extensionAuth(deps.db);
 
   // A project's place in the plan: its series, and the schedule and run day that made it.
   const whoOf = (projectId: string, series: string): PlanWho => {
@@ -269,12 +249,6 @@ export function studioRoutes(deps: AppDeps) {
       );
     });
   };
-  const extAllowed = (c: Context): boolean =>
-    studioRequestAllowed(
-      deps.db,
-      bearerToken(c.req.header("authorization")),
-      c.req.header("origin"),
-    );
   return (
     new Hono()
       .get("/settings", (c) => {
@@ -658,14 +632,7 @@ export function studioRoutes(deps: AppDeps) {
       })
       .get("/ext/pack", (c) => {
         allowOrigin(c, false);
-        if (
-          !studioRequestAllowed(
-            deps.db,
-            bearerToken(c.req.header("authorization")),
-            c.req.header("origin"),
-          )
-        )
-          return refused(c);
+        if (!extAllowed(c)) return refused(c);
         // The first waiting item that can still be filled; one whose project or short is gone
         // leaves the queue.
         const now = deps.clock.now();
@@ -692,14 +659,7 @@ export function studioRoutes(deps: AppDeps) {
       // next one.
       .post("/ext/filled", zValidator("json", queueItemBody, onInvalid), (c) => {
         allowOrigin(c, false);
-        if (
-          !studioRequestAllowed(
-            deps.db,
-            bearerToken(c.req.header("authorization")),
-            c.req.header("origin"),
-          )
-        )
-          return refused(c);
+        if (!extAllowed(c)) return refused(c);
         const { projectId, short } = c.req.valid("json");
         const left = removeFill(deps.db, projectId, short ?? null, deps.clock.now());
         return c.json({ waiting: left.length });
@@ -943,14 +903,7 @@ export function studioRoutes(deps: AppDeps) {
       })
       .get("/ext/files/:projectId/:asset", zValidator("param", fileParam, onInvalid), (c) => {
         allowOrigin(c, false);
-        if (
-          !studioRequestAllowed(
-            deps.db,
-            bearerToken(c.req.header("authorization")),
-            c.req.header("origin"),
-          )
-        )
-          return refused(c);
+        if (!extAllowed(c)) return refused(c);
         const { projectId, asset } = c.req.valid("param");
         // Only a pack's own files, its videos, thumbnails and captions: the extension puts the
         // video into Studio's upload dialog, the thumbnails into Details and the captions file
