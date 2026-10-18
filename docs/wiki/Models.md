@@ -113,10 +113,42 @@ You don't have to come here to see it: a template or schedule that picks a retir
 
 If a run starts a step whose model is no longer in the list, it stops with a message such as "The chosen … model is no longer in Slopify's model list." Open the project, choose **Edit project**, change the model under Providers, then use **Continue the run**. See [Recovery-and-Retries](Recovery-and-Retries).
 
+## Models that work for you
+
+The catalogue says which models exist. **Settings → Models → Models that work for you** says which ones your own keys and CLIs can use. Each model has one of these standings, shown as a badge in every model picker:
+
+| Badge | Meaning |
+|---|---|
+| **✓ works · checked 2 h ago** | A check call succeeded (**used** instead of **checked** when it was a real run). |
+| **? listed for you · not checked** | Your key's or CLI's own model list names it; nothing has tried it yet. |
+| **? not checked** | Only Slopify's model list names it. |
+| **✕ not on your plan** | The provider refused it for your account. The line under the picker quotes the provider's words. |
+| **⚠ retiring 30 Nov → replacement** | The model is due to retire; switch before that day. |
+
+Where they come from:
+
+- **Listed for you** comes from free reads: OpenAI, Google, ElevenLabs and OpenRouter list their models for your key, Replicate and fal.ai answer for each model's own page, and each CLI lists its own. Cartesia and Inworld have no such list, so their models stay **not checked** until a check.
+- **Check models** (one button per provider) sends each model the smallest request: a one-word reply at the lowest thinking setting, a voice saying "Hi", one small square image. When that costs money it first shows the price at list rates, such as "about $0.04", and nothing is sent until you confirm. A CLI's checks use its plan's allowance instead. Image-to-video models are listed, never checked.
+- **Real runs** teach it too: a model a run used is marked as working, and one the provider refuses as not on your plan or not found is marked at once, with the provider's sentence.
+
+Each row shows when that provider was last checked and what its checks have cost so far. A new key starts every row over.
+
+The standings only sort and filter the pickers. A run never asks for them: a model marked **not on your plan** still runs exactly as before if it is chosen.
+
+## Automatic checks
+
+With **Automatic checks** on **Free and near-free checks only** (the default), Slopify reads the key's model list and checks models by itself when you save a key, when a CLI becomes usable, and once a week. It checks only the models you use, ones that already worked and newly listed ones, at most 25 per provider, and only when a check is free, uses a CLI plan, or costs well under a tenth of a cent. Image checks never run by themselves. **Off** leaves checks to **Check models**; the free model-list reads still run when a picker opens.
+
+## New for you
+
+Models that start working for you after the first check appear under **New for you**, newest first, and Home shows a line such as "2 new models work for you" that opens this page. Choose one in a picker to try it, or **Dismiss** it.
+
 ## Pick models on Play
 
 On Play, each provider row has a model picker fed by the catalogue (or by the CLI for command-line tools):
 
+- By default it shows the models that work for you, plus the one already chosen, whatever its standing. Until something works for you it shows the listed models, then every known one, so the list is never empty. **Show all** brings back the rest.
+- The line under the picker says what is known about the chosen model, with **Check** (or **Check models** before anything was checked), which shows the price first when there is one.
 - The refresh button (**Refresh models**) asks the provider for its current list.
 - **Custom ID** lets you type a model ID the list does not show; **Use list** goes back.
 - **Thinking** (text) or **Effort** (images) appears only when the model offers levels. **Model default** leaves it to the provider.
