@@ -6,6 +6,7 @@ import { createTemplate } from "../project-templates/service.js";
 import { projectHolds } from "../reviews/holds.js";
 import {
   heldBeforeVideo,
+  preparedProject,
   preparedTopics,
   prepareTopic,
   scheduledDocument,
@@ -198,6 +199,49 @@ it("reads a prepared run a restart stopped as Stopped, before its day and on it"
     await createScheduleRunner(deps).tick(new Date("2026-09-12T00:01:30.000Z"));
     expect(count(h, "SELECT count(*) AS n FROM prepared_videos")).toBe(0);
     expect([...holds().stopped]).toEqual([prepared.projectId]);
+  } finally {
+    h.close();
+  }
+});
+
+// A template studio sample is made from the template's next queued topic, so its title can be
+// the very title a schedule run makes next. The run must never take that hidden project.
+it("never continues a running studio sample that has the next queued topic's title", async () => {
+  const { h, deps, scheduleId } = scheduled();
+  try {
+    const made = await prepareTopic(deps, { scheduleId, title: "First topic" });
+    if (!made.ok) throw new Error(made.reason);
+    const { db } = h.deps;
+    // The project becomes the studio's running sample: hidden, unfinished, same title.
+    db.prepare("UPDATE stages SET state='running' WHERE project_id=? AND state!='skipped'").run(
+      made.projectId,
+    );
+    db.prepare("DELETE FROM prepared_videos").run();
+    const templateId = String(db.prepare("SELECT template_id FROM schedules").get()?.template_id);
+    db.prepare(
+      "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,?,'First topic','queued',0,'2026-09-10T00:00:00.000Z')",
+    ).run(templateId, made.projectId);
+    expect(preparedProject(db, scheduleId, made.title)).toBeUndefined();
+    await createScheduleRunner(deps).tick(new Date("2026-09-12T00:01:30.000Z"));
+    const run = db.prepare("SELECT project_ids_json FROM schedule_runs").get();
+    expect(String(run?.project_ids_json)).not.toContain(made.projectId);
+    expect(count(h, "SELECT count(*) AS n FROM projects")).toBe(2);
+  } finally {
+    h.close();
+  }
+});
+
+it("never continues a prepared project that has since become a studio sample", async () => {
+  const { h, deps, scheduleId } = scheduled();
+  try {
+    const made = await prepareTopic(deps, { scheduleId, title: "First topic" });
+    if (!made.ok) throw new Error(made.reason);
+    const { db } = h.deps;
+    const templateId = String(db.prepare("SELECT template_id FROM schedules").get()?.template_id);
+    db.prepare(
+      "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,?,'First topic','queued',0,'2026-09-10T00:00:00.000Z')",
+    ).run(templateId, made.projectId);
+    expect(preparedProject(db, scheduleId, made.title, false)).toBeUndefined();
   } finally {
     h.close();
   }

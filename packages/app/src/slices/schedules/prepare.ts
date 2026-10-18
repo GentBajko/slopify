@@ -10,6 +10,7 @@ import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
 import { freshTemplateDraft } from "../project-templates/setup.js";
 import { currentRevisionId } from "../revisions/repo.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import type { ScheduleDeps } from "./model.js";
 import { scheduleById } from "./repo.js";
 import type { ScheduleSummary } from "./schema.js";
@@ -146,10 +147,14 @@ export function preparedProject(
   byTitle = true,
 ): { readonly projectId: string; readonly release: boolean } | undefined {
   const live = "project_id NOT IN (SELECT project_id FROM project_trash)";
+  // A template studio sample is titled from the template's next queued topic, so it can have
+  // the run's title; it is the studio's alone and never the run's to continue.
   const prepared = db
     .prepare(
       `SELECT project_id, added_checkpoint FROM prepared_videos
-       WHERE schedule_id=? AND title=? AND ${live} ORDER BY prepared_at DESC LIMIT 1`,
+       WHERE schedule_id=? AND title=? AND ${live}
+         AND ${notTemplateSample("prepared_videos", "project_id")}
+       ORDER BY prepared_at DESC LIMIT 1`,
     )
     .get(scheduleId, title);
   // A prepared project canceled since is no video to continue: the day makes a new one.
@@ -161,7 +166,8 @@ export function preparedProject(
   if (!byTitle) return undefined;
   for (const row of db
     .prepare(
-      "SELECT id FROM projects WHERE title=? AND id NOT IN (SELECT project_id FROM project_trash) ORDER BY created_at DESC",
+      `SELECT id FROM projects WHERE title=? AND id NOT IN (SELECT project_id FROM project_trash)
+         AND ${notTemplateSample()} ORDER BY created_at DESC`,
     )
     .all(title)) {
     const id = String(row.id);
