@@ -11,7 +11,7 @@ export const scheduleTools: readonly RouteTool[] = [
     name: "create_schedule",
     route: "POST /api/schedules",
     title: "Create a schedule",
-    description: `${formBody("the schedule editor")} Duplicate on a schedule is this with get_schedule's settings, a new id, a new name ending "(copy)" and items: [], then pause_schedule on the copy.`,
+    description: `${formBody("the schedule editor")} Duplicate on a schedule is this with get_schedule's settings, a new id, a new name ending "(copy)" and items: [], then pause_schedule on the copy. A design schedule (one designed piece per row, made ahead of the row's date) is {templateKind: "design", templateId: the design template's id, templateVersion: its headVersion, cadence: {kind: "by-date", time: "HH:MM"}, items: [{title, values: {every field, the date field as YYYY-MM-DD}}]}; it has no topic generation or release days, and makes only from a version marked ready.`,
   },
   {
     name: "get_schedule",
