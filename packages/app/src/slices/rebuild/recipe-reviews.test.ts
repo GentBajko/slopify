@@ -194,6 +194,22 @@ describe("the promise check's recipe", () => {
     expect(audio.some((row) => row.dependsOn.includes("review:promise"))).toBe(true);
   });
 
+  // A template studio sample reviews each stage's first item; the promise check has one, the
+  // sample's opening, so a sample shows how it answers.
+  it("runs in a template studio sample, alongside the article's own review", () => {
+    const on: RunConfig = {
+      ...written,
+      reviews: { ...reviewer, stages: { article: { mode: "flag" }, promise: { mode: "flag" } } },
+      sample: { fullScript: false },
+    };
+    expect(
+      generatedRecipes(on)
+        .filter((row) => row.key.startsWith("review:"))
+        .map((row) => row.key)
+        .sort(),
+    ).toEqual(["review:article:body", "review:promise"]);
+  });
+
   it("reads only the article when the thumbnail brief isn't written by a model", () => {
     const on: RunConfig = {
       ...written,

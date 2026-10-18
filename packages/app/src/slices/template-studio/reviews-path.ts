@@ -1,5 +1,5 @@
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
-import { reviewStages } from "../reviews/model.js";
+import { type ReviewStage, reviewStages } from "../reviews/model.js";
 
 // The Reviews & checkpoints sample: where a run stops for whom, in pipeline order. A checkpoint
 // waits for a person; an automatic review is answered by the reviewer model or by an agent.
@@ -12,8 +12,10 @@ export interface PathStep {
   readonly detail: string;
 }
 
-const reviewNames: Readonly<Record<string, string>> = {
+// Every stage named, so a new review stage has to be placed here too.
+const reviewNames: Readonly<Record<ReviewStage, string>> = {
   article: "Script",
+  promise: "The opening's promise",
   narration: "Narration",
   images: "Pictures",
   thumbnail: "Thumbnail",
@@ -28,6 +30,8 @@ const checkpointNames: Readonly<Record<string, string>> = {
 // Checkpoints stop before a stage; reviews judge what a stage made. In run order.
 const order = [
   "review:article",
+  // Read against the title and thumbnail before the paid narration.
+  "review:promise",
   "checkpoint:audio",
   "review:narration",
   "checkpoint:images",
@@ -54,7 +58,7 @@ export function reviewsPath(document: PlayDraftDocument): readonly PathStep[] {
     if (mode === "off") continue;
     steps.push({
       id: `review:${stage}`,
-      name: reviewNames[stage] ?? stage,
+      name: reviewNames[stage],
       kind: "review",
       by: agent ? "agent" : "model",
       detail: `${agent ? "Your agent answers this" : "The reviewer model checks it"}; ${mode === "redo" ? "a failed item is made again" : "a failed item is flagged for you"}.`,

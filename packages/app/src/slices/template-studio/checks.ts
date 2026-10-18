@@ -1,4 +1,5 @@
 import { detectSlots, filledKeywords } from "../admission/substitute.js";
+import { isReserved } from "../keywords/model.js";
 import type { PlayDraftDocument } from "../play-drafts/schema.js";
 import { topicKeywords } from "../project-templates/one-off.js";
 import { sectionLabel, type TemplateSection } from "./model.js";
@@ -90,7 +91,8 @@ function keywordsCheck(input: FreeCheckInput): Check {
     (name) =>
       !topics.has(name) &&
       !filledKeywords.includes(name) &&
-      !name.startsWith("Slopify_") &&
+      // The keywords registry's: an unknown Slopify_ name is refused when the prompt is saved.
+      !isReserved(name) &&
       (form.values[name] ?? "").trim() === "",
   );
   if (empty.length === 0)

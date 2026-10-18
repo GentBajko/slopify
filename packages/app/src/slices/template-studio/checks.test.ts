@@ -74,6 +74,18 @@ describe("freeChecks", () => {
       );
     });
 
+    it("leaves out the keywords Slopify fills itself", () => {
+      const result = check(
+        {
+          bodies: [
+            "{{Slopify_Title}} for {{Slopify_Channel}}: {{Slopify_Covered_Before}}, {{Scene}}.",
+          ],
+        },
+        "keywords",
+      );
+      expect(result?.ok).toBe(true);
+    });
+
     it("lets a schedule's topic keyword stay empty", () => {
       const result = check(
         {

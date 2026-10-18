@@ -142,6 +142,7 @@ describe("reviewsPath", () => {
           stages: {
             thumbnail: { mode: "flag", prompt: "" },
             article: { mode: "redo", prompt: "" },
+            promise: { mode: "flag", prompt: "" },
             images: { mode: "off", prompt: "" },
           },
         },
@@ -149,6 +150,7 @@ describe("reviewsPath", () => {
     });
     expect(path.map((step) => [step.name, step.kind, step.by])).toEqual([
       ["Script", "review", "model"],
+      ["The opening's promise", "review", "model"],
       ["Before the narration", "checkpoint", "you"],
       ["Thumbnail", "review", "model"],
       ["Before the video", "checkpoint", "you"],

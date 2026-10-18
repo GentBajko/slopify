@@ -39,6 +39,21 @@ describe("promptAnatomy", () => {
     expect(segments[2]).toEqual({ origin: "keyword", name: "Host", text: "Ana" });
   });
 
+  it("shows every built-in Slopify_ keyword's value as Slopify's, from the keywords registry", () => {
+    const segments = promptAnatomy({
+      body: "{{Slopify_Title}}, episode {{Slopify_Episode}} for {{Host}}",
+      sent: "The Salt Road, episode 4 for Ana",
+      values: {},
+    });
+    expect(segments).toEqual([
+      { origin: "slopify", name: "Slopify_Title", text: "The Salt Road" },
+      { origin: "yours", text: ", episode " },
+      { origin: "slopify", name: "Slopify_Episode", text: "4" },
+      { origin: "yours", text: " for " },
+      { origin: "keyword", name: "Host", text: "Ana" },
+    ]);
+  });
+
   it("marks a keyword still to fill, and falls back to the run's values with no sent prompt", () => {
     const segments = promptAnatomy({ body, values: { Topic: "Salt roads", Audience: "" } });
     expect(segments[1]).toEqual({ origin: "keyword", name: "Topic", text: "Salt roads" });
