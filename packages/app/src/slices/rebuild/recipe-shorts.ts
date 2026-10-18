@@ -57,6 +57,9 @@ export function shortsRecipes(
   const timing = exports.find((value) => value.key === "subtitles:timing");
   if (!usesShorts(config) || shorts === undefined || timing === undefined) return [];
   const prompt = shorts.prompt?.trim() ? promptOf(context, "shorts") : undefined;
+  // A shorts image prompt may name `{{Scene}}` like the video's: the prompts call already writes
+  // each image's moment from what the clip says, so that line is left out here.
+  const styled = shorts.imagePrompt?.trim() ? promptOf(context, "shortsImage") : undefined;
   const pickFor = (timingIdentity: FingerprintValue): ResolvedWorkRecipe =>
     recipe(
       context,
@@ -102,7 +105,7 @@ export function shortsRecipes(
               ]),
         ],
       },
-      [timing.key, ...(prompt?.dependsOn ?? [])],
+      [...new Set([timing.key, ...(prompt?.dependsOn ?? []), ...(styled?.dependsOn ?? [])])],
       // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
       { kind: "provider" },
     );
@@ -125,11 +128,7 @@ export function shortsRecipes(
     recorded === undefined ? [] : [pickFor([recorded.fingerprint, asset]).fingerprint],
   );
   const images = config.images ?? { provider: "", model: "" };
-  // A shorts image prompt may name `{{Scene}}` like the video's: the prompts call already writes
-  // each image's moment from what the clip says, so that line is left out here.
-  const style = shorts.imagePrompt?.trim()
-    ? withoutScene(promptOf(context, "shortsImage").text)
-    : defaultShortsImagePrompt;
+  const style = styled === undefined ? defaultShortsImagePrompt : withoutScene(styled.text);
   if (picked === undefined)
     return [
       pick,

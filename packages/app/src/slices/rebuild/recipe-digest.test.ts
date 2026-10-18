@@ -146,4 +146,19 @@ describe("the keyword digest step", () => {
       ),
     ).toMatchObject({ kind: "llm", stage: "article:digest", outputCharacters: 2000 });
   });
+
+  it("runs the shorts' pick after the digest its image style uses, without a scene line", () => {
+    const c: RunConfig = {
+      ...base,
+      sources: { ...base.sources, audio: "generate", thumbnail: "off" },
+      shorts: { enabled: true, count: 1, minSeconds: 30, maxSeconds: 60, imagePrompt: "Vertical" },
+    };
+    const recipes = plan(
+      c,
+      value({ shortsImage: "Poster: {{Slopify_Hook}}\nScene: {{Slopify_Scene}}" }),
+      "Text.",
+    );
+    expect(find(recipes, "shorts:pick").dependsOn).toContain("article:digest");
+    expect(JSON.stringify(find(recipes, "shorts:future").input)).not.toContain("Slopify_Scene");
+  });
 });
