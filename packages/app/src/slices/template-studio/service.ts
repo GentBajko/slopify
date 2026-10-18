@@ -1,5 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
+import type { Log } from "../../kernel/log.js";
+import type { Paths } from "../../kernel/paths.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import { lastAgentConnection } from "../agents/connection.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
@@ -14,6 +16,7 @@ import type { FreeSamples } from "./free.js";
 import { gateOf, runnableVersion } from "./gate.js";
 import { queuedJob, runningJob } from "./jobs.js";
 import { fallbackSampleTopic, type StudioResult } from "./model.js";
+import { paidView } from "./paid-view.js";
 import { gatesOf, sampleOf } from "./repo.js";
 import { reviewsPath } from "./reviews-path.js";
 import { monthlyCost, type RunPrice, upcomingRuns } from "./schedule-sample.js";
@@ -23,6 +26,9 @@ import { baseStatuses, madeStatuses } from "./status.js";
 export interface StudioDeps {
   readonly db: DatabaseSync;
   readonly clock: Clock;
+  // Where the sample project's files are, for its paid sample.
+  readonly paths: Paths;
+  readonly log: Log;
   // Whether each provider is set up now (`settings/readiness.ts` providerStatuses).
   readonly providerStatuses: () => Promise<readonly ProviderStatus[]>;
   // The samples made on this computer; without them every free sample says how to get them.
@@ -149,6 +155,7 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
     running: running?.templateId === id && running.templateVersion === template.version,
     queued: queued !== undefined,
   });
+  const paid = paidView(deps, id, template);
   return {
     ok: true,
     value: {
@@ -160,7 +167,11 @@ export async function getStudio(deps: StudioDeps, id: string): Promise<StudioRes
         topicSource: sample?.topicSource ?? "fixed",
         fullScript: sample?.fullScript ?? false,
       },
-      sections: baseStatuses(template.document, madeStatuses(free, schedules.length, cost)),
+      sections: baseStatuses(template.document, {
+        ...madeStatuses(free, schedules.length, cost),
+        ...paid.statuses,
+      }),
+      paid: paid.view,
       free,
       schedule: { runs: upcomingRuns(schedules, template.document, now), cost },
       reviews: reviewsPath(template.document),

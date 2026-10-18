@@ -49,6 +49,11 @@ export function paidDocument(deps: DraftReviewDeps): PlayDraftDocument {
     body: "Write a 1500-word documentary script about {{Topic}}.",
   });
   if (!prompt.ok) throw new Error("The fixture's article prompt was refused.");
+  return paidSetup();
+}
+
+// The same setup with no database: its article prompt is only named.
+export function paidSetup(): PlayDraftDocument {
   return {
     schemaVersion: 1,
     section: "content",

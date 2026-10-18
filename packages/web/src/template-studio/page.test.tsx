@@ -49,7 +49,7 @@ const view: StudioView = {
     sentence:
       id === "thumbnail"
         ? "The thumbnail is off."
-        : "No sample yet: this section's sample is made by a provider, which the studio doesn't do yet.",
+        : "No sample yet. Press Save to make one, or Make sample.",
   })),
   free: {
     video: {
@@ -78,6 +78,16 @@ const view: StudioView = {
       },
     ],
     cost: { runs: 8.7, high: 4.35, unknown: 0, problem: null },
+  },
+  paid: {
+    projectId: null,
+    revisionId: null,
+    state: null,
+    sentence: null,
+    quotedHigh: null,
+    article: null,
+    outputs: [],
+    versions: [],
   },
   reviews: [
     {

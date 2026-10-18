@@ -97,12 +97,14 @@ function service(deps: AppDeps): TemplateStudioService {
 }
 
 export function studioDeps(
-  deps: Pick<AppDeps, "db" | "clock" | "probe" | "hostCliStatus" | "speechHost" | "log">,
+  deps: Pick<AppDeps, "db" | "clock" | "paths" | "probe" | "hostCliStatus" | "speechHost" | "log">,
   studio: Pick<TemplateStudioService, "free" | "prices">,
 ): StudioDeps {
   return {
     db: deps.db,
     clock: deps.clock,
+    paths: deps.paths,
+    log: deps.log,
     free: studio.free,
     prices: studio.prices,
     // Probing the CLIs takes seconds: the studio's checks share one lookup for half a minute.

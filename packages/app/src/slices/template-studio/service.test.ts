@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import { attachSamples } from "../../kernel/paths.js";
 import { defaultLoudness } from "../loudness/model.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { createTemplate, updateTemplate } from "../project-templates/service.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { writeSetting } from "../settings/repo.js";
 import { createFreeSamples } from "./free.js";
+import { makePaidSample } from "./paid.js";
+import { sampleOf, sampleProjects } from "./repo.js";
 import {
   createPriceCache,
   createReadinessCache,
@@ -13,6 +16,7 @@ import {
   getStudioChecks,
   type StudioDeps,
 } from "./service.js";
+import { paidDocument, paidSampleDeps } from "./studio.fake.js";
 
 const open: (() => void)[] = [];
 afterEach(() => {
@@ -25,6 +29,8 @@ function studio(statuses: readonly ProviderStatus[] = []) {
   const deps: StudioDeps = {
     db: h.deps.db,
     clock: h.deps.clock,
+    paths: h.deps.paths,
+    log: h.deps.log,
     providerStatuses: async () => statuses,
     free: createFreeSamples({ loudnessDefault: () => defaultLoudness }),
     prices: createPriceCache(),
@@ -221,5 +227,40 @@ describe("createReadinessCache", () => {
     await expect(cache()).rejects.toThrow("probe failed");
     await expect(cache()).resolves.toEqual([]);
     expect(loads).toBe(2);
+  });
+});
+
+describe("getStudio with a paid sample", () => {
+  it("shows the made sample's sections current and names its project for its files", async () => {
+    const h = draftFixture();
+    open.push(h.close);
+    attachSamples(h.deps.paths, sampleProjects(h.deps.db, h.deps.paths.dataDir));
+    const { review, paid } = paidSampleDeps(h.deps);
+    const id = randomUUID();
+    const created = createTemplate(h.deps, { id, name: "Show", document: paidDocument(review) });
+    if (!created.ok) throw new Error(created.reason);
+    await makePaidSample(
+      paid,
+      { templateId: id, templateVersion: 1, ackHigh: 5, kind: "save", requestedAt: "a" },
+      new AbortController().signal,
+    );
+    const deps: StudioDeps = {
+      db: h.deps.db,
+      clock: h.deps.clock,
+      paths: h.deps.paths,
+      log: h.deps.log,
+      providerStatuses: async () => [],
+      free: createFreeSamples({ loudnessDefault: () => defaultLoudness }),
+      prices: createPriceCache(),
+    };
+    const result = await getStudio(deps, id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.value.paid).toMatchObject({
+      projectId: sampleOf(h.deps.db, id)?.projectId,
+      state: "done",
+      versions: [{ version: 1, state: "done" }],
+    });
+    const script = result.value.sections.find((section) => section.id === "script");
+    expect(script).toMatchObject({ state: "current", sentence: "Made for version 1." });
   });
 });

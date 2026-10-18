@@ -7,6 +7,7 @@ import {
   templateSections,
 } from "./model.js";
 import type { MonthlyCost } from "./schedule-sample.js";
+import { affectedSections } from "./sections.js";
 
 export interface SectionStatus {
   readonly id: TemplateSection;
@@ -86,8 +87,7 @@ export function baseStatuses(
         id,
         label,
         state: "stale",
-        sentence:
-          "No sample yet: this section's sample is made by a provider, which the studio doesn't do yet.",
+        sentence: "No sample yet. Press Save to make one, or Make sample.",
       }
     );
   });
@@ -133,5 +133,99 @@ export function madeStatuses(
             cost?.problem ??
             "The next runs with the titles their topics fill, and the cost a month.",
         };
+  return made;
+}
+
+// The sections a paid sample shows: what the providers make. The video, the PDF and the
+// schedule keep their free samples; the voice shows the loudness until a paid one is made.
+export const paidSections = [
+  "subject",
+  "script",
+  "voice",
+  "pictures",
+  "thumbnail",
+  "shorts",
+  "upload",
+] as const satisfies readonly TemplateSection[];
+
+export interface PaidStatusInput {
+  readonly headVersion: number;
+  readonly headDocument: PlayDraftDocument;
+  // Each version's paid sample, newest first (`sampleVersions`).
+  readonly versions: readonly import("./repo.js").SampleVersion[];
+  // A version's setup, to say which sections changed since the last sample.
+  readonly documentOf: (version: number) => PlayDraftDocument | undefined;
+  // This template's paid sample job is being made now.
+  readonly running: boolean;
+  // Another template's sample is being made, so this one's waits.
+  readonly busyElsewhere: boolean;
+}
+
+// What each paid section's sample is for the current version: made for it, being made,
+// waiting (with why and what to press), failed (with the step's own sentence), or made for an
+// older version and outdated by a change since. A section the change since the last made
+// sample never touched keeps that sample, current.
+export function paidStatuses(
+  input: PaidStatusInput,
+): Partial<Readonly<Record<TemplateSection, SectionStatus>>> {
+  const row = input.versions.find((one) => one.templateVersion === input.headVersion);
+  const done = input.versions.find(
+    (one) => one.state === "done" && one.templateVersion <= input.headVersion,
+  );
+  const madeFrom = done === undefined ? undefined : input.documentOf(done.templateVersion);
+  const changed = new Set(
+    madeFrom === undefined || done === undefined
+      ? paidSections
+      : affectedSections(madeFrom, input.headDocument),
+  );
+  const status = (id: TemplateSection, state: SectionState, sentence: string): SectionStatus => ({
+    id,
+    label: sectionLabel[id],
+    state,
+    sentence,
+  });
+  const made: Partial<Record<TemplateSection, SectionStatus>> = {};
+  if (row === undefined && done === undefined) return made;
+  for (const id of paidSections) {
+    if (row?.state === "done") {
+      made[id] = status(id, "current", `Made for version ${String(input.headVersion)}.`);
+      continue;
+    }
+    if (!changed.has(id) && done !== undefined) {
+      made[id] = status(
+        id,
+        "current",
+        `Made for version ${String(done.templateVersion)}; nothing it shows changed since.`,
+      );
+      continue;
+    }
+    const pending = row?.state === "queued" || row?.state === "making";
+    if (pending && (input.running || row?.state === "making"))
+      made[id] = status(id, "making", `Making the sample of version ${String(input.headVersion)}.`);
+    else if (pending)
+      made[id] = status(
+        id,
+        "waiting",
+        input.busyElsewhere
+          ? "Waits for another template's sample to finish."
+          : "Queued: it starts in a moment.",
+      );
+    else if (row?.state === "held")
+      made[id] = status(id, "waiting", row.heldReason ?? "Waiting. Press Make sample to make it.");
+    else if (row?.state === "failed")
+      made[id] = status(
+        id,
+        "needs-fix",
+        row.heldReason ?? "The sample failed. Press Make sample to try again.",
+      );
+    else
+      made[id] = status(
+        id,
+        "stale",
+        done === undefined
+          ? "No sample yet. Press Make sample to make one."
+          : `Changed since the sample of version ${String(done.templateVersion)}. Press Make sample to see it again.`,
+      );
+  }
   return made;
 }

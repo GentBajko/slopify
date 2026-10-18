@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { projectTemplateSchema } from "../project-templates/schema.js";
 import { freeCheckIds } from "./checks.js";
-import { gateStates, sectionStates, templateSections } from "./model.js";
+import { gateStates, sampleVersionStates, sectionStates, templateSections } from "./model.js";
 
 // What GET /api/template-studio/:id answers, browser-safe so the studio page parses the same
 // shape the server writes.
@@ -92,6 +92,44 @@ export const pathStepSchema = z
   .strict()
   .readonly();
 
+// The paid sample: its project's files now, each in its section, and each version's state.
+export const paidViewSchema = z
+  .object({
+    projectId: z.string().nullable(),
+    revisionId: z.string().nullable(),
+    state: z.enum(sampleVersionStates).nullable(),
+    sentence: z.string().nullable(),
+    quotedHigh: z.number().nullable(),
+    article: z.string().nullable(),
+    outputs: z
+      .array(
+        z
+          .object({
+            section: z.enum(templateSections),
+            role: z.string(),
+            url: z.string(),
+            name: z.string(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly(),
+    versions: z
+      .array(
+        z
+          .object({
+            version: z.number().int().positive(),
+            state: z.enum(sampleVersionStates),
+            updatedAt: z.string(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly(),
+  })
+  .strict()
+  .readonly();
+
 export const studioViewSchema = z
   .object({
     template: projectTemplateSchema,
@@ -110,6 +148,7 @@ export const studioViewSchema = z
     free: freeSamplesSchema,
     schedule: scheduleSampleSchema,
     reviews: z.array(pathStepSchema).readonly(),
+    paid: paidViewSchema,
   })
   .strict()
   .readonly();
