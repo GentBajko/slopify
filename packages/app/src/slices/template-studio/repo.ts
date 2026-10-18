@@ -1,5 +1,8 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { type SampleProjects, templateSamplesDir } from "../../kernel/paths.js";
 import { gateStates, type VersionGate } from "./model.js";
 
 // The clause that keeps a template's hidden sample project out of a query over projects. Every
@@ -13,6 +16,19 @@ export function isTemplateSample(db: DatabaseSync, projectId: string): boolean {
   return (
     db.prepare("SELECT 1 FROM template_samples WHERE project_id=?").get(projectId) !== undefined
   );
+}
+
+// Which projects' folders are kept in the data dir (`kernel/paths.ts` samples): a project
+// named by a template's sample row, or one whose folder is already there (a sample whose row
+// went with its template keeps its files where they are until the project is deleted).
+export function sampleProjects(db: DatabaseSync, dataDir: string): SampleProjects {
+  const named = db.prepare("SELECT 1 FROM template_samples WHERE project_id=?");
+  const root = templateSamplesDir({ dataDir });
+  return {
+    has: (projectId) =>
+      named.get(projectId) !== undefined ||
+      (/^[0-9A-Za-z_-]{1,64}$/u.test(projectId) && existsSync(join(root, projectId))),
+  };
 }
 
 export function templateSampleProjects(db: DatabaseSync): ReadonlySet<string> {

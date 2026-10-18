@@ -5,7 +5,7 @@ import { deleteVersions, recordVersion } from "../library/history.js";
 import { nameMax } from "../library/model.js";
 import { entryById, promptById } from "../library/repo.js";
 import { deleteProject, projectBusy } from "../storage/delete-project.js";
-import { notTemplateSample } from "../template-studio/repo.js";
+import { notTemplateSample, sampleOf } from "../template-studio/repo.js";
 import {
   type Restored,
   type TrashDeps,
@@ -260,6 +260,24 @@ export function deleteNow(deps: TrashDeps, kind: TrashKind, id: string): TrashRe
         return { ok: true, value: null };
       });
     case "template": {
+      if (
+        deps.db
+          .prepare("SELECT 1 FROM project_templates WHERE id = ? AND deleted_at IS NOT NULL")
+          .get(id) === undefined
+      )
+        return { ok: false, reason: "not-found" };
+      // Its studio sample goes first, folder and all, while its row still says the folder is
+      // in the data dir; a sample still being made keeps the template in the trash.
+      const sample = sampleOf(deps.db, id);
+      if (sample !== undefined) {
+        const removed = deleteProject(deps, sample.projectId);
+        if (!removed.ok && removed.reason !== "no-project")
+          return {
+            ok: false,
+            reason: removed.reason,
+            ...(removed.detail === undefined ? {} : { detail: removed.detail }),
+          };
+      }
       // Revisions cascade. A schedule in the trash may still name it: that schedule can then
       // no longer be restored (`restoreSchedule`), only removed.
       const changed = deps.db

@@ -18,6 +18,15 @@ export interface Paths {
   // the database is open. Without it a project's folder is its id and every file is at its
   // stored path: the layout before 3.14 and the one tests use.
   readonly places?: Places;
+  // Which projects are a template's hidden studio sample (`slices/template-studio`): their
+  // folders live in the data dir, never in the Projects folder the user browses, so nothing
+  // Slopify does to that folder (arranging, reconciling, moving it) can reach them. Set once
+  // the database is open; without it no project is a sample.
+  readonly samples?: SampleProjects;
+}
+
+export interface SampleProjects {
+  has(projectId: string): boolean;
 }
 
 // A project's readable folder and the place of each of its files. Stored paths never change;
@@ -62,6 +71,16 @@ export function layout(dataDir: string, files?: FilesLayout): Paths {
 // Gives a running install's Paths the places of moved project folders and files.
 export function attachPlaces(paths: Paths, places: Places): void {
   Object.assign(paths as { -readonly [K in keyof Paths]: Paths[K] }, { places });
+}
+
+// Tells a running install's Paths which projects are studio samples.
+export function attachSamples(paths: Paths, samples: SampleProjects): void {
+  Object.assign(paths as { -readonly [K in keyof Paths]: Paths[K] }, { samples });
+}
+
+// Where the studio samples' project folders are: inside the data dir, beside the database.
+export function templateSamplesDir(paths: Pick<Paths, "dataDir">): string {
+  return join(paths.dataDir, "template-studio", "samples");
 }
 
 // Points a running install's Paths at moved files. The one object every slice was handed is

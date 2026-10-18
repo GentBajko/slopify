@@ -1,7 +1,14 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { layout } from "../../kernel/paths.js";
-import { extensionOf, outputFileName, outputPath, projectDir, stagingPath } from "./layout.js";
+import { attachSamples, layout } from "../../kernel/paths.js";
+import {
+  extensionOf,
+  outputFileName,
+  outputPath,
+  projectDir,
+  renderCacheDir,
+  stagingPath,
+} from "./layout.js";
 
 const paths = layout("/data");
 
@@ -14,6 +21,44 @@ describe("projectDir", () => {
     expect(() => projectDir(paths, "..")).toThrow(/outside/);
     expect(() => projectDir(paths, "../../etc")).toThrow(/outside/);
     expect(() => projectDir(paths, "/etc")).toThrow(/outside/);
+  });
+});
+
+describe("a template's studio sample", () => {
+  const withSamples = {
+    ...layout("/data", {
+      projects: "/home/me/Documents/Slopify/Projects",
+      backups: "/b",
+      exports: null,
+    }),
+  };
+  attachSamples(withSamples, { has: (id) => id === "SAMPLE1" });
+
+  it("keeps its folder, files and render cache in the data dir, never in the Projects folder", () => {
+    const root = join("/data", "template-studio", "samples");
+    expect(projectDir(withSamples, "SAMPLE1")).toBe(join(root, "SAMPLE1"));
+    expect(outputPath(withSamples, "SAMPLE1", "images/001.png")).toBe(
+      join(root, "SAMPLE1", "images", "001.png"),
+    );
+    expect(renderCacheDir(withSamples, "SAMPLE1")).toBe(join(root, ".render-cache", "SAMPLE1"));
+    for (const path of [
+      projectDir(withSamples, "SAMPLE1"),
+      outputPath(withSamples, "SAMPLE1", "video.mp4"),
+      renderCacheDir(withSamples, "SAMPLE1"),
+    ])
+      expect(path.startsWith("/home/me/Documents")).toBe(false);
+  });
+
+  it("leaves every other project in the Projects folder", () => {
+    expect(projectDir(withSamples, "01JABC")).toBe(
+      join("/home/me/Documents/Slopify/Projects", "01JABC"),
+    );
+  });
+
+  it("still refuses a sample id that would climb out of the samples folder", () => {
+    const climbing = { ...layout("/data") };
+    attachSamples(climbing, { has: () => true });
+    expect(() => projectDir(climbing, "..")).toThrow(/outside/);
   });
 });
 

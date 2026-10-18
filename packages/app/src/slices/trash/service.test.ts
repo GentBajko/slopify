@@ -8,7 +8,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
-import { ensureDirs, layout } from "../../kernel/paths.js";
+import { attachSamples, ensureDirs, layout } from "../../kernel/paths.js";
 import type { RunConfig } from "../admission/model.js";
 import { insertProject, listProjects, projectById, projectExists } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
@@ -18,6 +18,7 @@ import { createEntry, createPrompt, removeEntry, removePrompt } from "../library
 import { templateById, templateSummaries } from "../project-templates/repo.js";
 import { dueSchedules, scheduleById } from "../schedules/repo.js";
 import { projectDir } from "../storage/layout.js";
+import { sampleProjects } from "../template-studio/repo.js";
 import type { TrashDeps } from "./model.js";
 import {
   createTrashPurge,
@@ -235,6 +236,36 @@ describe("templates in the trash", () => {
       n: 0,
     });
     expect(templateById(h.db, T1)).toBeUndefined();
+  });
+
+  it("take their studio sample project and its files with them, never touching Projects", () => {
+    const h = harness();
+    attachSamples(h.paths, sampleProjects(h.db, h.paths.dataDir));
+    template(h, T1, "Old");
+    insertProject(h.db, {
+      id: "SAMPLE1",
+      title: "Lighthouses",
+      format: "16:9",
+      config,
+      createdAt: now(h),
+      updatedAt: now(h),
+    });
+    h.db
+      .prepare(
+        "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES (?,?,?,?,0,?)",
+      )
+      .run(T1, "SAMPLE1", "Lighthouses", "fixed", now(h));
+    const folder = projectDir(h.paths, "SAMPLE1");
+    expect(folder.startsWith(h.paths.projects)).toBe(false);
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, "video.mp4"), "x");
+    mkdirSync(join(h.paths.projects, "Someone else's folder"), { recursive: true });
+    h.db.prepare("UPDATE project_templates SET deleted_at=? WHERE id=?").run(now(h), T1);
+
+    expect(deleteNow(h, "template", T1)).toEqual({ ok: true, value: null });
+    expect(projectExists(h.db, "SAMPLE1")).toBe(false);
+    expect(existsSync(folder)).toBe(false);
+    expect(existsSync(join(h.paths.projects, "Someone else's folder"))).toBe(true);
   });
 });
 

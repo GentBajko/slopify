@@ -1,9 +1,12 @@
 import { extname, isAbsolute, relative, resolve } from "node:path";
-import type { Paths } from "../../kernel/paths.js";
+import { type Paths, templateSamplesDir } from "../../kernel/paths.js";
 import type { OutputRole, StageKind } from "./model.js";
 
-// A project's folder: its readable name once it has one (`places.ts`), its id until then.
+// A project's folder: its readable name once it has one (`places.ts`), its id until then. A
+// template's studio sample is kept in the data dir by its id, out of the user's Projects folder.
 export function projectDir(paths: Paths, projectId: string): string {
+  if (paths.samples?.has(projectId) === true)
+    return contained(templateSamplesDir(paths), projectId);
   return contained(paths.projects, paths.places?.folderOf(projectId) ?? projectId);
 }
 
@@ -13,11 +16,15 @@ export function projectDir(paths: Paths, projectId: string): string {
 export const renderCacheFolder = ".render-cache";
 
 export function renderCacheDir(paths: Paths, projectId: string): string {
+  if (paths.samples?.has(projectId) === true)
+    return contained(templateSamplesDir(paths), `${renderCacheFolder}/${projectId}`);
   return contained(paths.projects, `${renderCacheFolder}/${projectId}`);
 }
 
 // A stored path on disk: where it was moved to (`places.ts`), or the stored path itself.
 export function outputPath(paths: Paths, projectId: string, relativePath: string): string {
+  if (paths.samples?.has(projectId) === true)
+    return contained(projectDir(paths, projectId), relativePath);
   return contained(
     projectDir(paths, projectId),
     paths.places?.placeOf(projectId, relativePath) ?? relativePath,

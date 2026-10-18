@@ -46,6 +46,7 @@ import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import {
   attachPlaces,
+  attachSamples,
   ensureDataDirs,
   ensureDirs,
   layout,
@@ -150,6 +151,7 @@ import { createDocumentSamples } from "./slices/template-studio/document-sample.
 import { createFreeSamples } from "./slices/template-studio/free.js";
 import { createLoudnessSamples } from "./slices/template-studio/loudness.js";
 import { sampleMaker } from "./slices/template-studio/make.js";
+import { sampleProjects } from "./slices/template-studio/repo.js";
 import { createSampleRunner } from "./slices/template-studio/runner.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
@@ -301,6 +303,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     recoverPlaces(db, paths);
     const places = createPlaces(db);
     attachPlaces(paths, places);
+    // A template's studio sample keeps its folder in the data dir, never in Projects
+    // (`slices/template-studio`): set before anything reads or reconciles a project's files.
+    attachSamples(paths, sampleProjects(db, paths.dataDir));
     const runtimeDb = db;
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
