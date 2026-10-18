@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { liveProject, projectExists, projectPaused, stagesOf } from "../admission/repo.js";
+import { notTemplateSample } from "../template-studio/repo.js";
 import { projectSettled } from "./arrange.js";
 import { backupsFolderName, outputPath, projectDir } from "./layout.js";
 import type { OutputRole } from "./model.js";
@@ -138,7 +139,8 @@ export function deleteOldVersions(deps: TrimDeps, projectId: string): OldVersion
   return { ok: true, files: count, bytesFreed };
 }
 
-// Every project's old versions, skipping any that runs or waits to run.
+// Every project's old versions, skipping any that runs or waits to run. A template studio
+// sample keeps its files (its bake-offs and resamples reuse them), and is no project to count.
 export function deleteAllOldVersions(deps: TrimDeps): {
   readonly projects: number;
   readonly files: number;
@@ -151,7 +153,9 @@ export function deleteAllOldVersions(deps: TrimDeps): {
   let files = 0;
   let bytesFreed = 0;
   let busy = 0;
-  for (const row of deps.db.prepare(`SELECT id FROM projects WHERE ${liveProject()}`).all()) {
+  for (const row of deps.db
+    .prepare(`SELECT id FROM projects WHERE ${liveProject()} AND ${notTemplateSample()}`)
+    .all()) {
     const id = String(row.id);
     if (placedFiles(deps.paths, id).size === 0) continue;
     const result = deleteOldVersions(deps, id);
@@ -180,7 +184,9 @@ export function cleanUpAll(deps: TrimDeps): {
   let files = old.files;
   let bytesFreed = old.bytesFreed;
   let skipped = old.busy;
-  for (const row of deps.db.prepare(`SELECT id FROM projects WHERE ${liveProject()}`).all()) {
+  for (const row of deps.db
+    .prepare(`SELECT id FROM projects WHERE ${liveProject()} AND ${notTemplateSample()}`)
+    .all()) {
     const id = String(row.id);
     const result = keepOutputsOnly(deps, id);
     if (result.ok) {

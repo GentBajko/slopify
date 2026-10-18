@@ -330,4 +330,27 @@ describe("the template studio's sample project", () => {
     const visible = await h.app.request("/api/projects/visible0control/pause", { method: "POST" });
     expect(visible.status).not.toBe(409);
   });
+
+  it("is never cleaned up by Settings → Backup & storage, one project or all of them", async () => {
+    const h = withSample();
+    for (const id of [sampleId, cloneId, "visible0control"])
+      h.deps.db.prepare("UPDATE stages SET state='done' WHERE project_id=?").run(id);
+    for (const id of [sampleId, cloneId])
+      for (const path of [
+        `/api/storage/projects/${id}/keep-outputs`,
+        `/api/storage/projects/${id}/old-versions/delete`,
+      ]) {
+        const reply = await h.app.request(path, { method: "POST" });
+        expect([path, reply.status]).toEqual([path, 409]);
+        expect(
+          await h.app.request(path.replace(id, "visible0control"), { method: "POST" }),
+        ).toHaveProperty("status", 200);
+        expect(await reply.json()).toMatchObject({ reason: "template-sample" });
+      }
+    for (const path of ["/api/storage/old-versions/delete", "/api/storage/cleanup"]) {
+      const reply = await h.app.request(path, { method: "POST" });
+      expect(reply.status).toBe(200);
+    }
+    // What the global actions skip is `slices/storage/trim.test.ts`'s; here they only answer.
+  });
 });

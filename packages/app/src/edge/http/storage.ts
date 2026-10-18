@@ -21,9 +21,10 @@ import {
   keepOutputsOnly,
   projectStorage,
 } from "../../slices/storage/trim.js";
+import { sampleOwner } from "../../slices/template-studio/repo.js";
 import type { AppDeps } from "./app.js";
 import { idParam } from "./ids.js";
-import { onInvalid, problem } from "./problem.js";
+import { onInvalid, type ProblemInit, problem } from "./problem.js";
 
 const exportFailed =
   "Slopify could not create the backup. Check there is free disk space and try again; if it keeps failing, use Download diagnostics in Settings and report it.";
@@ -37,6 +38,17 @@ export function storageRoutes(deps: AppDeps) {
     appVersion: deps.version,
     hasInflight: deps.runner.hasInflight,
   });
+  // A template's studio sample keeps its files for the studio's bake-offs and resamples.
+  const studioSample = (id: string): ProblemInit | undefined => {
+    const owner = sampleOwner(deps.db, id);
+    return owner === undefined
+      ? undefined
+      : {
+          status: 409,
+          detail: `This is the studio sample of ${owner.name}, and the studio keeps its files to make its samples again without paying twice. Change it in its studio instead: Library → Templates → ${owner.name} → Open studio.`,
+          extensions: { reason: "template-sample" },
+        };
+  };
   return (
     new Hono()
       .get("/", (c) =>
@@ -63,6 +75,8 @@ export function storageRoutes(deps: AppDeps) {
       })
       // Keep outputs only: a finished project drops its working files (`slices/storage/trim.ts`).
       .post("/projects/:id/keep-outputs", zValidator("param", idParam, onInvalid), (c) => {
+        const refused = studioSample(c.req.valid("param").id);
+        if (refused !== undefined) return problem(c, refused);
         const result = keepOutputsOnly(
           { db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight },
           c.req.valid("param").id,
@@ -82,6 +96,8 @@ export function storageRoutes(deps: AppDeps) {
       })
       // Delete old versions: one project's History files (`slices/storage/trim.ts`).
       .post("/projects/:id/old-versions/delete", zValidator("param", idParam, onInvalid), (c) => {
+        const refused = studioSample(c.req.valid("param").id);
+        if (refused !== undefined) return problem(c, refused);
         const result = deleteOldVersions(
           { db: deps.db, paths: deps.paths, hasInflight: deps.runner.hasInflight },
           c.req.valid("param").id,

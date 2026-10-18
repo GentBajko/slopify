@@ -3,7 +3,13 @@ import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { storageUsage } from "./portable.js";
-import { keepOutputsOnly, outputRoles, projectStorage } from "./trim.js";
+import {
+  cleanUpAll,
+  deleteAllOldVersions,
+  keepOutputsOnly,
+  outputRoles,
+  projectStorage,
+} from "./trim.js";
 
 let close = (): void => {};
 afterEach(() => {
@@ -122,4 +128,23 @@ it("counts the article, video, shorts, thumbnail, description and document as ou
     "short_image",
   ] as const)
     expect(outputRoles).toContain(role);
+});
+
+// A template studio sample keeps its working files: a later bake-off or resample reuses them,
+// and stripping them would make the studio pay for them again.
+it("leaves a template studio sample's files alone in Clean up everything and Delete all old versions", () => {
+  const { h, dir } = fixture();
+  const { db } = h.deps;
+  db.exec(
+    "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','t')",
+  );
+  db.exec(
+    "INSERT INTO template_samples (template_id,project_id,topic,topic_source,full_script,created_at) VALUES ('t1','p1','Topic','fixed',0,'t')",
+  );
+  mkdirSync(join(dir, "History"), { recursive: true });
+  writeFileSync(join(dir, "History", "old.png"), Buffer.alloc(5));
+  expect(cleanUpAll(h.deps)).toEqual({ files: 0, bytesFreed: 0, skipped: 0 });
+  expect(deleteAllOldVersions(h.deps)).toMatchObject({ projects: 0, files: 0, busy: 0 });
+  for (const kept of ["audio-body.mp3", "render.json"])
+    expect(existsSync(join(dir, kept)), kept).toBe(true);
 });
