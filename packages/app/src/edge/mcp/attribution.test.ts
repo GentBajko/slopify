@@ -73,6 +73,10 @@ it("names the projects and the schedule a call changed", () => {
   expect(
     subjectsOf(tool("POST /api/drafts/:id/start"), { id: "d1" }, { projectIds: ["p7"] }),
   ).toEqual({ projectIds: ["p7"], scheduleId: null });
+  // A new schedule is named by the schedule the route answered with.
+  expect(
+    subjectsOf(tool("POST /api/schedules"), { body: { id: "s2", name: "Weekly" } }, { id: "s2" }),
+  ).toEqual({ projectIds: [], scheduleId: "s2" });
 });
 
 it("records an agent's change, to a project or to none, and neither its reads nor its refused calls", async () => {

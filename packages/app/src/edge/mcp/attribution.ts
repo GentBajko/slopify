@@ -11,6 +11,8 @@ const movedBody = z.object({ projectIds: z.array(z.string()) }).loose();
 const trashBody = z
   .object({ items: z.array(z.object({ kind: z.string(), id: z.string() })) })
   .loose();
+// The schedule a create answered with.
+const madeSchedule = z.object({ id: z.string() }).loose();
 const savedVersion = z
   .object({ view: z.object({ revision: z.object({ id: z.string() }) }) })
   .loose();
@@ -22,11 +24,15 @@ export function subjectsOf(
   args: Readonly<Record<string, unknown>>,
   value: unknown,
 ): ActionSubjects {
-  const { path } = routeOf(tool);
+  const { method, path } = routeOf(tool);
   return {
     projectIds: projectIdsOf(path, args, value),
     scheduleId:
-      path.startsWith("/api/schedules/:id") && typeof args.id === "string" ? args.id : null,
+      path.startsWith("/api/schedules/:id") && typeof args.id === "string"
+        ? args.id
+        : method === "POST" && path === "/api/schedules"
+          ? (madeSchedule.safeParse(value).data?.id ?? null)
+          : null,
   };
 }
 
