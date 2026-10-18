@@ -286,6 +286,9 @@ export interface RunDraft {
   // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
   // what every project saved before it was; English is never stored.
   readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;
+  // Which other sites the project posts to and what each gets (`slices/social`). Absent is
+  // posting nowhere, which is what every project saved before it does.
+  readonly social?: import("../social/model.js").SocialSettings | undefined;
 }
 
 export interface TitleStyle {

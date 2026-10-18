@@ -69,10 +69,13 @@ export interface PostChoice {
   readonly link: boolean;
 }
 
+// A project's own pick for one site (Prepare upload): other settings, or not posting there.
+export type ProjectPostChoice = PostChoice | { readonly off: true };
+
 // The project's generating settings (revision `config.social`, Template Studio's Upload pack):
 // which sites the project posts to and what each gets. Absent is no posting, as every project
 // saved before it.
-export type SocialSettings = Partial<Record<SocialPlatform, PostChoice>>;
+export type SocialSettings = { readonly [P in SocialPlatform]?: PostChoice | undefined };
 
 export const redditPostKinds = ["link", "text", "media"] as const;
 export type RedditPostKind = (typeof redditPostKinds)[number];
@@ -239,4 +242,4 @@ export interface LinkLookup {
 }
 
 // The person's account on each site, only to find a published post's link; never a login.
-export type SocialAccounts = Partial<Record<SocialPlatform, string>>;
+export type SocialAccounts = { readonly [P in SocialPlatform]?: string | undefined };
