@@ -272,6 +272,47 @@ describe("migrate", () => {
     expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 65 });
   });
 
+  it("upgrades a database at 62 through every later migration, the template studio's included", () => {
+    const db = openDb(":memory:");
+    migrate(db, clock, { through: 62 });
+    migrate(db, clock);
+    expect(
+      db
+        .prepare("SELECT version FROM schema_migrations WHERE version > 62 ORDER BY version")
+        .all()
+        .map((row) => row.version),
+    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73]);
+  });
+
+  // Applied by the set of versions a database has, never by its newest: one that took the
+  // migrations after 0064 first (an integration build) still gets 0064 on its next start.
+  it("applies a migration it missed even when newer ones ran before it", () => {
+    const db = openDb(":memory:");
+    migrate(db, clock);
+    db.exec(
+      `DROP TABLE template_sample_jobs; DROP TABLE template_sample_versions;
+       DROP TABLE template_samples; DROP TABLE template_gates;
+       DELETE FROM schema_migrations WHERE version = 64;`,
+    );
+    migrate(db, clock);
+    expect(
+      db.prepare("SELECT count(*) AS n FROM schema_migrations WHERE version = 64").get(),
+    ).toEqual({ n: 1 });
+    expect(
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'template_%' ORDER BY name",
+        )
+        .all()
+        .map((row) => row.name),
+    ).toEqual([
+      "template_gates",
+      "template_sample_jobs",
+      "template_sample_versions",
+      "template_samples",
+    ]);
+  });
+
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);

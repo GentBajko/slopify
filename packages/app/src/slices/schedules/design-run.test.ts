@@ -7,13 +7,18 @@ import type { DesignDocument } from "../designs/schema.js";
 import { createTemplate as createDesignTemplate, markTemplateReady } from "../designs/templates.js";
 import { startFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
+import {
+  notReadySentence,
+  runnableTemplate,
+  templateGate,
+} from "../template-studio/schedule-gate.js";
 import { calendarRange } from "./agenda.js";
 import type { ScheduleDeps } from "./model.js";
 import { refreshDesignSchedules } from "./next-run.js";
 import { prepareTopic } from "./prepare.js";
 import { scheduleById } from "./repo.js";
 import { createScheduleRunner } from "./scheduler.js";
-import { createSchedule, listScheduleRuns, updateSchedule } from "./service.js";
+import { createSchedule, listScheduleRuns, listSchedules, updateSchedule } from "./service.js";
 
 const dated = (overrides: Partial<DesignDocument> = {}) =>
   poster({ schedule: { dateField: "Date", daysBefore: 7, time: "09:00" }, ...overrides });
@@ -101,6 +106,35 @@ describe("a design schedule", () => {
     expect(after?.items.map((item) => item.title)).toEqual(["Early Set"]);
     expect(after?.nextRunAt).toBe("2026-11-28T09:00:00.000Z");
     expect(after?.status).toBe("active");
+  });
+
+  // `main.ts` hands every schedule the template studio's gate; it is a project template's, so a
+  // design schedule never waits for a project template's Mark ready.
+  it("runs with the template studio's gate wired in, which only project templates have", async () => {
+    const { h, deps, id, create, runs, runner } = await setup();
+    const wired: ScheduleDeps = {
+      ...deps,
+      template: (templateId) => runnableTemplate(h.deps.db, templateId),
+      notReady: (templateId) => notReadySentence(h.deps.db, templateId),
+      templateGate: (templateId) => templateGate(h.deps.db, templateId),
+      templateHead: (templateId) => templateById(h.deps.db, templateId),
+    };
+    expect(create().ok).toBe(true);
+    expect(listSchedules(wired).find((one) => one.id === id)?.templateGate).toBeUndefined();
+    const range = calendarRange(
+      wired,
+      new Date("2026-11-01T00:00:00.000Z"),
+      new Date("2026-12-31T00:00:00.000Z"),
+    );
+    expect(range.ok && range.value.runs.map((run) => [run.templateKind, run.notReady])).toEqual([
+      ["design", false],
+      ["design", false],
+    ]);
+    await createScheduleRunner(wired).tick(new Date("2026-11-07T09:00:30.000Z"));
+    await runner.idle();
+    expect(runs().map((run) => [run.status, run.error, run.designIds.length])).toEqual([
+      ["succeeded", null, 1],
+    ]);
   });
 
   it("stays active with nothing to run once its table is empty, and runs rows added later", async () => {
