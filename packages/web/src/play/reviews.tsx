@@ -176,12 +176,13 @@ export function ReviewSettings({
             : "Pictures (images, thumbnail, shorts) need Claude Code or Codex as the reviewer."}
         </p>
       )}
+      {/* The two pickers share a cell and wrap under each other in a narrow drawer, so neither
+          ever cuts its words short. */}
       <table className="mt-3 w-full text-small">
         <thead className="sr-only">
           <tr>
             <th>Stage</th>
-            <th>Review</th>
-            <th>Review prompt</th>
+            <th>Review and its prompt</th>
           </tr>
         </thead>
         <tbody>
@@ -192,7 +193,7 @@ export function ReviewSettings({
             const saved = prompt !== "" && !choices.some((one) => one.name === prompt);
             return (
               <tr key={stage} className="border-t border-line">
-                <th scope="row" className="py-2 pr-3 text-left font-medium">
+                <th scope="row" className="w-[28%] py-2 pr-3 text-left align-top font-medium">
                   <span className="inline-flex items-center gap-1">
                     {reviewStageLabels[stage]}
                     {stage === "promise" ? (
@@ -200,37 +201,41 @@ export function ReviewSettings({
                     ) : null}
                   </span>
                 </th>
-                <td className="py-2 pr-3">
-                  <Picker
-                    aria-label={`${reviewStageLabels[stage]} review`}
-                    data-play-field={`reviews.stages.${stage}.mode`}
-                    value={mode}
-                    disabled={!available && mode === "off"}
-                    onChange={(event) => setStage(stage, event.target.value as ReviewMode, prompt)}
-                  >
-                    {reviewModes.map((one) => (
-                      <option key={one} value={one}>
-                        {reviewModeLabels[one]}
-                      </option>
-                    ))}
-                  </Picker>
-                </td>
                 <td className="py-2">
-                  <Picker
-                    aria-label={`${reviewStageLabels[stage]} review prompt`}
-                    data-play-field={`reviews.stages.${stage}.prompt`}
-                    value={prompt}
-                    disabled={mode === "off"}
-                    onChange={(event) => setStage(stage, mode, event.target.value)}
-                  >
-                    <option value="">Built-in</option>
-                    {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
-                    {choices.map((one) => (
-                      <option key={one.id} value={one.name}>
-                        {one.name}
-                      </option>
-                    ))}
-                  </Picker>
+                  <div className="flex flex-wrap gap-2">
+                    <Picker
+                      className="w-[9.5rem] shrink-0"
+                      aria-label={`${reviewStageLabels[stage]} review`}
+                      data-play-field={`reviews.stages.${stage}.mode`}
+                      value={mode}
+                      disabled={!available && mode === "off"}
+                      onChange={(event) =>
+                        setStage(stage, event.target.value as ReviewMode, prompt)
+                      }
+                    >
+                      {reviewModes.map((one) => (
+                        <option key={one} value={one}>
+                          {reviewModeLabels[one]}
+                        </option>
+                      ))}
+                    </Picker>
+                    <Picker
+                      className="w-auto min-w-[12rem] flex-1"
+                      aria-label={`${reviewStageLabels[stage]} review prompt`}
+                      data-play-field={`reviews.stages.${stage}.prompt`}
+                      value={prompt}
+                      disabled={mode === "off"}
+                      onChange={(event) => setStage(stage, mode, event.target.value)}
+                    >
+                      <option value="">Built-in</option>
+                      {saved ? <option value={prompt}>{prompt} (saved choice)</option> : null}
+                      {choices.map((one) => (
+                        <option key={one.id} value={one.name}>
+                          {one.name}
+                        </option>
+                      ))}
+                    </Picker>
+                  </div>
                   {problem(`reviews.stages.${stage}.prompt`) ? (
                     <p className="text-danger">{problem(`reviews.stages.${stage}.prompt`)}</p>
                   ) : !available && stage === "promise" ? (
