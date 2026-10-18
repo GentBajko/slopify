@@ -44,6 +44,20 @@ function scheduled() {
 const count = (h: ReturnType<typeof startFixture>, sql: string) =>
   Number(h.deps.db.prepare(sql).get()?.n);
 
+it("refuses to prepare a run of a paused schedule, as the calendar's greyed Prepare says", async () => {
+  const { h, deps, scheduleId } = scheduled();
+  try {
+    deps.db.prepare("UPDATE schedules SET status='paused' WHERE id=?").run(scheduleId);
+    expect(await prepareTopic(deps, { scheduleId, title: "First topic" })).toEqual({
+      ok: false,
+      reason: "paused",
+    });
+    expect(count(h, "SELECT count(*) AS n FROM projects")).toBe(0);
+  } finally {
+    h.close();
+  }
+});
+
 it("prepares a queued topic now, and its scheduled day continues it instead of starting another", async () => {
   const { h, deps, scheduleId } = scheduled();
   try {

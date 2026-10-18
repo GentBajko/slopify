@@ -274,6 +274,8 @@ function routes(deps: ScheduleDeps | undefined) {
               "This topic is no longer in the schedule's queue. Reload the page to see the queue as it is now.",
             "already-prepared":
               "This topic is already prepared: its project is in Projects under the same title.",
+            paused:
+              "Its schedule is paused, so it makes nothing, ahead or on its day. Resume it under Calendar → Schedules, then press Prepare again.",
             "missing-template":
               "This schedule's template was deleted, so there is nothing to prepare from. Choose another template under Edit.",
             "spend-limit":

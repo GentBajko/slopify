@@ -71,7 +71,7 @@ export const scheduleTools: readonly RouteTool[] = [
     route: "POST /api/schedules/:id/topics/prepare",
     title: "Prepare a topic",
     description:
-      "Prepare, from the schedule's topics or Open on calendar: makes the topic's project now, exactly as the schedule would, and runs everything but the video, which its scheduled day renders. It spends what Play's review estimates and is refused over the schedule's spend limit. Body: {topic: the topic's title}.",
+      "Prepare, from the schedule's topics or Open on calendar: makes the topic's project now, exactly as the schedule would, and runs everything but the video, which its scheduled day renders. It spends what Play's review estimates and is refused over the schedule's spend limit and while the schedule is paused. Body: {topic: the topic's title}.",
   },
   {
     name: "generate_topics",
