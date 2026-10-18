@@ -6,12 +6,15 @@ import {
   assistantCostlyTools,
   assistantExcludedTools,
   assistantOutwardTools,
+  isGated,
 } from "../../slices/assistant/gate.js";
 import { createTurnTokens } from "../../slices/assistant/tokens.js";
 import type { RevisionDeps } from "../../slices/revisions/model.js";
 import { assistantRouteTools } from "./assistant.js";
 import { connectAgent, mcpFixture } from "./mcp.fake.js";
+import { routeOf } from "./route-tool.js";
 import { routeTools } from "./tools.js";
+import { designTools } from "./tools-designs.js";
 
 const open: { readonly close: () => void }[] = [];
 afterEach(() => {
@@ -170,6 +173,56 @@ describe("/mcp/assistant", () => {
     expect(textOf(keywords)).toContain("Slopify_");
     expect(asksOf(h.deps.db, "s1", h.deps.clock.now())).toHaveLength(1);
     await client.close();
+  });
+
+  it("asks before every paid or removing design step, and reads and prices designs freely", () => {
+    const gated = (name: string): boolean => {
+      const tool = designTools.find((one) => one.name === name);
+      if (tool === undefined) throw new Error(`no design tool ${name}`);
+      return isGated({
+        name: tool.name,
+        method: routeOf(tool).method,
+        confirm: tool.confirm,
+      });
+    };
+    const asks = [
+      "edit_design_picture",
+      "make_design_artwork",
+      "make_design_from_template",
+      "make_design_template_sample",
+      "retry_design_step",
+      // A Save with sample "make" draws the editor's paid sample.
+      "save_design_template",
+      "delete_design",
+      "delete_design_template",
+      "mark_design_template_ready",
+    ];
+    const free = [
+      "list_designs",
+      "create_design",
+      "get_design",
+      "update_design",
+      "quote_design_edit",
+      "quote_design_artwork",
+      "set_design_version",
+      "get_design_picture",
+      "get_design_file",
+      "list_design_templates",
+      "create_design_template",
+      "get_design_template",
+      "quote_design_template",
+    ];
+    // Every design tool is classified here, so a new one has to be decided on.
+    expect(
+      designTools
+        .map((tool) => tool.name)
+        .filter((name) => name !== "upload_design_picture")
+        .toSorted(),
+    ).toEqual([...asks, ...free].toSorted());
+    for (const name of asks) expect([name, gated(name)]).toEqual([name, true]);
+    for (const name of free) expect([name, gated(name)]).toEqual([name, false]);
+    // Uploads take files from disk, so the assistant never gets one.
+    expect(assistantRouteTools.map((tool) => tool.name)).not.toContain("upload_design_picture");
   });
 
   it("names only tools that exist", () => {

@@ -40,6 +40,14 @@ export const assistantCostlyTools = [
   "switch_all_retired_models",
   // Settings → Models' Check models sends each model one small paid request.
   "check_models",
+  // Library → Designs: each draws a picture a provider bills for. A template's Save draws the
+  // editor's sample when it asks for one, so it asks whatever it sends.
+  "edit_design_picture",
+  "make_design_artwork",
+  "make_design_from_template",
+  "make_design_template_sample",
+  "retry_design_step",
+  "save_design_template",
 ] as const;
 const costly: ReadonlySet<string> = new Set(assistantCostlyTools);
 
