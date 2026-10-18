@@ -91,6 +91,10 @@ const drafts: readonly RouteTool[] = [
   },
 ];
 
+// Which version a schedule runs after a save (`template-studio/gate.ts`).
+const templateGateRule =
+  "Schedules use a new version from their next run unless a version of this template was marked ready in its Template studio (mark_template_ready); from then on a new version waits until it is marked ready.";
+
 const templates: readonly RouteTool[] = [
   {
     name: "list_templates",
@@ -102,19 +106,19 @@ const templates: readonly RouteTool[] = [
     name: "create_template",
     route: "POST /api/project-templates",
     title: "Create a template",
-    description: formBody("the template editor"),
+    description: `${formBody("the template editor")} ${templateGateRule}`,
   },
   {
     name: "template_from_project",
     route: "POST /api/project-templates/from-project/:projectId",
     title: "Save a project as a template",
-    description: formBody("Save as template on the project page"),
+    description: `${formBody("Save as template on the project page")} ${templateGateRule}`,
   },
   {
     name: "next_chapter_template",
     route: "POST /api/project-templates/next-chapter/:projectId",
     title: "Template for the next chapter",
-    description: formBody("Next chapter on the project page"),
+    description: `${formBody("Next chapter on the project page")} ${templateGateRule}`,
   },
   {
     name: "get_template",
@@ -126,7 +130,7 @@ const templates: readonly RouteTool[] = [
     name: "update_template",
     route: "PUT /api/project-templates/:id",
     title: "Save a template",
-    description: `${formBody("the template editor")} Saving adds a version.`,
+    description: `${formBody("the template editor")} Saving adds a version. ${templateGateRule}`,
   },
   {
     name: "delete_template",
