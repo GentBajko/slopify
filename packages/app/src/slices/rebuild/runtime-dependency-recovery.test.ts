@@ -186,3 +186,32 @@ it("waits for the entire caption bundle repair before running burned video once"
     h.close();
   }
 });
+
+it("exports the WAV again when its file went missing", async () => {
+  const h = await exportFixture();
+  try {
+    const part = h.grant("export:wav");
+    expect(await executeExportRecipe(h.deps, part.context, part.piece)).toBe("done");
+    h.deps.db
+      .prepare("UPDATE revision_work SET state='done' WHERE id=?")
+      .run(part.context.work.workId);
+    const finished = h.view();
+    const wav = finished.outputs.find((row) => row.selected && row.output.role === "audio_export");
+    if (wav === undefined) throw new Error("Missing WAV");
+    const helper = createRebuildDeps(h.deps);
+    const plan = async () => {
+      const preview = await previewRebuild(helper.deps, {
+        projectId: h.projectId,
+        baseRevisionId: finished.revision.id,
+        request: { kind: "allAffected" },
+      });
+      if (!preview.ok) throw new Error(JSON.stringify(preview));
+      return preview.value.work.filter((row) => row.disposition !== "reuse").map((row) => row.key);
+    };
+    expect(await plan()).not.toContain("export:wav");
+    rmSync(outputPath(h.deps.paths, h.projectId, wav.output.path));
+    expect(await plan()).toContain("export:wav");
+  } finally {
+    h.close();
+  }
+});

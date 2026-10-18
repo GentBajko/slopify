@@ -113,6 +113,9 @@ it("asks for confirmed: true on every tool whose page confirms first", () => {
     "move_files_folder",
     "mark_template_ready",
     "make_samples_for_all",
+    "delete_design",
+    "delete_design_template",
+    "mark_design_template_ready",
   ])
     expect(confirmed.has(name), name).toBe(true);
   // The pages remove these in one press, so the tools don't ask either.
@@ -139,6 +142,9 @@ it("leaves the POST tools that only look, price or test unrecorded as an agent's
       "quote_samples_for_all",
       "quote_say_it_as",
       "quote_template_save",
+      "quote_design_artwork",
+      "quote_design_edit",
+      "quote_design_template",
       "quote_voice_sample",
       "review_draft",
       "send_test_notification",
@@ -161,4 +167,14 @@ it("tells the agent's client a test send goes out and a catalogue check can chan
   // It asks each provider whether it answers: it looks outside, and changes nothing.
   expect(hints("check_providers")).toMatchObject({ readOnlyHint: true, openWorldHint: true });
   expect(hints("preview_rebuild")).toMatchObject({ readOnlyHint: true, openWorldHint: false });
+});
+
+it("offers designs with the confirm sentence Mark ready shows and takes a picture as bytes", () => {
+  const tool = (name: string) => routeTools.find((one) => one.name === name);
+  expect(tool("mark_design_template_ready")?.confirm).toBe(
+    "Schedules start making pieces from this version.",
+  );
+  expect(tool("upload_design_picture")?.upload).toBe("raw");
+  for (const name of ["edit_design_picture", "make_design_artwork", "make_design_from_template"])
+    expect(tool(name)?.description).toContain("acknowledgedHigh");
 });

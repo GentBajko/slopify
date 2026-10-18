@@ -5,7 +5,13 @@ import type { ProjectState } from "../../kernel/pipeline.js";
 import { projectLink } from "./address.js";
 import type { RunNotifierDeps } from "./notifier.js";
 import { createRunNotifier } from "./notifier.js";
-import { reviewItemName, runNotices, type StepFailure } from "./rules.js";
+import {
+  autoPassNoticeText,
+  reviewItemName,
+  reviewNoticeText,
+  runNotices,
+  type StepFailure,
+} from "./rules.js";
 import type { SendNotification, SendResult } from "./send.js";
 
 interface Posted {
@@ -550,6 +556,16 @@ it("names a reviewed item the way the project page does", () => {
   expect(reviewItemName("thumbnail:image", order)).toBe("the thumbnail");
   expect(reviewItemName("thumbnail:image:3", order)).toBe("thumbnail 3");
   expect(reviewItemName("something:else", order)).toBeUndefined();
+  expect(reviewItemName("promise", order)).toBe("the article's opening (promise check)");
+});
+
+it("tells a flagged or unanswered promise check by what it read", () => {
+  expect(reviewNoticeText({ title: "Rope", stage: "promise", reason: "Slow start." }).detail).toBe(
+    "The automatic review flagged the article's opening (promise check) and kept it. Open the project and press Overrule to keep it or Redo to make it again.",
+  );
+  expect(autoPassNoticeText({ title: "Rope", stage: "promise" }).detail).toBe(
+    "Rope: the article's opening (promise check) went ahead unreviewed. Open the project to look at it, or check that your agent's routine is running.",
+  );
 });
 
 // What is told is kept only while the run has it: a failure fixed, or a run that ended with none

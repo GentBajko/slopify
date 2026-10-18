@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { errorText, internalError } from "../../kernel/errors.js";
 import { withLanguage, wordTimingUnavailable } from "../../kernel/ports/languages.js";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -7,7 +8,6 @@ import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesFigureCards, usesShorts } from "../admission/rules.js";
 import { captionBoldFont } from "../fonts/coverage.js";
-import { resolveBoldFont } from "../fonts/index.js";
 import { masterGoal } from "../loudness/model.js";
 import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
@@ -487,7 +487,7 @@ async function backgroundMusic(
   } catch (error) {
     context.signal.throwIfAborted();
     throw new Error(
-      `The shorts' background music couldn't be read as audio (${error instanceof Error ? error.message : String(error)}). ${fix}`,
+      `The shorts' background music couldn't be read as audio (${errorText(error)}). ${fix}`,
     );
   }
   if (durationMs <= 0) throw new Error(`The shorts' background music file holds no sound. ${fix}`);
@@ -551,7 +551,5 @@ function imageIndex(key: string): number {
 }
 
 function setupError(): Error {
-  return new Error(
-    "Slopify hit an internal error (a Shorts step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-  );
+  return new Error(internalError("a Shorts step was set up wrongly"));
 }

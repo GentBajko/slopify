@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import { channelById } from "./repo.js";
 import { titlesFromCsv, titlesFromLines } from "./studio-csv.js";
 
@@ -91,7 +91,7 @@ export function previewChannelVideos(
   if (channelById(deps.db, channelId) === undefined) return { ok: false, reason: "not-found" };
   const read = importOf(input);
   if (!read.ok) return read;
-  const filter = storedFilter(readSetting(deps.db, filterKey(channelId)));
+  const filter = readJsonSetting(deps.db, filterKey(channelId), z.string(), "");
   return { ok: true, value: { titles: read.value.titles, filter } };
 }
 
@@ -118,17 +118,6 @@ export function importChannelVideos(
       writeSetting(deps.db, filterKey(channelId), JSON.stringify(filter.trim()));
     return { ok: true, value: { added, skipped: titles.length - added } } as const;
   });
-}
-
-// Stored as JSON, like every row of the `settings` table a backup carries.
-function storedFilter(stored: string | undefined): string {
-  if (stored === undefined) return "";
-  try {
-    const value: unknown = JSON.parse(stored);
-    return typeof value === "string" ? value : "";
-  } catch {
-    return "";
-  }
 }
 
 function importOf(

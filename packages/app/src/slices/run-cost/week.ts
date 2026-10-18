@@ -12,7 +12,8 @@ import { projectChannels } from "../channels/repo.js";
 // Home's "This week": how many videos were made since a moment, what the provider calls cost,
 // what the plan-billed ones would have cost through the API, and where each CLI plan's windows
 // stand now. Read from the same stored calls the Run cost tab reads, plus the calls made for a
-// schedule or channel rather than a project (topics, episode summaries, cast pictures);
+// schedule, channel or design rather than a project (topics, episode summaries, cast pictures,
+// design pictures and artwork);
 // nothing is estimated.
 
 export interface PlanStanding {

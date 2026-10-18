@@ -40,7 +40,7 @@ import { listVoices } from "../../slices/settings/repo.js";
 import { addVoice } from "../../slices/settings/voices.js";
 import { projectTitle } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 import { createProject } from "./project-create.js";
 
 const packParam = z.object({ id: z.string().min(1).max(40) });
@@ -89,7 +89,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!installed.ok)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
         });
@@ -104,7 +103,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (pack === undefined)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
         });
@@ -112,7 +110,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (modelsFor === undefined)
         return problem(c, {
           status: 503,
-          title: titleOf(503),
           detail:
             "Slopify can't list the models on this machine right now. Restart Slopify and try again.",
         });
@@ -126,7 +123,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!plan.ok)
         return problem(c, {
           status: 409,
-          title: titleOf(409),
           detail: plan.gaps.map((gap) => gap.message).join(" "),
           extensions: { gaps: plan.gaps },
         });
@@ -134,7 +130,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!installed.ok)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "Slopify doesn't have that starter pack. Reload the page and pick one of the packs listed.",
         });
@@ -174,7 +169,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!created.ok)
         return problem(c, {
           status: created.status,
-          title: titleOf(created.status),
           detail:
             `${created.detail} ${created.fields.map((field) => field.message).join(" ")}`.trim(),
           ...(created.fields.length === 0 ? {} : { extensions: { fields: created.fields } }),
@@ -190,20 +184,17 @@ export function onboardingRoutes(deps: AppDeps) {
       if (made.reason === "not-found")
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "This short or its starter pack is no longer here, so Play couldn't be set up from it. Open Play and pick a template yourself.",
         });
       if (made.reason === "not-short")
         return problem(c, {
           status: 409,
-          title: titleOf(409),
           detail:
             "This project is already a long video. Open Play to start another one on a new topic.",
         });
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail:
           "Slopify couldn't open a Play draft for the full video. Press Make the full video on this topic again; if it keeps failing, open Play and pick the pack's template in Library → Templates.",
         extensions: { reason: made.reason },
@@ -218,7 +209,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!restored.ok)
         return problem(c, {
           status: restored.status,
-          title: titleOf(restored.status),
           detail: restored.detail,
         });
       return c.json({ projectId: restored.samples.library, samples: restored.samples });
@@ -230,7 +220,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!input.success)
         return problem(c, {
           status: 400,
-          title: titleOf(400),
           detail: "Slopify couldn't tell which sample to copy. Reload the page and try again.",
         });
       const catalogue = deps.catalogue;
@@ -238,7 +227,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (catalogue === undefined || id === undefined)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "The sample project isn't here. Bring it back with Settings → Backup & storage → Restore samples, then press Make my own copy.",
         });
@@ -246,7 +234,6 @@ export function onboardingRoutes(deps: AppDeps) {
       if (!copied.ok)
         return problem(c, {
           status: copied.status,
-          title: titleOf(copied.status),
           detail: copied.detail,
         });
       deps.hub.emitGlobal({ type: "project.updated", projectId: copied.projectId });

@@ -49,6 +49,7 @@
 - [Schedules](Schedules)
 - [Calendar](Calendar)
 - [Notifications](Notifications)
+- [Assistant](Assistant)
 - [Agents (MCP)](Agents-MCP)
 - [Backups](Backups)
 
@@ -59,6 +60,7 @@
 **Library**
 - [Library overview](Library-Overview)
 - [Prompts](Prompts)
+- [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Intros and outros](Intros-and-Outros)
 - [Aliases and glossary](Narration-Aliases-and-Glossary)
 - [Document themes](Document-Themes)

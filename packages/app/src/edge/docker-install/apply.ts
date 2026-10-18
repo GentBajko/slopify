@@ -14,8 +14,8 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { hasCode } from "../../host-cli/paths.js";
 import { privateRead } from "../../host-cli/service.js";
+import { errorText, hasErrnoCode } from "../../kernel/errors.js";
 import { type Container, type Engine, recoveryId } from "./engine.js";
 import {
   type Install,
@@ -30,7 +30,7 @@ import {
   writeState,
   writeText,
 } from "./state.js";
-import { contains, identity, isMissing, privateTree, safePath, treeDigest } from "./tree.js";
+import { contains, identity, privateTree, safePath, treeDigest } from "./tree.js";
 
 export interface ApplyOptions {
   readonly home: string;
@@ -340,13 +340,13 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
       ...tidy,
     };
   } catch (cause) {
-    const reason = cause instanceof Error ? cause.message : String(cause);
+    const reason = errorText(cause);
     try {
       await rollback(o, e, directory, u);
       await unlink(paths.update);
     } catch (failure) {
       throw new Error(
-        `Slopify could not finish, and could not fully put the previous version back either. Don't delete anything: ${u.backup ? `your data's recovery copy is the Docker volume ${u.backup}, ` : ""}progress is recorded in ${paths.update}. Fix the problem below and run the same command again; it finishes the undo first. What failed: ${reason} Undo problem: ${failure instanceof Error ? failure.message : String(failure)}`,
+        `Slopify could not finish, and could not fully put the previous version back either. Don't delete anything: ${u.backup ? `your data's recovery copy is the Docker volume ${u.backup}, ` : ""}progress is recorded in ${paths.update}. Fix the problem below and run the same command again; it finishes the undo first. What failed: ${reason} Undo problem: ${errorText(failure)}`,
         { cause },
       );
     }
@@ -411,9 +411,7 @@ async function tidyUp(
       await action();
       removed.push(what);
     } catch (error) {
-      problems.push(
-        `Couldn't remove ${what}, so it is kept. ${fix} Why: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      problems.push(`Couldn't remove ${what}, so it is kept. ${fix} Why: ${errorText(error)}`);
     }
   };
   try {
@@ -441,7 +439,7 @@ async function tidyUp(
     }
   } catch (error) {
     problems.push(
-      `Couldn't list older recovery volumes and containers to tidy up, so all of them are kept. See them with docker volume ls --filter label=io.slopify.transaction. Why: ${error instanceof Error ? error.message : String(error)}`,
+      `Couldn't list older recovery volumes and containers to tidy up, so all of them are kept. See them with docker volume ls --filter label=io.slopify.transaction. Why: ${errorText(error)}`,
     );
   }
   return { removed, problems };
@@ -536,14 +534,14 @@ async function publishProjects(
   }
   // assertEmpty checked it before anything changed; rmdir still refuses if files appeared since.
   await rmdir(projects).catch((error: unknown) => {
-    if (!isMissing(error)) throw error;
+    if (!hasErrnoCode(error, "ENOENT")) throw error;
   });
   await rename(staging, projects);
 }
 
 async function assertFolder(path: string): Promise<void> {
   const s = await lstat(path).catch((error: unknown) => {
-    if (isMissing(error)) return null;
+    if (hasErrnoCode(error, "ENOENT")) return null;
     throw error;
   });
   if (s === null || !s.isDirectory())
@@ -554,7 +552,7 @@ async function assertFolder(path: string): Promise<void> {
 
 async function assertEmpty(path: string): Promise<void> {
   const entries = await readdir(path).catch((error: unknown) => {
-    if (isMissing(error)) return [];
+    if (hasErrnoCode(error, "ENOENT")) return [];
     throw error;
   });
   if (entries.length > 0)
@@ -588,7 +586,7 @@ async function lock(path: string): Promise<() => Promise<void>> {
       await file.close();
       return () => unlink(path);
     } catch (error) {
-      if (!hasCode(error, "EEXIST")) throw error;
+      if (!hasErrnoCode(error, "EEXIST")) throw error;
       const pid = Number((await readFile(path, "utf8").catch(() => "")).trim());
       if (Number.isInteger(pid) && pid > 0 && alive(pid))
         throw new Error(
@@ -607,6 +605,6 @@ function alive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    return hasCode(error, "EPERM");
+    return hasErrnoCode(error, "EPERM");
   }
 }

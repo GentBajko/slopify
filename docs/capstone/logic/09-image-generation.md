@@ -17,7 +17,6 @@ paths_covered:
   - ":(top)packages/app/src/slices/rebuild/recipe-save.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-validation.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-image.ts"
-  - ":(top)packages/app/src/slices/rebuild/runtime-actions.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-provider.ts"
   - ":(top)packages/app/src/slices/admission/rules.ts"
   - ":(top)packages/app/src/slices/admission/model.ts"
@@ -73,7 +72,7 @@ depends_on:
 
 The Images stage (slideshow images, the establishing image, image scenes and looks) and the prompt-drawn thumbnail, built as fingerprinted revision recipes and drawn by the configured image provider. The LLM-written thumbnail prompt is scenario 10; thumbnail A/B variants and the YouTube side are scenario 27; automatic image reviews are scenario 33; on-screen table/figure cards are scenario 11.
 
-The revision runtime is the only live path. `runImages` in `packages/app/src/slices/images/run.ts:54` has no importer outside its own file; only its comments are cited by `slices/reruns/index.ts:155`. `revisionAction` in `packages/app/src/slices/rebuild/runtime-actions.ts:18` is imported only by its test.
+The revision runtime is the only live path.
 
 ## Trigger & preconditions
 
@@ -112,12 +111,17 @@ The revision runtime is the only live path. `runImages` in `packages/app/src/sli
    - Where the scene goes (`scenes.ts:16-22`): if the body has `{{Scene}}`, the scene fills it. Otherwise it is inserted as a `Scene: …` line after the first paragraph.
    - With the switch off, any line holding `{{Scene}}` is removed (`scenes.ts:26-34`, `recipe-visual.ts:69-75`).
    - A `from_prompt` thumbnail whose prompt has `{{Scene}}` gets its own `thumbnail:scenes` step in the Thumbnail stage (`recipe-scenes.ts:36-74`). It writes one scene per thumbnail, each the most click-worthy moment from anywhere in the article (`scenes.ts:95-139`).
-4. **Looks (`{{Appearance}}`)**. The step `images:appearance` runs when any image, `from_prompt` thumbnail, establishing prompt or (Shorts on) Shorts image prompt body contains `{{Appearance}}` (`recipe-appearance.ts:31-60`, `:62-93`). Its request names the project's kept subject (`subjectOf`, `recipe-appearance.ts:68`), so a rename does not redo it:
+   - **`Slopify_` scene keywords** (`{{Slopify_Scene}}`, `{{Slopify_Setting}}`, `{{Slopify_Mood}}`; `usesSlopifyScene`, `scenes.ts`) turn scenes on for the picture whose prompt uses them, with the switch off too: `images:scenes` then lists only those pictures, and a thumbnail using one gets `thumbnail:scenes` even when Images is not Generate (`recipe-scenes.ts`). With the switch off no `Scene:` line is inserted and an old `{{Scene}}` line is still removed (`withScene` with `legacy: false`). `{{Slopify_Scene}}` fills like `{{Scene}}`.
+   - When a picture's prompt uses `{{Slopify_Setting}}` or `{{Slopify_Mood}}`, the scenes request also asks for each scene's setting and mood (objects `{scene, setting, mood}` instead of strings; `sceneMessages({details})`); the request without them is byte-identical to before. The answer may be either shape (`checkScenes`), and the piece stores `details` beside `scenes`. A line asking for a setting or mood that was not written is removed.
+   - Pictures drawn without scenes drop `Slopify_` scene keyword lines: the establishing image (`withoutSlopifyScene`, `recipe-reference.ts`), the AI-written thumbnail's instruction, and the Shorts image prompt.
+4. **Looks (`{{Appearance}}`, or `{{Slopify_Appearance}}`, which means exactly the same; `usesAppearance`, `appearance.ts`)**. The step `images:appearance` runs when any image, `from_prompt` thumbnail, establishing prompt or (Shorts on) Shorts image prompt body contains `{{Appearance}}` (`recipe-appearance.ts:31-60`, `:62-93`). Its request names the project's kept subject (`subjectOf`, `recipe-appearance.ts:68`), so a rename does not redo it:
    - One web-searching LLM call (`llmInput(..., true)`, `recipe-appearance.ts:82`) returns `{subject, characters[]}` with names, aliases and a 2-4 sentence look each (`packages/app/src/slices/images/appearance.ts:27-52`).
    - The answer must name a subject with a look (`appearance.ts:54-81`).
    - Each picture gets the subject's look plus up to 3 characters its scene names as whole words (`appearance.ts:84-104`).
    - The subject is included only when the scene names it. A thumbnail always includes the subject (`recipe-visual.ts:328-332`), and so does each short's still, whose scene is the clip's text; until the looks exist a short's prompts recipe is `deferred` and waits for them (`packages/app/src/slices/rebuild/recipe-shorts.ts:130-151`; Shorts are scenario 28).
    - A picture naming nobody drops its `{{Appearance}}` line (`appearance.ts:107-115`).
+   - Other `Slopify_` keywords in a picture prompt (facts, digest, `{{Slopify_Brand}}`) are filled after the person's values and before the scene and looks (`fillPrompt` passed to `visualRecipes`; scenario 03 step 12). A picture waiting for the keyword digest is planned deferred and names the `article:digest` step.
+   - The estimate prices the scenes call when the switch is on or a picture uses a `Slopify_` scene keyword, a Thumbnail scenes line for a thumbnail that does, and an Appearance lookup line when a picture uses either looks keyword (`packages/app/src/slices/estimate/index.ts`).
 5. **Establishing image** (`RunDraft.reference`, `model.ts:126-141`). It is active only while Images is Generate (`rules.ts:497-499`). It is one Images-stage step with key `reference:image`:
    - It is drawn from its Library image prompt with keywords filled, or it is the uploaded file (`packages/app/src/slices/rebuild/recipe-reference.ts:38-100`).
    - Every generated slideshow image and every short's image carry `reference: {fingerprint, assetId}` and depend on it (`recipe-visual.ts:117-123`, `recipe-reference.ts:104-117`). The thumbnail does too, unless `reference.thumbnail` is false; this applies only to a `from_prompt`/`prompt_by_llm` thumbnail (`rules.ts:502-507`, `recipe-build.ts:43-49`).

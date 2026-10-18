@@ -73,7 +73,14 @@ export function formBody(screen: string): string {
   return `Body: the fields ${screen} sends; a wrong body is refused with every wrong field named.`;
 }
 
-export function inputShape(tool: RouteTool): Record<string, z.ZodType> {
+// `confirmed` is what the confirmed argument is said to mean; the assistant offers it on every
+// ask-first tool, including ones the page doesn't confirm.
+export function inputShape(
+  tool: RouteTool,
+  confirmed: string | undefined = tool.confirm === undefined
+    ? undefined
+    : "true once you accept the consequence the description states.",
+): Record<string, z.ZodType> {
   const { method, path } = routeOf(tool);
   return {
     ...Object.fromEntries(paramsOf(path).map((name) => [name, pathParam])),
@@ -91,13 +98,6 @@ export function inputShape(tool: RouteTool): Record<string, z.ZodType> {
               .describe("The JSON body the description names."),
           }
         : { file: fileArg }),
-    ...(tool.confirm === undefined
-      ? {}
-      : {
-          confirmed: z
-            .boolean()
-            .optional()
-            .describe("true once you accept the consequence the description states."),
-        }),
+    ...(confirmed === undefined ? {} : { confirmed: z.boolean().optional().describe(confirmed) }),
   };
 }

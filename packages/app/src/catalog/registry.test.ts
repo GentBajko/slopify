@@ -59,6 +59,35 @@ describe("curated provider requests", () => {
     await expect(consume("off")).rejects.toThrow(/thinking/);
     expect(requests).toHaveLength(1);
   });
+  it("refuses web research on a tool that cannot search, before any call", async () => {
+    const requests: LlmCompletion[] = [];
+    const port: LlmPort = {
+      id: "claude-code",
+      capabilities: { streams: true, webSearch: false, reportsUsage: false },
+      models: async () => {
+        throw Error("metadata unavailable");
+      },
+      complete: async function* (request) {
+        requests.push(request);
+        yield { type: "done", usage: null, finishReason: null };
+      },
+    };
+    const curated = curateRegistry(registry(port), catalogue).llm("claude-code");
+    const consume = async (): Promise<void> => {
+      for await (const _event of curated.complete({
+        model: "exact-cli-id",
+        webSearch: true,
+        messages: [],
+        signal: new AbortController().signal,
+      })) {
+      }
+    };
+    await expect(consume()).rejects.toMatchObject({
+      fault: { kind: "unsupported" },
+      message: expect.stringContaining("cannot search the web for research"),
+    });
+    expect(requests).toEqual([]);
+  });
   it("rejects oversized physical requests without submitting hidden split jobs", async () => {
     const texts: string[] = [];
     const port = ttsRecorder(texts);
@@ -336,6 +365,32 @@ describe("curated provider requests", () => {
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow(/Establishing image to Off in the Images section/);
+    expect(requests).toEqual([]);
+  });
+
+  it("refuses a picture to edit for a catalogue model without the reference keyword", async () => {
+    const requests: string[] = [];
+    const port: ImagePort = {
+      id: "replicate",
+      models: async () => [],
+      generate: async (request) => {
+        requests.push(request.model);
+        return { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" };
+      },
+    };
+    const curated = curateRegistry(registry(undefined, undefined, port), catalogue).image(
+      "replicate",
+    );
+    const source = { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" as const };
+    await expect(
+      curated.generate({
+        model: "black-forest-labs/flux-1.1-pro",
+        prompt: "Darker sky",
+        aspect: "16:9",
+        edit: { source },
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow(/can't edit a picture.*Made with … · change/);
     expect(requests).toEqual([]);
   });
 });

@@ -137,6 +137,10 @@ it("retries only a failed narration part and keeps completed physical bytes", as
       .prepare("SELECT * FROM project_assets WHERE id=?")
       .get(finished.assetId ?? "");
     expect(calls).toEqual(["abcd", "efgh"]);
+    // Nothing is joined from a body with a part missing.
+    expect(partial.outputs.some((row) => row.selected && row.output.role === "audio_body")).toBe(
+      false,
+    );
     fail = false;
     await start(h.deps, h.projectId, ["export:wav"]);
     await h.runner.settled();

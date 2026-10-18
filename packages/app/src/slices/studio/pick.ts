@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import type { PackFile } from "./model.js";
 
 // Which of the video's titles and thumbnails go into the upload (Prepare upload's choice).
@@ -22,14 +22,7 @@ export const uploadPickPrefix = "studio.uploadPick.";
 const keyOf = (projectId: string) => `${uploadPickPrefix}${projectId}`;
 
 export function readUploadPick(db: DatabaseSync, projectId: string): UploadPick {
-  const stored = readSetting(db, keyOf(projectId));
-  if (stored === undefined) return { title: 0, thumbnail: 0 };
-  try {
-    const parsed = uploadPickSchema.safeParse(JSON.parse(stored));
-    return parsed.success ? parsed.data : { title: 0, thumbnail: 0 };
-  } catch {
-    return { title: 0, thumbnail: 0 };
-  }
+  return readJsonSetting(db, keyOf(projectId), uploadPickSchema, { title: 0, thumbnail: 0 });
 }
 
 export function writeUploadPick(db: DatabaseSync, projectId: string, pick: UploadPick): void {

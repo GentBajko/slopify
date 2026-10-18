@@ -2,7 +2,7 @@ import { reviewStages } from "@app/slices/reviews/model.js";
 import type { ReviewView } from "@app/slices/reviews/view.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { errorOf, jsonOf, refusalFrom, understood } from "@/http";
 
 const reviewSchema = z.object({
   id: z.string(),
@@ -21,7 +21,7 @@ const reviewSchema = z.object({
   redoState: z.enum(["pending", "started", "failed"]).nullable(),
   redoError: z.string().nullable(),
   answeredBy: z.enum(["model", "agent", "person", "nobody"]),
-  actionBy: z.enum(["person", "agent"]).nullable(),
+  actionBy: z.enum(["person", "agent", "assistant"]).nullable(),
   createdAt: z.string(),
   current: z.boolean(),
   outputId: z.string().nullable(),
@@ -32,8 +32,6 @@ export type Review = z.infer<typeof reviewSchema>;
 export const reviewsKey = (projectId: string): readonly string[] => ["reviews", projectId];
 
 export type ReviewReply = { readonly ok: true } | { readonly ok: false; readonly message: string };
-
-const problemSchema = z.object({ title: z.string(), detail: z.string().optional() });
 
 export async function listReviews(api: Api, projectId: string): Promise<readonly Review[]> {
   const response = await api.fetch(
@@ -62,14 +60,9 @@ export async function actOnReview(
     },
   );
   if (response.ok) return { ok: true };
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  const problem = problemSchema.safeParse(raw);
-  if (!problem.success || ![400, 404, 409, 503].includes(response.status))
-    throw errorOf(response, undefined);
-  return { ok: false, message: problem.data.detail ?? problem.data.title };
+  const refusal = refusalFrom(response, await jsonOf(response), {
+    statuses: [400, 404, 409, 503],
+    explain: false,
+  });
+  return { ok: false, message: refusal.message };
 }

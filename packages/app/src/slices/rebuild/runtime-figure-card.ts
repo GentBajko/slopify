@@ -1,6 +1,7 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { captionFont, captionFontDeps } from "../fonts/coverage.js";
@@ -38,9 +39,7 @@ export async function executeFigureCard(
   piece: WorkPiece,
 ): Promise<StageRunResult> {
   if (piece.input.kind !== "local")
-    throw new Error(
-      "Slopify hit an internal error (a figure card step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a figure card step was set up wrongly"));
   const card = values.parse(piece.input.values);
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
   // The article's own picture for a figure, when the project has it as an upload.

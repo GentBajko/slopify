@@ -7,6 +7,7 @@ import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js
 import { documentMessages } from "../../kernel/ports/llm-documents.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
 import { cliCheck, cliName, cliReported, commandOf } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { nodeAntigravityModels } from "./antigravity-models.js";
 import { imageWorkspace, readFileName, unseenImages } from "./image-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
@@ -245,6 +246,8 @@ function failure(
   if (/invalid model selection/i.test(message))
     return providerError({
       kind: "unsupported",
+      // agy lists models a plan can't run and refuses them with this sentence.
+      access: "no-access",
       message: `The ${cliName(binary)} does not offer the model "${model}". Run "agy models" in a terminal to see the ones it has, pick one in the Edit tab (Edit project → Providers), then use Continue the run.`,
     });
   if (
@@ -276,6 +279,7 @@ function failure(
   }
   return providerError({
     kind: "other",
+    ...accessField(null, message),
     message: sentence ?? cliReported(binary, redact(message), cliCheck(binary)),
   });
 }

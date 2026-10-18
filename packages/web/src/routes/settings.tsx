@@ -12,6 +12,7 @@ import { FileLink } from "@/components/kit/link";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { useToast } from "@/components/kit/toast";
+import { ModelChecksSettings } from "@/components/model-checks";
 import { ProviderHealthCheck, useProviderHealth } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Voices } from "@/components/voices";
@@ -199,7 +200,12 @@ export function SettingsRoute({
               </>
             ) : null}
             {section === "voices" ? <Voices /> : null}
-            {section === "models" ? <CatalogueSettings /> : null}
+            {section === "models" ? (
+              <>
+                <CatalogueSettings />
+                <ModelChecksSettings />
+              </>
+            ) : null}
             {section === "agents" ? <AgentSettings /> : null}
             {section === "playback" ? <ProductionDefaults /> : null}
             {section === "template-studio" ? <TemplateStudioSettings /> : null}

@@ -4,6 +4,7 @@ import type { PickedShorts } from "@app/slices/shorts/clips.js";
 import { keptOf } from "@app/slices/shorts/keep.js";
 import type { ShortPick } from "@app/slices/shorts/pick.js";
 import { type ReactElement, useId } from "react";
+import { Checkbox } from "@/components/kit/field";
 
 // The finished shorts (their render ready and in use), in number order.
 export function finishedClips(
@@ -77,12 +78,10 @@ export function KeepShorts({
           const box = `${id}-${String(clip.number)}`;
           return (
             <li key={clip.number} className="flex min-h-10 items-center gap-3">
-              <input
+              <Checkbox
                 id={box}
-                type="checkbox"
                 checked={kept.has(clip.number)}
                 aria-invalid={over && kept.has(clip.number)}
-                className="size-4 accent-accent"
                 onChange={(event) => {
                   const next = new Set(kept);
                   if (event.target.checked) next.add(clip.number);

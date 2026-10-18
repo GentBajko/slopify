@@ -4,10 +4,12 @@ import type { Ids } from "../../kernel/ids.js";
 import type { ProviderId, Voice } from "./model.js";
 import { providerById } from "./model.js";
 import {
+  deleteSetting,
   deleteVoice,
   insertVoice,
   listVoices,
-  readSetting,
+  readJsonSetting,
+  stringListSchema,
   updateVoiceLanguages,
   writeSetting,
 } from "./repo.js";
@@ -132,20 +134,12 @@ export function voices(deps: VoicesDeps): readonly Voice[] {
 export const realPersonVoicesKey = "voices.realPerson";
 
 export function realPersonVoiceIds(db: DatabaseSync): ReadonlySet<string> {
-  const stored = readSetting(db, realPersonVoicesKey);
-  if (stored === undefined) return new Set();
-  try {
-    const value: unknown = JSON.parse(stored);
-    return new Set(
-      Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : [],
-    );
-  } catch {
-    return new Set();
-  }
+  const value = readJsonSetting(db, realPersonVoicesKey, stringListSchema, []);
+  return new Set(value);
 }
 
 function writeRealPersonVoices(db: DatabaseSync, ids: readonly string[]): void {
-  if (ids.length === 0) db.prepare("DELETE FROM settings WHERE key = ?").run(realPersonVoicesKey);
+  if (ids.length === 0) deleteSetting(db, realPersonVoicesKey);
   else writeSetting(db, realPersonVoicesKey, JSON.stringify([...new Set(ids)].sort()));
 }
 

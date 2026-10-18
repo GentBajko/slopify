@@ -1,5 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -38,9 +39,7 @@ export async function executeAnimateRecipe(
     return "done";
   const input = piece.input;
   if (input.kind !== "image" || input.animate === undefined)
-    throw new Error(
-      "Slopify hit an internal error (an animated image was set up wrongly). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("an animated image was set up wrongly"));
   const imageKey = piece.key.slice("animate:".length);
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
   const index = (view?.revision.content.imageOrder.indexOf(imageKey) ?? -1) + 1;
@@ -61,9 +60,7 @@ export async function executeAnimateRecipe(
     );
   const animate = providers.forPiece(piece.id).animate;
   if (animate === undefined)
-    throw new Error(
-      "Slopify hit an internal error (animating images isn't wired up in this build). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("animating images isn't wired up in this build"));
   if (!context.maySubmit(piece.id)) return "held";
   let made: Awaited<ReturnType<typeof animate>>;
   try {
@@ -82,7 +79,7 @@ export async function executeAnimateRecipe(
   } catch (error) {
     if (context.signal.aborted) throw error;
     return fallback(
-      `${error instanceof Error ? error.message : String(error)} To try again, use More → Render the video again in the Video section.`,
+      `${errorText(error)} To try again, use More → Render the video again in the Video section.`,
     );
   }
   if (!made.ok) return "held";

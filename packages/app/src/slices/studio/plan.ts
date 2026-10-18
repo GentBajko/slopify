@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { templateById } from "../project-templates/repo.js";
 import { scheduleRows } from "../schedules/repo.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 
 // The posting plan: a week of long-video slots, each with its shorts. Each schedule sets its
 // own (its release times, one line per day it runs, in its time zone); lines saved in Settings
@@ -33,19 +33,10 @@ export function localTimeZone(): string {
 
 // The plan as stored in Settings: the lines made before schedules had release times.
 export function readStoredPlan(db: DatabaseSync): PostingPlan {
-  const stored = readSetting(db, key);
-  if (stored !== undefined)
-    try {
-      const parsed = postingPlanSchema.safeParse(JSON.parse(stored));
-      if (parsed.success)
-        return {
-          ...parsed.data,
-          rows: parsed.data.rows.filter((row) => row.schedule === undefined),
-        };
-    } catch {
-      // A broken setting reads as no plan.
-    }
-  return emptyPlan(localTimeZone());
+  // A broken setting reads as no plan.
+  const stored = readJsonSetting(db, key, postingPlanSchema, undefined);
+  if (stored === undefined) return emptyPlan(localTimeZone());
+  return { ...stored, rows: stored.rows.filter((row) => row.schedule === undefined) };
 }
 
 // The series of a schedule's template, from its project title ("{{Topic}} | Stories" →

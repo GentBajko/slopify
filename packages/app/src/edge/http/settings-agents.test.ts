@@ -24,9 +24,10 @@ it("answers when an agent last connected, or null before the first, and what age
     title: "Continue the run",
     revisionId: null,
     createdAt: "2026-09-10T08:01:00.000Z",
+    actor: "agent",
   });
   expect(await (await h.app.request("/api/settings/agents")).json()).toMatchObject({
     lastConnectedAt: "2026-09-10T08:00:00.000Z",
-    recent: [{ title: "Continue the run", subject: "Saved" }],
+    recent: [{ title: "Continue the run", subject: "Saved", actor: "agent" }],
   });
 });

@@ -24,19 +24,14 @@ import {
   updateTemplate,
 } from "../../slices/project-templates/service.js";
 import { templateGate } from "../../slices/template-studio/schedule-gate.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
 const param = z.object({ id: z.uuid() });
 function refused(c: Context, result: Extract<TemplateResult<never>, { ok: false }>): Response {
-  const status =
-    result.reason === "not-found"
-      ? 404
-      : ["conflict", "referenced-by-schedule"].includes(result.reason)
-        ? 409
-        : 400;
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, result.reason, {
+    statuses: { "not-found": 404, conflict: 409, "referenced-by-schedule": 409 },
+    otherwise: 400,
     detail:
       result.reason === "referenced-by-schedule"
         ? "Some schedules still use this template. In Library > Schedules, cancel and delete them first; their run history is kept."
@@ -47,7 +42,6 @@ function refused(c: Context, result: Extract<TemplateResult<never>, { ok: false 
             : result.reason === "conflict"
               ? "This template or its project changed while you were editing. Reload the page to see the latest, then make your change again."
               : "Some template settings are not valid, for example an image you supplied yourself. Check the template's settings and try again.",
-    extensions: { reason: result.reason },
   });
 }
 export function projectTemplateRoutes(deps: DraftDeps | undefined): ReturnType<typeof routes> {
@@ -101,7 +95,6 @@ function routes(deps: DraftDeps | undefined) {
             result.reason === "not-found" ? 404 : result.reason === "conflict" ? 409 : 400;
           return problem(c, {
             status,
-            title: titleOf(status),
             detail: result.message,
             extensions: { reason: result.reason },
           });

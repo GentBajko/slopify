@@ -8,6 +8,7 @@ import {
   briefMax,
   type ScheduleRelease,
   type TopicGeneration,
+  type TopicScoring,
   topicGenerationOff,
 } from "@app/slices/schedules/schema.js";
 import { templateKeywords } from "@app/slices/schedules/topic-list.js";
@@ -74,7 +75,10 @@ export function ScheduleForm({
   const { api } = useApp();
   const [name, setName] = useState(editing?.name ?? "");
   const [templateId, setTemplateId] = useState(editing?.templateId ?? "");
-  const [kind, setKind] = useState<Cadence["kind"]>(editing?.cadence.kind ?? "daily");
+  // Design schedules (Ahead of each date) are made in their design template's editor.
+  const [kind, setKind] = useState<Exclude<Cadence["kind"], "by-date">>(
+    editing === null || editing.cadence.kind === "by-date" ? "daily" : editing.cadence.kind,
+  );
   const [onceAt, setOnceAt] = useState(
     editing?.cadence.kind === "once" ? localScheduleTime(editing.cadence.at, editing.timezone) : "",
   );
@@ -99,6 +103,7 @@ export function ScheduleForm({
   const [generation, setGeneration] = useState<TopicGeneration>(
     editing?.topicGeneration ?? topicGenerationOff,
   );
+  const [scoring, setScoring] = useState<TopicScoring>(editing?.topicScoring ?? "off");
   const [releases, setReleases] = useState<readonly ScheduleRelease[] | null>(
     // A server from before release times sends none.
     (editing?.releases ?? []).length === 0 ? null : (editing?.releases ?? null),
@@ -222,6 +227,7 @@ export function ScheduleForm({
         const input: ScheduleCreate = {
           id: editing?.id ?? crypto.randomUUID(),
           name: name.trim(),
+          templateKind: "project",
           templateId: selectedTemplate.id,
           templateVersion: selectedTemplate.version,
           cadence,
@@ -235,6 +241,7 @@ export function ScheduleForm({
           values: everyRun,
           brief: brief.trim() === "" ? null : brief.trim(),
           topicGeneration: generation,
+          topicScoring: scoring,
           releases:
             releases === null || kind === "once" ? [] : releaseLines(releases, runDays, shortCount),
         };
@@ -479,6 +486,8 @@ export function ScheduleForm({
             onBrief={setBrief}
             generation={generation}
             onGeneration={setGeneration}
+            scoring={scoring}
+            onScoring={setScoring}
             templateLlm={form?.llm}
           />
         </fieldset>
@@ -526,6 +535,8 @@ function GenerationFields({
   onBrief,
   generation,
   onGeneration,
+  scoring,
+  onScoring,
   templateLlm,
 }: {
   readonly problems: ScheduleProblems;
@@ -533,6 +544,8 @@ function GenerationFields({
   readonly onBrief: (text: string) => void;
   readonly generation: TopicGeneration;
   readonly onGeneration: (next: TopicGeneration) => void;
+  readonly scoring: TopicScoring;
+  readonly onScoring: (next: TopicScoring) => void;
   readonly templateLlm: { readonly provider: string; readonly model: string } | undefined;
 }): ReactElement {
   const { api } = useApp();
@@ -604,6 +617,33 @@ function GenerationFields({
           </Field>
         )}
       </div>
+      <Field
+        label="Rank topics"
+        id="schedule-scoring"
+        tip="planning.schedule.rank-topics"
+        help={
+          generation.mode === "off"
+            ? "Ranks the topics Slopify generates: choose New topics first."
+            : scoring === "search"
+              ? "Sends each new topic's title to Google, DuckDuckGo and Wikipedia. Nothing else leaves this computer."
+              : undefined
+        }
+      >
+        <Select
+          value={scoring}
+          disabled={generation.mode === "off"}
+          onChange={(event) => {
+            const next = event.target.value;
+            onScoring(next === "library" || next === "search" ? next : "off");
+          }}
+        >
+          <option value="off">Off: in the order the LLM suggests</option>
+          <option value="library">By what the library already covers</option>
+          <option value="search">
+            Also by public search interest (sends topic titles to Google, DuckDuckGo and Wikipedia)
+          </option>
+        </Select>
+      </Field>
       {generation.mode === "off" ? null : (
         <div className="flex flex-col gap-3" {...helpScope}>
           <div className="flex items-center gap-1">

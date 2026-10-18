@@ -3,6 +3,8 @@ import { waitingReviewFixture } from "../reviews/external-repo.fake.js";
 import { listRevisionHistory } from "../revisions/repo.js";
 import {
   agentActionsOf,
+  agentRevisionIds,
+  assistantRevisionIds,
   lastStarter,
   recentAgentActions,
   recordAgentAction,
@@ -27,6 +29,7 @@ const action = (
   title: projectId === null ? "Save the Notification URL" : "Continue the run",
   revisionId,
   createdAt: at,
+  actor: "agent" as const,
 });
 
 it("records an agent's actions newest first, keeps one on a deleted project without it, and marks the version it saved", () => {
@@ -56,6 +59,34 @@ it("remembers who last started a project's work", () => {
   expect(lastStarter(db, "p1")).toBe("agent");
   recordStart(db, { projectId: "p1", actor: "person", at: "t2" });
   expect(lastStarter(db, "p1")).toBe("person");
+  recordStart(db, { projectId: "p1", actor: "assistant", at: "t3" });
+  expect(lastStarter(db, "p1")).toBe("assistant");
+});
+
+it("tells the in-app assistant's changes from an agent's", () => {
+  const f = waitingReviewFixture();
+  open.push(f);
+  const { db } = f.h.deps;
+  recordAgentAction(db, action("a1", "p1", "2026-09-10T00:01:00.000Z", "r-agent"));
+  recordAgentAction(db, {
+    ...action("a2", "p1", "2026-09-10T00:02:00.000Z", f.revisionId),
+    actor: "assistant",
+  });
+  recordAgentAction(db, { ...action("a3", null, "2026-09-10T00:03:00.000Z"), actor: "assistant" });
+  expect(agentActionsOf(db, "p1").map((one) => [one.id, one.actor])).toEqual([
+    ["a2", "assistant"],
+    ["a1", "agent"],
+  ]);
+  expect(recentAgentActions(db).map((one) => [one.id, one.actor])).toEqual([
+    ["a3", "assistant"],
+    ["a2", "assistant"],
+    ["a1", "agent"],
+  ]);
+  expect([...agentRevisionIds(db, "p1")]).toEqual(["r-agent"]);
+  expect([...assistantRevisionIds(db, "p1")]).toEqual([f.revisionId]);
+  expect(listRevisionHistory(db, "p1").map((one) => [one.byAgent, one.byAssistant])).toEqual([
+    [undefined, true],
+  ]);
 });
 
 it("lists only the latest 20 changes on the Agents list", () => {

@@ -22,6 +22,16 @@ paths_covered:
   - ":(top)packages/app/src/slices/admission/model.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-shorts.ts"
   - ":(top)packages/app/src/slices/rebuild/recipe-appearance.ts"
+  - ":(top)packages/app/src/slices/keywords/model.ts"
+  - ":(top)packages/app/src/slices/keywords/specs.ts"
+  - ":(top)packages/app/src/slices/keywords/rules.ts"
+  - ":(top)packages/app/src/slices/keywords/fill.ts"
+  - ":(top)packages/app/src/slices/keywords/values.ts"
+  - ":(top)packages/app/src/slices/keywords/facts.ts"
+  - ":(top)packages/app/src/slices/keywords/digest.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-keywords.ts"
+  - ":(top)packages/app/src/slices/rebuild/recipe-digest.ts"
+  - ":(top)packages/app/src/slices/rebuild/runtime-keywords.ts"
 scenario: placeholder-substitution
 mockup_row: S1
 screens: [05-prompt-editor, 06-play, 08-project]
@@ -30,7 +40,7 @@ depends_on: [01-pipeline-lifecycle]
 
 # 03 Placeholder substitution
 
-How `{{keywords}}` in prompt bodies, entries and the project title become fields on Play (and on Edit project, templates and schedules), and rendered text at run start. Two keywords, `{{Scene}}` and `{{Appearance}}`, are filled by Slopify per image instead. This scenario makes no external call: the rendered text is sent by scenarios 06, 07, 09 and the others that read `config.rendered`.
+How `{{keywords}}` in prompt bodies, entries and the project title become fields on Play (and on Edit project, templates and schedules), and rendered text at run start. The keywords Slopify fills (`{{Slopify_…}}`, and the old names `{{Scene}}` and `{{Appearance}}`) are never fields: step 12 says how they are filled. This scenario makes no external call: the rendered text is sent by scenarios 06, 07, 09 and the others that read `config.rendered`.
 
 ## Trigger & preconditions
 
@@ -58,13 +68,23 @@ How `{{keywords}}` in prompt bodies, entries and the project title become fields
 10. `{{Scene}}` and `{{Appearance}}` (scenario 09 owns the calls that produce them):
     - Scene: with Scenes from the article on, each image's scene replaces `{{Scene}}`, or, when the prompt has none, is inserted as a `Scene: …` line after the prompt's first paragraph (`withScene`, `packages/app/src/slices/images/scenes.ts:14-22`). With it off, any line holding `{{Scene}}` is removed (`withoutScene`, `scenes.ts:24-34`; applied in `packages/app/src/slices/rebuild/recipe-visual.ts:74-75`). In the Shorts image prompt the `{{Scene}}` line is always removed, because the per-clip prompts call already writes each still's moment (`packages/app/src/slices/rebuild/recipe-shorts.ts:88-92`).
     - Appearance: `{{Appearance}}` becomes the looks of the subject and up to 3 characters the image's scene names (the subject always for a thumbnail and for a short's stills, which take the clip's text as their scene, `packages/app/src/slices/rebuild/recipe-shorts.ts:132`); when that text is empty, the lines holding it are removed (`packages/app/src/slices/images/appearance.ts:83-115`). The Shorts image prompt counts among the bodies whose `{{Appearance}}` turns the looks lookup on (`pictureBodies`, `packages/app/src/slices/rebuild/recipe-appearance.ts:55-57`).
-11. Templates and schedules: saving a template empties the values of keywords the title names (the per-video topic) and keeps the rest (`templateValues`, `packages/app/src/slices/project-templates/one-off.ts:8-23`). A schedule has a topic keyword and "every run" values (each value ≤ 10000 chars, keyword names trimmed, ≤ 200, `packages/app/src/slices/schedules/schema.ts:11-19`); a run's values are layered template values → every-run values → the topic's own values → topic title in the topic keyword; without a topic keyword the topic is the whole title (`scheduledValues` / `renderedTitle`, `packages/app/src/slices/schedules/topic-list.ts:29-61`). The schedule's list labels fields "<name> (every run)" and adds "Unless a topic sets its own." to columns a topic list provides (`packages/web/src/schedules/topic-queue.tsx:349-364`). Scenario 25 owns schedules.
+12. Keywords Slopify fills (`packages/app/src/slices/keywords/`):
+    - One registry (`keywordSpecs`, `keywords/specs.ts`) names each keyword with the reserved `Slopify_` prefix, what fills it (facts, release date, chapters, duration, digest, scenes, appearance), where it works (`places`: title, article, script, narration, intro, outro, image, thumbnail, description, shorts, review) and its cost (free or part of one AI call). `filledKeywords` is every registry name plus `Scene` and `Appearance` (`substitute.ts`), so `collectFields` never asks for them. An unknown `Slopify_` name stays an ordinary field.
+    - Lint (`lint.ts`, `keywords/rules.ts`): saving refuses an unknown `Slopify_` name (any case) unless the stored prompt, the restored version or a backup row already had it; a keyword outside its places and an old name are warnings (`keywordWarnings`), as is `{{Slopify_Release_Date}}` in a Text entry.
+    - Play (`slots.ts` `pickTemplates`, `rules.ts` `admit`): a keyword outside its places marks the field that picked the prompt (`placedProblems`), unless the person gave that name a value of their own; any keyword in the title is refused; a Text intro or outro with the release date is refused. `keywordUses` (digest, chapters, scene keywords) makes the text model required and is refused with Article Off (`articleOffFields`). A saved version runs the same checks (`recipe-validation.ts`).
+    - Facts (`keywords/facts.ts`): when a picked body uses a fact keyword, start copies `config.keywordFacts` (channel name, series brief, links, previous video in the same series with its YouTube link, next planned video in the same series, cast, titles covered before, episode number, brand colours and bundled/uploaded font names); a draft never brings its own. Absent is none. `GET /api/keywords/facts/:projectId` copies them again for Edit project's Refresh keyword facts; a saved version using a fact keyword without facts is refused with that button's name.
+    - Fill (`fillPrompt`, `rebuild/recipe-keywords.ts`): after `render` with the person's values, each keyword usable at the prompt's place is replaced; an empty value removes its line; a body with no keyword is returned as the same string, so its requests and fingerprints are unchanged (pinned by `recipe-keywords-compat.test.ts`). In a Description prompt the links and neighbouring videos become the description's own link placeholders (`{{Previous video}}`, `{{Next video}}`, `{{<link name>}}`), filled when shown. Chapters come from the article's top headings; a step whose prompt waits for them, or for the digest, is planned deferred and runs after its producer.
+    - Late (`rebuild/runtime-keywords.ts`): `{{Slopify_Release_Date}}` (the long video's release in the posting plan) and `{{Slopify_Duration}}` (the narration's length) stay in the planned request and are filled as an AI or image request is sent, or as an agent review opens; with none, the line is left out. Changing either never outdates anything.
+    - Digest (`keywords/digest.ts`, `rebuild/recipe-digest.ts`): `article:digest`, one text call in the Article stage, exists only while an active prompt uses a digest keyword; it reads the article the pictures are drawn from and writes all six parts; its answer is checked and stored as the piece's `digest`.
+    - Picture keywords: scenario 09.
+13. Templates and schedules: saving a template empties the values of keywords the title names (the per-video topic) and keeps the rest (`templateValues`, `packages/app/src/slices/project-templates/one-off.ts:8-23`). A schedule has a topic keyword and "every run" values (each value ≤ 10000 chars, keyword names trimmed, ≤ 200, `packages/app/src/slices/schedules/schema.ts:11-19`); a run's values are layered template values → every-run values → the topic's own values → topic title in the topic keyword; without a topic keyword the topic is the whole title (`scheduledValues` / `renderedTitle`, `packages/app/src/slices/schedules/topic-list.ts:29-61`). The schedule's list labels fields "<name> (every run)" and adds "Unless a topic sets its own." to columns a topic list provides (`packages/web/src/schedules/topic-queue.tsx:349-364`). Scenario 25 owns schedules.
 
 ## Branches
 
 - Name used only by a Provide/Off stage's prompt → no field; also used by a generating stage's body → one field.
 - Name used on both sides → Common; one side → Text or Image.
 - Name is `Scene` or `Appearance` → never a field; filled per image or its line removed.
+- Name is a `Slopify_` keyword → never a field; filled where it works, refused elsewhere; unknown `Slopify_` name → refused on save, an ordinary field when already saved.
 - Body with no slots → no fields; allowed.
 - Lint error present → Save refused; none → Save allowed.
 - Title has keywords → rendered per project; a template stores those keywords empty.
@@ -88,6 +108,7 @@ None: no entity changes state here. Values and rendered text are written once, i
 
 - A rendered body never has a user keyword left unfilled: admission refuses a run with a missing value before render (`substitute.ts:91-93`, `rules.ts:368-377`). `{{Scene}}` and `{{Appearance}}` may remain in `config.rendered` and are resolved or removed before any image request.
 - A value never expands into further slots (single pass).
+- A body with no `Slopify_` keyword fills to the very same string: no existing project's request changes.
 - One name has exactly one value within a run.
 - Editor, Play and run share one grammar (`detectSlots`), imported, never restated (`lint.ts:1-3`, `admission.ts:12`).
 

@@ -11,7 +11,7 @@ import { stagedFileById } from "../../slices/storage/repo.js";
 import { fileResponse } from "./byte-range.js";
 import { draftProblem } from "./draft-problem.js";
 import { readMultipart } from "./multipart.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const params = z.object({ id: z.uuid(), attachmentId: z.uuid() });
 const imageTypes: Readonly<Record<string, string>> = {
@@ -38,7 +38,6 @@ export function draftFileRoutes(service: () => DraftStartDeps) {
         if (result === undefined)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: "No file arrived with the upload. Choose the file again and retry.",
           });
         return result.ok
@@ -67,7 +66,6 @@ export function draftFileRoutes(service: () => DraftStartDeps) {
       )
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "This attached file has not finished uploading, so it cannot be previewed yet. Wait a moment or attach it again.",
         });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { type Project, type RunConfig, referenceKey, type Stage } from "../admission/model.js";
@@ -161,7 +162,9 @@ export function legacyImageOutput(
   );
   if (matches.length > 1)
     throw new Error(
-      `Slopify hit an internal error (an image from an older Slopify version, ${piece.id}, matches multiple outputs). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
+      internalError(
+        `an image from an older Slopify version, ${piece.id}, matches multiple outputs`,
+      ),
     );
   return matches[0];
 }

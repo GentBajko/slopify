@@ -37,16 +37,9 @@ import {
 } from "../../slices/uploads/repo.js";
 import { settledStatus } from "../../slices/uploads/rules.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 import { createProject } from "./project-create.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
@@ -78,7 +71,6 @@ export function projectRoutes(deps: AppDeps) {
         if (!created.ok)
           return problem(c, {
             status: created.status,
-            title: titleOf(created.status),
             detail: created.detail,
             ...(created.fields.length === 0 ? {} : { extensions: { fields: created.fields } }),
           });
@@ -133,7 +125,6 @@ export function projectRoutes(deps: AppDeps) {
         if (project === undefined) {
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail: projectTrashed(deps.db, c.req.valid("param").id)
               ? "This project is in the trash. Restore it in Settings → Trash to open it again."
               : "This project no longer exists. Go back to Projects to pick another.",
@@ -189,7 +180,6 @@ export function projectRoutes(deps: AppDeps) {
           if (channelById(deps.db, channelId) === undefined)
             return problem(c, {
               status: 404,
-              title: titleOf(404),
               detail:
                 "That channel no longer exists. Reload the page and pick one from the list, or make it again in Channels.",
             });
@@ -209,7 +199,6 @@ export function projectRoutes(deps: AppDeps) {
           const status = result.reason === "running" ? 409 : 404;
           return problem(c, {
             status,
-            title: titleOf(status),
             detail:
               result.reason === "running"
                 ? "This project is still running. Use Cancel run on the project page first, then delete it."

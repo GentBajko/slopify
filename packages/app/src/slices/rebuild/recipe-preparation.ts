@@ -15,7 +15,7 @@ import {
   recipe,
   selectedReference,
 } from "./recipe-model.js";
-import { llmInput, renderedPrompt } from "./recipe-text.js";
+import { llmInput, promptOf } from "./recipe-text.js";
 
 export interface PreparedGroup {
   readonly preparation: ResolvedWorkRecipe;
@@ -26,7 +26,7 @@ export interface PreparedGroup {
 export function preparationTemplate(context: RecipeContext): FingerprintValue {
   const input = llmInput(
     context,
-    preparationMessages(renderedPrompt(context, "narration"), "", [], context.config.language),
+    preparationMessages(promptOf(context, "narration").text, "", [], context.config.language),
   );
   return [
     "inworld-tts-2",
@@ -75,7 +75,7 @@ export function preparationForGroup(
   // A delivery note for this chunk alone (Edit project → Narration), after the project's prompt.
   const override = context.content.narrationOverrides[logicalKey];
   const note = override?.kind === "text" ? override.direction : undefined;
-  const prompt = renderedPrompt(context, "narration");
+  const prompt = promptOf(context, "narration").text;
   const preparation = recipe(
     context,
     `narration:prepare:${segment}:${logicalKey}`,

@@ -5,6 +5,7 @@ import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, unreadable, voiceFix } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { retryAfter } from "../retry-after.js";
 import { inworldAsync, streamFailure } from "./inworld-async.js";
 import { inworldLanguages, lookUp } from "./voice-languages.js";
@@ -119,6 +120,7 @@ async function* synthesizeRequest(
     const detail = clean(await response.text().catch(() => ""), key);
     const retryAfterMs = retryAfter(response.headers.get("retry-after"));
     throw providerError({
+      ...accessField(response.status, detail),
       kind:
         response.status === 401 || response.status === 403
           ? "auth"
@@ -157,6 +159,7 @@ async function* synthesizeRequest(
     if (parsed.data.error) {
       const { code, message } = parsed.data.error;
       throw providerError({
+        ...accessField(code === 5 ? 404 : code === 7 ? 403 : null, message ?? ""),
         kind:
           code === 16 || code === 7
             ? "auth"

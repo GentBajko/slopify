@@ -66,7 +66,7 @@ All commands run from the repository root; the root config resolves each path to
 ```sh
 npx vitest run packages/app/src/slices/shorts              # one directory
 npx vitest run packages/web/src/routes/home.test.tsx        # one file
-npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"   # one named case
+npx vitest run packages/app/src/slices/rebuild/export-video-native.test.ts -t "burns"   # one named case
 npx vitest run --project web                                # one project (names in the table above)
 npm test                                                    # the whole suite
 ```
@@ -82,7 +82,7 @@ Triggers: pushes to any branch and pull requests; tags do not trigger CI (`.gith
 | `check` | `npm ci`, `npm run lint` (Biome), `npm run typecheck`, `npm run build`, `npm audit --audit-level=high` | every push/PR | `.github/workflows/ci.yml:10-25` |
 | `test` | `npx vitest run --shard=N/5` on five parallel runners, `fail-fast: false` | every push/PR | `.github/workflows/ci.yml:29-43` |
 | `changes` | `node packages/app/scripts/ci-changes.mjs` with full history and tags, `actions: read` permission and `GH_TOKEN` | every push/PR | `.github/workflows/ci.yml:71-90` |
-| `windows` | build, `install-smoke.mjs`, one focused Vitest selection (FFmpeg, boot, CLI discovery/spawn, CLI paths/status, files/folders, assets, fonts, `e2e/skeleton`), then `video-render.test.ts -t "real subtitle export"` | `changes.windows == 'true'` | `.github/workflows/ci.yml:46-65` |
+| `windows` | build, `install-smoke.mjs`, one focused Vitest selection (FFmpeg, boot, CLI discovery/spawn, CLI paths/status, files/folders, assets, fonts, `e2e/skeleton`), then the real-FFmpeg export tests `export-video-native.test.ts` and `export-wav-join.test.ts` | `changes.windows == 'true'` | `.github/workflows/ci.yml:46-65` |
 | `container` (matrix `image`, `docker-install`) | `npm ci --ignore-scripts`, build, `docker build -t slopify:smoke .`; `image` runs `container-smoke.sh` then `host-cli-smoke.mjs`; `docker-install` runs `docker-install-smoke.mjs` | `changes.docker == 'true'` | `.github/workflows/ci.yml:95-118` |
 
 `ci-changes.mjs` sets `release` when `packages/app/package.json`'s version has no tag yet (`packages/app/scripts/ci-changes.mjs:25`). `windows` and `docker` are true only on such release pushes and only when files matching their path sets changed since that job last passed: `lastPassed` reads the GitHub Actions API for the newest successful `ci.yml` run on `main` since the last release tag whose jobs of that name all succeeded, and falls back to the last reachable release tag when none is found or the API is unreadable (`packages/app/scripts/ci-changes.mjs:65-93`, `:99-120`). A `package.json`/`package-lock.json` diff that only changes workspace versions does not count (`packages/app/scripts/ci-changes.mjs:36-59`). With no prior tag, everything runs (`packages/app/scripts/ci-changes.mjs:28-33`, `:95-96`).
@@ -125,7 +125,6 @@ Provider ports are replaced by structural fakes that implement the real port int
 
 - `fixedClock`, `manualClock` (`packages/app/src/kernel/clock.fake.ts:7`, `:28`).
 - `standaloneOver` builds a slice's deps around the real standalone call over a fake provider, because slices may not hold a `Registry` (`packages/app/src/kernel/runner/standalone.fake.ts:9-11`).
-- `recordingCounter` replaces the telemetry recorder and keeps counters without writing rows (`packages/app/src/slices/telemetry/record.fake.ts:3-18`).
 
 **Database and storage fixtures** (real SQLite via `openDb` + `migrate`, temporary data directories, fixed clock, sequential IDs):
 
@@ -138,11 +137,10 @@ Provider ports are replaced by structural fakes that implement the real port int
 | `createRebuildDeps`, `serviceFixture`, `paidServiceFixture` | `packages/app/src/slices/rebuild/service.fake.ts:9-72` | rebuild service deps |
 | `recipe-fixture.ts` (`config`, `content`, `catalogue`, `emptyView`, `readyView`, `workFor`) | `packages/app/src/slices/rebuild/recipe-fixture.ts:5-137` | pure recipe inputs |
 | `exportFixture`, `narrationFixture`, `workFixture`, `admitPendingRevision` | `packages/app/src/slices/rebuild/runtime-export.fake.ts:22`, `runtime-narration.fake.ts:67`, `work.fake.ts:5`, `legacy-admission.fake.ts:9` | runtime stage inputs |
-| `exportFixture`, `inspectMedia`, `wavParts` | `packages/app/src/slices/video/export.fake.ts:19-149` | real bundled FFmpeg (`:17`) and media inspection |
+| `binary`, `inspectMedia`, `wavParts` | `packages/app/src/slices/video/export.fake.ts:6-17` | real bundled FFmpeg (`:6`) and media inspection |
 | `draftFixture`, `reviewFixture`, `startFixture` | `packages/app/src/slices/play-drafts/draft.fake.ts:20-141` | Play drafts through review and Start |
 | `composedFixture`, `deferred`, `tone`, `save`, `start` | `packages/app/test/revision-rebuild.fake.ts:22-113` | real `wireRunner` over fake `Registry` ports and real FFmpeg; held promises order edits, responses and publication |
 | `preparationFixture` | `packages/app/test/revision-preparation.fake.ts:6` | narration preparation composition |
-| `legacyAttempts`, `legacyStage` | `packages/app/test/legacy-runner.ts:6-16` | pre-revision storage for old slice composition tests |
 | `seedLegacy`, `verifyPcmWav` | `packages/app/test/e2e/editable-projects.fixture.ts:33`, `:174` | legacy project on disk for real-HTTP tests |
 | `mcpFixture`, `connectAgent`, `routeCallDeps` | `packages/app/src/edge/mcp/mcp.fake.ts:17`, `:53`, `:69` | the whole app (`createApp`) over a `revisionFixture` database with one project, optionally with the rebuild service; an SDK `Client` connected in-process through `StreamableHTTPClientTransport` whose `fetch` is `app.request`; `callRoute`'s deps over a fake `api` and an empty migrated database, for tests of one call |
 
@@ -160,7 +158,9 @@ Provider ports are replaced by structural fakes that implement the real port int
 - `call-route.test.ts`: path parameters, query and body reach the route; refusals pass through, a schema refusal names the wrong arguments; `confirmed: true` is asked before sending anything; agent changes are recorded once per `idempotencyKey` (`packages/app/src/edge/mcp/call-route.test.ts:30`-`:268`). Beside it, `file-tools`, `review-tools`, `library-tools`, `remake-tools`, `state-shapes`, `instructions`, `attribution`, `tools-projects` and `tools-setup` tests cover the bespoke tools and the answer shapes.
 - Slice side: `packages/app/src/slices/agents/attention.test.ts` checks `needs_attention` (every kind oldest first, in-flight retries, what is left out, one unreadable row skipped and logged); `packages/app/src/slices/reviews/external-repo.test.ts` checks the External agent review rules (first verdict wins, auto-pass at the deadline including paused projects, canceled runs never pass, Trash, superseded and replaced standings).
 - Composed: `packages/app/test/mcp-narration-fix.test.ts` and `packages/app/test/mcp-chunk-fix.test.ts` run the real runner (`composedFixture`) and fix a failed narration chunk through MCP the way the error says, voicing only that chunk again and continuing the run; `revision-agent-reviews.test.ts` and `revision-agent-reviews-shutdown.test.ts` run External agent reviews end to end (waiting, auto-pass after 2 h, restart, cancel, redo).
-- Backups: `packages/app/src/slices/storage/backup-new-tables.test.ts` lists every table as carried or in `leftOut` (`:33`); `external_reviews`, `agent_actions`, `project_starts` and `told_failures` are left out.
+- Backups: `packages/app/src/slices/storage/backup-new-tables.test.ts` lists every table as carried or in `leftOut` (`:33`); `external_reviews`, `agent_actions`, `project_starts`, `told_failures` and `model_checks` are left out.
+- Model standings never gate a run: `packages/app/src/catalog/registry.compat.test.ts` checks that a model marked not on the plan still validates and reaches the provider, and that no file a run goes through imports `slices/model-checks`.
+- The daily catalogue script: `packages/app/src/catalog/catalogue-build.test.ts` runs `scripts/catalogue-build.ts` against a saved OpenRouter listing (`src/catalog/fixtures/openrouter-models.json`), checks the files parse with the v1 schema, and that a second run proposes nothing.
 
 **Other packages:**
 

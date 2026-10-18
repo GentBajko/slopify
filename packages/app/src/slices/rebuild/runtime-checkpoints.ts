@@ -1,4 +1,5 @@
 import type { Catalogue } from "../../catalog/schema.js";
+import { internalError } from "../../kernel/errors.js";
 import { checkpointClosure, checkpointFingerprint } from "../checkpoints/fingerprint.js";
 import { saveCheckpointSet } from "../checkpoints/repo.js";
 import type { PlayStartResult, ReviewedCheckpoint } from "../play-drafts/model.js";
@@ -19,10 +20,7 @@ export function admitReviewedCheckpoints(
     const revisionId = currentRevisionId(deps.db, projectId);
     const view =
       revisionId === undefined ? undefined : getRevisionView(deps, projectId, revisionId);
-    if (!view)
-      throw new Error(
-        "Slopify hit an internal error (the project version to review is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+    if (!view) throw new Error(internalError("the project version to review is missing"));
     const plan = executionPlan(deps, view, executionCatalogue(catalogue, view.revision.config));
     const checkpoints = gates.map((gate) => {
       const work = deps.db
@@ -31,9 +29,7 @@ export function admitReviewedCheckpoints(
         )
         .get(projectId, view.revision.id, gate.stage);
       if (typeof work?.id !== "string")
-        throw new Error(
-          "Slopify hit an internal error (a review checkpoint has no matching stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a review checkpoint has no matching stage"));
       return {
         checkpointId: gate.checkpointId,
         stage: gate.stage,
@@ -51,16 +47,10 @@ export function admitReviewedCheckpoints(
       checkpoints,
       createdAt: deps.clock.now().toISOString(),
     });
-    if (!saved.ok)
-      throw new Error(
-        "Slopify hit an internal error (the review checkpoints could not be saved). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+    if (!saved.ok) throw new Error(internalError("the review checkpoints could not be saved"));
     return saved.value.map((row) => {
       const gate = gates.find((gate) => gate.checkpointId === row.checkpointId);
-      if (!gate)
-        throw new Error(
-          "Slopify hit an internal error (a saved review checkpoint could not be matched). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+      if (!gate) throw new Error(internalError("a saved review checkpoint could not be matched"));
       return { ...row, reviewedFingerprint: gate.fingerprint };
     });
   });

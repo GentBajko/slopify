@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import {
   alternativeTitles,
@@ -112,7 +113,7 @@ export function checkDescriptionAnswer(
   // Its pattern, whose fixed wording the other titles keep.
   shape?: TitleShape,
 ): CheckedAnswer {
-  const parsed = answerSchema.safeParse(jsonOf(text));
+  const parsed = answerSchema.safeParse(jsonBetween(text, "{", "}"));
   if (!parsed.success)
     return {
       ok: false,
@@ -319,17 +320,4 @@ function checkTags(
       `the tags come to ${String(length)} characters, over YouTube's ${String(tagsMaxCharacters)}`,
     );
   return { ok: true, value: tags };
-}
-
-// The object in the answer, wherever the model put it: bare, in a ```json fence, or after a
-// sentence of its own.
-function jsonOf(text: string): unknown {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
 }

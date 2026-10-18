@@ -130,3 +130,18 @@ it("never shows an agent the Notification URL, only whether one is set", async (
   for (const answer of said) expect(answer).not.toContain("harbor-7f3a9c2e1b");
   expect(said.every((answer) => !answer.includes("ntfy.sh"))).toBe(true);
 });
+
+it("words a model check's consequence from its estimate, and leaves Automatic checks to the person", () => {
+  const tool = toolNamed("check_models");
+  expect(tool.reachesOut).toBe("asks");
+  expect(tool.confirmFrom?.route).toBe("/api/providers/:id/models/check/estimate");
+  expect(tool.confirmFrom?.text({ count: 3, text: "about $0.04", planAccounts: [] })).toBe(
+    "Checks 3 models, one small request each: about $0.04 at list price.",
+  );
+  expect(tool.confirmFrom?.text({ count: 1, text: "free", planAccounts: ["codex"] })).toBe(
+    "Checks 1 model, one small request each: free at list price, using the CLI plan's allowance.",
+  );
+  expect(tool.confirmFrom?.text({ nope: true })).toBeUndefined();
+  expect(toolNamed("list_models").description).toContain("standings");
+  expect(routeTools.some((one) => one.route === "PUT /api/model-checks/auto")).toBe(false);
+});

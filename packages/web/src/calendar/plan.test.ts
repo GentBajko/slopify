@@ -17,6 +17,7 @@ const run = (over: Partial<CalendarRun> = {}): CalendarRun => ({
   renderedTitle: null,
   prepared: null,
   notReady: false,
+  templateKind: "project",
   ...over,
 });
 

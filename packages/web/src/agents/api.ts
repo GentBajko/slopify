@@ -12,6 +12,7 @@ const connectionSchema = z.object({
       title: z.string(),
       subject: z.string().nullable(),
       createdAt: z.string(),
+      actor: z.enum(["agent", "assistant"]).default("agent"),
     }),
   ),
 });

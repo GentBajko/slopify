@@ -1,6 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
-import { z } from "zod";
 import {
   addOutputPreviewRequestSchema,
   addOutputRequestSchema,
@@ -12,15 +11,8 @@ import {
 } from "../../slices/outputs/service.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
-
-const projectParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 const statuses = {
   "no-project": 404,
@@ -60,7 +52,6 @@ export function outputRoutes(deps: AppDeps) {
     const status = statuses[value.reason];
     return problem(c, {
       status,
-      title: titleOf(status),
       detail: value.message ?? details[value.reason],
       extensions: {
         reason: value.reason,
@@ -72,7 +63,7 @@ export function outputRoutes(deps: AppDeps) {
   return new Hono()
     .post(
       "/:id/outputs/preview",
-      zValidator("param", projectParam, onInvalid),
+      zValidator("param", idParam, onInvalid),
       zValidator("json", addOutputPreviewRequestSchema, onInvalid),
       (c) => {
         const projectId = c.req.valid("param").id;
@@ -82,7 +73,7 @@ export function outputRoutes(deps: AppDeps) {
     )
     .post(
       "/:id/outputs",
-      zValidator("param", projectParam, onInvalid),
+      zValidator("param", idParam, onInvalid),
       zValidator("json", addOutputRequestSchema, onInvalid),
       async (c) => {
         const projectId = c.req.valid("param").id;

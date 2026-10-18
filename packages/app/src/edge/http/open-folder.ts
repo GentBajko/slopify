@@ -5,7 +5,8 @@ import { assetOf, findDownload } from "../../slices/storage/downloads.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
 import { replyForFolder } from "./folder-location.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 export function openFolderRoutes(deps: AppDeps) {
   return new Hono().post(
@@ -13,11 +14,7 @@ export function openFolderRoutes(deps: AppDeps) {
     zValidator(
       "param",
       z.object({
-        id: z
-          .string()
-          .min(1)
-          .max(64)
-          .regex(/^[0-9A-Za-z_-]+$/),
+        id: idString,
       }),
       onInvalid,
     ),
@@ -36,7 +33,6 @@ export function openFolderRoutes(deps: AppDeps) {
       if (origin !== undefined && origin !== new URL(c.req.url).origin) {
         return problem(c, {
           status: 403,
-          title: titleOf(403),
           detail:
             "For your safety, folders can only be opened from the Slopify page itself. Open Slopify and try again there.",
         });
@@ -56,7 +52,6 @@ export function openFolderRoutes(deps: AppDeps) {
       if (download === undefined || !download.ok) {
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "This output's file was deleted or moved. Use More → make it again in its section on the project page to make it again.",
         });

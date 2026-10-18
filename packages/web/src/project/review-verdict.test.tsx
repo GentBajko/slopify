@@ -181,3 +181,51 @@ it("says an auto-passed item went ahead unreviewed", async () => {
   );
   expect(await screen.findByText(/No agent answered within 2 hours/)).toBeTruthy();
 });
+
+it("names the promise check beside the article, where it shares the place with the article review", async () => {
+  const promise: Review = {
+    ...flagged,
+    id: "v2",
+    itemKey: "promise",
+    stage: "promise",
+    reasons: ["It greets the viewer first. Start with: The rope held."],
+    attempt: 1,
+  };
+  function PromiseSubject() {
+    const reviews = useReviews("p1");
+    return (
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: "promise" })}
+        projectId="p1"
+        busy={false}
+      />
+    );
+  }
+  renderApp(
+    <PromiseSubject />,
+    testDeps({ "GET /api/projects/p1/reviews": jsonAnswer({ reviews: [promise] }) }),
+  );
+  expect(await screen.findByText("Promise check")).toBeTruthy();
+  expect(
+    screen.getByRole("region", { name: "Promise check (before narration) review" }),
+  ).toBeTruthy();
+  expect(screen.getByText("It greets the viewer first. Start with: The rope held.")).toBeTruthy();
+});
+
+it("says when the in-app assistant decided a flagged item", async () => {
+  for (const [action, label] of [
+    ["overruled", "Accepted by assistant"],
+    ["redone", "Made again by assistant"],
+  ] as const) {
+    renderApp(
+      <Subject />,
+      testDeps({
+        "GET /api/projects/p1/reviews": jsonAnswer({
+          reviews: [{ ...flagged, action, actionAt: "now", actionBy: "assistant" }],
+        }),
+      }),
+    );
+    expect(await screen.findByText(label)).toBeTruthy();
+    cleanup();
+  }
+});

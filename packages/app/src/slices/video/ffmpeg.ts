@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { bedChains, bedInputs } from "./ambient-mix.js";
 import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
@@ -90,7 +91,10 @@ export function slideshowClips(
       const shot = edit.shots[segment.kind === "shot" ? segment.shot : segment.to];
       if (shot === undefined)
         throw new Error(
-          "Slopify hit an internal error (the video's edit list lost a shot). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
+          internalError(
+            "the video's edit list lost a shot",
+            "Use More → Render the video again in the Video section",
+          ),
         );
       clips.push({ name, segment, shot, frames: segment.count });
     }
@@ -166,7 +170,10 @@ export function segmentArgs(
   const picture = (shot: Shot | undefined, from: number, label: string): void => {
     if (shot === undefined)
       throw new Error(
-        "Slopify hit an internal error (the video's edit list lost a shot). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
+        internalError(
+          "the video's edit list lost a shot",
+          "Use More → Render the video again in the Video section",
+        ),
       );
     const at = inputs.filter((one) => one === "-i").length;
     const built = pictureChain(edit, shot, from, segment.count, at, label, gradeFilter(edit.look));
@@ -593,7 +600,7 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
       try {
         work();
       } catch (error) {
-        run.log.write("warn", what, { detail: messageOf(error) });
+        run.log.write("warn", what, { detail: errorText(error) });
       }
     };
 
@@ -702,10 +709,6 @@ export async function probeDurationMs(
     },
   });
   return last;
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 function failure(

@@ -29,7 +29,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "a11y": {
+        "noLabelWithoutControl": {
+          "level": "error",
+          "options": { "inputComponents": ["Checkbox"] }
+        }
+      }
     }
   },
   "javascript": {
@@ -118,9 +124,10 @@
                       "!**/kernel/clock.js",
                       "!**/kernel/clock.fake.js",
                       "!**/kernel/log.js",
-                      "!**/kernel/cli-command.js"
+                      "!**/kernel/cli-command.js",
+                      "!**/kernel/errors.js"
                     ],
-                    "message": "adapters may import only kernel/ports and kernel/{clock,log,cli-command}, plus the clock's own double in a test."
+                    "message": "adapters may import only kernel/ports and kernel/{clock,log,cli-command,errors}, plus the clock's own double in a test."
                   }
                 ]
               }

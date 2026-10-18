@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText } from "../../kernel/errors.js";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { liveProject } from "../admission/repo.js";
 import { defaultChannelId } from "../channels/model.js";
 import { projectChannels, scheduleChannel } from "../channels/repo.js";
 import { channelVideoTitles } from "../channels/videos.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
 import {
@@ -21,6 +23,7 @@ import {
 } from "./schema.js";
 import { newTopics } from "./similar.js";
 import { scheduleKeywords, topicRowProblems } from "./topic-list.js";
+import { pinTopic, rankedItems, saveScores, scoreTopics } from "./topic-scores.js";
 
 // A schedule that finds its own topics asks an LLM whenever its queue holds fewer than
 // `keepAtLeast`. Only one generation per schedule runs at a time: a lease on the schedule row
@@ -172,7 +175,7 @@ async function ask(
   } catch (error) {
     if (options.signal?.aborted === true)
       return { ok: false, reason: "failed", message: "Slopify was closing." };
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = errorText(error);
     return fail(
       `${llm.provider} (${llm.model}) did not answer: ${detail.trim().slice(0, 300)}. Check it in Settings → Providers, or pick another LLM under Edit → Topic generation.`,
     );
@@ -182,28 +185,56 @@ async function ask(
     return fail(
       `${llm.provider} (${llm.model}) answered without a list of topics. Try again, or pick another LLM under Edit → Topic generation.`,
     );
+  // Scored outside the transaction: search may take seconds, and never holds the database.
+  const scores =
+    schedule.topicScoring === "off"
+      ? undefined
+      : await scoreTopics(
+          deps,
+          schedule.topicScoring,
+          newTopics(suggested, known),
+          known,
+          template?.document.form.language ?? "en",
+          options.signal,
+        );
   return transact(deps.db, (): GenerateResult => {
     const current = scheduleById(deps.db, schedule.id);
     if (current === undefined || current.deletedAt !== null)
       return { ok: false, reason: "not-found", message: "This schedule no longer exists." };
     // Checked again against what is there now: a topic added while the LLM was thinking counts.
-    const fresh = newTopics(suggested, knownTitles(deps, schedule.id)).slice(
-      0,
-      Math.max(0, Math.min(wanted, queueMax - current.items.length)),
-    );
+    const candidates = newTopics(suggested, knownTitles(deps, schedule.id));
+    // With scoring, the best-scored are kept; without, the LLM's own order, as before.
+    const fresh = (
+      scores === undefined
+        ? candidates
+        : candidates.toSorted((a, b) => (scores.get(b)?.score ?? -1) - (scores.get(a)?.score ?? -1))
+    ).slice(0, Math.max(0, Math.min(wanted, queueMax - current.items.length)));
     if (fresh.length === 0)
       return fail(
         "every topic the LLM suggested was already made, queued or turned down for this schedule. Add more detail to the series brief under Edit, so it has new ground to cover.",
       );
     const at = deps.clock.now().toISOString();
     const mode = current.topicGeneration.mode === "hold" ? "hold" : "queue";
+    if (scores !== undefined)
+      saveScores(
+        deps.db,
+        schedule.id,
+        new Map(
+          fresh.flatMap((title) => {
+            const score = scores.get(title);
+            return score === undefined ? [] : [[title, score] as const];
+          }),
+        ),
+        at,
+      );
     if (mode === "queue") {
+      const items = [...current.items, ...fresh.map((title) => ({ title, values: {} }))];
       deps.db
         .prepare(
           "UPDATE schedules SET items_json=?,version=version+1,updated_at=? WHERE id=? AND deleted_at IS NULL",
         )
         .run(
-          JSON.stringify([...current.items, ...fresh.map((title) => ({ title, values: {} }))]),
+          JSON.stringify(scores === undefined ? items : rankedItems(deps.db, schedule.id, items)),
           at,
           schedule.id,
         );
@@ -217,6 +248,7 @@ async function ask(
           )
           .run(deps.uuid(), schedule.id, title, start + index, at);
       });
+      if (scores !== undefined) rankHeld(deps, schedule.id);
     }
     deps.db
       .prepare(
@@ -238,6 +270,20 @@ async function ask(
       }
     }
     return { ok: true, added: fresh.length, mode };
+  });
+}
+
+// Held topics in score order: unscored ones first as they were, then the scored, best first.
+export function rankHeld(deps: Pick<ScheduleDeps, "db">, scheduleId: string): void {
+  const held = deps.db
+    .prepare(
+      "SELECT id,title FROM schedule_topics WHERE schedule_id=? AND state='held' ORDER BY rank,created_at,id",
+    )
+    .all(scheduleId)
+    .map((row) => z.object({ id: z.string(), title: z.string() }).parse(row));
+  const rank = deps.db.prepare("UPDATE schedule_topics SET rank=? WHERE id=?");
+  rankedItems(deps.db, scheduleId, held).forEach((topic, index) => {
+    rank.run(index, topic.id);
   });
 }
 
@@ -333,18 +379,8 @@ export function topicMessages(
 
 // A JSON array of strings, or failing that one topic per line with bullets and numbers dropped.
 export function parseTopics(answer: string): string[] {
-  const start = answer.indexOf("[");
-  const end = answer.lastIndexOf("]");
-  let lines: unknown[] | undefined;
-  if (start !== -1 && end > start) {
-    try {
-      const parsed: unknown = JSON.parse(answer.slice(start, end + 1));
-      if (Array.isArray(parsed)) lines = parsed;
-    } catch {
-      lines = undefined;
-    }
-  }
-  lines ??= answer.split(/\r?\n/);
+  const parsed = jsonBetween(answer, "[", "]");
+  const lines: unknown[] = Array.isArray(parsed) ? parsed : answer.split(/\r?\n/);
   return lines
     .map((line) =>
       typeof line === "string"
@@ -370,14 +406,7 @@ const heldValuesSchema = z.record(z.string(), z.record(z.string(), z.string()));
 type HeldValues = z.infer<typeof heldValuesSchema>;
 
 function readHeldValues(db: ScheduleDeps["db"]): HeldValues {
-  const raw = readSetting(db, heldValuesKey);
-  if (raw === undefined) return {};
-  try {
-    const parsed = heldValuesSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : {};
-  } catch {
-    return {};
-  }
+  return readJsonSetting(db, heldValuesKey, heldValuesSchema, {});
 }
 
 // Entries of topics that are no longer held (approved, turned down, or gone with their
@@ -560,6 +589,7 @@ export function moveTopic(
     if (topic === undefined) return { ok: false, reason: "invalid-input" };
     items.splice(Math.min(parsed.data.to, items.length), 0, topic);
     writeItems(deps, scheduleId, schedule.version, items);
+    pinTopic(deps.db, scheduleId, topic.title);
     return { ok: true, value: scheduleById(deps.db, scheduleId) as ScheduleSummary };
   });
 }

@@ -360,3 +360,17 @@ describe("an existing entry", () => {
     expect(await screen.findByText(/unexpected error \(500\)/)).not.toBeNull();
   });
 });
+
+describe("the entry editor's keywords Slopify fills", () => {
+  it("offers the keywords an intro can use above the body and puts one at the caret", async () => {
+    const user = userEvent.setup();
+    await newEditor();
+    const bar = screen.getByRole("toolbar", { name: "Insert a keyword Slopify fills" });
+    expect(within(bar).queryByRole("button", { name: "Insert Scene" })).toBeNull();
+    await fill(user, "Body", "Welcome to .");
+    const box = screen.getByLabelText("Body") as HTMLTextAreaElement;
+    box.setSelectionRange(11, 11);
+    await user.click(within(bar).getByRole("button", { name: "Insert Channel" }));
+    expect(box.value).toBe("Welcome to {{Slopify_Channel}}.");
+  });
+});

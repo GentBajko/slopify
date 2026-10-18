@@ -6,12 +6,14 @@ import { afterEach, expect, it } from "vitest";
 import { bridgeLimits } from "../../kernel/ports/host-cli.js";
 import type { LlmEvent } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { createHostCliClient, withPlanLimit } from "./index.js";
+import { bridgedFault, createHostCliClient, withPlanLimit } from "./index.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const fn of cleanups.splice(0).reverse()) await fn();
 });
+const posted: Buffer[] = [];
+
 async function endpoint(
   body: string | Buffer,
   type = "application/x-ndjson",
@@ -29,7 +31,12 @@ async function endpoint(
       res.end(JSON.stringify({ protocol, version: "1.4.0", active: 0, accepting: true }));
       return;
     }
-    if (req.method === "POST") posts++;
+    if (req.method === "POST") {
+      posts++;
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", () => posted.push(Buffer.concat(chunks)));
+    }
     res.statusCode = status;
     res.setHeader("content-type", type);
     const bytes = Buffer.from(body);
@@ -171,6 +178,16 @@ it.skipIf(process.platform === "win32")(
   },
 );
 
+it("reads a model's access back out of a bridged fault's words, kind unchanged", () => {
+  expect(
+    bridgedFault(
+      "other",
+      "The Claude Code CLI said: There's an issue with the selected model (x). It may not exist or you may not have access to it.",
+    ).fault,
+  ).toEqual({ kind: "other", access: "not-found" });
+  expect(bridgedFault("other", "stream disconnected").fault).toEqual({ kind: "other" });
+});
+
 it("reads a used-up plan back out of a bridged rate-limit fault, so Docker runs wait too", () => {
   const codex = withPlanLimit(
     providerError({
@@ -201,3 +218,20 @@ it("reads a used-up plan back out of a bridged rate-limit fault, so Docker runs 
       .fault.planLimit,
   ).toBeUndefined();
 });
+it.skipIf(process.platform === "win32")(
+  "sends a design's picture to edit to the helper as base64",
+  async () => {
+    const image = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+    const picture = await endpoint(image, "image/jpeg");
+    posted.length = 0;
+    await picture.client.image.generate({
+      model: "codex-imagegen",
+      prompt: "Darker sky",
+      aspect: "1:1",
+      edit: { source: { bytes: new Uint8Array(image), mime: "image/jpeg" } },
+      signal: AbortSignal.timeout(2000),
+    });
+    const body = JSON.parse(String(posted.at(-1))) as { edit?: unknown };
+    expect(body.edit).toEqual({ source: { mime: "image/jpeg", base64: image.toString("base64") } });
+  },
+);

@@ -139,3 +139,155 @@ describe("review recipes", () => {
     );
   });
 });
+
+describe("the promise check's recipe", () => {
+  const written: RunConfig = {
+    ...narrated,
+    sources: { ...narrated.sources, article: "generate", thumbnail: "prompt_by_llm" },
+    rendered: { ...narrated.rendered, thumbnailPrompt: "Draw the hook." },
+  };
+  const generatedRecipes = (c: RunConfig) =>
+    buildRecipes({
+      config: c,
+      content: { ...content, articleMarkdown: undefined },
+      manifest: { outputs: [], pieces: [] },
+      resolved: { articleMarkdown: null, researchNotes: null },
+    });
+
+  it("changes no step at all while it is off", () => {
+    const before = generatedRecipes(written);
+    expect(
+      generatedRecipes({
+        ...written,
+        reviews: { ...reviewer, stages: { promise: { mode: "off" } } },
+      }),
+    ).toEqual(before);
+    expect(generatedRecipes({ ...written, reviews: { ...reviewer, stages: {} } })).toEqual(before);
+  });
+
+  it("reads the article and the thumbnail brief, and holds the narration until it answers", () => {
+    const on: RunConfig = {
+      ...written,
+      reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
+    };
+    const before = generatedRecipes(written);
+    const recipes = generatedRecipes(on);
+    const review = recipes.find((row) => row.key === "review:promise");
+    expect(review).toMatchObject({
+      stage: "article",
+      kind: "provider",
+      dependsOn: ["article:body", "thumbnail:prompt"],
+      input: { kind: "local", operation: "review-v1" },
+    });
+    const values = review?.input.kind === "local" ? review.input.values : null;
+    expect(Array.isArray(values) ? values.slice(0, 2) : values).toEqual(["promise", "promise"]);
+    for (const row of recipes) {
+      const was = before.find((one) => one.key === row.key);
+      if (was === undefined || row.key === "thumbnail:prompt") continue;
+      if (was.dependsOn.includes("article:body")) expect(row.dependsOn).toContain("review:promise");
+    }
+    expect(recipes.find((row) => row.key === "thumbnail:prompt")?.dependsOn).not.toContain(
+      "review:promise",
+    );
+    const audio = recipes.filter((row) => row.stage === "audio");
+    expect(audio.length).toBeGreaterThan(0);
+    expect(audio.some((row) => row.dependsOn.includes("review:promise"))).toBe(true);
+  });
+
+  it("reads only the article when the thumbnail brief isn't written by a model", () => {
+    const on: RunConfig = {
+      ...written,
+      sources: { ...written.sources, thumbnail: "from_prompt" },
+      reviews: { ...reviewer, stages: { promise: { mode: "flag" } } },
+    };
+    expect(generatedRecipes(on).find((row) => row.key === "review:promise")?.dependsOn).toEqual([
+      "article:body",
+    ]);
+  });
+
+  it("plans the promise check and the keyword digest together without a loop", () => {
+    const acyclic = (rows: ReturnType<typeof generatedRecipes>) => {
+      const byKey = new Map(rows.map((row) => [row.key, row]));
+      const state = new Map<string, "open" | "done">();
+      const visit = (key: string): boolean => {
+        if (state.get(key) === "done") return true;
+        if (state.get(key) === "open") return false;
+        state.set(key, "open");
+        const ok = (byKey.get(key)?.dependsOn ?? []).every(visit);
+        state.set(key, "done");
+        return ok;
+      };
+      return rows.every((row) => visit(row.key));
+    };
+    const plan = (c: RunConfig, templates: Readonly<Record<string, string>>) =>
+      buildRecipes({
+        config: c,
+        content: {
+          ...content,
+          articleMarkdown: undefined,
+          promptTemplates: { article: "Write.", ...templates },
+        },
+        manifest: { outputs: [], pieces: [] },
+        resolved: { articleMarkdown: null, researchNotes: null },
+      });
+    const reviewed = (c: RunConfig): RunConfig => ({
+      ...c,
+      reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
+    });
+    const find = (rows: ReturnType<typeof generatedRecipes>, key: string) => {
+      const row = rows.find((one) => one.key === key);
+      if (row === undefined) throw new Error(`Missing ${key}`);
+      return row;
+    };
+
+    // The thumbnail brief the check reads is written from the digest: the digest runs first,
+    // straight after the article, and the brief after it.
+    const briefed: RunConfig = { ...written, articlePrompt: "Article", thumbnailPrompt: "Thumb" };
+    const fromBrief = plan(reviewed(briefed), {
+      thumbnailPrompt: "Draw: {{Slopify_Thumbnail_Text}}",
+    });
+    expect(acyclic(fromBrief)).toBe(true);
+    expect(find(fromBrief, "article:digest").dependsOn).toEqual(["article:body"]);
+    expect(find(fromBrief, "thumbnail:prompt").dependsOn).toContain("article:digest");
+    expect(find(fromBrief, "review:promise").dependsOn).toEqual([
+      "article:body",
+      "thumbnail:prompt",
+    ]);
+
+    // Only the description reads the digest: it reads the article like the narration, so it
+    // waits for the check, and the description waits for both.
+    const described: RunConfig = {
+      ...written,
+      sources: { ...written.sources, thumbnail: "off" },
+      articlePrompt: "Article",
+      youtubeDescription: true,
+      descriptionPrompt: "Description",
+    };
+    const fromDescription = plan(reviewed(described), {
+      description: "Open with: {{Slopify_Hook}}",
+    });
+    expect(acyclic(fromDescription)).toBe(true);
+    expect(find(fromDescription, "review:promise").dependsOn).toEqual(["article:body"]);
+    expect(find(fromDescription, "article:digest").dependsOn).toEqual([
+      "article:body",
+      "review:promise",
+    ]);
+    expect(find(fromDescription, "youtube:description").dependsOn).toContain("article:digest");
+    const planned = planRevision(emptyView(reviewed(described)), {
+      config: reviewed(described),
+      content: {
+        ...content,
+        promptTemplates: { article: "Write.", description: "{{Slopify_Hook}}" },
+      },
+    });
+    expect(planned.ok).toBe(true);
+  });
+
+  it("adds no step for an article the person wrote", () => {
+    const provided: RunConfig = {
+      ...narrated,
+      reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
+    };
+    expect(recipesFor(provided)).toEqual(recipesFor(narrated));
+  });
+});

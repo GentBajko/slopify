@@ -12,6 +12,7 @@ import { LoadFailed, LoadingBlock } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
+import { keys } from "@/queries";
 import { schedulesQuery } from "@/schedules/api";
 
 // Settings → YouTube Studio → Release times: each schedule sets its own (Calendar → Schedules →
@@ -35,7 +36,7 @@ export function PostingPlanSettings({
     mutationFn: (current: PostingPlan) => savePostingPlan(api, { ...current, rows: [] }),
     onSuccess: (body) => {
       client.setQueryData(planKey, body);
-      void client.invalidateQueries({ queryKey: ["studio", "releases"] });
+      void client.invalidateQueries({ queryKey: keys.studioReleases });
       notify("Removed the old posting plan. Each schedule's release times apply now.", "success");
     },
     onError: (error: Error) =>
@@ -48,7 +49,7 @@ export function PostingPlanSettings({
     mutationFn: (hours: number) => saveLeadHours(api, hours),
     onSuccess: (body) => {
       client.setQueryData(planKey, body);
-      void client.invalidateQueries({ queryKey: ["studio", "releases"] });
+      void client.invalidateQueries({ queryKey: keys.studioReleases });
       notify(
         `Each upload is now due ${String(body.leadHours)} hours before its release.`,
         "success",

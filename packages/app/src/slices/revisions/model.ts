@@ -190,6 +190,8 @@ export interface RevisionSummary {
   readonly current: boolean;
   // Saved by an agent through MCP.
   readonly byAgent?: boolean | undefined;
+  // Saved by the in-app assistant.
+  readonly byAssistant?: boolean | undefined;
 }
 export type RevisionMutationResult =
   | { readonly ok: true; readonly view: RevisionView; readonly duplicate: boolean }

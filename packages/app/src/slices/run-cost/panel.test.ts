@@ -6,7 +6,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { ulidIds } from "../../kernel/ids.js";
 import { createUsageMeter } from "./meter.js";
-import { runCostOf, windowUse } from "./panel.js";
+import { runCostOf } from "./panel.js";
 
 const open: DatabaseSync[] = [];
 afterEach(() => {
@@ -101,7 +101,14 @@ describe("the Run cost tab", () => {
         after: [{ kind: "weekly", usedPercent: 12, resetsAt: "2026-10-01T00:00:00.000Z" }],
       },
     });
-    meter.record({
+    // The second call two minutes later, so neither ran beside the other.
+    const later = createUsageMeter({
+      db,
+      ids: ulidIds,
+      clock: fixedClock("2026-09-27T10:03:00.000Z"),
+      catalogue: () => catalogue,
+    });
+    later.record({
       projectId: "p1",
       stage: "article",
       kind: "llm",
@@ -185,6 +192,11 @@ describe("the Run cost tab", () => {
           {
             kind: "weekly",
             usedPercent: 5,
+            basis: "measured",
+            sharedCalls: 0,
+            fromPercent: 10,
+            accountPercent: 5,
+            rolledOver: false,
             nowPercent: 15,
             resetsAt: "2026-10-01T00:00:00.000Z",
           },
@@ -202,17 +214,85 @@ describe("the Run cost tab", () => {
   });
 });
 
-describe("windowUse", () => {
-  it("counts usage since a window rolled over rather than going negative", () => {
-    expect(
-      windowUse([
-        [{ kind: "five_hour", usedPercent: 90, resetsAt: "2026-09-27T12:00:00.000Z" }],
-        [{ kind: "five_hour", usedPercent: 96, resetsAt: "2026-09-27T12:00:00.000Z" }],
-        // The window reset between these two readings.
-        [{ kind: "five_hour", usedPercent: 4, resetsAt: "2026-09-27T17:00:00.000Z" }],
-      ]),
-    ).toEqual([
-      { kind: "five_hour", usedPercent: 10, nowPercent: 4, resetsAt: "2026-09-27T17:00:00.000Z" },
+describe("a run beside another project's call on the same plan", () => {
+  it("says its share is shared with other use instead of charging the other call's use", () => {
+    const db = database();
+    db.exec("INSERT INTO projects VALUES ('p2','Other','16:9','{}','2026-09-27','2026-09-27')");
+    // Another project's Codex image, of no reported tokens, drawn while p1's call ran.
+    db.exec(
+      `INSERT INTO provider_usage (id, project_id, stage, kind, provider, model, images, wall_ms, on_plan, created_at)
+       VALUES ('img','p2','images','image','codex-image','gpt-image',1,20000,1,'2026-09-27T10:00:45.000Z')`,
+    );
+    createUsageMeter({
+      db,
+      ids: ulidIds,
+      clock: fixedClock("2026-09-27T10:01:00.000Z"),
+      catalogue: () => catalogue,
+    }).record({
+      projectId: "p1",
+      stage: "article",
+      kind: "llm",
+      provider: "codex",
+      model: "gpt-5.6-sol",
+      tokensIn: 1000,
+      tokensOut: 100,
+      wallMs: 60_000,
+      limits: {
+        before: [{ kind: "weekly", usedPercent: 10, resetsAt: "2026-10-01T00:00:00.000Z" }],
+        after: [{ kind: "weekly", usedPercent: 14, resetsAt: "2026-10-01T00:00:00.000Z" }],
+      },
+    });
+    const [codex] = runCostOf(db, "p1").plans;
+    expect(codex?.windows[0]).toMatchObject({
+      usedPercent: null,
+      basis: "shared",
+      sharedCalls: 1,
+      fromPercent: 10,
+      accountPercent: 4,
+      nowPercent: 14,
+    });
+  });
+});
+
+describe("a project saved before each call's own readings were kept", () => {
+  it("shows the account's rise while it ran, never above 100%, marked approximate", () => {
+    const db = database();
+    db.exec(
+      `INSERT INTO provider_usage (id, project_id, stage, kind, provider, model, wall_ms, on_plan, created_at)
+       VALUES ('c1','p1','article','llm','claude-code','sonnet',60000,1,'2026-09-27T10:01:00.000Z')`,
+    );
+    // Parallel calls' readings zig-zag and the stated reset drifts by 6-10 minutes; the old
+    // sum read this as 119% of the week.
+    const readings = [
+      [40, "2026-10-01T00:00:00.000Z"],
+      [70, "2026-10-01T00:08:00.000Z"],
+      [45, "2026-10-01T00:00:00.000Z"],
+      [80, "2026-10-01T00:10:00.000Z"],
+      [50, "2026-10-01T00:02:00.000Z"],
+      [85, "2026-10-01T00:12:00.000Z"],
+    ] as const;
+    const insert = db.prepare(
+      "INSERT INTO plan_limit_readings (id, project_id, account, reading_json, created_at) VALUES (?, 'p1', 'claude-code', ?, ?)",
+    );
+    for (const [index, [used, resetsAt]] of readings.entries())
+      insert.run(
+        `r${index}`,
+        JSON.stringify({ after: [{ kind: "weekly", usedPercent: used, resetsAt }] }),
+        `2026-09-27T10:0${index}:30.000Z`,
+      );
+    const [claude] = runCostOf(db, "p1").plans;
+    expect(claude?.windows).toEqual([
+      {
+        kind: "weekly",
+        usedPercent: 45,
+        basis: "approximate",
+        sharedCalls: 0,
+        fromPercent: 40,
+        accountPercent: 45,
+        rolledOver: false,
+        nowPercent: 85,
+        resetsAt: "2026-10-01T00:12:00.000Z",
+      },
     ]);
   });
 });

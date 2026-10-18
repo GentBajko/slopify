@@ -1,4 +1,5 @@
 import type { Clock } from "../clock.js";
+import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import { redact } from "../log.js";
 import type { StageKind } from "../pipeline.js";
@@ -180,6 +181,7 @@ function classify(
       message: redact(error.message),
       ...(error.fault.retryAfterMs === undefined ? {} : { retryAfterMs: error.fault.retryAfterMs }),
       ...(error.fault.planLimit === undefined ? {} : { planLimit: error.fault.planLimit }),
+      ...(error.fault.access === undefined ? {} : { access: error.fault.access }),
     });
   }
   if (unreachable(error)) {
@@ -192,7 +194,7 @@ function classify(
   }
   return providerError({
     kind: "other",
-    message: redact(error instanceof Error ? error.message : String(error)),
+    message: redact(errorText(error)),
   });
 }
 

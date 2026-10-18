@@ -1,4 +1,4 @@
-import type { Entry } from "@app/slices/library/model.js";
+import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { PlaySection } from "./sections";
 import { ambientUploadOn, llmUsesOf, type PlayFormState, shortsOn } from "./state";
 export function focusPlayField(root: HTMLElement, field: string): boolean {
@@ -18,6 +18,7 @@ export function playFieldTarget(
   form: PlayFormState,
   items: readonly { readonly key: string }[],
   entries: readonly Entry[] = [],
+  prompts: readonly Prompt[] = [],
 ): { section: PlaySection; field: string } {
   let target = field;
   if (field === "fontUpload") target = "subtitles.fontUpload";
@@ -75,7 +76,7 @@ export function playFieldTarget(
   const matches = (prefixes: readonly string[]) =>
     prefixes.some((prefix) => field === prefix || field.startsWith(`${prefix}.`));
   // The text model sits under Article only when writing the article or research needs it.
-  const llmSection = llmUsesOf(form, entries)[0]?.section ?? "article";
+  const llmSection = llmUsesOf(form, entries, prompts)[0]?.section ?? "article";
   const section: PlaySection = matches([
     "title",
     "articlePrompt",

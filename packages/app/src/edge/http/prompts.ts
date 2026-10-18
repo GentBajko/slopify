@@ -19,15 +19,8 @@ import {
 } from "../../slices/library/save.js";
 import { usedBy } from "../../slices/library/used-by.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 // History's Restore names the version by its number.
 export const versionParam = idParam.extend({ version: z.coerce.number().int().positive() });
@@ -79,7 +72,6 @@ export function promptRoutes(deps: AppDeps) {
             ? refused(c, { ok: false, reason: "not-found" }, "prompt")
             : problem(c, {
                 status: 400,
-                title: titleOf(400),
                 detail:
                   "Only an Image prompt can be marked photorealistic. Open the prompt from the Image tab in Library → Prompts.",
               });
@@ -126,7 +118,6 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
     case "invalid":
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: `This ${noun} cannot be saved yet. Fix the highlighted fields and try again.`,
         extensions: { fields: failure.fields },
       });
@@ -134,7 +125,6 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
     case "duplicate-name":
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail: `Another ${noun} already has this name. Choose a different name.`,
         extensions: {
           fields: [
@@ -148,7 +138,6 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
     case "not-found":
       return problem(c, {
         status: 404,
-        title: titleOf(404),
         detail: `This ${noun} no longer exists; it may have been deleted. Go back to the Library to pick another.`,
       });
   }

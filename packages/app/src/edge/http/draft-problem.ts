@@ -1,17 +1,11 @@
 import type { Context } from "hono";
 import type { DraftResult } from "../../slices/play-drafts/model.js";
-import { problem, titleOf } from "./problem.js";
+import { refusal } from "./refusal.js";
 
 export function draftProblem(
   c: Context,
   result: Extract<DraftResult<never>, { ok: false }>,
 ): Response {
-  const status =
-    result.reason === "not-found"
-      ? 404
-      : ["invalid-edit", "readiness"].includes(result.reason)
-        ? 400
-        : 409;
   const { ok: _ok, ...extensions } = result;
   const details: Readonly<Record<typeof result.reason, string>> = {
     "not-found":
@@ -28,9 +22,9 @@ export function draftProblem(
     readiness:
       "Slopify is not ready to start this video yet. Fix the highlighted problems, then try again.",
   };
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, result.reason, {
+    statuses: { "not-found": 404, "invalid-edit": 400, readiness: 400 },
+    otherwise: 409,
     detail: details[result.reason],
     extensions,
   });

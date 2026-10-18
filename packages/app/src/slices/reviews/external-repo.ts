@@ -1,9 +1,14 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { liveProject } from "../admission/repo.js";
-import type { Actor } from "../agents/model.js";
-import type { ExternalAnswerResult, ExternalReview, SettledReview } from "./external-model.js";
+import type {
+  ExternalAnswerer,
+  ExternalAnswerResult,
+  ExternalReview,
+  SettledReview,
+} from "./external-model.js";
 import { externalReviewByFingerprint, externalReviewById } from "./external-rows.js";
 import { liveWork, reviewStanding, wantedBy } from "./external-waiting.js";
 import { type ReviewVerdict, reviewStages } from "./model.js";
@@ -39,10 +44,7 @@ export function openExternalReview(
     input.deadlineAt,
   );
   const saved = externalReviewByFingerprint(db, input.projectId, input.reviewFingerprint);
-  if (saved === undefined)
-    throw new Error(
-      "Slopify hit an internal error (an external review could not be saved). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (saved === undefined) throw new Error(internalError("an external review could not be saved"));
   return saved;
 }
 
@@ -83,7 +85,7 @@ export function answerExternalReview(
     readonly projectId: string;
     readonly id: string;
     readonly verdict: ReviewVerdict;
-    readonly by: Actor;
+    readonly by: ExternalAnswerer;
     readonly at: string;
   },
 ): ExternalAnswerResult {

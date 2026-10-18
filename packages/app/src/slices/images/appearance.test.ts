@@ -60,3 +60,13 @@ it("gives each picture the looks of the figures its scene names", () => {
   expect(withAppearance("Draw.\n\nLooks: {{Appearance}}", "X: Y.")).toBe("Draw.\n\nLooks: X: Y.");
   expect(withAppearance("Draw.\n\nLooks: {{Appearance}}\n\nMore.", "")).toBe("Draw.\n\nMore.");
 });
+
+it("reads {{Slopify_Appearance}} exactly as the old {{Appearance}}", () => {
+  expect(usesAppearance("Looks: {{Slopify_Appearance}}")).toBe(true);
+  expect(withAppearance("Looks: {{Slopify_Appearance}} / {{Appearance}}", "Grey stone.")).toBe(
+    "Looks: Grey stone. / Grey stone.",
+  );
+  expect(withAppearance("Draw.\n\nLooks: {{Slopify_Appearance}}\n\nInk.", "")).toBe(
+    "Draw.\n\nInk.",
+  );
+});

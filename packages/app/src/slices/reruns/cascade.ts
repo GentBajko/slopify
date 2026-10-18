@@ -83,8 +83,7 @@ function clearsOf(action: RerunAction, kind: StageKind): Redo["clears"] {
   // The previous video stays downloadable until the new render finishes. Clearing the video's
   // outputs here would take it away the moment the user pressed Re-render - or for the whole of
   // a re-narration, when the video comes along as a dependent. It is kept instead, and
-  // `slices/video/run.ts` replaces the file and the rows in one swap once ffmpeg has exited
-  // cleanly. A render that fails or is canceled leaves the old one standing.
+  // the render replaces the file and the rows in one swap once ffmpeg has exited cleanly. A render that fails or is canceled leaves the old one standing.
   if (kind === "video") {
     return "nothing";
   }

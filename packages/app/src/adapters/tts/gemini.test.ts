@@ -189,7 +189,26 @@ describe("geminiTts.synthesize", () => {
       .synthesize({ voiceId: "Kore", text: "x", signal })
       .catch((error: unknown) => error);
     expect(isProviderError(badKey) && badKey.fault.kind).toBe("auth");
+    expect(isProviderError(badKey) && badKey.fault.access).toBeUndefined();
     expect(String(badKey)).toContain("Google did not accept the API key");
+
+    const answer = (status: number, message: string, named: string) =>
+      port(
+        replaying(Response.json({ error: { code: status, message, status: named } }, { status })),
+      )
+        .synthesize({ voiceId: "Kore", text: "x", signal })
+        .catch((error: unknown) => error);
+    const missing = await answer(
+      404,
+      "models/gemini-9-tts is not found for API version v1beta",
+      "NOT_FOUND",
+    );
+    expect(isProviderError(missing) && missing.fault).toEqual({
+      kind: "other",
+      access: "not-found",
+    });
+    const denied = await answer(403, "The caller does not have permission", "PERMISSION_DENIED");
+    expect(isProviderError(denied) && denied.fault).toEqual({ kind: "auth", access: "no-access" });
 
     const blocked = await port(
       replaying(new Response(JSON.stringify({ promptFeedback: { blockReason: "SAFETY" } }))),

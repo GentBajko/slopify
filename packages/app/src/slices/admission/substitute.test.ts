@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectFields, detectSlots, render } from "./substitute.js";
+import { collectFields, detectSlots, filledKeywords, render } from "./substitute.js";
 
 describe("detectSlots", () => {
   it("strips the whitespace immediately inside the braces", () => {
@@ -84,6 +84,39 @@ describe("collectFields", () => {
 
   it("asks for nothing when no selected body has a slot", () => {
     expect(collectFields(["plain"], [])).toEqual([]);
+  });
+
+  it("never asks for a keyword Slopify fills, by its new or old name", () => {
+    expect(
+      collectFields(
+        ["{{Slopify_Title}} {{topic}} {{Slopify_Chapters}}"],
+        ["{{Scene}} {{Slopify_Scene}} {{Appearance}} {{Slopify_Mood}}"],
+      ),
+    ).toEqual([{ name: "topic", group: "text" }]);
+  });
+
+  // An unknown name under the reserved prefix is refused when a prompt is saved; one already
+  // saved keeps asking for its value, as it always did.
+  it("keeps asking for an unknown Slopify_ name", () => {
+    expect(collectFields(["{{Slopify_Wish}}"], [])).toEqual([
+      { name: "Slopify_Wish", group: "text" },
+    ]);
+  });
+
+  // Ordinary words stay free: the prefix is what makes a keyword.
+  it("still asks for Title, Channel and Date as the person's own keywords", () => {
+    expect(
+      collectFields(["{{Title}} {{Channel}} {{Date}}"], []).map((field) => field.name),
+    ).toEqual(["Title", "Channel", "Date"]);
+  });
+});
+
+describe("filledKeywords", () => {
+  it("lists every keyword Slopify fills and the two old names", () => {
+    expect(filledKeywords).toContain("Slopify_Summary");
+    expect(filledKeywords).toContain("Scene");
+    expect(filledKeywords).toContain("Appearance");
+    expect(filledKeywords).not.toContain("Title");
   });
 });
 

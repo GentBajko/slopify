@@ -77,6 +77,8 @@ export function templateSchedules(
 ): readonly ScheduleSummary[] {
   return scheduleRows(db).filter(
     (schedule) =>
+      // A design schedule names a design template, never a project template.
+      schedule.templateKind === "project" &&
       schedule.templateId === templateId &&
       schedule.deletedAt === null &&
       (schedule.status === "active" || schedule.status === "paused"),

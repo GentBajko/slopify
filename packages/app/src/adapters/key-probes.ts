@@ -1,4 +1,5 @@
-import type { KeyProbes, ModelProbe } from "../kernel/ports/key-probe.js";
+import type { KeyProbes, ModelList, ModelProbe } from "../kernel/ports/key-probe.js";
+import { safeJson } from "./http-failure.js";
 import { cartesiaVersion } from "./tts/cartesia.js";
 
 // Settings → Providers' Test button, per provider. Some answer a key they do not recognise
@@ -24,6 +25,37 @@ function listed(ids: (value: unknown) => readonly unknown[]) {
 }
 const field = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined;
+function idsOf(rows: unknown, key: string, strip?: RegExp): string[] | undefined {
+  if (!Array.isArray(rows)) return undefined;
+  return rows.flatMap((row) => {
+    const id = field(row, key);
+    return typeof id === "string" && id !== "" ? [strip ? id.replace(strip, "") : id] : [];
+  });
+}
+// `{ data: [{ id }] }`: OpenAI's and OpenRouter's lists.
+function dataList(url: string): ModelList {
+  return {
+    url: () => url,
+    read: (body) => {
+      const ids = idsOf(field(safeJson(body), "data"), "id");
+      return ids === undefined ? undefined : { ids };
+    },
+  };
+}
+const googleBase = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000";
+const googleList: ModelList = {
+  url: (page) =>
+    page === undefined ? googleBase : `${googleBase}&pageToken=${encodeURIComponent(page)}`,
+  read: (body) => {
+    const value = safeJson(body);
+    const ids = idsOf(field(value, "models"), "name", /^models\//);
+    if (ids === undefined) return undefined;
+    const next = field(value, "nextPageToken");
+    return typeof next === "string" && next !== "" ? { ids, next } : { ids };
+  },
+};
+const openAiList = dataList("https://api.openai.com/v1/models");
+
 const google = {
   url: "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
   headers: (key: string) => ({ "x-goog-api-key": key }),
@@ -32,6 +64,7 @@ const google = {
     url: (model: string) =>
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model.replace(/^models\//, ""))}`,
   },
+  list: googleList,
 };
 
 export const keyProbes: KeyProbes = {
@@ -45,9 +78,20 @@ export const keyProbes: KeyProbes = {
         return Array.isArray(data) ? data.map((one) => field(one, "id")) : [];
       }),
     },
+    list: dataList("https://openrouter.ai/api/v1/models"),
   },
-  "openai-tts": { url: "https://api.openai.com/v1/models", headers: bearer, model: openAiModel },
-  "openai-image": { url: "https://api.openai.com/v1/models", headers: bearer, model: openAiModel },
+  "openai-tts": {
+    url: "https://api.openai.com/v1/models",
+    headers: bearer,
+    model: openAiModel,
+    list: openAiList,
+  },
+  "openai-image": {
+    url: "https://api.openai.com/v1/models",
+    headers: bearer,
+    model: openAiModel,
+    list: openAiList,
+  },
   "google-image": google,
   "google-tts": google,
   // fal.ai's model list answers without a key; its price lookup requires one.
@@ -80,6 +124,13 @@ export const keyProbes: KeyProbes = {
       lists: listed((body) =>
         Array.isArray(body) ? body.map((one) => field(one, "model_id")) : [],
       ),
+    },
+    list: {
+      url: () => "https://api.elevenlabs.io/v1/models",
+      read: (body) => {
+        const ids = idsOf(safeJson(body), "model_id");
+        return ids === undefined ? undefined : { ids };
+      },
     },
   },
   cartesia: {

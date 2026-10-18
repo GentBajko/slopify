@@ -1,4 +1,5 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
+import { z } from "zod";
 
 // One concern: turning a `Response` into a value or into the Error the query library's
 // error channel carries. `api.ts` and `project/api.ts` both answer the same server, so
@@ -143,4 +144,85 @@ export function understood<T>(schema: { parse: (raw: unknown) => T }, raw: unkno
   } catch (cause) {
     throw new Error(unrecognised, { cause });
   }
+}
+
+// The refusals a page shows beside what it asked for: invalid, not found, changed meanwhile.
+const refusalStatuses: readonly number[] = [400, 404, 409];
+
+// Every member a domain's refusal carries, so one parser reads them all and each API file keeps
+// only the typed wrapper it needs.
+const refusalSchema = z.object({
+  title: z.string(),
+  status: z.number().optional(),
+  detail: z.string().optional(),
+  reason: z.string().optional(),
+  currentVersion: z.number().int().positive().nullable().optional(),
+  currentRevisionId: z.string().nullable().optional(),
+  reviewId: z.uuid().optional(),
+  fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
+  errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+});
+
+export interface Refusal {
+  readonly reason: string | undefined;
+  readonly message: string;
+  readonly fields: readonly FieldError[];
+  readonly currentVersion: number | null;
+  readonly currentRevisionId: string | null;
+  readonly reviewId: string | undefined;
+}
+
+export interface RefusalOptions {
+  readonly statuses?: readonly number[];
+  // Whether a problem outside `statuses` still shows the server's own sentence.
+  readonly explain?: boolean;
+}
+
+export async function jsonOf(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw errorOf(response, undefined);
+  }
+}
+
+export function refusalFrom(
+  response: Response,
+  raw: unknown,
+  options: RefusalOptions = {},
+): Refusal {
+  const parsed = refusalSchema.safeParse(raw);
+  if (!parsed.success) throw errorOf(response, undefined);
+  const value = parsed.data;
+  if (!(options.statuses ?? refusalStatuses).includes(response.status)) {
+    if (options.explain === false) throw errorOf(response, undefined);
+    throw errorOf(response, {
+      title: value.title,
+      status: value.status ?? response.status,
+      ...(value.detail === undefined ? {} : { detail: value.detail }),
+      ...(value.fields === undefined ? {} : { fields: value.fields }),
+    });
+  }
+  return {
+    reason: value.reason,
+    message: value.detail ?? value.title,
+    fields:
+      value.fields ?? value.errors?.map((one) => ({ field: one.path, message: one.message })) ?? [],
+    currentVersion: value.currentVersion ?? null,
+    currentRevisionId: value.currentRevisionId ?? null,
+    reviewId: value.reviewId,
+  };
+}
+
+// A JSON reply, or a refusal the page can show. Anything else is a fault and throws.
+export async function refusable<T>(
+  response: Response,
+  schema: { parse: (raw: unknown) => T },
+  options?: RefusalOptions,
+): Promise<
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly refusal: Refusal }
+> {
+  const raw = await jsonOf(response);
+  if (response.ok) return { ok: true, value: understood(schema, raw) };
+  return { ok: false, refusal: refusalFrom(response, raw, options) };
 }

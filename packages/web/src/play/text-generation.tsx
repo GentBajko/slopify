@@ -1,5 +1,5 @@
 import type { LlmUse } from "@app/slices/admission/rules.js";
-import type { Entry } from "@app/slices/library/model.js";
+import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
 import { SectionHead } from "@/components/kit/section-head";
@@ -77,12 +77,15 @@ export function TextGeneration({
 export function TextGenerationIn({
   section,
   entries,
+  prompts,
   ...props
 }: Pick<RailProps, "form" | "providers" | "problem" | "update"> & {
   readonly section: LlmUse["section"];
   readonly entries: readonly Entry[];
+  // The library's prompts, for the keywords Slopify fills that need the text model.
+  readonly prompts?: readonly Prompt[];
   readonly onSettings: () => void;
 }): ReactElement | null {
-  const uses = llmUsesOf(props.form, entries);
+  const uses = llmUsesOf(props.form, entries, prompts);
   return uses[0]?.section === section ? <TextGeneration {...props} uses={uses} /> : null;
 }

@@ -1,19 +1,20 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
+import type { ModelStandingView } from "@app/slices/model-checks/model.js";
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "@/api";
 import { read } from "@/http";
+import { keys } from "@/queries";
 
 export interface ProviderModels {
   readonly models: readonly ModelInfo[];
   readonly allowsCustom: boolean;
   readonly warning?: string;
   readonly notice?: string;
+  // Each model's standing for the saved key or CLI; absent from an older server.
+  readonly standings?: Readonly<Record<string, ModelStandingView>>;
 }
 
-export const modelsKey = (provider: string): readonly ["provider-models", string] => [
-  "provider-models",
-  provider,
-];
+export const modelsKey = keys.modelsOf;
 
 export async function listProviderModels(
   api: Api,

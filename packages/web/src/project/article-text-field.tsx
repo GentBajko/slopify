@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 import { Field, Textarea } from "@/components/kit/field";
+import { groupedNumber } from "@/lib/format";
 
 // The server's limit for an edited article (`slices/revisions/schema.ts`).
 export const articleLimit = 500_000;
-const counted = new Intl.NumberFormat("en");
 
 // The article's text in Edit project, with its length against the limit always in view. No
 // native maxLength: a paste past the limit would be cut silently, so the whole text stays and
@@ -28,7 +28,7 @@ export function ArticleTextField({
         error={
           error ??
           (over > 0
-            ? `The article is ${counted.format(over)} characters over the ${counted.format(articleLimit)} limit. Shorten it, then press Save changes; nothing was cut.`
+            ? `The article is ${groupedNumber.format(over)} characters over the ${groupedNumber.format(articleLimit)} limit. Shorten it, then press Save changes; nothing was cut.`
             : undefined)
         }
         help={help}
@@ -37,7 +37,7 @@ export function ArticleTextField({
       </Field>
       <p
         className={`m-0 text-small tabular-nums ${over > 0 ? "text-danger" : "text-ink-2"}`}
-      >{`${counted.format(value.length)} of ${counted.format(articleLimit)} characters`}</p>
+      >{`${groupedNumber.format(value.length)} of ${groupedNumber.format(articleLimit)} characters`}</p>
     </div>
   );
 }

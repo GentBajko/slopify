@@ -5,20 +5,14 @@ import type { DownloadDeps } from "../../slices/storage/downloads.js";
 import { findDownload, imagesZip } from "../../slices/storage/downloads.js";
 import type { AppDeps } from "./app.js";
 import { fileResponse } from "./byte-range.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { projectIdParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 import { waveformAnswer } from "./waveform.js";
 
-const projectParam = z.object({
-  projectId: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
-const setParam = projectParam.extend({
+const setParam = projectIdParam.extend({
   set: z.enum(["images.zip", "thumbnails.zip", "shorts.zip"]),
 });
-const assetParam = projectParam.extend({
+const assetParam = projectIdParam.extend({
   asset: z
     .string()
     .min(1)
@@ -101,5 +95,5 @@ function missing(
     "no-images":
       "This project has no images or thumbnail yet. Wait for the Images step to finish, then try again.",
   };
-  return problem(c, { status: 404, title: titleOf(404), detail: details[reason] });
+  return problem(c, { status: 404, detail: details[reason] });
 }

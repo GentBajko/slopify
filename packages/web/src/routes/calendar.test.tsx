@@ -190,6 +190,40 @@ describe("the calendar", () => {
     expect(screen.getByRole("combobox", { name: "Move Cleopatra to…" })).not.toBeNull();
   });
 
+  it("offers Prepare only for a video run, and says why a design run has none", async () => {
+    const user = userEvent.setup();
+    const prepare = vi.fn(jsonAnswer({ projectId: "p", title: "x" }, 201));
+    const design = { ...run(1, 0, "Spring fair", otherId), templateKind: "design" };
+    renderRouted(
+      <CalendarRoute />,
+      deps({
+        "GET /api/calendar": jsonAnswer({
+          from: inDays(0, 0),
+          to: inDays(28, 0),
+          runs: [run(2, 0, "Cleopatra"), design],
+          projects: [],
+          queued: [],
+        }),
+        [`POST /api/schedules/${otherId}/topics/prepare`]: prepare,
+      }),
+    );
+    const chip = await screen.findByRole("article", { name: /^Spring fair,/ });
+    expect(within(chip).queryByRole("button", { name: "Prepare" })).toBeNull();
+    const video = screen.getByRole("article", { name: /^Cleopatra,/ });
+    expect(within(video).getByRole("button", { name: "Prepare" })).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getAllByRole("button", { name: "Prepare" })).toHaveLength(1);
+    expect(
+      screen.getByText("A design is made on its day, so there is nothing to prepare ahead."),
+    ).not.toBeNull();
+    expect(prepare).not.toHaveBeenCalled();
+    // Its template is a design template, opened in the design template editor.
+    const links = screen.getAllByRole("link", { name: "Stories" });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(
+      expect.arrayContaining([`/design-templates/${templateId}`, `/templates?item=${templateId}`]),
+    );
+  });
+
   it("offers Undo after a move, which moves the topic back", async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];

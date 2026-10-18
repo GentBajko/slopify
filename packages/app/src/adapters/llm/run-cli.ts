@@ -6,6 +6,7 @@ import { redact } from "../../kernel/log.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { cliName, commandOf, quoted } from "../explain.js";
+import { safeJson } from "../http-failure.js";
 
 // The local-agent seam, shaped after `slices/settings/cli-status.ts`'s `CliProbe`: a type
 // the adapters take as a parameter and one implementation over `node:child_process`. It
@@ -284,13 +285,5 @@ async function* bytesOf(source: Readable | null): AsyncGenerator<Uint8Array> {
   if (source === null) return;
   for await (const piece of source) {
     if (piece instanceof Uint8Array) yield piece;
-  }
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
   }
 }

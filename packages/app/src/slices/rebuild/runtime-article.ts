@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult } from "../../kernel/runner/work.js";
@@ -23,18 +24,14 @@ export async function executeArticleRequests(
   initial: WorkPiece,
 ): Promise<AttemptResult<LlmAnswer>> {
   if (initial.input.kind !== "llm")
-    throw new Error(
-      "Slopify hit an internal error (the article step has no AI request). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the article step has no AI request"));
   let piece = initial;
   let text = "";
   let inputTokens = 0;
   let outputTokens = 0;
   for (let part = 0; part <= continuationLimit; part += 1) {
     if (piece.input.kind !== "llm")
-      throw new Error(
-        "Slopify hit an internal error (an article continuation has no AI request). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("an article continuation has no AI request"));
     const saved = deps.db
       .prepare("SELECT result_json FROM revision_work_pieces WHERE id=? AND work_id=?")
       .get(piece.id, context.work.workId);

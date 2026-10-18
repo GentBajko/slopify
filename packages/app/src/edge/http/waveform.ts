@@ -1,6 +1,7 @@
 import type { Context } from "hono";
+import { errorText } from "../../kernel/errors.js";
 import type { DecodePeaks } from "./narration-peaks.js";
-import { problem, titleOf } from "./problem.js";
+import { problem } from "./problem.js";
 
 // The audio player's waveform: `?waveform=N` on a file's own URL answers the file's loudness
 // as N bars from 0 to 1, instead of the file. The peaks come from the same ffmpeg decode as the
@@ -45,19 +46,16 @@ export function waveformAnswer(decode: DecodePeaks | undefined) {
     if (!Number.isInteger(bars) || bars < 1 || bars > waveformBarsMax)
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: `Ask for a waveform of 1 to ${String(waveformBarsMax)} bars.`,
       });
     if (!file.contentType.startsWith("audio/"))
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: "Only an audio file has a waveform. This file plays without one.",
       });
     if (decode === undefined)
       return problem(c, {
         status: 503,
-        title: titleOf(503),
         detail:
           "Slopify can't draw the waveform because ffmpeg isn't available. The audio still plays. Restart Slopify; if it keeps happening, use Download diagnostics in Settings and report it.",
       });
@@ -69,8 +67,7 @@ export function waveformAnswer(decode: DecodePeaks | undefined) {
       } catch (error) {
         return problem(c, {
           status: 500,
-          title: titleOf(500),
-          detail: `Slopify couldn't read this audio to draw its waveform (${error instanceof Error ? error.message : String(error)}). The audio still plays.`,
+          detail: `Slopify couldn't read this audio to draw its waveform (${errorText(error)}). The audio still plays.`,
         });
       }
       cache.set(key, waveform);

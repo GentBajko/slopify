@@ -4,6 +4,7 @@ import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { Field, Select } from "@/components/kit/field";
+import { keys } from "@/queries";
 import { instantiateProjectTemplate, type TemplateSummary, templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
 import { outputKindOf, outputNoun } from "./output-kind";
@@ -63,7 +64,7 @@ export function TemplateField({
         onError(`The template "${template.name}" wasn't applied. ${reply.message}`);
         return;
       }
-      await client.invalidateQueries({ queryKey: ["play-drafts"] });
+      await client.invalidateQueries({ queryKey: keys.playDrafts });
       if (!(await session.open(reply.value.draft.id))) {
         onError(`The draft made from "${template.name}" didn't open. Open it from Drafts.`);
         return;

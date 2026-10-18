@@ -1,13 +1,32 @@
 // Automatic reviews: a reviewer model looks at each finished item of a stage (the article,
-// every image, the narration, the thumbnail, every short) before the run moves on, and says
+// the opening's promise, every image, the narration, the thumbnail, every short) before the
+// run moves on, and says
 // pass or fail with its reasons. A failed item is flagged, or made again while its retries
 // last. Browser-safe: Play, Edit project and the project page read these names and limits too.
 
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
 import type { Actor } from "../agents/model.js";
 
-export const reviewStages = ["article", "images", "narration", "thumbnail", "shorts"] as const;
+// "promise" reads the written article's opening against the title and thumbnail before the
+// paid narration starts; it is last so every list saved before it keeps its order.
+export const reviewStages = [
+  "article",
+  "images",
+  "narration",
+  "thumbnail",
+  "shorts",
+  "promise",
+] as const;
 export type ReviewStage = (typeof reviewStages)[number];
+// The stages in the order a run reaches them, as the Reviews rows list them.
+export const reviewStagesInRunOrder: readonly ReviewStage[] = [
+  "article",
+  "promise",
+  "images",
+  "narration",
+  "thumbnail",
+  "shorts",
+];
 
 // Off is the same as the stage having no entry, which is what every project saved before
 // reviews existed has.
@@ -60,6 +79,7 @@ export const reviewStageLabels: Readonly<Record<ReviewStage, string>> = {
   narration: "Narration",
   thumbnail: "Thumbnail",
   shorts: "Shorts",
+  promise: "Promise check (before narration)",
 };
 
 export const reviewModeLabels: Readonly<Record<ReviewMode, string>> = {
@@ -96,6 +116,9 @@ export function reviewPromptKey(stage: ReviewStage): string {
 // A review's step is `review:` and the key of the item it reviews. The narration is
 // reviewed as a whole, so its item key names no step.
 export const narrationItemKey = "narration";
+// The promise check reviews the article, but as its own item, so its verdict never stands in
+// for the article review's.
+export const promiseItemKey = "promise";
 export function reviewKey(itemKey: string): string {
   return `review:${itemKey}`;
 }
@@ -209,4 +232,6 @@ export const defaultReviewPrompts: Readonly<Record<ReviewStage, string>> = {
     "Review this thumbnail as it would be seen on a phone, about 320 pixels wide. Fail it when its text (if any) cannot be read at that size, when the subject is unclear or cluttered, when a hand or body is malformed, or when it shows stray letters or watermarks.",
   shorts:
     "Review these images from one vertical short, as they would be seen full screen on a phone. Fail them when the subject is unclear, when a hand or body is malformed, when they show stray text, letters or watermarks, or when they do not fit the short's title.",
+  promise:
+    "Review whether this video's opening keeps the promise its title and thumbnail make. Pass it when the first 30 seconds start delivering what the title and thumbnail promise and give the viewer a reason to keep watching. Fail it when the opening is a slow preamble, greets the viewer or talks about the channel (subscribe, welcome back) before the subject, is about something other than the title, or promises something the rest of the article never delivers. When you fail it, name the sentence from the article that should come first.",
 };

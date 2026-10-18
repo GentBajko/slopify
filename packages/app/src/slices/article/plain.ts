@@ -1,6 +1,7 @@
 import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 import stripMarkdown from "strip-markdown";
+import { internalError } from "../../kernel/errors.js";
 
 // ceiling: conversions remembered. The same article is converted again every time a run plans
 // its work, which is several times a step; a long article took seconds each time, on the
@@ -27,15 +28,11 @@ function convert(markdown: string): string {
   const paragraphs = tree.children
     .map((node) => {
       if (node.type !== "paragraph")
-        throw new Error(
-          "Slopify hit an internal error (the article couldn't be turned into plain text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("the article couldn't be turned into plain text"));
       return node.children
         .map((child) => {
           if (child.type !== "text")
-            throw new Error(
-              "Slopify hit an internal error (the article couldn't be turned into plain text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-            );
+            throw new Error(internalError("the article couldn't be turned into plain text"));
           return child.value;
         })
         .join("");

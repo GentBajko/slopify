@@ -57,7 +57,7 @@ const revisions: readonly RouteTool[] = [
     route: "GET /api/projects/:id/revisions",
     title: "Read project history",
     description:
-      "Every saved version of the project, newest first, as Project history lists them (byAgent marks one an agent saved), and agentActions: what agents did in the project.",
+      "Every saved version of the project, newest first, as Project history lists them (byAgent marks one an agent saved, byAssistant one the in-app assistant saved), and agentActions: what agents and the assistant did in the project (actor says which).",
   },
   {
     name: "get_revision",

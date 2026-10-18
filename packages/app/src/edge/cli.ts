@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { type Config, configFrom } from "../kernel/config/index.js";
+import { errnoCode } from "../kernel/errors.js";
 import { readVersion } from "../kernel/version.js";
 import { boot } from "../main.js";
 import { forwardManagedUpdate } from "../updater/forward.js";
@@ -136,7 +137,7 @@ try {
 // in use") names the symptom but not the fix, so the common startup failures are restated here.
 function explainStartupError(error: unknown, config: Config | undefined): string {
   if (!(error instanceof Error)) return String(error);
-  const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+  const code = errnoCode(error);
   const syscall = "syscall" in error && typeof error.syscall === "string" ? error.syscall : "";
   if (config !== undefined && syscall === "listen") {
     const other = config.port === 7070 ? 7071 : 7070;

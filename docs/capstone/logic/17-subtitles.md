@@ -95,7 +95,7 @@ Local captions align the saved spoken text to the actual narration in the projec
 
 ## Outcomes & side effects
 
-The revision holds `subtitle_words`, `subtitles_srt`, `subtitles_vtt`, `subtitle_ass` and `subtitle_font` outputs independently of narration and media; history keeps its references. Project deletion removes them; uploaded fonts (`<dataDir>/fonts`) and model caches (`<dataDir>/models/`) remain (scenario 14). `slices/subtitles/prepare.ts` and `transcript.ts` belong to the pre-revision `renderVideo` path (`slices/video/run.ts:36`), which is reached only from tests.
+The revision holds `subtitle_words`, `subtitles_srt`, `subtitles_vtt`, `subtitle_ass` and `subtitle_font` outputs independently of narration and media; history keeps its references. Project deletion removes them; uploaded fonts (`<dataDir>/fonts`) and model caches (`<dataDir>/models/`) remain (scenario 14).
 
 ## Dimensions not in play
 

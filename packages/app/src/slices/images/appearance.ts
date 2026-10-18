@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { appearanceKeyword, detectSlots, render } from "../admission/substitute.js";
 
@@ -8,8 +9,11 @@ import { appearanceKeyword, detectSlots, render } from "../admission/substitute.
 // picture then gets the subject's look and the looks of the characters its scene names, so a
 // figure looks the same from image to image and like the one people know.
 
+// `{{Appearance}}` is the old name of `{{Slopify_Appearance}}`; both mean the same.
+const appearanceNames: readonly string[] = [appearanceKeyword, "Slopify_Appearance"];
+
 export function usesAppearance(body: string | null | undefined): boolean {
-  return body != null && detectSlots(body).names.includes(appearanceKeyword);
+  return body != null && detectSlots(body).names.some((name) => appearanceNames.includes(name));
 }
 
 const figureSchema = z.object({
@@ -58,7 +62,7 @@ export function checkAppearance(
   | { readonly ok: false; readonly reason: string } {
   const fix =
     "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
-  const parsed = appearanceSchema.safeParse(jsonObjectOf(text));
+  const parsed = appearanceSchema.safeParse(jsonBetween(text, "{", "}"));
   if (!parsed.success)
     return { ok: false, reason: `The AI model didn't answer with the looks it looked up. ${fix}` };
   const tidy = (figure: Figure): Figure => ({
@@ -105,7 +109,7 @@ export function appearanceFor(
 
 // The prompt with its looks; a line asking for looks nobody in the picture has is left out.
 export function withAppearance(body: string, text: string): string {
-  if (text !== "") return render(body, { [appearanceKeyword]: text });
+  if (text !== "") return render(body, { [appearanceKeyword]: text, Slopify_Appearance: text });
   return body
     .split("\n")
     .filter((line) => !usesAppearance(line))
@@ -117,15 +121,4 @@ export function withAppearance(body: string, text: string): string {
 function names(text: string, name: string): boolean {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "iu").test(text);
-}
-
-function jsonObjectOf(text: string): unknown {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
 }

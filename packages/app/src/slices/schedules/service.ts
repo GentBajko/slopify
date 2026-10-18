@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { requestHash } from "../play-drafts/repo.js";
-import { nextOccurrence } from "./calendar.js";
+import { checkDesign } from "./design-check.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
+import { nextRunOf } from "./next-run.js";
 import {
   insertSchedule,
   runsForSchedule,
@@ -29,6 +30,9 @@ export function listSchedules(deps: ScheduleDeps): readonly ScheduleSummary[] {
   const gateOf = deps.templateGate;
   if (gateOf === undefined) return rows;
   return rows.map((schedule) => {
+    // The template studio's gate is a project template's; a design schedule's template is
+    // a design template, readied by the designs.
+    if (schedule.templateKind !== "project") return schedule;
     const templateGate = gateOf(schedule.templateId);
     return templateGate === undefined ? schedule : { ...schedule, templateGate };
   });
@@ -64,17 +68,17 @@ export function createSchedule(
         ? { ok: true, value: scheduleById(deps.db, parsed.data.id) as ScheduleSummary }
         : { ok: false, reason: "conflict" };
     }
-    const checked = checkTemplate(deps, parsed.data.templateId);
+    const checked = checkKind(deps, parsed.data, []);
     if (!checked.ok) return checked;
-    const topics = checkTopics(deps, parsed.data, []);
-    if (!topics.ok) return topics;
     const now = deps.clock.now();
-    const next = nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
-    if (next === null) return { ok: false, reason: "not-due" };
+    const next = nextRunOf(deps.db, parsed.data, now);
+    // A design schedule with no row still to come waits for rows; any other has to run.
+    if (next === null && parsed.data.templateKind === "project")
+      return { ok: false, reason: "not-due" };
     // The version it was saved against, for the record; runs use the newest.
     const value = summary(
       { ...parsed.data, templateVersion: checked.value },
-      next.toISOString(),
+      next?.toISOString() ?? null,
       now.toISOString(),
     );
     insertSchedule(deps.db, value, hash);
@@ -108,17 +112,22 @@ export function updateSchedule(
     if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
     if (previous.status === "canceled" || previous.status === "completed")
       return { ok: false, reason: "conflict" };
-    const checked = checkTemplate(deps, parsed.data.templateId);
+    if (parsed.data.templateKind !== previous.templateKind)
+      return {
+        ok: false,
+        reason: "invalid-input",
+        message:
+          "A schedule can't switch between making videos and making designed pieces. Make a new schedule for the other kind.",
+      };
+    const checked = checkKind(deps, parsed.data, previous.items);
     if (!checked.ok) return checked;
-    const topics = checkTopics(deps, parsed.data, previous.items);
-    if (!topics.ok) return topics;
     const now = deps.clock.now();
     const next =
       previous.status === "active"
-        ? nextOccurrence(parsed.data.cadence, parsed.data.timezone, now)
-        : previous.nextRunAt === null
+        ? nextRunOf(deps.db, parsed.data, now)
+        : previous.nextRunAt === null && previous.templateKind === "project"
           ? null
-          : nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
+          : nextRunOf(deps.db, parsed.data, now);
     // The version it was saved against, for the record; runs use the newest.
     const value = summary(
       { ...parsed.data, templateVersion: checked.value },
@@ -128,6 +137,7 @@ export function updateSchedule(
       previous.version + 1,
       // Saving clears a recorded generation failure, so the next tick tries again.
       { ...previous.topics, failedAt: null, error: null },
+      previous.topicScoring,
     );
     if (!updateScheduleRow(deps.db, value, parsed.data.mutationId, hash, parsed.data.baseVersion))
       return { ok: false, reason: "conflict" };
@@ -150,8 +160,9 @@ export function resumeSchedule(
   if (previous.deletedAt !== null) return { ok: false, reason: "conflict" };
   if (previous.version !== parsed.data.baseVersion || previous.status !== "paused")
     return { ok: false, reason: "conflict" };
-  const next = nextOccurrence(previous.cadence, previous.timezone, deps.clock.now());
-  const status = next === null ? "completed" : "active";
+  const next = nextRunOf(deps.db, previous, deps.clock.now());
+  // A design schedule with no row to come stays active, waiting for rows.
+  const status = next === null && previous.templateKind === "project" ? "completed" : "active";
   if (
     !setScheduleStatus(
       deps.db,
@@ -223,6 +234,28 @@ function control(
   return { ok: true, value: scheduleById(deps.db, previous.id) as ScheduleSummary };
 }
 
+// Answers the template's newest version when a schedule may use it, and checks its queue
+// against that template: a project template's keywords, or a design template's fields and
+// dates.
+function checkKind(
+  deps: ScheduleDeps,
+  input: ScheduleCreate,
+  kept: readonly TopicRow[],
+):
+  | Extract<ScheduleResult<ScheduleSummary>, { ok: false }>
+  | { readonly ok: true; readonly value: number } {
+  if (input.templateKind === "design") return checkDesign(deps, input);
+  // Exactly as before design schedules: a project template's id is a UUID, and its schedule
+  // runs once, daily or weekly.
+  if (!z.uuid().safeParse(input.templateId).success || input.cadence.kind === "by-date")
+    return { ok: false, reason: "invalid-input" };
+  const checked = checkTemplate(deps, input.templateId);
+  if (!checked.ok) return checked;
+  const topics = checkTopics(deps, input, kept);
+  if (!topics.ok) return topics;
+  return checked;
+}
+
 // Answers the template's newest version when a schedule may use it.
 function checkTemplate(
   deps: ScheduleDeps,
@@ -288,10 +321,12 @@ function summary(
   status: ScheduleSummary["status"] = "active",
   version = 1,
   topics: ScheduleSummary["topics"] = topicStateIdle,
+  topicScoring: ScheduleSummary["topicScoring"] = "off",
 ): ScheduleSummary {
   return {
     id: input.id,
     name: input.name,
+    templateKind: input.templateKind,
     templateId: input.templateId,
     templateVersion: input.templateVersion,
     cadence: input.cadence,
@@ -305,6 +340,7 @@ function summary(
     brief: input.brief === null || input.brief === "" ? null : input.brief,
     topicGeneration: input.topicGeneration,
     releases: input.releases,
+    topicScoring: input.topicScoring ?? topicScoring,
     topics,
     status,
     version,

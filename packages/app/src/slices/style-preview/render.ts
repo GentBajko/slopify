@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { defaultMotionStyle, defaultZoomPercent } from "../admission/rules.js";
@@ -16,10 +17,10 @@ import { previewCues, previewShots, previewWords, type StylePreviewSettings } fr
 
 // The preview goes through the same planner and renderer as a real video: `planRender` builds
 // the edit list (motion, transitions, the Look, the chapter card), the captions are the same
-// ASS script `prepareSubtitles` writes, and `renderSlideshow` encodes it clip by clip. The
-// Shorts layout goes through `renderShort`, as a short-mode video and every cut short do. Only
-// the inputs are the bundled sample's: three of its images and six seconds of its narration
-// with the word timing (`narration.ts`); no provider is ever called.
+// ASS script the captions step writes (`rebuild/runtime-subtitles.ts`), and `renderSlideshow`
+// encodes it clip by clip. The Shorts layout goes through `renderShort`, as a short-mode video
+// and every cut short do. Only the inputs are the bundled sample's: three of its images and six
+// seconds of its narration with the word timing (`narration.ts`); no provider is ever called.
 
 // `picture` is a still to draw every shot from instead of the sample stills.
 export type StylePreviewRenderer = (
@@ -212,7 +213,7 @@ function narrationFor(path: string, seconds: number): EditList["audio"] {
 
 function explained(log: Log, error: unknown): StylePreviewError {
   if (error instanceof StylePreviewError) return error;
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorText(error);
   if (isMissingFont(error))
     return new StylePreviewError(
       "font-missing",

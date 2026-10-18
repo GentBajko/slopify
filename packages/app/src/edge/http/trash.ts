@@ -11,15 +11,13 @@ import {
 } from "../../slices/trash/model.js";
 import { deleteNow, listTrash, restoreItem } from "../../slices/trash/service.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idString } from "./ids.js";
+import { onInvalid } from "./problem.js";
+import { refusal } from "./refusal.js";
 
 const itemParam = z.object({
   kind: z.enum(trashKinds),
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
+  id: idString,
 });
 
 // Settings → Trash's Restore selected / Restore all and Delete selected / Empty trash: the
@@ -29,6 +27,8 @@ const manySchema = z.object({ items: z.array(itemParam).min(1).max(5000) });
 // A template comes back before the schedules that run it, so restoring both at once works.
 const restoreOrder: Readonly<Record<TrashKind, number>> = {
   template: 0,
+  "design-template": 0,
+  design: 1,
   prompt: 1,
   entry: 1,
   project: 1,
@@ -73,11 +73,10 @@ function failedItem(kind: TrashKind, id: string, reason: TrashRefusal, detail?: 
 }
 
 function refused(c: Context, reason: TrashRefusal, detail?: string): Response {
-  return problem(c, {
-    status: status[reason],
-    title: titleOf(status[reason]),
+  return refusal(c, reason, {
+    statuses: status,
+    otherwise: 500,
     detail: detail === undefined ? details[reason] : `${details[reason]} (${detail})`,
-    extensions: { reason },
   });
 }
 

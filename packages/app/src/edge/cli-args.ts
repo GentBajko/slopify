@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { errnoCode, errorText } from "../kernel/errors.js";
 
 const options = {
   port: { type: "string" },
@@ -33,10 +34,7 @@ export function parseCli(args: readonly string[]): CliArgs {
   try {
     parsed = parse(args);
   } catch (error) {
-    const code =
-      error instanceof Error && "code" in error && typeof error.code === "string"
-        ? error.code
-        : undefined;
+    const code = errnoCode(error);
     if (code === "ERR_PARSE_ARGS_UNKNOWN_OPTION") {
       const flag = /'([^']+)'/.exec(error instanceof Error ? error.message : "")?.[1];
       throw new Error(
@@ -45,7 +43,7 @@ export function parseCli(args: readonly string[]): CliArgs {
     }
     if (code === "ERR_PARSE_ARGS_INVALID_OPTION_VALUE")
       throw new Error(
-        `${error instanceof Error ? error.message : String(error)}. Run npx @gentbajko/slopify --help to see how each option is written.`,
+        `${errorText(error)}. Run npx @gentbajko/slopify --help to see how each option is written.`,
       );
     throw error;
   }

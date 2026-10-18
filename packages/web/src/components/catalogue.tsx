@@ -18,6 +18,7 @@ import {
   upkeepKeys,
 } from "@/components/provider-upkeep-api";
 import { startedAt } from "@/lib/utils";
+import { keys } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { templatesKey } from "@/templates/api";
 
@@ -49,7 +50,7 @@ export function CatalogueSettings() {
   const retired = useQuery({ queryKey: upkeepKeys.retired, queryFn: () => readRetired(api) });
   const refreshed = async (): Promise<void> => {
     await Promise.all([
-      cache.invalidateQueries({ queryKey: ["provider-models"] }),
+      cache.invalidateQueries({ queryKey: keys.providerModels }),
       cache.invalidateQueries({ queryKey: upkeepKeys.retired }),
     ]);
   };
@@ -79,7 +80,7 @@ export function CatalogueSettings() {
       cache.invalidateQueries({ queryKey: upkeepKeys.retired }),
       cache.invalidateQueries({ queryKey: templatesKey }),
       cache.invalidateQueries({ queryKey: schedulesKey }),
-      cache.invalidateQueries({ queryKey: ["play-drafts"] }),
+      cache.invalidateQueries({ queryKey: keys.playDrafts }),
       cache.invalidateQueries({ queryKey: ["projects"] }),
       cache.invalidateQueries({ queryKey: ["project"] }),
     ]);

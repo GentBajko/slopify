@@ -7,11 +7,18 @@ import type { RevisionDeps, RevisionEdit, RevisionView } from "../revisions/mode
 // current content with each prompt's template body replaced, so a changed prompt is sent as
 // written now. Saving it outdates exactly what the change touches; the rebuild makes only that.
 export function sampleEdit(
-  deps: Pick<RevisionDeps, "db" | "paths">,
+  deps: Pick<RevisionDeps, "db" | "paths" | "clock">,
   base: RevisionView,
   run: ResolvedPlayRun,
 ): RevisionEdit {
-  const config = configOf(deps, run.draft, run.rendered);
+  const config = configOf(
+    deps,
+    run.draft,
+    run.rendered,
+    deps.clock.now(),
+    run.templates,
+    base.revision.projectId,
+  );
   return {
     config,
     content: {

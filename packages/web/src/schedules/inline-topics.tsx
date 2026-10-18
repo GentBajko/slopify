@@ -8,6 +8,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { SelectionBar, useSelection } from "@/components/selection";
 import { InlineTopicRow } from "./inline-topic-row";
 import { TopicAddField } from "./topic-add-field";
+import { RescoreButton, useTopicScores } from "./topic-score";
 import { useInlineQueue } from "./use-inline-queue";
 
 // A queue this long shows its first rows and a Show all button, so the page stays quick.
@@ -21,6 +22,7 @@ export const shownAtFirst = 100;
 export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary }): ReactElement {
   const topicWord = schedule.topicKeyword === null ? "title" : `{{${schedule.topicKeyword}}}`;
   const queue = useInlineQueue(schedule, topicWord);
+  const scoreOf = useTopicScores(schedule.id);
   const { items, keys, saving } = queue;
   const selection = useSelection(keys);
   const [insertAfter, setInsertAfter] = useState<string | null>(null);
@@ -56,7 +58,15 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
             ? "Each topic becomes the next project's title."
             : `Each topic fills ${topicWord}; the next run takes the first.`
         }
-      />
+      >
+        {schedule.topicScoring === "off" ? null : (
+          <RescoreButton
+            scheduleId={schedule.id}
+            scoring={schedule.topicScoring}
+            disabled={saving}
+          />
+        )}
+      </SectionHead>
       {queue.error === null ? null : (
         <p role="alert" className="m-0 mt-2 text-small text-danger">
           {queue.error}
@@ -122,6 +132,7 @@ export function InlineTopics({ schedule }: { readonly schedule: ScheduleSummary 
                   onRemove={() => void queue.remove([index])}
                   onInsertBelow={() => setInsertAfter(key)}
                   onDuplicate={() => queue.duplicate(index)}
+                  score={scoreOf(row.title)}
                 />
               );
               return index !== insertAt

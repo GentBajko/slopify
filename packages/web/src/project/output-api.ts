@@ -1,9 +1,9 @@
 import type { AddableOutput } from "@app/slices/outputs/add.js";
 import { addedOutputPreviewSchema, addedOutputSchema } from "@app/slices/outputs/model.js";
-import { z } from "zod";
+import type { z } from "zod";
 import type { Api } from "@/api";
 import { fileUrl } from "@/api";
-import { errorOf, understood } from "@/http";
+import { refusable } from "@/http";
 import { revisionFileUrl } from "./revision-api.js";
 
 export type AddedOutputPreview = z.infer<typeof addedOutputPreviewSchema>;
@@ -18,14 +18,6 @@ export interface OutputRefusal {
   readonly fields: readonly { readonly field: string; readonly message: string }[];
 }
 export type OutputReply<T> = { readonly ok: true; readonly value: T } | OutputRefusal;
-
-const problemSchema = z.object({
-  title: z.string(),
-  status: z.number(),
-  detail: z.string().optional(),
-  reason: z.string().optional(),
-  fields: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-});
 
 async function post<T>(
   api: Api,
@@ -42,27 +34,13 @@ async function post<T>(
       body: JSON.stringify(body),
     },
   );
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  if (response.ok) return { ok: true, value: understood(schema, raw) };
-  const parsed = problemSchema.safeParse(raw);
-  if (!parsed.success) throw errorOf(response, undefined);
-  const problem = parsed.data;
-  if (![400, 404, 409].includes(response.status))
-    throw errorOf(response, {
-      title: problem.title,
-      status: problem.status,
-      ...(problem.detail === undefined ? {} : { detail: problem.detail }),
-    });
+  const result = await refusable(response, schema);
+  if (result.ok) return result;
   return {
     ok: false,
-    reason: problem.reason ?? "invalid-request",
-    message: problem.detail ?? problem.title,
-    fields: problem.fields ?? [],
+    reason: result.refusal.reason ?? "invalid-request",
+    message: result.refusal.message,
+    fields: result.refusal.fields,
   };
 }
 

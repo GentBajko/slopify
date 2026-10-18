@@ -7,7 +7,7 @@ import {
   tutorialWriteSchema,
 } from "../../slices/settings/tutorial.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 // Preserve Hono's inferred route types for the web client.
 export function tutorialRoutes(deps: Pick<AppDeps, "db">) {
@@ -18,7 +18,6 @@ export function tutorialRoutes(deps: Pick<AppDeps, "db">) {
       if (!result.ok)
         return problem(c, {
           status: 409,
-          title: titleOf(409),
           detail:
             result.reason === "unreadable"
               ? "Your saved tutorial progress could not be read. Choose Restart tutorial to start it again."

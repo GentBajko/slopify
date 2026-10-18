@@ -1,4 +1,6 @@
 import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
+import type { ModelStandingView } from "@app/slices/model-checks/model.js";
+import { badgeOf } from "@app/slices/model-checks/rules.js";
 import {
   type AnimateMode,
   type Atmosphere,
@@ -27,6 +29,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import type { HelpId } from "@/help/catalog";
@@ -193,11 +196,9 @@ export function useVideoEditControls({
           />
         </Row>
         <Row id={`${id}-cards`} label="Chapter cards" tip="project.video.chapter-cards">
-          <input
+          <Checkbox
             id={`${id}-cards`}
-            type="checkbox"
             data-play-field={`${fieldPrefix}.chapterCards`}
-            className="size-4 accent-accent"
             checked={edit.chapterCards}
             disabled={!narrated && !edit.chapterCards}
             onChange={(event) => set({ chapterCards: event.currentTarget.checked })}
@@ -251,7 +252,7 @@ export function useVideoEditControls({
             ) : null}
             {offered.map((one) => (
               <option key={one.id} value={one.id}>
-                {one.name}
+                {videoBadge(one.name, models.data?.standings?.[one.id])}
               </option>
             ))}
           </Picker>
@@ -330,4 +331,10 @@ function Choice<T extends string>({
       ))}
     </Picker>
   );
+}
+
+// Image-to-video models are listed, never checked, so every one stays offered; the badge says
+// only what is known (listed for the key, not on the plan, retiring).
+export function videoBadge(name: string, view: ModelStandingView | undefined): string {
+  return view === undefined ? name : `${name} · ${badgeOf(view, new Date())}`;
 }

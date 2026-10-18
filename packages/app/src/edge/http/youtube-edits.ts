@@ -14,7 +14,7 @@ import {
 import { descriptionMaxCharacters } from "../../slices/youtube/model.js";
 import { channelLinksProblem } from "../../slices/youtube/placeholders.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 import { channelLinksBody } from "./settings.js";
 
 const idParam = z.object({ id: z.string().min(1).max(64) });
@@ -32,7 +32,7 @@ const gone = "This project no longer exists. Go back to Projects to pick another
 // server keeps them; the page applies the merge rules to the text it shows.
 export function youtubeEditRoutes(deps: AppDeps) {
   const exists = (id: string) => projectExists(deps.db, id);
-  const missing = (c: Context) => problem(c, { status: 404, title: titleOf(404), detail: gone });
+  const missing = (c: Context) => problem(c, { status: 404, detail: gone });
   const now = () => deps.clock.now().toISOString();
 
   return (
@@ -99,7 +99,6 @@ export function youtubeEditRoutes(deps: AppDeps) {
           if (refused !== undefined)
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail: `This project's links weren't saved: ${refused} Then press Save links under YouTube on the Video section.`,
             });
           const saved = transact(deps.db, () => {

@@ -17,6 +17,7 @@ const run = (index: number, topic: string, scheduleId = "s1"): CalendarRun => ({
   renderedTitle: null,
   prepared: null,
   notReady: false,
+  templateKind: "project",
 });
 
 describe("undoOf", () => {

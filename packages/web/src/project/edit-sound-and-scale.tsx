@@ -25,6 +25,7 @@ import { type ReactElement, useId, useState } from "react";
 import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
+import { SceneKeywordRows, sceneKeywordUses } from "@/components/scene-keyword-rows";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
 import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls";
 import {
@@ -325,9 +326,24 @@ export function EditImageScenes({
   readonly edit: RevisionEdit;
   readonly onChange: (next: RevisionEdit) => void;
 }): ReactElement | null {
-  const { config } = edit;
+  const { config, content } = edit;
   // Scenes are written from the article, so with Article Off the switch isn't offered.
   if (config.sources.images !== "generate" || config.sources.article === "off") return null;
+  // The project's own copies of its picture prompts, which a saved version runs.
+  const bodyOf = (key: string) => content.promptTemplates[key] ?? config.rendered[key];
+  const uses =
+    config.imageScenes === true
+      ? []
+      : sceneKeywordUses([
+          ...config.imagePrompts.map((picked, index) => ({
+            label: `"${picked.name}"`,
+            body: bodyOf(`imagePrompts.${String(index)}`),
+          })),
+          ...(config.sources.thumbnail === "from_prompt" ||
+          config.sources.thumbnail === "prompt_by_llm"
+            ? [{ label: "the thumbnail", body: bodyOf("thumbnailPrompt") }]
+            : []),
+        ]);
   return (
     <div className="flex flex-col items-start gap-2" {...helpScope}>
       <Switch
@@ -339,6 +355,7 @@ export function EditImageScenes({
           onChange({ ...edit, config: { ...rest, ...(on ? { imageScenes: true } : {}) } });
         }}
       />
+      <SceneKeywordRows uses={uses} />
     </div>
   );
 }

@@ -199,6 +199,25 @@ describe("openAiImage.generate", () => {
     expect(String(thrown)).toContain("Invalid value for 'size'");
   });
 
+  it("marks a model the organization can't use, and one that doesn't exist", async () => {
+    const answer = (status: number, message: string, code: string | null) => (): Response =>
+      new Response(JSON.stringify({ error: { message, type: "invalid_request_error", code } }), {
+        status,
+      });
+    const unverified = await failed(
+      replaying(
+        answer(403, "Your organization must be verified to use the model `gpt-image-1`.", null),
+      ),
+    );
+    expect(isProviderError(unverified) && unverified.fault.access).toBe("no-access");
+    const missing = await failed(
+      replaying(answer(404, "The model `gpt-image-9` does not exist.", "model_not_found")),
+    );
+    expect(isProviderError(missing) && missing.fault.access).toBe("not-found");
+    const size = await failed(replaying(answer(400, "Invalid value for 'size'", null)));
+    expect(isProviderError(size) && size.fault.access).toBeUndefined();
+  });
+
   it("fails the attempt when the base64 decodes to something that is not an image", async () => {
     const thrown = await failed(replaying(answering("openai-image-truncated.json")));
 
@@ -295,5 +314,62 @@ describe("cast pictures", () => {
       signal: new AbortController().signal,
     });
     expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
+  });
+});
+
+describe("a picture to edit", () => {
+  it("goes to the edits endpoint as image[] 0, before the cast, with the edit wording", async () => {
+    const seen: Seen[] = [];
+    const source = { bytes: new Uint8Array(pngHead), mime: "image/png" as const };
+    const ada = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
+    await openAiImage({
+      fetch: replaying(answering("openai-image-success.json"), seen),
+      key: () => key,
+    }).generate({
+      model,
+      prompt: "Remove the sign",
+      aspect: "9:16",
+      edit: { source },
+      cast: [{ name: "Ada", description: "", images: [ada] }],
+      signal: new AbortController().signal,
+    });
+    expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
+    const form = seen[0]?.init?.body;
+    if (!(form instanceof FormData)) throw new Error("no form");
+    const images = form.getAll("image[]");
+    expect(images).toHaveLength(2);
+    expect(new Uint8Array(await (images[0] as Blob).arrayBuffer())).toEqual(source.bytes);
+    expect(new Uint8Array(await (images[1] as Blob).arrayBuffer())).toEqual(ada.bytes);
+    expect(String(form.get("prompt"))).toMatch(/^Change the first attached image as follows\./);
+    expect(String(form.get("prompt"))).toContain("Image 2 shows Ada");
+    expect(String(form.get("prompt"))).not.toContain("visual reference");
+  });
+
+  it("marks an edit the organization can't run with the model, like any other call", async () => {
+    const thrown = await openAiImage({
+      fetch: replaying(
+        () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                message: "Your organization must be verified to use the model `gpt-image-1`.",
+                type: "invalid_request_error",
+                code: null,
+              },
+            }),
+            { status: 403 },
+          ),
+      ),
+      key: () => key,
+    })
+      .generate({
+        model,
+        prompt: "Remove the sign",
+        aspect: "1:1",
+        edit: { source: { bytes: new Uint8Array(pngHead), mime: "image/png" } },
+        signal: new AbortController().signal,
+      })
+      .catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.access).toBe("no-access");
   });
 });

@@ -81,13 +81,10 @@ import {
 } from "../../slices/studio/videos.js";
 import { setAsideProjects, uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
+const id = idString;
 const projectParam = z.object({ projectId: id });
 const fileParam = z.object({
   projectId: id,
@@ -191,7 +188,6 @@ export function studioRoutes(deps: AppDeps) {
     if (origin === undefined || origin === new URL(c.req.url).origin) return undefined;
     return problem(c, {
       status: 403,
-      title: titleOf(403),
       detail:
         "For your safety, YouTube Studio settings can only be changed from the Slopify page itself. Open Slopify and try again there.",
     });
@@ -391,7 +387,6 @@ export function studioRoutes(deps: AppDeps) {
           if (!swapped)
             return problem(c, {
               status: 409,
-              title: titleOf(409),
               detail:
                 "Both videos need a release time to swap. Give this one a time first, or reload the page and pick another video.",
             });
@@ -434,7 +429,6 @@ export function studioRoutes(deps: AppDeps) {
         if (channelId !== undefined && channelById(deps.db, channelId) === undefined)
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "The playlists weren't saved: that channel no longer exists. Reload Settings → YouTube Studio and pick the channel again.",
           });
@@ -442,7 +436,6 @@ export function studioRoutes(deps: AppDeps) {
         if (invalid !== undefined)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: invalid,
             extensions: { fields: [{ field: "playlists", message: invalid }] },
           });
@@ -483,7 +476,6 @@ export function studioRoutes(deps: AppDeps) {
             if (!free)
               return problem(c, {
                 status: 409,
-                title: titleOf(409),
                 detail:
                   "That slot is taken or past. Reload Prepare upload and choose one of the slots it lists.",
               });
@@ -556,7 +548,6 @@ export function studioRoutes(deps: AppDeps) {
           if (packItem(result.pack, short) === undefined)
             return problem(c, {
               status: 404,
-              title: titleOf(404),
               detail: `This project has no short ${String(short)}. Reload the project page and press Prepare upload again.`,
             });
           const queue = enqueueFill(deps.db, projectId, short ?? null, deps.clock.now());
@@ -589,7 +580,6 @@ export function studioRoutes(deps: AppDeps) {
           if (videoId === undefined)
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail:
                 "That isn't a YouTube video link. Copy the video's link from YouTube Studio (Details → Video link, like https://youtu.be/…) and paste it again.",
             });
@@ -619,7 +609,6 @@ export function studioRoutes(deps: AppDeps) {
         if (path === undefined || stat === undefined || !stat.isFile())
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "The Slopify Studio extension isn't included in this copy of Slopify, so there is nothing to download. Update or reinstall Slopify; when running from the repository, run `npm run build` at its root, which builds the extension too.",
           });
@@ -652,7 +641,6 @@ export function studioRoutes(deps: AppDeps) {
             ? refused(c)
             : problem(c, {
                 status: 403,
-                title: titleOf(403),
                 detail:
                   "Only the Slopify Studio browser extension can pair with Slopify. Install it (see Settings → YouTube Studio) and pair from its options page.",
               });
@@ -686,7 +674,6 @@ export function studioRoutes(deps: AppDeps) {
         }
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             gone > 0
               ? "The project chosen to fill in is gone. In Slopify, open the project again, press Prepare upload, then Fill in YouTube Studio."
@@ -768,7 +755,6 @@ export function studioRoutes(deps: AppDeps) {
         if (!result.ok || packItem(result.pack, short ?? undefined) === undefined)
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail: "That upload isn't in the project any more. Open the popup again.",
           });
         planned(projectId);
@@ -964,7 +950,6 @@ export function studioRoutes(deps: AppDeps) {
         if (found === undefined || !found.ok)
           return problem(c, {
             status: 404,
-            title: titleOf(404),
             detail:
               "That file isn't in the project's upload pack any more. Reload the project in Slopify and press Fill in YouTube Studio again.",
           });
@@ -1011,7 +996,6 @@ function confirmVideoUpload(
 function unknownProject(c: Context): Response {
   return problem(c, {
     status: 404,
-    title: titleOf(404),
     detail: "This project no longer exists. Go back to Projects and open it again.",
   });
 }

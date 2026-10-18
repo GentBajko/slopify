@@ -5,6 +5,7 @@ import {
   parsePronunciationGlossary,
   pronunciationRulesOf,
 } from "@app/slices/narration/pronunciation.js";
+import { promiseItemKey } from "@app/slices/reviews/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { CopyIcon } from "lucide-react";
@@ -14,6 +15,7 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ReadingView } from "@/components/kit/reading-view";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
+import { groupedNumber } from "@/lib/format";
 import { keys } from "@/queries";
 import { ScriptView } from "@/voices/script-view";
 import type { BodyProps } from "./body.js";
@@ -163,6 +165,11 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
     <StageBody>
       <ReviewVerdict
         review={reviewFor(reviews, { itemKey: "article:body" })}
+        projectId={project.id}
+        busy={busy}
+      />
+      <ReviewVerdict
+        review={reviewFor(reviews, { itemKey: promiseItemKey })}
         projectId={project.id}
         busy={busy}
       />
@@ -344,8 +351,6 @@ export function ArticleBody({ stage, companion, project, outputs, busy }: BodyPr
   );
 }
 
-const counted = new Intl.NumberFormat("en");
-
 // "18,281 words · 110,234 characters · about 2 h 2 min read aloud": the narrated body as
 // read, without its markdown (heading marks, emphasis, links' addresses) or the end matter.
 export function textCount(markdown: string): string {
@@ -356,7 +361,7 @@ export function textCount(markdown: string): string {
     .trim();
   const words = plain.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
   const characters = plain.replace(/\s*\n\s*/g, " ").length;
-  return `${counted.format(words)} ${words === 1 ? "word" : "words"} · ${counted.format(characters)} characters · ${spokenLength(words)}`;
+  return `${groupedNumber.format(words)} ${words === 1 ? "word" : "words"} · ${groupedNumber.format(characters)} characters · ${spokenLength(words)}`;
 }
 
 // Read aloud at about 150 words a minute, the pace the cost estimate assumes: a planning

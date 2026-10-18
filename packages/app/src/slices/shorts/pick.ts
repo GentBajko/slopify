@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { youtubeTimestamp } from "../youtube/timestamps.js";
 import type { TranscriptSentence } from "../youtube/transcript.js";
@@ -227,7 +228,7 @@ export function checkPicks(
   sentences: readonly TranscriptSentence[],
   limits: PickLimits,
 ): CheckedPicks {
-  const parsed = answerSchema.safeParse(jsonArrayOf(text));
+  const parsed = answerSchema.safeParse(jsonBetween(text, "[", "]"));
   if (!parsed.success)
     return {
       ok: false,
@@ -340,17 +341,4 @@ export function noPicksMessage(problems: readonly string[], limits: PickLimits):
 
 function round(seconds: number): number {
   return Math.round(seconds * 1000) / 1000;
-}
-
-// The array in the answer, wherever the model put it: bare, in a ```json fence, or after a
-// sentence of its own.
-function jsonArrayOf(text: string): unknown {
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
 }

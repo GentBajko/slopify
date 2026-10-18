@@ -12,7 +12,10 @@ import { alignSubtitlesWith } from "./adapters/alignment/index.js";
 import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
+import { createSearchInterest } from "./adapters/interest/search-interest.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { assistantSelfUrl, wireAssistant } from "./assistant-wiring.js";
+import { startAutopilot } from "./autopilot-timers.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createAutostart } from "./edge/autostart/index.js";
@@ -71,6 +74,7 @@ import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/ru
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
+import { cliWatcher, wireModelChecks } from "./model-checks.js";
 import { projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
@@ -81,11 +85,22 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import { dailySampleBudget } from "./slices/designs/budget.js";
+import { designCheckContext } from "./slices/designs/check-context.js";
+import { contextChecks } from "./slices/designs/gate.js";
+import { runPdfWorker } from "./slices/designs/pdf-runner.js";
+import { createDesignRenderer } from "./slices/designs/render.js";
+import { createDesignRunner } from "./slices/designs/runner.js";
+import { createDesignSamples, type DesignSamples } from "./slices/designs/sample.js";
+import type { DesignDeps } from "./slices/designs/service.js";
+import type { TemplateMakeDeps } from "./slices/designs/template-make.js";
 import {
   createEpisodeMemoryWatcher,
   type EpisodeMemoryWatcher,
 } from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
+import { accessRecorder } from "./slices/model-checks/record.js";
+import { readChecks } from "./slices/model-checks/repo.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
 import { projectLink } from "./slices/notifications/address.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
@@ -113,10 +128,11 @@ import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
 import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
+import { refreshDesignSchedules } from "./slices/schedules/next-run.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
-import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
+import { isLocalCliProvider, localCliConcurrency, providerIds } from "./slices/settings/model.js";
 import { readSettings } from "./slices/settings/playback.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { readSetting } from "./slices/settings/repo.js";
@@ -162,7 +178,7 @@ import {
 } from "./slices/template-studio/schedule-gate.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
-import { probeDurationMs } from "./slices/video/ffmpeg.js";
+import { probeDurationMs, runFfmpeg } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -198,8 +214,10 @@ export interface BootOptions {
   // Import the bundled sample project on the first launch. The CLI turns it on; tests boot
   // without it so each starts with no projects.
   readonly seedSample?: boolean;
-  // Check the published model catalogue and OpenRouter's live list at start and once a day.
-  // The CLI turns it on; tests boot without it so they never reach the network.
+  // Check the published model catalogue and OpenRouter's live list at start and once a day,
+  // and which models work for the saved keys and CLIs (free listings, cheap checks) when a key
+  // or CLI is added and weekly. The CLI turns it on; tests boot without it so they never reach
+  // the network.
   readonly refreshModels?: boolean;
   // A new install keeps its projects, backups and exports in <Documents>/Slopify. The CLI turns
   // it on unless a data dir was chosen; tests boot without it so they never touch Documents.
@@ -383,11 +401,15 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     );
     // Calls that belong to no project (topic generation, episode summaries, cast pictures)
     // still go through the attempt wrapper, and are metered against their schedule or channel.
+    // What real calls teach about each model for the person's keys and logins (Settings →
+    // Models, the pickers); no run reads it back.
+    const access = accessRecorder({ db, clock });
     const standalone: StandaloneDeps = {
       registry,
       clock,
       log,
       meter: createStandaloneMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+      access,
     };
     episodes = createEpisodeMemoryWatcher({
       db,
@@ -523,6 +545,18 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    // Which models work for the person's keys and logins (Settings → Models, the pickers).
+    const { checks: modelChecks, listing: modelListing } = wireModelChecks({
+      db,
+      clock,
+      log,
+      registry,
+      catalogue: () => catalogue.read(),
+      lifecycle: catalogue.lifecycle,
+      fetch: globalThis.fetch,
+      statuses: rebuild.providers,
+    });
+    const autoModelChecks = options.refreshModels === true;
     // Redos a review asked for before the last shutdown start now.
     reviewRedos.bind(rebuild);
     reviewRedos.kick();
@@ -562,14 +596,20 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
+    // Built with the designs further down; design schedules make their pieces with it.
+    let designMake: TemplateMakeDeps | undefined;
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
-      // The newest version that may run: legacy, marked ready, or carried by Slopify.
+      designs: () => designMake,
+      // The newest version that may run: legacy, marked ready, or carried by Slopify. Only a
+      // project template's: a design schedule asks the designs (runnableDesignVersion).
       template: (id) => runnableTemplate(runtimeDb, id),
       notReady: (id) => notReadySentence(runtimeDb, id),
       templateHead: (id) => templateById(runtimeDb, id),
       templateGate: (id) => templateGate(runtimeDb, id),
       topicLlm: (call) => standaloneLlm(standalone, call),
+      // Asked only for schedules set to rank topics by public search interest.
+      interest: createSearchInterest({ fetch: globalThis.fetch, version, now: () => clock.now() }),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
         notifier.observeTopics(event);
@@ -698,7 +738,96 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       } catch (error) {
         log.write("warn", "studio.extension", { detail: causedBy(error) });
       }
+    const autopilot = startAutopilot({
+      db: updateDb,
+      clock,
+      log,
+      dataDir: paths.dataDir,
+      template: (id) => templateById(updateDb, id),
+      catalogue: () => catalogue.read(),
+      fetch: globalThis.fetch,
+      send: sendNotification,
+      hostCli,
+      readLogin: readHostLogin,
+    });
+    // The assistant panel's chat: turns on this computer's Claude Code or Codex, reaching this
+    // server's own `/mcp/assistant`. In the Docker copy it says why it isn't there.
+    const assistant = wireAssistant({
+      db: updateDb,
+      ids,
+      clock,
+      log,
+      emit: hub.emitGlobal,
+      spawn: nodeRunCli,
+      probe: nodeCliProbe,
+      readLogin: readHostLogin,
+      selfUrl: () => assistantSelfUrl(config.host, listeningPort),
+      container: hostCli !== undefined,
+    });
+    // Library → Designs: paid pictures through the attempt wrapper, metered on the design;
+    // drawing in a child ffmpeg and PDFs in a forked worker, never on this thread.
+    // The template editor's samples hear when a sample's picture lands, to start the next.
+    let designSamples: DesignSamples | undefined;
+    const designService: DesignDeps = {
+      db,
+      clock,
+      ids,
+      paths,
+      log,
+      emit: (event) => {
+        hub.emitGlobal(event);
+        if (event.type === "design.changed") designSamples?.designChanged(event.designId);
+      },
+    };
+    const designRenderer = createDesignRenderer({
+      db,
+      paths,
+      log,
+      clock,
+      ffmpeg,
+      runFfmpeg,
+      font: (fontId) => resolveFont(paths, fontId),
+      pdf: (job, signal) => runPdfWorker(job, signal),
+    });
+    const designRunner = createDesignRunner({
+      ...designService,
+      catalogue: () => catalogue.read(),
+      generate: ({ designId, ...call }) =>
+        standaloneImage(standalone, { ...call, owner: { kind: "design", id: designId } }),
+      shrink: (bytes) => designRenderer.shrink(bytes, AbortSignal.timeout(120_000)),
+    });
+    designRunner.recover();
+    designMake = {
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+    };
+    designSamples = createDesignSamples({
+      service: designService,
+      runner: designRunner,
+      catalogue: () => catalogue.read(),
+      budget: () => dailySampleBudget(runtimeDb, log),
+      timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    });
+    designSamples.recover();
+    const designChecks = designCheckContext({
+      resolveFont: (fontId) => resolveFont(paths, fontId),
+      providers: rebuild.providers,
+    });
     const app = createApp({
+      assistant,
+      autopilot,
+      designs: { service: designService, runner: designRunner, renderer: designRenderer },
+      designTemplates: {
+        service: designService,
+        runner: designRunner,
+        catalogue: () => catalogue.read(),
+        checks: (templateId, doc) => contextChecks(doc, templateId, designChecks),
+        samples: designSamples,
+        templateChanged: (templateId) => {
+          refreshDesignSchedules(runtimeDb, templateId, clock.now());
+        },
+      },
       autostart,
       rebuild,
       drafts: draftDeps,
@@ -733,7 +862,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         documentFile: documentSamples.file,
       },
       ...modelSources(registry),
-      audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
+      audition: (call, signal) => auditionVoice({ registry, clock, log, access }, call, signal),
       voiceLanguages: async (provider, voiceId, signal) => {
         try {
           return await registry.tts(provider).voiceLanguages?.(voiceId, signal);
@@ -742,6 +871,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         }
       },
       catalogue,
+      modelChecks,
+      modelListing,
+      autoModelChecks,
       clock,
       ids,
       log,
@@ -817,13 +949,34 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         (status) => {
           if (status.warning !== null)
             log.write("warn", "model-catalog.sync", { detail: status.warning });
+          // A model new to the list may already be on the person's key's own list.
+          for (const provider of new Set(status.changes.added.map((added) => added.provider)))
+            if (isProviderId(provider))
+              void modelListing.refresh(provider, true).catch((error: unknown) => {
+                log.write("warn", "model-checks.listing", { detail: causedBy(error) });
+              });
         },
         (error: unknown) => log.write("warn", "model-catalog.sync", { detail: causedBy(error) }),
       );
     };
     syncModels();
+    // Model checks look hourly too: a CLI that became usable, and the weekly look. Both run in
+    // the background and never hold a request or a run.
+    const lookForClis = cliWatcher(
+      modelChecks,
+      rebuild.providers,
+      (provider) => readChecks(updateDb, provider).length > 0,
+    );
+    const lookAtModels = (): void => {
+      if (!autoModelChecks) return;
+      lookForClis()
+        .then(() => (modelChecks.weeklyDue() ? modelChecks.automatic("weekly") : undefined))
+        .catch((error: unknown) => log.write("warn", "model-checks", { detail: causedBy(error) }));
+    };
+    lookAtModels();
     const modelTimer = setInterval(() => {
       if (catalogue.syncDue?.(Date.now()) === true) syncModels();
+      lookAtModels();
     }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {
@@ -902,6 +1055,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(trashTimer);
         clearInterval(arrangeTimer);
         clearInterval(modelTimer);
+        modelChecks.stop();
+        autopilot.stop();
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
         const topicDrain = scheduleRunner.stop();
@@ -925,6 +1080,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await topicDrain;
           await sampleDrain;
           await backupDrain;
+          // An assistant turn left running would keep spending the person's plan.
+          await assistant.stopAll();
           await runner.abortAll();
           await episodes?.settled();
         } finally {
@@ -1022,6 +1179,7 @@ export function wireRunner({
     clock,
     log,
     meter: createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    access: accessRecorder({ db, clock }),
     limits: createLimitGate({
       db,
       clock,
@@ -1167,6 +1325,10 @@ export function urlOf(host: string, port: number): string {
 
 // A stage can only be `running` at boot if the previous process died mid-run;
 // nothing auto-resumes, the user retries by hand.
+function isProviderId(id: string): id is (typeof providerIds)[number] {
+  return (providerIds as readonly string[]).includes(id);
+}
+
 export function markInterruptedStages(db: DatabaseSync, clock: Clock): number {
   const result = db
     .prepare(

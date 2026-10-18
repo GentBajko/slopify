@@ -8,7 +8,7 @@ import {
 } from "../narration/blocks.js";
 import { describeMessages, spokenPassage } from "../narration/describe.js";
 import { type RecipeContext, type ResolvedWorkRecipe, recipe } from "./recipe-model.js";
-import { llmInput, matchingText, renderedPrompt } from "./recipe-text.js";
+import { llmInput, matchingText, promptOf } from "./recipe-text.js";
 
 // "Describe tables and figures in the narration": one text-model step per table, figure,
 // diagram, equation or code block (`narration:describe:<n>`, in reading order), whose answer
@@ -33,7 +33,7 @@ export function describeTemplate(context: RecipeContext): FingerprintValue {
     context,
     describeMessages(
       { kind: "table", index: 1, source: "", section: null },
-      renderedPrompt(context, "narration"),
+      promptOf(context, "narration").text,
       context.config.language,
     ),
   );
@@ -84,7 +84,7 @@ export function describedText(
     code: config.audio?.skipCode === true ? "skip" : "describe",
     language: config.language,
   });
-  const style = renderedPrompt(context, "narration");
+  const style = promptOf(context, "narration").text;
   const passages = new Map<number, string | null>();
   const cards: ResolvedWorkRecipe[] = [];
   const recipes = describedBlocks(blocks).map((block) => {

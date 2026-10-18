@@ -68,6 +68,8 @@ export async function prepareTopic(
 ): Promise<PrepareResult> {
   const schedule = scheduleById(deps.db, input.scheduleId);
   if (schedule === undefined) return { ok: false, reason: "not-found" };
+  // A design schedule's piece is made on its day; there is no video to hold back.
+  if (schedule.templateKind === "design") return { ok: false, reason: "design" };
   const topic = schedule.items.find((item) => item.title === input.title);
   if (topic === undefined) return { ok: false, reason: "not-found" };
   // Prepared ahead is the schedule's run made early: it waits for a ready version too.

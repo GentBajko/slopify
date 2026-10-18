@@ -9,7 +9,7 @@ import { silenceGapSecondsMax } from "../admission/rules.js";
 import { loudnessFields } from "../loudness/model.js";
 import type { AppSettings } from "./model.js";
 import { appearances, defaultSettings } from "./model.js";
-import { readSetting, writeSetting } from "./repo.js";
+import { readJsonSetting, writeSetting } from "./repo.js";
 
 export interface PlaybackDeps {
   readonly db: DatabaseSync;
@@ -92,25 +92,5 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
 // but what was saved. Such a row falls back to the default and says so in the log rather
 // than reaching the app or taking the settings page down.
 function parsed<T>(deps: PlaybackDeps, key: string, schema: z.ZodType<T>, fallback: T): T {
-  const stored = readSetting(deps.db, key);
-  if (stored === undefined) {
-    return fallback;
-  }
-  const result = schema.safeParse(jsonOf(stored));
-  if (result.success) {
-    return result.data;
-  }
-  deps.log.write("warn", "settings.invalid", {
-    detail: `setting ${key} is not a value this build understands; using the default`,
-  });
-  return fallback;
-}
-
-function jsonOf(stored: string): unknown {
-  try {
-    return JSON.parse(stored);
-  } catch {
-    // Not JSON at all: the same answer as JSON of the wrong shape, decided by the caller.
-    return undefined;
-  }
+  return readJsonSetting(deps.db, key, schema, fallback, deps.log);
 }

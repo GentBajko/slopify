@@ -203,6 +203,36 @@ describe("startRun", () => {
     expect(storage.db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
   });
 
+  it("stores a pasted article's sources and glossary apart from its narration source", () => {
+    const storage = deps();
+    const pasted =
+      "# Rope\n\nRope is twisted fibre.\n\n## Sources Consulted\n\n- https://example.test/rope\n\n## Pronunciation Glossary\n\n- bowline /ˈboʊlɪn/\n";
+    const { project } = startRun(
+      storage,
+      draft({
+        sources: { ...draft().sources, audio: "off", images: "off", video: "off" },
+        provided: { article: pasted },
+      }),
+      {},
+    );
+    const dir = join(storage.paths.projects, project.id);
+    expect(readFileSync(join(dir, "article.txt"), "utf8")).toBe("Rope\n\nRope is twisted fibre.\n");
+    expect(readFileSync(join(dir, "sources.txt"), "utf8")).toBe(
+      "## Sources Consulted\n\n- https://example.test/rope\n\n",
+    );
+    // The paste is trimmed before it is split, so the last section keeps no trailing blank
+    // line the user did not type.
+    expect(readFileSync(join(dir, "glossary.txt"), "utf8")).toBe(
+      "## Pronunciation Glossary\n\n- bowline /ˈboʊlɪn/",
+    );
+    const roles = storage.db
+      .prepare("SELECT role FROM outputs WHERE project_id = ? ORDER BY rowid")
+      .all(project.id)
+      .map((row) => row.role);
+    expect(roles).toEqual(expect.arrayContaining(["article_txt", "sources", "glossary"]));
+    storage.db.close();
+  });
+
   it("queues the document when the run asks for one, with its theme in the config", () => {
     const storage = deps();
 
@@ -539,7 +569,7 @@ describe("configOf", () => {
       provided: { article: "Dr. Grey.", images: [image] },
       sample: { fullScript: false },
     });
-    const expected = configOf(storage, run, { article: "Write." });
+    const expected = configOf(storage, run, { article: "Write." }, storage.clock.now());
     const started = startRun(storage, run, { article: "Write." }, true).project.config;
     expect(started).toEqual(expected);
     expect(started).toMatchObject({
@@ -553,5 +583,41 @@ describe("configOf", () => {
       pronunciationRules: currentPronunciationRules,
       sample: { fullScript: false },
     });
+  });
+});
+
+describe("keyword facts", () => {
+  const articleOnly: Partial<RunDraft> = {
+    sources: {
+      research: "off",
+      article: "provide",
+      audio: "off",
+      images: "off",
+      thumbnail: "off",
+      video: "off",
+    },
+  };
+
+  it("copies none for a run whose prompts use no fact", () => {
+    const run = startRun(deps(), draft(articleOnly), { article: "Write about {{Slopify_Title}}." });
+    expect(run.project.config.keywordFacts).toBeUndefined();
+    expect("keywordFacts" in run.project.config).toBe(false);
+  });
+
+  it("copies the facts when a picked prompt uses one", () => {
+    const run = startRun(deps(), draft(articleOnly), { article: "rendered" }, false, {
+      article: "For {{Slopify_Channel}}.",
+    });
+    expect(run.project.config.keywordFacts).toMatchObject({ episode: 1 });
+    expect(run.project.config.keywordFacts?.channel).toBeTypeOf("string");
+  });
+
+  it("never keeps facts a draft brings with it", () => {
+    const run = startRun(
+      deps(),
+      draft({ ...articleOnly, keywordFacts: { channel: "Forged", episode: 99 } }),
+      {},
+    );
+    expect(run.project.config.keywordFacts).toBeUndefined();
   });
 });

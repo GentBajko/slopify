@@ -14,15 +14,8 @@ import { renderSampleDocument } from "../../slices/document/sample.js";
 import { builtInTheme, resolveTheme } from "../../slices/document/theme.js";
 import { documentThemeSchema } from "../../slices/document/theme-schema.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
+import { idParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
 // Shape only: the values' ranges are the slice's, so the editor gets field-by-field sentences.
 const themeBody = z.object({ name: z.string(), values: z.unknown() });
@@ -85,7 +78,6 @@ function refused(
     case "invalid":
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: "This theme can't be saved yet. Fix the highlighted settings and try again.",
         extensions: { fields: failure.fields },
       });
@@ -93,7 +85,6 @@ function refused(
       const message = "Another PDF theme already has this name. Choose a different name.";
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail: message,
         extensions: { fields: [{ field: "name", message }] },
       });
@@ -101,7 +92,6 @@ function refused(
     case "not-found":
       return problem(c, {
         status: 404,
-        title: titleOf(404),
         detail:
           "This PDF theme no longer exists; it may have been deleted in another tab. Go back to Library → PDF themes.",
       });

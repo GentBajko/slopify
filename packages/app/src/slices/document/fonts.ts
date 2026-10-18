@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { jsPDF } from "jspdf";
+import { errorText } from "../../kernel/errors.js";
 import type { FontFace } from "./theme.js";
 
 // The bundled Cinzel weights and Literata styles (SIL OFL 1.1, assets/document/fonts) and the
@@ -45,7 +46,7 @@ export function readDocumentAssets(): DocumentAssets {
     };
   } catch (error) {
     throw new Error(
-      `Slopify couldn't read the fonts and page texture it makes documents with (${error instanceof Error ? error.message : String(error)}). Its installation is incomplete: reinstall or update Slopify, then use Try again on Document.`,
+      `Slopify couldn't read the fonts and page texture it makes documents with (${errorText(error)}). Its installation is incomplete: reinstall or update Slopify, then use Try again on Document.`,
       { cause: error },
     );
   }

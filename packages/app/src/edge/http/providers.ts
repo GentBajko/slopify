@@ -6,6 +6,7 @@ import { z } from "zod";
 import { keyProbes } from "../../adapters/key-probes.js";
 import { catalogueModelInfo } from "../../catalog/model-info.js";
 import { videoModelsOf } from "../../catalog/schema.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { defaultSpeechVoice, detectSpeechCached } from "../../kernel/ports/system-speech.js";
 import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
 import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
@@ -22,7 +23,7 @@ import { createModelCatalog } from "../../slices/settings/models.js";
 import type { ReadinessDeps } from "../../slices/settings/readiness.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const providerParam = z.object({ id: z.enum(providerIds) });
 const healthQuery = z.object({ provider: z.enum(providerIds).optional() });
@@ -63,6 +64,15 @@ export function providerRoutes(deps: AppDeps) {
   });
 
   const upkeep = () => ({ ...deps, uuid: deps.drafts?.uuid ?? randomUUID });
+  // A picker opening reads the key's own model list again when it is due; never waited for.
+  const relist = (id: ProviderId): void => {
+    if (deps.autoModelChecks !== true) return;
+    void deps.modelListing?.refresh(id).catch((error: unknown) => {
+      deps.log.write("warn", "model-checks.listing", { detail: `${id}: ${String(error)}` });
+    });
+  };
+  const standingsOf = (id: ProviderId, models: readonly ModelInfo[]) =>
+    deps.modelChecks?.standings(id, models);
 
   return (
     new Hono()
@@ -86,8 +96,7 @@ export function providerRoutes(deps: AppDeps) {
       // answering for the key. `?provider=codex` checks that one only (its row's Check again,
       // or a sign-in fix-it's).
       .post("/health", zValidator("query", healthQuery, onInvalid), async (c) => {
-        if (deps.fetch === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.fetch === undefined) return problem(c, { status: 503, detail: noFetch });
         const catalogue = deps.catalogue;
         return c.json(
           await checkProviderHealth(
@@ -109,7 +118,6 @@ export function providerRoutes(deps: AppDeps) {
         if (!deps.catalogue?.sync)
           return problem(c, {
             status: 503,
-            title: titleOf(503),
             detail:
               "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
           });
@@ -121,25 +129,26 @@ export function providerRoutes(deps: AppDeps) {
         c.header("Cache-Control", "no-store");
         return c.json({
           usages:
-            deps.catalogue === undefined ? [] : retiredModelUsage(deps.db, deps.catalogue.read()),
+            deps.catalogue === undefined
+              ? []
+              : retiredModelUsage(deps.db, deps.catalogue.read(), deps.catalogue.lifecycle?.()),
         });
       })
       .post("/catalogue/retired/switch", zValidator("json", switchBody, onInvalid), async (c) => {
-        if (deps.catalogue === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.catalogue === undefined) return problem(c, { status: 503, detail: noFetch });
         const result = await switchRetiredModel(
           upkeep(),
           deps.catalogue.read(),
           c.req.valid("json"),
         );
-        if (!result.ok)
-          return problem(c, { status: 409, title: titleOf(409), detail: result.message });
+        if (!result.ok) return problem(c, { status: 409, detail: result.message });
         return c.json(result);
       })
       .post("/catalogue/retired/switch-all", async (c) => {
-        if (deps.catalogue === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
-        return c.json(await switchAllRetired(upkeep(), deps.catalogue.read()));
+        if (deps.catalogue === undefined) return problem(c, { status: 503, detail: noFetch });
+        return c.json(
+          await switchAllRetired(upkeep(), deps.catalogue.read(), deps.catalogue.lifecycle?.()),
+        );
       })
       .get("/catalogue", (c) =>
         c.json(
@@ -153,7 +162,6 @@ export function providerRoutes(deps: AppDeps) {
         if (!deps.catalogue)
           return problem(c, {
             status: 503,
-            title: titleOf(503),
             detail:
               "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
           });
@@ -162,7 +170,6 @@ export function providerRoutes(deps: AppDeps) {
         } catch {
           return problem(c, {
             status: 502,
-            title: titleOf(502),
             detail:
               "Slopify could not download the latest model list. Your current list is still in use; check your internet connection and try Refresh again.",
           });
@@ -189,28 +196,36 @@ export function providerRoutes(deps: AppDeps) {
         const { id } = c.req.valid("param");
         // Animate images lists the provider's image-to-video models, which only the catalogue
         // names.
-        if (c.req.query("video") === "1")
+        relist(id);
+        if (c.req.query("video") === "1") {
+          const videos =
+            deps.catalogue === undefined ? [] : videoModelsOf(deps.catalogue.read(), id);
           return c.json({
-            models: deps.catalogue === undefined ? [] : videoModelsOf(deps.catalogue.read(), id),
+            models: videos,
             allowsCustom: false,
+            standings: standingsOf(id, videos),
           });
-        if (deps.catalogue && !isUncataloguedProvider(id))
+        }
+        if (deps.catalogue && !isUncataloguedProvider(id)) {
+          const models = deps.catalogue
+            .models(id, providerById(id).family)
+            .map((m) => ({ ...m, ...catalogueModelInfo(m) }));
           return c.json({
-            models: deps.catalogue
-              .models(id, providerById(id).family)
-              .map((m) => ({ ...m, ...catalogueModelInfo(m) })),
+            models,
             allowsCustom: false,
             notice:
               "Curated active models from models.yaml. Edit it locally or refresh in Settings.",
             warning: deps.catalogue.status().warning ?? undefined,
+            standings: standingsOf(id, models),
           });
+        }
         const result = await catalog.get(
           id,
           providerById(id).family,
           c.req.query("refresh") === "1",
         );
         c.header("Cache-Control", "no-store");
-        return c.json(result);
+        return c.json({ ...result, standings: standingsOf(id, result.models) });
       })
       .put(
         "/:id/path",
@@ -225,7 +240,6 @@ export function providerRoutes(deps: AppDeps) {
           if (!result.ok)
             return problem(c, {
               status: 400,
-              title: titleOf(400),
               detail: result.message,
               extensions: { fields: [{ field: "path", message: result.message }] },
             });
@@ -244,6 +258,11 @@ export function providerRoutes(deps: AppDeps) {
             return refusal(c, id, result.reason);
           }
           catalog.invalidate(id);
+          // A new key: read its model list and check what is free to check, in the background.
+          if (deps.autoModelChecks === true)
+            void deps.modelChecks?.automatic("key-added", id).catch((error: unknown) => {
+              deps.log.write("warn", "model-checks", { detail: `${id}: ${String(error)}` });
+            });
           // The response says a key is stored and shows the mask, never the value.
           return c.json(keyStatus(keys, id));
         },
@@ -254,14 +273,12 @@ export function providerRoutes(deps: AppDeps) {
       .post("/:id/key/test", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
         if (providerById(id).auth !== "key") return refusal(c, id, "cli-provider");
-        if (deps.fetch === undefined)
-          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        if (deps.fetch === undefined) return problem(c, { status: 503, detail: noFetch });
         const raw: unknown = await c.req.json().catch(() => undefined);
         const candidate = raw === undefined ? undefined : keyBody.safeParse(raw);
         if (candidate !== undefined && !candidate.success)
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `The pasted ${providerById(id).displayName} key could not be tested: it is empty or longer than any key. Paste the whole key in Settings → Providers → ${providerById(id).displayName}, then choose Test again.`,
           });
         return c.json(
@@ -293,7 +310,6 @@ function refusal(
   if (reason === "cli-provider") {
     return problem(c, {
       status: 400,
-      title: titleOf(400),
       detail:
         providerById(id).auth === "local"
           ? `${name} is your computer's own speech, so it has no API key to save. It works as soon as a speech program is installed.`
@@ -303,13 +319,11 @@ function refusal(
   if (reason === "absent") {
     return problem(c, {
       status: 404,
-      title: titleOf(404),
       detail: `There is no saved API key for ${name}, so there is nothing to remove.`,
     });
   }
   return problem(c, {
     status: 400,
-    title: titleOf(400),
     detail: "This API key cannot be saved yet. Paste the key and try again.",
     extensions: {
       fields: [{ field: "key", message: "Paste the API key from your provider's account page." }],

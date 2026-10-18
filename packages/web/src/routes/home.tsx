@@ -17,6 +17,8 @@ import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink } from "@/components/kit/link";
 import { LoadFailed, LoadingBlock, QueryState, StaleNote } from "@/components/kit/query-state";
 import { SectionHead } from "@/components/kit/section-head";
+import { NewModelsSlot } from "@/components/model-checks";
+import { Autopilot } from "@/home/autopilot";
 import { ComingUp } from "@/home/coming-up";
 import { isReadyToUpload } from "@/home/ready";
 import { RunningMore } from "@/home/running-more";
@@ -222,6 +224,7 @@ export function HomeRoute(): ReactElement {
           {showComingUp ? (
             <section aria-label="Coming up">
               <SectionHead title="Coming up" info="home.coming-up" meta="Next 7 days" />
+              <Autopilot channelId={current.channelId} />
               {schedules.error !== null && schedules.data === undefined ? (
                 <LoadFailed
                   compact
@@ -252,6 +255,7 @@ export function HomeRoute(): ReactElement {
               )}
             </section>
           ) : null}
+          <NewModelsSlot />
           <WeekTotals channelId={current.channelId} channelName={current.channel?.name} />
         </BoardColumn>
       </Board>

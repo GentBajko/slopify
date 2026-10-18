@@ -5,6 +5,7 @@ import { Button } from "@/components/kit/button";
 import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { RowCheck, SelectionBar, useSelection } from "@/components/selection";
+import { plural } from "@/lib/format";
 import { useBulkMarkUploaded } from "./bulk-uploaded.js";
 import { FailedItem } from "./failed-item.js";
 import { HeldTopicsItem, PausedItem, StoppedItem } from "./needs-you.js";
@@ -25,10 +26,6 @@ export type Decision =
 
 // Enough to see what matters without the page turning into the projects list.
 export const shownPerKind = 4;
-
-function plural(count: number, one: string, many: string): string {
-  return `${String(count)} ${count === 1 ? one : many}`;
-}
 
 export function workMeta(decisions: number, ready: number): string {
   return [

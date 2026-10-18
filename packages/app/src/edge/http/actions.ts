@@ -24,22 +24,13 @@ import { allowsCustomModel } from "../../slices/settings/models.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam, idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
+import { revisionRequired } from "./refusal.js";
 
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
 const stageParam = idParam.extend({ kind: z.enum(stageKinds) });
 const imageParam = idParam.extend({
-  outputId: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
+  outputId: idString,
 });
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
@@ -128,7 +119,6 @@ export function actionRoutes(deps: AppDeps) {
     };
     return problem(c, {
       status: codes[result.reason],
-      title: titleOf(codes[result.reason]),
       detail: messages[result.reason],
       extensions: {
         reason: result.reason,
@@ -147,7 +137,6 @@ export function actionRoutes(deps: AppDeps) {
     if (deps.rebuild === undefined)
       return problem(c, {
         status: 503,
-        title: titleOf(503),
         detail:
           "Resume and retry are not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
       });
@@ -199,7 +188,6 @@ export function actionRoutes(deps: AppDeps) {
     ].join(" ");
     return problem(c, {
       status,
-      title: titleOf(status),
       detail,
       extensions: {
         reason: result.reason,
@@ -277,7 +265,6 @@ export function actionRoutes(deps: AppDeps) {
           if (keys.length === 0)
             return problem(c, {
               status: 409,
-              title: titleOf(409),
               detail:
                 "Nothing in this section was refused by a content filter, so there is no prompt to soften. Reload the page; if the section still shows an error, use Try again.",
               extensions: { reason: "nothing-refused" },
@@ -309,14 +296,4 @@ export function actionRoutes(deps: AppDeps) {
         revisionRequired,
       )
   );
-}
-
-function revisionRequired(c: Context): Response {
-  return problem(c, {
-    status: 409,
-    title: titleOf(409),
-    detail:
-      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Choose what to remake (in the project's More menu).",
-    extensions: { reason: "revision-required" },
-  });
 }

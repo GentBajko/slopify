@@ -114,6 +114,11 @@ export const planningHelp = {
     body: "Off: you add every topic yourself. Generate and queue directly: new topics join the end of the list. Generate and hold for approval: they wait under Topics waiting, and beside the calendar, until you approve them. Each generation is one LLM call. Default: Off.",
     tutorial: { page: "Schedules", anchor: "topics-that-find-themselves" },
   },
+  "planning.schedule.rank-topics": {
+    title: "Rank topics",
+    body: "Orders generated topics best first, with a 0-100 score on each. By what the library covers: a topic far from anything made or queued scores higher, and nothing leaves this computer. Also by public search interest: adds Google or DuckDuckGo suggestions and Wikipedia views, so each new topic's title is sent to them. Topics you add or move keep their places. Never uses channel analytics. Default: Off.",
+    tutorial: { page: "Schedules", anchor: "rank-topics" },
+  },
   "planning.schedule.keep-count": {
     title: "Keep at least this many queued",
     body: "Slopify asks for new topics whenever the queue, plus the topics waiting for approval when holding, drops below this number. A higher number keeps more topics lined up ahead of the runs, for you to review. From 1 to 100. Default: 10.",

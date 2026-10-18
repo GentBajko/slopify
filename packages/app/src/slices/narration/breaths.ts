@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync } from "node:fs";
 import { type FileHandle, open, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { errorText } from "../../kernel/errors.js";
 import type { FfmpegRun } from "../loudness/loudnorm.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { breathRate, type Stretch, scanBreaths, softenChunk } from "./breaths-detect.js";
@@ -49,7 +50,7 @@ export async function softenBreaths(
     } catch (error) {
       if (run.signal.aborted) throw error;
       throw new Error(
-        `Soften breaths could not process narration piece ${String(index + 1)} (${error instanceof Error ? error.message : String(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften breaths in Edit project → Pauses and volume and use Save changes, then use Download diagnostics in Settings and report it.`,
+        `Soften breaths could not process narration piece ${String(index + 1)} (${errorText(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften breaths in Edit project → Pauses and volume and use Save changes, then use Download diagnostics in Settings and report it.`,
         { cause: error },
       );
     } finally {

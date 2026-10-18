@@ -5,6 +5,7 @@ import { executeAgentReviewRecipe } from "./runtime-agent-review.js";
 import { executeAnimateRecipe } from "./runtime-animate.js";
 import { executeDocumentRecipe } from "./runtime-document.js";
 import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.js";
+import { lateKeywordProviders, lateValuesOf } from "./runtime-keywords.js";
 import { executeLocalRecipe } from "./runtime-local.js";
 import { pieceLabel } from "./runtime-piece-label.js";
 import { executeProviderRecipe } from "./runtime-provider.js";
@@ -18,8 +19,10 @@ import { workPieces } from "./work-records.js";
 export async function runRevisionInvocation(
   deps: ExportExecutionDeps,
   context: StageContext,
-  providers: StageProviders,
+  sent: StageProviders,
 ): Promise<StageRunResult> {
+  // `{{Slopify_Release_Date}}` and `{{Slopify_Duration}}` are filled as a request is sent.
+  const providers = lateKeywordProviders(sent, () => lateValuesOf(deps, context));
   const pieces = workPieces(deps.db, context.work.workId).filter(
     (piece) => !piece.key.startsWith("article:continuation:"),
   );

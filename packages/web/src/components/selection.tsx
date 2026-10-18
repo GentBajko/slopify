@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/kit/button";
+import { Checkbox } from "@/components/kit/field";
+import { plural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Bulk selection for a collection (docs/ux-audit-2026-10.md, Lists and collections): visible
@@ -80,7 +82,7 @@ export function useSelection<K extends string>(keys: readonly K[]): Selection<K>
   };
 }
 
-const boxClass = "size-4 shrink-0 accent-[var(--color-accent)]";
+const boxClass = "shrink-0";
 
 // One row's checkbox, named "Select row: Cleopatra" (`label` is the row's name). The "Select
 // row" prefix is what the help walks accept as self-explanatory (help/coverage.ts). The 16px box
@@ -110,8 +112,7 @@ export function RowCheck<K extends string>({
         className,
       )}
     >
-      <input
-        type="checkbox"
+      <Checkbox
         aria-label={`Select row: ${label}`}
         checked={selection.has(value)}
         onClick={(event) => {
@@ -141,8 +142,7 @@ export function SelectAllBox<K extends string>({
   const all = total > 0 && selection.count === total;
   return (
     <label className="flex min-h-8 cursor-pointer items-center gap-2 text-small text-ink-2">
-      <input
-        type="checkbox"
+      <Checkbox
         checked={all}
         disabled={total === 0}
         ref={(box) => {
@@ -209,6 +209,4 @@ export function SelectionBar<K extends string>({
 }
 
 // "Restored 3 items." / "Removed 1 topic." for a bulk action's toast or status line.
-export function counted(count: number, singular: string, plural: string): string {
-  return `${String(count)} ${count === 1 ? singular : plural}`;
-}
+export { plural as counted };

@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { fingerprint } from "../../kernel/runner/work.js";
-import { readSetting, writeSetting } from "./repo.js";
+import { deleteSetting, readSetting, writeSetting } from "./repo.js";
 
 import {
   type TutorialView,
@@ -79,6 +79,6 @@ export function saveTutorial(db: DatabaseSync, input: TutorialWrite): TutorialSa
 
 export function resetTutorial(db: DatabaseSync): void {
   transact(db, () => {
-    db.prepare("DELETE FROM settings WHERE key = ?").run("tutorial.session");
+    deleteSetting(db, "tutorial.session");
   });
 }

@@ -92,13 +92,29 @@ export const scheduleReleaseSchema = z
   .readonly();
 export type ScheduleRelease = z.infer<typeof scheduleReleaseSchema>;
 const releases = z.array(scheduleReleaseSchema).max(7).readonly();
+// How generated topics are ranked (`score.ts`): not at all, by what the library already
+// covers, or also by public search interest (topic titles go to Google, DuckDuckGo and
+// Wikipedia). Off is what every schedule saved before it has.
+export const topicScorings = ["off", "library", "search"] as const;
+export type TopicScoring = (typeof topicScorings)[number];
 // Enough for a year of daily runs, pasted as one list.
 export const queueMax = 500;
+// What a schedule makes: projects from a project template (every schedule before designs), or
+// designed pieces from a design template, one per row ahead of its date.
+export const scheduleTemplateKinds = ["project", "design"] as const;
+// A project template's id is a UUID (checked by the service); a design template's may be any
+// id its creator chose.
+const templateId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/);
 export const scheduleCreateSchema = z
   .object({
     id,
     name: z.string().trim().min(1).max(200),
-    templateId: id,
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
+    templateId,
     templateVersion: z.number().int().positive(),
     cadence: cadenceSchema,
     timezone: z
@@ -119,6 +135,9 @@ export const scheduleCreateSchema = z
     brief: z.string().trim().max(briefMax).nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
     releases: releases.default([]),
+    // Absent: off for a new schedule, unchanged on a save, so a caller that doesn't know it
+    // never turns it off.
+    topicScoring: z.enum(topicScorings).optional(),
   })
   .strict()
   .readonly();
@@ -148,7 +167,8 @@ export const scheduleSummarySchema = z
   .object({
     id,
     name: z.string(),
-    templateId: id,
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
+    templateId,
     templateVersion: z.number().int().positive(),
     cadence: cadenceSchema,
     timezone: z.string(),
@@ -161,6 +181,7 @@ export const scheduleSummarySchema = z
     brief: z.string().nullable().default(null),
     topicGeneration: topicGenerationSchema.default(topicGenerationOff),
     releases: releases.default([]),
+    topicScoring: z.enum(topicScorings).default("off"),
     // The generation's own state: how many topics wait for approval, whether an LLM is being
     // asked now, and the last failure's plain reason (cleared by the next success).
     topics: topicState.default(topicStateIdle),
@@ -185,6 +206,8 @@ export const scheduleRunSchema = z
     status: z.enum(["running", "succeeded", "failed", "skipped"]),
     requestId: id.nullable(),
     projectIds: z.array(z.string()).readonly(),
+    // The designed pieces a design schedule's run made. Older servers leave it out.
+    designIds: z.array(z.string()).readonly().default([]),
     estimate: z.unknown().nullable(),
     startedAt: z.string().datetime({ offset: true }),
     endedAt: z.string().datetime({ offset: true }).nullable(),
@@ -242,7 +265,7 @@ export const calendarRunSchema = z
     scheduleName: z.string(),
     scheduleVersion: z.number().int().positive(),
     paused: z.boolean(),
-    templateId: id,
+    templateId,
     templateVersion: z.number().int().positive(),
     templateName: z.string().nullable(),
     // The topic's position in the schedule's queue, for reordering; null without one.
@@ -259,6 +282,9 @@ export const calendarRunSchema = z
     // No version of its template is marked ready (or saved before the template studio), so
     // this run is skipped unless one is by then. Older servers leave it out.
     notReady: z.boolean().default(false),
+    // A design schedule's run makes a designed piece on its day, never a video: it has nothing
+    // to prepare ahead and fills no video slot. Older servers leave it out.
+    templateKind: z.enum(scheduleTemplateKinds).default("project"),
   })
   .strict()
   .readonly();

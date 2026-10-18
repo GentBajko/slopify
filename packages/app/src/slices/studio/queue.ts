@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { deleteSetting, readJsonSetting, writeSetting } from "../settings/repo.js";
 import { studioFillQueuePrefix, studioPairing } from "./settings.js";
 
 // What Fill in YouTube Studio chose, waiting for the extension: one entry per video or short,
@@ -34,21 +34,13 @@ function queueKey(db: DatabaseSync): string {
 }
 
 function write(db: DatabaseSync, key: string, entries: readonly FillEntry[]): void {
-  if (entries.length === 0) db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+  if (entries.length === 0) deleteSetting(db, key);
   else writeSetting(db, key, JSON.stringify(entries));
 }
 
 // The waiting entries, oldest first, without the stale ones.
 export function readFillQueue(db: DatabaseSync, now: Date): readonly FillEntry[] {
-  const stored = readSetting(db, queueKey(db));
-  if (stored === undefined) return [];
-  let raw: unknown;
-  try {
-    raw = JSON.parse(stored);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(raw)) return [];
+  const raw = readJsonSetting(db, queueKey(db), z.array(z.unknown()), []);
   return raw.flatMap((one) => {
     const parsed = entrySchema.safeParse(one);
     if (!parsed.success) return [];

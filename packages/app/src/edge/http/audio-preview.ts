@@ -5,20 +5,14 @@ import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { projectTitle } from "../../slices/storage/repo.js";
 import { currentWorkOrigin } from "../events/visibility.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { projectIdParam } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
 
-const projectParam = z.object({
-  projectId: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
-const previewParam = projectParam.extend({ previewId: z.uuid() });
+const previewParam = projectIdParam.extend({ previewId: z.uuid() });
 
 export function audioPreviewRoutes(deps: Pick<AppDeps, "db" | "audioPreviews">) {
   return new Hono()
-    .get("/:projectId/audio-preview", zValidator("param", projectParam, onInvalid), (c) => {
+    .get("/:projectId/audio-preview", zValidator("param", projectIdParam, onInvalid), (c) => {
       const { projectId } = c.req.valid("param");
       if (projectTitle(deps.db, projectId) === undefined) return missing(c);
       c.header("Cache-Control", "no-store");
@@ -54,7 +48,6 @@ export function audioPreviewRoutes(deps: Pick<AppDeps, "db" | "audioPreviews">) 
 function missing(c: Parameters<typeof problem>[0]): Response {
   return problem(c, {
     status: 404,
-    title: titleOf(404),
     detail:
       "This live audio preview has ended. Play the finished narration from the project's audio outputs instead.",
   });

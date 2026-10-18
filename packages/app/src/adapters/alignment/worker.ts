@@ -1,4 +1,5 @@
 import { open, readFile, stat } from "node:fs/promises";
+import { errorText } from "../../kernel/errors.js";
 import { SubtitleMismatch, type TimedWord } from "../../kernel/ports/subtitles.js";
 import { alignmentSpecFor } from "./multilingual.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
@@ -25,7 +26,7 @@ process.once("message", (raw: unknown) => {
     (error: unknown) =>
       send({
         type: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: errorText(error),
         ...(error instanceof SubtitleMismatch
           ? { mismatch: { at: error.at, expected: error.expected, heard: error.heard } }
           : {}),

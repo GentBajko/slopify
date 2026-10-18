@@ -1,6 +1,10 @@
-import type { Actor } from "../agents/model.js";
 import type { ReviewStage, ReviewVerdict } from "./model.js";
 import type { ReviewMaterial } from "./verdict.js";
+
+// Who may answer an external review: the agent it waits for, or the person. The in-app
+// assistant never does (`edge/http/external-reviews.ts`).
+export const externalAnswerers = ["person", "agent"] as const;
+export type ExternalAnswerer = (typeof externalAnswerers)[number];
 
 // ceiling: the owner's number. An hourly agent routine answers well inside two hours; a run
 // with no agent at all still finishes the same evening.
@@ -39,7 +43,7 @@ export interface ExternalReview {
   readonly waitingSince: string;
   readonly deadlineAt: string;
   readonly verdict: ReviewVerdict | null;
-  readonly answeredBy: Actor | null;
+  readonly answeredBy: ExternalAnswerer | null;
   readonly answeredAt: string | null;
 }
 

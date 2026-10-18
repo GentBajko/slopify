@@ -9,6 +9,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
 import { UnsavedStatus } from "@/components/save-state";
+import { autopilotKey, readWeeklyReport, setWeeklyReport, weeklyReportKey } from "@/home/api";
 import {
   browserNotificationsOn,
   notificationPermission,
@@ -35,6 +36,7 @@ export function NotificationSettings() {
         <BrowserNotifications />
         <RunSounds />
         <NotificationUrl />
+        <WeeklyReport />
       </div>
     </div>
   );
@@ -250,5 +252,45 @@ function NotificationUrl() {
         </p>
       )}
     </Field>
+  );
+}
+
+// Last week's report (made, failed, cost) sent to the Notification URL each Monday. Off by
+// default; it applies at once, like the switches above.
+function WeeklyReport() {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const current = useQuery({ queryKey: weeklyReportKey, queryFn: () => readWeeklyReport(api) });
+  const save = useMutation({
+    mutationFn: (enabled: boolean) => setWeeklyReport(api, enabled),
+    onSuccess: async (saved) => {
+      client.setQueryData(weeklyReportKey, saved);
+      await client.invalidateQueries({ queryKey: autopilotKey });
+    },
+  });
+  return (
+    <div className="flex flex-col gap-2">
+      <Switch
+        label="Weekly report"
+        tip="settings.notifications.weekly"
+        checked={current.data?.enabled === true}
+        disabled={current.data === undefined || save.isPending}
+        onChange={(next) => save.mutate(next)}
+      />
+      <p className="m-0 text-small text-ink-2">
+        Each Monday from 09:00, what was made, what failed and what it cost last week go to the
+        Notification URL above.
+      </p>
+      {current.error === null ? null : (
+        <p className="m-0 text-small text-danger">
+          {`The Weekly report setting didn't load: ${current.error.message}. Reload the page to try again.`}
+        </p>
+      )}
+      {save.error === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {`Weekly report wasn't changed: ${save.error.message}. Try the switch again.`}
+        </p>
+      )}
+    </div>
   );
 }

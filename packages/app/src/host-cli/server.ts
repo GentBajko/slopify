@@ -4,8 +4,8 @@ import { connect } from "node:net";
 import { join } from "node:path";
 import { createAdaptorServer } from "@hono/node-server";
 import { hostCliRoutes, hostGate } from "../edge/http/host-cli.js";
+import { hasErrnoCode } from "../kernel/errors.js";
 import type { HostCliRuntime } from "../kernel/ports/host-cli.js";
-import { hasCode } from "./paths.js";
 
 export async function startHostServer(options: {
   readonly directory: string;
@@ -36,7 +36,7 @@ export async function startHostServer(options: {
       );
     await unlink(socket);
   } catch (error) {
-    if (!hasCode(error, "ENOENT")) throw error;
+    if (!hasErrnoCode(error, "ENOENT")) throw error;
   }
   const gate = hostGate();
   const app = hostCliRoutes({ ...options, gate });
@@ -76,7 +76,7 @@ export async function startHostServer(options: {
           const current = await lstat(socket);
           if (current.ino === owned.ino && current.dev === owned.dev) await unlink(socket);
         } catch (error) {
-          if (!hasCode(error, "ENOENT")) throw error;
+          if (!hasErrnoCode(error, "ENOENT")) throw error;
         }
       })();
       return stopping;
@@ -97,7 +97,7 @@ function listening(path: string): Promise<boolean> {
     });
     socket.once("error", (error) => {
       socket.destroy();
-      if (hasCode(error, "ECONNREFUSED")) resolve(false);
+      if (hasErrnoCode(error, "ECONNREFUSED")) resolve(false);
       else reject(new Error("Could not verify existing host socket."));
     });
   });

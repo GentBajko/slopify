@@ -1,6 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
-import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import { revisionControlSchema } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import type { RecoveryResult } from "../../slices/rebuild/recovery-model.js";
@@ -17,14 +17,12 @@ import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { getRevisionView } from "../../slices/revisions/view.js";
 import { actorOf } from "./actor.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam, idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
-const projectParam = z.object({ id });
+const id = idString;
+const projectParam = idParam;
 const verdictParam = projectParam.extend({ verdictId: id });
 
 // The project page's review column: each reviewed item's latest verdict with its reasons,
@@ -34,15 +32,13 @@ export function reviewRoutes(deps: AppDeps) {
   const gone = (c: Context) =>
     problem(c, {
       status: 404,
-      title: titleOf(404),
       detail:
         "This review no longer exists; the project may have been deleted or restored from a backup. Reload the project page.",
     });
   const decided = (c: Context, verdict: ReviewRecord) =>
     problem(c, {
       status: 409,
-      title: titleOf(409),
-      detail: `This verdict was already decided: the item was ${verdict.action === "overruled" ? "kept as it is" : "sent to be made again"}${verdict.actionBy === "agent" ? " by an agent" : ""}, so nothing changed. Reload the project page (or call needs_attention) to see what waits now.`,
+      detail: `This verdict was already decided: the item was ${verdict.action === "overruled" ? "kept as it is" : "sent to be made again"}${verdict.actionBy === "agent" ? " by an agent" : verdict.actionBy === "assistant" ? " by the assistant" : ""}, so nothing changed. Reload the project page (or call needs_attention) to see what waits now.`,
       extensions: { reason: "decided" },
     });
   const notify = (projectId: string) => {
@@ -51,7 +47,7 @@ export function reviewRoutes(deps: AppDeps) {
     } catch (error) {
       deps.log.write("error", "review.notify", {
         projectId,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
   };
@@ -74,7 +70,6 @@ export function reviewRoutes(deps: AppDeps) {
       const busy = () =>
         problem(c, {
           status: 409,
-          title: titleOf(409),
           detail:
             "This verdict can't be overruled: it passed, or Slopify has already started making the item again. Wait for the new version to land, then reload the project page and overrule its review if it fails again.",
           extensions: { reason: "conflict" },
@@ -127,14 +122,12 @@ export function reviewRoutes(deps: AppDeps) {
         if (deps.rebuild === undefined)
           return problem(c, {
             status: 503,
-            title: titleOf(503),
             detail:
               "Redo is not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
           });
         const already = () =>
           problem(c, {
             status: 409,
-            title: titleOf(409),
             detail:
               "Slopify is already making this item again. Wait for it to land, then reload the project page.",
             extensions: { reason: "conflict" },
@@ -172,12 +165,6 @@ export function reviewRoutes(deps: AppDeps) {
     result: Extract<RecoveryResult, { ok: false }>,
     projectId: string,
   ): Response {
-    const status =
-      result.reason === "no-project"
-        ? 404
-        : result.reason === "invalid-selection" || result.reason === "invalid-edit"
-          ? 400
-          : 409;
     const lead =
       result.reason === "running"
         ? "This item, or work that depends on it, is still running. Wait for it to finish, or Pause the project, then use Redo again."
@@ -188,12 +175,11 @@ export function reviewRoutes(deps: AppDeps) {
             : result.reason === "invalid-selection"
               ? "This item can't be made again."
               : "Slopify couldn't make this item again.";
-    return problem(c, {
-      status,
-      title: titleOf(status),
+    return refusal(c, result.reason, {
+      statuses: { "no-project": 404, "invalid-selection": 400, "invalid-edit": 400 },
+      otherwise: 409,
       detail: [lead, ...(result.fields ?? []).map((row) => row.message)].join(" "),
       extensions: {
-        reason: result.reason,
         fields: result.fields ?? [],
         currentRevisionId: currentRevisionId(deps.db, projectId) ?? null,
       },

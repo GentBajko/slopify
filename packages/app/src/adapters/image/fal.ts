@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
 import type {
   AnimateRequest,
@@ -8,19 +9,19 @@ import type {
   ImagePort,
   ImageRequest,
 } from "../../kernel/ports/image.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { httpFailure, noImage, providerSaid, unreadable } from "../explain.js";
 import {
-  httpFailure,
-  internalError,
-  missingKey,
-  noImage,
-  providerSaid,
-  unreadable,
-} from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { downloadImage } from "./bytes.js";
-import { referencePictures, withReferences } from "./reference.js";
+import { attachedPictures, promptFor } from "./reference.js";
 import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for fal.ai: `fetch` and the downloader beside this file, no SDK.
@@ -86,6 +87,9 @@ function editEndpoint(model: string): string | undefined {
   return editModels.includes(model) ? `${model}/edit` : undefined;
 }
 
+export const falEditRefusal =
+  "This fal.ai model can't edit a picture. Choose FLUX.2 or Nano Banana 2 on fal.ai, or Codex CLI, OpenAI or Google, under Made with … · change.";
+
 export interface FalImageDeps {
   // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
@@ -145,8 +149,10 @@ export function falImage(deps: FalImageDeps): ImagePort {
       // `image_urls`; only the models that have one are marked as taking a reference.
       // Cast pictures ride the same list; a model without an edit endpoint gets the cast in
       // words instead, since only the establishing image is something the user turned on.
-      const pictures = referencePictures(req);
+      const pictures = attachedPictures(req);
       const edit = pictures.length === 0 ? undefined : editEndpoint(req.model);
+      if (req.edit !== undefined && edit === undefined)
+        throw providerError({ kind: "unsupported", message: falEditRefusal });
       if (req.reference !== undefined && edit === undefined)
         throw providerError({
           kind: "unsupported",
@@ -158,7 +164,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
         signal: req.signal,
         headers: { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: withReferences(req.prompt, req, edit === undefined ? 0 : pictures.length),
+          prompt: promptFor(req.prompt, req, edit === undefined ? 0 : pictures.length),
           ...(edit === undefined
             ? {}
             : { image_urls: pictures.map((picture) => dataUri(picture.image)) }),
@@ -171,7 +177,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
         }),
       });
       if (!response.ok) {
-        throw await failure(response);
+        throw await failure(response, "image request", true);
       }
       const answer = parse(await response.text());
       refused(answer, req.prompt);
@@ -203,7 +209,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
           ...(Object.hasOwn(videoInputs, req.model) ? videoInputs[req.model]?.(req.aspect) : {}),
         }),
       });
-      if (!submitted.ok) throw await failure(submitted, "video clip request");
+      if (!submitted.ok) throw await failure(submitted, "video clip request", true);
       const links = read(queued, await submitted.text());
       for (;;) {
         const status = await deps.fetch(links.status_url, { signal: req.signal, headers });
@@ -242,12 +248,7 @@ function read<T>(schema: z.ZodType<T>, text: string): T {
 }
 
 function keyOf(deps: FalImageDeps): string {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("fal.ai") });
-  }
-  return key;
+  return requireKey(deps.key(), "fal.ai");
 }
 
 // A content-policy refusal is final, named here and made terminal by the wrapper. fal declines
@@ -263,37 +264,22 @@ function refused(answer: z.infer<typeof generated>, prompt: string): void {
   }
 }
 
-// Only the adapter sees the vendor's status code, so only the adapter names the kind.
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a 422 naming an input this model
-  // does not take fails the same way four times over. A terminal "this will never work" kind
-  // has to reach the port's error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
-}
-
-async function failure(response: Response, subject = "image request"): Promise<Error> {
-  const text = await response.text().catch(() => "");
+// `atModel`: the request went to the model's own address, so a 404 or 403 is about the model.
+async function failure(
+  response: Response,
+  subject = "image request",
+  atModel = false,
+): Promise<Error> {
+  const text = await failureText(response);
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
-    message: httpFailure({
-      provider: "fal.ai",
-      status: response.status,
-      detail: message,
-      subject,
-    }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
+    httpFailure({ provider: "fal.ai", status: response.status, detail: message, subject }),
+    undefined,
+    modelAccessOf(response.status, text, atModel),
+  );
 }
 
 function detailOf(text: string): string {
@@ -317,12 +303,4 @@ function parse(text: string): z.infer<typeof generated> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

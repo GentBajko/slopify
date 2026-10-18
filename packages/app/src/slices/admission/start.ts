@@ -5,6 +5,8 @@ import { storeArticleText } from "../article/store.js";
 import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
 import { earlierEpisodesFor } from "../episodes/related.js";
+import { keywordFactsFor } from "../keywords/facts.js";
+import { usesFacts } from "../keywords/rules.js";
 import { listNarrationAliases } from "../narration/aliases-library.js";
 import { currentPronunciationRules } from "../narration/pronunciation.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
@@ -55,7 +57,7 @@ export function startRun(
 ): StartedRun {
   const id = deps.ids.next();
   const at = deps.clock.now().toISOString();
-  const config = configOf(deps, draft, rendered);
+  const config = configOf(deps, draft, rendered, deps.clock.now(), templates);
   const { title } = config;
   const project: Project = {
     id,
@@ -131,6 +133,11 @@ export function configOf(
   deps: Pick<StorageDeps, "db" | "paths">,
   draft: RunDraft,
   rendered: Readonly<Record<string, string>>,
+  now: Date,
+  templates?: Readonly<Record<string, string>>,
+  // The project the config is for when it exists already (a template sample's next
+  // revision): it is neither its own previous video nor one it covered before.
+  projectId?: string,
 ): RunConfig {
   const shared =
     usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
@@ -146,14 +153,19 @@ export function configOf(
   const title = render(draft.title, draft.values).trim() || draft.title;
   // The channel's related earlier episodes as they are now (`slices/episodes`): later edits
   // there never change this project. A draft never brings its own.
-  const { earlierEpisodes: _carried, ...fresh } = draft;
+  const { earlierEpisodes: _carried, keywordFacts: _facts, ...fresh } = draft;
   const earlier = earlierEpisodesFor(deps.db, draft, title);
-  const config: RunConfig = {
+  const titlePattern =
+    title !== draft.title && detectSlots(draft.title).names.length > 0 ? draft.title : undefined;
+  // The facts the keywords Slopify fills come from, as they are now, and only when a picked
+  // prompt asks for one: a run that uses none saves the config it always did.
+  const facts = usesFacts(Object.values(templates ?? rendered))
+    ? keywordFactsFor(deps, { ...draft, title, titlePattern }, now, projectId)
+    : undefined;
+  return {
     ...fresh,
     title,
-    ...(title !== draft.title && detectSlots(draft.title).names.length > 0
-      ? { titlePattern: draft.title }
-      : {}),
+    ...(titlePattern === undefined ? {} : { titlePattern }),
     // A new project always names its document theme: a config without one reads as the
     // DiceMaster of older projects (see documentThemeOf), which no new project should get.
     ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
@@ -164,8 +176,8 @@ export function configOf(
     ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
     pronunciationRules: currentPronunciationRules,
     ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
+    ...(facts === undefined ? {} : { keywordFacts: facts }),
   };
-  return config;
 }
 
 function attachProvided(

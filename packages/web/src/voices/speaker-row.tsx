@@ -224,8 +224,6 @@ export function SpeakerRow({
   );
 }
 
-const money = { format: usd };
-
 // One short line in the speaker's voice, priced before it is asked for and spoken only on the
 // click. The status line is always there, so the row does not move when it fills.
 function Audition({
@@ -268,7 +266,7 @@ function Audition({
       ? undefined
       : estimate.unknown > 0
         ? "price unknown"
-        : `about ${money.format(estimate.high)}`;
+        : `about ${usd(estimate.high)}`;
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-3">
       <span className="inline-flex items-center gap-1">

@@ -1,6 +1,7 @@
 import ffmpegStatic from "ffmpeg-static";
 import { expect, vi } from "vitest";
 import type { Catalogue } from "../../catalog/schema.js";
+import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
@@ -70,6 +71,8 @@ export async function narrationFixture(
     readonly config?: Partial<RunConfig>;
     readonly catalogue?: Catalogue;
     readonly answer?: (key: string, messages: readonly Message[]) => string;
+    // Where the narration streams its live previews, as the app's own store.
+    readonly audioPreviews?: AudioPreviewStore;
   } = {},
 ): Promise<
   ReturnType<typeof revisionFixture> & {
@@ -88,7 +91,12 @@ export async function narrationFixture(
 > {
   const h = revisionFixture();
   const count = vi.fn();
-  const deps = { ...h.deps, count, ffmpeg: resolveFfmpeg({}, ffmpegStatic) };
+  const deps = {
+    ...h.deps,
+    count,
+    ffmpeg: resolveFfmpeg({}, ffmpegStatic),
+    ...(options.audioPreviews === undefined ? {} : { audioPreviews: options.audioPreviews }),
+  };
   const config = {
     ...h.config,
     sources: { ...h.config.sources, audio: "generate" as const },
@@ -141,7 +149,11 @@ export async function narrationFixture(
         value,
       };
     },
-    tts: async (input) => {
+    tts: async (input, observe) => {
+      const bytes = narrationBytes();
+      observe?.({ type: "start" });
+      observe?.({ type: "chunk", bytes });
+      observe?.({ type: "complete" });
       calls.push({
         kind: "tts",
         key: activeKey,
@@ -150,7 +162,7 @@ export async function narrationFixture(
           ? {}
           : { dialogue: input.dialogue.map((line) => line.text) }),
       });
-      return { ok: true, value: { bytes: narrationBytes(), container: "mp3" } };
+      return { ok: true, value: { bytes, container: "mp3" } };
     },
     image: async () => {
       throw new Error("Unexpected image request");

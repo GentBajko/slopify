@@ -9,6 +9,8 @@
 export async function* lines(
   chunks: AsyncIterable<Uint8Array>,
   signal?: AbortSignal,
+  // A producer that never ends a line would otherwise grow the buffer without bound.
+  pending?: { readonly chars: number; readonly error: () => Error },
 ): AsyncGenerator<string> {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
@@ -19,6 +21,7 @@ export async function* lines(
       yield withoutCr(buffer.slice(0, at));
       buffer = buffer.slice(at + 1);
     }
+    if (pending !== undefined && buffer.length > pending.chars) throw pending.error();
   }
   buffer += decoder.decode();
   // A producer that ends without a trailing newline still wrote a whole line, and one cut

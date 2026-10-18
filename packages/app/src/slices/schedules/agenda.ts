@@ -12,6 +12,7 @@ import { limitWaitsByProject, listingWait } from "../run-cost/panel.js";
 import { setAsideProjects, uploadedAndSettled, uploadedProjects } from "../uploads/repo.js";
 import { settledStatus } from "../uploads/rules.js";
 import { nextOccurrence } from "./calendar.js";
+import { upcomingDesignRuns } from "./design-agenda.js";
 import type { ScheduleDeps } from "./model.js";
 import { preparedProject } from "./prepare.js";
 import { scheduleRows } from "./repo.js";
@@ -75,6 +76,8 @@ function upcomingRuns(
 ): CalendarRun[] {
   if (schedule.deletedAt !== null) return [];
   if (schedule.status !== "active" && schedule.status !== "paused") return [];
+  if (schedule.cadence.kind === "by-date")
+    return upcomingDesignRuns(deps.db, schedule, now, from, to);
   const paused = schedule.status === "paused";
   // A paused schedule resumes from the next occurrence after the moment Resume is pressed.
   let at: Date | null =
@@ -119,6 +122,7 @@ function upcomingRuns(
                 ? "held"
                 : "generated",
         renderedTitle: title,
+        templateKind: "project",
         // Prepared ahead (`prepare.ts`): the project the day continues.
         prepared:
           title === null || queuedTopic === undefined

@@ -3,6 +3,7 @@ import { dirname, join, relative, sep } from "node:path";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import { executionPlan } from "../rebuild/runtime-plan.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
@@ -145,7 +146,10 @@ function rebind(deps: CopyDeps, projectId: string): void {
           .run(before, after, projectId, before);
   }
   throw new Error(
-    "Slopify hit an internal error (the copy of the sample kept changing while its steps were matched up). Delete the copy and try Make my own copy again; if it happens again, use Download diagnostics in Settings and report it.",
+    internalError(
+      "the copy of the sample kept changing while its steps were matched up",
+      "Delete the copy and try Make my own copy again",
+    ),
   );
 }
 

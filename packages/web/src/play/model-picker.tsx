@@ -1,14 +1,29 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
+import type { ModelStandingView } from "@app/slices/model-checks/model.js";
+import { badgeOf, pickerEntries } from "@app/slices/model-checks/rules.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
+import { estimateChecks } from "@/lib/model-checks";
 import { modelOptionLabel } from "@/lib/model-label";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
+import { useCheckModels } from "@/lib/use-check-models";
 import { cn } from "@/lib/utils";
 import { type FieldProps, LabelledField } from "./pickers";
+
+// The line under the select: the chosen model's badge once something is known about it, or
+// "Not checked yet." while nothing works for the key yet.
+function statusOf(view: ModelStandingView | undefined, fallback: boolean, now: Date): string {
+  const known =
+    view !== undefined &&
+    (view.standing === "works" || view.standing === "no-access" || view.retiring !== undefined);
+  if (known) return badgeOf(view, now);
+  if (fallback) return "Not checked yet.";
+  return view === undefined ? "" : badgeOf(view, now);
+}
 
 // More models than this and a filter box shows above the list (OpenRouter's live list).
 const filterFrom = 12;
@@ -36,7 +51,28 @@ function ProviderModelPicker({
     mutationFn: () => listProviderModels(api, provider, true),
     onSuccess: (next) => client.setQueryData(modelsKey(provider), next),
   });
-  const all = catalogue.data?.models ?? [];
+  const every = catalogue.data?.models ?? [];
+  const standings = catalogue.data?.standings;
+  // By default only the models that work for the person's key or CLI, plus the one chosen;
+  // before anything works, the listed then the known ones. Show all brings back the rest.
+  const [showAll, setShowAll] = useState(false);
+  const shown = pickerEntries(every, standings, value, showAll || standings === undefined);
+  const all = shown.entries.map((entry) => entry.model);
+  const now = new Date();
+  const labelOf = (model: ModelInfo): string => {
+    const label = modelOptionLabel(model);
+    return standings === undefined ? label : `${label} · ${badgeOf(standings[model.id], now)}`;
+  };
+  const checks = useCheckModels(provider, "");
+  const checkOne = standings !== undefined && value !== "" && !shown.fallback;
+  // What checking the chosen model costs, said on its Check button before it is pressed.
+  const estimate = useQuery({
+    queryKey: ["model-check-estimate", provider, value],
+    queryFn: ({ signal }) => estimateChecks(api, provider, [value], signal),
+    enabled: checkOne,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
   // A live list can run to hundreds of models; past a short list a filter box narrows the
   // select to the names typed, keeping the picked model in it.
   const [filter, setFilter] = useState("");
@@ -45,12 +81,16 @@ function ProviderModelPicker({
     `${model.name} ${model.id} ${model.group ?? ""}`.toLowerCase().includes(words);
   const listed = words === "" ? all : all.filter((model) => model.id === value || matches(model));
   const noMatch = words !== "" && !all.some(matches);
+  const chosenView: ModelStandingView | undefined =
+    standings !== undefined && value !== "" && Object.hasOwn(standings, value)
+      ? standings[value]
+      : undefined;
   const groups = [...new Set(listed.flatMap((model) => (model.group ? [model.group] : [])))];
   const allowsCustom = catalogue.data?.allowsCustom ?? customModelFallback(provider);
   const typing = custom && allowsCustom;
   const refreshing = catalogue.isFetching || refresh.isPending;
   const warning = refresh.error?.message ?? catalogue.error?.message ?? catalogue.data?.warning;
-  const selectedMissing = value !== "" && !all.some((model) => model.id === value);
+  const selectedMissing = value !== "" && !every.some((model) => model.id === value);
 
   return (
     <div className="min-w-0 max-w-full">
@@ -109,7 +149,7 @@ function ProviderModelPicker({
                     .filter((model) => !model.group)
                     .map((model) => (
                       <option key={model.id} value={model.id}>
-                        {modelOptionLabel(model)}
+                        {labelOf(model)}
                       </option>
                     ))}
                   {groups.map((group) => (
@@ -118,7 +158,7 @@ function ProviderModelPicker({
                         .filter((model) => model.group === group)
                         .map((model) => (
                           <option key={model.id} value={model.id}>
-                            {modelOptionLabel(model)}
+                            {labelOf(model)}
                           </option>
                         ))}
                     </optgroup>
@@ -149,6 +189,25 @@ function ProviderModelPicker({
             />
             Refresh
           </Button>
+          {standings !== undefined ? (
+            <Button
+              type="button"
+              variant="quiet"
+              className="px-2 text-label"
+              aria-label={
+                showAll ? `Show only working models for ${label}` : `Show all models for ${label}`
+              }
+              aria-pressed={showAll}
+              disabled={!showAll && shown.hidden === 0}
+              onClick={() => setShowAll(!showAll)}
+            >
+              {showAll
+                ? "Show fewer"
+                : shown.hidden === 0
+                  ? "Show all"
+                  : `Show all (${String(shown.hidden)} more)`}
+            </Button>
+          ) : null}
           {allowsCustom ? (
             <Button
               type="button"
@@ -162,6 +221,32 @@ function ProviderModelPicker({
           ) : null}
         </div>
       ) : null}
+      {standings !== undefined ? (
+        <p
+          className="m-0 mt-1 flex min-h-6 max-w-[360px] flex-wrap items-center gap-1 text-label text-ink-3"
+          role="status"
+        >
+          <span>{statusOf(chosenView, shown.fallback, now)}</span>
+          {chosenView?.standing === "no-access" && chosenView.sentence !== null ? (
+            <span>{chosenView.sentence}</span>
+          ) : null}
+          <Button
+            type="button"
+            variant="quiet"
+            className="px-2 text-label"
+            disabled={checks.pending || (value === "" && every.length === 0)}
+            onClick={() => checks.check(checkOne ? [value] : undefined)}
+          >
+            {!checkOne
+              ? "Check models"
+              : estimate.data === undefined
+                ? "Check"
+                : `Check · ${estimate.data.text}`}
+          </Button>
+          {checks.message === undefined ? null : <span>{checks.message}</span>}
+        </p>
+      ) : null}
+      {checks.dialog}
       {catalogue.data?.notice ? (
         <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink-3">
           {catalogue.data.notice}

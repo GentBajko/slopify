@@ -170,6 +170,7 @@ export async function importLibrary(
     title: importTool.title,
     revisionId: null,
     createdAt: deps.clock.now().toISOString(),
+    actor: deps.actor ?? "agent",
   });
   return text(JSON.stringify({ file: file.name, ...outcome }));
 }

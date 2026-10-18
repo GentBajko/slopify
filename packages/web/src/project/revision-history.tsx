@@ -14,7 +14,13 @@ import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
 import { outputStateWords } from "./output-status.js";
-import { historyOf, revisionFileUrl, revisionImagesUrl, viewOf } from "./revision-api.js";
+import {
+  type AgentActionView,
+  historyOf,
+  revisionFileUrl,
+  revisionImagesUrl,
+  viewOf,
+} from "./revision-api.js";
 import { WaveAudioPlayer } from "./waveform.js";
 
 const retainedTextSchema = z.object({
@@ -97,18 +103,19 @@ export function RevisionHistory({
               {revision.title} ·{" "}
               <Stamp iso={revision.createdAt}>{startedAt(revision.createdAt)}</Stamp>
               {revision.byAgent === true ? " · by agent" : ""}
+              {revision.byAssistant === true ? " · by assistant" : ""}
               {revision.current ? " · Current" : ""}
             </Button>
           </li>
         ))}
       </ol>
       {(history.data?.agentActions.length ?? 0) === 0 ? null : (
-        <section aria-label="Done by agents" className="space-y-1">
-          <h3 className="m-0 text-title-3">Done by agents</h3>
+        <section aria-label={doneByTitle(history.data?.agentActions ?? [])} className="space-y-1">
+          <h3 className="m-0 text-title-3">{doneByTitle(history.data?.agentActions ?? [])}</h3>
           <ul className="m-0 list-none space-y-1 p-0 text-small text-ink-2">
             {history.data?.agentActions.map((action) => (
               <li key={action.id}>
-                {action.title} · by agent ·{" "}
+                {action.title} · by {action.actor} ·{" "}
                 <Stamp iso={action.createdAt}>{startedAt(action.createdAt)}</Stamp>
               </li>
             ))}
@@ -279,4 +286,11 @@ export function RevisionHistory({
       )}
     </section>
   );
+}
+
+function doneByTitle(actions: readonly AgentActionView[]): string {
+  const agents = actions.some((action) => action.actor === "agent");
+  const assistant = actions.some((action) => action.actor === "assistant");
+  if (agents && assistant) return "Done by agents and the assistant";
+  return assistant ? "Done by the assistant" : "Done by agents";
 }

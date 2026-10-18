@@ -20,7 +20,7 @@ describe("the Library layout", () => {
       within(screen.getByRole("navigation", { name }))
         .getAllByRole("link")
         .map((link) => link.textContent);
-    expect(group("Setups")).toEqual(["Templates"]);
+    expect(group("Setups")).toEqual(["Templates", "Designs"]);
     // PDF themes, not "Documents"; aliases named for what they change.
     expect(group("Building blocks")).toEqual([
       "Prompts",

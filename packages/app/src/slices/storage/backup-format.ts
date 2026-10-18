@@ -112,6 +112,12 @@ export const libraryTables = [
   "standalone_usage",
   // Since 4.0.0: which template versions the template studio marked ready.
   "template_gates",
+  // Since 4.0.0: designs with every version of their picture, and design templates.
+  "designs",
+  "design_steps",
+  "design_templates",
+  "design_template_revisions",
+  "design_template_samples",
 ] as const;
 export type LibraryTable = (typeof libraryTables)[number];
 

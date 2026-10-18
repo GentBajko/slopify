@@ -247,6 +247,29 @@ describe("replicateImage.generate", () => {
     );
   });
 
+  it("marks a model Replicate doesn't have, but not a prediction it lost", async () => {
+    const missing = await failed(
+      replaying([() => new Response(JSON.stringify({ detail: "Not found." }), { status: 404 })]),
+    );
+    expect(isProviderError(missing) && missing.fault.access).toBe("not-found");
+    const pending = (): Response =>
+      new Response(
+        JSON.stringify({
+          status: "processing",
+          output: null,
+          urls: { get: `${replicateBase}/predictions/p1` },
+        }),
+        { status: 201 },
+      );
+    const lost = await failed(
+      replaying([
+        pending,
+        () => new Response(JSON.stringify({ detail: "Not found." }), { status: 404 }),
+      ]),
+    );
+    expect(isProviderError(lost) && lost.fault.access).toBeUndefined();
+  });
+
   it("says so when a prediction is unfinished and names no address to read it from", async () => {
     const stuck = (): Response =>
       new Response(JSON.stringify({ status: "processing", output: null }), { status: 201 });
@@ -279,5 +302,21 @@ it("refuses an establishing image before sending anything", async () => {
     .catch((error: unknown) => error);
   expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
   expect(String(thrown)).toContain("set Establishing image to Off in the Images section");
+  expect(seen).toEqual([]);
+});
+
+it("refuses a picture to edit before sending anything", async () => {
+  const seen: Seen[] = [];
+  const thrown: unknown = await port(replaying([], delivered, seen))
+    .generate({
+      model,
+      prompt,
+      aspect: "16:9",
+      edit: { source: { bytes: jpegBytes, mime: "image/jpeg" } },
+      signal: new AbortController().signal,
+    })
+    .catch((error: unknown) => error);
+  expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
+  expect(String(thrown)).toContain("can't edit a picture");
   expect(seen).toEqual([]);
 });

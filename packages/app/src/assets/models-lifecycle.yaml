@@ -1,0 +1,6 @@
+# When a model in models.yaml is due to retire, and what replaces it. Kept apart from
+# models.yaml on purpose: older Slopify versions read models.yaml with a strict schema, so a new
+# field there would break them. Each entry names a model by family, provider and id;
+# replacement (optional) is the id of a model of the same provider and family.
+schemaVersion: 1
+models: []

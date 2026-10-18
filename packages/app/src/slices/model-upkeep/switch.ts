@@ -1,3 +1,4 @@
+import type { Lifecycle } from "../../catalog/lifecycle.js";
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
@@ -260,6 +261,7 @@ async function switchProject(
 export async function switchAllRetired(
   deps: UpkeepDeps,
   catalogue: Catalogue,
+  lifecycle?: Lifecycle,
 ): Promise<{
   readonly switched: number;
   readonly failed: readonly { readonly key: string; readonly message: string }[];
@@ -268,7 +270,7 @@ export async function switchAllRetired(
   const failed: { key: string; message: string }[] = [];
   // Templates first: switching one also moves the schedules that follow it.
   const order: readonly UsageKind[] = ["template", "schedule", "draft", "project"];
-  const usages = [...retiredModelUsage(deps.db, catalogue)].sort(
+  const usages = [...retiredModelUsage(deps.db, catalogue, lifecycle)].sort(
     (a, b) => order.indexOf(a.kind) - order.indexOf(b.kind),
   );
   for (const usage of usages) {

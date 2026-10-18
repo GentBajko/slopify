@@ -175,7 +175,7 @@ describe("the precondition every action shares", () => {
 describe("re-running one stage", () => {
   // The audio is remade and the video with it. The audio keeps nothing it had; the video
   // keeps everything, because the previous render stays downloadable until the new one
-  // finishes and `slices/video/run.ts` swaps it.
+  // finishes and the render swaps it.
   it("drops the stage's outputs, its pieces and its chunk files, but keeps the video", () => {
     const h = finished();
 

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { type Actor, actors } from "../agents/model.js";
 import { type ReviewRecord, reviewAnswerers, reviewStages } from "./model.js";
 
@@ -80,10 +81,7 @@ export function saveVerdict(db: DatabaseSync, record: ReviewRecord): ReviewRecor
     record.createdAt,
   );
   const saved = verdictByReview(db, record.projectId, record.reviewFingerprint);
-  if (saved === undefined)
-    throw new Error(
-      "Slopify hit an internal error (a review's verdict could not be saved). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (saved === undefined) throw new Error(internalError("a review's verdict could not be saved"));
   return saved;
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import { documentThemeNameMax } from "../document/model.js";
 import type { DocumentTheme } from "../document/theme.js";
@@ -282,7 +283,7 @@ export async function importEach<T extends { readonly name: string }>(
         reason = reply.fields.map((field) => field.message).join(" ");
         if (!reply.fields.some((field) => field.field === "name")) break;
       } catch (error) {
-        reason = error instanceof Error ? error.message : String(error);
+        reason = errorText(error);
         break;
       }
     }

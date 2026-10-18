@@ -36,16 +36,3 @@ export function resetStage(db: DatabaseSync, stageId: string): void {
     "UPDATE stages SET state = 'pending', failure_reason = NULL, failure_kind = NULL, retry_at = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",
   ).run(stageId);
 }
-
-export function setStageProgress(
-  db: DatabaseSync,
-  stageId: string,
-  current: number,
-  total: number,
-): void {
-  db.prepare("UPDATE stages SET progress_current = ?, progress_total = ? WHERE id = ?").run(
-    current,
-    total,
-    stageId,
-  );
-}

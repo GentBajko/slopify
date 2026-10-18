@@ -3,10 +3,11 @@ import { access, stat } from "node:fs/promises";
 import { extname, isAbsolute } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { isUnreachablePath } from "../../kernel/errors.js";
 import type { HostCliPorts } from "../../kernel/ports/host-cli.js";
 import { type CliProbe, cliProbeTimeoutMs, readinessFromProbe } from "./cli-status.js";
 import { type ProviderId, type ProviderStatus, providerById } from "./model.js";
-import { readSetting, writeSetting } from "./repo.js";
+import { readJsonSetting, writeSetting } from "./repo.js";
 
 export const cliPathMaxLength = 4096;
 const pathSchema = z
@@ -37,8 +38,7 @@ export type SaveCliPathResult =
 export function cliPathStatus(db: DatabaseSync, id: ProviderId): CliPathStatus {
   const provider = providerById(id);
   if (provider.auth !== "cli") throw new Error(`${id} is not a CLI provider`);
-  const stored = readSetting(db, `cli.path.${installationId(id)}`);
-  const configured = stored === undefined ? null : storedPathSchema.parse(JSON.parse(stored));
+  const configured = readJsonSetting(db, `cli.path.${installationId(id)}`, storedPathSchema, null);
   return { configured, command: configured ?? provider.binary };
 }
 
@@ -114,11 +114,7 @@ async function save(deps: CliPathDeps, id: ProviderId, raw: string): Promise<Sav
           : constants.X_OK,
       );
     } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        ["ENOENT", "ENOTDIR", "EACCES", "EPERM", "ELOOP"].includes(String(error.code))
-      )
+      if (isUnreachablePath(error))
         return {
           ok: false,
           message:

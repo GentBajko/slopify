@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { detectSlots, render, sceneKeyword } from "../admission/substitute.js";
 
@@ -7,27 +8,94 @@ import { detectSlots, render, sceneKeyword } from "../admission/substitute.js";
 // article and writes every scene, following the article from its opening to its end in the
 // order the images are shown.
 
+// The keywords Slopify fills per picture from the scenes call (`keywords/specs.ts`): any of them
+// turns scenes on for that picture, whatever the Images switch says.
+export const slopifySceneKeywords = ["Slopify_Scene", "Slopify_Setting", "Slopify_Mood"] as const;
+const sceneNames: readonly string[] = [sceneKeyword, "Slopify_Scene"];
+const detailNames: readonly string[] = ["Slopify_Setting", "Slopify_Mood"];
+
+// `{{Scene}}` or `{{Slopify_Scene}}`: where the scene goes.
 export function usesScene(body: string | null | undefined): boolean {
+  return body != null && detectSlots(body).names.some((name) => sceneNames.includes(name));
+}
+
+// The old name, which follows Images → Scenes from the article as it always did.
+export function usesLegacyScene(body: string | null | undefined): boolean {
   return body != null && detectSlots(body).names.includes(sceneKeyword);
 }
 
-// The prompt with its scene: where the prompt has `{{Scene}}`, there; otherwise as a line of
-// its own after the prompt's first paragraph, so any prompt takes a scene without editing.
-export function withScene(body: string, scene: string): string {
-  if (usesScene(body)) return render(body, { [sceneKeyword]: scene });
-  const at = body.indexOf("\n\n");
-  return at === -1
-    ? `${body}\n\nScene: ${scene}`
-    : `${body.slice(0, at)}\n\nScene: ${scene}${body.slice(at)}`;
+// `{{Slopify_Scene}}`, `{{Slopify_Setting}}` or `{{Slopify_Mood}}`: the picture gets its scene.
+export function usesSlopifyScene(body: string | null | undefined): boolean {
+  return (
+    body != null &&
+    detectSlots(body).names.some((name) =>
+      (slopifySceneKeywords as readonly string[]).includes(name),
+    )
+  );
 }
 
-// The prompt with the switch off: a line that holds `{{Scene}}` is left out, so the image is
-// drawn from the rest of the prompt as it always was.
+// `{{Slopify_Setting}}` or `{{Slopify_Mood}}`: the scenes call writes them too.
+export function wantsSceneDetails(body: string | null | undefined): boolean {
+  return body != null && detectSlots(body).names.some((name) => detailNames.includes(name));
+}
+
+export interface SceneDetails {
+  readonly setting?: string | undefined;
+  readonly mood?: string | undefined;
+}
+
+// The prompt with its scene: where the prompt has `{{Scene}}` or `{{Slopify_Scene}}`, there;
+// otherwise, while the Images switch is on (`legacy`), as a line of its own after the prompt's
+// first paragraph, so any prompt takes a scene without editing. With the switch off a picture is
+// here only for its `Slopify_` keywords, and a `{{Scene}}` line is left out as it always was.
+// The setting and mood go where the prompt asks; a line asking for one not written is left out.
+export function withScene(
+  body: string,
+  scene: string,
+  options: { readonly legacy?: boolean } & SceneDetails = {},
+): string {
+  const legacy = options.legacy !== false;
+  const text = legacy ? body : withoutLines(body, [sceneKeyword]);
+  const detailed = withDetails(text, options);
+  if (usesScene(detailed)) return render(detailed, { [sceneKeyword]: scene, Slopify_Scene: scene });
+  if (!legacy) return detailed;
+  const at = detailed.indexOf("\n\n");
+  return at === -1
+    ? `${detailed}\n\nScene: ${scene}`
+    : `${detailed.slice(0, at)}\n\nScene: ${scene}${detailed.slice(at)}`;
+}
+
+// A picture that is drawn without scenes (the establishing image): a line holding a `Slopify_`
+// scene keyword is left out, and `{{Scene}}` stays as it always did.
+export function withoutSlopifyScene(body: string): string {
+  return withoutLines(body, slopifySceneKeywords);
+}
+
+// The prompt with no scene: a line that holds a scene keyword is left out, so the image is drawn
+// from the rest of the prompt as it always was.
 export function withoutScene(body: string): string {
-  if (!usesScene(body)) return body;
+  return withoutLines(body, [...sceneNames, ...detailNames]);
+}
+
+function withDetails(body: string, details: SceneDetails): string {
+  if (!wantsSceneDetails(body)) return body;
+  const missing = [
+    ...(details.setting?.trim() ? [] : ["Slopify_Setting"]),
+    ...(details.mood?.trim() ? [] : ["Slopify_Mood"]),
+  ];
+  return render(withoutLines(body, missing), {
+    ...(details.setting?.trim() ? { Slopify_Setting: details.setting.trim() } : {}),
+    ...(details.mood?.trim() ? { Slopify_Mood: details.mood.trim() } : {}),
+  });
+}
+
+function withoutLines(body: string, names: readonly string[]): string {
+  const holds = (line: string): boolean =>
+    detectSlots(line).names.some((name) => names.includes(name));
+  if (!body.split("\n").some(holds)) return body;
   return body
     .split("\n")
-    .filter((line) => !usesScene(line))
+    .filter((line) => !holds(line))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -49,7 +117,37 @@ const countLine = /^Pictures: (\d+)$/m;
 // the moment that would make someone click, a different one for each thumbnail.
 const thumbnailLine = /^Thumbnails: (\d+)$/m;
 
+// With `details`, each scene comes with its setting and mood for `{{Slopify_Setting}}` and
+// `{{Slopify_Mood}}`; without, the request is the one it always was.
 export function sceneMessages(brief: {
+  readonly title: string;
+  readonly article: string;
+  readonly pictures: readonly string[];
+  readonly thumbnails?: number;
+  readonly details?: boolean;
+}): readonly Message[] {
+  const plain = plainSceneMessages(brief);
+  return brief.details === true ? plain.map(askingDetails) : plain;
+}
+
+const answerLine = /^Answer with a JSON array of exactly (\d+) strings, (.*), and nothing else\.$/m;
+
+function askingDetails(message: Message): Message {
+  if (message.role !== "system") return message;
+  return {
+    ...message,
+    content: message.content.replace(
+      answerLine,
+      (_whole: string, total: string, order: string): string =>
+        [
+          "For each scene also write its setting: the era and place of that moment in a few words (period, region, season), so the picture stays true to its time; and its mood: the feeling of that moment in one to three words (calm, tense, sad), for the picture's light and colour.",
+          `Answer with a JSON array of exactly ${total} objects, ${order}, each {"scene": "…", "setting": "…", "mood": "…"}, and nothing else.`,
+        ].join("\n\n"),
+    ),
+  };
+}
+
+function plainSceneMessages(brief: {
   readonly title: string;
   readonly article: string;
   readonly pictures: readonly string[];
@@ -138,21 +236,49 @@ function withThumbnails(
   ];
 }
 
+const sceneAnswer = z.array(
+  z.union([
+    z.string(),
+    z.object({
+      scene: z.string(),
+      setting: z.string().optional(),
+      mood: z.string().optional(),
+    }),
+  ]),
+);
+
+// A list of scenes, or of scenes with their setting and mood (`details`, only then present).
 export function checkScenes(
   text: string,
   count: number,
 ):
-  | { readonly ok: true; readonly scenes: readonly string[] }
+  | {
+      readonly ok: true;
+      readonly scenes: readonly string[];
+      readonly details?: readonly SceneDetails[];
+    }
   | { readonly ok: false; readonly reason: string } {
   const fix =
     "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
-  const parsed = z.array(z.string()).safeParse(jsonArrayOf(text));
+  const parsed = sceneAnswer.safeParse(jsonBetween(text, "[", "]"));
   if (!parsed.success)
     return {
       ok: false,
       reason: `The AI model didn't answer with a list of image scenes. ${fix}`,
     };
-  const scenes = parsed.data.map((scene) => scene.replace(/\s+/g, " ").trim());
+  const tidy = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const scenes = parsed.data.map((one) => tidy(typeof one === "string" ? one : one.scene));
+  const details = parsed.data.some((one) => typeof one !== "string")
+    ? parsed.data.map(
+        (one): SceneDetails =>
+          typeof one === "string"
+            ? {}
+            : {
+                ...(one.setting === undefined ? {} : { setting: tidy(one.setting) }),
+                ...(one.mood === undefined ? {} : { mood: tidy(one.mood) }),
+              },
+      )
+    : undefined;
   if (scenes.length !== count)
     return {
       ok: false,
@@ -160,16 +286,5 @@ export function checkScenes(
     };
   if (scenes.some((scene) => scene === ""))
     return { ok: false, reason: `One of the AI model's image scenes is empty. ${fix}` };
-  return { ok: true, scenes };
-}
-
-function jsonArrayOf(text: string): unknown {
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
+  return { ok: true, scenes, ...(details === undefined ? {} : { details }) };
 }

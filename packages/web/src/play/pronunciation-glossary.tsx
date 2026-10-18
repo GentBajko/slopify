@@ -1,4 +1,5 @@
 import { type ReactElement, type ReactNode, useId } from "react";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
 export function PronunciationGlossary({
@@ -26,14 +27,12 @@ export function PronunciationGlossary({
           htmlFor={id}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
         >
-          <input
+          <Checkbox
             id={id}
-            type="checkbox"
             data-play-field="audio.usePronunciationGlossary"
             checked={value === true}
             disabled={!supported}
             aria-describedby={supported ? undefined : `${id}-support`}
-            className="size-4 accent-accent"
             onChange={(event) => onChange(event.currentTarget.checked)}
           />
           Use Pronunciation Glossary
@@ -47,13 +46,11 @@ export function PronunciationGlossary({
               htmlFor={`${id}-shared`}
               className="flex min-h-8 items-center gap-3 text-small max-[1099px]:min-h-11"
             >
-              <input
+              <Checkbox
                 id={`${id}-shared`}
-                type="checkbox"
                 data-play-field="audio.shareGlossary"
                 checked={shared.value === true}
                 disabled={!sharing}
-                className="size-4 accent-accent"
                 onChange={(event) => shared.onChange(event.currentTarget.checked)}
               />
               Also use pronunciations from my other projects

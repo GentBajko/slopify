@@ -4,7 +4,7 @@ import { z } from "zod";
 import { projectExists } from "../../slices/admission/repo.js";
 import { runCostOf } from "../../slices/run-cost/panel.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const idParam = z.object({ id: z.string().min(1).max(64) });
 
@@ -20,7 +20,6 @@ export function runCostRoutes(deps: AppDeps) {
     if (!projectExists(deps.db, id))
       return problem(c, {
         status: 404,
-        title: titleOf(404),
         detail: "This project no longer exists. Go back to Projects to pick another.",
       });
     return c.json(runCostOf(deps.db, id));

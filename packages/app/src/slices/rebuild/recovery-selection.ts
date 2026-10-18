@@ -1,6 +1,7 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { readmitted, type StageStanding } from "../../kernel/runner/graph.js";
 import { narrationRegenerationKey } from "../narration/plan.js";
+import { promiseItemKey } from "../reviews/model.js";
 import type { RevisionEdit, RevisionView } from "../revisions/model.js";
 import type { RebuildSelection } from "./model.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
@@ -55,7 +56,8 @@ export function redoTarget(
     return edit === undefined ? undefined : { roots: sectionRoots(view, plan, stage), edit };
   };
   if (item === "narration") return section("audio");
-  if (item === "article:body") return section("article");
+  // The promise check sends the article back: its opening is what broke the promise.
+  if (item === "article:body" || item === promiseItemKey) return section("article");
   const own = (roots: readonly string[]) => ({
     roots,
     edit: { config: view.revision.config, content: view.revision.content, regenerate: [item] },

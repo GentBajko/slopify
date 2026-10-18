@@ -191,7 +191,11 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     const read = new Set<string>();
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
+    // A call of several model turns reports its windows once per turn: the first is kept as
+    // the call's "before", the last as its "after".
+    let firstLimits: RateLimitInfo | undefined;
     let limits: RateLimitInfo | undefined;
+    let limitEvents = 0;
     try {
       images = imageWorkspace(req.images);
       const folder = images?.directory ?? documents?.directory;
@@ -242,7 +246,11 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           // A shape this version does not know is not a failure: the plan windows are
           // reported beside the answer, never needed for it.
           const parsed = rateLimitEvent.safeParse(event.value);
-          if (parsed.success) limits = parsed.data.rate_limit_info;
+          if (parsed.success) {
+            firstLimits ??= parsed.data.rate_limit_info;
+            limits = parsed.data.rate_limit_info;
+            limitEvents += 1;
+          }
           continue;
         }
         if (event.type === "assistant" && !documents) {
@@ -284,6 +292,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
             });
           throw providerError({
             kind: kindOf(result.api_error_status ?? null),
+            ...(result.api_error_status === 404 ? { access: "not-found" as const } : {}),
             message: cliReported(
               binary,
               redact(result.result ?? result.subtype),
@@ -295,11 +304,15 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         if (images && images.unread(read).length > 0) throw unseenImages();
         if ((documents || images) && result.result) yield { type: "delta", text: result.result };
         const windows = limits === undefined ? [] : claudeWindows(limits);
+        const start =
+          limitEvents > 1 && firstLimits !== undefined ? claudeWindows(firstLimits) : [];
         yield {
           type: "done",
           usage: usageOf(result.modelUsage),
           finishReason: result.stop_reason ?? null,
-          ...(windows.length === 0 ? {} : { limits: { after: windows } }),
+          ...(windows.length === 0
+            ? {}
+            : { limits: { ...(start.length === 0 ? {} : { before: start }), after: windows } }),
         };
         return;
       }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { type Column, DataTable, Stat, Stats } from "@/components/kit/stats";
+import { wholeNumber } from "@/lib/format";
 import { stageNames } from "@/project/summary";
 import { usageQuery } from "@/queries";
 
@@ -44,8 +45,13 @@ export function UsageBoard() {
 const stageColumns: readonly Column<StageTokens>[] = [
   { id: "stage", header: "Stage", cell: (row) => stageNames[row.stage] },
   { id: "model", header: "Provider · model", cell: (row) => namedBy(row) },
-  { id: "in", header: "Tokens in", numeric: true, cell: (row) => whole.format(row.tokensIn) },
-  { id: "out", header: "Tokens out", numeric: true, cell: (row) => whole.format(row.tokensOut) },
+  { id: "in", header: "Tokens in", numeric: true, cell: (row) => wholeNumber.format(row.tokensIn) },
+  {
+    id: "out",
+    header: "Tokens out",
+    numeric: true,
+    cell: (row) => wholeNumber.format(row.tokensOut),
+  },
 ];
 
 // The counters and the table side by side on a wide screen, stacked on a narrow one.
@@ -93,7 +99,6 @@ function namedBy(row: StageTokens): string {
   return row.model === null ? row.provider : `${row.provider} · ${row.model}`;
 }
 
-const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const tenths = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 const short = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
 
@@ -104,17 +109,17 @@ const short = new Intl.NumberFormat(undefined, { notation: "compact", maximumFra
 function countersOf(usage: Usage): readonly { readonly label: string; readonly value: string }[] {
   const counters = usage.counters;
   return [
-    { label: "Videos made", value: whole.format(counters.videosMade) },
+    { label: "Videos made", value: wholeNumber.format(counters.videosMade) },
     { label: "Hours of audio", value: tenths.format(counters.audioSeconds / 3600) },
-    { label: "Images made", value: whole.format(counters.imagesMade) },
+    { label: "Images made", value: wholeNumber.format(counters.imagesMade) },
     {
       label: "Tokens used",
       value:
         counters.tokensUsed < 1_000_000
-          ? whole.format(counters.tokensUsed)
+          ? wholeNumber.format(counters.tokensUsed)
           : short.format(counters.tokensUsed),
     },
-    { label: "Projects", value: whole.format(counters.projects) },
+    { label: "Projects", value: wholeNumber.format(counters.projects) },
   ];
 }
 

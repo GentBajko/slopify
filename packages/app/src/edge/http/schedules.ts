@@ -6,6 +6,7 @@ import { calendarRange } from "../../slices/schedules/agenda.js";
 import { rejectHeldTopics, restoreRejectedTopics } from "../../slices/schedules/held-bulk.js";
 import type { ScheduleDeps, ScheduleResult } from "../../slices/schedules/model.js";
 import { preparedTopics, prepareTopic } from "../../slices/schedules/prepare.js";
+import { rescoreTopics } from "../../slices/schedules/rescore.js";
 import {
   calendarMaxDays,
   calendarSchema,
@@ -30,6 +31,7 @@ import {
   resumeSchedule,
   updateSchedule,
 } from "../../slices/schedules/service.js";
+import { scoresFor } from "../../slices/schedules/topic-scores.js";
 import {
   approveHeldTopics,
   editHeldTopic,
@@ -39,7 +41,8 @@ import {
   replaceTopics,
   transferTopic,
 } from "../../slices/schedules/topics.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
 const id = z.object({ id: z.uuid() });
 const topicParam = z.object({ id: z.uuid(), topicId: z.string().min(1).max(100) });
@@ -61,18 +64,6 @@ const heldRestore = z
   })
   .strict();
 function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false }>): Response {
-  const status = ["not-found", "missing-template", "topic-not-found"].includes(result.reason)
-    ? 404
-    : [
-          "conflict",
-          "cancel-required",
-          "spend-limit",
-          "unsupported-media",
-          "queue-full",
-          "busy",
-        ].includes(result.reason)
-      ? 409
-      : 400;
   const detail: Record<string, string> = {
     "invalid-input": "Some schedule settings are not valid. Check each field and save again.",
     "not-found":
@@ -99,11 +90,20 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
     "invalid-topics":
       "Some topics name keywords this template does not use. Check each topic under Schedules → Edit and save again.",
   };
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, result.reason, {
+    statuses: {
+      "not-found": 404,
+      "missing-template": 404,
+      "topic-not-found": 404,
+      conflict: 409,
+      "cancel-required": 409,
+      "spend-limit": 409,
+      "unsupported-media": 409,
+      "queue-full": 409,
+      busy: 409,
+    },
+    otherwise: 400,
     detail: result.message ?? detail[result.reason],
-    extensions: { reason: result.reason },
   });
 }
 
@@ -140,6 +140,12 @@ function routes(deps: ScheduleDeps | undefined) {
           ? c.json({
               schedule: scheduleSummarySchema.parse(schedule),
               runs: runs.value.map((run) => scheduleRunSchema.parse(run)),
+              // Each queued and held topic's score and reasons, by `topicKey`, while ranking
+              // is on.
+              scores: scoresFor(service().db, schedule.id, [
+                ...schedule.items.map((item) => item.title),
+                ...heldTopics(service(), schedule.id).map((topic) => topic.title),
+              ]),
             })
           : refused(c, runs);
       })
@@ -223,9 +229,30 @@ function routes(deps: ScheduleDeps | undefined) {
         const scheduleId = c.req.valid("param").id;
         if (listSchedules(service()).every((item) => item.id !== scheduleId))
           return refused(c, { ok: false, reason: "not-found" });
+        const topics = heldTopics(service(), scheduleId).map((topic) =>
+          heldTopicSchema.parse(topic),
+        );
         return c.json({
-          topics: heldTopics(service(), scheduleId).map((topic) => heldTopicSchema.parse(topic)),
+          topics,
+          scores: scoresFor(
+            service().db,
+            scheduleId,
+            topics.map((topic) => topic.title),
+          ),
         });
+      })
+      // Rescore: every queued and held topic scored again, then put in score order. With search
+      // ranking it asks Google, DuckDuckGo and Wikipedia, up to 15 seconds.
+      .post("/:id/topics/score", zValidator("param", id, onInvalid), async (c) => {
+        const result = await rescoreTopics(service(), c.req.valid("param").id);
+        if (result.ok) return c.json(scheduleSummarySchema.parse(result.value));
+        if (result.reason === "scoring-off")
+          return problem(c, {
+            status: 409,
+            detail: result.message,
+            extensions: { reason: result.reason },
+          });
+        return refused(c, result);
       })
       // Which queued topics are prepared ahead, and their projects.
       .get("/:id/prepared", zValidator("param", id, onInvalid), (c) =>
@@ -251,10 +278,11 @@ function routes(deps: ScheduleDeps | undefined) {
               "This schedule's template was deleted, so there is nothing to prepare from. Choose another template under Edit.",
             "spend-limit":
               "Preparing it would go over this schedule's spend limit. Raise the limit under Edit, or prepare it from Play instead.",
+            design:
+              "A design schedule makes each piece on its day, so there is nothing to prepare ahead. To have a piece now, open the design template (Library → Designs → Templates) and press Make a piece; to have it sooner on a schedule, give its row an earlier date in the Schedule section.",
           };
           return problem(c, {
             status: result.reason === "not-found" ? 404 : 409,
-            title: titleOf(result.reason === "not-found" ? 404 : 409),
             detail:
               (result.reason === "not-ready" ? result.detail : undefined) ??
               detail[result.reason] ??
@@ -285,7 +313,6 @@ function routes(deps: ScheduleDeps | undefined) {
         if (refusal !== undefined)
           return problem(c, {
             status: 409,
-            title: titleOf(409),
             detail: refusal,
             extensions: { reason: "busy" },
           });
@@ -421,7 +448,6 @@ export function calendarRoutes(deps: ScheduleDeps | undefined) {
     if (!result.ok)
       return problem(c, {
         status: 400,
-        title: titleOf(400),
         detail: `Choose a range whose end is after its start and at most ${String(calendarMaxDays)} days long.`,
         extensions: { reason: result.reason },
       });

@@ -34,6 +34,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
+import { fullDay } from "@/lib/format";
 import { intents, useIntent } from "@/lib/intents";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
@@ -54,7 +55,6 @@ export function calendarTabOf(value: unknown): CalendarTab {
   return value === "schedules" ? "schedules" : value === "releases" ? "releases" : "weeks";
 }
 
-const fullDay = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
 const shortDay = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
 const dayMs = 24 * 60 * 60_000;
 

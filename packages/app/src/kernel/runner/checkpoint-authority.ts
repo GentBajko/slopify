@@ -1,3 +1,4 @@
+import { errorText } from "../errors.js";
 import type { Log } from "../log.js";
 import type { WorkRef } from "./work.js";
 
@@ -42,7 +43,7 @@ export function createCheckpointAuthority<T>(deps: AuthorityDeps<T>): Checkpoint
         } catch (error) {
           deps.log.write("error", "checkpoint.wake", {
             projectId,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: errorText(error),
           });
         }
       }

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
+import { providerError } from "../src/kernel/ports/model.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { findRevisionDownload } from "../src/slices/revisions/downloads.js";
 import { outputPath } from "../src/slices/storage/layout.js";
@@ -140,3 +141,83 @@ it.each([
     }
   },
 );
+
+it("keeps the chapters that landed and asks again only for the one that failed", async () => {
+  let refuse = true;
+  const asked: string[] = [];
+  const llm = fakeLlm({
+    reply: (req) => {
+      const text = req.messages.map((message) => message.content).join("\n");
+      if (text.includes("You are planning the web research")) {
+        asked.push("planner");
+        return ["First\nSecond"];
+      }
+      if (text.includes("You are researching one chapter")) {
+        const second = text.includes("Research this chapter and no other: Second");
+        asked.push(second ? "second" : "first");
+        if (second && refuse) throw providerError({ kind: "refusal", message: "Fixture refusal" });
+        return [`Finding.\nSources\nhttps://example.test`];
+      }
+      asked.push("synthesis");
+      return ["Final notes.\nSources\nhttps://example.test"];
+    },
+  });
+  const h = await composedFixture({ llm: () => llm });
+  try {
+    h.setCatalogue({
+      ...h.deps.catalogue.read(),
+      providers: { ...h.deps.catalogue.read().providers, ...narrationCatalogue.providers },
+      llm: narrationCatalogue.llm.map((model) => ({
+        ...model,
+        llm: { ...model.llm, webSearch: true },
+      })),
+    });
+    const base = current(h.deps, h.projectId);
+    await save(h.deps, h.projectId, {
+      config: {
+        ...base.revision.config,
+        sources: {
+          ...base.revision.config.sources,
+          research: "generate",
+          article: "generate",
+          images: "off",
+        },
+        llm: { provider: "openrouter", model: "llm" },
+        rendered: { article: "Original prompt" },
+      },
+      content: {
+        ...base.revision.content,
+        articleMarkdown: undefined,
+        articleEdited: false,
+        imageOrder: [],
+        imageDefinitions: {},
+      },
+    });
+    await start(h.deps, h.projectId, ["research:notes"]);
+    await h.runner.settled();
+    expect(asked).toEqual(["planner", "first", "second"]);
+    const failed = current(h.deps, h.projectId);
+    const first = failed.pieces.find((row) => row.selected && row.key === "research:chapter:1");
+    expect(first?.assetId).toBeTruthy();
+    expect(failed.outputs.some((row) => row.workKey === "research:notes" && row.selected)).toBe(
+      false,
+    );
+    refuse = false;
+    await start(h.deps, h.projectId, ["research:notes"]);
+    await h.runner.settled();
+    expect(asked).toEqual(["planner", "first", "second", "second", "synthesis"]);
+    const after = current(h.deps, h.projectId);
+    expect(
+      after.pieces.find((row) => row.selected && row.key === "research:chapter:1")?.assetId,
+    ).toBe(first?.assetId);
+    expect(
+      after.outputs.some(
+        (row) => row.workKey === "research:notes" && row.selected && row.state === "ready",
+      ),
+    ).toBe(true);
+  } finally {
+    await h.runner.settled();
+    h.audioPreviews.close();
+    h.close();
+  }
+}, 30000);

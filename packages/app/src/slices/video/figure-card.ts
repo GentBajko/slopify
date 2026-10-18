@@ -3,6 +3,7 @@ import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 import type { Log } from "../../kernel/log.js";
 import type { DescribedKind } from "../narration/blocks.js";
+import { assText, assColour as colour } from "./ass-text.js";
 import { runFfmpeg } from "./ffmpeg.js";
 
 // "Show tables and figures on screen": each table, figure, equation and code block the
@@ -616,22 +617,6 @@ function wrap(textValue: string, width: number, most: number): string[] {
 
 function clip(value: string, room: number): string {
   return value.length <= room ? value : `${value.slice(0, Math.max(1, room - 1))}…`;
-}
-
-// Text as libass draws it literally: braces and backslashes escaped rather than read as
-// override tags; code keeps its spaces, prose has them collapsed.
-function assText(value: string, keepSpaces = false): string {
-  const escaped = value.replace(/\\/g, "\\\\").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
-  return keepSpaces
-    ? escaped.replace(/ {2,}/g, (run) => "\\h".repeat(run.length))
-    : escaped.replace(/\s+/g, " ");
-}
-
-function colour(hex: string): string {
-  const match = /^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/.exec(hex);
-  if (match === null) return "&HFFFFFF&";
-  const [, r, g, b] = match;
-  return `&H${(b ?? "").toUpperCase()}${(g ?? "").toUpperCase()}${(r ?? "").toUpperCase()}&`;
 }
 
 function text(x: number, y: number, align: number, body: string): string {

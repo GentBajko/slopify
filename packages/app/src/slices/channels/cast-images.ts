@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Format } from "../../kernel/pipeline.js";
 import type { GeneratedImage } from "../../kernel/ports/image.js";
@@ -94,7 +95,7 @@ export function generateCastImage(
         .run(sha256, id);
     },
     (error: unknown) => {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = errorText(error);
       deps.log?.write("warn", "channels.cast-image.failed", { detail: reason.slice(0, 500) });
       fail(
         deps,

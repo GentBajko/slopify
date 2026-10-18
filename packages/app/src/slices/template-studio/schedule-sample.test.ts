@@ -17,6 +17,7 @@ function schedule(overrides: Partial<ScheduleSummary>): ScheduleSummary {
   return {
     id: "s1",
     name: "Weekdays",
+    templateKind: "project",
     templateId: "t1",
     templateVersion: 1,
     cadence: { kind: "weekly", time: "20:00", days: [1, 3] },
@@ -33,6 +34,7 @@ function schedule(overrides: Partial<ScheduleSummary>): ScheduleSummary {
     brief: null,
     topicGeneration: { mode: "off", keepAtLeast: 10, llm: null },
     releases: [],
+    topicScoring: "off",
     topics: { held: 0, generatingSince: null, generatedAt: null, failedAt: null, error: null },
     status: "active",
     version: 1,

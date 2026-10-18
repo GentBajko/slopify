@@ -17,7 +17,8 @@ import {
   setEpisodeMemory,
 } from "../../slices/episodes/service.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid } from "./problem.js";
+import { jsonBody, refusal } from "./refusal.js";
 
 const idParam = z.object({ id: z.uuid() });
 const memoryParam = idParam.extend({ memoryId: z.string().min(1).max(100) });
@@ -42,12 +43,12 @@ export function channelMemoryRoutes(deps: AppDeps) {
       return result.ok ? c.json(result.value) : refused(c, result, "episode");
     })
     .put("/:id/episodes/setting", zValidator("param", idParam, onInvalid), async (c) => {
-      const result = setEpisodeMemory(service, c.req.valid("param").id, await body(c));
+      const result = setEpisodeMemory(service, c.req.valid("param").id, await jsonBody(c));
       return result.ok ? c.json(result.value) : refused(c, result, "episode");
     })
     .put("/:id/episodes/:memoryId", zValidator("param", memoryParam, onInvalid), async (c) => {
       const { id, memoryId } = c.req.valid("param");
-      const result = editMemory(service, id, memoryId, await body(c));
+      const result = editMemory(service, id, memoryId, await jsonBody(c));
       return result.ok ? c.json(result.value) : refused(c, result, "episode");
     })
     .delete("/:id/episodes/:memoryId", zValidator("param", memoryParam, onInvalid), (c) => {
@@ -64,12 +65,12 @@ export function channelMemoryRoutes(deps: AppDeps) {
       zValidator("param", idParam, onInvalid),
       importLimit(),
       async (c) => {
-        const result = previewChannelVideos(service, c.req.valid("param").id, await body(c));
+        const result = previewChannelVideos(service, c.req.valid("param").id, await jsonBody(c));
         return result.ok ? c.json(result.value) : refused(c, result, "video");
       },
     )
     .post("/:id/videos", zValidator("param", idParam, onInvalid), importLimit(), async (c) => {
-      const result = importChannelVideos(service, c.req.valid("param").id, await body(c));
+      const result = importChannelVideos(service, c.req.valid("param").id, await jsonBody(c));
       return result.ok ? c.json(result.value, 201) : refused(c, result, "video");
     })
     .delete("/:id/videos", zValidator("param", idParam, onInvalid), (c) => {
@@ -100,16 +101,7 @@ function importLimit() {
   });
 }
 
-async function body(c: Context): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    return undefined;
-  }
-}
-
 function refused(c: Context, result: Refusal, about: "episode" | "video"): Response {
-  const status = result.reason === "not-found" ? 404 : 400;
   const detail =
     result.message ??
     (result.reason === "not-found"
@@ -117,10 +109,5 @@ function refused(c: Context, result: Refusal, about: "episode" | "video"): Respo
         ? "This channel or episode summary no longer exists; it may have been deleted in another tab. Reload the channel's Episodes tab."
         : "This channel or video title no longer exists; it may have been deleted in another tab. Reload the channel's Existing videos tab."
       : "This request isn't valid. Reload the page and try again.");
-  return problem(c, {
-    status,
-    title: titleOf(status),
-    detail,
-    extensions: { reason: result.reason },
-  });
+  return refusal(c, result.reason, { statuses: { "not-found": 404 }, otherwise: 400, detail });
 }

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -17,6 +18,7 @@ import { parseVerdict, type ReviewMaterial, reviewMessages } from "../reviews/ve
 import type { RevisionOutputView } from "../revisions/model.js";
 import { pickedShortsOf } from "../shorts/clips.js";
 import { outputPath } from "../storage/layout.js";
+import { openingOf, spokenArticle } from "./review-promise.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import {
   type ExportSnapshot,
@@ -68,9 +70,7 @@ export async function executeReviewRecipe(
       ? valuesSchema.safeParse(input.values)
       : undefined;
   if (values === undefined || !values.success)
-    throw new Error(
-      "Slopify hit an internal error (a review step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("a review step was set up wrongly"));
   const [stage, itemKey, , provider, model, thinking, prompt, mode, retries] = values.data;
   const snapshot = exportSnapshot(deps, context, piece);
   const material = reviewMaterial(deps, context, snapshot, stage, itemKey, prompt);
@@ -232,6 +232,26 @@ export function reviewMaterial(
           },
           ...(research === "" ? [] : [{ label: "Research notes", text: research }]),
           { label: "Article", text: text(article) },
+        ]),
+        images: [],
+        itemFingerprint: article.fingerprint,
+      };
+    }
+    // The opening as the viewer will hear it, against what the title and the thumbnail brief
+    // promise; the whole article shows whether the promise is kept later on.
+    case "promise": {
+      const article = output("article:body", "article_md");
+      if (article === undefined)
+        throw missing("article", "Use More → Write the article again in the Article section");
+      const spoken = spokenArticle(readFileSync(path(article), "utf8"));
+      const thumbnail = recipes.find((one) => one.key === "thumbnail:image");
+      const brief = thumbnail?.input.kind === "image" ? thumbnail.input.prompt.trim() : "";
+      return {
+        request: request([
+          { label: "Video title", text: config.title },
+          ...(brief === "" ? [] : [{ label: "Thumbnail brief", text: clip(brief) }]),
+          { label: "Opening (first ~30 s)", text: openingOf(spoken) },
+          { label: "Whole article", text: clip(spoken) },
         ]),
         images: [],
         itemFingerprint: article.fingerprint,

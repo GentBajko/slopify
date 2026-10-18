@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CastMember } from "@/channels/api";
 import { renderApp, testDeps } from "@/test-app";
 import { editPreviewImageOf } from "./edit-preview-image.js";
-import { EditAmbientBed, EditImageScale } from "./edit-sound-and-scale.js";
+import { EditAmbientBed, EditImageScale, EditImageScenes } from "./edit-sound-and-scale.js";
 import { revisionView } from "./revision-fixture.js";
 
 afterEach(cleanup);
@@ -142,5 +142,60 @@ describe("Edit project's style preview picture", () => {
       drawnOn: "Mira's picture",
     });
     expect(editPreviewImageOf(revisionView(), edit, [member("Owen", null)])).toBeUndefined();
+  });
+});
+
+describe("Edit project's Scenes from the article", () => {
+  function scenesEdit(imageScenes: boolean): RevisionEdit {
+    const edit = editOf({
+      sources: {
+        ...editOf().config.sources,
+        article: "generate",
+        images: "generate",
+        thumbnail: "from_prompt",
+      },
+      imagePrompts: [
+        { name: "Castle", number: 2 },
+        { name: "Maps", number: 1 },
+      ],
+      ...(imageScenes ? { imageScenes: true } : {}),
+    });
+    return {
+      ...edit,
+      content: {
+        ...edit.content,
+        promptTemplates: {
+          "imagePrompts.0": "A castle at {{Slopify_Setting}}",
+          "imagePrompts.1": "A map with {{Scene}}",
+          thumbnailPrompt: "Cover: {{Slopify_Scene}}",
+        },
+      },
+    };
+  }
+
+  it("says which pictures get their scene anyway while it is off, and leaves it off", () => {
+    const changed = vi.fn();
+    renderApp(<EditImageScenes edit={scenesEdit(false)} onChange={changed} />, testDeps({}));
+    expect(
+      screen.getByRole("switch", { name: "Scenes from the article" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    const rows = screen
+      .getAllByRole("switch")
+      .filter((row) => row.textContent?.startsWith("On for"))
+      .map((row) => [
+        row.textContent,
+        row.getAttribute("aria-checked"),
+        (row as HTMLButtonElement).disabled,
+      ]);
+    expect(rows).toEqual([
+      ['On for "Castle": it uses {{Slopify_Setting}}', "true", true],
+      ["On for the thumbnail: it uses {{Slopify_Scene}}", "true", true],
+    ]);
+    expect(changed).not.toHaveBeenCalled();
+  });
+
+  it("shows no such row once the switch is on", () => {
+    renderApp(<EditImageScenes edit={scenesEdit(true)} onChange={vi.fn()} />, testDeps({}));
+    expect(screen.queryByText(/^On for/)).toBeNull();
   });
 });

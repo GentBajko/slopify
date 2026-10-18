@@ -1,13 +1,11 @@
 import { type ReactElement, useId, useRef } from "react";
 import { Button } from "@/components/kit/button";
-import { Field, Input } from "@/components/kit/field";
+import { Checkbox, Field, Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
+import { pluralGrouped } from "@/lib/format";
 import { ShowMore, useBounded } from "./bounded-list";
-
-const plural = (n: number, one: string, many: string): string =>
-  `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
 // A Studio CSV's titles before saving: one tick per title, in file order.
 export interface Preview {
@@ -64,10 +62,10 @@ export function CsvPreview({
         as="h3"
         title="Titles in the CSV"
         info="planning.channel.videos-ticks"
-        meta={`${count.toLocaleString("en")} of ${plural(preview.titles.length, "title", "titles")} ticked · Shift+click ticks a range`}
+        meta={`${count.toLocaleString("en")} of ${pluralGrouped(preview.titles.length, "title", "titles")} ticked · Shift+click ticks a range`}
       >
         <Button variant="primary" disabled={busy || count === 0} onClick={onSave}>
-          Add {plural(count, "ticked title", "ticked titles")}
+          Add {pluralGrouped(count, "ticked title", "ticked titles")}
         </Button>
         <Button variant="quiet" disabled={busy} onClick={onCancel}>
           Cancel
@@ -98,12 +96,11 @@ export function CsvPreview({
             // biome-ignore lint/suspicious/noArrayIndexKey: a CSV may list one title twice; rows never reorder.
             key={index}
             lead={
-              <input
+              <Checkbox
                 id={`${id}-${index}`}
-                type="checkbox"
                 checked={preview.ticked[index] === true}
                 disabled={busy}
-                className="size-4 shrink-0 accent-accent"
+                className="shrink-0"
                 onClick={(event) => {
                   shift.current = event.shiftKey;
                 }}

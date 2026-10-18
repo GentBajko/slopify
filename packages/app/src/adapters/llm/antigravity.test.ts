@@ -295,10 +295,23 @@ describe("Antigravity CLI", () => {
       }),
     ]);
     await expect(drain(one.run, request({ model: "gemini-2.5-pro" }))).rejects.toMatchObject({
-      fault: { kind: "unsupported" },
+      fault: { kind: "unsupported", access: "no-access" },
       message: expect.stringContaining(
         'The Antigravity CLI does not offer the model "gemini-2.5-pro"',
       ),
+    });
+  });
+
+  it("marks a model the plan does not include, keeping the kind", async () => {
+    const one = fake([
+      result({
+        status: "ERROR",
+        response: "",
+        error: "This model is not available on your current plan.",
+      }),
+    ]);
+    await expect(drain(one.run, request({ model: "gemini-3.8-pro" }))).rejects.toMatchObject({
+      fault: { kind: "other", access: "no-access" },
     });
   });
 

@@ -1,6 +1,7 @@
 import { rmSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -104,10 +105,7 @@ export async function executeLocalRecipe(
     );
     return "done";
   }
-  if (input.kind !== "local")
-    throw new Error(
-      "Slopify hit an internal error (a local step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+  if (input.kind !== "local") throw new Error(internalError("a local step was set up wrongly"));
   if (input.operation === "figure-card-v1") return executeFigureCard(deps, context, piece);
   if (input.operation === "narration-files-v1") {
     await publishNarrationText(deps, context, piece);
@@ -156,9 +154,7 @@ export async function executeLocalRecipe(
     });
     return "done";
   }
-  throw new Error(
-    `Slopify hit an internal error (no handler for the step "${input.operation}"). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
-  );
+  throw new Error(internalError(`no handler for the step "${input.operation}"`));
 }
 
 async function concatenate(
@@ -168,9 +164,7 @@ async function concatenate(
 ): Promise<void> {
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
   if (view === undefined)
-    throw new Error(
-      "Slopify hit an internal error (the project version being built is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the project version being built is missing"));
   const row = deps.db
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
@@ -180,7 +174,7 @@ async function concatenate(
   );
   if (recipe === undefined)
     throw new Error(
-      "Slopify hit an internal error (the narration chunks to join no longer match the project's saved inputs). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      internalError("the narration chunks to join no longer match the project's saved inputs"),
     );
   const files = recipe.dependsOn.map((key) => {
     const input = view.pieces.find(
@@ -418,9 +412,7 @@ export async function joinTurns(
     .rest(z.unknown())
     .parse(values)[1];
   if (layout.length !== files.length || files.length === 0)
-    throw new Error(
-      "Slopify hit an internal error (the speaker turns to join don't match their audio). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the speaker turns to join don't match their audio"));
   await runFfmpeg({
     bin: run.bin,
     args: turnJoinArgs(

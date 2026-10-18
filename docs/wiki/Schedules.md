@@ -125,6 +125,22 @@ Only one generation per schedule runs at a time. A failed try shows its reason o
 
 Press **Generate topics now** to ask for new topics at once: at least 5, even when the queue is full and even during the 5-minute wait after a failed try. It is one LLM call. Saving the schedule also clears the wait.
 
+### Rank topics
+
+Under Edit → Topic generation, **Rank topics** orders the topics Slopify generates, best first, and shows a **Score** (0 to 100) on each queued and held topic, with why it scored so behind the ⓘ beside it:
+
+| Choice | What it reads | What leaves this computer |
+| --- | --- | --- |
+| **Off** (default) | Nothing: topics join in the order the LLM suggests, as before | Nothing |
+| **By what the library already covers** | How far the topic is from everything made, queued, held or turned down in this channel ("Library: new; nearest “…” (40% overlap)") | Nothing |
+| **Also by public search interest** | The library, plus how many of Google's search suggestions name the topic (DuckDuckGo's when Google doesn't answer) and its Wikipedia article's views last month | Each new topic's title, sent to Google, DuckDuckGo and Wikipedia |
+
+- When a generation finds more topics than it needs, the best-scored are kept. They join after the topics you added or moved, in score order; held topics are listed by score.
+- A topic you move keeps its place from then on.
+- With no connection, topics are still added, ranked by the library alone, and their reasons say "Search interest unknown: no connection".
+- **Rescore**, beside Queued topics, scores every queued and held topic again now and puts them in order; a topic you added gets a score but stays where it is.
+- It never uses your channel's analytics.
+
 ### Approve held topics
 
 When **New topics** is **Generate and hold for approval**, suggestions wait under **Topics waiting** on the schedule (and under **Suggested topics** on the [Calendar](Calendar)):

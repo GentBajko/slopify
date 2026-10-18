@@ -14,6 +14,7 @@ import { Workspace } from "@/components/kit/layout";
 import { Rail, RailLink } from "@/components/kit/rail";
 import { Lamp, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { ProjectDesigns, useProjectDesignCount } from "@/designs/project-designs";
 import { copyText } from "@/fixes/fix-actions";
 import { intents, useIntent } from "@/lib/intents";
 import { shortcuts } from "@/lib/shortcuts";
@@ -203,6 +204,8 @@ function ProjectWorkspace({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [designsOpen, setDesignsOpen] = useState(false);
+  const designCount = useProjectDesignCount(projectId);
   const [cancelling, setCancelling] = useState(false);
   const revisionId = project.data?.revisionId ?? null;
   const controller = useRevisionController(projectId, revisionId, {
@@ -556,6 +559,12 @@ function ProjectWorkspace({
       disabled: revisionId === null || isSample,
     },
     {
+      id: "designs",
+      label: designCount === undefined ? "Designs…" : `Designs (${String(designCount)})…`,
+      run: () => setDesignsOpen(true),
+      disabled: isSample,
+    },
+    {
       id: "channel",
       label: "Move to channel…",
       run: () => setMoveOpen(true),
@@ -843,6 +852,11 @@ function ProjectWorkspace({
               {uploadOpen ? (
                 <PrepareUploadDrawer projectId={projectId} onClose={() => setUploadOpen(false)} />
               ) : null}
+              <ProjectDesigns
+                projectId={projectId}
+                open={designsOpen}
+                onClose={() => setDesignsOpen(false)}
+              />
               <MoveToChannel
                 projectId={projectId}
                 title={summary.title}

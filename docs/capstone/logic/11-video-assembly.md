@@ -30,7 +30,6 @@ paths_covered:
   - ":(top)packages/app/src/slices/video/audio-export-args.ts"
   - ":(top)packages/app/src/slices/video/figure-card.ts"
   - ":(top)packages/app/src/slices/video/figure-spans.ts"
-  - ":(top)packages/app/src/slices/video/run.ts"
   - ":(top)packages/app/src/slices/loudness/loudnorm.ts"
   - ":(top)packages/app/src/slices/loudness/model.ts"
   - ":(top)packages/app/src/slices/rebuild/runtime-export.ts"
@@ -133,7 +132,7 @@ The final media stage produces an MP4 slideshow (`export:video`) or a combined P
 - Success: one MP4 or WAV, its `render.json`, re-published caption files, optional `master` report; the previous export stays downloadable until the replacement publishes.
 - Failure: stage `failed` with the error text.
 - `stage.completed` for stage `video` is counted for both MP4 and WAV exports, and the usage page and collector count every such event as a video made (`slices/telemetry/usage.ts:64-67`, scenario 16).
-- `packages/app/src/slices/video/run.ts:36` (`renderVideo`, the pre-revision stage runner) and its helpers `audio-inputs.ts`, `audio-export.ts`, `write-export.ts` and `slices/subtitles/prepare.ts` are referenced only by tests; the revision recipes above are the live path.
+- The revision recipes above are the only path; `slices/video/audio-export.ts` is now only a re-export of `audioExportArgs` for `runtime-export.ts`.
 
 ## Dimensions not in play
 

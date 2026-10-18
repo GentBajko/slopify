@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 
@@ -74,9 +75,7 @@ export async function joinNarration(deps: JoinDeps, input: JoinInput): Promise<n
   const first = input.files[0];
   if (first === undefined) {
     // The stage refuses an empty narration before it gets here, so this is a bug.
-    throw new Error(
-      "Slopify hit an internal error (there is no narration audio to join). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("there is no narration audio to join"));
   }
   mkdirSync(dirname(input.output), { recursive: true, mode: 0o700 });
 

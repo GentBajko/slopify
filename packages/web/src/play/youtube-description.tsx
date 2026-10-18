@@ -1,6 +1,7 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { type ReactElement, useId } from "react";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 import { GridField } from "./grid-field";
@@ -38,14 +39,12 @@ export function YoutubeDescription({
           htmlFor={`${id}-switch`}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
         >
-          <input
+          <Checkbox
             id={`${id}-switch`}
-            type="checkbox"
             data-play-field="youtubeDescription"
             checked={enabled}
             disabled={!narrated && !enabled}
             aria-describedby={issue ? `${id}-error` : undefined}
-            className="size-4 accent-accent"
             onChange={(event) =>
               onChange({
                 youtubeDescription: event.currentTarget.checked,

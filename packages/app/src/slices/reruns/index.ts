@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -153,8 +154,7 @@ export function deleteImage(deps: RerunDeps, projectId: string, outputId: string
     return { ok: false, reason: "last-image" };
   }
   return apply(deps, projectId, { kind: "image-deleted" }, loaded, () => {
-    // `slices/images/run.ts` counts an image as landed only when its row and its file both
-    // survive, so a delete removes both - and the piece that planned it, or the next run
+    // An image counts as landed only when its row and its file both survive, so a delete removes both - and the piece that planned it, or the next run
     // of the stage would read the plan and make the image again.
     deleteOutput(deps.db, image.id);
     dropImagePiece(deps, loaded.stages, image.path);
@@ -279,7 +279,7 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
 export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readonly (() => void)[] {
   if (currentRevisionId(deps.db, projectId) !== undefined)
     throw new Error(
-      "Slopify hit an internal error (narration was changed the old way on a project that uses versions). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      internalError("narration was changed the old way on a project that uses versions"),
     );
   const stage = stagesOf(deps.db, projectId).find((one) => one.kind === "audio");
   if (
@@ -297,8 +297,8 @@ export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readon
 }
 
 // A regenerated image is replaced in place at the same index, so the piece keeps the prompt
-// and the index it was planned with and only stops naming a file: `slices/images/run.ts`
-// then sees one image of its plan still to make, and the file it named can be removed.
+// and the index it was planned with and only stops naming a file: the images stage then
+// sees one image of its plan still to make, and the file it named can be removed.
 function forgetImageFile(deps: RerunDeps, stages: readonly Stage[], path: string): void {
   for (const piece of imagePieces(deps, stages, path)) {
     if (piece.payload === null) {
@@ -358,7 +358,7 @@ function removeFiles(deps: RerunDeps, projectId: string, orphaned: readonly stri
       // the action here would leave the user with a stage that cannot be re-run.
       deps.log.write("warn", "reruns.file", {
         projectId,
-        detail: `${path}: ${messageOf(error)}`,
+        detail: `${path}: ${errorText(error)}`,
       });
     }
   }
@@ -377,8 +377,4 @@ function stageOf(stages: readonly Stage[], kind: StageKind): Stage | undefined {
 
 function imageOf(outputs: readonly Output[], outputId: string): Output | undefined {
   return outputs.find((output) => output.id === outputId && output.role === "image");
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

@@ -1,4 +1,5 @@
 import type { ConfigEnv } from "../../kernel/config/index.js";
+import { errorText } from "../../kernel/errors.js";
 import type { TelemetryEventType, TelemetryPayload } from "./model.js";
 
 // One queued event as the collector receives it: the local row plus the machine id,
@@ -65,11 +66,7 @@ export function httpPostEvents(endpoint: string, timeoutMs: number): PostEvents 
     } catch (error) {
       // Offline is the ordinary case, not a fault: the events stay queued and the user is
       // told nothing.
-      return { ok: false, retriable: true, reason: messageOf(error) };
+      return { ok: false, retriable: true, reason: errorText(error) };
     }
   };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

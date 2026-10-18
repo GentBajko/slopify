@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { CollectorEvent, PostEvents } from "./collector-client.js";
 import type { TelemetryEvent } from "./model.js";
@@ -102,7 +103,7 @@ export function createFlusher(deps: FlushDeps, delayMs: number): Flusher {
       .catch((error: unknown) => {
         // The timer has no caller to fail: a broken flush is logged and the next one
         // tries again.
-        deps.log.write("warn", "telemetry.flush", { detail: messageOf(error) });
+        deps.log.write("warn", "telemetry.flush", { detail: errorText(error) });
       })
       .finally(() => {
         running = false;
@@ -134,8 +135,4 @@ function envelope(event: TelemetryEvent, machineId: string): CollectorEvent {
     payload: event.payload,
     createdAt: event.createdAt,
   };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

@@ -13,6 +13,7 @@ import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
+import type { KeywordFacts } from "@app/slices/keywords/values.js";
 import type { LibraryItemKind, LibraryVersion } from "@app/slices/library/history.js";
 import type {
   Entry,
@@ -114,7 +115,7 @@ export interface ProjectBody {
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
   // Who last started the project's work.
-  readonly startedBy?: "person" | "agent" | null;
+  readonly startedBy?: "person" | "agent" | "assistant" | null;
 }
 export interface CreatedProjectBody {
   readonly project: ProjectSummary;
@@ -1103,6 +1104,15 @@ export async function readSharedPronunciations(
   except: string,
 ): Promise<{ readonly entries: readonly SharedPronunciation[]; readonly projects: number }> {
   return read(await api.client.pronunciations.shared.$get({ query: { except } }));
+}
+
+// The facts the keywords Slopify fills are written from, copied again from the project's
+// channel now, for Edit project's Refresh keyword facts.
+export async function readKeywordFacts(
+  api: Api,
+  projectId: string,
+): Promise<{ readonly keywordFacts: KeywordFacts }> {
+  return read(await api.client.keywords.facts[":projectId"].$get({ param: { projectId } }));
 }
 
 // Library → Aliases: the whole ordered list, read and saved at once.

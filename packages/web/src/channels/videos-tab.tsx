@@ -9,6 +9,7 @@ import { Field, Input, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
+import { pluralGrouped } from "@/lib/format";
 import { ShowMore, useBounded } from "./bounded-list";
 import {
   type ChannelVideo,
@@ -20,9 +21,6 @@ import {
   videosQuery,
 } from "./memory-api";
 import { CsvPreview, type Preview, tickedBy } from "./videos-csv-preview";
-
-const plural = (n: number, one: string, many: string): string =>
-  `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
 // The Existing videos tab: titles of videos the channel made before Slopify, pasted or imported
 // from YouTube Studio, so topic suggestions and duplicate checks skip them too.
@@ -44,7 +42,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
       if (body.filter === undefined) setText("");
       else setPreview(undefined);
       setNote(
-        `Added ${plural(result.added, "title", "titles")}${
+        `Added ${pluralGrouped(result.added, "title", "titles")}${
           result.skipped > 0
             ? `; skipped ${result.skipped.toLocaleString("en")} already listed`
             : ""
@@ -200,8 +198,8 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
             />
             <span className="text-small text-ink-2" role="status">
               {needle === ""
-                ? plural(videos.length, "title", "titles")
-                : `${found.length.toLocaleString("en")} of ${plural(videos.length, "title", "titles")} match`}
+                ? pluralGrouped(videos.length, "title", "titles")
+                : `${found.length.toLocaleString("en")} of ${pluralGrouped(videos.length, "title", "titles")} match`}
             </span>
           </div>
           {found.length === 0 ? (
@@ -234,7 +232,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
       ) : null}
       <ConfirmDialog
         open={clearing}
-        title={`Remove all ${plural(videos.length, "title", "titles")}?`}
+        title={`Remove all ${pluralGrouped(videos.length, "title", "titles")}?`}
         consequence={
           clear.error?.message ??
           "Topic suggestions and duplicate checks stop skipping them. Your videos on YouTube are not touched."

@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { CatalogueStore } from "../../catalog/store.js";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { errorText } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -124,7 +125,7 @@ export async function stageUpload(
     try {
       deps.emit(event);
     } catch (error) {
-      deps.log.write("warn", "staging.emit", { detail: messageOf(error) });
+      deps.log.write("warn", "staging.emit", { detail: errorText(error) });
     }
   };
   const progress = (state: StagedFile["state"]): void => {
@@ -164,10 +165,10 @@ export async function stageUpload(
       stagedFileId: id,
       stageKind: input.stageKind,
       originalFilename,
-      detail: messageOf(error),
+      detail: errorText(error),
     });
     deps.log.write("error", "staging.failed", {
-      detail: `${id} ${originalFilename}: ${messageOf(error)}`,
+      detail: `${id} ${originalFilename}: ${errorText(error)}`,
     });
     throw error;
   }
@@ -232,7 +233,7 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   } catch (error) {
     deps.log.write("error", "storage.attach", {
       projectId: input.projectId,
-      detail: `${staged.id} → ${name}: ${messageOf(error)}`,
+      detail: `${staged.id} → ${name}: ${errorText(error)}`,
     });
     throw error;
   }
@@ -306,7 +307,7 @@ function discard(deps: StorageDeps, id: string, target: string, event: string): 
     rmSync(target, { force: true });
   } catch (error) {
     // The row stays `copying`, so the next boot's reconcile removes the file instead.
-    deps.log.write("warn", event, { detail: `${id}: ${messageOf(error)}` });
+    deps.log.write("warn", event, { detail: `${id}: ${errorText(error)}` });
     return;
   }
   deleteStagedFile(deps.db, id);
@@ -318,8 +319,4 @@ function closed(sink: WriteStream): Promise<void> {
     : new Promise<void>((resolve) => {
         sink.once("close", resolve);
       });
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

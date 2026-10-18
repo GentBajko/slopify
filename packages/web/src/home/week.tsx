@@ -8,11 +8,9 @@ import { Meter, Stat, Stats } from "@/components/kit/stats";
 import { usd } from "@/lib/format";
 import { startOfWeek, type WeekSummary, weekQuery } from "./api.js";
 
-const money = { format: usd };
-
 // "$9.40", with the unpriced calls said rather than read as free.
 export function spentLabel(week: WeekSummary): string {
-  const via = week.apiEquivalent === null ? "" : ` · ~${money.format(week.apiEquivalent)} via API`;
+  const via = week.apiEquivalent === null ? "" : ` · ~${usd(week.apiEquivalent)} via API`;
   const unknown =
     week.unpriced === 0
       ? ""
@@ -41,9 +39,9 @@ export function ThisWeek({ channelId }: { readonly channelId: string | null }): 
         <Stats className="sl-home-stats">
           <Stat value={String(data.videos)} label="videos made" />
           <Stat
-            value={money.format(data.cost)}
+            value={usd(data.cost)}
             label={`${spentLabel(data)}${
-              total === undefined ? "" : ` · ${money.format(total.cost)} across all channels`
+              total === undefined ? "" : ` · ${usd(total.cost)} across all channels`
             }`}
           />
           {data.plans

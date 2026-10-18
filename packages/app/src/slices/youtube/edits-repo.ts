@@ -6,7 +6,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { defaultChannelId } from "../channels/model.js";
 import { channelById, projectChannelId } from "../channels/repo.js";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import { readJsonSetting, writeSetting } from "../settings/repo.js";
 import { chapterNotice, fitChapters } from "./chapters.js";
 import type { DescriptionEdits } from "./edits.js";
 import {
@@ -64,16 +64,9 @@ export function writeDescriptionEdits(
 }
 
 export function readChannelLinks(db: DatabaseSync): readonly ChannelLink[] {
-  const value = readSetting(db, channelLinksKey);
-  if (value === undefined) return [];
   // A hand-edited row that no longer parses reads as no links rather than breaking the page;
   // saving the list in Settings writes a good one again.
-  try {
-    const parsed = linksSchema.safeParse(JSON.parse(value));
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
+  return readJsonSetting(db, channelLinksKey, linksSchema, []);
 }
 
 export function writeChannelLinks(db: DatabaseSync, links: readonly ChannelLink[]): void {

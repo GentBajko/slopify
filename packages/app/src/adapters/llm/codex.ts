@@ -12,6 +12,7 @@ import type {
   PlanLimitReading,
 } from "../../kernel/ports/plan-limits.js";
 import { cliCheck, cliReported } from "../explain.js";
+import { accessField } from "../model-access.js";
 import { cliLoginError } from "./cli-login-error.js";
 import { codexPlanLimit } from "./codex-limits.js";
 import { nodeCodexModels } from "./codex-models.js";
@@ -92,12 +93,10 @@ const disabledFeatures = [
 // "-i, --image <FILE>... Optional image(s) to attach to the initial prompt"), which needs no
 // tool: `view_image` stays disabled. Each is given as its own flag so a path is never read as
 // the prompt.
-export function codexArgs(
-  req: LlmCompletion,
-  directory: string,
-  documents?: DocumentWorkspace,
-  images?: ImageWorkspace,
-): string[] {
+// One ephemeral, read-only turn in `directory` with every local tool, hook, plugin, skill and
+// project document left out. The content adapter and the in-app assistant (`assistant-cli.ts`)
+// both start from it and add their own instructions, search setting and MCP servers.
+export function hardenedCodexBase(directory: string): string[] {
   return [
     "exec",
     "--json",
@@ -131,6 +130,17 @@ export function codexArgs(
     "include_environment_context=false",
     "-c",
     'shell_environment_policy.inherit="none"',
+  ];
+}
+
+export function codexArgs(
+  req: LlmCompletion,
+  directory: string,
+  documents?: DocumentWorkspace,
+  images?: ImageWorkspace,
+): string[] {
+  return [
+    ...hardenedCodexBase(directory),
     "-c",
     `instructions=${JSON.stringify(writingRole + (documents ? " Use the explicitly supplied research MCP tool to read request documents; it is the only permitted local reference source." : ""))}`,
     "-c",
@@ -272,6 +282,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
+            ...accessField(null, failed),
             message: cliReported(
               binary,
               redact(cliShaped(binary, turnFailed, event.value).error.message),
@@ -287,6 +298,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (planLimit !== undefined) throw codexLimitError(failed, planLimit);
           throw providerError({
             kind: "other",
+            ...accessField(null, failed),
             message: cliReported(
               binary,
               redact(cliShaped(binary, errorEvent, event.value).message),

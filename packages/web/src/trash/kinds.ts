@@ -11,6 +11,8 @@ const kindLabels: Readonly<Record<TrashKind, string>> = {
   entry: "Intro/outro",
   template: "Template",
   schedule: "Schedule",
+  design: "Design",
+  "design-template": "Design template",
 };
 
 // The filter's words, plural, in the order the filter shows them.
@@ -20,11 +22,13 @@ export const kindFilters: readonly { readonly value: TrashKind; readonly label: 
   { value: "entry", label: "Intros and outros" },
   { value: "template", label: "Templates" },
   { value: "schedule", label: "Schedules" },
+  { value: "design", label: "Designs" },
+  { value: "design-template", label: "Design templates" },
 ];
 
 // What does and does not come here, for the empty trash and the section's meta line.
 export const whatComesHere =
-  "Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days.";
+  "Deleted projects, prompts, intros and outros, templates, schedules and designs stay here for 30 days.";
 export const whatDoesNot =
   "Channels, cast members, PDF themes and episode summaries are deleted permanently and never come here.";
 
@@ -61,11 +65,13 @@ export function itemKey(item: Pick<TrashItem, "kind" | "id">): string {
 
 // The lists an item returns to, so they show it again at once.
 export const listsOf: Readonly<Record<TrashKind, readonly (readonly string[])[]>> = {
-  project: [keys.projects, ["calendar"]],
+  project: [keys.projects, keys.calendar],
   prompt: [keys.prompts],
   entry: [keys.entries],
   template: [templatesKey],
-  schedule: [schedulesKey, ["calendar"]],
+  schedule: [schedulesKey, keys.calendar],
+  design: [keys.designs],
+  "design-template": [keys.designTemplates],
 };
 
 // The one-sentence consequence of removing these items for good.

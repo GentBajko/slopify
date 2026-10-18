@@ -23,9 +23,11 @@ import type { UnpackedExtension } from "../../slices/studio/unpacked.js";
 import { sampleOwner } from "../../slices/template-studio/repo.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
+import { assistantMcpPath, assistantMcpRoutes } from "../mcp/assistant.js";
 import { mcpRoutes } from "../mcp/http.js";
 import { actionRoutes } from "./actions.js";
-import { agentBindings } from "./actor.js";
+import { agentBindings, assistantBindings } from "./actor.js";
+import { assistantRoutes } from "./assistant.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { autostartRoutes } from "./autostart.js";
@@ -33,6 +35,8 @@ import { backupRoutes } from "./backups.js";
 import { channelMemoryRoutes } from "./channel-memory.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
+import { type DesignTemplateRoutesDeps, designTemplateRoutes } from "./design-templates.js";
+import { type DesignRoutesDeps, designRoutes } from "./designs.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
 import { draftRoutes } from "./drafts.js";
@@ -41,6 +45,8 @@ import { externalReviewRoutes } from "./external-reviews.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
+import { keywordRoutes } from "./keywords.js";
+import { modelCheckRoutes, providerCheckRoutes } from "./model-checks.js";
 import type { MutationLifecycle } from "./mutations.js";
 import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { onboardingRoutes } from "./onboarding.js";
@@ -48,7 +54,7 @@ import { openFolderRoutes } from "./open-folder.js";
 import { outputRoutes } from "./outputs.js";
 import { patchNotesRoutes } from "./patch-notes.js";
 import { planningRoutes } from "./planning.js";
-import { problem, problemFromError, titleOf } from "./problem.js";
+import { problem, problemFromError } from "./problem.js";
 import { projectTemplateRoutes } from "./project-templates.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
@@ -92,6 +98,9 @@ export interface AppDeps {
     | import("../../slices/channels/cast-images.js").CastImageGenerator
     | undefined;
   readonly schedules?: ScheduleDeps;
+  // Library → Designs; absent answers that designs aren't available.
+  readonly designs?: DesignRoutesDeps | undefined;
+  readonly designTemplates?: DesignTemplateRoutesDeps | undefined;
   readonly backups?: BackupService;
   // Settings → Backup & storage's files folder: where it is, Open folder, and moving it.
   readonly files?: import("../../slices/storage/files-location.js").FilesService;
@@ -113,6 +122,20 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // Settings → Models' checks and the pickers' standings (`slices/model-checks`).
+  readonly modelChecks?: import("../../slices/model-checks/service.js").ModelChecks | undefined;
+  readonly modelListing?: import("../../slices/model-checks/listing.js").Listing | undefined;
+  // Whether listings and free checks run by themselves (a key saved, a picker opened). Off in
+  // tests, so a route never reaches the network on its own.
+  readonly autoModelChecks?: boolean | undefined;
+  // The autopilot's hourly check (`slices/autopilot/signals.ts`); absent reads as not run yet.
+  readonly autopilot?:
+    | {
+        readonly latest: () =>
+          | import("../../slices/autopilot/signals.js").AutopilotProbes
+          | undefined;
+      }
+    | undefined;
   // The network for Settings → Providers' Test and Check all. Handed in so a test never
   // reaches a real provider.
   readonly fetch?: typeof globalThis.fetch;
@@ -146,6 +169,11 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
+  // The in-app assistant's chat and turns (`slices/assistant/turn.ts`); absent, the panel says
+  // it is unavailable and `/mcp/assistant` opens for nobody.
+  readonly assistant?: import("../../slices/assistant/turn.js").Assistant | undefined;
+  // The running turns' tokens when no assistant is wired (a test's own).
+  readonly assistantTurns?: import("../../slices/assistant/access.js").AssistantTurnTokens;
   // The address the server listens on (`--host`); `/mcp` accepts pages served from it.
   readonly host?: string | undefined;
   // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
@@ -201,6 +229,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/channels", channelRoutes(deps))
       .route("/channels", channelMemoryRoutes(deps))
+      .route("/designs", designRoutes(deps.designs))
+      .route("/design-templates", designTemplateRoutes(deps.designTemplates))
       .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
@@ -224,6 +254,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", youtubeEditRoutes(deps))
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
+      .route("/keywords", keywordRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
       .route("/pronunciations", pronunciationRoutes(deps))
@@ -238,8 +269,11 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/whats-new", whatsNewRoutes(deps))
       .route("/patch-notes", patchNotesRoutes(deps))
       .route("/tutorials", tutorialPagesRoutes(deps))
+      .route("/providers", providerCheckRoutes(deps))
       .route("/providers", providerRoutes(deps))
+      .route("/model-checks", modelCheckRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
+      .route("/assistant", assistantRoutes(deps))
   );
 }
 
@@ -257,7 +291,6 @@ export function createApp(deps: AppDeps): Hono {
       if (deps.installationPending?.() && new URL(c.req.url).pathname !== "/api/update/activate")
         return problem(c, {
           status: 503,
-          title: titleOf(503),
           detail:
             "Slopify is still finishing its Docker setup. Wait for the launcher to finish, then try again.",
         });
@@ -265,7 +298,6 @@ export function createApp(deps: AppDeps): Hono {
       if (deps.mutations !== undefined && releaseRequest === undefined)
         return problem(c, {
           status: 503,
-          title: titleOf(503),
           detail:
             "Slopify is shutting down, so changes cannot be saved right now. Start it again, reload the page and try again.",
         });
@@ -281,7 +313,6 @@ export function createApp(deps: AppDeps): Hono {
         releaseRequest?.();
         return problem(c, {
           status: 409,
-          title: titleOf(409),
           detail: "Slopify is updating. Wait for it to restart, reload the page and try again.",
         });
       }
@@ -306,7 +337,6 @@ export function createApp(deps: AppDeps): Hono {
         return next();
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail:
           "This is the sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top of the sample's page, then edit and rebuild the copy.",
         extensions: { reason: "sample-read-only" },
@@ -320,7 +350,6 @@ export function createApp(deps: AppDeps): Hono {
       if (owner === undefined) return next();
       return problem(c, {
         status: 409,
-        title: titleOf(409),
         detail: `This is the studio sample of ${owner.name}. Change the template in its studio instead: Library → Templates → ${owner.name} → Open studio.`,
         extensions: { reason: "template-sample" },
       });
@@ -342,6 +371,26 @@ export function createApp(deps: AppDeps): Hono {
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);
 
+  const mcpDeps = {
+    db: deps.db,
+    paths: deps.paths,
+    ids: deps.ids,
+    clock: deps.clock,
+    log: deps.log,
+    version: deps.version,
+    host: deps.host,
+    ...(deps.measureAudio === undefined ? {} : { measureAudio: deps.measureAudio }),
+  };
+  // The in-app assistant reaches it the same way, as the assistant, with its turn's token.
+  // Mounted first: `/mcp` must never answer for it.
+  app.route(
+    assistantMcpPath,
+    assistantMcpRoutes({
+      ...mcpDeps,
+      turns: deps.assistant?.tokens ?? deps.assistantTurns,
+      api: async (request) => app.request(request, undefined, assistantBindings),
+    }),
+  );
   // Agents reach the same API in-process, as the agent (`actor.ts`): every tool validates,
   // refuses and answers exactly like the page's own request.
   app.route(
@@ -380,7 +429,6 @@ const sampleReadOnlyExempt = /\/(revisions\/prepare|rebuild\/preview|open-folder
 function missing(c: Context): Response {
   return problem(c, {
     status: 404,
-    title: titleOf(404),
     detail: `${c.req.method} ${c.req.path} is not a route of this API.`,
   });
 }

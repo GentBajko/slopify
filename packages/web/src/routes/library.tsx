@@ -13,7 +13,13 @@ import { cn } from "@/lib/utils";
 // the narration aliases that say words a certain way), and A/B results. Each tab keeps its own
 // URL, so a link to any of them still lands.
 export const libraryGroups = [
-  { label: "Setups", tabs: [{ to: "/templates", label: "Templates" }] },
+  {
+    label: "Setups",
+    tabs: [
+      { to: "/templates", label: "Templates" },
+      { to: "/designs", label: "Designs" },
+    ],
+  },
   {
     label: "Building blocks",
     tabs: [
@@ -31,7 +37,7 @@ export function LibraryLayout(): ReactElement {
     <div>
       <PageHeader
         title="Library"
-        meta="Templates to start from, and the prompts, intros and outros, PDF themes and narration aliases they use"
+        meta="Templates and designs to start from, and the prompts, intros and outros, PDF themes and narration aliases they use"
       />
       <div className="mb-6 flex min-w-0 flex-wrap items-end gap-x-8 gap-y-3 border-b border-line">
         {libraryGroups.map((group) => (

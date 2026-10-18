@@ -14,6 +14,11 @@ export const cadenceSchema = z.discriminatedUnion("kind", [
       days: z.array(z.number().int().min(0).max(6)).min(1).max(7).readonly(),
     })
     .strict(),
+  // A design schedule: each row of its table is made ahead of the date it holds, at this time
+  // (`by-date.ts`). Only design schedules use it, and `nextOccurrence` is never asked about it.
+  z
+    .object({ kind: z.literal("by-date"), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/) })
+    .strict(),
 ]);
 export type Cadence = z.infer<typeof cadenceSchema>;
 

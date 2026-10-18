@@ -2,6 +2,7 @@ import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { useAssistantSelection } from "@/assistant/screen";
 import { channelsQuery } from "@/channels/api";
 import { useCurrentChannel } from "@/channels/current";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -79,6 +80,10 @@ export function TemplatesRoute({
         );
   const selection = useSelection(shown?.map((template) => template.id) ?? []);
   const chosen = shown?.filter((template) => selection.has(template.id)) ?? [];
+  useAssistantSelection(
+    "template",
+    chosen.map((template) => ({ id: template.id, label: template.name })),
+  );
   const bulk = useTemplatesBulk(templates.data ?? [], selection);
   const channelName = (template: TemplateSummary): string | undefined =>
     channels.data?.find((channel) => channel.id === channelOfTemplate(template))?.name;

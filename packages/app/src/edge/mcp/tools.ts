@@ -1,5 +1,6 @@
 import type { RouteTool } from "./route-tool.js";
 import { channelTools } from "./tools-channels.js";
+import { designTools } from "./tools-designs.js";
 import { libraryTools } from "./tools-library.js";
 import { planningTools } from "./tools-planning.js";
 import { projectTools } from "./tools-projects.js";
@@ -18,6 +19,7 @@ export const routeTools: readonly RouteTool[] = [
   ...planningTools,
   ...scheduleTools,
   ...channelTools,
+  ...designTools,
   ...libraryTools,
   ...setupTools,
   ...storageTools,

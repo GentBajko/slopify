@@ -7,7 +7,7 @@ import type { StorageDeps } from "../../slices/storage/staging.js";
 import { discardStagedFile, stageUpload } from "../../slices/storage/staging.js";
 import type { AppDeps } from "./app.js";
 import { readMultipart } from "./multipart.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 const kindParam = z.object({ kind: z.enum(uploadableStageKinds) });
 const idParam = z.object({ id: z.string().min(1).max(64) });
@@ -40,12 +40,11 @@ export function stagingRoutes(deps: AppDeps) {
       if (result === undefined) {
         return problem(c, {
           status: 400,
-          title: titleOf(400),
           detail: "No file arrived with the upload. Choose the file again and retry.",
         });
       }
       if (!result.ok) {
-        return problem(c, { status: 400, title: titleOf(400), detail: detailOf(result.reason) });
+        return problem(c, { status: 400, detail: detailOf(result.reason) });
       }
       return c.json(result.file, 201);
     })
@@ -54,7 +53,6 @@ export function stagingRoutes(deps: AppDeps) {
       if (!result.ok) {
         return problem(c, {
           status: result.reason === "in-use" ? 409 : 404,
-          title: titleOf(result.reason === "in-use" ? 409 : 404),
           detail:
             result.reason === "in-use"
               ? "This file is still attached to a draft in Play. Remove it from the draft first."

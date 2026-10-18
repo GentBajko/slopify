@@ -1,7 +1,3 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { z } from "zod";
 import { cliCommand } from "../../kernel/cli-command.js";
 import {
@@ -10,6 +6,8 @@ import {
   type PlanLimitHit,
   windowKindOf,
 } from "../../kernel/ports/plan-limits.js";
+import { withChildSession } from "./child-session.js";
+import { lines } from "./sse-lines.js";
 
 // The Codex plan windows. `codex exec --json` reports none, so they are asked of the CLI's
 // app server with `account/rateLimits/read` - a metadata-only exchange that starts no thread
@@ -51,80 +49,47 @@ export async function nodeCodexLimits(
   timeoutMs = 10_000,
 ): Promise<LimitWindow[] | null> {
   const command = cliCommand(binary);
-  const directory = await mkdtemp(join(tmpdir(), "slopify-codex-limits-"));
-  const child = spawn(command.file, [...command.args, "app-server", "--listen", "stdio://"], {
-    cwd: directory,
-    env: { ...env, PWD: directory },
-    stdio: ["pipe", "pipe", "pipe"],
-    windowsHide: true,
-    detached: process.platform !== "win32",
-  });
-  child.on("error", () => {});
-  child.stdin.on("error", () => {});
-  child.stderr.resume();
-  const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
-  const terminate = (signal: NodeJS.Signals): void => {
-    if (process.platform !== "win32" && child.pid !== undefined) {
+  const oversize = (): Error => new Error("Oversized reply");
+  return withChildSession(
+    {
+      file: command.file,
+      args: [...command.args, "app-server", "--listen", "stdio://"],
+      env: (directory) => ({ ...env, PWD: directory }),
+      directoryPrefix: "slopify-codex-limits-",
+      timeoutMs,
+      graceMs: 1000,
+    },
+    async ({ child, send }) => {
       try {
-        process.kill(-child.pid, signal);
-        return;
-      } catch {
-        /* The process may already have exited. */
-      }
-    }
-    child.kill(signal);
-  };
-  const timer = setTimeout(() => terminate("SIGKILL"), timeoutMs);
-  const send = (message: unknown) => child.stdin.write(`${JSON.stringify(message)}\n`);
-  let buffer = "";
-  try {
-    send({
-      id: 1,
-      method: "initialize",
-      params: { clientInfo: { name: "slopify_limits", version: "1.0" } },
-    });
-    child.stdout.setEncoding("utf8");
-    for await (const piece of child.stdout) {
-      buffer += piece;
-      if (buffer.length > 1024 * 1024) return null;
-      let newline = buffer.indexOf("\n");
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        newline = buffer.indexOf("\n");
-        if (line === "") continue;
-        const reply = z
-          .object({ id: z.unknown().optional(), result: z.unknown().optional() })
-          .safeParse(JSON.parse(line));
-        if (!reply.success) continue;
-        if (reply.data.id === 1) {
-          send({ method: "initialized" });
-          send({ id: 2, method: "account/rateLimits/read" });
-        } else if (reply.data.id === 2) {
-          const windows = codexWindows(reply.data.result);
-          return windows.length === 0 ? null : windows;
+        send({
+          id: 1,
+          method: "initialize",
+          params: { clientInfo: { name: "slopify_limits", version: "1.0" } },
+        });
+        for await (const raw of lines(child.stdout, undefined, {
+          chars: 1024 * 1024,
+          error: oversize,
+        })) {
+          const line = raw.trim();
+          if (line === "") continue;
+          const reply = z
+            .object({ id: z.unknown().optional(), result: z.unknown().optional() })
+            .safeParse(JSON.parse(line));
+          if (!reply.success) continue;
+          if (reply.data.id === 1) {
+            send({ method: "initialized" });
+            send({ id: 2, method: "account/rateLimits/read" });
+          } else if (reply.data.id === 2) {
+            const windows = codexWindows(reply.data.result);
+            return windows.length === 0 ? null : windows;
+          }
         }
+        return null;
+      } catch {
+        return null;
       }
-    }
-    return null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-    terminate("SIGTERM");
-    let grace: ReturnType<typeof setTimeout> | undefined;
-    await Promise.race([
-      closed,
-      new Promise<void>((resolve) => {
-        grace = setTimeout(() => {
-          terminate("SIGKILL");
-          resolve();
-        }, 1000);
-      }),
-    ]);
-    clearTimeout(grace);
-    await rm(directory, { recursive: true, force: true });
-  }
+    },
+  );
 }
 
 const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];

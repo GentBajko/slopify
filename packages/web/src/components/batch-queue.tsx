@@ -11,7 +11,7 @@ import { QueryState } from "@/components/kit/query-state";
 import { useToast } from "@/components/kit/toast";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
-import { projectsQuery } from "@/queries";
+import { keys, projectsQuery } from "@/queries";
 import { restoreTrashItem } from "@/trash/api";
 
 const queueKey = ["batch-queue"] as const;
@@ -133,7 +133,7 @@ export function QueueItemActions({
   const refresh = () => {
     void client.invalidateQueries({ queryKey: queueKey });
     void client.invalidateQueries({ queryKey: ["projects"] });
-    void client.invalidateQueries({ queryKey: ["calendar"] });
+    void client.invalidateQueries({ queryKey: keys.calendar });
   };
   const move = useMutation({
     mutationFn: (by: -1 | 1) => moveQueued(api, projectId, by),

@@ -292,8 +292,57 @@ export function mappedCodepoints(
 ): ReadonlySet<number> | undefined {
   const bytes = Buffer.from(content.buffer, content.byteOffset, content.byteLength);
   const face = directories(bytes)?.[index];
-  const table = face?.tables.get("cmap");
-  if (face === undefined || table === undefined || !validCmap(bytes, table)) return undefined;
+  const cmap = face === undefined ? undefined : unicodeCmap(bytes, face);
+  if (cmap === undefined) return undefined;
+  const found = new Set<number>();
+  for (const codepoint of codepoints)
+    if (glyphOf(bytes, cmap.at, cmap.format, codepoint, cmap.end) !== 0) found.add(codepoint);
+  return found;
+}
+
+// How wide each character is drawn, as a share of the ASS font size: the glyph's advance
+// (hmtx) over the height libass sizes a font by (OS/2 winAscent + winDescent, else the em).
+// Undefined for a character the font has no glyph for, and the whole answer undefined when
+// the font's tables can't be read; the caller then estimates.
+export function fontAdvances(
+  content: Uint8Array,
+  index: number,
+): ((codepoint: number) => number | undefined) | undefined {
+  const bytes = Buffer.from(content.buffer, content.byteOffset, content.byteLength);
+  const face = directories(bytes)?.[index];
+  const cmap = face === undefined ? undefined : unicodeCmap(bytes, face);
+  const head = face?.tables.get("head");
+  const hhea = face?.tables.get("hhea");
+  const hmtx = face?.tables.get("hmtx");
+  if (cmap === undefined || head === undefined || hhea === undefined || hmtx === undefined)
+    return undefined;
+  const units = bytes.readUInt16BE(head.offset + 18);
+  const metrics = bytes.readUInt16BE(hhea.offset + 34);
+  const os2 = face?.tables.get("OS/2");
+  const win =
+    os2 !== undefined && os2.length >= 78
+      ? bytes.readUInt16BE(os2.offset + 74) + bytes.readUInt16BE(os2.offset + 76)
+      : 0;
+  const height = win >= units / 2 && win <= units * 4 ? win : units;
+  const cache = new Map<number, number | undefined>();
+  return (codepoint) => {
+    if (cache.has(codepoint)) return cache.get(codepoint);
+    const glyph = glyphOf(bytes, cmap.at, cmap.format, codepoint, cmap.end);
+    // Glyphs past the last full metric share its advance (validated in `validTables`).
+    const advance =
+      glyph === 0 ? undefined : bytes.readUInt16BE(hmtx.offset + Math.min(glyph, metrics - 1) * 4);
+    const share = advance === undefined ? undefined : advance / height;
+    cache.set(codepoint, share);
+    return share;
+  };
+}
+
+function unicodeCmap(
+  bytes: Buffer,
+  face: Face,
+): { readonly at: number; readonly format: number; readonly end: number } | undefined {
+  const table = face.tables.get("cmap");
+  if (table === undefined || !validCmap(bytes, table)) return undefined;
   const count = bytes.readUInt16BE(table.offset + 2);
   let best: { readonly at: number; readonly format: number } | undefined;
   for (let entry = 0; entry < count; entry += 1) {
@@ -306,12 +355,7 @@ export function mappedCodepoints(
     if (!unicode || (format !== 4 && format !== 12)) continue;
     if (best === undefined || format > best.format) best = { at, format };
   }
-  if (best === undefined) return undefined;
-  const end = table.offset + table.length;
-  const found = new Set<number>();
-  for (const codepoint of codepoints)
-    if (glyphOf(bytes, best.at, best.format, codepoint, end) !== 0) found.add(codepoint);
-  return found;
+  return best === undefined ? undefined : { ...best, end: table.offset + table.length };
 }
 
 function glyphOf(

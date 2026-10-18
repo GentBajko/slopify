@@ -25,6 +25,7 @@ import { projectTemplateSchema } from "../project-templates/schema.js";
 import { revisionById } from "../revisions/repo.js";
 import { runsForSchedule, scheduleRows } from "../schedules/repo.js";
 import { allTelemetryEvents } from "../telemetry/repo.js";
+import { mergeDesigns } from "./backup-designs.js";
 import { type BackupDeps, projectRows, rowsOf } from "./backup-export.js";
 import {
   type BackupManifest,
@@ -133,6 +134,9 @@ export interface BackupImportSummary {
   readonly schedules: ItemCounts & { readonly paused: number };
   readonly voices: ItemCounts;
   readonly drafts: ItemCounts;
+  // Absent in summaries recorded before designs travelled.
+  readonly designs?: ItemCounts | undefined;
+  readonly designTemplates?: ItemCounts | undefined;
   readonly settings: { readonly added: number; readonly kept: number };
   readonly fonts: number;
   readonly usage: { readonly events: number; readonly alreadyImported: boolean };
@@ -499,6 +503,10 @@ function loadScratch(
       // broken fails there, and the upgrade's own message would talk about downgrading.
       throw damaged("some of its records point at records it doesn't hold.");
     }
+    // A design only links to a project; one whose project didn't travel stays, unlinked.
+    scratch.exec(
+      "UPDATE designs SET project_id=NULL WHERE project_id NOT IN (SELECT id FROM projects)",
+    );
     if (scratch.prepare("PRAGMA foreign_key_check").all().length > 0)
       throw damaged("some of its records point at records it doesn't hold.");
     return scratch;
@@ -835,14 +843,19 @@ function commit(
 
       const schedules = { added: 0, renamed: 0, skipped: 0, paused: 0 };
       for (const schedule of rowsOf(scratch, "SELECT * FROM schedules ORDER BY rowid")) {
-        if (
-          has("SELECT 1 FROM schedules WHERE id=?", String(schedule.id)) ||
-          !has(
-            "SELECT 1 FROM project_template_revisions WHERE template_id=? AND version=?",
-            String(schedule.template_id),
-            Number(schedule.template_version),
-          )
-        ) {
+        // A design schedule's template comes in with the designs, further down.
+        const design = schedule.template_kind === "design";
+        const templateHere = design
+          ? scratch
+              .prepare("SELECT 1 FROM design_templates WHERE id=?")
+              .get(String(schedule.template_id)) !== undefined ||
+            has("SELECT 1 FROM design_templates WHERE id=?", String(schedule.template_id))
+          : has(
+              "SELECT 1 FROM project_template_revisions WHERE template_id=? AND version=?",
+              String(schedule.template_id),
+              Number(schedule.template_version),
+            );
+        if (has("SELECT 1 FROM schedules WHERE id=?", String(schedule.id)) || !templateHere) {
           schedules.skipped += 1;
           continue;
         }
@@ -961,6 +974,11 @@ function commit(
         imported.push({ id: listed.id, title: listed.title });
       }
 
+      // After the projects, so a design keeps its link to one that came in with it.
+      const merged = mergeDesigns(db, scratch, (table, row) => {
+        insertRow(db, table, row);
+      });
+
       const summary: BackupImportSummary = {
         backup: {
           id: manifest.backupId,
@@ -977,6 +995,8 @@ function commit(
         schedules,
         voices: { added: voicesAdded, renamed: 0, skipped: voicesSkipped },
         drafts,
+        designs: { ...merged.designs, renamed: 0 },
+        designTemplates: { ...merged.templates, renamed: 0 },
         settings: { added: settingsAdded, kept: settingsKept },
         fonts,
         usage: { events, alreadyImported },

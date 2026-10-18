@@ -63,9 +63,11 @@ Mistakes the editor refuses, with the line and column:
 - a keyword with no name,
 - a keyword placed inside another keyword.
 
-### Keywords Slopify fills: {{Scene}} and {{Appearance}}
+### Keywords Slopify fills
 
-Two keywords never become fields. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
+Keywords written with the `Slopify_` prefix, like `{{Slopify_Title}}`, `{{Slopify_Summary}}` or `{{Slopify_Setting}}`, never become fields either: Slopify fills them itself, and the editor's **Insert** bar lists the ones each kind of prompt can use. See [Keywords Slopify fills](Keywords-Slopify-Fills) for every one, where it works and what it costs. Any other name starting with `Slopify_` is refused when you save.
+
+`{{Scene}}` and `{{Appearance}}` are the old names of `{{Slopify_Scene}}` and `{{Slopify_Appearance}}`. They never become fields. The project's AI model writes them during the run, once the article exists, and the picture waits for them:
 
 | Keyword | Filled with | Works in | Needs |
 | --- | --- | --- | --- |
@@ -155,6 +157,7 @@ Prompts saved before history existed start with their current text as version 1.
 - [Library overview](Library-Overview)
 - [Title and article](Play-Title-and-Article)
 - [Images](Play-Images)
+- [Keywords Slopify fills](Keywords-Slopify-Fills)
 - [Templates](Templates)
 - [Editing a project](Editing-a-Project)
 - [Trash](Trash)

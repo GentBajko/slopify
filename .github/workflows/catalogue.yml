@@ -1,0 +1,54 @@
+name: Catalogue
+
+# Once a day: propose models.yaml and models-lifecycle.yaml from OpenRouter's public model
+# metadata (packages/app/scripts/catalogue-build.ts) and keep one pull request open with the
+# result, titled like "Models: 3 new, 1 retired, 2 price changes". Nothing is merged here.
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: catalogue-daily
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - id: build
+        run: |
+          summary="$(node --import ./packages/app/scripts/ts-resolve.mjs packages/app/scripts/catalogue-build.ts | tail -n 1)"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+      # The proposal must pass the same catalogue tests CI runs, including the one that reads
+      # the shipped models.yaml with the v1 schema older installs use.
+      - run: npx vitest run packages/app/src/catalog
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.build.outputs.summary }}
+        run: |
+          if git diff --quiet -- packages/app/src/assets/models.yaml packages/app/src/assets/models-lifecycle.yaml; then
+            echo "No catalogue changes today."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/catalogue-daily
+          git add packages/app/src/assets/models.yaml packages/app/src/assets/models-lifecycle.yaml
+          git commit -m "chore(models): $SUMMARY" -m "Proposed from OpenRouter's public model metadata by the Catalogue workflow. Review the new models, retirements and prices before merging."
+          git push --force origin chore/catalogue-daily
+          body="Proposed by the daily Catalogue workflow from OpenRouter's public model metadata. Check the new models, retirements and prices, then merge. Installed copies pick the change up at their next daily check."
+          gh pr create --base main --head chore/catalogue-daily --title "$SUMMARY" --body "$body" \
+            || gh pr edit chore/catalogue-daily --title "$SUMMARY" --body "$body"

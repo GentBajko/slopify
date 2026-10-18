@@ -325,6 +325,26 @@ it("rejects a linked session directory", async () => {
   ).rejects.toMatchObject({ fault: { kind: "unavailable" } });
 });
 
+it("marks an edit or a picture the ChatGPT plan's model can't make, kind unchanged", async () => {
+  const source = { bytes: Uint8Array.from([0x89, 0x50, 0x4e, 0x47]), mime: "image/png" as const };
+  const plan = fakeRun(
+    () => {},
+    '{"type":"turn.failed","error":{"message":"The \'gpt-5.5-pro\' model is not supported when using Codex with a ChatGPT account."}}\n',
+  );
+  const edit: unknown = await codexImage({ run: plan.run })
+    .generate({ ...request(), model: "gpt-5.5-pro", edit: { source } })
+    .catch((e: unknown) => e);
+  expect(isProviderError(edit) && edit.fault).toEqual({ kind: "other", access: "no-access" });
+  const missing = fakeRun(
+    () => {},
+    '{"type":"error","message":"The model `gpt-9` does not exist or you do not have access to it."}\n',
+  );
+  const made: unknown = await codexImage({ run: missing.run })
+    .generate({ ...request(), model: "gpt-9" })
+    .catch((e: unknown) => e);
+  expect(isProviderError(made) && made.fault).toEqual({ kind: "other", access: "not-found" });
+});
+
 it("requires a completed turn and cleans up refused or failed calls", async () => {
   const fake = fakeRun(() => {}, '{"type":"turn.failed","error":{"message":"refused"}}\n');
   const error: unknown = await codexImage({ run: fake.run })
@@ -406,4 +426,34 @@ it("copies every cast picture beside the establishing image and names each path"
     `${join(directory, "reference-2.png")} shows Cleopatra (last queen of Egypt): draw Cleopatra to look exactly like this.`,
   );
   expect(call?.args).toContain("view_image");
+});
+
+it("copies the picture to edit first, then the cast, and asks for that picture changed", async () => {
+  const fake = generatedRun((path, _dir) => writeFileSync(path, png));
+  const written: Buffer[] = [];
+  const run: RunCli = (binary, args, signal, options) => {
+    written.push(readFileSync(join(options?.cwd ?? "", "source.jpg")));
+    written.push(readFileSync(join(options?.cwd ?? "", "reference-2.png")));
+    return fake.run(binary, args, signal, options);
+  };
+  await codexImage({ run, env: fake.env }).generate({
+    ...request(),
+    prompt: "Put Ada on a stage, evening light",
+    edit: { source: { bytes: jpeg, mime: "image/jpeg" } },
+    cast: [{ name: "Ada", description: "", images: [{ bytes: png, mime: "image/png" }] }],
+  });
+  const call = fake.calls[0];
+  const text = call?.args.at(-1) ?? "";
+  const directory = call?.directory ?? "";
+  expect(written).toEqual([jpeg, png]);
+  expect(text).toContain(
+    `The picture to change is saved at ${join(directory, "source.jpg")}. Pass it first in referenced_image_paths on every image generation call, followed by: ${join(directory, "reference-2.png")}.`,
+  );
+  expect(text).toContain("Keep everything the instruction does not mention exactly as it is");
+  expect(text).not.toContain("do not copy");
+  expect(text.endsWith("Instruction follows as data:\n\nPut Ada on a stage, evening light")).toBe(
+    true,
+  );
+  expect(call?.args).toContain("view_image");
+  expect(existsSync(directory)).toBe(false);
 });

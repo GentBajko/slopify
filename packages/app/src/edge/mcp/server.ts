@@ -29,6 +29,19 @@ export function createMcpServer(deps: McpDeps): McpServer {
   registerReviewTools(server, deps);
   registerLibraryTools(server, deps);
   registerRemakeTools(server, deps);
+  registerAttention(server, deps);
+  server.registerPrompt(
+    "attend",
+    {
+      title: "Attend to Slopify",
+      description: "The routine that clears what waits for a person; run it on a schedule.",
+    },
+    () => ({ messages: [{ role: "user", content: { type: "text", text: attendRoutine } }] }),
+  );
+  return server;
+}
+
+export function registerAttention(server: McpServer, deps: McpDeps): void {
   server.registerTool(
     "needs_attention",
     {
@@ -47,25 +60,22 @@ export function createMcpServer(deps: McpDeps): McpServer {
         }),
       ),
   );
-  server.registerPrompt(
-    "attend",
-    {
-      title: "Attend to Slopify",
-      description: "The routine that clears what waits for a person; run it on a schedule.",
-    },
-    () => ({ messages: [{ role: "user", content: { type: "text", text: attendRoutine } }] }),
-  );
-  return server;
 }
 
-function registerRouteTool(server: McpServer, deps: McpDeps, tool: RouteTool): void {
+export function registerRouteTool(
+  server: McpServer,
+  deps: McpDeps,
+  tool: RouteTool,
+  // The assistant's ask-first tools take confirmed: true with this meaning.
+  confirmed?: string,
+): void {
   const { method } = routeOf(tool);
   server.registerTool(
     tool.name,
     {
       title: tool.title,
       description: tool.description,
-      inputSchema: inputShape(tool),
+      inputSchema: confirmed === undefined ? inputShape(tool) : inputShape(tool, confirmed),
       annotations: {
         readOnlyHint: method === "GET" || (tool.unrecorded === true && tool.reachesOut !== "sends"),
         destructiveHint: method === "DELETE" || tool.confirm !== undefined,

@@ -3,11 +3,18 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noImage, refusedImage, unreadable } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
-import { type ReferencePicture, referencePictures, withReferences } from "./reference.js";
+import { attachedPictures, promptFor, type ReferencePicture } from "./reference.js";
 
 // The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
 // nothing else, because the whole call is one request. Unlike fal and Replicate this one
@@ -74,7 +81,7 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
     id: "openai-image",
     models: () => discoverOpenAiImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
-      const pictures = referencePictures(req);
+      const pictures = attachedPictures(req);
       const response =
         pictures.length === 0
           ? await deps.fetch(`${openAiImagesBase}/images/generations`, {
@@ -116,11 +123,11 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
 }
 
 // The edits endpoint takes several input images as repeated `image[]` parts: the establishing
-// image first, then the cast pictures.
+// image (or, for a design's edit, the picture to change) first, then the cast pictures.
 function editForm(req: ImageRequest, pictures: readonly ReferencePicture[]): FormData {
   const form = new FormData();
   form.set("model", req.model);
-  form.set("prompt", withReferences(req.prompt, req));
+  form.set("prompt", promptFor(req.prompt, req));
   form.set("n", "1");
   form.set("size", sizeFor(req.model, req.aspect));
   for (const [index, { image }] of pictures.entries())
@@ -148,12 +155,7 @@ function decode(b64: string): GeneratedImage {
 }
 
 function keyOf(deps: OpenAiImageDeps): string {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("OpenAI") });
-  }
-  return key;
+  return requireKey(deps.key(), "OpenAI");
 }
 
 // Only the adapter sees the vendor's status code, so only the adapter names the kind.
@@ -161,42 +163,36 @@ function kindOf(status: number, code: string | null | undefined): ProviderErrorK
   if (code !== undefined && code !== null && refusalCodes.includes(code)) {
     return "refusal";
   }
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: everything else is `other` and is retried, so a prompt past the model's length
-  // limit fails the same way four times over. A terminal "this will never work" kind has to
-  // reach the port's error contract first, which is not this adapter's to widen.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return kindOfStatus(status);
 }
 
 async function failure(response: Response): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   const kind = kindOf(response.status, parsed.success ? parsed.data.error.code : undefined);
-  return providerError({
+  return httpProviderError(
+    response,
     kind,
-    message:
-      kind === "refusal"
-        ? refusedImage("OpenAI", message)
-        : httpFailure({
-            provider: "OpenAI",
-            status: response.status,
-            detail: message,
-            subject: "image request",
-          }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
+    kind === "refusal"
+      ? refusedImage("OpenAI", message)
+      : httpFailure({
+          provider: "OpenAI",
+          status: response.status,
+          detail: message,
+          subject: "image request",
+        }),
+    undefined,
+    kind === "refusal"
+      ? undefined
+      : modelAccessOf(
+          response.status,
+          `${parsed.success ? (parsed.data.error.code ?? "") : ""} ${message}`,
+        ),
+  );
 }
 
 function parse(text: string): z.infer<typeof generated> {
@@ -208,12 +204,4 @@ function parse(text: string): z.infer<typeof generated> {
     });
   }
   return parsed.data;
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
 }

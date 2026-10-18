@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
-import type { Usage } from "../../kernel/ports/llm.js";
 
 // One install event, one per project created, one per stage completing.
 export const telemetryEventTypes = ["install", "project.created", "stage.completed"] as const;
@@ -25,15 +24,6 @@ export type RecordEvent = (type: TelemetryEventType, counters: TelemetryCounters
 export interface Tokens {
   readonly tokensIn: number;
   readonly tokensOut: number;
-}
-
-export const noTokens: Tokens = { tokensIn: 0, tokensOut: 0 };
-
-export function plusUsage(tokens: Tokens, usage: Usage | null): Tokens {
-  return {
-    tokensIn: tokens.tokensIn + (usage?.inputTokens ?? 0),
-    tokensOut: tokens.tokensOut + (usage?.outputTokens ?? 0),
-  };
 }
 
 // The whole privacy surface. API keys, prompt bodies, keyword values, titles, article and

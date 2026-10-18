@@ -254,6 +254,30 @@ describe("googleImage failures", () => {
     expect(error instanceof Error && error.message).toMatch(/^Google refused access/);
   });
 
+  it("marks a model the key can't use or that Google doesn't have, kind unchanged", async () => {
+    const answer =
+      (status: number, message: string, named: string): GoogleImageDeps["fetch"] =>
+      () =>
+        Promise.resolve(
+          Response.json({ error: { code: status, message, status: named } }, { status }),
+        );
+    const denied = await generate(
+      answer(403, "The caller does not have permission", "PERMISSION_DENIED"),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(denied) && denied.fault).toMatchObject({
+      kind: "refusal",
+      access: "no-access",
+    });
+    const missing = await generate(
+      answer(404, "models/imagen-9 is not found for API version v1beta", "NOT_FOUND"),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(missing) && missing.fault.access).toBe("not-found");
+    const busy = await generate(answer(503, "The model is overloaded.", "UNAVAILABLE")).catch(
+      (e: unknown) => e,
+    );
+    expect(isProviderError(busy) && busy.fault.access).toBeUndefined();
+  });
+
   // An absent key is terminal, so it never becomes a request.
   it("fails without calling when no key is stored", async () => {
     const seen: Seen[] = [];
@@ -270,5 +294,34 @@ describe("googleImage failures", () => {
       Promise.resolve(new Response("<html>502</html>", { status: 200 }));
 
     await expect(generate(shapeless)).rejects.toThrow(/could not read/);
+  });
+});
+
+describe("a picture to edit", () => {
+  it("is the first input part, before the cast, with the edit wording last", async () => {
+    const seen: Seen[] = [];
+    const source = { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), mime: "image/png" as const };
+    const ada = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
+    await googleImage({ fetch: watching("google-success.json", seen), key: () => key }).generate({
+      model,
+      prompt: "Evening light",
+      aspect: "1:1",
+      edit: { source },
+      cast: [{ name: "Ada", description: "the host", images: [ada] }],
+      signal: new AbortController().signal,
+    });
+    const body = bodyOf(seen[0]) as {
+      input: { type: string; mime_type?: string; data?: string; text?: string }[];
+    };
+    expect(body.input.map((part) => part.type)).toEqual(["image", "image", "text"]);
+    expect(body.input[0]).toEqual({
+      type: "image",
+      mime_type: "image/png",
+      data: Buffer.from(source.bytes).toString("base64"),
+    });
+    expect(body.input[1]?.mime_type).toBe("image/jpeg");
+    expect(body.input[2]?.text).toMatch(/^Change the first attached image as follows\./);
+    expect(body.input[2]?.text).toContain("Image 2 shows Ada (the host)");
+    expect(body.input[2]?.text).toMatch(/Evening light$/);
   });
 });

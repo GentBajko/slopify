@@ -1,5 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
-import { readSetting, writeSetting } from "../settings/repo.js";
+import {
+  deleteSetting,
+  readJsonSetting,
+  stringListSchema,
+  writeSetting,
+} from "../settings/repo.js";
 import type { Prompt } from "./model.js";
 import { promptById, promptByName } from "./repo.js";
 
@@ -14,16 +19,8 @@ import { promptById, promptByName } from "./repo.js";
 export const photorealisticPromptsKey = "library.photorealisticPrompts";
 
 export function photorealisticPromptIds(db: DatabaseSync): ReadonlySet<string> {
-  const stored = readSetting(db, photorealisticPromptsKey);
-  if (stored === undefined) return new Set();
-  try {
-    const value: unknown = JSON.parse(stored);
-    return new Set(
-      Array.isArray(value) ? value.filter((one): one is string => typeof one === "string") : [],
-    );
-  } catch {
-    return new Set();
-  }
+  const value = readJsonSetting(db, photorealisticPromptsKey, stringListSchema, []);
+  return new Set(value);
 }
 
 // The prompts as the Library lists them, the ticked ones marked.
@@ -51,8 +48,7 @@ export function setPromptPhotorealistic(
   if (prompt.kind !== "image") return { ok: false, reason: "not-an-image-prompt" };
   const others = [...photorealisticPromptIds(db)].filter((one) => one !== id);
   const next = on ? [...others, id].sort() : others;
-  if (next.length === 0)
-    db.prepare("DELETE FROM settings WHERE key = ?").run(photorealisticPromptsKey);
+  if (next.length === 0) deleteSetting(db, photorealisticPromptsKey);
   else writeSetting(db, photorealisticPromptsKey, JSON.stringify(next));
   return { ok: true };
 }

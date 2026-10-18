@@ -225,6 +225,24 @@ describe("falImage.generate", () => {
     expect(String(thrown)).toContain("value is not a valid enumeration member");
   });
 
+  it("marks a model fal.ai doesn't have or won't run for the key, at its own address", async () => {
+    const missing = await failed(
+      replaying(
+        () => new Response(JSON.stringify({ detail: "Application not found" }), { status: 404 }),
+      ),
+    );
+    expect(isProviderError(missing) && missing.fault).toEqual({
+      kind: "other",
+      access: "not-found",
+    });
+    const denied = await failed(
+      replaying(() => new Response(JSON.stringify({ detail: "Forbidden" }), { status: 403 })),
+    );
+    expect(isProviderError(denied) && denied.fault.access).toBe("no-access");
+    const bad = await failed(replaying(answering("fal-422.json", 422)));
+    expect(isProviderError(bad) && bad.fault.access).toBeUndefined();
+  });
+
   // The safety checker's verdict is fal's final answer, so the wrapper must not
   // spend three more images finding that out.
   it("calls a flagged answer a refusal, which the wrapper never retries", async () => {
@@ -306,5 +324,51 @@ describe("an establishing image", () => {
     expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
     expect(String(thrown)).toContain("set Establishing image to Off in the Images section");
     expect(seen).toEqual([]);
+  });
+});
+
+describe("a picture to edit", () => {
+  const source = { bytes: pngBytes, mime: "image/png" as const };
+  const member = { bytes: Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]), mime: "image/jpeg" as const };
+  const editing = (fetcher: FalImageDeps["fetch"], which: string) =>
+    falImage({ fetch: fetcher, key: () => key }).generate({
+      model: which,
+      prompt: "Darker sky",
+      aspect: "1:1",
+      edit: { source },
+      cast: [{ name: "Ada", description: "", images: [member] }],
+      signal: new AbortController().signal,
+    });
+
+  it("goes to the edit endpoint with the source first in image_urls and the edit wording", async () => {
+    const seen: Seen[] = [];
+    await editing(replaying(answering("fal-success.json"), delivered, seen), "fal-ai/flux-2");
+    expect(seen[0]?.url).toBe(`${falBase}/fal-ai/flux-2/edit`);
+    const body = bodyOf(seen[0]) as { image_urls: string[]; prompt: string };
+    expect(body.image_urls).toEqual([
+      `data:image/png;base64,${Buffer.from(pngBytes).toString("base64")}`,
+      `data:image/jpeg;base64,${Buffer.from(member.bytes).toString("base64")}`,
+    ]);
+    expect(body.prompt).toMatch(/^Change the first attached image as follows\./);
+    expect(body.prompt).toMatch(/Darker sky$/);
+  });
+
+  it("is refused, before any request, by a model without an edit endpoint", async () => {
+    const seen: Seen[] = [];
+    const thrown: unknown = await editing(
+      replaying(answering("fal-success.json"), delivered, seen),
+      "fal-ai/flux/schnell",
+    ).catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.kind).toBe("unsupported");
+    expect(String(thrown)).toContain("can't edit a picture");
+    expect(seen).toEqual([]);
+  });
+
+  it("marks an edit endpoint the key can't reach, like any other call", async () => {
+    const thrown: unknown = await editing(
+      replaying(() => new Response(JSON.stringify({ detail: "Forbidden" }), { status: 403 })),
+      "fal-ai/flux-2",
+    ).catch((error: unknown) => error);
+    expect(isProviderError(thrown) && thrown.fault.access).toBe("no-access");
   });
 });

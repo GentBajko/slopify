@@ -74,7 +74,14 @@ export interface ProviderFault {
   readonly retryAfterMs?: number | undefined;
   // A CLI's plan allowance is used up: the call waits for it to return instead of failing.
   readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
+  // The provider said this account can't use the chosen model (not on the plan, no access) or
+  // that the model does not exist for it. Only Settings → Models and the pickers read it; the
+  // kind alone decides what the run does.
+  readonly access?: ModelAccess | undefined;
 }
+
+export const modelAccesses = ["no-access", "not-found"] as const;
+export type ModelAccess = (typeof modelAccesses)[number];
 
 // An Error, so a stack survives and every existing catch still works, carrying the one
 // field the attempt wrapper reads. Adapters name the kind because only the adapter sees
@@ -87,6 +94,7 @@ export interface ProviderErrorInit {
   readonly message: string;
   readonly retryAfterMs?: number | undefined;
   readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
+  readonly access?: ModelAccess | undefined;
 }
 
 export function providerError(init: ProviderErrorInit): ProviderError {
@@ -95,6 +103,7 @@ export function providerError(init: ProviderErrorInit): ProviderError {
       kind: init.kind,
       ...(init.retryAfterMs === undefined ? {} : { retryAfterMs: init.retryAfterMs }),
       ...(init.planLimit === undefined ? {} : { planLimit: init.planLimit }),
+      ...(init.access === undefined ? {} : { access: init.access }),
     },
   });
 }

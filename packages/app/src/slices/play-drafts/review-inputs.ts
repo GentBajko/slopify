@@ -140,6 +140,7 @@ export function resolveReviewInputs(
       draft: { ...draft, values },
       staged,
       requiredSlots: basePicked.requiredSlots,
+      keywordUses: basePicked.keywordUses,
     });
     const accepted = admitted.ok ? admitted.draft : draft;
     const issues = [

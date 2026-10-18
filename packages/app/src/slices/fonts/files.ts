@@ -1,14 +1,7 @@
 import { constants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
+import { isUnreachablePath } from "../../kernel/errors.js";
 import { fontMaxBytes } from "./model.js";
-
-export function unavailable(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    ["ENOENT", "ENOTDIR", "EACCES", "EPERM", "ELOOP"].includes(String(error.code))
-  );
-}
 
 export async function readFontFile(path: string): Promise<Buffer | undefined> {
   try {
@@ -29,7 +22,7 @@ export async function readFontFile(path: string): Promise<Buffer | undefined> {
       await file.close();
     }
   } catch (error) {
-    if (unavailable(error)) return undefined;
+    if (isUnreachablePath(error)) return undefined;
     throw error;
   }
 }

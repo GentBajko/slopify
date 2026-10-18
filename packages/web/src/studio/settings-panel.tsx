@@ -6,7 +6,7 @@ import { newStudioPairing, readStudioSettings, saveStudioPlaylists } from "@/api
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { Button } from "@/components/kit/button";
-import { Field, Input, Select } from "@/components/kit/field";
+import { Checkbox, Field, Input, Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
@@ -147,9 +147,7 @@ function Playlists() {
               }
             />
             <label className="flex min-h-9 items-center gap-2 text-small">
-              <input
-                type="checkbox"
-                className="size-4 accent-[var(--color-accent)]"
+              <Checkbox
                 checked={row.byDefault}
                 onChange={(event) => {
                   const on = event.currentTarget.checked;

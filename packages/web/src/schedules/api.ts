@@ -15,15 +15,20 @@ import {
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf, understood } from "@/http";
+import { refusable } from "@/http";
+import { keys } from "@/queries";
 
-const problemSchema = z.object({
-  title: z.string(),
-  detail: z.string().optional(),
-  reason: z.string().optional(),
-});
 const summaryBody = z.object({ schedules: z.array(scheduleSummarySchema) });
-const detailBody = z.object({ schedule: scheduleSummarySchema, runs: z.array(scheduleRunSchema) });
+// Each scored topic's score and reasons, by `topicKey`; a server from before scoring sends none.
+const scoresBody = z
+  .record(z.string(), z.object({ score: z.number(), reasons: z.array(z.string()) }))
+  .default({});
+export type TopicScores = z.infer<typeof scoresBody>;
+const detailBody = z.object({
+  schedule: scheduleSummarySchema,
+  runs: z.array(scheduleRunSchema),
+  scores: scoresBody,
+});
 const root = (api: Api): string => `${api.origin}/api/schedules`;
 
 export type ScheduleReply<T> =
@@ -31,18 +36,13 @@ export type ScheduleReply<T> =
   | { readonly ok: false; readonly message: string; readonly reason: string };
 
 async function responseOf<T>(response: Response, schema: z.ZodType<T>): Promise<ScheduleReply<T>> {
-  let raw: unknown;
-  try {
-    raw = await response.json();
-  } catch {
-    throw errorOf(response, undefined);
-  }
-  if (response.ok) return { ok: true, value: understood(schema, raw) };
-  const parsed = problemSchema.safeParse(raw);
-  if (!parsed.success) throw errorOf(response, undefined);
-  const message = parsed.data.detail ?? parsed.data.title;
-  if (![400, 404, 409].includes(response.status)) throw new Error(message);
-  return { ok: false, message, reason: parsed.data.reason ?? "invalid-request" };
+  const result = await refusable(response, schema);
+  if (result.ok) return result;
+  return {
+    ok: false,
+    message: result.refusal.message,
+    reason: result.refusal.reason ?? "invalid-request",
+  };
 }
 
 const json = (method: string, body: unknown): RequestInit => ({
@@ -65,11 +65,30 @@ export function schedulesQuery(api: Api): UseQueryOptions<readonly ScheduleSumma
   };
 }
 
+export const scheduleDetailKey = (id: string) => ["schedule", id] as const;
+
+// One schedule's runs and its topics' scores; Schedules → the picked schedule reads it.
+export function scheduleDetailQuery(api: Api, id: string) {
+  return {
+    queryKey: scheduleDetailKey(id),
+    queryFn: async () => {
+      const reply = await readSchedule(api, id);
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+    refetchInterval: 30_000,
+  };
+}
+
 export async function readSchedule(
   api: Api,
   id: string,
 ): Promise<
-  ScheduleReply<{ readonly schedule: ScheduleSummary; readonly runs: readonly ScheduleRun[] }>
+  ScheduleReply<{
+    readonly schedule: ScheduleSummary;
+    readonly runs: readonly ScheduleRun[];
+    readonly scores: TopicScores;
+  }>
 > {
   return responseOf(await api.fetch(`${root(api)}/${encodeURIComponent(id)}`), detailBody);
 }
@@ -136,6 +155,14 @@ export async function readHeldTopics(
 
 const topicPath = (api: Api, id: string, rest: string): string =>
   `${root(api)}/${encodeURIComponent(id)}/topics/${rest}`;
+
+// Rescore: every queued and held topic scored again and put in score order.
+export async function rescoreTopics(api: Api, id: string): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(topicPath(api, id, "score"), json("POST", {})),
+    scheduleSummarySchema,
+  );
+}
 
 export async function generateTopicsNow(
   api: Api,
@@ -295,7 +322,7 @@ export async function transferTopic(
   );
 }
 
-export const calendarKey = ["calendar"] as const;
+export const calendarKey = keys.calendar;
 
 export function calendarQuery(api: Api, from: string, to: string): UseQueryOptions<Calendar> {
   return {

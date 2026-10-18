@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonBetween } from "../../kernel/json-answer.js";
 import type { Message } from "../../kernel/ports/llm.js";
 
 // One call per short writes exactly the image prompts its clip needs, one per stretch of
@@ -58,7 +59,7 @@ const fix = "Try again, or choose another model in Edit project → Providers.";
 // The reason is the sentence the stage shows; the provider wrapper's `check` asks the model
 // again while attempts remain.
 export function checkImagePrompts(text: string, count: number): CheckedImagePrompts {
-  const parsed = z.array(z.string()).safeParse(jsonArrayOf(text));
+  const parsed = z.array(z.string()).safeParse(jsonBetween(text, "[", "]"));
   if (!parsed.success)
     return {
       ok: false,
@@ -76,15 +77,4 @@ export function checkImagePrompts(text: string, count: number): CheckedImageProm
       reason: `One of the AI model's image prompts for a short is empty. ${fix}`,
     };
   return { ok: true, prompts };
-}
-
-function jsonArrayOf(text: string): unknown {
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start === -1 || end <= start) return undefined;
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return undefined;
-  }
 }

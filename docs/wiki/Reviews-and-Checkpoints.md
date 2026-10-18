@@ -81,7 +81,7 @@ A reviewer checks each finished item and saves its verdict and reasons on the pr
 | **Reviewer model** | The model that judges each item. A stronger model catches more but costs more per review. It can differ from the model that wrote the text. | None |
 | **Redos per item** | How many times **Flag and redo** makes a failed item again before it keeps the last one and flags it. Each redo costs the item again plus one more review. | 2; 0 to 5 |
 
-Then, for each stage (**Article**, **Images**, **Narration**, **Thumbnail**, **Shorts**), pick a mode and a prompt:
+Then, for each stage (**Article**, **Promise check (before narration)**, **Images**, **Narration**, **Thumbnail**, **Shorts**), pick a mode and a prompt:
 
 | Mode | What happens to a failed item |
 | --- | --- |
@@ -96,10 +96,21 @@ The prompt next to each mode is **Built-in** or a **Review** prompt from the Lib
 | Stage | The built-in reviewer checks |
 | --- | --- |
 | **Article** | The article prompt's rules (length, structure, tone), no invented lore, no repeated sections. The research notes are included. |
+| **Promise check (before narration)** | That the opening keeps what the title and thumbnail promise. See [The promise check](#the-promise-check). |
 | **Images** | Malformed hands or bodies, stray text or letters, that it matches its brief, and that it matches the establishing image when one is on. |
 | **Narration** | Nothing missing or garbled compared with the text: the reviewer reads what the word timing heard and the stretches it could not hear. |
 | **Thumbnail** | Readable at phone size, clear subject. |
 | **Shorts** | The short's images at phone size: clear subject, no stray text, fits the title. |
+
+### The promise check
+
+One cheap text call before the paid narration. The reviewer reads the video's title, the thumbnail brief (when the thumbnail is drawn from a prompt), the opening as the voice will say it (about the first 30 seconds: 75 words at 150 words a minute) and the whole article.
+
+- **Passes** when the opening starts delivering what the title and thumbnail promise and gives a reason to keep watching.
+- **Fails** on a slow preamble, a greeting or channel housekeeping (subscribe, welcome back) before the subject, an opening about something else, or a promise the article never keeps. The reasons name the sentence that should come first.
+- **Flag and redo** writes the article again and checks the new one. The narration, the pictures and everything else that reads the article wait for the answer, so nothing paid is made from an opening that failed.
+- It needs an article written by a model: with **Article** set to Provide the row is greyed and says why.
+- It uses the reviewer model above and adds one text-model call to the estimate. Default: Off.
 
 ### Set up automatic reviews
 
@@ -121,7 +132,7 @@ With **Who reviews** set to **External agent (MCP)**, no model is called: each r
 
 ### Reviews on the project page
 
-Beside the article, the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With the External agent reviewer, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
+Beside the article (with the promise check's verdict under the article review's), the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. With the External agent reviewer, or when an agent acted on it, it reads **Passed by agent**, **Flagged by agent**, **Redone after agent review**, **Accepted by agent**, **Made again by agent**, or **Passed without review** when no agent answered in time. For a failed item nobody has acted on:
 
 - **Overrule** accepts it as it is.
 - **Redo** makes it again (a new version of the project, then the item and what depends on it are rebuilt), and it is reviewed again.

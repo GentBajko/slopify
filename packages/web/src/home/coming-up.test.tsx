@@ -19,6 +19,7 @@ const run = {
   renderedTitle: "Crime",
   prepared: null,
   notReady: false,
+  templateKind: "project" as const,
 };
 
 it("says a run waits for Mark ready instead of calling it queued", () => {

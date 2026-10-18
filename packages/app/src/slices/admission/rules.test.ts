@@ -8,6 +8,8 @@ import { stageSources } from "./model.js";
 import {
   admit,
   allowedSources,
+  articleOffFields,
+  llmUses,
   usesNarrationPreparation,
   usesShorts,
   usesYoutubeDescription,
@@ -833,5 +835,81 @@ describe("article off", () => {
       ? undefined
       : result.fields.find((field) => field.field === "sources.audio");
     expect(narration?.message).toContain("Set Article to Generate or Provide");
+  });
+});
+
+describe("the keywords Slopify fills", () => {
+  it("refuses a keyword Slopify fills in the title, unless it is the person's own", () => {
+    const result = admit({
+      draft: provided({ title: "{{Slopify_Title}} again" }),
+      staged: files,
+      requiredSlots: [],
+    });
+    expect(result.ok ? [] : result.fields).toEqual([
+      {
+        field: "title",
+        message:
+          "{{Slopify_Title}} at line 1, column 1 can't be used in the title: Slopify fills its keywords from the title, so the title can't use them. Remove it, or use a keyword of your own such as {{Title}}.",
+      },
+    ]);
+    expect(
+      fields(provided({ title: "{{Slopify_Title}}", values: { Slopify_Title: "Mine" } }), {
+        requiredSlots: ["Slopify_Title"],
+      }),
+    ).toEqual([]);
+  });
+
+  it("needs a text model for the keyword digest and the scene keywords", () => {
+    expect(fields(provided(), { keywordUses: { digest: "thumbnailPrompt" } })).toEqual(["llm"]);
+    expect(fields(provided(), { keywordUses: { scenes: "imagePrompts.0.name" } })).toEqual(["llm"]);
+    expect(fields(provided(), { keywordUses: { chapters: "descriptionPrompt" } })).toEqual([]);
+    expect(
+      fields(provided({ llm: { provider: "text", model: "m" } }), {
+        keywordUses: { digest: "thumbnailPrompt" },
+      }),
+    ).toEqual([]);
+  });
+
+  it("says what the text model is for", () => {
+    expect(
+      llmUses(provided(), { digest: "thumbnailPrompt", scenes: "imagePrompts.0.name" }).map(
+        (use) => use.label,
+      ),
+    ).toEqual(["writing image scenes", "writing the keyword digest"]);
+    expect(llmUses(provided())).toEqual([]);
+  });
+
+  it("refuses the keywords written from the article when Article is Off", () => {
+    const draft = provided({
+      sources: { ...provided().sources, article: "off", audio: "off" },
+      provided: {},
+      llm: { provider: "text", model: "m" },
+    });
+    expect(
+      articleOffFields(draft, {
+        digest: "thumbnailPrompt",
+        chapters: "imagePrompts.0.name",
+        scenes: "imagePrompts.1.name",
+      }),
+    ).toEqual([
+      {
+        field: "thumbnailPrompt",
+        message:
+          "{{Slopify_Summary}}, {{Slopify_Hook}} and the other digest keywords are written from the article, and Article is Off. Set Article to Generate or Provide, or remove them from this prompt.",
+      },
+      {
+        field: "imagePrompts.0.name",
+        message:
+          "{{Slopify_Chapters}} lists the article's chapters, and Article is Off. Set Article to Generate or Provide, or remove it from this prompt.",
+      },
+      {
+        field: "imagePrompts.1.name",
+        message:
+          "{{Slopify_Scene}}, {{Slopify_Setting}} and {{Slopify_Mood}} are written from the article, and Article is Off. Set Article to Generate or Provide, or remove them from this prompt.",
+      },
+    ]);
+    expect(articleOffFields({ ...draft, sources: provided().sources }, { digest: "x" })).toEqual(
+      [],
+    );
   });
 });

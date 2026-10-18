@@ -134,7 +134,7 @@ Forbidden: pause/cancel changing a `done` stage or deleting a stored piece or as
 
 - Pause: project status `paused`; the rail reads "The run is paused." with the still-to-make list and Continue the run (`packages/web/src/project/next-action.ts:164`). Pending stages read "Waits until you continue the run" (`packages/web/src/project/summary.ts:76`). The running rail explains Pause as "Pausing lets the current call finish and keeps everything made so far." (`packages/web/src/project/next-action.ts:304`) while the server aborts in-flight calls (step 4).
 - Cancel: project status `canceled`, header status "Canceled", stage rows "Canceled by user" (`packages/web/src/project/summary.ts:87`); rail "The run stopped before it finished." with Continue the run (`packages/web/src/project/next-action.ts:336`). Kept outputs remain downloadable (scenario 14).
-- Telemetry: usage is recorded only for calls that completed; a canceled then resumed run counts only the calls the resumed run made (`packages/app/src/kernel/runner/providers.ts:159`, `packages/app/test/cancel.test.ts:260`).
+- Telemetry: usage is recorded only for calls that completed; a canceled then resumed run counts only the calls the resumed run made (`packages/app/src/kernel/runner/providers.ts:159`, `packages/app/test/revision-images.test.ts`).
 - Notifications: a transition into `paused` or `canceled` produces no run notice (`packages/app/src/slices/notifications/rules.ts:10`).
 - Records: `project_control_receipts` row per pause/cancel request; `project_recovery_requests` row per resume/retry/soften; schedule occurrences settled on cancel.
 

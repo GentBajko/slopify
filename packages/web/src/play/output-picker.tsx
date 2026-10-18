@@ -2,6 +2,7 @@ import { castHosts } from "@app/slices/voices/cast.js";
 import { type ReactElement, useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { StartFromPicture } from "@/designs/start";
 import { useDraftCast } from "./channel-picker";
 import {
   type OutputKind,
@@ -58,6 +59,7 @@ export function OutputPicker({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
+      <StartFromPicture />
     </div>
   );
 }

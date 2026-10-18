@@ -1,4 +1,4 @@
-import { type Context, Hono } from "hono";
+import { Hono } from "hono";
 import {
   bundledPatchNotesDir,
   PatchNotesMissing,
@@ -6,13 +6,8 @@ import {
 } from "../../slices/patch-notes/library.js";
 import { markPatchNotesSeen, readPatchNotes } from "../../slices/patch-notes/seen.js";
 import type { AppDeps } from "./app.js";
-import { problem, titleOf } from "./problem.js";
-
-// A build without its notes says so in plain words; anything else is the app's error handler's.
-function missing(c: Context, error: unknown): Response {
-  if (!(error instanceof PatchNotesMissing)) throw error;
-  return problem(c, { status: 500, title: titleOf(500), detail: error.message });
-}
+import { problem } from "./problem.js";
+import { bundleMissing } from "./refusal.js";
 
 // Settings → Patch notes: the list (with which note is due to open by itself), one note's
 // Markdown, and recording that the note that opened by itself was closed.
@@ -24,7 +19,7 @@ export function patchNotesRoutes(deps: Pick<AppDeps, "db" | "version" | "patchNo
       try {
         return c.json(await readPatchNotes(deps.db, dir, deps.version));
       } catch (error) {
-        return missing(c, error);
+        return bundleMissing(c, error, PatchNotesMissing);
       }
     })
     .post("/seen", (c) => {
@@ -36,12 +31,11 @@ export function patchNotesRoutes(deps: Pick<AppDeps, "db" | "version" | "patchNo
       try {
         markdown = await readPatchNote(dir, c.req.param("id"));
       } catch (error) {
-        return missing(c, error);
+        return bundleMissing(c, error, PatchNotesMissing);
       }
       if (markdown === undefined)
         return problem(c, {
           status: 404,
-          title: titleOf(404),
           detail:
             "These patch notes are not in this version of Slopify. Open Settings → Patch notes and pick one from the list.",
         });

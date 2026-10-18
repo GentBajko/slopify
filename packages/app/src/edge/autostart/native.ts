@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, rmdir, unlink, writeFile } from "node:fs/promises";
 import { posix, win32 } from "node:path";
+import { hasErrnoCode } from "../../kernel/errors.js";
 import {
   type AutostartPlatform,
   agentLabel,
@@ -245,7 +246,7 @@ export const nodeAutostartFs: AutostartFs = {
     try {
       return await readFile(path, "utf8");
     } catch (error) {
-      if (isMissing(error)) return undefined;
+      if (hasErrnoCode(error, "ENOENT")) return undefined;
       throw error;
     }
   },
@@ -260,7 +261,7 @@ export const nodeAutostartFs: AutostartFs = {
     try {
       await unlink(path);
     } catch (error) {
-      if (!isMissing(error)) throw error;
+      if (!hasErrnoCode(error, "ENOENT")) throw error;
     }
   },
   removeEmptyDir: async (path) => {
@@ -290,7 +291,3 @@ export const nodeAutostartExec: AutostartExec = (file, args) =>
       },
     );
   });
-
-function isMissing(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
-}

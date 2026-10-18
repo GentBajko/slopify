@@ -6,6 +6,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStreamReadResult } from "node:stream/web";
 import { setTimeout as delay } from "node:timers/promises";
+import { hasErrnoCode } from "../../kernel/errors.js";
 import {
   defaultEnglishSubtitleModel,
   type EnglishSubtitleModel,
@@ -171,7 +172,7 @@ async function downloadModel(input: ModelInput, deps: ModelDeps, target: string)
       await rename(part, target);
     } catch (error) {
       if (await verified(target, deps.model, input.signal)) return target;
-      if (!isCode(error, "EEXIST") && !isCode(error, "EPERM")) throw error;
+      if (!hasErrnoCode(error, "EEXIST") && !hasErrnoCode(error, "EPERM")) throw error;
       await rm(target, { force: true });
       await rename(part, target);
     }
@@ -214,10 +215,7 @@ async function verified(path: string, model: ModelFile, signal: AbortSignal): Pr
     await pipeline(createReadStream(path), hash, { signal });
     return hash.digest("hex") === model.sha256;
   } catch (error) {
-    if (isCode(error, "ENOENT")) return false;
+    if (hasErrnoCode(error, "ENOENT")) return false;
     throw error;
   }
-}
-function isCode(error: unknown, code: string): boolean {
-  return error instanceof Error && "code" in error && error.code === code;
 }

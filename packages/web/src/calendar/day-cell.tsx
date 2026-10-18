@@ -8,6 +8,7 @@ import { Button } from "@/components/kit/button";
 import { ButtonLink, TextLink } from "@/components/kit/link";
 import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
+import { fullDay, shortTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { calendarKey, prepareTopic } from "@/schedules/api";
 import { projectLook } from "./attention";
@@ -17,8 +18,6 @@ import { type Day, runTitle } from "./plan";
 // with Alt+arrow keys), and the projects that ran on it.
 
 const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric" });
-const fullDay = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
-const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
 export function DayCell({
   date,
@@ -153,7 +152,7 @@ function RunChip({
     // the other way to do it without dragging.
     <article
       tabIndex={run.index === null ? undefined : 0}
-      aria-label={`${title}, ${time.format(new Date(run.at))}, ${run.scheduleName}${run.index === null ? "" : ". Alt+arrow keys move it."}`}
+      aria-label={`${title}, ${shortTime.format(new Date(run.at))}, ${run.scheduleName}${run.index === null ? "" : ". Alt+arrow keys move it."}`}
       draggable={movable}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
@@ -176,7 +175,7 @@ function RunChip({
             className="size-3 shrink-0 text-ink-3"
           />
         )}
-        {time.format(new Date(run.at))}
+        {shortTime.format(new Date(run.at))}
       </span>
       <b className={cn("text-small", run.topic === null && "font-normal text-ink-2")}>{title}</b>
       <TextLink
@@ -200,6 +199,9 @@ function RunChip({
     </article>
   );
 }
+
+export const designNotPrepared =
+  "A design is made on its day, so there is nothing to prepare ahead.";
 
 // Prepare a queued topic ahead: its project runs everything but the video now, and its day
 // renders. Once prepared, the way to its project.
@@ -238,6 +240,9 @@ export function PrepareRun({
         {compact ? "Open" : "Open prepared"}
       </ButtonLink>
     );
+  // The server refuses it: a design is made on its day, and there is no video to hold back.
+  if (run.templateKind === "design")
+    return compact ? null : <span className="text-label text-ink-2">{designNotPrepared}</span>;
   if (run.index === null || run.topic === null || run.topicSource !== "queued") return null;
   return (
     <>

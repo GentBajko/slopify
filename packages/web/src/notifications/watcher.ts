@@ -59,6 +59,7 @@ export interface ShownStartNotice {
   readonly projectId: string;
   readonly title: string;
   readonly byAgent?: boolean | undefined;
+  readonly byAssistant?: boolean | undefined;
 }
 
 export interface ShownReviewNotice {
@@ -202,6 +203,7 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
         projectId,
         title: subject.title,
         ...(subject.startedBy === "agent" ? { byAgent: true } : {}),
+        ...(subject.startedBy === "assistant" ? { byAssistant: true } : {}),
       });
   };
 

@@ -239,9 +239,10 @@ export function PlayForm({
   });
 
   // The row the text model sits in: the section of the first thing that needs it.
-  const llmRow = llmUsesOf(form, choices.entries)[0]?.section ?? "article";
+  const llmRow = llmUsesOf(form, choices.entries, choices.prompts)[0]?.section ?? "article";
   const target = (field: string) =>
-    checkpointTarget(field, form) ?? playFieldTarget(field, form, batchItems, choices.entries);
+    checkpointTarget(field, form) ??
+    playFieldTarget(field, form, batchItems, choices.entries, choices.prompts);
   const problem = (field: string): string | undefined => {
     const canonical = target(field).field;
     return errors.find(

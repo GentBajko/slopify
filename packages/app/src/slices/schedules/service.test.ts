@@ -241,3 +241,39 @@ it("records a missed occurrence without dispatching when skip is selected", asyn
     h.close();
   }
 });
+
+it("keeps topic scoring off unless asked, and keeps it through a save that doesn't name it", () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    expect(createTemplate(h.deps, { id: templateId, name: "T", document: h.document }).ok).toBe(
+      true,
+    );
+    const deps = { ...h.deps, template: (id: string) => templateById(h.deps.db, id) };
+    const plain = createSchedule(deps, scheduleInput(templateId));
+    expect(plain.ok && plain.value.topicScoring).toBe("off");
+    const ranked = createSchedule(deps, { ...scheduleInput(templateId), topicScoring: "search" });
+    expect(ranked.ok && ranked.value.topicScoring).toBe("search");
+    if (!ranked.ok) return;
+    const kept = updateSchedule(deps, {
+      ...scheduleInput(templateId, ranked.value.id),
+      baseVersion: ranked.value.version,
+      mutationId: randomUUID(),
+    });
+    expect(kept.ok && kept.value.topicScoring).toBe("search");
+    if (!kept.ok) return;
+    const off = updateSchedule(deps, {
+      ...scheduleInput(templateId, ranked.value.id),
+      topicScoring: "library",
+      baseVersion: kept.value.version,
+      mutationId: randomUUID(),
+    });
+    expect(off.ok && off.value.topicScoring).toBe("library");
+    expect(
+      scheduleCreateSchema.safeParse({ ...scheduleInput(templateId), topicScoring: "trends" })
+        .success,
+    ).toBe(false);
+  } finally {
+    h.close();
+  }
+});

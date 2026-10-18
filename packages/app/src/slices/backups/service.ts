@@ -1,4 +1,5 @@
 import { statfs } from "node:fs/promises";
+import { errnoCode } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import {
   BackupBusyError,
@@ -11,7 +12,6 @@ import {
 import { defaultBackupsDir } from "../storage/layout.js";
 import {
   backupFileName,
-  codeOf,
   ensureFolder,
   listBackups,
   pruneBackups,
@@ -113,7 +113,7 @@ export function createBackupService(deps: BackupServiceDeps): BackupService {
         await pruneBackups(folder, settings.keep);
       } catch (error) {
         deps.log.write("warn", "backups.prune", { detail: String(error) });
-        detail = `The backup was saved, but older backups in ${folder} could not be removed (${codeOf(error) ?? "unknown error"}), so more than ${settings.keep} are kept. Check Slopify can delete files in that folder, or pick another Folder in Settings → Backups.`;
+        detail = `The backup was saved, but older backups in ${folder} could not be removed (${errnoCode(error) ?? "unknown error"}), so more than ${settings.keep} are kept. Check Slopify can delete files in that folder, or pick another Folder in Settings → Backups.`;
       }
       record({
         ...attempt,
@@ -337,7 +337,7 @@ export function explain(
     return "The backup was not saved: Slopify stopped while writing it, and the unfinished file was removed. It runs again after Slopify starts.";
   if (error instanceof NoSpaceError)
     return `The backup was not saved: it needs about ${bytes(error.needed)}, but the disk holding ${folder} has ${bytes(error.free)} free. Free up space there, lower "Keep last" in Settings → Backups, or pick another Folder.`;
-  switch (codeOf(error)) {
+  switch (errnoCode(error)) {
     case "ENOSPC":
     case "EDQUOT":
       return `The backup was not saved: the disk holding ${folder} ran out of space. Free up space there, lower "Keep last" in Settings → Backups, or pick another Folder.`;

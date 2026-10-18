@@ -1,4 +1,5 @@
 import type {
+  AssistantEvent,
   GlobalEvent,
   ProjectEvent,
   ProjectStateEvent,
@@ -9,6 +10,7 @@ import type {
   StageStateEvent,
 } from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent, TemplateSampleEvent } from "@app/kernel/events.js";
+import type { DesignEvent } from "@app/slices/designs/model.js";
 import type { PatchEvent } from "@/project/live";
 
 // A project's events and the global ones, over the page's one live connection
@@ -64,6 +66,9 @@ export interface GlobalSink {
   readonly reviewFlagged?: (event: ReviewFlaggedEvent) => void;
   // An external review passed at its deadline with no agent's verdict.
   readonly reviewAutoPassed?: (event: ReviewAutoPassedEvent) => void;
+  // A design or a design template's sample changed: a picture landed or failed, or a
+  // sample started, finished or is held (Library → Designs).
+  readonly designChanged?: (event: DesignEvent) => void;
   // The connection dropped or came back (`components/connection-status.tsx`).
   readonly connection?: (state: Connection) => void;
 }
@@ -95,6 +100,8 @@ const globalEventNames = [
   // project refresh, not only its own page.
   "stage.state",
   "stage.progress",
+  "design.changed",
+  "design-template.sample",
 ] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
@@ -162,6 +169,10 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
         sink.templateSample?.(event);
         return;
       }
+      if (event.type === "design.changed" || event.type === "design-template.sample") {
+        sink.designChanged?.(event);
+        return;
+      }
       if (event.type === "review.flagged") {
         sink.reviewFlagged?.(event);
         sink.refetch(event.projectId);
@@ -176,6 +187,22 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
     },
     sink.connection,
   );
+}
+
+const assistantEventNames = [
+  "assistant.delta",
+  "assistant.tool",
+  "assistant.ask",
+  "assistant.turn",
+] as const;
+
+// The assistant panel's chat, over the same one connection; a reconnect refetches the chat.
+export function subscribeAssistant(
+  open: OpenEvents,
+  url: string,
+  sink: { readonly event: (event: AssistantEvent) => void; readonly refetch: () => void },
+): () => void {
+  return listen<AssistantEvent>(open, url, assistantEventNames, sink.refetch, sink.event);
 }
 
 function listen<Event extends ProjectEvent | GlobalEvent>(

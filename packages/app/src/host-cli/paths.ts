@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { chmod, lstat, mkdir, open } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
+import { hasErrnoCode } from "../kernel/errors.js";
 
 export interface HostPaths {
   readonly root: string;
@@ -71,7 +72,7 @@ export async function ensureBridgeToken(path: string): Promise<string> {
       await file.close();
     }
   } catch (error) {
-    if (!hasCode(error, "EEXIST")) throw error;
+    if (!hasErrnoCode(error, "EEXIST")) throw error;
   }
   const entry = await lstat(path);
   if (entry.isSymbolicLink() || (process.getuid && entry.uid !== process.getuid()))
@@ -79,7 +80,4 @@ export async function ensureBridgeToken(path: string): Promise<string> {
       `The host helper token file ${path} is a link or belongs to another user. Delete it and run the launcher again.`,
     );
   return readBridgeToken(path);
-}
-export function hasCode(error: unknown, code: string): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }

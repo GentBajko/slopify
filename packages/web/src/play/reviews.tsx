@@ -11,7 +11,7 @@ import {
   reviewModeLabels,
   reviewModes,
   reviewStageLabels,
-  reviewStages,
+  reviewStagesInRunOrder,
   visionStages,
 } from "@app/slices/reviews/model.js";
 import { stageMakesItems } from "@app/slices/reviews/rules.js";
@@ -185,7 +185,7 @@ export function ReviewSettings({
           </tr>
         </thead>
         <tbody>
-          {reviewStages.map((stage) => {
+          {reviewStagesInRunOrder.map((stage) => {
             const mode = modeOf(stage);
             const prompt = value.stages[stage]?.prompt ?? "";
             const available = makes(stage);
@@ -193,7 +193,12 @@ export function ReviewSettings({
             return (
               <tr key={stage} className="border-t border-line">
                 <th scope="row" className="py-2 pr-3 text-left font-medium">
-                  {reviewStageLabels[stage]}
+                  <span className="inline-flex items-center gap-1">
+                    {reviewStageLabels[stage]}
+                    {stage === "promise" ? (
+                      <InfoTip id="play.reviews.promise" className="-my-1" />
+                    ) : null}
+                  </span>
                 </th>
                 <td className="py-2 pr-3">
                   <Picker
@@ -228,6 +233,10 @@ export function ReviewSettings({
                   </Picker>
                   {problem(`reviews.stages.${stage}.prompt`) ? (
                     <p className="text-danger">{problem(`reviews.stages.${stage}.prompt`)}</p>
+                  ) : !available && stage === "promise" ? (
+                    <p className="text-ink-3">
+                      Needs an article a model writes: set Article to Generate to use it.
+                    </p>
                   ) : !available && mode !== "off" ? (
                     <p className="text-ink-3">This stage makes nothing to review in this run.</p>
                   ) : null}

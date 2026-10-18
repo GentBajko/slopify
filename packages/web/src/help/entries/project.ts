@@ -158,6 +158,11 @@ export const projectHelp = {
     body: "Copies a prompt from your Library into this project, replacing the raw prompt below. The project keeps its own copy, so later Library edits reach it only when you pick it again or press Use the Library version. Outputs made from the old wording turn outdated; nothing is remade until you choose.",
     tutorial: { page: "Editing-a-Project", anchor: "prompts" },
   },
+  "project.prompts.keyword-facts": {
+    title: "Refresh keyword facts",
+    body: "The project keeps the facts it copied when it started, such as the channel name, series brief, links, cast and neighbouring videos, so later changes to the channel never change it. Refresh copies them again now. Saving afterwards remakes only the steps whose prompts use a fact that changed. Free: no AI call.",
+    tutorial: { page: "Keywords-Slopify-Fills", anchor: "facts-slopify-already-has" },
+  },
   "project.prompts.raw": {
     title: "Raw prompt",
     body: "This project's own copy of the prompt, with keywords still in double braces such as {{Topic}}. Edit it to change what the model is asked for this project only; the Library prompt is untouched. Saving fills the keywords in again, and what was made from the old wording turns outdated.",

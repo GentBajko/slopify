@@ -2,6 +2,7 @@ import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { useApp } from "@/app-context";
+import { keys } from "@/queries";
 import type { DraftReply } from "./draft-api";
 import {
   createPlayDraft,
@@ -47,7 +48,7 @@ export function useDraftSession(): PlaySession {
       timer = undefined;
     };
     const invalidate = () => {
-      void queryClient.invalidateQueries({ queryKey: ["play-drafts"] });
+      void queryClient.invalidateQueries({ queryKey: keys.playDrafts });
     };
     const fail = (error: unknown) => {
       publish({
@@ -324,7 +325,7 @@ export function useDraftSession(): PlaySession {
         publish(emptySession());
         review.reset();
         rememberDraft(null);
-        for (const key of [["projects"], ["staging"], ["play-drafts"]])
+        for (const key of [["projects"], ["staging"], keys.playDrafts])
           void queryClient.invalidateQueries({ queryKey: key });
         return created;
       },

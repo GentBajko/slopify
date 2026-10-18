@@ -1,19 +1,25 @@
 import { z } from "zod";
+import { internalError } from "../../kernel/errors.js";
 import { redact } from "../../kernel/log.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { DialogueLine, TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import {
   httpFailure,
-  internalError,
-  missingKey,
   noAudio,
   providerSaid,
   refreshList,
   unreadable,
   voiceFix,
 } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 
 // The HTTP gateway adapter for Gemini's speech generation (generateContent with an AUDIO
 // response, https://ai.google.dev/gemini-api/docs/speech-generation), billed to a Gemini API
@@ -205,23 +211,11 @@ function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
 }
 
 function keyOf(deps: GeminiTtsDeps): string {
-  // `missing_key`, not `auth`, because that rule makes it terminal.
-  const key = deps.key();
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("Google") });
-  }
-  return key;
-}
-
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) return "auth";
-  if (status === 429) return "rate_limit";
-  if (status >= 500) return "dropped";
-  return "other";
+  return requireKey(deps.key(), "Google");
 }
 
 async function failure(response: Response, voiceId?: string, next?: string): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // Through the redactor: an error body may quote the key back.
   const detail = redact(
@@ -231,10 +225,10 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
   // Google answers an unknown key with 400 API_KEY_INVALID rather than 401.
   const badKey = response.status === 400 && text.includes("API_KEY_INVALID");
   const status = badKey ? 401 : response.status;
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: badKey ? "auth" : kindOf(response.status),
-    message: httpFailure({
+  return httpProviderError(
+    response,
+    badKey ? "auth" : kindOfStatus(response.status),
+    httpFailure({
       provider: "Google",
       status,
       detail,
@@ -243,14 +237,14 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
         ? {}
         : { subject: `narration request for voice "${voiceId}"`, fix: voiceFix(voiceId) }),
     }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
+    undefined,
+    // A narration request goes to the model's own address (models/<id>:generateContent).
+    badKey || voiceId === undefined
+      ? undefined
+      : modelAccessOf(
+          response.status,
+          `${parsed.success ? (parsed.data.error.status ?? "") : ""} ${detail}`,
+          true,
+        ),
+  );
 }

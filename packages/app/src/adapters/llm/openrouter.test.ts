@@ -219,6 +219,7 @@ describe("openRouterLlm.complete", () => {
     });
     const error: unknown = await drain(port).catch((thrown: unknown) => thrown);
     expect(isProviderError(error) && error.fault.kind).toBe("auth");
+    expect(isProviderError(error) && error.fault.access).toBeUndefined();
     expect(String(error)).toContain("No auth credentials found");
     expect(String(error)).toContain("401");
   });
@@ -245,7 +246,53 @@ describe("openRouterLlm.complete", () => {
     });
     const error: unknown = await drain(port).catch((thrown: unknown) => thrown);
     expect(isProviderError(error) && error.fault.kind).toBe("other");
+    expect(isProviderError(error) && error.fault.access).toBe("not-found");
     expect(String(error)).toContain("is not a valid model ID");
+  });
+
+  it("marks a model with no endpoint for the key, and one the key may not use", async () => {
+    const missing = openRouterLlm({
+      ...replaying(
+        new Response(
+          JSON.stringify({ error: { code: 404, message: "No endpoints found for x/y." } }),
+          {
+            status: 404,
+          },
+        ),
+      ),
+      key: () => key,
+    });
+    const gone: unknown = await drain(missing).catch((thrown: unknown) => thrown);
+    expect(isProviderError(gone) && gone.fault).toEqual({ kind: "other", access: "not-found" });
+    const denied = openRouterLlm({
+      ...replaying(
+        new Response(
+          JSON.stringify({
+            error: { code: 403, message: "This model is not available in your region." },
+          }),
+          { status: 403 },
+        ),
+      ),
+      key: () => key,
+    });
+    const refused: unknown = await drain(denied).catch((thrown: unknown) => thrown);
+    expect(isProviderError(refused) && refused.fault).toEqual({
+      kind: "auth",
+      access: "no-access",
+    });
+  });
+
+  it("marks an error frame about the model after the 200", async () => {
+    const port = openRouterLlm({
+      ...replaying(
+        new Response('data: {"error":{"code":404,"message":"No endpoints found for x/y."}}\n\n', {
+          status: 200,
+        }),
+      ),
+      key: () => key,
+    });
+    const error: unknown = await drain(port).catch((thrown: unknown) => thrown);
+    expect(isProviderError(error) && error.fault.access).toBe("not-found");
   });
 
   it("quotes a body that is not the documented envelope", async () => {

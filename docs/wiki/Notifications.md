@@ -99,6 +99,12 @@ To turn it off, clear the field and press **Save**.
 - [Agents](Agents-MCP) never see the address, only whether one is configured. They may set a new one.
 - In [Docker](Docker) the request goes out from the container, so the address must be reachable from there. `localhost` means the container itself.
 
+## Weekly report
+
+Settings → Notifications → **Weekly report** sends last week in one message to the Notification URL: how many videos were made, each failed step with its project and reason (the first ten, then a count), what it cost, and how much of each CLI plan's week is used. It goes out once a week, on Monday from 09:00 in this computer's time zone; if Slopify was off on Monday, it goes out the next time it runs that week. It needs a Notification URL. A send that fails is tried again 15 minutes later. Default: off.
+
+Home shows the same last 7 days under **Coming up** (see [Home and Projects](Home-and-Projects#autopilot)).
+
 ## Tips
 
 - Turn on both: browser notifications while you are at the computer, ntfy for when you walk away.

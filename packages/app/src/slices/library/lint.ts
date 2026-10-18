@@ -5,18 +5,53 @@
 import type { FieldError } from "../admission/rules.js";
 import type { SlotLintError } from "../admission/substitute.js";
 import { detectSlots } from "../admission/substitute.js";
+import type { KeywordPlace } from "../keywords/model.js";
+import { keywordProblems, positionOf, textEntryProblems } from "../keywords/rules.js";
 import type { EntryDraft, PromptDraft } from "./model.js";
 import { bodyMax, nameMax } from "./model.js";
 
-export function lintPrompt(draft: PromptDraft): readonly FieldError[] {
-  return lint(draft.name, draft.body);
+// `grandfathered` is the slot names the stored template already has: an unknown `Slopify_`
+// name saved before the prefix was reserved does not stop it saving again.
+export function lintPrompt(
+  draft: PromptDraft,
+  grandfathered: readonly string[] = [],
+): readonly FieldError[] {
+  return lint(draft.name, draft.body, draft.kind, grandfathered);
 }
 
-export function lintEntry(draft: EntryDraft): readonly FieldError[] {
-  return lint(draft.name, draft.body);
+export function lintEntry(
+  draft: EntryDraft,
+  grandfathered: readonly string[] = [],
+): readonly FieldError[] {
+  return lint(draft.name, draft.body, draft.category, grandfathered);
 }
 
-function lint(name: string, body: string): readonly FieldError[] {
+// What the editor warns about without refusing the save: a keyword where it can't be filled
+// (Play refuses that run) and an old keyword name.
+export function keywordWarnings(draft: PromptDraft | EntryDraft): readonly FieldError[] {
+  return [
+    ...keywordProblems(draft.body, placeOf(draft))
+      .filter((problem) => problem.kind !== "unknown")
+      .map((problem) => ({ field: "body", message: problem.message })),
+    ...("category" in draft && draft.mode === "text"
+      ? textEntryProblems(draft.body, draft.category).map((problem) => ({
+          field: "body",
+          message: problem.message,
+        }))
+      : []),
+  ];
+}
+
+function placeOf(draft: PromptDraft | EntryDraft): KeywordPlace {
+  return "kind" in draft ? draft.kind : draft.category;
+}
+
+function lint(
+  name: string,
+  body: string,
+  place: KeywordPlace,
+  grandfathered: readonly string[],
+): readonly FieldError[] {
   const fields: FieldError[] = [];
   const trimmed = name.trim();
   if (trimmed === "") {
@@ -42,6 +77,8 @@ function lint(name: string, body: string): readonly FieldError[] {
   for (const error of detectSlots(body).errors) {
     fields.push({ field: "body", message: describe(error, body) });
   }
+  for (const problem of keywordProblems(body, place, grandfathered))
+    if (problem.kind === "unknown") fields.push({ field: "body", message: problem.message });
   return fields;
 }
 
@@ -57,12 +94,4 @@ function describe(error: SlotLintError, body: string): string {
     case "nested":
       return `The keyword at ${where} contains a brace. Keywords cannot be placed inside other keywords.`;
   }
-}
-
-function positionOf(body: string, at: number): string {
-  const before = body.slice(0, at);
-  const lastBreak = before.lastIndexOf("\n");
-  const line = before.split("\n").length;
-  const column = at - lastBreak;
-  return `line ${String(line)}, column ${String(column)}`;
 }

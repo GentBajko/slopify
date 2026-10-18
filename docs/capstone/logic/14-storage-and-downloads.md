@@ -123,7 +123,7 @@ This is Slopify-managed storage, not a synchronization folder: reconciliation re
 
 ## Font and model lifetime
 
-System fonts are read from standard OS directories (`packages/app/src/slices/fonts/discovery.ts:22`); uploaded `.ttf`/`.otf` files are limited to 32 MiB, validated and stored as `uploaded-<sha256>` (`packages/app/src/slices/fonts/upload.ts:35-42`, `packages/app/src/slices/fonts/model.ts:15`). Each caption export keeps a `subtitle_font` snapshot (`fonts/selected<ext>`), so history remains usable after a system font disappears (`packages/app/src/slices/subtitles/prepare.ts:103`, `packages/app/src/slices/subtitles/prepare.ts:149`). Uploaded fonts (in `<dataDir>/fonts`) and the alignment-model cache (`<dataDir>/models/`) are outside project folders, so project removal leaves them (`packages/app/src/kernel/paths.ts:78-84`).
+System fonts are read from standard OS directories (`packages/app/src/slices/fonts/discovery.ts:22`); uploaded `.ttf`/`.otf` files are limited to 32 MiB, validated and stored as `uploaded-<sha256>` (`packages/app/src/slices/fonts/upload.ts:35-42`, `packages/app/src/slices/fonts/model.ts:15`). Each caption export keeps a `subtitle_font` snapshot (`fonts/selected<ext>`), so history remains usable after a system font disappears (`packages/app/src/slices/rebuild/runtime-subtitles.ts:237`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:318-322`). Uploaded fonts (in `<dataDir>/fonts`) and the alignment-model cache (`<dataDir>/models/`) are outside project folders, so project removal leaves them (`packages/app/src/kernel/paths.ts:78-84`).
 
 ## Verification
 

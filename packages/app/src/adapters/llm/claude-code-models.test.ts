@@ -14,7 +14,12 @@ afterEach(async () => {
   );
 });
 
-async function fakeClaude(reply: string, linger = false, ignoreTerm = false): Promise<string> {
+async function fakeClaude(
+  reply: string,
+  linger = false,
+  ignoreTerm = false,
+  splitInside?: string,
+): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "slopify-claude-model-test-"));
   directories.push(directory);
   const path = join(directory, "claude.mjs");
@@ -25,16 +30,20 @@ async function fakeClaude(reply: string, linger = false, ignoreTerm = false): Pr
       'import { writeFileSync } from "node:fs";',
       'let input = "";',
       'process.stdin.setEncoding("utf8");',
-      'process.stdin.on("data", (piece) => {',
+      'process.stdin.on("data", async (piece) => {',
       "  input += piece;",
       '  if (!input.includes("\\n")) return;',
       '  const request = JSON.parse(input.split("\\n")[0]);',
       '  if (request.type !== "control_request" || request.request.subtype !== "initialize") process.exit(9);',
       '  writeFileSync(new URL("./cwd.txt", import.meta.url), process.cwd());',
       '  writeFileSync(new URL("./env.json", import.meta.url), JSON.stringify({config:process.env.CLAUDE_CONFIG_DIR ?? null,unrelated:process.env.SLOPIFY_PRIVATE_TEST ?? null}));',
-      "  process.stdout.write(" +
+      "  const out = Buffer.from(" +
         JSON.stringify(reply) +
         '.replaceAll("REQUEST_ID", request.request_id));',
+      splitInside === undefined
+        ? "  process.stdout.write(out);"
+        : // The first chunk ends between the two bytes of the character.
+          `  const cut = out.indexOf(Buffer.from(${JSON.stringify(splitInside)})) + 1;\n  process.stdout.write(out.subarray(0, cut));\n  await new Promise((resolve) => setTimeout(resolve, 100));\n  process.stdout.write(out.subarray(cut));`,
       ignoreTerm ? '  process.on("SIGTERM", () => {});' : "",
       linger ? "  setInterval(() => {}, 1000);" : "  process.exit(0);",
       "});",
@@ -121,6 +130,15 @@ describe("Claude Code model discovery", () => {
       { id: "haiku", name: "Haiku 4.5" },
       { id: "claude-fable-5-1[1m]", name: "Fable 5.1 (1M context)" },
       { id: "new-alias", name: "Opus 5.5" },
+    ]);
+  });
+
+  it("keeps a character that arrives in two pieces whole", async () => {
+    const reply = JSON.parse(success);
+    reply.response.response.models = [{ value: "alias", displayName: "Münchner Modell" }];
+    const binary = await fakeClaude(`${JSON.stringify(reply)}\n`, false, false, "ü");
+    expect(await nodeClaudeCodeModels(binary, 1000)).toEqual([
+      { id: "alias", name: "Münchner Modell" },
     ]);
   });
 

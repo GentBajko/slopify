@@ -65,7 +65,7 @@ const projects: readonly RouteTool[] = [
     route: "GET /api/projects/:id/run-cost",
     title: "Read a project's run cost",
     description:
-      "What the project's runs cost so far, by stage and provider, and any wait on a CLI plan's limits, as its Run cost tab shows.",
+      'What the project\'s runs cost so far, by stage and provider, and any wait on a CLI plan\'s limits, as its Run cost tab shows. Each plan window has two figures: usedPercent, this run\'s own share from each call\'s before→after readings (basis "measured"; "split" when overlapping calls shared a rise by tokens; "shared" when some calls ran beside other use on the account and are not counted, usedPercent null if none could be told apart; "approximate" for projects run before per-call readings were kept, the account\'s rise as an upper bound), and fromPercent → nowPercent, all use on the account while the run went (accountPercent, never above 100), with resetsAt.',
   },
   {
     name: "get_week",
@@ -73,6 +73,27 @@ const projects: readonly RouteTool[] = [
     title: "Read this week",
     description:
       "Home's This week: videos made, calls, cost and CLI plan standings. Query: {since: an ISO time, channelId?}.",
+  },
+  {
+    name: "get_autopilot",
+    route: "GET /api/home/autopilot",
+    title: "Read autopilot health",
+    description:
+      "Home's autopilot block: how far ahead the schedules' content is (forecast: readyCount, daysAhead, coveredUntil, runsDryAt and each schedule's own), the warnings that may stop them (each with key, what failed, why, and where the fix is), checkedAt (when sign-ins, the OpenRouter key and the disk were last checked, hourly), the last seven days (finished, failed steps, cost) and weeklyNotify. It never starts a CLI. Query: {channelId?}.",
+  },
+  {
+    name: "hide_autopilot_warning",
+    route: "POST /api/home/autopilot/snooze",
+    title: "Hide an autopilot warning",
+    description:
+      "Hide, like the button beside a warning on Home: the warning stays hidden for 7 days, or until it changes. It fixes nothing. Body: {key: a warning's key from get_autopilot}.",
+  },
+  {
+    name: "set_weekly_report",
+    route: "PUT /api/home/autopilot/weekly",
+    title: "Turn the weekly report on or off",
+    description:
+      "Settings → Notifications → Weekly report: each Monday from 09:00 Slopify sends last week's report (made, failed, cost) to the Notification URL. Off by default. Body: {enabled: true | false}.",
   },
   {
     name: "mark_uploaded",

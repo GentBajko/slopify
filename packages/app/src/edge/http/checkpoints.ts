@@ -1,6 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
-import { z } from "zod";
+import { errorText } from "../../kernel/errors.js";
 import {
   changeCheckpoints,
   checkpointChangeSchema,
@@ -11,37 +11,32 @@ import {
 import { checkpointApprovalSchema, checkpointRowSchema } from "../../slices/checkpoints/schema.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { idParam, idString } from "./ids.js";
+import { onInvalid, problem } from "./problem.js";
+import { refusal } from "./refusal.js";
 
-const id = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[0-9A-Za-z_-]+$/);
-const projectParam = z.object({ id });
+const id = idString;
+const projectParam = idParam;
 const approvalParam = projectParam.extend({ checkpointId: id });
 const approvalBody = checkpointApprovalSchema
   .unwrap()
   .omit({ projectId: true, checkpointId: true, approvedAt: true });
 function refused(c: Context, reason: string): Response {
-  const status = reason === "not-found" ? 404 : reason === "invalid-input" ? 400 : 409;
-  return problem(c, {
-    status,
-    title: titleOf(status),
+  return refusal(c, reason, {
+    statuses: { "not-found": 404, "invalid-input": 400 },
+    otherwise: 409,
     detail:
       reason === "not-found"
         ? "This checkpoint no longer exists; the project may have moved on or changed. Reload the page to see where it is now."
         : reason === "invalid-input"
           ? "This checkpoint answer could not be read. Reload the page and try again."
           : "This checkpoint changed since the page loaded, for example it was already approved. Reload the page to see its current state, then try again.",
-    extensions: { reason },
   });
 }
 
 function alreadyApproved(c: Context): Response {
   return problem(c, {
     status: 409,
-    title: titleOf(409),
     detail:
       "This checkpoint was already approved, so nothing changed. Reload the page (or call needs_attention) to see what waits now.",
     extensions: { reason: "already-approved" },
@@ -59,7 +54,7 @@ function buildCheckpointRoutes(deps: AppDeps) {
     } catch (error) {
       deps.log.write("error", "checkpoint.notify", {
         projectId,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorText(error),
       });
     }
     if (wake) {
@@ -68,7 +63,7 @@ function buildCheckpointRoutes(deps: AppDeps) {
       } catch (error) {
         deps.log.write("error", "checkpoint.wake", {
           projectId,
-          detail: error instanceof Error ? error.message : String(error),
+          detail: errorText(error),
         });
       }
     }

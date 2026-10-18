@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { nodeHostSetupRunner } from "../../host-cli/install.js";
+import { errorText } from "../../kernel/errors.js";
 import { readVersion } from "../../kernel/version.js";
 import { documentsDir, nodeDocumentsHost } from "../../slices/storage/documents.js";
 import { recordLoginStart } from "../autostart/docker-record.js";
@@ -144,7 +145,7 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
       report: (line) => console.log(line),
     }).catch((error: unknown) => {
       console.warn(
-        `Slopify couldn't check whether Docker starts when you log in (${error instanceof Error ? error.message : String(error)}). Settings → General will say it doesn't know; run the command again to check again.`,
+        `Slopify couldn't check whether Docker starts when you log in (${errorText(error)}). Settings → General will say it doesn't know; run the command again to check again.`,
       );
     });
   } finally {

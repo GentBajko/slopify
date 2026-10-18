@@ -1,4 +1,5 @@
 import { type ReactElement, type ReactNode, useId } from "react";
+import { Checkbox } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
 // "Use narration aliases": say Library → Aliases' words the way they are listed ("Dr." as
@@ -22,12 +23,10 @@ export function NarrationAliasesToggle({
           htmlFor={id}
           className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
         >
-          <input
+          <Checkbox
             id={id}
-            type="checkbox"
             data-play-field="audio.useNarrationAliases"
             checked={value === true}
-            className="size-4 accent-accent"
             onChange={(event) => onChange(event.currentTarget.checked)}
           />
           Use narration aliases

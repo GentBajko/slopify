@@ -19,12 +19,14 @@ import { crc32 } from "node:zlib";
 import { strFromU8, strToU8, Unzip, UnzipInflate, zipSync } from "fflate";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { isUnreachablePath } from "../../kernel/errors.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
 import { liveProject } from "../admission/repo.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
 import { agentConnectionKey } from "../agents/connection.js";
+import { dailySampleBudgetKey, dailySampleBudgetSchema } from "../designs/budget.js";
 import { fontMaxBytes } from "../fonts/model.js";
 import { readFontMetadata } from "../fonts/sfnt.js";
 import { lintEntry, lintPrompt } from "../library/lint.js";
@@ -406,7 +408,7 @@ function planStagedExport(deps: PortableDeps): readonly StagedExport[] {
     try {
       stat = lstatSync(path);
     } catch (error) {
-      if (unavailable(error)) continue;
+      if (isUnreachablePath(error)) continue;
       throw error;
     }
     if (
@@ -516,6 +518,7 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key.startsWith(uploadPickPrefix)) uploadPickSchema.parse(parsed);
     else if (key === studioProjectPlaylistsKey) storedProjectPlaylistsSchema.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
+    else if (key === dailySampleBudgetKey) dailySampleBudgetSchema.parse(parsed);
     else if (
       key === realPersonVoicesKey ||
       key === photorealisticPromptsKey ||
@@ -575,7 +578,7 @@ function validateLibraryRows(
   const promptIds = new Set<string>();
   const promptNames = new Set<string>();
   for (const row of manifest.prompts) {
-    if (row.name !== row.name.trim() || lintPrompt(row).length > 0)
+    if (row.name !== row.name.trim() || lintPrompt(row, detectSlots(row.body).names).length > 0)
       throw new Error("The backup contains an invalid prompt.");
     uniquePortableRow(promptIds, row.id, "prompt id");
     uniquePortableRow(promptNames, `${row.kind}\0${row.name.toLowerCase()}`, "prompt name");
@@ -584,7 +587,7 @@ function validateLibraryRows(
   const entryIds = new Set<string>();
   const entryNames = new Set<string>();
   for (const row of manifest.entries) {
-    if (row.name !== row.name.trim() || lintEntry(row).length > 0)
+    if (row.name !== row.name.trim() || lintEntry(row, detectSlots(row.body).names).length > 0)
       throw new Error("The backup contains an invalid entry.");
     uniquePortableRow(entryIds, row.id, "entry id");
     uniquePortableRow(entryNames, `${row.category}\0${row.name.toLowerCase()}`, "entry name");
@@ -1018,7 +1021,7 @@ function installedUploadedFonts(paths: Paths): PortableFont[] {
   try {
     names = readdirSync(root);
   } catch (error) {
-    if (unavailable(error)) return [];
+    if (isUnreachablePath(error)) return [];
     throw error;
   }
   return names.toSorted().flatMap((name) => {
@@ -1082,7 +1085,7 @@ function readStoredFont(path: string): Buffer | undefined {
     if (!stat.isFile() || stat.size < 12 || stat.size > fontMaxBytes) return undefined;
     return readFileSync(descriptor);
   } catch (error) {
-    if (unavailable(error)) return undefined;
+    if (isUnreachablePath(error)) return undefined;
     throw error;
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
@@ -1102,14 +1105,6 @@ function writeImportedFile(
   } finally {
     closeSync(descriptor);
   }
-}
-
-function unavailable(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    ["ENOENT", "ENOTDIR", "EACCES", "EPERM", "ELOOP"].includes(String(error.code))
-  );
 }
 
 function planStagedImport(

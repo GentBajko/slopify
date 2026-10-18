@@ -345,6 +345,11 @@ export const playHelp = {
     body: "Gives every image its own moment. The project's AI model reads the article once and writes a scene per image, from the opening to the ending in slideshow order. The scene goes where a prompt has {{Scene}}, or after its first paragraph. A thumbnail prompt with {{Scene}} gets a scene too: the article's most striking moment, a different one per thumbnail. Off, a {{Scene}} line is left out. One more AI call per run.",
     tutorial: { page: "Play-Images", anchor: "scenes-from-the-article" },
   },
+  "play.image-scenes.keyword": {
+    title: "Scenes on for one picture",
+    body: "This picture's prompt uses {{Slopify_Scene}}, {{Slopify_Setting}} or {{Slopify_Mood}}, so it gets its own scene even with Scenes from the article off. That is one AI call per run on the project's text model, shared by every picture. To stop it, remove the keyword from the prompt.",
+    tutorial: { page: "Keywords-Slopify-Fills", anchor: "per-picture" },
+  },
   "play.image-scale.rate": {
     title: "Image rate",
     body: "Give the rate as one image every N minutes of narration (0.25 to 60) or as N images per hour (1 to 240); switching keeps the same rate. Narration runs about 150 words a minute. Starts at one image every 2 minutes.",
@@ -490,6 +495,11 @@ export const playHelp = {
     title: "Reviewer model",
     body: "The model that judges each item. A stronger model catches more but costs more per review. It can differ from the model that wrote the text.",
     tutorial: { page: "Reviews-and-Checkpoints", anchor: "set-up-automatic-reviews" },
+  },
+  "play.reviews.promise": {
+    title: "Promise check",
+    body: "One cheap call before the paid narration: the reviewer model reads the title, the thumbnail brief and the article's first 30 seconds as the voice will say them, and fails a slow, off-topic or greeting-first opening. Flag and redo writes the article again; the narration and pictures wait for the answer. Needs an article a model writes. Default: Off.",
+    tutorial: { page: "Reviews-and-Checkpoints", anchor: "the-promise-check" },
   },
   "play.reviews.retries": {
     title: "Redos per item",

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { errorText, internalError } from "../../kernel/errors.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { readDocumentAssets } from "../document/fonts.js";
@@ -53,7 +54,7 @@ export async function executeDocumentRecipe(
       );
     } catch (error) {
       throw new Error(
-        `The document's cover is the project's thumbnail, and its file can't be read (${error instanceof Error ? error.message : String(error)}). Regenerate or upload the thumbnail again (More → make it again in its section on Thumbnail, or Edit project → Thumbnail), then use Try again on Document.`,
+        `The document's cover is the project's thumbnail, and its file can't be read (${errorText(error)}). Regenerate or upload the thumbnail again (More → make it again in its section on Thumbnail, or Edit project → Thumbnail), then use Try again on Document.`,
         { cause: error },
       );
     }
@@ -99,7 +100,10 @@ function documentView(
     .get(context.work.workId);
   if (view === undefined || row === undefined)
     throw new Error(
-      "Slopify hit an internal error (the project version the document belongs to is missing). Use Try again on Document; if it happens again, use Download diagnostics in Settings and report it.",
+      internalError(
+        "the project version the document belongs to is missing",
+        "Use Try again on Document",
+      ),
     );
   const recipe = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.find(
     (one) => one.key === piece.key && one.fingerprint === piece.fingerprint,

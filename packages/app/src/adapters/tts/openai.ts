@@ -1,10 +1,17 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
-import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
-import { retryAfter } from "../retry-after.js";
+import { httpFailure, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
+import {
+  failureText,
+  httpProviderError,
+  kindOfStatus,
+  requireKey,
+  safeJson,
+} from "../http-failure.js";
+import { modelAccessOf } from "../model-access.js";
 
 // The HTTP gateway adapter for OpenAI's speech endpoint. `fetch` and nothing else; the response
 // body is already the stream the port asks for.
@@ -95,42 +102,23 @@ function voiceOf(voiceId: string): string | { readonly id: string } {
 }
 
 function keyOf(deps: OpenAiTtsDeps): string {
-  const key = deps.key();
-  // An absent key is terminal, so it never becomes a request.
-  if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: missingKey("OpenAI") });
-  }
-  return key;
-}
-
-function kindOf(status: number): ProviderErrorKind {
-  if (status === 401 || status === 403) {
-    return "auth";
-  }
-  if (status === 429) {
-    return "rate_limit";
-  }
-  // ceiling: as in the OpenRouter adapter, a 400 is retried three more times because the
-  // port's error contract has no terminal kind for a request that cannot be repaired.
-  // The provider's own server failed; the same request may well succeed later.
-  if (status >= 500) return "dropped";
-  return "other";
+  return requireKey(deps.key(), "OpenAI");
 }
 
 async function failure(response: Response, voiceId?: string, next?: string): Promise<Error> {
-  const text = await response.text().catch(() => "");
+  const text = await failureText(response);
   const parsed = errorBody.safeParse(safeJson(text));
   // Verbatim, through the same redactor the wrapper uses: OpenAI's own 401 quotes the
   // start of the key back at the caller.
   const message = redact(
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
-  return providerError({
-    kind: kindOf(response.status),
+  return httpProviderError(
+    response,
+    kindOfStatus(response.status),
     // The voice ID is named, so a rejected voice reads differently from
     // a rejected key.
-    message: httpFailure({
+    httpFailure({
       provider: "OpenAI",
       status: response.status,
       detail: message,
@@ -142,14 +130,7 @@ async function failure(response: Response, voiceId?: string, next?: string): Pro
             fix: voiceFix(voiceId),
           }),
     }),
-    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-  });
-}
-
-function safeJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
+    undefined,
+    modelAccessOf(response.status, text),
+  );
 }

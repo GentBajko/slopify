@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { internalError } from "../../kernel/errors.js";
 import { withLanguage } from "../../kernel/ports/languages.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -40,9 +41,7 @@ export async function executeYoutubeRecipe(
   context.signal.throwIfAborted();
   const input = piece.input;
   if (input.kind !== "local" || input.operation !== "youtube-description-v1")
-    throw new Error(
-      "Slopify hit an internal error (the YouTube description step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-    );
+    throw new Error(internalError("the YouTube description step was set up wrongly"));
   const { view } = exportSnapshot(deps, context, piece);
   const config = view.revision.config;
   const llm = config.llm;

@@ -1,3 +1,4 @@
+import { errorText } from "../../kernel/errors.js";
 import type {
   ArticleDeltaEvent,
   ImageLandedEvent,
@@ -14,12 +15,15 @@ import type {
 } from "../../kernel/events.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { AssistantEvent } from "../../slices/assistant/model.js";
+import type { DesignEvent } from "../../slices/designs/model.js";
 import type { StagingEvent } from "../../slices/storage/model.js";
 import { createPreviewCache } from "./preview-cache.js";
 
 export type { ProjectState, StageState } from "../../kernel/pipeline.js";
 export type {
   ArticleDeltaEvent,
+  AssistantEvent,
   ImageLandedEvent,
   ProjectEvent,
   ProjectStateEvent,
@@ -43,7 +47,10 @@ export type GlobalEvent =
   | ProjectStateEvent
   | ProjectUpdatedEvent
   | ReviewFlaggedEvent
-  | ReviewAutoPassedEvent;
+  | ReviewAutoPassedEvent
+  // The assistant panel's chat: what it is writing, the tools it used, its asks, its turns.
+  | AssistantEvent
+  | DesignEvent;
 
 export interface SseMessage {
   readonly event: string;
@@ -113,7 +120,7 @@ export function createHub(deps: HubDeps): Hub {
       .writeSSE({ event: event.type, data: JSON.stringify(event), id: deps.ids.next() })
       .catch((error: unknown) => {
         subscriber.drop();
-        deps.log.write("warn", "sse.write", { detail: `${event.type}: ${messageOf(error)}` });
+        deps.log.write("warn", "sse.write", { detail: `${event.type}: ${errorText(error)}` });
       });
   };
 
@@ -217,8 +224,4 @@ export function observedHub(hub: Hub, observe: (event: ProjectEvent) => void): H
       observe(event);
     },
   };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

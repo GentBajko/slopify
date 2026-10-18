@@ -1,16 +1,9 @@
 import { zValidator } from "@hono/zod-validator";
-import { type Context, Hono } from "hono";
-import { z } from "zod";
+import { Hono } from "hono";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
+import { idParam } from "./ids.js";
+import { onInvalid } from "./problem.js";
+import { revisionRequired } from "./refusal.js";
 
 export function subtitleRoutes(_deps: AppDeps) {
   return new Hono().patch(
@@ -18,13 +11,4 @@ export function subtitleRoutes(_deps: AppDeps) {
     zValidator("param", idParam, onInvalid),
     revisionRequired,
   );
-}
-function revisionRequired(c: Context): Response {
-  return problem(c, {
-    status: 409,
-    title: titleOf(409),
-    detail:
-      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Choose what to remake (in the project's More menu).",
-    extensions: { reason: "revision-required" },
-  });
 }

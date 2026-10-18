@@ -8,7 +8,7 @@ import {
 } from "../../slices/narration/aliases-library.js";
 import { collectSharedGlossary } from "../../slices/narration/shared-glossary.js";
 import type { AppDeps } from "./app.js";
-import { onInvalid, problem, titleOf } from "./problem.js";
+import { onInvalid, problem } from "./problem.js";
 
 // The pronunciations of every project's glossary, merged, for Edit project to copy into a
 // project that shares them. `except` leaves out the project being edited, whose own glossary
@@ -48,7 +48,6 @@ export function pronunciationRoutes(deps: AppDeps) {
           if (result.ok) return c.json({ aliases: result.aliases });
           return problem(c, {
             status: 400,
-            title: titleOf(400),
             detail: `These aliases can't be saved yet: ${result.fields.map((field) => field.message).join(" ")}`,
             extensions: { fields: result.fields },
           });

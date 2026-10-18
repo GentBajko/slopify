@@ -119,6 +119,9 @@ export const hostImageSchema = z
       )
       .max(4)
       .optional(),
+    // A design's picture to change (`ImageRequest.edit`). A helper from before it refuses the
+    // whole request as invalid rather than drawing a new picture in its place.
+    edit: z.object({ source: bridgedImage }).strict().optional(),
   })
   .strict();
 export const hostOpenFolderSchema = z

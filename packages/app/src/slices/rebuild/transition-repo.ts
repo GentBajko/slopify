@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { internalError } from "../../kernel/errors.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
@@ -38,16 +39,12 @@ export function transitionRevisionWork(
     const base = revisionById(db, input.projectId, input.baseRevisionId);
     const next = revisionById(db, input.projectId, input.revisionId);
     if (base === undefined || next === undefined)
-      throw new Error(
-        "Slopify hit an internal error (a project version to switch between is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("a project version to switch between is missing"));
     if (
       JSON.stringify(Object.entries(input.fingerprints).sort()) !==
       JSON.stringify(Object.entries(next.fingerprints).sort())
     )
-      throw new Error(
-        "Slopify hit an internal error (the planned steps don't match the saved project version). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-      );
+      throw new Error(internalError("the planned steps don't match the saved project version"));
     const reserved = db
       .prepare(
         `SELECT r.* FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.project_id=? AND r.revision_id=? AND w.state IN ('pending','running','done')`,
@@ -124,9 +121,7 @@ export function transitionRevisionWork(
       if (carried.has(key)) continue;
       const exact = input.recipes?.find((row) => row.key === key);
       if (exact !== undefined && exact.fingerprint !== fp)
-        throw new Error(
-          "Slopify hit an internal error (a planned step doesn't match the saved project version). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a planned step doesn't match the saved project version"));
       // An undo, a restore or a save repeated while a step waits for Resume asks for a
       // step the project already has a row for. A finished one is the result itself; a
       // held copy nobody started is the same placeholder. Minting another each time left a
@@ -143,9 +138,7 @@ export function transitionRevisionWork(
         .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
         .get(input.projectId, kind);
       if (stage === undefined)
-        throw new Error(
-          "Slopify hit an internal error (a planned step has no matching stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-        );
+        throw new Error(internalError("a planned step has no matching stage"));
       const workId = deps.ids.next();
       const pieceId = deps.ids.next();
       db.prepare(
@@ -247,7 +240,5 @@ export function stageForKey(key: string): StageKind {
   )
     return "video";
   if (prefix === "document") return "document";
-  throw new Error(
-    "Slopify hit an internal error (unknown kind of step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
-  );
+  throw new Error(internalError("unknown kind of step"));
 }

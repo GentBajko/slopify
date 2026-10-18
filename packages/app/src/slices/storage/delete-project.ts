@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
+import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
@@ -59,9 +60,9 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   } catch (error) {
     deps.log.write("warn", "project.delete", {
       projectId,
-      detail: messageOf(error),
+      detail: errorText(error),
     });
-    return { ok: false, reason: "files", detail: messageOf(error) };
+    return { ok: false, reason: "files", detail: errorText(error) };
   }
 
   // Stages, attempts, pieces and outputs go with it: every one of those tables declares
@@ -71,8 +72,4 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   const places = deps.paths.places;
   if (places !== undefined && "forget" in places) (places as ProjectPlaces).forget(projectId);
   return { ok: true };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

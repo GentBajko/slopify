@@ -212,8 +212,16 @@ it("records a change by agent, but not a POST that only looks", async () => {
   await callRoute(fake, preview, { id: "p1", body: {} });
   expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([]);
   await callRoute(fake, resume, { id: "p1", body: {} });
-  expect(fake.db.prepare("SELECT tool FROM agent_actions").all()).toEqual([
-    { tool: "resume_project" },
+  expect(fake.db.prepare("SELECT tool, actor FROM agent_actions").all()).toEqual([
+    { tool: "resume_project", actor: "agent" },
+  ]);
+});
+
+it("records the in-app assistant's change as the assistant's", async () => {
+  const fake = answering(Response.json({ ok: true }));
+  await callRoute({ ...fake, actor: "assistant" }, resume, { id: "p1", body: {} });
+  expect(fake.db.prepare("SELECT tool, actor FROM agent_actions").all()).toEqual([
+    { tool: "resume_project", actor: "assistant" },
   ]);
 });
 

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
+import { errorText } from "../../kernel/errors.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -93,7 +94,7 @@ export async function summarizeEpisode(
     if (signal?.aborted === true) return "failed";
     deps.log.write("warn", "episode.memory", {
       projectId,
-      detail: `The episode summary wasn't saved: ${error instanceof Error ? error.message : String(error)}. The project is unaffected; only later episodes won't be reminded of this one. Check the project's text model in Settings → Providers.`,
+      detail: `The episode summary wasn't saved: ${errorText(error)}. The project is unaffected; only later episodes won't be reminded of this one. Check the project's text model in Settings → Providers.`,
     });
     return "failed";
   }

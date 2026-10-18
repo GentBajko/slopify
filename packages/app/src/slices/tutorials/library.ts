@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hasErrnoCode } from "../../kernel/errors.js";
 import { pageTitleOf, tutorialHeadings, tutorialPageIdPattern } from "./anchors.js";
 
 // Help → Tutorials: the GitHub wiki's pages, kept in the repository's docs/wiki/ and copied
@@ -85,7 +86,7 @@ export async function loadTutorials(dir: string): Promise<TutorialBook> {
   try {
     names = await readdir(dir);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+    if (hasErrnoCode(error, "ENOENT"))
       throw new TutorialsMissing(
         "This copy of Slopify has no tutorials: its docs/wiki folder is missing. Reinstall Slopify (or run npm run build) and reload the page.",
       );
@@ -102,8 +103,8 @@ export async function loadTutorials(dir: string): Promise<TutorialBook> {
       "This copy of Slopify has damaged tutorials: docs/wiki/Home.md is missing. Reinstall Slopify (or run npm run build) and reload the page.",
     );
   const extra = async (name: string) =>
-    readFile(join(dir, name), "utf8").catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return "";
+    readFile(join(dir, name), "utf8").catch((error: unknown) => {
+      if (hasErrnoCode(error, "ENOENT")) return "";
       throw error;
     });
   const sidebar = parseSidebar(await extra("_Sidebar.md"));

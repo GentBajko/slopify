@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { opendir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { extname, join, posix, win32 } from "node:path";
-import { readFontFile, unavailable } from "./files.js";
+import { isUnreachablePath } from "../../kernel/errors.js";
+import { readFontFile } from "./files.js";
 import type { ResolvedFont } from "./model.js";
 import { readFontMetadata } from "./sfnt.js";
 
@@ -54,7 +55,7 @@ export async function scanFontDirectories(
         if (entries >= 10000 || files.size >= 2048) break;
       }
     } catch (error) {
-      if (!unavailable(error)) throw error;
+      if (!isUnreachablePath(error)) throw error;
     }
   }
   const fonts: ResolvedFont[] = [];

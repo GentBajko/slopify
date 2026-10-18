@@ -9,17 +9,10 @@ import type { LibraryDeps } from "../../slices/library/save.js";
 import { createEntry, removeEntry, restoreEntry, updateEntry } from "../../slices/library/save.js";
 import { usedBy } from "../../slices/library/used-by.js";
 import type { AppDeps } from "./app.js";
+import { idParam } from "./ids.js";
 import { onInvalid } from "./problem.js";
 // One rule set for prompts and entries, so one refusal mapping too.
 import { refused, versionParam } from "./prompts.js";
-
-const idParam = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[0-9A-Za-z_-]+$/),
-});
 
 const entryBody = z.object({
   category: z.enum(entryCategories),
