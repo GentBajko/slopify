@@ -23,10 +23,10 @@ const calendar = {
   entries: [{ at: "2026-10-11T18:00:00.000Z", project: { id: "p2", title: "Two | Series" } }],
 };
 
-function setup() {
+function setup(own: Record<string, unknown> = releases) {
   const calls: string[] = [];
   const deps = testDeps({
-    "GET /api/studio/releases/p1": jsonAnswer(releases),
+    "GET /api/studio/releases/p1": jsonAnswer(own),
     "GET /api/studio/releases": jsonAnswer(calendar),
     "PUT /api/studio/releases/p1": async (request) => {
       calls.push(`put ${await request.text()}`);
@@ -42,6 +42,28 @@ function setup() {
 }
 
 describe("ReleaseTimes", () => {
+  it("reads and saves the times in the schedule's zone, naming it when it isn't the browser's", async () => {
+    const zone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone === "Pacific/Kiritimati"
+        ? "Pacific/Pago_Pago"
+        : "Pacific/Kiritimati";
+    const calls = setup({ ...releases, timeZone: zone });
+    const input = (await screen.findByLabelText("Long video: release")) as HTMLInputElement;
+    // 18:00 UTC is 08:00 the next day on Kiritimati (UTC+14), 07:00 the same day in Pago Pago.
+    expect(input.value).toBe(
+      zone === "Pacific/Kiritimati" ? "2026-10-11T08:00" : "2026-10-10T07:00",
+    );
+    expect(screen.getByText(`${zone.split("/")[1]?.replaceAll("_", " ") ?? ""} time`)).toBeTruthy();
+    await userEvent.clear(input);
+    await userEvent.type(
+      input,
+      zone === "Pacific/Kiritimati" ? "2026-10-11T09:00" : "2026-10-10T08:00",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toContain('"at":"2026-10-10T19:00:00.000Z"');
+  });
+
   it("takes a free plan time only after Take this time, not on picking it", async () => {
     const calls = setup();
     const free = await screen.findByLabelText("Take a free time of the posting plan");

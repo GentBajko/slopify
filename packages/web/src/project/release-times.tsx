@@ -8,20 +8,22 @@ import { Input, Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
-import { localInput } from "@/lib/format";
+import { fromZonedInput, zoneDiffers, zonedFormat, zonedInput, zoneName } from "@/lib/zoned";
 import { keys } from "@/queries";
 
 // The project page's Release block (Video section): when the long video and each short go
 // out, editable here, with the time each must be uploaded and scheduled by. The same times
 // Calendar → Releases, Prepare upload and the Studio extension use.
 
-const when = new Intl.DateTimeFormat(undefined, {
+// Every time here is read in the zone its schedule (or the posting plan) keeps, as Calendar →
+// Releases reads it, with the zone named beside a time when it isn't the browser's.
+const whenOptions: Intl.DateTimeFormatOptions = {
   weekday: "short",
   day: "numeric",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
-});
+};
 
 export function ReleaseTimes({ projectId }: { readonly projectId: string }): ReactElement | null {
   const { api } = useApp();
@@ -86,7 +88,11 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
     onError: (error: Error) => notify(`The time wasn't saved: ${error.message}`, "error"),
   });
   if (read.data === undefined) return null;
-  const { items, free, leadHours } = read.data;
+  const { items, free, leadHours, timeZone: zone } = read.data;
+  const when = (iso: string): string => {
+    const text = zonedFormat(iso, zone, whenOptions);
+    return zone !== undefined && zoneDiffers(iso, zone) ? `${text} ${zoneName(zone)}` : text;
+  };
   if (items.length === 0) return null;
   return (
     <section aria-label="Release" className="flex flex-col gap-3">
@@ -99,8 +105,8 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {items.map((item) => {
           const label = item.short === 0 ? "Long video" : `Short ${String(item.short)}`;
-          const draft = drafts[item.short] ?? (item.at === null ? "" : localInput(item.at));
-          const changed = draft !== (item.at === null ? "" : localInput(item.at));
+          const draft = drafts[item.short] ?? (item.at === null ? "" : zonedInput(item.at, zone));
+          const changed = draft !== (item.at === null ? "" : zonedInput(item.at, zone));
           const late =
             !item.onYoutube && item.uploadBy !== null && Date.parse(item.uploadBy) < Date.now();
           return (
@@ -116,13 +122,16 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                   setDrafts((all) => ({ ...all, [item.short]: value }));
                 }}
               />
+              {zone !== undefined && item.at !== null && zoneDiffers(item.at, zone) ? (
+                <span className="text-small text-ink-2">{`${zoneName(zone)} time`}</span>
+              ) : null}
               {changed ? (
                 <Button
                   type="button"
                   size="small"
                   disabled={draft === "" || save.isPending}
                   onClick={() =>
-                    save.mutate({ short: item.short, at: new Date(draft).toISOString() })
+                    save.mutate({ short: item.short, at: fromZonedInput(draft, zone) })
                   }
                 >
                   Save
@@ -139,7 +148,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                       { value: "", label: "Free plan times…" },
                       ...free.map((slot) => ({
                         value: slot.longAt,
-                        label: when.format(new Date(slot.longAt)),
+                        label: when(slot.longAt),
                       })),
                     ]}
                   />
@@ -170,7 +179,7 @@ export function ReleaseTimes({ projectId }: { readonly projectId: string }): Rea
                       { value: "", label: "Swap with…" },
                       ...others.map((one) => ({
                         value: one.id,
-                        label: `${one.title.split(" | ")[0] ?? one.title} · ${when.format(new Date(one.at))}`,
+                        label: `${one.title.split(" | ")[0] ?? one.title} · ${when(one.at)}`,
                       })),
                     ]}
                   />

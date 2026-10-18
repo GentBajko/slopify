@@ -70,3 +70,49 @@ export function zonedDayKey(iso: string, zone: string | undefined): string {
     ...(own === undefined ? {} : { timeZone: own }),
   }).format(new Date(iso));
 }
+
+const pad = (n: number): string => String(n).padStart(2, "0");
+
+// A datetime-local input's value for `iso` as the zone's own wall clock: "2026-10-20T20:00".
+export function zonedInput(iso: string, zone: string | undefined): string {
+  const own = usable(zone);
+  const at = new Date(iso);
+  if (own === undefined)
+    return `${String(at.getFullYear())}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: own,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(at)
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year ?? ""}-${parts.month ?? ""}-${parts.day ?? ""}T${parts.hour ?? ""}:${parts.minute ?? ""}`;
+}
+
+// The instant a datetime-local value means as the zone's wall clock (`zonedInput` read back).
+export function fromZonedInput(value: string, zone: string | undefined): string {
+  const own = usable(zone);
+  if (own === undefined) return new Date(value).toISOString();
+  const wall = fromWall(value);
+  // The zone's offset at the guess, then at the answer: right on both sides of a clock change.
+  const offset = (instant: number): number => {
+    const shown = zonedInput(new Date(instant).toISOString(), own);
+    return fromWall(shown) - instant;
+  };
+  let guess = wall - offset(wall);
+  guess = wall - offset(guess);
+  return new Date(guess).toISOString();
+}
+
+function fromWall(value: string): number {
+  const [date = "", time = ""] = value.split("T");
+  const [y = 0, m = 1, d = 1] = date.split("-").map(Number);
+  const [h = 0, min = 0] = time.split(":").map(Number);
+  return Date.UTC(y, m - 1, d, h, min);
+}

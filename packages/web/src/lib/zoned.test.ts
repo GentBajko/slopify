@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { zonedDayKey, zonedFormat, zonedTime, zoneName } from "./zoned";
+import { fromZonedInput, zonedDayKey, zonedFormat, zonedInput, zonedTime, zoneName } from "./zoned";
 
 const at = "2026-10-20T19:00:00.000Z"; // 20:00 in London (BST), 21:00 in Tirane (CEST)
 const clock = (zone: string) =>
@@ -36,4 +36,13 @@ it("formats a date in the zone and falls back to the browser for an unknown one"
   expect(zonedFormat(at, "Not/AZone", day)).toBe(
     new Intl.DateTimeFormat(undefined, day).format(new Date(at)),
   );
+});
+
+it("edits a time as the zone's own wall clock and reads it back to the same instant", () => {
+  expect(zonedInput(at, "Europe/London")).toBe("2026-10-20T20:00");
+  expect(zonedInput(at, "Europe/Tirane")).toBe("2026-10-20T21:00");
+  expect(fromZonedInput("2026-10-20T20:00", "Europe/London")).toBe(at);
+  // Across the clocks going back in London (25 October), each side keeps its own offset.
+  expect(fromZonedInput("2026-10-26T20:00", "Europe/London")).toBe("2026-10-26T20:00:00.000Z");
+  expect(fromZonedInput("2026-10-20T21:00", "Europe/Tirane")).toBe(at);
 });

@@ -39,6 +39,7 @@ import {
 import {
   allReleases,
   freeSlots,
+  lineZone,
   type PlanWho,
   planReleases,
   readLeadHours,
@@ -355,6 +356,11 @@ export function studioRoutes(deps: AppDeps) {
         const releases = releasesOf(deps.db, projectId);
         return c.json({
           leadHours: readLeadHours(deps.db),
+          // The zone its times are read in: its line's schedule's, else the plan's.
+          timeZone: lineZone(
+            readPlan(deps.db),
+            releases.find((release) => release.short === 0)?.line ?? null,
+          ),
           items: pack.pack.items
             .filter((item) => item.video !== null || item.kind === "video")
             .map((item) => {

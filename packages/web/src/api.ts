@@ -613,6 +613,9 @@ export async function readReleaseCalendar(api: Api, weeks = 2): Promise<ReleaseC
 
 export interface ProjectReleases {
   readonly leadHours: number;
+  // The zone the times are read in (the schedule's, else the posting plan's); absent from an
+  // older server, read in the browser's.
+  readonly timeZone?: string;
   readonly items: readonly {
     readonly short: number;
     readonly title: string;
