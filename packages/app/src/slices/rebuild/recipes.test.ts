@@ -319,3 +319,19 @@ it("validates active raw template keywords without rejecting disabled image defi
     }),
   ).toMatchObject({ ok: true });
 });
+
+it("refuses to save a generated image whose prompt was never filled in", () => {
+  const next = {
+    ...content,
+    imageDefinitions: {
+      ...content.imageDefinitions,
+      harbor: { source: "generate" as const, assetId: null, prompt: "  ", templateKey: null },
+    },
+  };
+  expect(planRevision(emptyView(), { config, content: next })).toEqual({
+    ok: false,
+    fields: [
+      { field: "content.imageDefinitions.harbor.prompt", message: "Enter a prompt or text." },
+    ],
+  });
+});
