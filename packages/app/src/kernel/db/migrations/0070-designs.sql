@@ -38,7 +38,7 @@ CREATE TABLE design_steps (
  instruction TEXT CHECK(instruction IS NULL OR length(instruction) <= 4000),
  provider TEXT,
  model TEXT,
- inputs_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(inputs_json)),
+ inputs_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(inputs_json)),
  state TEXT NOT NULL CHECK(state IN ('making','ready','failed')),
  error TEXT,
  sha256 TEXT REFERENCES image_blobs(sha256),
