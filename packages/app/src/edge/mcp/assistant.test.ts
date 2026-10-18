@@ -499,6 +499,11 @@ describe("/mcp/assistant", () => {
     };
     const asked = await client.callTool({ name: "create_schedule", arguments: { body: right } });
     expect(textOf(asked)).toContain("Waiting for the person");
+    expect(textOf(asked)).toContain("cadence.days: Monday, Wednesday");
+    expect(textOf(asked)).toContain(
+      "It starts active: runs start at the schedule's times and are paid then.",
+    );
+    expect(textOf(asked)).not.toContain("Slopify can't price it here");
     const [ask] = asksOf(h.deps.db, "s1", h.deps.clock.now());
     expect(decideAsk(h.deps.db, ask?.id ?? "", "allow", h.deps.clock.now()).ok).toBe(true);
     const deps = {

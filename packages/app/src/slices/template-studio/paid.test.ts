@@ -149,7 +149,7 @@ describe("a template's first paid sample", () => {
     for (const [fail, said] of [
       [
         "The AI model didn't answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
-        "The AI model didn't answer. Press Make sample to try again; if it keeps happening, choose another model in the Providers section of Edit project.",
+        "The AI model didn't answer. Press Make sample to try again; if it keeps happening, choose another model with Change on that section's “Made with …” line.",
       ],
       [
         "No OpenRouter API key is saved. Add one in Settings → Providers, then use Try again.",

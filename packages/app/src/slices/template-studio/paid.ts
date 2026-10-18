@@ -150,14 +150,19 @@ export function studioWords(
   button: string = "Make sample",
   then: string = " to try again",
 ): string {
-  return reason.replace(
-    /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][a-z]+)?/g,
-    (_, verb: string | undefined, at: number) => {
-      const opens =
-        verb === undefined ? /(^|[.;:!?]\s+)$/.test(reason.slice(0, at)) : /^[UP]/.test(verb);
-      return `${opens ? "Press" : "press"} ${button}${then}`;
-    },
-  );
+  return reason
+    .replace(
+      /choose another model in the Providers section of Edit project/g,
+      "choose another model with Change on that section's “Made with …” line",
+    )
+    .replace(
+      /(\b[UuPp](?:se|ress) )?Try again(?: on [A-Z][a-z]+)?/g,
+      (_, verb: string | undefined, at: number) => {
+        const opens =
+          verb === undefined ? /(^|[.;:!?]\s+)$/.test(reason.slice(0, at)) : /^[UP]/.test(verb);
+        return `${opens ? "Press" : "press"} ${button}${then}`;
+      },
+    );
 }
 
 const refusedSentence: Readonly<Record<string, string>> = {

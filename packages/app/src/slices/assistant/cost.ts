@@ -29,6 +29,20 @@ export function costSentence(estimates: readonly PricedWork[]): string {
 
 export const unpricedSentence = "This starts paid work; Slopify can't price it here.";
 
+// A schedule call starts nothing now: runs begin at the schedule's times, and are paid then.
+export function scheduleSentence(tool: string): string | undefined {
+  switch (tool) {
+    case "create_schedule":
+      return "It starts active: runs start at the schedule's times and are paid then.";
+    case "update_schedule":
+      return "Runs start at the schedule's times and are paid then; a paused schedule stays paused, so nothing runs until you resume it.";
+    case "resume_schedule":
+      return "Runs start again at the schedule's times and are paid then.";
+    default:
+      return undefined;
+  }
+}
+
 const costsSchema = z
   .object({
     currency: z.literal("USD"),

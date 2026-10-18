@@ -12,7 +12,12 @@ import type {
   AssistantTurnTokens,
 } from "../../slices/assistant/access.js";
 import { consumeGrant } from "../../slices/assistant/asks.js";
-import { costSentence, estimateOfAnswer, unpricedSentence } from "../../slices/assistant/cost.js";
+import {
+  costSentence,
+  estimateOfAnswer,
+  scheduleSentence,
+  unpricedSentence,
+} from "../../slices/assistant/cost.js";
 import {
   argsHash,
   assistantExcludedTools,
@@ -92,7 +97,7 @@ async function askText(
         ? "This deletes it."
         : isOutward(gateOf(tool))
           ? "This sends to, or changes, an address outside Slopify."
-          : unpricedSentence);
+          : (scheduleSentence(tool.name) ?? unpricedSentence));
   const details = detailsOf(args);
   return `${what} ${consequence}${details === "" ? "" : ` ${details}`}`;
 }
@@ -103,6 +108,25 @@ async function askText(
 const hiddenField = /(^id$|Id$|Ids$|^idempotencyKey$|^fingerprint$|^confirmed$)/;
 const secretField = /key|token|secret|password|authorization/i;
 const detailsMax = 400;
+// Weekday numbers as a schedule's weekly cadence counts them: 0 is Sunday.
+const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+// A short list of plain values shown as they are; anything longer or nested stays a count.
+function shortList(name: string, value: readonly unknown[]): string | undefined {
+  if (value.length === 0 || value.length > 7) return undefined;
+  const words = value.map((one) => {
+    if (typeof one === "number" && name.endsWith("cadence.days"))
+      return weekdays[one] ?? String(one);
+    if (typeof one === "number" || typeof one === "boolean") return String(one);
+    if (typeof one === "string") {
+      const text = redact(one.replace(/\s+/g, " ").trim());
+      return text === "" ? undefined : `“${text}”`;
+    }
+    return undefined;
+  });
+  if (words.some((one) => one === undefined)) return undefined;
+  const joined = words.join(", ");
+  return joined.length > 80 ? undefined : `${name}: ${joined}`;
+}
 function detailsOf(args: Readonly<Record<string, unknown>>): string {
   const parts: string[] = [];
   const add = (name: string, value: unknown, depth: number): void => {
@@ -117,9 +141,12 @@ function detailsOf(args: Readonly<Record<string, unknown>>): string {
         parts.push(`${name}: “${shown.length > 80 ? `${shown.slice(0, 79)}…` : shown}”`);
     } else if (typeof value === "number" || typeof value === "boolean")
       parts.push(`${name}: ${String(value)}`);
-    else if (Array.isArray(value))
-      parts.push(`${name}: ${String(value.length)} ${value.length === 1 ? "item" : "items"}`);
-    else if (typeof value === "object" && depth < 2)
+    else if (Array.isArray(value)) {
+      const shown = shortList(name, value);
+      parts.push(
+        shown ?? `${name}: ${String(value.length)} ${value.length === 1 ? "item" : "items"}`,
+      );
+    } else if (typeof value === "object" && depth < 2)
       for (const [key, inner] of Object.entries(value)) add(`${name}.${key}`, inner, depth + 1);
   };
   const { body, query, ...rest } = args;
